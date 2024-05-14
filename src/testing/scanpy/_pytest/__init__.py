@@ -101,6 +101,10 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
     skip_reason: str | None
     if skip_reason := getattr(func, "_doctest_skip_reason", None):
         pytest.skip(reason=skip_reason)
+    if getattr(func, "_doctest_internet", False) and not request.config.getoption(
+        "--internet-tests"
+    ):
+        pytest.skip(reason="need --internet-tests option to run")
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:

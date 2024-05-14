@@ -11,6 +11,7 @@ from anndata import AnnData
 from .. import _utils
 from .._compat import old_positionals
 from .._settings import settings
+from .._utils._doctests import doctest_internet
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
@@ -65,6 +66,7 @@ def blobs(
     return AnnData(X, obs=dict(blobs=y.astype(str)))
 
 
+@doctest_internet
 @check_datasetdir_exists
 def burczynski06() -> AnnData:
     """\
@@ -73,6 +75,17 @@ def burczynski06() -> AnnData:
     The study assesses transcriptional profiles in peripheral blood mononuclear
     cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
     hybridization to microarrays interrogating more than 22,000 sequences.
+
+    Returns
+    -------
+    Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.burczynski06()
+    AnnData object with n_obs × n_vars = 127 × 22283
+        obs: 'groups'
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
     url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
@@ -120,6 +133,7 @@ def krumsiek11() -> AnnData:
     return adata
 
 
+@doctest_internet
 @check_datasetdir_exists
 def moignard15() -> AnnData:
     """\
@@ -128,6 +142,14 @@ def moignard15() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.moignard15()
+    AnnData object with n_obs × n_vars = 3934 × 42
+        obs: 'exp_groups'
+        uns: 'iroot', 'exp_groups_colors'
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
     backup_url = "https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
@@ -158,6 +180,7 @@ def moignard15() -> AnnData:
     return adata
 
 
+@doctest_internet
 @check_datasetdir_exists
 def paul15() -> AnnData:
     """\
@@ -172,6 +195,14 @@ def paul15() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.paul15()
+    AnnData object with n_obs × n_vars = 2730 × 3451
+        obs: 'paul15_clusters'
+        uns: 'iroot'
     """
     import h5py
 
@@ -276,10 +307,11 @@ def pbmc68k_reduced() -> AnnData:
         return read(filename)
 
 
+@doctest_internet
 @filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
-    r"""\
+    """\
     3k PBMCs from 10x Genomics.
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
@@ -314,12 +346,20 @@ def pbmc3k() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.pbmc3k()
+    AnnData object with n_obs × n_vars = 2700 × 32738
+        var: 'gene_ids'
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
+@doctest_internet
 @filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
@@ -331,6 +371,18 @@ def pbmc3k_processed() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.pbmc3k_processed()
+    AnnData object with n_obs × n_vars = 2638 × 1838
+        obs: 'n_genes', 'percent_mito', 'n_counts', 'louvain'
+        var: 'n_cells'
+        uns: 'draw_graph', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
+        obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
+        varm: 'PCs'
+        obsp: 'distances', 'connectivities'
     """
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
@@ -428,6 +480,7 @@ def _download_visium_dataset(
     return sample_dir
 
 
+@doctest_internet
 @check_datasetdir_exists
 def visium_sge(
     sample_id: VisiumSampleID = "V1_Breast_Cancer_Block_A_Section_1",
@@ -450,6 +503,17 @@ def visium_sge(
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+
+    >>> import scanpy as sc
+    >>> sc.datasets.visium_sge(sample_id='V1_Breast_Cancer_Block_A_Section_1')
+    AnnData object with n_obs × n_vars = 3798 × 36601
+        obs: 'in_tissue', 'array_row', 'array_col'
+        var: 'gene_ids', 'feature_types', 'genome'
+        uns: 'spatial'
+        obsm: 'spatial'
     """
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
     sample_dir = _download_visium_dataset(
