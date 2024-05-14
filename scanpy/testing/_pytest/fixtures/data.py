@@ -53,11 +53,8 @@ def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], Ann
     params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
     ids=["sparse", "dense"],
 )
-def backed_adata(
-    request, worker_id
-):  # worker_id for xdist since we don't want to override open files
-    if not worker_id:
-        worker_id = "serial"
+# worker_id for xdist since we don't want to override open files
+def backed_adata(request, worker_id="serial"):
     rand_func = request.param
     tmp_path = f"{tempfile.gettempdir()}/test_{rand_func.__name__}_{worker_id}.h5ad"
     X = rand_func(200, 10).astype(np.float32)
