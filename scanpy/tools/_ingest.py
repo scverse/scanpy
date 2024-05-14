@@ -9,12 +9,11 @@ from packaging.version import Version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
-from testing.scanpy._doctests import doctest_skip
-
 from .. import logging as logg
 from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView
+from .._utils._doctests import doctest_skip
 from ..neighbors import FlatTree, RPForestDict
 
 if TYPE_CHECKING:

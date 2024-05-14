@@ -8,9 +8,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from testing.scanpy._doctests import doctest_needs
-
 from ..._compat import old_positionals
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData

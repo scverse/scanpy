@@ -8,10 +8,9 @@ from anndata import AnnData  # noqa: TCH002
 from matplotlib.axes import Axes  # noqa: TCH002
 from sklearn.utils import deprecated
 
-from testing.scanpy._doctests import doctest_needs
-
 from .._compat import old_positionals
 from .._utils import _doc_params
+from .._utils._doctests import doctest_needs
 from ..plotting import _scrublet, _utils, embedding
 from ..plotting._docs import (
     doc_adata_color_etc,

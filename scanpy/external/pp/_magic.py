@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING, Literal
 
 from packaging.version import Version
 
-from testing.scanpy._doctests import doctest_needs
-
 from ... import logging as logg
 from ..._settings import settings
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
