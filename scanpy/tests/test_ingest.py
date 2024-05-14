@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import tempfile
-
 import anndata
 import numpy as np
 import pytest
@@ -158,11 +156,11 @@ def test_ingest_map_embedding_umap():
     assert np.allclose(ing._obsm["X_umap"], umap_transformed_t)
 
 
-def test_ingest_backed(adatas):
+def test_ingest_backed(adatas, tmp_path):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
 
-    tmp_path = tempfile.gettempdir()
+    tmp_path = tmp_path
 
     adata_new.write_h5ad(f"{tmp_path}/new.h5ad")
 
