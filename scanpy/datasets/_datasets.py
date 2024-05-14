@@ -381,6 +381,7 @@ def _download_visium_dataset(
         filename=tar_pth, backup_url=f"{url_prefix}/{tar_filename}"
     )
     with tarfile.open(tar_pth) as f:
+        f.extraction_filter = tarfile.data_filter
         for el in f:
             if not (sample_dir / el.name).exists():
                 f.extract(el, sample_dir)
