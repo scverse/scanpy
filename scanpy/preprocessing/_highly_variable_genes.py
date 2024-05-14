@@ -259,8 +259,8 @@ def _highly_variable_genes_single_batch(
 
     if flavor == "seurat":
         X = X.copy()
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            X *= np.log(adata.uns["log1p"]["base"])
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            X *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
         if isinstance(X, np.ndarray):
             np.expm1(X, out=X)
