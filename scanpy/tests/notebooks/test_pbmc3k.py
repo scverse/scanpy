@@ -20,7 +20,7 @@ from matplotlib.testing import setup
 setup()
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_pbmc3k"
