@@ -12,6 +12,7 @@ from scipy import sparse
 
 from .. import logging as logg
 from .._settings import settings
+from .._utils._doctests import doctest_internet
 from ..readwrite import _download
 from ._utils import check_datasetdir_exists
 
@@ -95,25 +96,32 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
+@doctest_internet
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
 ) -> anndata.AnnData:
     """\
-    Load a dataset from the `EBI Single Cell Expression Atlas
-    <https://www.ebi.ac.uk/gxa/sc/experiments>`__
+    Load a dataset from the `EBI Single Cell Expression Atlas`_.
 
     Downloaded datasets are saved in the directory specified by
     :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
+
+    .. _EBI Single Cell Expression Atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 
     Params
     ------
     accession
         Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``.
-        This can be found in the url on the datasets page, for example
-        https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne.
+        This can be found in the url on the datasets page, for example E-GEOD-98816_.
+
+        .. _E-GEOD-98816: https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne
     filter_boring
         Whether boring labels in `.obs` should be automatically removed, such as
         labels with a single or :attr:`~anndata.AnnData.n_obs` distinct values.
+
+    Returns
+    -------
+    Annotated data matrix.
 
     Example
     -------
