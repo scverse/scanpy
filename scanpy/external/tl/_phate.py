@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData

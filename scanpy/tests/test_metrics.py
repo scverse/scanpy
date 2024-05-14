@@ -15,8 +15,8 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 mark_flaky = pytest.mark.xfail(
     strict=False,
