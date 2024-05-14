@@ -203,7 +203,7 @@ filterwarnings = [
 [tool.coverage.run]
 data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
-omit = ["*/tests/*"]
+omit = ["scanpy/tests/*", "src/testing/*"]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]

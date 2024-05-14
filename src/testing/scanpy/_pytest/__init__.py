@@ -116,3 +116,8 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker(
             pytest.mark.skip(reason="dask support requires anndata version > 0.10")
         )
+
+
+assert (
+    "scanpy" not in sys.modules
+), "scanpy is already imported, this will mess up test coverage"
