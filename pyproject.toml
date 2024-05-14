@@ -153,6 +153,10 @@ dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build]
 exclude = ["scanpy/tests"]
+[tool.hatch.build.targets.wheel]
+# TODO: move scanpy to src/
+only-include = ["src/testing", "scanpy"]
+sources = ["src", "."]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
@@ -163,6 +167,7 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
+    "-ptesting.scanpy._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
@@ -199,7 +204,7 @@ filterwarnings = [
 [tool.coverage.run]
 data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
-omit = ["*/tests/*"]
+omit = ["scanpy/tests/*", "src/testing/*"]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
@@ -242,7 +247,7 @@ ignore = [
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
 [tool.ruff.lint.isort]
-known-first-party = ["scanpy"]
+known-first-party = ["scanpy", "testing.scanpy"]
 required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"

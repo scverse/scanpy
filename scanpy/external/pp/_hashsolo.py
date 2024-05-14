@@ -26,7 +26,7 @@ from scipy.stats import norm
 
 from ..._compat import old_positionals
 from ..._utils import check_nonnegative_integers
-from ...testing._doctests import doctest_skip
+from ..._utils._doctests import doctest_skip
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

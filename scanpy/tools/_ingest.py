@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from packaging import version
+from packaging.version import Version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
@@ -13,13 +13,13 @@ from .. import logging as logg
 from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView
+from .._utils._doctests import doctest_skip
 from ..neighbors import FlatTree, RPForestDict
-from ..testing._doctests import doctest_skip
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-ANNDATA_MIN_VERSION = version.parse("0.7rc1")
+ANNDATA_MIN_VERSION = Version("0.7rc1")
 
 
 @old_positionals(

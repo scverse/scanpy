@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -115,9 +115,7 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    if metric != "euclidean" and (
-        version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
-    ):
+    if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
 
     # Backwards compat handling: Remove in scanpy 1.9.0

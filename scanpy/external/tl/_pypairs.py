@@ -7,10 +7,10 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from typing import TYPE_CHECKING, Union
 
-from packaging import version
+from packaging.version import Version
 
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -154,6 +154,6 @@ def _check_import():
     except ImportError:
         raise ImportError("You need to install the package `pypairs`.")
 
-    min_version = version.parse("3.0.9")
-    if version.parse(pypairs.__version__) < min_version:
+    min_version = Version("3.0.9")
+    if Version(pypairs.__version__) < min_version:
         raise ImportError(f"Please only use `pypairs` >= {min_version}")

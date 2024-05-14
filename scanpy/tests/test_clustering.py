@@ -4,8 +4,8 @@ import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 
 @pytest.fixture
