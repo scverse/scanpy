@@ -15,6 +15,7 @@ from .._compat import DaskArray, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
+    raise_not_implemented_error_if_backed_type,
     renamed_arg,
     view_to_actual,
 )
@@ -288,8 +289,6 @@ def scale_anndata(
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | None:
-    if adata.isbacked:
-        raise NotImplementedError("scale is not implemented for backed AnnData")
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
     if mask_obs is not None:
@@ -300,6 +299,7 @@ def scale_anndata(
         mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
     X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    raise_not_implemented_error_if_backed_type(X, "scale")
     X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
         X,
         zero_center=zero_center,

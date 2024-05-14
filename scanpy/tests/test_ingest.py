@@ -170,6 +170,7 @@ def test_ingest_backed(adatas):
 
     ing = sc.tl.Ingest(adata_ref)
     with pytest.raises(
-        NotImplementedError, match="Ingest.fit is not implemented for backed AnnData"
+        NotImplementedError,
+        match=f"Ingest.fit is not implemented for matrices of type {type(adata_new.X)}",
     ):
         ing.fit(adata_new)

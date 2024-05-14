@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import anndata
 import numpy as np
 import pandas as pd
 import pytest
@@ -77,10 +76,9 @@ def test_dendrogram_cor():
     sc.tl.dendrogram(rep, groupby="leiden")
 
 
-def test_dendrogram_backed(backed_adata_path):
-    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+def test_dendrogram_backed(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="dendrogram is not implemented for backed AnnData",
+        match=f"dendrogram is not implemented for matrices of type {type(backed_adata.X)}",
     ):
-        sc.tl.dendrogram(adata, groupby="cat")
+        sc.tl.dendrogram(backed_adata, groupby="cat")

@@ -12,7 +12,10 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import check_nonnegative_integers
+from .._utils import (
+    check_nonnegative_integers,
+    raise_not_implemented_error_if_backed_type,
+)
 from ..get import _check_mask
 from ..preprocessing._utils import _get_mean_var
 
@@ -132,6 +135,7 @@ class _RankGenes:
             if use_raw and adata.raw is not None:
                 adata_comp = adata.raw
             X = adata_comp.X
+        raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
         if issparse(X):
@@ -592,10 +596,6 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    if adata.isbacked:
-        raise NotImplementedError(
-            "rank_genes_groups is not implemented for backed AnnData"
-        )
     if mask_var is not None:
         mask_var = _check_mask(adata, mask_var, "var")
 

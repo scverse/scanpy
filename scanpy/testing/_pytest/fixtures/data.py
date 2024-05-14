@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+from anndata.experimental import sparse_dataset
 from scipy import sparse
 
 import scanpy as sc
@@ -46,15 +48,31 @@ def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], Ann
     return _pbmc3ks_parametrized_session[True].copy
 
 
-@pytest.fixture(scope="session")
-def backed_adata_path():
-    tmp_path = f"{tempfile.gettempdir()}/test.h5ad"
-    X = sparse.random(200, 10, format="csr").astype(np.float32)
+@pytest.fixture(
+    scope="session",
+    params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
+    ids=["sparse", "dense"],
+)
+def backed_adata(
+    request, worker_id
+):  # worker_id for xdist since we don't want to override open files
+    if not worker_id:
+        worker_id = "serial"
+    rand_func = request.param
+    tmp_path = f"{tempfile.gettempdir()}/test_{rand_func.__name__}_{worker_id}.h5ad"
+    X = rand_func(200, 10).astype(np.float32)
     cat = np.random.randint(0, 3, (200,))
     adata = AnnData(X, obs={"cat": cat})
     adata.obs["cat"] = adata.obs["cat"].astype("category")
+    adata.layers["X_copy"] = adata.X[...]
     adata.write_h5ad(tmp_path)
-    return tmp_path
+    adata = read_h5ad(tmp_path, backed="r")
+    adata.layers["X_copy"] = (
+        sparse_dataset(adata.file["X"])
+        if isinstance(adata.X, BaseCompressedSparseDataset)
+        else adata.file["X"]
+    )
+    return adata
 
 
 def _prepare_pbmc_testdata(

@@ -12,7 +12,7 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .._compat import old_positionals, pkg_version
 from .._settings import settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from ..neighbors import FlatTree, RPForestDict
 from ..testing._doctests import doctest_skip
 
@@ -388,10 +388,7 @@ class Ingest:
         `adata` refers to the :class:`~anndata.AnnData` object
         that is passed during the initialization of an Ingest instance.
         """
-        if adata_new.isbacked:
-            raise NotImplementedError(
-                "Ingest.fit is not implemented for backed AnnData"
-            )
+        raise_not_implemented_error_if_backed_type(adata_new.X, "Ingest.fit")
         ref_var_names = self._adata_ref.var_names.str.upper()
         new_var_names = adata_new.var_names.str.upper()
 

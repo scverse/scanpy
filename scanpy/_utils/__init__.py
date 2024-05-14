@@ -30,9 +30,11 @@ from typing import (
 )
 from weakref import WeakSet
 
+import h5py
 import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from numpy.typing import NDArray
 from packaging.version import Version
 from scipy import sparse
@@ -1090,3 +1092,14 @@ def _resolve_axis(
     if axis in {1, "var"}:
         return (1, "var")
     raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
+
+
+def is_backed_type(X):
+    return isinstance(X, (BaseCompressedSparseDataset, h5py.File, h5py.Dataset))
+
+
+def raise_not_implemented_error_if_backed_type(X, method_name):
+    if is_backed_type(X):
+        raise NotImplementedError(
+            f"{method_name} is not implemented for matrices of type {type(X)}"
+        )

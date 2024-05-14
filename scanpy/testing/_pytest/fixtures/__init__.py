@@ -13,7 +13,7 @@ import pytest
 
 from .data import (
     _pbmc3ks_parametrized_session,
-    backed_adata_path,
+    backed_adata,
     pbmc3k_parametrized,
     pbmc3k_parametrized_small,
 )
@@ -28,7 +28,7 @@ __all__ = [
     "_pbmc3ks_parametrized_session",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
-    "backed_adata_path",
+    "backed_adata",
 ]
 
 

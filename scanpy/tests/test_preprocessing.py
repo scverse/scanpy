@@ -41,20 +41,26 @@ def test_log1p(tmp_path):
     assert np.allclose(ad4.X, A_l / np.log(2))
 
 
-def test_log1p_backed_errors(backed_adata_path):
-    adata = read_h5ad(backed_adata_path, backed="r")
+def test_log1p_backed_errors(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="log1p is not implemented for backed AnnData with chunked as False or backed mode not r+",
+        match="log1p is not implemented for backed AnnData with backed mode not r+",
     ):
-        sc.pp.log1p(adata)
-    adata.file.close()
-    adata = read_h5ad(backed_adata_path, backed="r+")
+        sc.pp.log1p(backed_adata, chunked=True)
+    backed_adata.file.close()
+    backed_adata = read_h5ad(backed_adata.filename, backed="r+")
     with pytest.raises(
         NotImplementedError,
-        match="log1p is not implemented for backed AnnData with chunked as False or backed mode not r+",
+        match=f"log1p is not implemented for matrices of type {type(backed_adata.X)} without the chunked keyword as True",
     ):
-        sc.pp.log1p(adata)
+        sc.pp.log1p(backed_adata)
+    backed_adata.layers["X_copy"] = backed_adata.X
+    with pytest.raises(
+        NotImplementedError,
+        match=f"log1p is not implemented for matrices of type {type(backed_adata.layers["X_copy"])} from layers",
+    ):
+        sc.pp.log1p(backed_adata, layer="X_copy")
+    backed_adata.file.close()
 
 
 def test_log1p_deprecated_arg():
@@ -195,11 +201,12 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
-def test_scale_backed(backed_adata_path):
+def test_scale_backed(backed_adata):
     with pytest.raises(
-        NotImplementedError, match="scale is not implemented for backed AnnData"
+        NotImplementedError,
+        match=f"scale is not implemented for matrices of type {type(backed_adata.X)}",
     ):
-        sc.pp.scale(read_h5ad(backed_adata_path, backed="r"))
+        sc.pp.scale(backed_adata)
 
 
 ARRAY_TYPES_DASK_SPARSE = [
@@ -287,14 +294,14 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
-def test_regress_out_backed(backed_adata_path):
-    adata = read_h5ad(backed_adata_path, backed="r")
-    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
-    adata.obs["n_counts"] = adata.X[...].sum(axis=1)
+def test_regress_out_backed(backed_adata):
+    backed_adata.obs["percent_mito"] = np.random.rand(backed_adata.X.shape[0])
+    backed_adata.obs["n_counts"] = backed_adata.X[...].sum(axis=1)
     with pytest.raises(
-        NotImplementedError, match="regress_out is not implemented for backed AnnData"
+        NotImplementedError,
+        match=f"regress_out is not implemented for matrices of type {type(backed_adata.X)}",
     ):
-        sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+        sc.pp.regress_out(backed_adata, keys=["n_counts", "percent_mito"])
 
 
 def test_regress_out_layer():
@@ -469,18 +476,12 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
-def test_downsample_counts_backed(backed_adata_path):
-    adata = read_h5ad(backed_adata_path, backed="r")
+def test_downsample_counts_backed(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="downsample_counts is not implemented for backed AnnData",
+        match=f"downsample_counts is not implemented for matrices of type {type(backed_adata.X)}",
     ):
-        sc.pp.downsample_counts(adata, counts_per_cell=1000)
-    with pytest.raises(
-        NotImplementedError,
-        match="downsample_counts is not implemented for backed AnnData",
-    ):
-        sc.pp.downsample_counts(adata, total_counts=1000)
+        sc.pp.downsample_counts(backed_adata, counts_per_cell=1000)
 
 
 def test_recipe_weinreb():
@@ -532,12 +533,12 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
-def test_filter_genes_backed(backed_adata_path):
-    adata = read_h5ad(backed_adata_path, backed="r")
+def test_filter_genes_backed(backed_adata):
     with pytest.raises(
-        NotImplementedError, match="filter_genes is not implemented for backed AnnData"
+        NotImplementedError,
+        match=f"filter_genes is not implemented for matrices of type {type(backed_adata.X)}",
     ):
-        sc.pp.filter_genes(adata, max_cells=100)
+        sc.pp.filter_genes(backed_adata, max_cells=100)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -577,3 +578,11 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     if issparse(adata.X):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+def test_filter_cells_backed(backed_adata):
+    with pytest.raises(
+        NotImplementedError,
+        match=f"filter_cells is not implemented for matrices of type {type(backed_adata.X)}",
+    ):
+        sc.pp.filter_cells(backed_adata, max_genes=100)

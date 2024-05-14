@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
-import anndata
 import anndata as ad
 import numpy as np
 import pytest
@@ -319,13 +318,18 @@ def test_mask_highly_var_error(array_type):
         sc.pp.pca(adata, use_highly_variable=True)
 
 
-def test_pca_backed(backed_adata_path):
-    adata = anndata.read_h5ad(backed_adata_path, backed="r")
+def test_pca_backed(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="PCA is not implemented for backed AnnData with chunked as False",
+        match=f"PCA is not implemented for matrices of type {type(backed_adata.X)} from layers with chunked as False",
     ):
-        sc.pp.pca(adata)
+        sc.pp.pca(backed_adata)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=f"PCA is not implemented for matrices of type {type(backed_adata.layers['X_copy'])} from layers",
+    ):
+        sc.pp.pca(backed_adata, layer="X_copy")
 
 
 def test_mask_length_error():
