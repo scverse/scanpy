@@ -160,7 +160,15 @@ DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
 DS_DYNAMIC = frozenset({"blobs", "ebi_expression_atlas"})
 
 
-@pytest.mark.parametrize("ds_name", set(sc.datasets.__all__) - DS_DYNAMIC - DS_INCLUDED)
+@pytest.mark.parametrize(
+    "ds_name",
+    [
+        pytest.param(
+            ds, id=ds, marks=[] if ds in DS_INCLUDED else [pytest.mark.internet]
+        )
+        for ds in set(sc.datasets.__all__) - DS_DYNAMIC
+    ],
+)
 def test_doc_shape(ds_name):
     dataset_fn: Callable[[], AnnData] = getattr(sc.datasets, ds_name)
     assert dataset_fn.__doc__, "No docstring"

@@ -91,18 +91,17 @@ def krumsiek11() -> AnnData:
 
     Simulate via :func:`~scanpy.tl.sim`.
 
+    Returns
+    -------
+    Annotated data matrix.
+
     Examples
     --------
-
     >>> import scanpy as sc
     >>> sc.datasets.krumsiek11()
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
-
-    Returns
-    -------
-    Annotated data matrix.
     """
     with settings.verbosity.override("error"):  # suppress output...
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
@@ -220,6 +219,13 @@ def toggleswitch() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.toggleswitch()
+    AnnData object with n_obs × n_vars = 200 × 2
+        uns: 'iroot'
     """
     filename = HERE / "toggleswitch.txt"
     adata = read(filename, first_column_names=True)
@@ -246,6 +252,18 @@ def pbmc68k_reduced() -> AnnData:
     Returns
     -------
     Annotated data matrix.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.pbmc68k_reduced()
+    AnnData object with n_obs × n_vars = 700 × 765
+        obs: 'bulk_labels', 'n_genes', 'percent_mito', 'n_counts', 'S_score', 'G2M_score', 'phase', 'louvain'
+        var: 'n_counts', 'means', 'dispersions', 'dispersions_norm', 'highly_variable'
+        uns: 'bulk_labels_colors', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
+        obsm: 'X_pca', 'X_umap'
+        varm: 'PCs'
+        obsp: 'distances', 'connectivities'
     """
 
     filename = HERE / "10x_pbmc68k_reduced.h5ad"
