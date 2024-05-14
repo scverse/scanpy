@@ -24,7 +24,7 @@ if Version(anndata_version) >= Version("0.10.0"):
     def make_sparse(x):
         return sparse_dataset(x)
 else:
-    from anndata._core.sparse_dataset import SparseDataset as SparseDataset
+    from anndata._core.sparse_dataset import SparseDataset
 
     def make_sparse(x):
         return SparseDataset(x)

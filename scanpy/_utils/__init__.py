@@ -49,7 +49,7 @@ if Version(anndata_version) >= Version("0.10.0"):
         BaseCompressedSparseDataset as SparseDataset,
     )
 else:
-    from anndata._core.sparse_dataset import SparseDataset as SparseDataset
+    from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -1100,11 +1100,11 @@ def _resolve_axis(
     raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
 
 
-def is_backed_type(X):
+def is_backed_type(X: object) -> bool:
     return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
 
 
-def raise_not_implemented_error_if_backed_type(X, method_name):
+def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
     if is_backed_type(X):
         raise NotImplementedError(
             f"{method_name} is not implemented for matrices of type {type(X)}"

@@ -415,13 +415,10 @@ def log1p_anndata(
     else:
         X = _get_obs_rep(adata, layer=layer, obsm=obsm)
         if is_backed_type(X):
+            msg = f"log1p is not implemented for matrices of type {type(X)}"
             if layer is not None:
-                raise NotImplementedError(
-                    f"log1p is not implemented for matrices of type {type(X)} from layers"
-                )
-            raise NotImplementedError(
-                f"log1p is not implemented for matrices of type {type(X)} without the chunked keyword as True"
-            )
+                raise NotImplementedError(f"{msg} from layers")
+            raise NotImplementedError(f"{msg} without `chunked=True`")
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
