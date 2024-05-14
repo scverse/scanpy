@@ -6,7 +6,7 @@ import pytest
 import scipy.sparse as sp
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 n_neighbors = 5
 key = "test"

@@ -16,10 +16,10 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
-from scanpy.testing._helpers.data import pbmc3k_normalized
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import (
+from testing.scanpy._helpers import as_dense_dask_array, as_sparse_dask_array
+from testing.scanpy._helpers.data import pbmc3k_normalized
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
     param_with,

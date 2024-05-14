@@ -12,13 +12,13 @@ from scipy import sparse as sp
 from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy.testing._helpers import (
+from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
 )
-from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 
 def test_log1p(tmp_path):

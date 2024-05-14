@@ -11,14 +11,14 @@ from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
 from scanpy._utils import axis_sum
-from scanpy.testing._helpers import (
+from testing.scanpy._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
     check_rep_results,
 )
 
 # TODO: Add support for sparse-in-dask
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 from anndata import AnnData
 
 from .._utils import _doc_params
+from .._utils._doctests import doctest_needs
 from ..get import rank_genes_groups_df
-from ..testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
