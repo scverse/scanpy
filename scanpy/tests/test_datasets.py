@@ -69,10 +69,7 @@ def test_krumsiek11(tmp_dataset_dir):
     with pytest.warns(UserWarning, match=r"Observation names are not unique"):
         adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
-    assert all(
-        np.unique(adata.obs["cell_type"])
-        == np.array(["Ery", "Mk", "Mo", "Neu", "progenitor"])
-    )
+    assert set(adata.obs["cell_type"]) == {"Ery", "Mk", "Mo", "Neu", "progenitor"}
 
 
 def test_blobs():
