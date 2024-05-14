@@ -22,7 +22,7 @@ def sparse_multiply(
     nrow = E.shape[0]
     w = sparse.dia_matrix((a, 0), shape=(nrow, nrow), dtype=a.dtype)
     r = w @ E
-    if isinstance(r, (np.ndarray)):
+    if isinstance(r, np.ndarray):
         return sparse.csc_matrix(r)
     return r
 

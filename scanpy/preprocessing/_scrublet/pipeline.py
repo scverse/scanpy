@@ -22,7 +22,8 @@ def mean_center(self: Scrublet) -> None:
 
 
 def normalize_variance(self: Scrublet) -> None:
-    gene_stdevs = np.sqrt(_get_mean_var(self._counts_obs_norm, axis=0)[1])
+    _, gene_vars = _get_mean_var(self._counts_obs_norm, axis=0)
+    gene_stdevs = np.sqrt(gene_vars)
     self._counts_obs_norm = sparse_multiply(self._counts_obs_norm.T, 1 / gene_stdevs).T
     if self._counts_sim_norm is not None:
         self._counts_sim_norm = sparse_multiply(
