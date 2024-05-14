@@ -52,7 +52,7 @@ def scrublet(
     log_transform: bool = False,
     mean_center: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True,
+    use_approx_neighbors: bool | None = None,
     get_doublet_neighbor_parents: bool = False,
     n_neighbors: int | None = None,
     threshold: float | None = None,
@@ -245,9 +245,11 @@ def scrublet(
 
     if batch_key is not None:
         if batch_key not in adata.obs.keys():
-            raise ValueError(
-                "`batch_key` must be a column of .obs in the input annData object."
+            msg = (
+                "`batch_key` must be a column of .obs in the input AnnData object,"
+                f"but {batch_key!r} is not in {adata.obs.keys()!r}."
             )
+            raise ValueError(msg)
 
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
@@ -302,7 +304,7 @@ def _scrublet_call_doublets(
     mean_center: bool = True,
     normalize_variance: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True,
+    use_approx_neighbors: bool | None = None,
     knn_dist_metric: _Metric | _MetricFn = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: float | None = None,
