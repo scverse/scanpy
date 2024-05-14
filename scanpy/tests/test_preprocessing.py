@@ -9,7 +9,7 @@ from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
 from scipy import sparse as sp
-from sklearn.utils import issparse
+from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy.testing._helpers import (

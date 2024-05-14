@@ -391,7 +391,7 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if "log1p" in adata.uns_keys():
+    if "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
     adata = adata.copy() if copy else adata

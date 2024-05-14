@@ -11,7 +11,7 @@ import pytest
 import scipy
 from anndata import AnnData
 from numpy.random import binomial, negative_binomial, seed
-from packaging import version
+from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -278,7 +278,7 @@ def test_wilcoxon_tie_correction(reference):
     Y = pbmc.raw.X[mask_rest].toarray()
 
     # Handle scipy versions
-    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
+    if Version(scipy.__version__) >= Version("1.7.0"):
         pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
         pvals[np.isnan(pvals)] = 1.0
     else:
