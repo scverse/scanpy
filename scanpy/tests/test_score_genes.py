@@ -70,14 +70,6 @@ def test_score_with_reference():
     np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
 
 
-def test_score_genes_backed(backed_adata):
-    with pytest.raises(
-        NotImplementedError,
-        match=f"rank_genes_groups is not implemented for matrices of type {type(backed_adata.X)}",
-    ):
-        sc.tl.score_genes(backed_adata, gene_list=backed_adata.var_names[:100])
-
-
 def test_add_score():
     """
     check the dtype of the scores

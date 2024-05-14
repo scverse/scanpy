@@ -318,20 +318,6 @@ def test_mask_highly_var_error(array_type):
         sc.pp.pca(adata, use_highly_variable=True)
 
 
-def test_pca_backed(backed_adata):
-    with pytest.raises(
-        NotImplementedError,
-        match=f"PCA is not implemented for matrices of type {type(backed_adata.X)} from layers with chunked as False",
-    ):
-        sc.pp.pca(backed_adata)
-
-    with pytest.raises(
-        NotImplementedError,
-        match=f"PCA is not implemented for matrices of type {type(backed_adata.layers['X_copy'])} from layers",
-    ):
-        sc.pp.pca(backed_adata, layer="X_copy")
-
-
 def test_mask_length_error():
     """Check error for n_obs / mask length mismatch."""
     adata = AnnData(A_list)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -64,17 +63,18 @@ def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], Ann
 
 
 @pytest.fixture(
-    scope="session",
     params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
     ids=["sparse", "dense"],
 )
 # worker_id for xdist since we don't want to override open files
-def backed_adata(request, worker_id="serial"):
+def backed_adata(request, tmp_path, worker_id="serial"):
     rand_func = request.param
-    tmp_path = f"{tempfile.gettempdir()}/test_{rand_func.__name__}_{worker_id}.h5ad"
+    tmp_path = f"{tmp_path}/test_{rand_func.__name__}_{worker_id}.h5ad"
     X = rand_func(200, 10).astype(np.float32)
-    cat = np.random.randint(0, 3, (200,))
+    cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
     adata = AnnData(X, obs={"cat": cat})
+    adata.obs["percent_mito"] = np.random.rand(X.shape[0])
+    adata.obs["n_counts"] = X.sum(axis=1)
     adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.layers["X_copy"] = adata.X[...]
     adata.write_h5ad(tmp_path)

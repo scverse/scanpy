@@ -172,7 +172,7 @@ def pca(
     if data_is_AnnData:
         if layer is None and not chunked and is_backed_type(data.X):
             raise NotImplementedError(
-                f"PCA is not implemented for matrices of type {type(data.X)} from layers with chunked as False"
+                f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             )
         adata = data.copy() if copy else data
     else:

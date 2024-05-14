@@ -74,11 +74,3 @@ def test_dendrogram_cor():
         obsm=dict(X_pca=REP_PCA),
     )
     sc.tl.dendrogram(rep, groupby="leiden")
-
-
-def test_dendrogram_backed(backed_adata):
-    with pytest.raises(
-        NotImplementedError,
-        match=f"dendrogram is not implemented for matrices of type {type(backed_adata.X)}",
-    ):
-        sc.tl.dendrogram(backed_adata, groupby="cat")

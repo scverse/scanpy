@@ -179,14 +179,6 @@ def test_results_layers(array_type):
         )
 
 
-def test_rank_genes_groups_backed(backed_adata):
-    with pytest.raises(
-        NotImplementedError,
-        match=f"rank_genes_groups is not implemented for matrices of type {type(backed_adata.X)}",
-    ):
-        sc.tl.rank_genes_groups(backed_adata, groupby="cat")
-
-
 def test_rank_genes_groups_use_raw():
     # https://github.com/scverse/scanpy/issues/1929
     pbmc = pbmc68k_reduced()

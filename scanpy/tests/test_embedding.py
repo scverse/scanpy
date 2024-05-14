@@ -31,14 +31,6 @@ def test_tsne():
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
 
 
-def test_tsne_backed(backed_adata):
-    with pytest.raises(
-        NotImplementedError,
-        match=f"tsne is not implemented for matrices of type {type(backed_adata.X)}",
-    ):
-        sc.tl.tsne(backed_adata)
-
-
 def test_umap_init_dtype():
     pbmc = pbmc68k_reduced()[:100, :].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float32))
