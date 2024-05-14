@@ -9,7 +9,6 @@ import pandas as pd
 from anndata import AnnData
 
 from .. import _utils
-from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from ..readwrite import read, read_visium
@@ -92,6 +91,15 @@ def krumsiek11() -> AnnData:
 
     Simulate via :func:`~scanpy.tl.sim`.
 
+    Examples
+    --------
+
+    >>> import scanpy as sc
+    >>> sc.datasets.krumsiek11()
+    AnnData object with n_obs × n_vars = 640 × 11
+        obs: 'cell_type'
+        uns: 'iroot', 'highlights'
+
     Returns
     -------
     Annotated data matrix.
@@ -164,10 +172,6 @@ def paul15() -> AnnData:
     -------
     Annotated data matrix.
     """
-    logg.warning(
-        "In Scanpy 0.*, this returned logarithmized data. "
-        "Now it returns non-logarithmized data."
-    )
     import h5py
 
     filename = settings.datasetdir / "paul15/paul15.h5"

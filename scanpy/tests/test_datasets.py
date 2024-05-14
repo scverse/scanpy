@@ -7,6 +7,7 @@ from __future__ import annotations
 import subprocess
 import warnings
 from pathlib import Path
+from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -16,7 +17,9 @@ from anndata.tests.helpers import assert_adata_equal
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+
+    from anndata import AnnData
 
 
 @pytest.fixture(scope="module")
@@ -149,3 +152,24 @@ def test_download_failure():
 
     with pytest.raises(HTTPError):
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
+
+
+# These are tested via doctest
+DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
+# These have parameters that affect shape and so on
+DS_DYNAMIC = frozenset({"blobs", "ebi_expression_atlas"})
+
+
+@pytest.mark.parametrize("ds_name", set(sc.datasets.__all__) - DS_DYNAMIC - DS_INCLUDED)
+def test_doc_shape(ds_name):
+    dataset_fn: Callable[[], AnnData] = getattr(sc.datasets, ds_name)
+    assert dataset_fn.__doc__, "No docstring"
+    docstring = dedent(dataset_fn.__doc__)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            r"(Observation|Variable) names are not unique",
+            category=UserWarning,
+        )
+        dataset = dataset_fn()
+    assert repr(dataset) in docstring
