@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
+from testing.scanpy._doctests import doctest_needs
+
 from ... import logging as logg
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData

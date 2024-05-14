@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from ..._utils import _import_name
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
@@ -87,6 +86,8 @@ def pytest_collection_modifyitems(
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
+    from scanpy._utils import _import_name
+
     assert isinstance(request.node, pytest.DoctestItem)
 
     request.getfixturevalue("_doctest_env")

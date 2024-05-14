@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from testing.scanpy._doctests import doctest_needs
+
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData

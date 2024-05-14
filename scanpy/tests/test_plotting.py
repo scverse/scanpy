@@ -17,13 +17,13 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
-from scanpy.testing._helpers.data import (
+from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
     pbmc3k_processed,
     pbmc68k_reduced,
 )
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable

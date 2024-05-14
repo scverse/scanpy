@@ -17,10 +17,10 @@ from scipy.stats import mannwhitneyu
 import scanpy as sc
 from scanpy._utils import elem_mul, select_groups
 from scanpy.get import rank_genes_groups_df
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable

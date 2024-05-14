@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING, TypedDict, Union, cast
 
 import pytest
 
-pytest_plugins = ["scanpy.testing._pytest"]
-
 # just import for the IMPORTED check
 import scanpy as _sc  # noqa: F401
 
@@ -16,7 +14,7 @@ if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     import os
     from collections.abc import Generator
 
-    from scanpy.testing._pytest.fixtures import *  # noqa: F403
+    from testing.scanpy._pytest.fixtures import *  # noqa: F403
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())

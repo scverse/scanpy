@@ -8,6 +8,8 @@ from anndata import AnnData  # noqa: TCH002
 from matplotlib.axes import Axes  # noqa: TCH002
 from sklearn.utils import deprecated
 
+from testing.scanpy._doctests import doctest_needs
+
 from .._compat import old_positionals
 from .._utils import _doc_params
 from ..plotting import _scrublet, _utils, embedding
@@ -18,7 +20,6 @@ from ..plotting._docs import (
     doc_show_save_ax,
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
-from ..testing._doctests import doctest_needs
 from .tl._wishbone import _anndata_to_wishbone
 
 if TYPE_CHECKING:

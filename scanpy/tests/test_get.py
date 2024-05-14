@@ -11,8 +11,8 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.datasets._utils import filter_oldformatwarning
-from scanpy.testing._helpers import anndata_v0_8_constructor_compat
-from scanpy.testing._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers import anndata_v0_8_constructor_compat
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 
 # Override so warning gets caught
