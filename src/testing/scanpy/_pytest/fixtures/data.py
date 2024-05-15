@@ -12,8 +12,6 @@ from anndata import __version__ as anndata_version
 from packaging.version import Version
 from scipy import sparse
 
-import scanpy as sc
-
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
@@ -107,6 +105,7 @@ def _prepare_pbmc_testdata(
     small
         False (default) returns full data, True returns small subset of the data.
     """
+    import scanpy as sc
 
     if small:
         adata = adata[:1000, :500].copy()
