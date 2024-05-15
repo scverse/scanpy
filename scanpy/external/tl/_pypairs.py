@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Union
 from packaging.version import Version
 
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     import pandas as pd

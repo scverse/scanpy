@@ -13,8 +13,8 @@ from .. import logging as logg
 from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
+from .._utils._doctests import doctest_skip
 from ..neighbors import FlatTree, RPForestDict
-from ..testing._doctests import doctest_skip
 
 if TYPE_CHECKING:
     from anndata import AnnData

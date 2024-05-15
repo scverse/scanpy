@@ -10,7 +10,7 @@ from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
