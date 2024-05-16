@@ -66,7 +66,7 @@ class needs(QuietMarkDecorator, Enum):
         super().__init__(dec.mark)
 
 
-xfail_if_dev_tests_pynn_npinfty = pytest.mark.xfail(
+xfail_if_pre_release_pynn_npinfty = pytest.mark.xfail(
     os.environ.get("DEPENDENCIES_VERSION", "latest") == "pre-release",
     reason="pynndescent still uses `np.infty`, removed in `numpy==2.0`",
 )
