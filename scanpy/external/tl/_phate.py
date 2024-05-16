@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -53,7 +53,7 @@ def phate(
     **kwargs,
 ) -> AnnData | None:
     """\
-    PHATE [Moon17]_.
+    PHATE :cite:p:`Moon2019`.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for

@@ -391,7 +391,7 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if "log1p" in adata.uns_keys():
+    if "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
     adata = adata.copy() if copy else adata
@@ -487,8 +487,8 @@ def normalize_per_cell(  # noqa: PLR0917
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
 
-    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-    [Zheng17]_ or SPRING [Weinreb17]_.
+    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
+    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
 
     Parameters
     ----------
@@ -609,7 +609,7 @@ def regress_out(
     Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
-    function in R [Satija15]. Note that this function tends to overcorrect
+    function in R :cite:p:`Satija2015`. Note that this function tends to overcorrect
     in certain circumstances as described in :issue:`526`.
 
     Parameters

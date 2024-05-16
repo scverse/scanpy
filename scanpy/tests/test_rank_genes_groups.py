@@ -11,16 +11,16 @@ import pytest
 import scipy
 from anndata import AnnData
 from numpy.random import binomial, negative_binomial, seed
-from packaging import version
+from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
 from scanpy._utils import elem_mul, select_groups
 from scanpy.get import rank_genes_groups_df
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -278,7 +278,7 @@ def test_wilcoxon_tie_correction(reference):
     Y = pbmc.raw.X[mask_rest].toarray()
 
     # Handle scipy versions
-    if version.parse(scipy.__version__) >= version.parse("1.7.0"):
+    if Version(scipy.__version__) >= Version("1.7.0"):
         pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
         pvals[np.isnan(pvals)] = 1.0
     else:

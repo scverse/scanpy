@@ -12,10 +12,10 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.testing._helpers import _check_check_values_warnings
-from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._helpers import _check_check_values_warnings
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")

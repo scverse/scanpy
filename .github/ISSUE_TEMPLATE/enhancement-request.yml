@@ -1,7 +1,9 @@
 name: Enhancement request
 description: Anything you’d like to see in scanpy?
 #title: ...
-labels: ['Enhancement ✨']
+labels:
+- Enhancement ✨
+- Triage 🩺
 #assignees: []
 body:
 - type: dropdown

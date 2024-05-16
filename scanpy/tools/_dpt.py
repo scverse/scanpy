@@ -50,12 +50,12 @@ def dpt(
 ) -> AnnData | None:
     """\
     Infer progression of cells through geodesic distance along the graph
-    [Haghverdi16]_ [Wolf19]_.
+    :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
-    data. `Diffusion Pseudotime` has been introduced by [Haghverdi16]_ and
-    implemented within Scanpy [Wolf18]_. Here, we use a further developed
-    version, which is able to deal with disconnected graphs [Wolf19]_ and can
+    data. `Diffusion Pseudotime` has been introduced by :cite:t:`Haghverdi2016` and
+    implemented within Scanpy :cite:p:`Wolf2018`. Here, we use a further developed
+    version, which is able to deal with disconnected graphs :cite:p:`Wolf2019` and can
     be run in a `hierarchical` mode by setting the parameter
     `n_branchings>1`. We recommend, however, to only use
     :func:`~scanpy.tl.dpt` for computing pseudotime (`n_branchings=0`) and
@@ -93,7 +93,7 @@ def dpt(
         number of data points.
     allow_kendall_tau_shift
         If a very small branch is detected upon splitting, shift away from
-        maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
+        maximum correlation in Kendall tau criterion of :cite:t:`Haghverdi2016` to
         stabilize the splitting.
     neighbors_key
         If not specified, dpt looks .uns['neighbors'] for neighbors settings
@@ -121,7 +121,7 @@ def dpt(
 
     Notes
     -----
-    The tool is similar to the R package `destiny` of [Angerer16]_.
+    The tool is similar to the R package `destiny` of :cite:t:`Angerer2015`.
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata

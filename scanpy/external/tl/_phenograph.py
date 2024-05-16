@@ -12,7 +12,7 @@ from anndata import AnnData
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._utils import renamed_arg
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     import numpy as np
@@ -69,7 +69,7 @@ def phenograph(
     **kargs: Any,
 ) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
     """\
-    PhenoGraph clustering [Levine15]_.
+    PhenoGraph clustering :cite:p:`Levine2015`.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
     data. It works by creating a graph ("network") representing phenotypic similarities

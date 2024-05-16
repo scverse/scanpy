@@ -34,7 +34,7 @@ import numpy as np
 from anndata import AnnData
 from anndata import __version__ as anndata_version
 from numpy.typing import NDArray
-from packaging import version
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import check_random_state
 
@@ -46,6 +46,8 @@ from .compute.is_constant import is_constant  # noqa: F401
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+
+    from numpy.typing import DTypeLike
 
 
 class Empty(Enum):
@@ -75,14 +77,21 @@ class RNGIgraph:
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
+def ensure_igraph() -> None:
+    if importlib.util.find_spec("igraph"):
+        return
+    raise ImportError(
+        "Please install the igraph package: "
+        "`conda install -c conda-forge python-igraph` or "
+        "`pip3 install igraph`."
+    )
+
+
 @contextmanager
 def set_igraph_random_state(random_state: int):
-    try:
-        import igraph
-    except ImportError:
-        raise ImportError(
-            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
-        )
+    ensure_igraph()
+    import igraph
+
     rng = RNGIgraph(random_state)
     try:
         igraph.set_random_number_generator(rng)
@@ -95,7 +104,7 @@ EPS = 1e-15
 
 
 def check_versions():
-    if version.parse(anndata_version) < version.parse("0.6.10"):
+    if Version(anndata_version) < Version("0.6.10"):
         from .. import __version__
 
         raise ImportError(
@@ -705,7 +714,7 @@ def axis_sum(
     X: sparse.spmatrix,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> np.matrix: ...
 
 
@@ -714,7 +723,7 @@ def axis_sum(
     X: np.ndarray,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> np.ndarray:
     return np.sum(X, axis=axis, dtype=dtype)
 
@@ -724,7 +733,7 @@ def _(
     X: DaskArray,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: np.typing.DTypeLike | None = None,
+    dtype: DTypeLike | None = None,
 ) -> DaskArray:
     import dask.array as da
 

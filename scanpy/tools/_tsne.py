@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -42,14 +42,15 @@ def tsne(
     metric: str = "euclidean",
 ) -> AnnData | None:
     """\
-    t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+    t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
-    t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
-    proposed for visualizating single-cell data by [Amir13]_. Here, by default,
-    we use the implementation of *scikit-learn* [Pedregosa11]_. You can achieve
-    a huge speedup and better convergence if you install `Multicore-tSNE
-    <https://github.com/DmitryUlyanov/Multicore-TSNE>`__ by [Ulyanov16]_, which
-    will be automatically detected by Scanpy.
+    t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) has been
+    proposed for visualizating single-cell data by :cite:t:`Amir2013`. Here, by default,
+    we use the implementation of *scikit-learn* :cite:p:`Pedregosa2011`. You can achieve
+    a huge speedup and better convergence if you install Multicore-tSNE_
+    by :cite:t:`Ulyanov2016`, which will be automatically detected by Scanpy.
+
+    .. _multicore-tsne: https://github.com/DmitryUlyanov/Multicore-TSNE
 
     Parameters
     ----------
@@ -114,9 +115,7 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    if metric != "euclidean" and (
-        version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
-    ):
+    if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
 
     # Backwards compat handling: Remove in scanpy 1.9.0

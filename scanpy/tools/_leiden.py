@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -42,15 +41,15 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "ipgraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
     """\
-    Cluster cells into subgroups [Traag18]_.
+    Cluster cells into subgroups :cite:p:`Traag2019`.
 
-    Cluster cells using the Leiden algorithm [Traag18]_,
-    an improved version of the Louvain algorithm [Blondel08]_.
-    It has been proposed for single-cell analysis by [Levine15]_.
+    Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
+    an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
+    It has been proposed for single-cell analysis by :cite:t:`Levine2015`.
 
     This requires having ran :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
@@ -121,11 +120,7 @@ def leiden(
         raise ValueError(
             f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
         )
-    igraph_spec = importlib.util.find_spec("igraph")
-    if igraph_spec is None:
-        raise ImportError(
-            "Please install the igraph package: `conda install -c conda-forge igraph` or `pip3 install igraph`."
-        )
+    _utils.ensure_igraph()
     if flavor == "igraph":
         if directed:
             raise ValueError(

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from packaging import version
+from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
@@ -63,11 +63,11 @@ def louvain(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
+    Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
-    Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
-    of [Traag17]_. The Louvain algorithm has been proposed for single-cell
-    analysis by [Levine15]_.
+    Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
+    of :cite:t:`Traag2017`. The Louvain algorithm has been proposed for single-cell
+    analysis by :cite:t:`Levine2015`.
 
     This requires having ran :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first,
@@ -81,7 +81,7 @@ def louvain(
         For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
-        See “Time as a resolution parameter” in [Lambiotte09]_.
+        See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
     random_state
         Change the initialization of the optimization.
     restrict_to
@@ -175,7 +175,7 @@ def louvain(
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if version.parse(louvain.__version__) < version.parse("0.7.0"):
+            if Version(louvain.__version__) < Version("0.7.0"):
                 louvain.set_rng_seed(random_state)
             else:
                 partition_kwargs["seed"] = random_state

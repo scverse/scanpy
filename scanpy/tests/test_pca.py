@@ -13,13 +13,13 @@ from anndata.tests.helpers import (
 )
 from packaging.version import Version
 from scipy import sparse
-from sklearn.utils import issparse
+from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
-from scanpy.testing._helpers.data import pbmc3k_normalized
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import (
+from testing.scanpy._helpers import as_dense_dask_array, as_sparse_dask_array
+from testing.scanpy._helpers.data import pbmc3k_normalized
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
     param_with,
@@ -231,12 +231,14 @@ def test_pca_sparse():
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
 
-    assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
-    assert np.allclose(
+    np.testing.assert_allclose(
+        implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"]
+    )
+    np.testing.assert_allclose(
         implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
     )
-    assert np.allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
-    assert np.allclose(implicit.varm["PCs"], explicit.varm["PCs"])
+    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
+    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm["PCs"])
 
 
 def test_pca_reproducible(array_type):
