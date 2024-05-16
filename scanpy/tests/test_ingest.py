@@ -4,12 +4,12 @@ import anndata
 import numpy as np
 import pytest
 from sklearn.neighbors import KDTree
-from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import xfail_if_dev_tests_pynn_npinfty
 
 X = np.array(
     [
@@ -136,7 +136,10 @@ def test_ingest_function(adatas):
     assert "X_pca" in ad.obsm
 
 
+@xfail_if_dev_tests_pynn_npinfty
 def test_ingest_map_embedding_umap():
+    from umap import UMAP
+
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
