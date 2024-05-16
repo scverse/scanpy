@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import collections.abc as cabc
 from collections import OrderedDict
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Sequence
 from itertools import product
 from typing import TYPE_CHECKING, Literal, Union
 
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, ListedColormap, Normalize, is_color_like
+from matplotlib.colors import is_color_like
 from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
@@ -31,9 +31,6 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
-    ColorLike,
-    _FontSize,
-    _FontWeight,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -41,11 +38,16 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping
+
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap, ListedColormap, Normalize
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
+
+    from ._utils import ColorLike, _FontSize, _FontWeight
 
 VALID_LEGENDLOCS = {
     "none",

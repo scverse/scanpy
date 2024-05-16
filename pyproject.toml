@@ -252,3 +252,6 @@ required-imports = ["from __future__ import annotations"]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = []
+strict = true

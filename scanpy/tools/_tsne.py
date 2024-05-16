@@ -8,12 +8,14 @@ from packaging.version import Version
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import AnyRandom, _doc_params
+from .._utils import _doc_params
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 @old_positionals(

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping
 from copy import copy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -36,6 +36,9 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+    from typing import Literal
+
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -12,6 +12,7 @@ from ._common import TransformerChecksMixin
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any
 
     from numpy.typing import ArrayLike
     from scipy.sparse import csr_matrix

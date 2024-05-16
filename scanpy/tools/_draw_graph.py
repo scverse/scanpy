@@ -8,12 +8,14 @@ import numpy as np
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import AnyRandom, _choose_graph
+from .._utils import _choose_graph
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
+
+    from .._utils import AnyRandom
 
 _LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
 _Layout = Literal[_LAYOUTS]

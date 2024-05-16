@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, MutableMapping
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -14,10 +14,14 @@ from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView
 from .._utils._doctests import doctest_skip
-from ..neighbors import FlatTree, RPForestDict
+from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from anndata import AnnData
+
+    from ..neighbors import RPForestDict
 
 ANNDATA_MIN_VERSION = Version("0.7rc1")
 

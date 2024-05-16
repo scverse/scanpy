@@ -9,11 +9,13 @@ from sklearn.utils import check_array, check_random_state
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import AnyRandom, NeighborsView
+from .._utils import NeighborsView
 from ._utils import _choose_representation, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 _InitPos = Literal["paga", "spectral", "random"]
 

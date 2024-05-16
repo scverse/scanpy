@@ -8,7 +8,7 @@ from copy import copy
 from functools import partial
 from itertools import combinations, product
 from numbers import Integral
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,14 +17,14 @@ from cycler import Cycler  # noqa: TCH002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes  # noqa: TCH002
-from matplotlib.colors import Colormap, Normalize
+from matplotlib.colors import Normalize
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
 from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
-from ..._utils import Empty, _doc_params, _empty, sanitize_anndata
+from ..._utils import _doc_params, _empty, sanitize_anndata
 from ...get import _check_mask
 from .. import _utils
 from .._docs import (
@@ -34,19 +34,22 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import (
-    ColorLike,
-    VBound,
-    _FontSize,
-    _FontWeight,
-    _IGraphLayout,
-    check_colornorm,
-    check_projection,
-    circles,
-)
+from .._utils import check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Any, Literal
+
+    from matplotlib.colors import Colormap
+
+    from ..._utils import Empty
+    from .._utils import (
+        ColorLike,
+        VBound,
+        _FontSize,
+        _FontWeight,
+        _IGraphLayout,
+    )
 
 
 @_doc_params(

@@ -4,14 +4,14 @@ import collections.abc as cabc
 import warnings
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy
 from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, is_color_like
+from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
@@ -21,13 +21,17 @@ from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
 from .. import _utils
-from .._utils import _FontSize, _FontWeight, _IGraphLayout, matrix
+from .._utils import matrix
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import Any, Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap
+
+    from .._utils import _FontSize, _FontWeight, _IGraphLayout
 
 
 @old_positionals(

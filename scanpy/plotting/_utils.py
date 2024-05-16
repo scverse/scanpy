@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections.abc as cabc
 import warnings
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Callable, Literal
 from typing import Union as _U
 
@@ -13,8 +13,7 @@ from matplotlib import axes, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
-from matplotlib.colors import Colormap, is_color_like
-from matplotlib.figure import Figure
+from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from matplotlib.patches import Circle
 
@@ -25,7 +24,11 @@ from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from anndata import AnnData
+    from matplotlib.colors import Colormap
+    from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
     from PIL.Image import Image

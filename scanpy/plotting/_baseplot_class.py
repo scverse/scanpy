@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import collections.abc as cabc
 from collections import namedtuple
-from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Literal, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 from warnings import warn
 
 import numpy as np
@@ -15,12 +15,17 @@ from matplotlib import pyplot as plt
 from .. import logging as logg
 from .._compat import old_positionals
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
-from ._utils import ColorLike, _AxesSubplot, check_colornorm, make_grid_spec
+from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+    from typing import Literal, Self
+
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
+
+    from ._utils import ColorLike, _AxesSubplot
 
 _VarNames = Union[str, Sequence[str]]
 
@@ -193,7 +198,7 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    def swap_axes(self, swap_axes: bool | None = True) -> BasePlot:
+    def swap_axes(self, swap_axes: bool | None = True) -> Self:
         """
         Plots a transposed image.
 
@@ -225,7 +230,7 @@ class BasePlot:
         show: bool | None = True,
         dendrogram_key: str | None = None,
         size: float | None = 0.8,
-    ) -> BasePlot:
+    ) -> Self:
         r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
         categories. Categories are reordered to match the dendrogram order.
@@ -308,10 +313,10 @@ class BasePlot:
     def add_totals(
         self,
         show: bool | None = True,
-        sort: Literal["ascending", "descending"] = None,
+        sort: Literal["ascending", "descending"] | None = None,
         size: float | None = 0.8,
         color: ColorLike | Sequence[ColorLike] | None = None,
-    ) -> BasePlot:
+    ) -> Self:
         r"""\
         Show barplot for the number of cells in in `groupby` category.
 
@@ -386,7 +391,7 @@ class BasePlot:
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> BasePlot:
+    def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> Self:
         """\
         Set visual style parameters
 
@@ -410,7 +415,7 @@ class BasePlot:
         show: bool | None = True,
         title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
-    ) -> BasePlot:
+    ) -> Self:
         r"""\
         Configure legend parameters
 

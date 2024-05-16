@@ -7,7 +7,7 @@ from enum import IntEnum
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
+from typing import TYPE_CHECKING, Literal, Union
 
 from . import logging
 from ._compat import old_positionals
@@ -15,6 +15,7 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from typing import Any, TextIO
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 from typing import Callable as _C
 from typing import Union as _U
 
 import numpy as np
 
 if TYPE_CHECKING:
-    from typing import Self
+    from typing import Any, Self
 
     from scipy.sparse import spmatrix
 

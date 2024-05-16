@@ -3,7 +3,7 @@ from __future__ import annotations
 import pickle
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
     from numpy.typing import NDArray
 

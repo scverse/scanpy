@@ -8,7 +8,7 @@ import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
-from scipy.sparse import issparse, spmatrix
+from scipy.sparse import issparse
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
@@ -16,13 +16,16 @@ from sklearn.utils.extmath import svd_flip
 from .. import logging as logg
 from .._compat import DaskArray, pkg_version
 from .._settings import settings
-from .._utils import AnyRandom, Empty, _doc_params, _empty
+from .._utils import _doc_params, _empty
 from ..get import _check_mask, _get_obs_rep
 from ._docs import doc_mask_var_hvg
 from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
+    from scipy.sparse import spmatrix
+
+    from .._utils import AnyRandom, Empty
 
 
 @_doc_params(

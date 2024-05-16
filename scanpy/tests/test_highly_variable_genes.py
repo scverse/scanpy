@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from string import ascii_letters
-from typing import Callable, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,9 @@ from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
+
+if TYPE_CHECKING:
+    from typing import Callable, Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")

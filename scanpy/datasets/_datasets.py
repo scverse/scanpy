@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
@@ -16,6 +16,8 @@ from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from .._utils import AnyRandom
 
 HERE = Path(__file__).parent
