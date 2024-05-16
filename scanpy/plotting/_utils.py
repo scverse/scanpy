@@ -3,8 +3,7 @@ from __future__ import annotations
 import collections.abc as cabc
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Literal
-from typing import Union as _U
+from typing import TYPE_CHECKING, Callable, Literal, Union
 
 import matplotlib as mpl
 import numpy as np
@@ -33,13 +32,17 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from PIL.Image import Image
 
-ColorLike = _U[str, tuple[float, ...]]
-_IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree", ...]
+    # TODO: more
+    DensityNorm = Literal["area", "count", "width"]
+
+# These are needed by _wraps_plot_scatter
+_IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree"]
+VBound = Union[str, float, Callable[[Sequence[float]], float]]
 _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
 ]
-VBound = _U[str, float, Callable[[Sequence[float]], float]]
+ColorLike = Union[str, tuple[float, ...]]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -1273,10 +1276,9 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     return norm
 
 
-DN = Literal["area", "count", "width"]
-
-
-def _deprecated_scale(density_norm: DN, scale: DN | None, *, default: DN) -> DN:
+def _deprecated_scale(
+    density_norm: DensityNorm, scale: DensityNorm | None, *, default: DensityNorm
+) -> DensityNorm:
     if scale is None:
         return density_norm
     if density_norm != default:

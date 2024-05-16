@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import collections.abc as cabc
 from collections import OrderedDict
-from collections.abc import Sequence
 from itertools import product
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 import numpy as np
@@ -38,7 +37,8 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Mapping
+    from collections.abc import Collection, Iterable, Mapping, Sequence
+    from typing import Literal, Union
 
     from anndata import AnnData
     from cycler import Cycler
@@ -48,6 +48,11 @@ if TYPE_CHECKING:
     from seaborn.matrix import ClusterGrid
 
     from ._utils import ColorLike, _FontSize, _FontWeight
+
+    # TODO: is that all?
+    _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
+    _VarNames = Union[str, Sequence[str]]
+
 
 VALID_LEGENDLOCS = {
     "none",
@@ -66,10 +71,6 @@ VALID_LEGENDLOCS = {
     "upper center",
     "center",
 }
-
-# TODO: is that all?
-_Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-_VarNames = Union[str, Sequence[str]]
 
 
 @old_positionals(

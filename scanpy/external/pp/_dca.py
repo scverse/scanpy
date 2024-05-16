@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from ..._compat import old_positionals
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from typing import Any
+    from typing import Any, Literal
 
     from anndata import AnnData
 
     from ..._utils import AnyRandom
 
-_AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
+    _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
 @old_positionals(

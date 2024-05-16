@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from collections import namedtuple
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
 import numpy as np
@@ -18,8 +16,8 @@ from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
-    from typing import Literal, Self
+    from collections.abc import Iterable, Mapping, Sequence
+    from typing import Literal, Self, Union
 
     from anndata import AnnData
     from matplotlib.axes import Axes
@@ -27,7 +25,15 @@ if TYPE_CHECKING:
 
     from ._utils import ColorLike, _AxesSubplot
 
-_VarNames = Union[str, Sequence[str]]
+    _VarNames = Union[str, Sequence[str]]
+
+
+class VBoundNorm(NamedTuple):
+    vmin: float | None
+    vmax: float | None
+    vcenter: float | None
+    norm: Normalize | None
+
 
 doc_common_groupby_plot_args = """\
 title
@@ -168,7 +174,6 @@ class BasePlot:
         self.log = log
         self.kwds = kwds
 
-        VBoundNorm = namedtuple("VBoundNorm", ["vmin", "vmax", "vcenter", "norm"])
         self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
 
         # set default values for legend

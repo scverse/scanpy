@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
     from .._utils import AnyRandom
 
-_LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
-_Layout = Literal[_LAYOUTS]
+_Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
+_LAYOUTS = get_args(_Layout)
 
 
 @old_positionals(

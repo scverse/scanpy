@@ -1,46 +1,43 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Protocol
-from typing import Callable as _C
-from typing import Union as _U
-
-import numpy as np
 
 if TYPE_CHECKING:
-    from typing import Any, Self
+    from collections.abc import Callable
+    from typing import Any, Self, Union
 
+    import numpy as np
     from scipy.sparse import spmatrix
 
+    _MetricFn = Callable[[np.ndarray, np.ndarray], float]
+    # from sklearn.metrics.pairwise_distances.__doc__:
+    _MetricSparseCapable = Literal[
+        "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan"
+    ]
+    _MetricScipySpatial = Literal[
+        "braycurtis",
+        "canberra",
+        "chebyshev",
+        "correlation",
+        "dice",
+        "hamming",
+        "jaccard",
+        "kulsinski",
+        "mahalanobis",
+        "minkowski",
+        "rogerstanimoto",
+        "russellrao",
+        "seuclidean",
+        "sokalmichener",
+        "sokalsneath",
+        "sqeuclidean",
+        "yule",
+    ]
+    _Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
 
+# These two are used with get_Args elsewhere
 _Method = Literal["umap", "gauss"]
-
 _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
-
-_MetricFn = _C[[np.ndarray, np.ndarray], float]
-# from sklearn.metrics.pairwise_distances.__doc__:
-_MetricSparseCapable = Literal[
-    "cityblock", "cosine", "euclidean", "l1", "l2", "manhattan"
-]
-_MetricScipySpatial = Literal[
-    "braycurtis",
-    "canberra",
-    "chebyshev",
-    "correlation",
-    "dice",
-    "hamming",
-    "jaccard",
-    "kulsinski",
-    "mahalanobis",
-    "minkowski",
-    "rogerstanimoto",
-    "russellrao",
-    "seuclidean",
-    "sokalmichener",
-    "sokalsneath",
-    "sqeuclidean",
-    "yule",
-]
-_Metric = _U[_MetricSparseCapable, _MetricScipySpatial]
 
 
 class KnnTransformerLike(Protocol):

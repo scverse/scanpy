@@ -4,8 +4,7 @@ Calculate scores based on relative expression change of maker pairs
 
 from __future__ import annotations
 
-from collections.abc import Collection
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from packaging.version import Version
 
@@ -13,12 +12,13 @@ from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Collection, Mapping
+    from typing import Union
 
     import pandas as pd
     from anndata import AnnData
 
-Genes = Collection[Union[str, int, bool]]
+    Genes = Collection[Union[str, int, bool]]
 
 
 @doctest_needs("pypairs")
