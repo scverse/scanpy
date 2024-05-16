@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
@@ -13,12 +13,14 @@ from .get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Literal, Union
+    from typing import Union
 
     from numpy.typing import NDArray
 
     Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
-    AggType = Literal["count_nonzero", "mean", "sum", "var"]
+
+# Used with get_args
+AggType = Literal["count_nonzero", "mean", "sum", "var"]
 
 
 class Aggregate:
