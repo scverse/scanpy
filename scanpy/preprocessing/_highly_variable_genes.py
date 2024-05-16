@@ -259,15 +259,15 @@ def _highly_variable_genes_single_batch(
 
     if flavor == "seurat":
         X = X.copy()
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            X *= np.log(adata.uns["log1p"]["base"])
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            X *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
         if isinstance(X, np.ndarray):
             np.expm1(X, out=X)
         else:
             X = np.expm1(X)
 
-    mean, var = _get_mean_var(X)
+    mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -277,9 +277,7 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(
-        dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
-    )
+    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
@@ -501,24 +499,24 @@ def highly_variable_genes(
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
+    Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    :cite:p:`Satija2015`, Cell Ranger :cite:p:`Zheng2017`, and Seurat v3 :cite:p:`Stuart2019`.
 
     `'seurat_v3'`/`'seurat_v3_paper'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
-    For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
-    `flavor='cell_ranger'` [Zheng17]_), the normalized dispersion is obtained
+    For the dispersion-based methods (`flavor='seurat'` :cite:t:`Satija2015` and
+    `flavor='cell_ranger'` :cite:t:`Zheng2017`), the normalized dispersion is obtained
     by scaling with the mean and standard deviation of the dispersions for genes
     falling into a given bin for mean expression of genes. This means that for each
     bin of mean expression, highly variable genes are selected.
 
-    For `flavor='seurat_v3'`/`'seurat_v3_paper'` [Stuart19]_, a normalized variance for each gene
+    For `flavor='seurat_v3'`/`'seurat_v3_paper'` :cite:p:`Stuart2019`, a normalized variance for each gene
     is computed. First, the data are standardized (i.e., z-score normalization
     per feature) with a regularized standard deviation. Next, the normalized variance
     is computed as the variance of each gene after the transformation. Genes are ranked

@@ -48,12 +48,12 @@ def spring_project(
     overwrite: bool = False,
 ) -> None:
     """\
-    Exports to a SPRING project directory [Weinreb17]_.
+    Exports to a SPRING project directory :cite:p:`Weinreb2017`.
 
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
 
-    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or [Weinreb17]_ for details.
+    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or :cite:t:`Weinreb2017` for details.
 
     Parameters
     ----------
@@ -102,7 +102,7 @@ def spring_project(
                 )
             else:
                 raise ValueError(
-                    "Run the specified embedding method `%s` first." % embedding_method
+                    f"Run the specified embedding method `{embedding_method}` first."
                 )
 
     coords = adata.obsm[embedding_method]
@@ -332,13 +332,13 @@ def _write_graph(filename, n_nodes, edges):
 def _write_edges(filename, edges):
     with Path(filename).open("w") as f:
         for e in edges:
-            f.write("%i;%i\n" % (e[0], e[1]))
+            f.write(f"{e[0]};{e[1]}\n")
 
 
 def _write_color_tracks(ctracks, fname):
     out = []
     for name, score in ctracks.items():
-        line = name + "," + ",".join(["%.3f" % x for x in score])
+        line = f"{name}," + ",".join(f"{x:.3f}" for x in score)
         out += [line]
     out = sorted(out, key=lambda x: x.split(",")[0])
     Path(fname).write_text("\n".join(out))

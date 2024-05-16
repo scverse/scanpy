@@ -69,13 +69,13 @@ def neighbors(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
+    Computes the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
-    The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
+    The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
     the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to [Coifman05]_, in the adaption of
-    [Haghverdi16]_.
+    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
+    :cite:t:`Haghverdi2016`.
 
     Parameters
     ----------
@@ -99,12 +99,12 @@ def neighbors(
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
-        with adaptive width [Haghverdi16]_) for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018` or 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
+        with adaptive width :cite:t:`Haghverdi2016`) for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
-        See :doc:`tutorials:knn-transformers` for more details.
+        See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
         `None` (the default)
@@ -166,7 +166,7 @@ def neighbors(
 
     See also
     --------
-    :doc:`tutorials:knn-transformers`
+    :doc:`/how-to/knn-transformers`
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
@@ -487,8 +487,8 @@ class Neighbors:
     def distances_dpt(self) -> OnFlySymMatrix:
         """DPT distances.
 
-        This is yields [Haghverdi16]_, Eq. 15 from the supplement with the
-        extensions of [Wolf19]_, supplement on random-walk based distance
+        This is yields :cite:p:`Haghverdi2016`, Eq. 15 from the supplement with the
+        extensions of :cite:p:`Wolf2019`, supplement on random-walk based distance
         measures.
         """
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)

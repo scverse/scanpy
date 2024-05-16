@@ -4,7 +4,7 @@ trigger:
 
 variables:
   python.version: '3.12'
-  PYTEST_ADDOPTS: '-v --color=yes --durations=0 --nunit-xml=test-data/test-results.xml'
+  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=test-data/test-results.xml'
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
   TEST_TYPE: "standard" # | "coverage"
@@ -84,7 +84,7 @@ jobs:
     displayName: 'PyTest (coverage)'
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
-  - task: PublishCodeCoverageResults@1
+  - task: PublishCodeCoverageResults@2
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: 'test-data/coverage.xml'

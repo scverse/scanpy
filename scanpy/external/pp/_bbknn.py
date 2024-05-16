@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -33,7 +33,7 @@ def bbknn(
     **kwargs,
 ) -> AnnData | None:
     """\
-    Batch balanced kNN [Polanski19]_.
+    Batch balanced kNN :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell's top neighbours in
     each batch separately instead of the entire cell pool with no accounting for batch.

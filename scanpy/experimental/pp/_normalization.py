@@ -92,7 +92,7 @@ def normalize_pearson_residuals(
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
     """\
-    Applies analytic Pearson residual normalization, based on [Lause21]_.
+    Applies analytic Pearson residual normalization, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`
@@ -136,7 +136,7 @@ def normalize_pearson_residuals(
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, check_values, copy=~inplace)
+    residuals = _pearson_residuals(X, theta, clip, check_values, copy=not inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
@@ -175,7 +175,7 @@ def normalize_pearson_residuals_pca(
     inplace: bool = True,
 ) -> AnnData | None:
     """\
-    Applies analytic Pearson residual normalization and PCA, based on [Lause21]_.
+    Applies analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`,

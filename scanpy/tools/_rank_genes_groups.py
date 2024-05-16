@@ -14,7 +14,7 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import check_nonnegative_integers
 from ..get import _check_mask
-from ..preprocessing._simple import _get_mean_var
+from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -103,8 +103,8 @@ class _RankGenes:
         comp_pts: bool = False,
     ) -> None:
         self.mask_var = mask_var
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
 
@@ -526,7 +526,7 @@ def rank_genes_groups(
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
-        `'logreg'` uses logistic regression. See [Ntranos18]_,
+        `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
@@ -839,8 +839,8 @@ def filter_rank_genes_groups(
             index=gene_names.index,
         )
 
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             expm1_func = np.expm1
 

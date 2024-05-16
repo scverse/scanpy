@@ -5,8 +5,8 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 
 def test_tsne():

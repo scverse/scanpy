@@ -60,7 +60,7 @@ def umap(
     method_kwds: _MethodKwds | None = None,
 ) -> AnnData | None:
     """\
-    Embed the neighborhood graph using UMAP [McInnes18]_.
+    Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
@@ -68,10 +68,11 @@ def umap(
     the topology of the data, which we represent throughout Scanpy using a
     neighborhood graph. tSNE, by contrast, optimizes the distribution of
     nearest-neighbor distances in the embedding such that these best match the
-    distribution of distances in the high-dimensional space.  We use the
-    implementation of `umap-learn <https://github.com/lmcinnes/umap>`__
-    [McInnes18]_. For a few comparisons of UMAP with tSNE, see this `preprint
-    <https://doi.org/10.1101/298430>`__.
+    distribution of distances in the high-dimensional space.
+    We use the implementation of umap-learn_ :cite:p:`McInnes2018`.
+    For a few comparisons of UMAP with tSNE, see :cite:t:`Becht2018`.
+
+    .. _umap-learn: https://github.com/lmcinnes/umap
 
     Parameters
     ----------

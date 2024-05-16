@@ -9,7 +9,7 @@ from anndata import AnnData
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
-from scanpy.testing._helpers.data import paul15
+from testing.scanpy._helpers.data import paul15
 
 HERE = Path(__file__).parent / Path("_data/")
 
