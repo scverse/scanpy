@@ -112,7 +112,7 @@ def score_genes(
     use_raw = _check_use_raw(adata, use_raw)
     if is_backed_type(adata.X) and not use_raw:
         raise NotImplementedError(
-            f"rank_genes_groups is not implemented for matrices of type {type(adata.X)}"
+            f"score_genes is not implemented for matrices of type {type(adata.X)}"
         )
 
     if random_state is not None:

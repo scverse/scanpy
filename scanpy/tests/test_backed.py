@@ -51,7 +51,7 @@ import scanpy as sc
             id="rank_genes_groups",
         ),
         pytest.param(
-            "rank_genes_groups",
+            "score_genes",
             partial(sc.tl.score_genes, gene_list=map(str, range(100))),
             "",
             id="score_genes",
