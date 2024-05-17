@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -12,26 +12,27 @@ from ._common import TransformerChecksMixin
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any, Literal
 
     from numpy.typing import ArrayLike
     from scipy.sparse import csr_matrix
 
-_Algorithm = Literal["rbc", "brute", "ivfflat", "ivfpq"]
-_Metric = Literal[
-    "l1",
-    "cityblock",
-    "taxicab",
-    "manhattan",
-    "euclidean",
-    "l2",
-    "braycurtis",
-    "canberra",
-    "minkowski",
-    "chebyshev",
-    "jensenshannon",
-    "cosine",
-    "correlation",
-]
+    _Algorithm = Literal["rbc", "brute", "ivfflat", "ivfpq"]
+    _Metric = Literal[
+        "l1",
+        "cityblock",
+        "taxicab",
+        "manhattan",
+        "euclidean",
+        "l2",
+        "braycurtis",
+        "canberra",
+        "minkowski",
+        "chebyshev",
+        "jensenshannon",
+        "cosine",
+        "correlation",
+    ]
 
 
 class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimator):

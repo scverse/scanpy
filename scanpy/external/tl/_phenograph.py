@@ -4,7 +4,7 @@ Perform clustering using PhenoGraph
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from anndata import AnnData
@@ -15,6 +15,8 @@ from ..._utils import renamed_arg
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Any, Literal
+
     import numpy as np
     from scipy.sparse import spmatrix
 

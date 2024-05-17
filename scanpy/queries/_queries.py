@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc as cabc
 from functools import singledispatch
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from anndata import AnnData
 
@@ -13,6 +13,7 @@ from ..get import rank_genes_groups_df
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
+    from typing import Any
 
     import pandas as pd
 

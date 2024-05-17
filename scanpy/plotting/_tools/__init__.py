@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping
 from copy import copy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -36,6 +36,9 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+    from typing import Literal
+
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
@@ -407,8 +410,8 @@ def rank_genes_groups(
     gs = gridspec.GridSpec(nrows=n_panels_y, ncols=n_panels_x, wspace=0.22, hspace=0.3)
 
     ax0 = None
-    ymin = np.Inf
-    ymax = -np.Inf
+    ymin = np.inf
+    ymax = -np.inf
     for count, group_name in enumerate(group_names):
         gene_names = adata.uns[key]["names"][group_name][:n_genes]
         scores = adata.uns[key]["scores"][group_name][:n_genes]

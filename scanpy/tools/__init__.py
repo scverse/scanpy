@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
@@ -25,6 +25,9 @@ from ._score_genes import score_genes, score_genes_cell_cycle
 from ._sim import sim
 from ._tsne import tsne
 from ._umap import umap
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def __getattr__(name: str) -> Any:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -22,6 +22,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
@@ -143,8 +144,8 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
     "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-@pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
-@pytest.mark.parametrize("clip", [None, 1, np.Inf])
+@pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])
+@pytest.mark.parametrize("clip", [None, 1, np.inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])
