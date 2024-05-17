@@ -5,7 +5,7 @@ Calculate overlaps of rank_genes_groups marker genes with marker gene dictionari
 from __future__ import annotations
 
 import collections.abc as cabc
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,11 @@ from .. import logging as logg
 from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
+
+    _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
@@ -71,9 +75,6 @@ def _calc_jaccard(markers1: dict, markers2: dict):
         jacc_results[j, :] = tmp
 
     return jacc_results
-
-
-_Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
 @doctest_needs("leidenalg")

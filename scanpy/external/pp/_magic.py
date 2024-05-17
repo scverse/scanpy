@@ -4,7 +4,7 @@ Denoise high-dimensional data using MAGIC
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from packaging.version import Version
 
@@ -14,6 +14,7 @@ from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
 
