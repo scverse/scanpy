@@ -17,7 +17,10 @@ if TYPE_CHECKING:
 
 # Defining it here because it’s autouse.
 @pytest.fixture(autouse=True)
-def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+def _global_test_context(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
     import seaborn as sns  # noqa: F401
@@ -30,6 +33,7 @@ def _global_test_context(request: pytest.FixtureRequest) -> Generator[None, None
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
+    sc.settings.datasetdir = tmp_path_factory.mktemp("scanpy_data")
 
     if isinstance(request.node, pytest.DoctestItem):
         _modify_doctests(request)

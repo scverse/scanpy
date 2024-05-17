@@ -17,24 +17,13 @@ from anndata.tests.helpers import assert_adata_equal
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
 
     from anndata import AnnData
 
 
-@pytest.fixture(scope="module")
-def _tmp_dataset_dir(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> Generator[None, None, None]:
-    new_dir = tmp_path_factory.mktemp("scanpy_data")
-    old_dir = sc.settings.datasetdir
-    sc.settings.datasetdir = new_dir  # Set up
-    yield
-    sc.settings.datasetdir = old_dir  # Tear down
-
-
 @pytest.mark.internet
-def test_burczynski06(_tmp_dataset_dir):
+def test_burczynski06():
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         adata = sc.datasets.burczynski06()
     assert adata.shape == (127, 22283)
@@ -42,7 +31,7 @@ def test_burczynski06(_tmp_dataset_dir):
 
 
 @pytest.mark.internet
-def test_moignard15(_tmp_dataset_dir):
+def test_moignard15():
     with warnings.catch_warnings():
         # https://foss.heptapod.net/openpyxl/openpyxl/-/issues/2051
         warnings.filterwarnings(
@@ -56,19 +45,19 @@ def test_moignard15(_tmp_dataset_dir):
 
 
 @pytest.mark.internet
-def test_paul15(_tmp_dataset_dir):
+def test_paul15():
     sc.datasets.paul15()
 
 
 @pytest.mark.internet
-def test_pbmc3k(_tmp_dataset_dir):
+def test_pbmc3k():
     adata = sc.datasets.pbmc3k()
     assert adata.shape == (2700, 32738)
     assert "CD8A" in adata.var_names
 
 
 @pytest.mark.internet
-def test_pbmc3k_processed(_tmp_dataset_dir):
+def test_pbmc3k_processed():
     with warnings.catch_warnings(record=True) as records:
         adata = sc.datasets.pbmc3k_processed()
     assert adata.shape == (2638, 1838)
@@ -78,14 +67,14 @@ def test_pbmc3k_processed(_tmp_dataset_dir):
 
 
 @pytest.mark.internet
-def test_ebi_expression_atlas(_tmp_dataset_dir):
+def test_ebi_expression_atlas():
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     # The shape changes sometimes
     assert 2261 <= adata.shape[0] <= 2315
     assert 23899 <= adata.shape[1] <= 24051
 
 
-def test_krumsiek11(_tmp_dataset_dir):
+def test_krumsiek11():
     with pytest.warns(UserWarning, match=r"Observation names are not unique"):
         adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
@@ -111,7 +100,7 @@ def test_pbmc68k_reduced():
 
 
 @pytest.mark.internet
-def test_visium_datasets(_tmp_dataset_dir, tmp_path: Path):
+def test_visium_datasets(tmp_path: Path):
     # Tests that reading/ downloading works and is does not have global effects
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         hheart = sc.datasets.visium_sge("V1_Human_Heart")
