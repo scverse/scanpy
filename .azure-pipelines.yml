@@ -101,7 +101,8 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/data'
-      artifactName: drop
+      artifactName: data
+    condition: eq(variables['TEST_TYPE'], 'coverage')
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
