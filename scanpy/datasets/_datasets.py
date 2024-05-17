@@ -20,6 +20,37 @@ if TYPE_CHECKING:
 
     from .._utils import AnyRandom
 
+    VisiumSampleID = Literal[
+        "V1_Breast_Cancer_Block_A_Section_1",
+        "V1_Breast_Cancer_Block_A_Section_2",
+        "V1_Human_Heart",
+        "V1_Human_Lymph_Node",
+        "V1_Mouse_Kidney",
+        "V1_Adult_Mouse_Brain",
+        "V1_Mouse_Brain_Sagittal_Posterior",
+        "V1_Mouse_Brain_Sagittal_Posterior_Section_2",
+        "V1_Mouse_Brain_Sagittal_Anterior",
+        "V1_Mouse_Brain_Sagittal_Anterior_Section_2",
+        "V1_Human_Brain_Section_1",
+        "V1_Human_Brain_Section_2",
+        "V1_Adult_Mouse_Brain_Coronal_Section_1",
+        "V1_Adult_Mouse_Brain_Coronal_Section_2",
+        # spaceranger version 1.2.0
+        "Targeted_Visium_Human_Cerebellum_Neuroscience",
+        "Parent_Visium_Human_Cerebellum",
+        "Targeted_Visium_Human_SpinalCord_Neuroscience",
+        "Parent_Visium_Human_SpinalCord",
+        "Targeted_Visium_Human_Glioblastoma_Pan_Cancer",
+        "Parent_Visium_Human_Glioblastoma",
+        "Targeted_Visium_Human_BreastCancer_Immunology",
+        "Parent_Visium_Human_BreastCancer",
+        "Targeted_Visium_Human_OvarianCancer_Pan_Cancer",
+        "Targeted_Visium_Human_OvarianCancer_Immunology",
+        "Parent_Visium_Human_OvarianCancer",
+        "Targeted_Visium_Human_ColorectalCancer_GeneSignature",
+        "Parent_Visium_Human_ColorectalCancer",
+    ]
+
 HERE = Path(__file__).parent
 
 
@@ -391,38 +422,6 @@ def pbmc3k_processed() -> AnnData:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
-
-
-VisiumSampleID = Literal[
-    "V1_Breast_Cancer_Block_A_Section_1",
-    "V1_Breast_Cancer_Block_A_Section_2",
-    "V1_Human_Heart",
-    "V1_Human_Lymph_Node",
-    "V1_Mouse_Kidney",
-    "V1_Adult_Mouse_Brain",
-    "V1_Mouse_Brain_Sagittal_Posterior",
-    "V1_Mouse_Brain_Sagittal_Posterior_Section_2",
-    "V1_Mouse_Brain_Sagittal_Anterior",
-    "V1_Mouse_Brain_Sagittal_Anterior_Section_2",
-    "V1_Human_Brain_Section_1",
-    "V1_Human_Brain_Section_2",
-    "V1_Adult_Mouse_Brain_Coronal_Section_1",
-    "V1_Adult_Mouse_Brain_Coronal_Section_2",
-    # spaceranger version 1.2.0
-    "Targeted_Visium_Human_Cerebellum_Neuroscience",
-    "Parent_Visium_Human_Cerebellum",
-    "Targeted_Visium_Human_SpinalCord_Neuroscience",
-    "Parent_Visium_Human_SpinalCord",
-    "Targeted_Visium_Human_Glioblastoma_Pan_Cancer",
-    "Parent_Visium_Human_Glioblastoma",
-    "Targeted_Visium_Human_BreastCancer_Immunology",
-    "Parent_Visium_Human_BreastCancer",
-    "Targeted_Visium_Human_OvarianCancer_Pan_Cancer",
-    "Targeted_Visium_Human_OvarianCancer_Immunology",
-    "Parent_Visium_Human_OvarianCancer",
-    "Targeted_Visium_Human_ColorectalCancer_GeneSignature",
-    "Parent_Visium_Human_ColorectalCancer",
-]
 
 
 def _download_visium_dataset(
