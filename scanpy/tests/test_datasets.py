@@ -100,21 +100,29 @@ def test_pbmc68k_reduced():
 
 
 @pytest.mark.internet
-def test_visium_datasets(tmp_path: Path):
-    # Tests that reading/ downloading works and is does not have global effects
+def test_visium_datasets():
+    """Tests that reading/ downloading works and is does not have global effects."""
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         hheart = sc.datasets.visium_sge("V1_Human_Heart")
-    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
-        mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         hheart_again = sc.datasets.visium_sge("V1_Human_Heart")
     assert_adata_equal(hheart, hheart_again)
 
-    # Test that changing the dataset dir doesn't break reading
+
+@pytest.mark.internet
+def test_visium_datasets_dir_change(tmp_path: Path):
+    """Test that changing the dataset dir doesn't break reading."""
+    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
+        mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
     sc.settings.datasetdir = tmp_path
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain_again = sc.datasets.visium_sge("V1_Adult_Mouse_Brain")
     assert_adata_equal(mbrain, mbrain_again)
+
+
+@pytest.mark.internet
+def test_visium_datasets_images():
+    """Test that image download works and is does not have global effects."""
 
     # Test that downloading tissue image works
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
