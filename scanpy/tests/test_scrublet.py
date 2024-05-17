@@ -158,8 +158,12 @@ def test_scrublet_data():
     )
     import zarr
 
-    store_manual = zarr.ZipStore(Path(__file__).parent / "data/manual.zip", mode="w")
-    store_auto = zarr.ZipStore(Path(__file__).parent / "data/auto.zip", mode="w")
+    manual_path = Path(__file__).parent / "data/manual.zip"
+    manual_path.mkdir()
+    auto_path = Path(__file__).parent / "data/auto.zip"
+    auto_path.mkdir()
+    store_manual = zarr.ZipStore(manual_path, mode="w")
+    store_auto = zarr.ZipStore(auto_path, mode="w")
     z_manual = zarr.zeros(
         adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
     )
