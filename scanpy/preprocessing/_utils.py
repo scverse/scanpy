@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
+from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import DTypeLike, NDArray
 
     from .._compat import DaskArray
+    from .._utils import AnyRandom, _SupportedArray
 
 
 @singledispatch

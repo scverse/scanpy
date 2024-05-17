@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -22,6 +22,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])

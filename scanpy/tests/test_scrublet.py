@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 pytestmark = [needs.skimage]
 

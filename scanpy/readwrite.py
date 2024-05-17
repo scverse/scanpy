@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path, PurePath
-from typing import BinaryIO, Literal
+from typing import TYPE_CHECKING
 
 import anndata.utils
 import h5py
@@ -25,7 +25,12 @@ from matplotlib.image import imread
 from . import logging as logg
 from ._compat import old_positionals
 from ._settings import settings
-from ._utils import Empty, _empty
+from ._utils import _empty
+
+if TYPE_CHECKING:
+    from typing import BinaryIO, Literal
+
+    from ._utils import Empty
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
