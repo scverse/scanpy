@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy.testing as npt
 import pytest
-from anndata import AnnData, read_zarr
+from anndata import read_zarr
 
 from scanpy._compat import DaskArray, ZappyArray
 from scanpy.datasets._utils import filter_oldformatwarning
@@ -17,6 +18,9 @@ from scanpy.preprocessing import (
 )
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 HERE = Path(__file__).parent / Path("_data/")
 input_file = Path(HERE, "10x-10k-subset.zarr")

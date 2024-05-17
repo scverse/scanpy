@@ -6,7 +6,7 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr, spmatrix
+from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from .._utils import _doc_params
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 
 def _choose_mtx_rep(adata, use_raw: bool = False, layer: str | None = None):

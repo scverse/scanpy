@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import Any, Literal
 
     from anndata import AnnData
     from scipy.sparse import spmatrix

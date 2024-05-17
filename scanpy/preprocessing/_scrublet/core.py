@@ -10,12 +10,10 @@ from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
-from ..._utils import AnyRandom, get_random_state
+from ..._utils import get_random_state
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
-    _Metric,
-    _MetricFn,
 )
 from .._utils import sample_comb
 from .sparse_utils import subsample_counts
@@ -23,6 +21,9 @@ from .sparse_utils import subsample_counts
 if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
+
+    from ..._utils import AnyRandom
+    from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
 

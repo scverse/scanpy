@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import cache
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pooch
@@ -11,6 +11,8 @@ from anndata import concat
 import scanpy as sc
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
