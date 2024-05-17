@@ -144,8 +144,8 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
     "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-@pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
-@pytest.mark.parametrize("clip", [None, 1, np.Inf])
+@pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])
+@pytest.mark.parametrize("clip", [None, 1, np.inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])

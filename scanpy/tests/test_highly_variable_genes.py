@@ -175,9 +175,9 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
 
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize(
-    "clip", [None, np.Inf, 30], ids=["noclip", "infclip", "30clip"]
+    "clip", [None, np.inf, 30], ids=["noclip", "infclip", "30clip"]
 )
-@pytest.mark.parametrize("theta", [100, np.Inf], ids=["100theta", "inftheta"])
+@pytest.mark.parametrize("theta", [100, np.inf], ids=["100theta", "inftheta"])
 @pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_pearson_residuals_general(
     pbmc3k_parametrized_small, subset, clip, theta, n_top_genes

@@ -48,8 +48,9 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    # numpy needs a version due to #1320
-    "numpy>=1.23",
+    # TODO: remove <2 requirement once PyNNDescent releases this fix:
+    # https://github.com/lmcinnes/pynndescent/issues/241
+    "numpy>=1.23,<2",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
