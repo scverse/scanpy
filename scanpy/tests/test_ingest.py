@@ -161,8 +161,6 @@ def test_ingest_backed(adatas, tmp_path):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
 
-    tmp_path = tmp_path
-
     adata_new.write_h5ad(f"{tmp_path}/new.h5ad")
 
     adata_new = anndata.read_h5ad(f"{tmp_path}/new.h5ad", backed="r")

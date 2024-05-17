@@ -61,13 +61,19 @@ def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], Ann
 
 
 @pytest.fixture(
+    scope="session",
     params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
     ids=["sparse", "dense"],
 )
 # worker_id for xdist since we don't want to override open files
-def backed_adata(request, tmp_path, worker_id="serial"):
+def backed_adata(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+    worker_id: str = "serial",
+) -> AnnData:
+    tmp_path = tmp_path_factory.mktemp("backed_adata")
     rand_func = request.param
-    tmp_path = f"{tmp_path}/test_{rand_func.__name__}_{worker_id}.h5ad"
+    tmp_path = tmp_path / f"test_{rand_func.__name__}_{worker_id}.h5ad"
     X = rand_func(200, 10).astype(np.float32)
     cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
     adata = AnnData(X, obs={"cat": cat})
