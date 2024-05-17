@@ -197,7 +197,7 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
-@numba.njit(cache=True, parallel=False)
+@numba.njit(cache=True)
 def _clip_sparse(
     indices: NDArray[np.integer],
     data: NDArray[np.floating],
@@ -211,8 +211,8 @@ def _clip_sparse(
     for i in range(nnz):
         idx = indices[i]
         element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[i] += element**2
-        batch_counts_sum[i] += element
+        squared_batch_counts_sum[idx] += element**2
+        batch_counts_sum[idx] += element
 
     return squared_batch_counts_sum, batch_counts_sum
 
