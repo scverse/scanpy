@@ -4,6 +4,7 @@ import anndata
 import numpy as np
 import pytest
 from sklearn.neighbors import KDTree
+from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
@@ -136,8 +137,6 @@ def test_ingest_function(adatas):
 
 
 def test_ingest_map_embedding_umap():
-    from umap import UMAP
-
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
