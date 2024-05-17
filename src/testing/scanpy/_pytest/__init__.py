@@ -34,6 +34,7 @@ def _global_test_context(
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
     sc.settings.datasetdir = tmp_path_factory.mktemp("scanpy_data")
+    sc.settings.writedir = tmp_path_factory.mktemp("scanpy_write")
 
     if isinstance(request.node, pytest.DoctestItem):
         _modify_doctests(request)
