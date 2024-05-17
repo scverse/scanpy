@@ -1,27 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
 
-from ..._utils import AnyRandom, get_random_state
+from scanpy.preprocessing._utils import _get_mean_var
+
+from ..._utils import get_random_state
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-
-def sparse_var(
-    E: sparse.csr_matrix | sparse.csc_matrix,
-    *,
-    axis: Literal[0, 1],
-) -> NDArray[np.float64]:
-    """variance across the specified axis"""
-
-    mean_gene: NDArray[np.float64] = E.mean(axis=axis).A.squeeze()
-    tmp: sparse.csc_matrix | sparse.csr_matrix = E.copy()
-    tmp.data **= 2
-    return tmp.mean(axis=axis).A.squeeze() - mean_gene**2
+    from ..._utils import AnyRandom
 
 
 def sparse_multiply(
@@ -31,10 +22,9 @@ def sparse_multiply(
     """multiply each row of E by a scalar"""
 
     nrow = E.shape[0]
-    w = sparse.lil_matrix((nrow, nrow))
-    w.setdiag(a)
+    w = sparse.dia_matrix((a, 0), shape=(nrow, nrow), dtype=a.dtype)
     r = w @ E
-    if isinstance(r, (np.matrix, np.ndarray)):
+    if isinstance(r, np.ndarray):
         return sparse.csc_matrix(r)
     return r
 
@@ -46,11 +36,9 @@ def sparse_zscore(
     gene_stdev: NDArray[np.float64] | None = None,
 ) -> sparse.csr_matrix | sparse.csc_matrix:
     """z-score normalize each column of E"""
-
-    if gene_mean is None:
-        gene_mean = E.mean(0)
-    if gene_stdev is None:
-        gene_stdev = np.sqrt(sparse_var(E, axis=0))
+    if gene_mean is None or gene_stdev is None:
+        gene_means, gene_stdevs = _get_mean_var(E, axis=0)
+        gene_stdevs = np.sqrt(gene_stdevs)
     return sparse_multiply(np.asarray((E - gene_mean).T), 1 / gene_stdev).T
 
 

@@ -4,16 +4,17 @@ Denoise high-dimensional data using MAGIC
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
 
@@ -145,7 +146,7 @@ def magic(
             "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
         )
     else:
-        if not version.parse(__version__) >= version.parse(MIN_VERSION):
+        if Version(__version__) < Version(MIN_VERSION):
             raise ImportError(
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "

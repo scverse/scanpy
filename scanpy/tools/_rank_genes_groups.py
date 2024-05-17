@@ -23,8 +23,10 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from scipy import sparse
 
+    _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+
+# Used with get_args
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-_CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -103,8 +105,8 @@ class _RankGenes:
         comp_pts: bool = False,
     ) -> None:
         self.mask_var = mask_var
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
 
@@ -839,8 +841,8 @@ def filter_rank_genes_groups(
             index=gene_names.index,
         )
 
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             expm1_func = np.expm1
 

@@ -4,19 +4,21 @@ Calculate scores based on relative expression change of maker pairs
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Mapping
+    from typing import Union
+
     import pandas as pd
     from anndata import AnnData
 
-Genes = Collection[Union[str, int, bool]]
+    Genes = Collection[Union[str, int, bool]]
 
 
 @doctest_needs("pypairs")
@@ -154,6 +156,6 @@ def _check_import():
     except ImportError:
         raise ImportError("You need to install the package `pypairs`.")
 
-    min_version = version.parse("3.0.9")
-    if version.parse(pypairs.__version__) < min_version:
+    min_version = Version("3.0.9")
+    if Version(pypairs.__version__) < min_version:
         raise ImportError(f"Please only use `pypairs` >= {min_version}")

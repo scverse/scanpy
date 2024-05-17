@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from string import ascii_letters
-from typing import Callable, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -12,10 +12,13 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.testing._helpers import _check_check_values_warnings
-from scanpy.testing._helpers.data import pbmc3k, pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._helpers import _check_check_values_warnings
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES
+
+if TYPE_CHECKING:
+    from typing import Callable, Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -172,9 +175,9 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
 
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize(
-    "clip", [None, np.Inf, 30], ids=["noclip", "infclip", "30clip"]
+    "clip", [None, np.inf, 30], ids=["noclip", "infclip", "30clip"]
 )
-@pytest.mark.parametrize("theta", [100, np.Inf], ids=["100theta", "inftheta"])
+@pytest.mark.parametrize("theta", [100, np.inf], ids=["100theta", "inftheta"])
 @pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_pearson_residuals_general(
     pbmc3k_parametrized_small, subset, clip, theta, n_top_genes

@@ -7,8 +7,8 @@ from warnings import warn
 import anndata as ad
 import numpy as np
 from anndata import AnnData
-from packaging import version
-from scipy.sparse import issparse, spmatrix
+from packaging.version import Version
+from scipy.sparse import issparse
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
@@ -16,13 +16,16 @@ from sklearn.utils.extmath import svd_flip
 from .. import logging as logg
 from .._compat import DaskArray, pkg_version
 from .._settings import settings
-from .._utils import AnyRandom, Empty, _doc_params, _empty
+from .._utils import _doc_params, _empty
 from ..get import _check_mask, _get_obs_rep
 from ._docs import doc_mask_var_hvg
 from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from numpy.typing import DTypeLike, NDArray
+    from scipy.sparse import spmatrix
+
+    from .._utils import AnyRandom, Empty
 
 
 @_doc_params(
@@ -39,7 +42,7 @@ def pca(
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
-    dtype: str = "float32",
+    dtype: DTypeLike = "float32",
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
@@ -172,7 +175,7 @@ def pca(
     if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        if pkg_version("anndata") < version.parse("0.8.0rc1"):
+        if pkg_version("anndata") < Version("0.8.0rc1"):
             adata = AnnData(data, dtype=data.dtype)
         else:
             adata = AnnData(data)
@@ -195,7 +198,7 @@ def pca(
 
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
-        version.parse(ad.__version__) < version.parse("0.9")
+        Version(ad.__version__) < Version("0.9")
         and mask_var is not None
         and isinstance(X, np.ndarray)
     ):
@@ -305,7 +308,8 @@ def pca(
         )
         X_pca = pca_.fit_transform(X)
     else:
-        raise Exception("This shouldn't happen. Please open a bug report.")
+        msg = "This shouldn’t happen. Please open a bug report."
+        raise AssertionError(msg)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr:
         X_pca = X_pca.astype(dtype)
@@ -390,7 +394,14 @@ def _handle_mask_var(
     return mask_var, _check_mask(adata, mask_var, "var")
 
 
-def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
+def _pca_with_sparse(
+    X: spmatrix,
+    n_pcs: int,
+    *,
+    solver: str = "arpack",
+    mu: NDArray[np.floating] | None = None,
+    random_state: AnyRandom = None,
+):
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(X.shape))
@@ -429,8 +440,11 @@ def _pca_with_sparse(X, npcs, solver="arpack", mu=None, random_state=None):
         rmatmat=rmatmat,
     )
 
-    u, s, v = svds(XL, solver=solver, k=npcs, v0=random_init)
-    u, v = svd_flip(u, v)
+    u, s, v = svds(XL, solver=solver, k=n_pcs, v0=random_init)
+    # u_based_decision was changed in https://github.com/scikit-learn/scikit-learn/pull/27491
+    u, v = svd_flip(
+        u, v, u_based_decision=pkg_version("scikit-learn") < Version("1.5.0rc1")
+    )
     idx = np.argsort(-s)
     v = v[idx, :]
 

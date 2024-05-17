@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
@@ -18,10 +18,9 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import old_positionals
 from .._settings import settings as sett
 from .._utils import (
-    AnyRandom,
     _check_array_function_arguments,
     axis_sum,
     renamed_arg,
@@ -43,8 +42,12 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
+    from typing import Literal
 
     from numpy.typing import NDArray
+
+    from .._compat import DaskArray
+    from .._utils import AnyRandom
 
 
 @old_positionals(
@@ -391,7 +394,7 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if "log1p" in adata.uns_keys():
+    if "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
     adata = adata.copy() if copy else adata

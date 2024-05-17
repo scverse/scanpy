@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import partial
 from math import sqrt
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba as nb
 import numpy as np
@@ -27,6 +27,8 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
 
