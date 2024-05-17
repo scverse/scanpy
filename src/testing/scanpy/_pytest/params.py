@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pytest
 from anndata.tests.helpers import asarray
@@ -16,6 +16,7 @@ from .._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from _pytest.mark.structures import ParameterSet
 

@@ -4,7 +4,7 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -17,6 +17,7 @@ from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
     from anndata import AnnData
 

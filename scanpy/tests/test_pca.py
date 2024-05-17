@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
@@ -24,6 +24,9 @@ from testing.scanpy._pytest.params import (
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
     param_with,
 )
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 A_list = np.array(
     [

@@ -7,10 +7,12 @@ from scipy import sparse
 
 from scanpy.preprocessing._utils import _get_mean_var
 
-from ..._utils import AnyRandom, get_random_state
+from ..._utils import get_random_state
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+    from ..._utils import AnyRandom
 
 
 def sparse_multiply(
