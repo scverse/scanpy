@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from enum import Enum, auto
 from importlib.util import find_spec
@@ -64,9 +63,3 @@ class needs(QuietMarkDecorator, Enum):
             reason = f"{reason} (`pip install {mod}`)"
         dec = pytest.mark.skipif(not find_spec(self._name_), reason=reason)
         super().__init__(dec.mark)
-
-
-xfail_if_pre_release_pynn_npinfty = pytest.mark.xfail(
-    os.environ.get("DEPENDENCIES_VERSION", "latest") == "pre-release",
-    reason="pynndescent still uses `np.infty`, removed in `numpy==2.0`",
-)
