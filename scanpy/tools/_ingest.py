@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, MutableMapping
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -12,12 +12,16 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .._compat import old_positionals, pkg_version
 from .._settings import settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
-from ..neighbors import FlatTree, RPForestDict
+from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from anndata import AnnData
+
+    from ..neighbors import RPForestDict
 
 ANNDATA_MIN_VERSION = Version("0.7rc1")
 
@@ -388,6 +392,7 @@ class Ingest:
         `adata` refers to the :class:`~anndata.AnnData` object
         that is passed during the initialization of an Ingest instance.
         """
+        raise_not_implemented_error_if_backed_type(adata_new.X, "Ingest.fit")
         ref_var_names = self._adata_ref.var_names.str.upper()
         new_var_names = adata_new.var_names.str.upper()
 

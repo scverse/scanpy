@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
@@ -10,6 +10,8 @@ from scanpy.preprocessing._utils import _get_mean_var
 from .sparse_utils import sparse_multiply, sparse_zscore
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from ..._utils import AnyRandom
     from .core import Scrublet
 

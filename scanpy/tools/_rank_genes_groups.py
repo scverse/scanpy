@@ -12,7 +12,10 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import check_nonnegative_integers
+from .._utils import (
+    check_nonnegative_integers,
+    raise_not_implemented_error_if_backed_type,
+)
 from ..get import _check_mask
 from ..preprocessing._utils import _get_mean_var
 
@@ -23,8 +26,10 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from scipy import sparse
 
+    _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+
+# Used with get_args
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-_CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -132,6 +137,7 @@ class _RankGenes:
             if use_raw and adata.raw is not None:
                 adata_comp = adata.raw
             X = adata_comp.X
+        raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
         if issparse(X):
@@ -592,7 +598,6 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-
     if mask_var is not None:
         mask_var = _check_mask(adata, mask_var, "var")
 

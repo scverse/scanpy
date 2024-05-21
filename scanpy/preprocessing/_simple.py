@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
@@ -18,12 +18,13 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import old_positionals
 from .._settings import settings as sett
 from .._utils import (
-    AnyRandom,
     _check_array_function_arguments,
     axis_sum,
+    is_backed_type,
+    raise_not_implemented_error_if_backed_type,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
@@ -43,8 +44,12 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
+    from typing import Literal
 
     from numpy.typing import NDArray
+
+    from .._compat import DaskArray
+    from .._utils import AnyRandom
 
 
 @old_positionals(
@@ -142,6 +147,7 @@ def filter_cells(
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
     if isinstance(data, AnnData):
+        raise_not_implemented_error_if_backed_type(data.X, "filter_cells")
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(
             filter_cells(
@@ -257,6 +263,7 @@ def filter_genes(
         )
 
     if isinstance(data, AnnData):
+        raise_not_implemented_error_if_backed_type(data.X, "filter_genes")
         adata = data.copy() if copy else data
         gene_subset, number = materialize_as_ndarray(
             filter_genes(
@@ -402,10 +409,19 @@ def log1p_anndata(
             raise NotImplementedError(
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+        if adata.isbacked and adata.file._filemode != "r+":
+            raise NotImplementedError(
+                "log1p is not implemented for backed AnnData with backed mode not r+"
+            )
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
         X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        if is_backed_type(X):
+            msg = f"log1p is not implemented for matrices of type {type(X)}"
+            if layer is not None:
+                raise NotImplementedError(f"{msg} from layers")
+            raise NotImplementedError(f"{msg} without `chunked=True`")
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
@@ -644,6 +660,7 @@ def regress_out(
         keys = [keys]
 
     X = _get_obs_rep(adata, layer=layer)
+    raise_not_implemented_error_if_backed_type(X, "regress_out")
 
     if issparse(X):
         logg.info("    sparse input is densified and may " "lead to high memory use")
@@ -852,6 +869,7 @@ def downsample_counts(
     `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.spmatrix` (dtype `float`)
         Downsampled counts matrix.
     """
+    raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,6 +23,7 @@ from .tl._wishbone import _anndata_to_wishbone
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Any
 
 
 __all__ = [
