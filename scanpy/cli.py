@@ -7,11 +7,13 @@ from argparse import ArgumentParser, Namespace, _SubParsersAction
 from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
-from subprocess import CompletedProcess, run
-from typing import TYPE_CHECKING, Any
+from subprocess import run
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Mapping, Sequence
+    from subprocess import CompletedProcess
+    from typing import Any
 
 
 class _DelegatingSubparsersAction(_SubParsersAction):

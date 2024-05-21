@@ -19,21 +19,11 @@ from functools import partial, singledispatch, wraps
 from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Literal,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, overload
 from weakref import WeakSet
 
 import numpy as np
-from anndata import AnnData
 from anndata import __version__ as anndata_version
-from numpy.typing import NDArray
 from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import check_random_state
@@ -46,8 +36,14 @@ from .compute.is_constant import is_constant  # noqa: F401
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+    from typing import Any, Callable, Literal, TypeVar, Union
 
-    from numpy.typing import DTypeLike
+    from anndata import AnnData
+    from numpy.typing import DTypeLike, NDArray
+
+    # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    # maybe in the future random.Generator
+    AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class Empty(Enum):
@@ -58,10 +54,6 @@ class Empty(Enum):
 
 
 _empty = Empty.token
-
-# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-# maybe in the future random.Generator
-AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class RNGIgraph:
@@ -535,9 +527,10 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-_MemoryArray = Union[NDArray, _SparseMatrix]
-_SupportedArray = Union[_MemoryArray, DaskArray]
+if TYPE_CHECKING:
+    _SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+    _MemoryArray = Union[NDArray, _SparseMatrix]
+    _SupportedArray = Union[_MemoryArray, DaskArray]
 
 
 @singledispatch
@@ -561,7 +554,8 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     return da.map_blocks(elem_mul, x, y)
 
 
-Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
+if TYPE_CHECKING:
+    Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
 
 def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:

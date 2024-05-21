@@ -48,8 +48,9 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    # numpy needs a version due to #1320
-    "numpy>=1.23",
+    # TODO: remove <2 requirement once PyNNDescent releases this fix:
+    # https://github.com/lmcinnes/pynndescent/issues/241
+    "numpy>=1.23,<2",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
@@ -252,3 +253,6 @@ required-imports = ["from __future__ import annotations"]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = []
+strict = true

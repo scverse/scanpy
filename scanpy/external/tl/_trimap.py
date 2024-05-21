@@ -4,7 +4,7 @@ Embed high-dimensional data using TriMap
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import scipy.sparse as scp
 
@@ -14,6 +14,8 @@ from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
 
