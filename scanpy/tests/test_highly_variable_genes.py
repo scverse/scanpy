@@ -633,20 +633,20 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
 
     # check that the results are consistent for subset True/False
     adata_post_subset = adatas["subset_False_inplace_True"][
-        :, adatas.var["highly_variable"]
+        :, adatas["subset_False_inplace_True"].var["highly_variable"]
     ]
     assert adata_post_subset.var_names.equals(
         adatas["subset_True_inplace_True"].var_names
     )
 
-    df_post_subset = dfs["subset_False_inplace_True"][
-        :, dfs["subset_True_inplace_True"]["highly_variable"]
+    df_post_subset = dfs["subset_False_inplace_False"][
+        dfs["subset_False_inplace_False"]["highly_variable"]
     ]
-    assert df_post_subset.index.equals(dfs["subset_True_inplace_True"].index)
+    assert df_post_subset.index.equals(dfs["subset_True_inplace_False"].index)
 
     # check that the results are consistent for inplace True/False
     assert adatas["subset_True_inplace_True"].var_names.equals(
-        dfs["subset_True_inplace_False"]
+        dfs["subset_True_inplace_False"].index
     )
 
 
