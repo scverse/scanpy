@@ -573,15 +573,17 @@ def test_cutoff_info():
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
-@pytest.mark.parametrize("inplace", [True, False], ids=["inplace", "copy"])
-def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
+@pytest.mark.parametrize("batch_key", [None, "batch"])
+def test_subset_inplace_consistency(flavor, array_type, batch_key):
     """Tests that, with `n_top_genes=n`
     - `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
+    - for both with and without batch_key
     """
     adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+    rng = np.random.default_rng(0)
+    adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
     if flavor == "seurat" or flavor == "cell_ranger":
@@ -596,66 +598,53 @@ def test_subset_inplace_consistency(flavor, array_type, subset, inplace):
 
     n_genes = adata.shape[1]
 
-    output_df = sc.pp.highly_variable_genes(
-        adata,
-        flavor=flavor,
-        n_top_genes=15,
-        subset=subset,
-        inplace=inplace,
+    adatas = {}
+    dfs = {}
+    # for loops instead of parametrization to compare between settings
+    for subset in [True, False]:
+        for inplace in [True, False]:
+            adata_copy = adata.copy()
+
+            output_df = sc.pp.highly_variable_genes(
+                adata_copy,
+                flavor=flavor,
+                n_top_genes=15,
+                batch_key=batch_key,
+                subset=subset,
+                inplace=inplace,
+            )
+
+            assert (output_df is None) == inplace
+            assert len(adata_copy.var if inplace else output_df) == (
+                15 if subset else n_genes
+            )
+            assert (
+                sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
+            )
+
+            if not inplace:
+                assert isinstance(output_df, pd.DataFrame)
+
+            adatas[f"subset_{subset}_inplace_{inplace}"] = adata_copy
+            dfs[f"subset_{subset}_inplace_{inplace}"] = output_df
+
+    # check that the results are consistent for subset True/False
+    adata_post_subset = adatas["subset_False_inplace_True"][
+        :, adatas.var["highly_variable"]
+    ]
+    assert adata_post_subset.var_names.equals(
+        adatas["subset_True_inplace_True"].var_names
     )
 
-    assert (output_df is None) == inplace
-    assert len(adata.var if inplace else output_df) == (15 if subset else n_genes)
-    if output_df is not None:
-        assert isinstance(output_df, pd.DataFrame)
+    df_post_subset = dfs["subset_False_inplace_True"][
+        :, dfs["subset_True_inplace_True"]["highly_variable"]
+    ]
+    assert df_post_subset.index.equals(dfs["subset_True_inplace_True"].index)
 
-
-@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("batch_key", [None, "batch"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_subset_consistency(flavor, batch_key, array_type):
-    """Tests that, with `n_top_genes=n`
-    - `subset` works correctly
-    - for both the `seurat` and `cell_ranger` flavors
-    - with/without batch_key
-    - for dask arrays and non-dask arrays
-    """
-    adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
-    adata.obs["batch"] = np.random.choice(["a", "b"], adata.shape[0])
-    adata.X = array_type(np.abs(adata.X).astype(int))
-
-    if flavor == "seurat" or flavor == "cell_ranger":
-        sc.pp.normalize_total(adata, target_sum=1e4)
-        sc.pp.log1p(adata)
-
-    elif flavor == "seurat_v3":
-        pass
-
-    else:
-        raise ValueError(f"Unknown flavor {flavor}")
-
-    adata_subset = adata.copy()
-    sc.pp.highly_variable_genes(
-        adata_subset,
-        flavor=flavor,
-        batch_key=batch_key,
-        n_top_genes=15,
-        subset=True,
+    # check that the results are consistent for inplace True/False
+    assert adatas["subset_True_inplace_True"].var_names.equals(
+        dfs["subset_True_inplace_False"]
     )
-
-    adata_no_subset = adata.copy()
-    sc.pp.highly_variable_genes(
-        adata_no_subset,
-        flavor=flavor,
-        batch_key=batch_key,
-        n_top_genes=15,
-        subset=True,
-    )
-    adata_no_subset = adata_no_subset[:, adata_subset.var["highly_variable"]]
-
-    # assert subsetted data is indeed the highly_variable marked genes
-    assert sum(adata_subset.var["highly_variable"]) == 15
-    assert adata_subset.var_names.equals(adata_no_subset.var_names)
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
