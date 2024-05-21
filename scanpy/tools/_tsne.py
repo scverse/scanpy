@@ -142,9 +142,8 @@ def tsne(
     # deal with different tSNE implementations
     if use_fast_tsne:
         try:
-            from sklearnex import patch_sklearn,unpatch_sklearn
-            patch_sklearn()
             from MulticoreTSNE import MulticoreTSNE as TSNE
+
             tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
@@ -156,7 +155,6 @@ def tsne(
                     "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
                 )
             )
-            unpatch_sklearn()
     if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearnex import patch_sklearn,unpatch_sklearn
         patch_sklearn()

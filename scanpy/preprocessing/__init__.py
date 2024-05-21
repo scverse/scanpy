@@ -21,7 +21,6 @@ from ._simple import (
     subsample,
 )
 
-
 __all__ = [
     "neighbors",
     "combat",
