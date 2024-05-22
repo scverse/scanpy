@@ -329,7 +329,7 @@ def rank_genes_groups(
     ncols: int = 4,
     sharey: bool = True,
     show: bool | None = None,
-    save: bool | None = None,
+    save: bool | str | None = None,
     ax: Axes | None = None,
     **kwds,
 ):
