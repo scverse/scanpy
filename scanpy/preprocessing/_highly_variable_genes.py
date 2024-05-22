@@ -198,7 +198,7 @@ def _highly_variable_genes_seurat_v3(
 
 
 @numba.njit(cache=True)
-def _clip_sparse(
+def _sum_and_sum_squares_clipped(
     indices: NDArray[np.integer],
     data: NDArray[np.floating],
     *,
