@@ -43,8 +43,8 @@ def _choose_representation(
                     "Falling back to preprocessing with `sc.pp.pca` and default params."
                 )
                 n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
-                X = pca(adata.X, n_comps=n_pcs_pca)
-                adata.obsm["X_pca"] = X
+                pca(adata, n_comps=n_pcs_pca)
+                X = adata.obsm["X_pca"]
         else:
             logg.info("    using data matrix X directly")
             X = adata.X
