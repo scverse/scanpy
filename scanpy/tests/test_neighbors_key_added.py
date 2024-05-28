@@ -32,6 +32,12 @@ def test_neighbors_key_added(adata):
     )
 
 
+def test_neighbors_pca_keys_added(adata):
+    assert "pca" not in adata.uns
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
+    assert "pca" in adata.uns
+
+
 # test functions with neighbors_key and obsp
 @needs.igraph
 @needs.leidenalg
