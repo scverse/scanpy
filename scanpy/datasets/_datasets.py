@@ -11,7 +11,7 @@ from anndata import AnnData
 from .. import _utils
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils._doctests import doctest_internet
+from .._utils._doctests import doctest_internet, doctest_needs
 from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
@@ -167,6 +167,7 @@ def krumsiek11() -> AnnData:
 
 
 @doctest_internet
+@doctest_needs("openpyxl")
 @check_datasetdir_exists
 def moignard15() -> AnnData:
     """\
