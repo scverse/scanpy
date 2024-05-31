@@ -39,11 +39,9 @@ def _choose_representation(
                 logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
             else:
                 warnings.warn(
-                    UserWarning(
-                        f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
-                        "if you really want this, set `use_rep='X'`.\n         "
-                        "Falling back to preprocessing with `sc.pp.pca` and default params."
-                    )
+                    f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
+                    "if you really want this, set `use_rep='X'`.\n         "
+                    "Falling back to preprocessing with `sc.pp.pca` and default params."
                 )
                 n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
                 pca(adata, n_comps=n_pcs_pca)
