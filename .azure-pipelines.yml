@@ -44,10 +44,18 @@ jobs:
     inputs:
       key: '"python $(python.version)" | "$(Agent.OS)" | pyproject.toml'
       restoreKeys: |
-        python | "$(Agent.OS)"
-        python
+        "python" | "$(Agent.OS)"
+        "python"
       path: $(uv_cache_dir)
     displayName: Cache pip packages
+
+
+  - task: Cache@2
+    inputs:
+      key: '"pytest"'
+      restoreKeys: '"pytest"'
+      path: $(Pipeline.Workspace)/.pytest_cache/d
+    displayName: Cache pytest data
 
   - script: |
       export MPLBACKEND="agg"
