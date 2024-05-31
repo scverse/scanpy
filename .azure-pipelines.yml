@@ -54,7 +54,7 @@ jobs:
     inputs:
       key: '"pytest"'
       restoreKeys: '"pytest"'
-      path: $(Pipeline.Workspace)/.pytest_cache/d
+      path: $(System.DefaultWorkingDirectory)/.pytest_cache/d
     displayName: Cache pytest data
 
   - script: |
