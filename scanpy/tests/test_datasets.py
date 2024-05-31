@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import subprocess
 import warnings
+from collections import defaultdict
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ import pytest
 from anndata.tests.helpers import assert_adata_equal
 
 import scanpy as sc
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -31,6 +33,7 @@ def test_burczynski06():
 
 
 @pytest.mark.internet
+@needs.openpyxl
 def test_moignard15():
     with warnings.catch_warnings():
         # https://foss.heptapod.net/openpyxl/openpyxl/-/issues/2051
@@ -155,13 +158,20 @@ def test_download_failure():
 DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
 # These have parameters that affect shape and so on
 DS_DYNAMIC = frozenset({"blobs", "ebi_expression_atlas"})
+# Additional marks for datasets besides “internet”
+DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 
 
 @pytest.mark.parametrize(
     "ds_name",
     [
         pytest.param(
-            ds, id=ds, marks=[] if ds in DS_INCLUDED else [pytest.mark.internet]
+            ds,
+            id=ds,
+            marks=[
+                *(() if ds in DS_INCLUDED else [pytest.mark.internet]),
+                *DS_MARKS[ds],
+            ],
         )
         for ds in set(sc.datasets.__all__) - DS_DYNAMIC
     ],
