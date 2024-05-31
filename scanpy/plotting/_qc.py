@@ -78,7 +78,7 @@ def highest_expr_genes(
     if issparse(norm_dict["X"]):
         mean_percent = norm_dict["X"].mean(axis=0).A1
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
-        counts_top_genes = norm_dict["X"][:, top_idx].A
+        counts_top_genes = norm_dict["X"][:, top_idx].toarray()
     else:
         mean_percent = norm_dict["X"].mean(axis=0)
         top_idx = np.argsort(mean_percent)[::-1][:n_top]

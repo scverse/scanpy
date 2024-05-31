@@ -580,14 +580,34 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: sparse.spmatrix,
-    scaling_array,
+    X: np.ndarray,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: sparse.spmatrix | None = None,
-) -> sparse.spmatrix:
+    out: np.ndarray | None = None,
+) -> np.ndarray:
+    check_op(op)
+    scaling_array = broadcast_axis(scaling_array, axis)
+    if op is mul:
+        return np.multiply(X, scaling_array, out=out)
+    if not allow_divide_by_zero:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+    return np.true_divide(X, scaling_array, out=out)
+
+
+@axis_mul_or_truediv.register(sparse.csr_matrix)
+@axis_mul_or_truediv.register(sparse.csc_matrix)
+def _(
+    X: sparse.csr_matrix | sparse.csc_matrix,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: sparse.csr_matrix | sparse.csc_matrix | None = None,
+) -> sparse.csr_matrix | sparse.csc_matrix:
     check_op(op)
     if out is not None:
         if X.data is not out.data:
@@ -601,12 +621,12 @@ def axis_mul_or_truediv(
     column_scale = axis == 1
     if row_scale:
 
-        def new_data_op(x):
+        def new_data_op(x: sparse.csr_matrix | sparse.csc_matrix):
             return op(x.data, np.repeat(scaling_array, np.diff(x.indptr)))
 
     elif column_scale:
 
-        def new_data_op(x):
+        def new_data_op(x: sparse.csr_matrix | sparse.csc_matrix):
             return op(x.data, scaling_array.take(x.indices, mode="clip"))
 
     if X.format == "csr":
@@ -627,25 +647,6 @@ def axis_mul_or_truediv(
         out=transposed,
         allow_divide_by_zero=allow_divide_by_zero,
     ).T
-
-
-@axis_mul_or_truediv.register(np.ndarray)
-def _(
-    X: np.ndarray,
-    scaling_array: np.ndarray,
-    axis: Literal[0, 1],
-    op: Callable[[Any, Any], Any],
-    *,
-    allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
-) -> np.ndarray:
-    check_op(op)
-    scaling_array = broadcast_axis(scaling_array, axis)
-    if op is mul:
-        return np.multiply(X, scaling_array, out=out)
-    if not allow_divide_by_zero:
-        scaling_array = scaling_array.copy() + (scaling_array == 0)
-    return np.true_divide(X, scaling_array, out=out)
 
 
 def make_axis_chunks(
