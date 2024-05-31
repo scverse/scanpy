@@ -240,5 +240,5 @@ def test_is_constant_dask(axis, expected, block_type):
         [0, 0, 0, 0],
     ]
     x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-
-    np.testing.assert_array_equal(expected, is_constant(x, axis=axis))
+    result = is_constant(x, axis=axis).compute()
+    np.testing.assert_array_equal(expected, result)
