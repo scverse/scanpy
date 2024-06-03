@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 
-from scanpy._utils import _check_use_raw
+from scanpy._utils import _check_use_raw, is_backed_type
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -115,6 +115,10 @@ def score_genes(
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
     use_raw = _check_use_raw(adata, use_raw)
+    if is_backed_type(adata.X) and not use_raw:
+        raise NotImplementedError(
+            f"score_genes is not implemented for matrices of type {type(adata.X)}"
+        )
 
     if random_state is not None:
         np.random.seed(random_state)

@@ -16,7 +16,7 @@ from sklearn.utils.extmath import svd_flip
 from .. import logging as logg
 from .._compat import DaskArray, pkg_version
 from .._settings import settings
-from .._utils import _doc_params, _empty
+from .._utils import _doc_params, _empty, is_backed_type
 from ..get import _check_mask, _get_obs_rep
 from ._docs import doc_mask_var_hvg
 from ._utils import _get_mean_var
@@ -173,6 +173,10 @@ def pca(
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
+        if layer is None and not chunked and is_backed_type(data.X):
+            raise NotImplementedError(
+                f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
+            )
         adata = data.copy() if copy else data
     else:
         if pkg_version("anndata") < Version("0.8.0rc1"):
@@ -195,7 +199,10 @@ def pca(
     logg.info(f"    with n_comps={n_comps}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
-
+    if is_backed_type(X) and layer is not None:
+        raise NotImplementedError(
+            f"PCA is not implemented for matrices of type {type(X)} from layers"
+        )
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
         Version(ad.__version__) < Version("0.9")
