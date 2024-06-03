@@ -137,8 +137,9 @@ def krumsiek11() -> AnnData:
     Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
     The literature-curated boolean network from :cite:t:`Krumsiek2011` was used to
-    simulate the data. It describes development to four cell fates: 'monocyte',
-    'erythrocyte', 'megakaryocyte' and 'neutrophil'.
+    simulate the data. It describes development to four cell fates annotated in
+    :attr:`~anndata.AnnData.obs`\\ `["cell_type"]`:
+    “monocyte” (`Mo`), “erythrocyte” (`Ery`), “megakaryocyte” (`Mk`) and “neutrophil” (`Neu`).
 
     See also the discussion of this data in :cite:t:`Wolf2019`.
 
@@ -179,6 +180,11 @@ def krumsiek11() -> AnnData:
 def moignard15() -> AnnData:
     """\
     Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
+
+    :attr:`~anndata.AnnData.obs`\\ `["exp_groups"]` contains the stages derived by
+    flow sorting and GFP marker status:
+    “primitive streak” (`PS`), “neural plate” (`NP`), “head fold (`HF`),
+    “four somite” blood/GFP⁺ (4SG), and “four somite” endothelial/GFP¯ (`4SFG`).
 
     Returns
     -------
@@ -230,8 +236,8 @@ def paul15() -> AnnData:
     Non-logarithmized raw data.
 
     The data has been sent out by Email from the Amit Lab. An R version for
-    loading the data can be found here
-    https://github.com/theislab/scAnalysisTutorial
+    loading the data can be found `here
+    <https://github.com/theislab/scAnalysisTutorial>`_.
 
     Returns
     -------
