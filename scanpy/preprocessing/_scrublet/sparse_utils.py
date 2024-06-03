@@ -52,7 +52,7 @@ def subsample_counts(
     if rate < 1:
         random_seed = get_random_state(random_seed)
         E.data = random_seed.binomial(np.round(E.data).astype(int), rate)
-        current_totals = E.sum(1).A.squeeze()
+        current_totals = np.asarray(E.sum(1)).squeeze()
         unsampled_orig_totals = original_totals - current_totals
         unsampled_downsamp_totals = np.random.binomial(
             np.round(unsampled_orig_totals).astype(int), rate
