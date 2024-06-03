@@ -2,11 +2,12 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
+
 from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
@@ -20,15 +21,16 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings as sett
 from .._utils import (
-    AnyRandom,
     _check_array_function_arguments,
+    axis_sum,
+    is_backed_type,
+    raise_not_implemented_error_if_backed_type,
     renamed_arg,
     sanitize_anndata,
     view_to_actual,
 )
-from ..get import _check_mask, _get_obs_rep, _set_obs_rep
+from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
-from ._utils import _get_mean_var
 
 # install dask if available
 try:
@@ -42,15 +44,19 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
+    from typing import Literal
 
     from numpy.typing import NDArray
+
+    from .._compat import DaskArray
+    from .._utils import AnyRandom
 
 
 @old_positionals(
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
 def filter_cells(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -141,6 +147,7 @@ def filter_cells(
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
     if isinstance(data, AnnData):
+        raise_not_implemented_error_if_backed_type(data.X, "filter_cells")
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(
             filter_cells(
@@ -162,7 +169,7 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = np.sum(
+    number_per_cell = axis_sum(
         X if min_genes is None and max_genes is None else X > 0, axis=1
     )
     if issparse(X):
@@ -172,7 +179,7 @@ def filter_cells(
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = materialize_as_ndarray(np.sum(~cell_subset))
+    s = axis_sum(~cell_subset)
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -197,7 +204,7 @@ def filter_cells(
     "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
 )
 def filter_genes(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | spmatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,
@@ -256,6 +263,7 @@ def filter_genes(
         )
 
     if isinstance(data, AnnData):
+        raise_not_implemented_error_if_backed_type(data.X, "filter_genes")
         adata = data.copy() if copy else data
         gene_subset, number = materialize_as_ndarray(
             filter_genes(
@@ -278,7 +286,7 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = np.sum(
+    number_per_gene = axis_sum(
         X if min_cells is None and max_cells is None else X > 0, axis=0
     )
     if issparse(X):
@@ -288,7 +296,7 @@ def filter_genes(
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
 
-    s = np.sum(~gene_subset)
+    s = axis_sum(~gene_subset)
     if s > 0:
         msg = f"filtered out {s} genes that are detected "
         if min_cells is not None or min_counts is not None:
@@ -390,7 +398,7 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if "log1p" in adata.uns_keys():
+    if "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
     adata = adata.copy() if copy else adata
@@ -401,10 +409,19 @@ def log1p_anndata(
             raise NotImplementedError(
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+        if adata.isbacked and adata.file._filemode != "r+":
+            raise NotImplementedError(
+                "log1p is not implemented for backed AnnData with backed mode not r+"
+            )
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
         X = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        if is_backed_type(X):
+            msg = f"log1p is not implemented for matrices of type {type(X)}"
+            if layer is not None:
+                raise NotImplementedError(f"{msg} from layers")
+            raise NotImplementedError(f"{msg} without `chunked=True`")
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
@@ -486,8 +503,8 @@ def normalize_per_cell(  # noqa: PLR0917
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
 
-    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-    [Zheng17]_ or SPRING [Weinreb17]_.
+    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
+    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
 
     Parameters
     ----------
@@ -608,7 +625,7 @@ def regress_out(
     Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
-    function in R [Satija15]. Note that this function tends to overcorrect
+    function in R :cite:p:`Satija2015`. Note that this function tends to overcorrect
     in certain circumstances as described in :issue:`526`.
 
     Parameters
@@ -643,6 +660,7 @@ def regress_out(
         keys = [keys]
 
     X = _get_obs_rep(adata, layer=layer)
+    raise_not_implemented_error_if_backed_type(X, "regress_out")
 
     if issparse(X):
         logg.info("    sparse input is densified and may " "lead to high memory use")
@@ -743,200 +761,6 @@ def _regress_out_chunk(data):
         responses_chunk_list.append(new_column)
 
     return np.vstack(responses_chunk_list)
-
-
-@renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
-@singledispatch
-def scale(
-    data: AnnData | spmatrix | np.ndarray,
-    *,
-    zero_center: bool = True,
-    max_value: float | None = None,
-    copy: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | None:
-    """\
-    Scale data to unit variance and zero mean.
-
-    .. note::
-        Variables (genes) that do not display any variation (are constant across
-        all observations) are retained and (for zero_center==True) set to 0
-        during this operation. In the future, they might be set to NaNs.
-
-    Parameters
-    ----------
-    data
-        The (annotated) data matrix of shape `n_obs` × `n_vars`.
-        Rows correspond to cells and columns to genes.
-    zero_center
-        If `False`, omit zero-centering variables, which allows to handle sparse
-        input efficiently.
-    max_value
-        Clip (truncate) to this value after scaling. If `None`, do not clip.
-    copy
-        Whether this function should be performed inplace. If an AnnData object
-        is passed, this also determines if a copy is returned.
-    layer
-        If provided, which element of layers to scale.
-    obsm
-        If provided, which element of obsm to scale.
-    mask_obs
-        Restrict both the derivation of scaling parameters and the scaling itself
-        to a certain set of observations. The mask is specified as a boolean array
-        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
-
-    Returns
-    -------
-    Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
-
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
-        Scaled count data matrix.
-    `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
-        Means per gene before scaling.
-    `adata.var['std']` : :class:`pandas.Series` (dtype `float`)
-        Standard deviations per gene before scaling.
-    `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
-        Variances per gene before scaling.
-    """
-    _check_array_function_arguments(layer=layer, obsm=obsm)
-    if layer is not None:
-        raise ValueError(
-            f"`layer` argument inappropriate for value of type {type(data)}"
-        )
-    if obsm is not None:
-        raise ValueError(
-            f"`obsm` argument inappropriate for value of type {type(data)}"
-        )
-    return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
-    )
-
-
-@scale.register(np.ndarray)
-def scale_array(
-    X: np.ndarray,
-    *,
-    zero_center: bool = True,
-    max_value: float | None = None,
-    copy: bool = False,
-    return_mean_std: bool = False,
-    mask_obs: NDArray[np.bool_] | None = None,
-) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
-    if copy:
-        X = X.copy()
-    if mask_obs is not None:
-        mask_obs = _check_mask(X, mask_obs, "obs")
-        scale_rv = scale_array(
-            X[mask_obs, :],
-            zero_center=zero_center,
-            max_value=max_value,
-            copy=False,
-            return_mean_std=return_mean_std,
-            mask_obs=None,
-        )
-        if return_mean_std:
-            X[mask_obs, :], mean, std = scale_rv
-            return X, mean, std
-        else:
-            X[mask_obs, :] = scale_rv
-            return X
-
-    if not zero_center and max_value is not None:
-        logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
-        )
-
-    if np.issubdtype(X.dtype, np.integer):
-        logg.info(
-            "... as scaling leads to float results, integer "
-            "input is cast to float, returning copy."
-        )
-        X = X.astype(float)
-
-    mean, var = _get_mean_var(X)
-    std = np.sqrt(var)
-    std[std == 0] = 1
-    if issparse(X):
-        if zero_center:
-            raise ValueError("Cannot zero-center sparse matrix.")
-        sparsefuncs.inplace_column_scale(X, 1 / std)
-    else:
-        if zero_center:
-            X -= mean
-        X /= std
-
-    # do the clipping
-    if max_value is not None:
-        logg.debug(f"... clipping at max_value {max_value}")
-        X[X > max_value] = max_value
-    if return_mean_std:
-        return X, mean, std
-    else:
-        return X
-
-
-@scale.register(spmatrix)
-def scale_sparse(
-    X: spmatrix,
-    *,
-    zero_center: bool = True,
-    max_value: float | None = None,
-    copy: bool = False,
-    return_mean_std: bool = False,
-    mask_obs: NDArray[np.bool_] | None = None,
-) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
-    # need to add the following here to make inplace logic work
-    if zero_center:
-        logg.info(
-            "... as `zero_center=True`, sparse input is "
-            "densified and may lead to large memory consumption"
-        )
-        X = X.toarray()
-        copy = False  # Since the data has been copied
-    return scale_array(
-        X,
-        zero_center=zero_center,
-        copy=copy,
-        max_value=max_value,
-        return_mean_std=return_mean_std,
-        mask_obs=mask_obs,
-    )
-
-
-@scale.register(AnnData)
-def scale_anndata(
-    adata: AnnData,
-    *,
-    zero_center: bool = True,
-    max_value: float | None = None,
-    copy: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | None:
-    adata = adata.copy() if copy else adata
-    str_mean_std = ("mean", "std")
-    if mask_obs is not None:
-        if isinstance(mask_obs, str):
-            str_mean_std = (f"mean of {mask_obs}", f"std of {mask_obs}")
-        else:
-            str_mean_std = ("mean with mask", "std with mask")
-        mask_obs = _check_mask(adata, mask_obs, "obs")
-    view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
-        X,
-        zero_center=zero_center,
-        max_value=max_value,
-        copy=False,  # because a copy has already been made, if it were to be made
-        return_mean_std=True,
-        mask_obs=mask_obs,
-    )
-    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
-    return adata if copy else None
 
 
 @old_positionals("n_obs", "random_state", "copy")
@@ -1045,6 +869,7 @@ def downsample_counts(
     `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.spmatrix` (dtype `float`)
         Downsampled counts matrix.
     """
+    raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
@@ -1080,7 +905,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
+        totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
@@ -1096,7 +921,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
     else:
-        totals = np.ravel(X.sum(axis=1))
+        totals = np.ravel(axis_sum(X, axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
             row = X[rowidx, :]

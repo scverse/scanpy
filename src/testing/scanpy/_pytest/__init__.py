@@ -1,14 +1,13 @@
 """A private pytest plugin"""
+
 from __future__ import annotations
 
 import os
 import sys
-import warnings
 from typing import TYPE_CHECKING
 
 import pytest
 
-from ..._utils import _import_name
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
@@ -60,26 +59,6 @@ def max_threads() -> Generator[int, None, None]:
         yield 0
 
 
-@pytest.fixture(autouse=True, scope="session")
-def _fix_dask_df_warning():
-    """
-    Currently, dask warns when importing dask.dataframe.
-    This fixture preempts the warning and should be removed
-    once it is no longer raised.
-    """
-    try:
-        import dask  # noqa: F401
-    except ImportError:
-        return
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            category=DeprecationWarning,
-            message=r"The current Dask DataFrame implementation is deprecated",
-        )
-        import dask.dataframe  # noqa: F401
-
-
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--internet-tests",
@@ -107,6 +86,8 @@ def pytest_collection_modifyitems(
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
+    from scanpy._utils import _import_name
+
     assert isinstance(request.node, pytest.DoctestItem)
 
     request.getfixturevalue("_doctest_env")
@@ -135,3 +116,8 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker(
             pytest.mark.skip(reason="dask support requires anndata version > 0.10")
         )
+
+
+assert (
+    "scanpy" not in sys.modules
+), "scanpy is already imported, this will mess up test coverage"

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
@@ -13,13 +13,20 @@ from anndata.tests.helpers import (
 )
 from packaging.version import Version
 from scipy import sparse
-from sklearn.utils import issparse
+from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy.testing._helpers import as_dense_dask_array, as_sparse_dask_array
-from scanpy.testing._helpers.data import pbmc3k_normalized
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SUPPORTED, param_with
+from testing.scanpy._helpers import as_dense_dask_array, as_sparse_dask_array
+from testing.scanpy._helpers.data import pbmc3k_normalized
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
+    param_with,
+)
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 A_list = np.array(
     [
@@ -59,7 +66,7 @@ A_svd = np.array(
 @pytest.fixture(
     params=[
         param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
-        for at in ARRAY_TYPES_SUPPORTED
+        for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
     ]
 )
 def array_type(request: pytest.FixtureRequest):
@@ -227,12 +234,14 @@ def test_pca_sparse():
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
 
-    assert np.allclose(implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"])
-    assert np.allclose(
+    np.testing.assert_allclose(
+        implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"]
+    )
+    np.testing.assert_allclose(
         implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
     )
-    assert np.allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
-    assert np.allclose(implicit.varm["PCs"], explicit.varm["PCs"])
+    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
+    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm["PCs"])
 
 
 def test_pca_reproducible(array_type):
@@ -299,12 +308,15 @@ def test_pca_n_pcs():
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
-    with pytest.warns(
-        FutureWarning,
-        match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
-    ), pytest.raises(
-        ValueError,
-        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+    with (
+        pytest.warns(
+            FutureWarning,
+            match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
+        ),
+        pytest.raises(
+            ValueError,
+            match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+        ),
     ):
         sc.pp.pca(adata, use_highly_variable=True)
 
@@ -390,14 +402,13 @@ def test_mask_defaults(array_type, float_dtype):
     Test if pca result is equal without highly variable and with-but mask is None
     and if pca takes highly variable as mask as default
     """
-    A = array_type(A_list).astype("float32")
+    A = array_type(A_list).astype("float64")
     adata = AnnData(A)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
-    mask = np.random.choice([True, False], adata.shape[1])
-    mask[0] = True
-    mask[1] = True
+    rng = np.random.default_rng(8)
+    mask = rng.choice([True, False], adata.shape[1])
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None

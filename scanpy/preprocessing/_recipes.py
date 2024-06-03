@@ -1,4 +1,5 @@
 """Preprocessing recipes from the literature"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -39,7 +40,7 @@ def recipe_weinreb17(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of [Weinreb17]_.
+    Normalization and filtering as of :cite:p:`Weinreb2017`.
 
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
@@ -84,7 +85,7 @@ def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of Seurat [Satija15]_.
+    Normalization and filtering as of Seurat :cite:p:`Satija2015`.
 
     This uses a particular preprocessing.
 
@@ -133,9 +134,9 @@ def recipe_zheng17(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Normalization and filtering as of [Zheng17]_.
+    Normalization and filtering as of :cite:t:`Zheng2017`.
 
-    Reproduces the preprocessing of [Zheng17]_ – the Cell Ranger R Kit of 10x
+    Reproduces the preprocessing of :cite:t:`Zheng2017` – the Cell Ranger R Kit of 10x
     Genomics.
 
     Expects non-logarithmized data.

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import partial, singledispatch, wraps
 from numbers import Integral
-from typing import TYPE_CHECKING, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import numpy as np
 from numba import njit
@@ -12,6 +12,8 @@ from scipy import sparse
 from ..._compat import DaskArray
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
 C = TypeVar("C", bound=Callable)
@@ -31,13 +33,11 @@ def _check_axis_supported(wrapped: C) -> C:
 
 
 @overload
-def is_constant(a: NDArray, axis: None = None) -> bool:
-    ...
+def is_constant(a: NDArray, axis: None = None) -> bool: ...
 
 
 @overload
-def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]:
-    ...
+def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
 
 
 @_check_axis_supported

@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 from ..._compat import old_positionals
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import Any, Literal
 
     from anndata import AnnData
 
     from ..._utils import AnyRandom
 
-_AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
+    _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
 @old_positionals(
@@ -71,7 +72,7 @@ def dca(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Deep count autoencoder [Eraslan18]_.
+    Deep count autoencoder :cite:p:`Eraslan2019`.
 
     Fits a count autoencoder to the raw count data given in the anndata object
     in order to denoise the data and to capture hidden representation of

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +10,7 @@ from sklearn.utils import deprecated
 
 from .._compat import old_positionals
 from .._utils import _doc_params
+from .._utils._doctests import doctest_needs
 from ..plotting import _scrublet, _utils, embedding
 from ..plotting._docs import (
     doc_adata_color_etc,
@@ -18,11 +19,11 @@ from ..plotting._docs import (
     doc_show_save_ax,
 )
 from ..plotting._tools.scatterplots import _wraps_plot_scatter
-from ..testing._doctests import doctest_needs
 from .tl._wishbone import _anndata_to_wishbone
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Any
 
 
 __all__ = [

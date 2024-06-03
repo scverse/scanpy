@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal, Union, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
@@ -13,10 +13,13 @@ from .get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
+    from typing import Union
 
     from numpy.typing import NDArray
 
-Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
+    Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
+
+# Used with get_args
 AggType = Literal["count_nonzero", "mean", "sum", "var"]
 
 
@@ -71,7 +74,7 @@ class Aggregate:
         """
         # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
         # return self.indicator_matrix @ pattern
-        return self.indicator_matrix @ (self.data != 0)
+        return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
     def sum(self) -> Array:
         """\
@@ -156,7 +159,6 @@ def _power(X: Array, power: float | int) -> Array:
     return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
-@singledispatch
 def aggregate(
     adata: AnnData,
     by: str | Collection[str],
@@ -179,8 +181,6 @@ def aggregate(
     in the output `AnnData` object.
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
-    If `func` only has length 1 or is just an `AggType`, then aggregation data is written to `X`.
-    Otherwise, it is written to `layers` or `xxxm` as appropriate for the dimensions of the aggregation data.
 
     Params
     ------
@@ -234,6 +234,11 @@ def aggregate(
 
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
+    if not isinstance(adata, AnnData):
+        raise NotImplementedError(
+            "sc.get.aggregate is currently only implemented for AnnData input, "
+            f"was passed {type(adata)}."
+        )
     if axis is None:
         axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
@@ -262,18 +267,27 @@ def aggregate(
     dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
     # Actual computation
-    layers = aggregate(
+    layers = _aggregate(
         data,
         by=categorical,
         func=func,
         mask=mask,
         dof=dof,
     )
-    result = AnnData(
-        layers=layers,
-        obs=new_label_df,
-        var=getattr(adata, "var" if axis == 0 else "obs"),
-    )
+
+    # Define new var dataframe
+    if obsm or varm:
+        if isinstance(data, pd.DataFrame):
+            # Check if there could be labels
+            var = pd.DataFrame(index=data.columns)
+        else:
+            # Create them otherwise
+            var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
+    else:
+        var = getattr(adata, "var" if axis == 0 else "obs")
+
+    # It's all coming together
+    result = AnnData(layers=layers, obs=new_label_df, var=var)
 
     if axis == 1:
         return result.T
@@ -281,8 +295,25 @@ def aggregate(
         return result
 
 
-@aggregate.register(np.ndarray)
-@aggregate.register(sparse.spmatrix)
+@singledispatch
+def _aggregate(
+    data,
+    by: pd.Categorical,
+    func: AggType | Iterable[AggType],
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+):
+    raise NotImplementedError(f"Data type {type(data)} not supported for aggregation")
+
+
+@_aggregate.register(pd.DataFrame)
+def aggregate_df(data, by, func, *, mask=None, dof=1):
+    return _aggregate(data.values, by, func, mask=mask, dof=dof)
+
+
+@_aggregate.register(np.ndarray)
+@_aggregate.register(sparse.spmatrix)
 def aggregate_array(
     data,
     by: pd.Categorical,
@@ -349,7 +380,7 @@ def _combine_categories(
 
     # Calculating result codes
     factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
-    np.cumsum(n_categories[::-1], out=factors[1:])
+    np.cumprod(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
     code_array = np.zeros((len(cols), df.shape[0]), dtype=np.int32)

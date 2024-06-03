@@ -1,5 +1,5 @@
-"""Logging and Profiling
-"""
+"""Logging and Profiling"""
+
 from __future__ import annotations
 
 import logging
@@ -8,11 +8,13 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from functools import partial, update_wrapper
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from typing import IO, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import anndata.logging
 
 if TYPE_CHECKING:
+    from typing import IO
+
     from ._settings import ScanpyConfig
 
 

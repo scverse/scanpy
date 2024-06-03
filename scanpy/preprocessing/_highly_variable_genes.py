@@ -3,8 +3,9 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from inspect import signature
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
+import numba
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -20,6 +21,8 @@ from ._simple import filter_genes
 from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
 
@@ -96,19 +99,25 @@ def _highly_variable_genes_seurat_v3(
         estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10**estimat_var)
 
-        batch_counts = data_batch.astype(np.float64).copy()
         # clip large values as in Seurat
         N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
-        if sp_sparse.issparse(batch_counts):
-            batch_counts = sp_sparse.csr_matrix(batch_counts)
-            mask = batch_counts.data > clip_val[batch_counts.indices]
-            batch_counts.data[mask] = clip_val[batch_counts.indices[mask]]
+        if sp_sparse.issparse(data_batch):
+            if sp_sparse.isspmatrix_csr(data_batch):
+                batch_counts = data_batch
+            else:
+                batch_counts = sp_sparse.csr_matrix(data_batch)
 
-            squared_batch_counts_sum = np.array(batch_counts.power(2).sum(axis=0))
-            batch_counts_sum = np.array(batch_counts.sum(axis=0))
+            squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
+                batch_counts.indices,
+                batch_counts.data,
+                n_cols=batch_counts.shape[1],
+                clip_val=clip_val,
+                nnz=batch_counts.nnz,
+            )
         else:
+            batch_counts = data_batch.astype(np.float64).copy()
             clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
             np.putmask(
                 batch_counts,
@@ -191,6 +200,26 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
+@numba.njit(cache=True)
+def _sum_and_sum_squares_clipped(
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    n_cols: int,
+    clip_val: NDArray[np.float64],
+    nnz: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    for i in range(nnz):
+        idx = indices[i]
+        element = min(np.float64(data[i]), clip_val[idx])
+        squared_batch_counts_sum[idx] += element**2
+        batch_counts_sum[idx] += element
+
+    return squared_batch_counts_sum, batch_counts_sum
+
+
 @dataclass
 class _Cutoffs:
     min_disp: float
@@ -259,15 +288,15 @@ def _highly_variable_genes_single_batch(
 
     if flavor == "seurat":
         X = X.copy()
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            X *= np.log(adata.uns["log1p"]["base"])
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            X *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
         if isinstance(X, np.ndarray):
             np.expm1(X, out=X)
         else:
             X = np.expm1(X)
 
-    mean, var = _get_mean_var(X)
+    mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -277,9 +306,7 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(
-        dict(zip(["means", "dispersions"], materialize_as_ndarray((mean, dispersion))))
-    )
+    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
@@ -362,7 +389,7 @@ def _subset_genes(
 ) -> NDArray[np.bool_] | DaskArray:
     """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        dispersion_norm = np.nan_to_num(dispersion_norm)  # similar to Seurat
         return cutoff.in_bounds(mean, dispersion_norm)
     n_top_genes = cutoff
     del cutoff
@@ -462,8 +489,7 @@ def _highly_variable_genes_batched(
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
     else:
-        dispersion_norm = df["dispersions_norm"].to_numpy()
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        df["dispersions_norm"] = df["dispersions_norm"].fillna(0)  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])
 
     return df
@@ -502,24 +528,24 @@ def highly_variable_genes(
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """\
-    Annotate highly variable genes [Satija15]_ [Zheng17]_ [Stuart19]_.
+    Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_, Cell Ranger [Zheng17]_, and Seurat v3 [Stuart19]_.
+    :cite:p:`Satija2015`, Cell Ranger :cite:p:`Zheng2017`, and Seurat v3 :cite:p:`Stuart2019`.
 
     `'seurat_v3'`/`'seurat_v3_paper'` requires `scikit-misc` package. If you plan to use this flavor, consider
     installing `scanpy` with this optional dependency: `scanpy[skmisc]`.
 
-    For the dispersion-based methods (`flavor='seurat'` [Satija15]_ and
-    `flavor='cell_ranger'` [Zheng17]_), the normalized dispersion is obtained
+    For the dispersion-based methods (`flavor='seurat'` :cite:t:`Satija2015` and
+    `flavor='cell_ranger'` :cite:t:`Zheng2017`), the normalized dispersion is obtained
     by scaling with the mean and standard deviation of the dispersions for genes
     falling into a given bin for mean expression of genes. This means that for each
     bin of mean expression, highly variable genes are selected.
 
-    For `flavor='seurat_v3'`/`'seurat_v3_paper'` [Stuart19]_, a normalized variance for each gene
+    For `flavor='seurat_v3'`/`'seurat_v3_paper'` :cite:p:`Stuart2019`, a normalized variance for each gene
     is computed. First, the data are standardized (i.e., z-score normalization
     per feature) with a regularized standard deviation. Next, the normalized variance
     is computed as the variance of each gene after the transformation. Genes are ranked

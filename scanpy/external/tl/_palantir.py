@@ -1,6 +1,7 @@
 """\
 Run Diffusion maps using the adaptive anisotropic kernel
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -9,7 +10,7 @@ import pandas as pd
 
 from ... import logging as logg
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -41,7 +42,7 @@ def palantir(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
+    Run Diffusion maps using the adaptive anisotropic kernel :cite:p:`Setty2019`.
 
     Palantir is an algorithm to align cells along differentiation trajectories.
     Palantir models differentiation as a stochastic process where stem cells

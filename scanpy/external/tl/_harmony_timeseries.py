@@ -2,6 +2,7 @@
 Harmony time series for data visualization with augmented affinity matrix at
 discrete time points
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,7 +12,7 @@ import pandas as pd
 
 from ... import logging as logg
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -30,7 +31,7 @@ def harmony_timeseries(
 ) -> AnnData | None:
     """\
     Harmony time series for data visualization with augmented affinity matrix
-    at discrete time points [Nowotschin18i]_.
+    at discrete time points :cite:p:`Nowotschin2019`.
 
     Harmony time series is a framework for data visualization, trajectory
     detection and interpretation for scRNA-seq data measured at discrete

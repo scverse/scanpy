@@ -3,9 +3,10 @@
 """\
 This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from scipy.sparse import issparse
@@ -17,6 +18,7 @@ from .._utils import select_groups
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Literal
 
     from anndata import AnnData
 

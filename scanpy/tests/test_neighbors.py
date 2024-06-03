@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -11,9 +11,11 @@ from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy.testing._helpers import anndata_v0_8_constructor_compat
+from testing.scanpy._helpers import anndata_v0_8_constructor_compat
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from pytest_mock import MockerFixture
 
 # the input data

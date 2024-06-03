@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 import pytest
 from packaging.version import Version
-from scipy.sparse import csr_matrix
+from scipy import sparse
 
 import scanpy as sc
 from scanpy._utils import _resolve_axis
-from scanpy.testing._helpers import assert_equal
-from scanpy.testing._helpers.data import pbmc3k_processed
-from scanpy.testing._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._helpers import assert_equal
+from testing.scanpy._helpers.data import pbmc3k_processed
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 
 @pytest.fixture
@@ -61,10 +61,10 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
     obs_df, var_df = (df_groupby, df_base) if dim == "obs" else (df_base, df_groupby)
     data = X.T if dim == "var" and data_key != "varm" else X
     if data_key != "X":
-        data_dict_sparse = {data_key: {"test": csr_matrix(data)}}
+        data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}
         data_dict_dense = {data_key: {"test": data}}
     else:
-        data_dict_sparse = {data_key: csr_matrix(data)}
+        data_dict_sparse = {data_key: sparse.csr_matrix(data)}
         data_dict_dense = {data_key: data}
 
     adata_sparse = ad.AnnData(obs=obs_df, var=var_df, **data_dict_sparse)
@@ -378,3 +378,101 @@ def test_combine_categories(label_cols, cols, expected):
         [x.split("_") for x in result], columns=cols, index=result.astype(str)
     ).astype("category")
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
+def test_aggregate_arraytype(array_type, metric):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
+    adata.X = array_type(adata.X)
+    aggregate = sc.get.aggregate(adata, ["louvain"], metric)
+    assert isinstance(aggregate.layers[metric], np.ndarray)
+
+
+def test_aggregate_obsm_varm():
+    adata_obsm = sc.datasets.blobs()
+    adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
+    adata_obsm.obsm["test"] = adata_obsm.X[:, ::2].copy()
+    adata_varm = adata_obsm.T.copy()
+
+    result_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
+    result_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
+
+    assert_equal(result_obsm, result_varm.T)
+
+    expected_sum = (
+        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        .groupby(adata_obsm.obs["blobs"], observed=True)
+        .sum()
+    )
+    expected_mean = (
+        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        .groupby(adata_obsm.obs["blobs"], observed=True)
+        .mean()
+    )
+
+    assert_equal(expected_sum.values, result_obsm.layers["sum"])
+    assert_equal(expected_mean.values, result_obsm.layers["mean"])
+
+
+def test_aggregate_obsm_labels():
+    from itertools import chain, repeat
+
+    label_counts = [("a", 5), ("b", 3), ("c", 4)]
+    blocks = [np.ones((n, 1)) for _, n in label_counts]
+    obs_names = pd.Index(
+        [f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))]
+    )
+    entry = pd.DataFrame(
+        sparse.block_diag(blocks).toarray(),
+        columns=[f"dim_{i}" for i in range(len(label_counts))],
+        index=obs_names,
+    )
+
+    adata = ad.AnnData(
+        obs=pd.DataFrame(
+            {
+                "labels": list(
+                    chain.from_iterable(repeat(l, n) for (l, n) in label_counts)
+                )
+            },
+            index=obs_names,
+        ),
+        var=pd.DataFrame(index=["gene_0"]),
+        obsm={"entry": entry},
+    )
+
+    expected = ad.AnnData(
+        obs=pd.DataFrame({"labels": pd.Categorical(list("abc"))}, index=list("abc")),
+        var=pd.DataFrame(index=[f"dim_{i}" for i in range(3)]),
+        layers={
+            "sum": np.diag([n for _, n in label_counts]),
+        },
+    )
+    result = sc.get.aggregate(adata, by="labels", func="sum", obsm="entry")
+    assert_equal(expected, result)
+
+
+def test_dispatch_not_implemented():
+    adata = sc.datasets.blobs()
+    with pytest.raises(NotImplementedError):
+        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
+
+
+def test_factors():
+    from itertools import product
+
+    obs = pd.DataFrame(
+        product(range(5), range(5), range(5), range(5)), columns=list("abcd")
+    )
+    obs.index = [f"cell_{i:04d}" for i in range(obs.shape[0])]
+    adata = ad.AnnData(
+        X=np.arange(obs.shape[0]).reshape(-1, 1),
+        obs=obs,
+    )
+
+    res = sc.get.aggregate(adata, by=["a", "b", "c", "d"], func="sum")
+    np.testing.assert_equal(res.layers["sum"], adata.X)

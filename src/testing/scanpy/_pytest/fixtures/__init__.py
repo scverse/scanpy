@@ -2,6 +2,7 @@
 
 This is kept seperate from the helpers file because it relies on pytest.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -12,6 +13,7 @@ import pytest
 
 from .data import (
     _pbmc3ks_parametrized_session,
+    backed_adata,
     pbmc3k_parametrized,
     pbmc3k_parametrized_small,
 )
@@ -26,6 +28,7 @@ __all__ = [
     "_pbmc3ks_parametrized_session",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
+    "backed_adata",
 ]
 
 

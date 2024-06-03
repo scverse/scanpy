@@ -4,19 +4,20 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import _doc_params
+from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
     from anndata import AnnData
 
@@ -116,6 +117,8 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
+
+    raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]
@@ -145,7 +148,7 @@ def dendrogram(
         categorical.name = "_".join(groupby)
 
         rep_df.set_index(categorical, inplace=True)
-        categories = rep_df.index.categories
+        categories: pd.Index = rep_df.index.categories
     else:
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
@@ -164,7 +167,7 @@ def dendrogram(
     import scipy.cluster.hierarchy as sch
     from scipy.spatial import distance
 
-    corr_matrix = mean_df.T.corr(method=cor_method)
+    corr_matrix = mean_df.T.corr(method=cor_method).clip(-1, 1)
     corr_condensed = distance.squareform(1 - corr_matrix)
     z_var = sch.linkage(
         corr_condensed, method=linkage_method, optimal_ordering=optimal_ordering

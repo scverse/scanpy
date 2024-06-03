@@ -13,7 +13,7 @@ from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc3k_processed
+from testing.scanpy._helpers.data import pbmc3k_processed
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"

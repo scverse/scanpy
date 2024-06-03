@@ -8,7 +8,11 @@ from copy import copy
 from functools import partial
 from itertools import combinations, product
 from numbers import Integral
-from typing import TYPE_CHECKING, Any, Literal
+from typing import (
+    TYPE_CHECKING,
+    Any,  # noqa: TCH003
+    Literal,  # noqa: TCH003
+)
 
 import numpy as np
 import pandas as pd
@@ -17,14 +21,22 @@ from cycler import Cycler  # noqa: TCH002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes  # noqa: TCH002
-from matplotlib.colors import Colormap, Normalize
+from matplotlib.colors import (
+    Colormap,  # noqa: TCH002
+    Normalize,
+)
 from matplotlib.figure import Figure  # noqa: TCH002
 from numpy.typing import NDArray  # noqa: TCH002
 from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
-from ..._utils import Empty, _doc_params, _empty, sanitize_anndata
+from ..._utils import (
+    Empty,  # noqa: TCH001
+    _doc_params,
+    _empty,
+    sanitize_anndata,
+)
 from ...get import _check_mask
 from .. import _utils
 from .._docs import (
@@ -35,11 +47,11 @@ from .._docs import (
     doc_show_save_ax,
 )
 from .._utils import (
-    ColorLike,
-    VBound,
-    _FontSize,
-    _FontWeight,
-    _IGraphLayout,
+    ColorLike,  # noqa: TCH001
+    VBound,  # noqa: TCH001
+    _FontSize,  # noqa: TCH001
+    _FontWeight,  # noqa: TCH001
+    _IGraphLayout,  # noqa: TCH001
     check_colornorm,
     check_projection,
     circles,
@@ -989,7 +1001,7 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :doc:`tutorials:spatial/basic-analysis`
+    :doc:`/tutorials/spatial/basic-analysis`
         Tutorial on spatial analysis.
     """
     # get default image params if available

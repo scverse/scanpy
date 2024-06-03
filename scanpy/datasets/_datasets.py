@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
@@ -16,6 +16,8 @@ from ..readwrite import read, read_visium
 from ._utils import check_datasetdir_exists, filter_oldformatwarning
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from .._utils import AnyRandom
 
 HERE = Path(__file__).parent
@@ -90,13 +92,13 @@ def burczynski06() -> ad.AnnData:
 
 def krumsiek11() -> ad.AnnData:
     """\
-    Simulated myeloid progenitors [Krumsiek11]_.
+    Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
-    The literature-curated boolean network from [Krumsiek11]_ was used to
+    The literature-curated boolean network from :cite:t:`Krumsiek2011` was used to
     simulate the data. It describes development to four cell fates: 'monocyte',
     'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
-    See also the discussion of this data in [Wolf19]_.
+    See also the discussion of this data in :cite:t:`Wolf2019`.
 
     Simulate via :func:`~scanpy.tl.sim`.
 
@@ -123,7 +125,7 @@ def krumsiek11() -> ad.AnnData:
 @check_datasetdir_exists
 def moignard15() -> ad.AnnData:
     """\
-    Hematopoiesis in early mouse embryos [Moignard15]_.
+    Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
 
     Returns
     -------
@@ -161,7 +163,7 @@ def moignard15() -> ad.AnnData:
 @check_datasetdir_exists
 def paul15() -> ad.AnnData:
     """\
-    Development of Myeloid Progenitors [Paul15]_.
+    Development of Myeloid Progenitors :cite:p:`Paul2015`.
 
     Non-logarithmized raw data.
 
@@ -218,7 +220,7 @@ def toggleswitch() -> ad.AnnData:
     """\
     Simulated toggleswitch.
 
-    Data obtained simulating a simple toggleswitch [Gardner00]_
+    Data obtained simulating a simple toggleswitch :cite:p:`Gardner2000`
 
     Simulate via :func:`~scanpy.tl.sim`.
 
@@ -307,7 +309,7 @@ def pbmc3k() -> ad.AnnData:
 def pbmc3k_processed() -> ad.AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
-    Processed using the basic tutorial :doc:`tutorials:pbmc3k`.
+    Processed using the basic tutorial :doc:`/tutorials/basics/clustering-2017`.
 
     Returns
     -------

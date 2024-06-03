@@ -1,37 +1,40 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, MutableMapping
 from textwrap import indent
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict, get_args
+from typing import TYPE_CHECKING, NamedTuple, TypedDict, get_args
 from warnings import warn
 
 import numpy as np
 import scipy
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import issparse
 from sklearn.utils import check_random_state
-
-from .._compat import old_positionals
-
-if TYPE_CHECKING:
-    from anndata import AnnData
-    from igraph import Graph
-
-    from ._types import KnnTransformerLike
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
-from .._utils import AnyRandom, NeighborsView, _doc_params
+from .._utils import NeighborsView, _doc_params
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
 from ._doc import doc_n_pcs, doc_use_rep
-from ._types import _KnownTransformer, _Method, _Metric, _MetricFn
+from ._types import _KnownTransformer, _Method
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, MutableMapping
+    from typing import Any, Literal
+
+    from anndata import AnnData
+    from igraph import Graph
+    from scipy.sparse import csr_matrix
+
+    from .._utils import AnyRandom
+    from ._types import KnnTransformerLike, _Metric, _MetricFn
+
+    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 N_DCS = 15  # default number of diffusion components
@@ -69,13 +72,13 @@ def neighbors(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    Computes the nearest neighbors distance matrix and a neighborhood graph of observations [McInnes18]_.
+    Computes the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
-    The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
+    The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
     the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to [Coifman05]_, in the adaption of
-    [Haghverdi16]_.
+    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
+    :cite:t:`Haghverdi2016`.
 
     Parameters
     ----------
@@ -99,11 +102,12 @@ def neighbors(
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
-        with adaptive width [Haghverdi16]_) for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018` or 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
+        with adaptive width :cite:t:`Haghverdi2016`) for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
+        See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
         `None` (the default)
@@ -162,6 +166,10 @@ def neighbors(
     >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
+
+    See also
+    --------
+    :doc:`/how-to/knn-transformers`
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
@@ -482,8 +490,8 @@ class Neighbors:
     def distances_dpt(self) -> OnFlySymMatrix:
         """DPT distances.
 
-        This is yields [Haghverdi16]_, Eq. 15 from the supplement with the
-        extensions of [Wolf19]_, supplement on random-walk based distance
+        This is yields :cite:p:`Haghverdi2016`, Eq. 15 from the supplement with the
+        extensions of :cite:p:`Wolf2019`, supplement on random-walk based distance
         measures.
         """
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)

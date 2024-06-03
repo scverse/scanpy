@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -9,7 +10,10 @@ from anndata import AnnData
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
-from scanpy.testing._helpers.data import paul15
+from testing.scanpy._helpers.data import paul15
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 HERE = Path(__file__).parent / Path("_data/")
 
@@ -66,8 +70,8 @@ def test_score_with_reference():
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
     with Path(HERE, "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
-    # np.testing.assert_allclose(reference, adata.obs.Test.values)
-    np.testing.assert_array_equal(reference, adata.obs.Test.values)
+    # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
+    np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
 
 
 def test_add_score():
@@ -102,16 +106,20 @@ def test_sparse_nanmean():
     # sparse matrix, no NaN
     S = _create_sparse_nan_matrix(R, C, percent_zero=0.3, percent_nan=0)
     # col/col sum
-    np.testing.assert_allclose(S.A.mean(0), np.array(_sparse_nanmean(S, 0)).flatten())
-    np.testing.assert_allclose(S.A.mean(1), np.array(_sparse_nanmean(S, 1)).flatten())
+    np.testing.assert_allclose(
+        S.toarray().mean(0), np.array(_sparse_nanmean(S, 0)).flatten()
+    )
+    np.testing.assert_allclose(
+        S.toarray().mean(1), np.array(_sparse_nanmean(S, 1)).flatten()
+    )
 
     # sparse matrix with nan
     S = _create_sparse_nan_matrix(R, C, percent_zero=0.3, percent_nan=0.3)
     np.testing.assert_allclose(
-        np.nanmean(S.A, 1), np.array(_sparse_nanmean(S, 1)).flatten()
+        np.nanmean(S.toarray(), 1), np.array(_sparse_nanmean(S, 1)).flatten()
     )
     np.testing.assert_allclose(
-        np.nanmean(S.A, 0), np.array(_sparse_nanmean(S, 0)).flatten()
+        np.nanmean(S.toarray(), 0), np.array(_sparse_nanmean(S, 0)).flatten()
     )
 
     # edge case of only NaNs per row
@@ -138,7 +146,7 @@ def test_score_genes_sparse_vs_dense():
     adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
 
     adata_dense = adata_sparse.copy()
-    adata_dense.X = adata_dense.X.A
+    adata_dense.X = adata_dense.X.toarray()
 
     gene_set = adata_dense.var_names[:10]
 
@@ -161,7 +169,7 @@ def test_score_genes_deplete():
     adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
 
     adata_dense = adata_sparse.copy()
-    adata_dense.X = adata_dense.X.A
+    adata_dense.X = adata_dense.X.toarray()
 
     # here's an arbitary gene set
     gene_set = adata_dense.var_names[:10]
@@ -194,10 +202,10 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     sparse_scores = adata.obs["Test"].values.tolist()
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
-    def mock_fn(x, axis):
-        return np.nanmean(x.A, axis, dtype="float64")
+    def mock_fn(x: csr_matrix, axis: Literal[0, 1]):
+        return np.nanmean(x.toarray(), axis, dtype="float64")
 
-    monkeypatch.setattr(sc.tools._score_genes, "_sparse_nanmean", mock_fn)
+    monkeypatch.setattr(sc.tl._score_genes, "_sparse_nanmean", mock_fn)
     sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
     dense_scores = adata.obs["Test"].values
 

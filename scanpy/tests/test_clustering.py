@@ -4,8 +4,8 @@ import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 
 @pytest.fixture
@@ -31,9 +31,12 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
         resolution=resolution,
         n_iterations=n_iterations,
         directed=(flavor == "leidenalg"),
+        key_added="leiden_custom",
     )
-    assert adata_neighbors.uns["leiden"]["params"]["resolution"] == resolution
-    assert adata_neighbors.uns["leiden"]["params"]["n_iterations"] == n_iterations
+    assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
+    assert (
+        adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
+    )
 
 
 @needs.leidenalg
@@ -187,9 +190,48 @@ def test_louvain_basic(adata_neighbors):
 
 
 @needs.louvain
+@pytest.mark.parametrize("random_state", [10, 999])
+@pytest.mark.parametrize("resolution", [0.9, 1.1])
+def test_louvain_custom_key(adata_neighbors, resolution, random_state):
+    sc.tl.louvain(
+        adata_neighbors,
+        key_added="louvain_custom",
+        random_state=random_state,
+        resolution=resolution,
+    )
+    assert (
+        adata_neighbors.uns["louvain_custom"]["params"]["random_state"] == random_state
+    )
+    assert adata_neighbors.uns["louvain_custom"]["params"]["resolution"] == resolution
+
+
+@needs.louvain
 @needs.igraph
 def test_partition_type(adata_neighbors):
     import louvain
 
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
+
+
+@pytest.mark.parametrize(
+    "clustering,default_key,default_res,custom_resolutions",
+    [
+        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
+        pytest.param(sc.tl.louvain, "louvain", 0.8, [0.9, 1.1], marks=needs.louvain),
+    ],
+)
+def test_clustering_custom_key(
+    adata_neighbors, clustering, default_key, default_res, custom_resolutions
+):
+    custom_keys = [f"{default_key}_{res}" for res in custom_resolutions]
+
+    # Run clustering with default key, then custom keys
+    clustering(adata_neighbors, resolution=default_res)
+    for key, res in zip(custom_keys, custom_resolutions):
+        clustering(adata_neighbors, resolution=res, key_added=key)
+
+    # ensure that all clustering parameters are added to user provided keys and not overwritten
+    assert adata_neighbors.uns[default_key]["params"]["resolution"] == default_res
+    for key, res in zip(custom_keys, custom_resolutions):
+        assert adata_neighbors.uns[key]["params"]["resolution"] == res

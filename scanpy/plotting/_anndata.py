@@ -1,18 +1,19 @@
-"""Plotting functions for AnnData.
-"""
+"""Plotting functions for AnnData."""
+
 from __future__ import annotations
 
 import collections.abc as cabc
 from collections import OrderedDict
-from collections.abc import Collection, Iterable, Mapping, Sequence
 from itertools import product
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, ListedColormap, Normalize, is_color_like
+from matplotlib.colors import is_color_like
+from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
 
@@ -29,9 +30,6 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
-    ColorLike,
-    _FontSize,
-    _FontWeight,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -39,11 +37,22 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping, Sequence
+    from typing import Literal, Union
+
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap, ListedColormap, Normalize
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
+
+    from ._utils import ColorLike, _FontSize, _FontWeight
+
+    # TODO: is that all?
+    _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
+    _VarNames = Union[str, Sequence[str]]
+
 
 VALID_LEGENDLOCS = {
     "none",
@@ -62,10 +71,6 @@ VALID_LEGENDLOCS = {
     "upper center",
     "center",
 }
-
-# TODO: is that all?
-_Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-_VarNames = Union[str, Sequence[str]]
 
 
 @old_positionals(
@@ -518,7 +523,11 @@ def _scatter_obs(
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
             )
         if legend is not None:
-            for handle in legend.legendHandles:
+            if Version(mpl.__version__) < Version("3.7"):
+                _attr = "legendHandles"
+            else:
+                _attr = "legend_handles"
+            for handle in getattr(legend, _attr):
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter

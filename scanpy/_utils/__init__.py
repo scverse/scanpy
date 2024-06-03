@@ -3,27 +3,29 @@
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
 """
+
 from __future__ import annotations
 
 import importlib.util
 import inspect
 import random
+import re
 import sys
 import warnings
 from collections import namedtuple
 from contextlib import contextmanager
 from enum import Enum
 from functools import partial, singledispatch, wraps
+from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from typing import TYPE_CHECKING, overload
 from weakref import WeakSet
 
+import h5py
 import numpy as np
-from anndata import AnnData
 from anndata import __version__ as anndata_version
-from numpy.typing import NDArray
-from packaging import version
+from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import check_random_state
 
@@ -32,9 +34,24 @@ from .._compat import DaskArray
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
+if Version(anndata_version) >= Version("0.10.0"):
+    from anndata._core.sparse_dataset import (
+        BaseCompressedSparseDataset as SparseDataset,
+    )
+else:
+    from anndata._core.sparse_dataset import SparseDataset
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+    from typing import Any, Callable, Literal, TypeVar, Union
+
+    from anndata import AnnData
+    from numpy.typing import DTypeLike, NDArray
+
+    # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    # maybe in the future random.Generator
+    AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class Empty(Enum):
@@ -45,10 +62,6 @@ class Empty(Enum):
 
 
 _empty = Empty.token
-
-# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-# maybe in the future random.Generator
-AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class RNGIgraph:
@@ -64,14 +77,21 @@ class RNGIgraph:
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
+def ensure_igraph() -> None:
+    if importlib.util.find_spec("igraph"):
+        return
+    raise ImportError(
+        "Please install the igraph package: "
+        "`conda install -c conda-forge python-igraph` or "
+        "`pip3 install igraph`."
+    )
+
+
 @contextmanager
 def set_igraph_random_state(random_state: int):
-    try:
-        import igraph
-    except ImportError:
-        raise ImportError(
-            "Please install igraph: `conda install -c conda-forge igraph` or `pip3 install igraph`."
-        )
+    ensure_igraph()
+    import igraph
+
     rng = RNGIgraph(random_state)
     try:
         igraph.set_random_number_generator(rng)
@@ -84,7 +104,7 @@ EPS = 1e-15
 
 
 def check_versions():
-    if version.parse(anndata_version) < version.parse("0.6.10"):
+    if Version(anndata_version) < Version("0.6.10"):
         from .. import __version__
 
         raise ImportError(
@@ -268,25 +288,6 @@ def get_igraph_from_adjacency(adjacency, directed=None):
             "Your adjacency matrix contained redundant nodes."
         )
     return g
-
-
-def get_sparse_from_igraph(graph, weight_attr=None):
-    from scipy.sparse import csr_matrix
-
-    edges = graph.get_edgelist()
-    if weight_attr is None:
-        weights = [1] * len(edges)
-    else:
-        weights = graph.es[weight_attr]
-    if not graph.is_directed():
-        edges.extend([(v, u) for u, v in edges])
-        weights.extend(weights)
-    shape = graph.vcount()
-    shape = (shape, shape)
-    if len(edges) > 0:
-        return csr_matrix((weights, zip(*edges)), shape=shape)
-    else:
-        return csr_matrix(shape)
 
 
 # --------------------------------------------------------------------------------
@@ -534,9 +535,10 @@ def update_params(
 # --------------------------------------------------------------------------------
 
 
-_SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-_MemoryArray = Union[NDArray, _SparseMatrix]
-_SupportedArray = Union[_MemoryArray, DaskArray]
+if TYPE_CHECKING:
+    _SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
+    _MemoryArray = Union[NDArray, _SparseMatrix]
+    _SupportedArray = Union[_MemoryArray, DaskArray]
 
 
 @singledispatch
@@ -558,6 +560,219 @@ def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     import dask.array as da
 
     return da.map_blocks(elem_mul, x, y)
+
+
+if TYPE_CHECKING:
+    Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
+
+
+def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
+    divisor = np.ravel(divisor)
+    if axis:
+        return divisor[None, :]
+    return divisor[:, None]
+
+
+def check_op(op):
+    if op not in {truediv, mul}:
+        raise ValueError(f"{op} not one of truediv or mul")
+
+
+@singledispatch
+def axis_mul_or_truediv(
+    X: sparse.spmatrix,
+    scaling_array,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: sparse.spmatrix | None = None,
+) -> sparse.spmatrix:
+    check_op(op)
+    if out is not None:
+        if X.data is not out.data:
+            raise ValueError(
+                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+            )
+    if not allow_divide_by_zero and op is truediv:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+
+    row_scale = axis == 0
+    column_scale = axis == 1
+    if row_scale:
+
+        def new_data_op(x):
+            return op(x.data, np.repeat(scaling_array, np.diff(x.indptr)))
+
+    elif column_scale:
+
+        def new_data_op(x):
+            return op(x.data, scaling_array.take(x.indices, mode="clip"))
+
+    if X.format == "csr":
+        indices = X.indices
+        indptr = X.indptr
+        if out is not None:
+            X.data = new_data_op(X)
+            return X
+        return sparse.csr_matrix(
+            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
+        )
+    transposed = X.T
+    return axis_mul_or_truediv(
+        transposed,
+        scaling_array,
+        op=op,
+        axis=1 - axis,
+        out=transposed,
+        allow_divide_by_zero=allow_divide_by_zero,
+    ).T
+
+
+@axis_mul_or_truediv.register(np.ndarray)
+def _(
+    X: np.ndarray,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: np.ndarray | None = None,
+) -> np.ndarray:
+    check_op(op)
+    scaling_array = broadcast_axis(scaling_array, axis)
+    if op is mul:
+        return np.multiply(X, scaling_array, out=out)
+    if not allow_divide_by_zero:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+    return np.true_divide(X, scaling_array, out=out)
+
+
+def make_axis_chunks(
+    X: DaskArray, axis: Literal[0, 1], pad=True
+) -> tuple[tuple[int], tuple[int]]:
+    if axis == 0:
+        return (X.chunks[axis], (1,))
+    return ((1,), X.chunks[axis])
+
+
+@axis_mul_or_truediv.register(DaskArray)
+def _(
+    X: DaskArray,
+    scaling_array: Scaling_T,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: None = None,
+) -> DaskArray:
+    check_op(op)
+    if out is not None:
+        raise TypeError(
+            "`out` is not `None`. Do not do in-place modifications on dask arrays."
+        )
+
+    import dask.array as da
+
+    scaling_array = broadcast_axis(scaling_array, axis)
+    row_scale = axis == 0
+    column_scale = axis == 1
+
+    if isinstance(scaling_array, DaskArray):
+        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+            column_scale
+            and (
+                (
+                    len(scaling_array.chunksize) == 1
+                    and X.chunksize[1] != scaling_array.chunksize[0]
+                )
+                or (
+                    len(scaling_array.chunksize) == 2
+                    and X.chunksize[1] != scaling_array.chunksize[1]
+                )
+            )
+        ):
+            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
+    else:
+        scaling_array = da.from_array(
+            scaling_array,
+            chunks=make_axis_chunks(X, axis),
+        )
+    return da.map_blocks(
+        axis_mul_or_truediv,
+        X,
+        scaling_array,
+        axis,
+        op,
+        meta=X._meta,
+        out=out,
+        allow_divide_by_zero=allow_divide_by_zero,
+    )
+
+
+@overload
+def axis_sum(
+    X: sparse.spmatrix,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: DTypeLike | None = None,
+) -> np.matrix: ...
+
+
+@singledispatch
+def axis_sum(
+    X: np.ndarray,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: DTypeLike | None = None,
+) -> np.ndarray:
+    return np.sum(X, axis=axis, dtype=dtype)
+
+
+@axis_sum.register(DaskArray)
+def _(
+    X: DaskArray,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: DTypeLike | None = None,
+) -> DaskArray:
+    import dask.array as da
+
+    if dtype is None:
+        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+
+    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
+        return X.sum(axis=axis, dtype=dtype)
+
+    def sum_drop_keepdims(*args, **kwargs):
+        kwargs.pop("computing_meta", None)
+        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
+        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
+            args[0], (sparse.spmatrix, np.matrix)
+        ):
+            kwargs.pop("keepdims", None)
+            axis = kwargs["axis"]
+            if isinstance(axis, tuple):
+                if len(axis) != 1:
+                    raise ValueError(
+                        f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
+                    )
+                kwargs["axis"] = axis[0]
+        # returns a np.matrix normally, which is undesireable
+        return np.array(np.sum(*args, dtype=dtype, **kwargs))
+
+    def aggregate_sum(*args, **kwargs):
+        return np.sum(args[0], dtype=dtype, **kwargs)
+
+    return da.reduction(
+        X,
+        sum_drop_keepdims,
+        aggregate_sum,
+        axis=axis,
+        dtype=dtype,
+        meta=np.array([], dtype=dtype),
+    )
 
 
 @singledispatch
@@ -652,6 +867,12 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
         file if hasattr(file, "write") else sys.stderr
     )
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
+
+
+def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
+    warnings.warn(msg, category, stacklevel=stacklevel)
+    # You'd think `'once'` works, but it doesn't at the repl and in notebooks
+    warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 
 
 def subsample(
@@ -871,3 +1092,14 @@ def _resolve_axis(
     if axis in {1, "var"}:
         return (1, "var")
     raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
+
+
+def is_backed_type(X: object) -> bool:
+    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
+
+
+def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
+    if is_backed_type(X):
+        raise NotImplementedError(
+            f"{method_name} is not implemented for matrices of type {type(X)}"
+        )

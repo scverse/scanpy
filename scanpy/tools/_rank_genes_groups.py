@@ -1,5 +1,5 @@
-"""Rank genes according to differential expression.
-"""
+"""Rank genes according to differential expression."""
+
 from __future__ import annotations
 
 from math import floor
@@ -12,9 +12,12 @@ from scipy.sparse import issparse, vstack
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import check_nonnegative_integers
+from .._utils import (
+    check_nonnegative_integers,
+    raise_not_implemented_error_if_backed_type,
+)
 from ..get import _check_mask
-from ..preprocessing._simple import _get_mean_var
+from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -23,8 +26,10 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from scipy import sparse
 
+    _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+
+# Used with get_args
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-_CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -103,8 +108,8 @@ class _RankGenes:
         comp_pts: bool = False,
     ) -> None:
         self.mask_var = mask_var
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            self.expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
 
@@ -132,6 +137,7 @@ class _RankGenes:
             if use_raw and adata.raw is not None:
                 adata_comp = adata.raw
             X = adata_comp.X
+        raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
         if issparse(X):
@@ -526,7 +532,7 @@ def rank_genes_groups(
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
-        `'logreg'` uses logistic regression. See [Ntranos18]_,
+        `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
@@ -592,7 +598,6 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-
     if mask_var is not None:
         mask_var = _check_mask(adata, mask_var, "var")
 
@@ -839,8 +844,8 @@ def filter_rank_genes_groups(
             index=gene_names.index,
         )
 
-        if "log1p" in adata.uns_keys() and adata.uns["log1p"].get("base") is not None:
-            expm1_func = lambda x: np.expm1(x * np.log(adata.uns["log1p"]["base"]))
+        if (base := adata.uns.get("log1p", {}).get("base")) is not None:
+            expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             expm1_func = np.expm1
 

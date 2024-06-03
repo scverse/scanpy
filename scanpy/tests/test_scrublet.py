@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -11,22 +11,23 @@ from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
 
 import scanpy as sc
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 pytestmark = [needs.skimage]
 
 
 def pbmc200() -> AnnData:
-    from scanpy.testing._helpers.data import _pbmc3k
+    from testing.scanpy._helpers.data import _pbmc3k
 
     return _pbmc3k()[200:400].copy()
 
 
 def paul500() -> AnnData:
-    from scanpy.testing._helpers.data import _paul15
+    from testing.scanpy._helpers.data import _paul15
 
     return _paul15()[:500].copy()
 
@@ -38,14 +39,16 @@ def paul500() -> AnnData:
         pytest.param(paul500, [180], [0.219178], id="dense"),
     ],
 )
+@pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
+    use_approx_neighbors: bool | None,
 ):
     """Check that scrublet runs and detects some doublets."""
     adata = mk_data()
-    sc.pp.scrublet(adata, use_approx_neighbors=False)
+    sc.pp.scrublet(adata, use_approx_neighbors=use_approx_neighbors)
 
     doublet_idx = np.flatnonzero(adata.obs["predicted_doublet"]).tolist()
     assert doublet_idx == expected_idx

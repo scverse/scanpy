@@ -14,6 +14,7 @@ second highest barcode from a noise distribution. A negative two highest
 barcodes should come from noise distributions. We test each of these
 hypotheses in a bayesian fashion, and select the most probable hypothesis.
 """
+
 from __future__ import annotations
 
 from itertools import product
@@ -25,7 +26,7 @@ from scipy.stats import norm
 
 from ..._compat import old_positionals
 from ..._utils import check_nonnegative_integers
-from ...testing._doctests import doctest_skip
+from ..._utils._doctests import doctest_skip
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -288,7 +289,7 @@ def hashsolo(
     number_of_noise_barcodes: int | None = None,
     inplace: bool = True,
 ) -> AnnData | None:
-    """Probabilistic demultiplexing of cell hashing data using HashSolo [Bernstein20]_.
+    """Probabilistic demultiplexing of cell hashing data using HashSolo :cite:p:`Bernstein2020`.
 
     .. note::
         More information and bug reports `here <https://github.com/calico/solo>`__.
@@ -383,12 +384,12 @@ def hashsolo(
                 priors,
                 number_of_noise_barcodes,
             )
-            results.loc[
-                cluster_feature_bool_vector, "most_likely_hypothesis"
-            ] = posterior_dict["most_likely_hypothesis"]
-            results.loc[
-                cluster_feature_bool_vector, "cluster_feature"
-            ] = cluster_feature
+            results.loc[cluster_feature_bool_vector, "most_likely_hypothesis"] = (
+                posterior_dict["most_likely_hypothesis"]
+            )
+            results.loc[cluster_feature_bool_vector, "cluster_feature"] = (
+                cluster_feature
+            )
             results.loc[
                 cluster_feature_bool_vector, "negative_hypothesis_probability"
             ] = posterior_dict["probs_hypotheses"][:, 0]
@@ -429,12 +430,12 @@ def hashsolo(
     ]
 
     adata.obs["Classification"] = None
-    adata.obs.loc[
-        adata.obs["most_likely_hypothesis"] == 2, "Classification"
-    ] = "Doublet"
-    adata.obs.loc[
-        adata.obs["most_likely_hypothesis"] == 0, "Classification"
-    ] = "Negative"
+    adata.obs.loc[adata.obs["most_likely_hypothesis"] == 2, "Classification"] = (
+        "Doublet"
+    )
+    adata.obs.loc[adata.obs["most_likely_hypothesis"] == 0, "Classification"] = (
+        "Negative"
+    )
     all_sings = adata.obs["most_likely_hypothesis"] == 1
     singlet_sample_index = np.argmax(
         adata.obs.loc[all_sings, cell_hashing_columns].values, axis=1

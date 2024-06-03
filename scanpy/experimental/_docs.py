@@ -1,5 +1,5 @@
-"""Shared docstrings for experimental function parameters.
-"""
+"""Shared docstrings for experimental function parameters."""
+
 from __future__ import annotations
 
 doc_adata = """\
@@ -12,14 +12,14 @@ doc_dist_params = """\
 theta
     The negative binomial overdispersion parameter `theta` for Pearson residuals.
     Higher values correspond to less overdispersion \
-    (`var = mean + mean^2/theta`), and `theta=np.Inf` corresponds to a Poisson model.
+    (`var = mean + mean^2/theta`), and `theta=np.inf` corresponds to a Poisson model.
 clip
     Determines if and how residuals are clipped:
 
     * If `None`, residuals are clipped to the interval \
     `[-sqrt(n_obs), sqrt(n_obs)]`, where `n_obs` is the number of cells in the dataset (default behavior).
     * If any scalar `c`, residuals are clipped to the interval `[-c, c]`. Set \
-    `clip=np.Inf` for no clipping.
+    `clip=np.inf` for no clipping.
 """
 
 doc_check_values = """\
