@@ -408,7 +408,7 @@ def _pca_with_sparse(
     X = check_array(X, accept_sparse=["csr", "csc"])
 
     if mu is None:
-        mu = X.mean(0).A.flatten()[None, :]
+        mu = np.asarray(X.mean(0)).flatten()[None, :]
     mdot = mu.dot
     mmat = mdot
     mhdot = mu.T.dot

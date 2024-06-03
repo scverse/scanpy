@@ -285,7 +285,7 @@ def write_hdf5_genes(E, gene_list, filename):
     hf.attrs["ngenes"] = E.shape[1]
 
     for iG, g in enumerate(gene_list):
-        counts = E[:, iG].A.squeeze()
+        counts = E[:, iG].toarray().squeeze()
         cell_ix = np.nonzero(counts)[0]
         counts = counts[cell_ix]
         counts_group.create_dataset(g, data=counts)
@@ -307,7 +307,7 @@ def write_hdf5_cells(E, filename):
     hf.attrs["ngenes"] = E.shape[1]
 
     for iC in range(E.shape[0]):
-        counts = E[iC, :].A.squeeze()
+        counts = E[iC, :].toarray().squeeze()
         gene_ix = np.nonzero(counts)[0]
         counts = counts[gene_ix]
         counts_group.create_dataset(str(iC), data=counts)

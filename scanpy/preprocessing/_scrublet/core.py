@@ -185,7 +185,7 @@ class Scrublet:
     ) -> None:
         self._counts_obs = sparse.csc_matrix(counts_obs)
         self._total_counts_obs = (
-            self._counts_obs.sum(1).A.squeeze()
+            np.asarray(self._counts_obs.sum(1)).squeeze()
             if total_counts_obs is None
             else total_counts_obs
         )
