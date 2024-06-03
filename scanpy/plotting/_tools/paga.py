@@ -1224,7 +1224,7 @@ def paga_path(
             values = (
                 adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
             )[idcs]
-            x += (values.A if issparse(values) else values).tolist()
+            x += (values.toarray() if issparse(values) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))

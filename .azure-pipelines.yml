@@ -80,9 +80,6 @@ jobs:
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
-  - script: uv pip list
-    displayName: 'Display installed versions'
-
   - script: pytest
     displayName: 'PyTest'
     condition: eq(variables['TEST_TYPE'], 'standard')
