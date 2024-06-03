@@ -181,6 +181,9 @@ def moignard15() -> AnnData:
     """\
     Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
 
+    The data was obtained using qRT–PCR.
+    :attr:`~anndata.AnnData.X` contains the normalized dCt values from supp. table 7 of the publication.
+
     :attr:`~anndata.AnnData.obs`\\ `["exp_groups"]` contains the stages derived by
     flow sorting and GFP marker status:
     “primitive streak” (`PS`), “neural plate” (`NP`), “head fold (`HF`),
