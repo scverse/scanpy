@@ -15,13 +15,18 @@ from .._compat import old_positionals
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
+    from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._utils import AnyRandom
 
 
-def _sparse_nanmean(X, axis):
+def _sparse_nanmean(
+    X: csr_matrix | csc_matrix, axis: Literal[0, 1]
+) -> NDArray[np.float64]:
     """
     np.nanmean equivalent for sparse matrices
     """

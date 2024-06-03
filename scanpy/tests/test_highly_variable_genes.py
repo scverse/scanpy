@@ -124,7 +124,7 @@ def test_keep_layer(base, flavor):
     else:
         assert False
 
-    assert np.allclose(X_orig.A, adata.X.A)
+    assert np.allclose(X_orig.toarray(), adata.X.toarray())
 
 
 def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
