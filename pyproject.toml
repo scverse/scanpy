@@ -101,6 +101,8 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
+    # optional storage modes
+    "zappy",
     # additional tested algorithms
     "scanpy[louvain]",
     "scanpy[magic]",
