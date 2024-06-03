@@ -86,6 +86,13 @@ def blobs(
     -------
     Annotated data matrix containing a observation annotation 'blobs' that
     indicates cluster identity.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> sc.datasets.blobs()
+    AnnData object with n_obs × n_vars = 640 × 11
+        obs: 'blobs'
     """
     import sklearn.datasets
 

@@ -157,7 +157,7 @@ def test_download_failure():
 # These are tested via doctest
 DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
 # These have parameters that affect shape and so on
-DS_DYNAMIC = frozenset({"blobs", "ebi_expression_atlas"})
+DS_DYNAMIC = frozenset({"ebi_expression_atlas"})
 # Additional marks for datasets besides “internet”
 DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 
