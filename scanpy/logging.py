@@ -157,6 +157,11 @@ def print_header(*, file=None):
     """\
     Versions that might influence the numerical results.
     Matplotlib and Seaborn are excluded from this.
+
+    Parameters
+    ----------
+    file
+        Optional path for dependency output.
     """
 
     modules = ["scanpy"] + _DEPENDENCIES_NUMERICS
@@ -171,6 +176,11 @@ def print_versions(*, file: IO[str] | None = None):
     Print versions of imported packages, OS, and jupyter environment.
 
     For more options (including rich output) use `session_info.show` directly.
+
+    Parameters
+    ----------
+    file
+        Optional path for output.
     """
     import session_info
 
@@ -202,6 +212,11 @@ def print_versions(*, file: IO[str] | None = None):
 def print_version_and_date(*, file=None):
     """\
     Useful for starting a notebook so you see when you started working.
+
+    Parameters
+    ----------
+    file
+        Optional path for output.
     """
     from . import __version__
 
@@ -228,7 +243,7 @@ def error(
     Log message with specific level and return current time.
 
     Parameters
-    ==========
+    ----------
     msg
         Message to display.
     time
