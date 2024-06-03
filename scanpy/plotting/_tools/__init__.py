@@ -277,7 +277,8 @@ def dpt_groups_pseudotime(
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
 ):
-    """Plot groups and pseudotime.
+    """\
+    Plot groups and pseudotime.
 
     Parameters
     ----------
