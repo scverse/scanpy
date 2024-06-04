@@ -161,8 +161,8 @@ def score_genes(
         ].index
         if len(r_genes) == 0:
             logg.warning(
-                f"No control genes for this cut. You might want to increase "
-                f"ctrl_size={ctrl_size} to sample from more control genes."
+                f"No control genes for cut={cut}. You might want to increase "
+                f"gene_pool size (current size: {len(gene_pool)})"
             )
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
