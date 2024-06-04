@@ -255,11 +255,7 @@ def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     if use_raw is not None:
         return use_raw
-    else:
-        if adata.raw is not None:
-            return True
-        else:
-            return False
+    return adata.raw is not None
 
 
 # --------------------------------------------------------------------------------
