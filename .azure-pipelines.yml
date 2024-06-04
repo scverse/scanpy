@@ -72,9 +72,6 @@ jobs:
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
 
-  - script: uv pip list
-    displayName: 'Display installed versions'
-
   - script: pytest
     displayName: 'PyTest'
     condition: eq(variables['TEST_TYPE'], 'standard')
@@ -84,7 +81,7 @@ jobs:
     displayName: 'PyTest (coverage)'
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
-  - task: PublishCodeCoverageResults@1
+  - task: PublishCodeCoverageResults@2
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: 'test-data/coverage.xml'

@@ -4,13 +4,15 @@ Run the Self-Assembling Manifold algorithm
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from ... import logging as logg
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
     from samalg import SAM
 
@@ -47,7 +49,7 @@ def sam(
     verbose: bool = True,
 ) -> SAM | tuple[SAM, AnnData]:
     """\
-    Self-Assembling Manifolds single-cell RNA sequencing analysis tool [Tarashansky19]_.
+    Self-Assembling Manifolds single-cell RNA sequencing analysis tool :cite:p:`Tarashansky2019`.
 
     SAM iteratively rescales the input gene expression matrix to emphasize
     genes that are spatially variable along the intrinsic manifold of the data.

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-from typing import Union as _U
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -12,12 +11,13 @@ from . import _utils
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal, Union
 
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-Scale = _U[Literal["linear", "log", "symlog", "logit"], str]
+    Scale = Union[Literal["linear", "log", "symlog", "logit"], str]
 
 
 @old_positionals(
@@ -104,7 +104,7 @@ def scrublet_score_distribution(
             doublet_scores_sim = adata.uns["scrublet"]["batches"][batch_key][
                 "doublet_scores_sim"
             ]
-            axis_lab_suffix = " (%s)" % batch_key
+            axis_lab_suffix = f" ({batch_key})"
             obs_ax = axs[idx][0]
             sim_ax = axs[idx][1]
 

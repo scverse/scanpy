@@ -6,7 +6,7 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr, spmatrix
+from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from .._utils import _doc_params
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
+    from scipy.sparse import spmatrix
 
 
 def _choose_mtx_rep(adata, use_raw: bool = False, layer: str | None = None):
@@ -246,7 +247,7 @@ def calculate_qc_metrics(
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
-    [McCarthy17]_. Currently is most efficient on a sparse CSR or dense matrix.
+    :cite:p:`McCarthy2017`. Currently is most efficient on a sparse CSR or dense matrix.
 
     Note that this method can take a while to compile on the first call. That
     result is then cached to disk to be used later.

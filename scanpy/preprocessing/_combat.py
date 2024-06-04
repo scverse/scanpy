@@ -144,12 +144,11 @@ def combat(
     inplace: bool = True,
 ) -> np.ndarray | None:
     """\
-    ComBat function for batch effect correction [Johnson07]_ [Leek12]_
-    [Pedersen12]_.
+    ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
 
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes.
-    This uses the implementation `combat.py`_ [Pedersen12]_.
+    This uses the implementation `combat.py`_ :cite:p:`Pedersen2012`.
 
     .. _combat.py: https://github.com/brentp/combat.py
 
@@ -163,7 +162,7 @@ def combat(
     covariates
         Additional covariates besides the batch variable such as adjustment
         variables or biological condition. This parameter refers to the design
-        matrix `X` in Equation 2.1 in [Johnson07]_ and to the `mod` argument in
+        matrix `X` in Equation 2.1 in :cite:t:`Johnson2006` and to the `mod` argument in
         the original combat function in the sva R package.
         Note that not including covariates may introduce bias or lead to the
         removal of biological signal in unbalanced designs.
@@ -198,7 +197,7 @@ def combat(
 
     # only works on dense matrices so far
     if issparse(adata.X):
-        X = adata.X.A.T
+        X = adata.X.toarray().T
     else:
         X = adata.X.T
     data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)

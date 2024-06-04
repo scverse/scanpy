@@ -1,28 +1,28 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
-from scipy.sparse import csr_matrix
-from sklearn.utils import issparse
+from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
 from scanpy._utils import axis_sum
-from scanpy.testing._helpers import (
+from testing.scanpy._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
     check_rep_results,
 )
 
 # TODO: Add support for sparse-in-dask
-from scanpy.testing._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
@@ -144,8 +144,8 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
     "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-@pytest.mark.parametrize("theta", [0.01, 1, 100, np.Inf])
-@pytest.mark.parametrize("clip", [None, 1, np.Inf])
+@pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])
+@pytest.mark.parametrize("clip", [None, 1, np.inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     # toy data
     X = np.array([[3, 6], [2, 4], [1, 0]])

@@ -12,8 +12,8 @@ import pytest
 from matplotlib.testing import setup
 
 import scanpy as sc
-from scanpy.testing._helpers.data import paul15
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import paul15
+from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images_paga_paul15_subsampled"

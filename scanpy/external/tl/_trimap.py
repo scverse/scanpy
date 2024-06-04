@@ -4,16 +4,18 @@ Embed high-dimensional data using TriMap
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import scipy.sparse as scp
 
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
 
@@ -44,7 +46,7 @@ def trimap(
     copy: bool = False,
 ) -> AnnData | None:
     """\
-    TriMap: Large-scale Dimensionality Reduction Using Triplets [Amid19]_.
+    TriMap: Large-scale Dimensionality Reduction Using Triplets :cite:p:`Amid2019`.
 
     TriMap is a dimensionality reduction method that uses triplet constraints
     to form a low-dimensional embedding of a set of points. The triplet

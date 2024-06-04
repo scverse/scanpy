@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
@@ -10,7 +10,6 @@ from scipy.sparse import issparse
 
 from ... import logging as logg
 from ..._utils import (
-    Empty,
     _doc_params,
     _empty,
     check_nonnegative_integers,
@@ -31,6 +30,9 @@ from ...preprocessing._pca import _handle_mask_var, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any
+
+    from ..._utils import Empty
 
 
 def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
@@ -92,7 +94,7 @@ def normalize_pearson_residuals(
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
     """\
-    Applies analytic Pearson residual normalization, based on [Lause21]_.
+    Applies analytic Pearson residual normalization, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`
@@ -175,7 +177,7 @@ def normalize_pearson_residuals_pca(
     inplace: bool = True,
 ) -> AnnData | None:
     """\
-    Applies analytic Pearson residual normalization and PCA, based on [Lause21]_.
+    Applies analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`,

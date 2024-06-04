@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
@@ -21,6 +21,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from anndata import AnnData
 
@@ -89,10 +90,10 @@ def normalize_total(
     If `exclude_highly_expressed=True`, very highly expressed genes are excluded
     from the computation of the normalization factor (size factor) for each
     cell. This is meaningful as these can strongly influence the resulting
-    normalized values for all other genes [Weinreb17]_.
+    normalized values for all other genes :cite:p:`Weinreb2017`.
 
-    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-    [Zheng17]_ or SPRING [Weinreb17]_.
+    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
+    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
 
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to

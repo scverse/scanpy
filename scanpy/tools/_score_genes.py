@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 
-from scanpy._utils import _check_use_raw
+from scanpy._utils import _check_use_raw, is_backed_type
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -16,13 +16,18 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
+    from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._utils import AnyRandom
 
 
-def _sparse_nanmean(X, axis):
+def _sparse_nanmean(
+    X: csr_matrix | csc_matrix, axis: Literal[0, 1]
+) -> NDArray[np.float64]:
     """
     np.nanmean equivalent for sparse matrices
     """
@@ -64,13 +69,13 @@ def score_genes(
     layer: str | None = None,
 ) -> AnnData | None:
     """\
-    Score a set of genes [Satija15]_.
+    Score a set of genes :cite:p:`Satija2015`.
 
     The score is the average expression of a set of genes subtracted with the
     average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
-    This reproduces the approach in Seurat [Satija15]_ and has been implemented
+    This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
     for Scanpy by Davide Cittaro.
 
     Parameters
@@ -114,6 +119,10 @@ def score_genes(
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
     use_raw = _check_use_raw(adata, use_raw)
+    if is_backed_type(adata.X) and not use_raw:
+        raise NotImplementedError(
+            f"score_genes is not implemented for matrices of type {type(adata.X)}"
+        )
 
     if random_state is not None:
         np.random.seed(random_state)
@@ -212,7 +221,7 @@ def score_genes_cell_cycle(
     **kwargs,
 ) -> AnnData | None:
     """\
-    Score cell cycle genes [Satija15]_.
+    Score cell cycle genes :cite:p:`Satija2015`.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See

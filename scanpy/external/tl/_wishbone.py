@@ -8,7 +8,7 @@ import pandas as pd
 
 from ... import logging
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -29,7 +29,7 @@ def wishbone(
 ):
     """\
     Wishbone identifies bifurcating developmental trajectories from single-cell data
-    [Setty16]_.
+    :cite:p:`Setty2016`.
 
     Wishbone is an algorithm for positioning single cells along bifurcating
     developmental trajectories with high resolution. Wishbone uses multi-dimensional

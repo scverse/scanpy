@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping
 from copy import copy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -19,10 +19,12 @@ from ..._utils import _doc_params, sanitize_anndata, subsample
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
+    doc_cm_palette,
     doc_panels,
     doc_rank_genes_groups_plot_args,
     doc_rank_genes_groups_values_to_plot,
     doc_scatter_embedding,
+    doc_show_save,
     doc_show_save_ax,
     doc_vbound_percentile,
 )
@@ -36,6 +38,9 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+    from typing import Literal
+
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
@@ -262,6 +267,7 @@ def dpt_timeseries(
 
 
 @old_positionals("color_map", "palette", "show", "save", "marker")
+@_doc_params(cm_palette=doc_cm_palette, show_save=doc_show_save)
 def dpt_groups_pseudotime(
     adata: AnnData,
     *,
@@ -271,7 +277,18 @@ def dpt_groups_pseudotime(
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
 ):
-    """Plot groups and pseudotime."""
+    """\
+    Plot groups and pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    {cm_palette}
+    {show_save}
+    marker
+        Marker style. See :mod:`~matplotlib.markers` for details.
+    """
     _, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
         adata.obs["dpt_groups"].cat.codes,
@@ -407,8 +424,8 @@ def rank_genes_groups(
     gs = gridspec.GridSpec(nrows=n_panels_y, ncols=n_panels_x, wspace=0.22, hspace=0.3)
 
     ax0 = None
-    ymin = np.Inf
-    ymax = -np.Inf
+    ymin = np.inf
+    ymax = -np.inf
     for count, group_name in enumerate(group_names):
         gene_names = adata.uns[key]["names"][group_name][:n_genes]
         scores = adata.uns[key]["scores"][group_name][:n_genes]

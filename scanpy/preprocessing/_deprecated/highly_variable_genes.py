@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from scipy.sparse import spmatrix
 
 
@@ -30,7 +32,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     copy: bool = False,
 ) -> AnnData | np.recarray | None:
     """\
-    Extract highly variable genes [Satija15]_ [Zheng17]_.
+    Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
     .. warning::
         .. deprecated:: 1.3.6
@@ -48,7 +50,7 @@ def filter_genes_dispersion(  # noqa: PLR0917
     If trying out parameters, pass the data matrix instead of AnnData.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_ and Cell Ranger [Zheng17]_.
+    :cite:p:`Satija2015` and Cell Ranger :cite:p:`Zheng2017`.
 
     The normalized dispersion is obtained by scaling with the mean and standard
     deviation of the dispersions for genes falling into a given bin for mean

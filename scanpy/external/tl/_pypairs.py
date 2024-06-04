@@ -4,19 +4,21 @@ Calculate scores based on relative expression change of maker pairs
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Mapping
+    from typing import Union
+
     import pandas as pd
     from anndata import AnnData
 
-Genes = Collection[Union[str, int, bool]]
+    Genes = Collection[Union[str, int, bool]]
 
 
 @doctest_needs("pypairs")
@@ -29,13 +31,13 @@ def sandbag(
     filter_samples: Genes | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
     """\
-    Calculate marker pairs of genes. [Scialdone15]_ [Fechtner18]_.
+    Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
 
-    This reproduces the approach of [Scialdone15]_ in the implementation of
-    [Fechtner18]_.
+    This reproduces the approach of :cite:t:`Scialdone2015` in the implementation of
+    :cite:t:`Fechtner2018`.
 
     More information and bug reports `here
     <https://github.com/rfechtner/pypairs>`__.
@@ -94,13 +96,13 @@ def cyclone(
     min_pairs: int = 50,
 ) -> pd.DataFrame:
     """\
-    Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
+    Assigns scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
 
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
 
-    This reproduces the approach of [Scialdone15]_ in the implementation of
-    [Fechtner18]_.
+    This reproduces the approach of :cite:t:`Scialdone2015` in the implementation of
+    :cite:t:`Fechtner2018`.
 
     Parameters
     ----------
@@ -154,6 +156,6 @@ def _check_import():
     except ImportError:
         raise ImportError("You need to install the package `pypairs`.")
 
-    min_version = version.parse("3.0.9")
-    if version.parse(pypairs.__version__) < min_version:
+    min_version = Version("3.0.9")
+    if Version(pypairs.__version__) < min_version:
         raise ImportError(f"Please only use `pypairs` >= {min_version}")

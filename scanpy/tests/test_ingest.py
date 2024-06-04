@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import anndata
 import numpy as np
 import pytest
 from sklearn.neighbors import KDTree
@@ -8,7 +9,7 @@ from umap import UMAP
 import scanpy as sc
 from scanpy import settings
 from scanpy._compat import pkg_version
-from scanpy.testing._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 X = np.array(
     [
@@ -153,3 +154,19 @@ def test_ingest_map_embedding_umap():
     umap_transformed_t = reducer.transform(T)
 
     assert np.allclose(ing._obsm["X_umap"], umap_transformed_t)
+
+
+def test_ingest_backed(adatas, tmp_path):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    adata_new.write_h5ad(f"{tmp_path}/new.h5ad")
+
+    adata_new = anndata.read_h5ad(f"{tmp_path}/new.h5ad", backed="r")
+
+    ing = sc.tl.Ingest(adata_ref)
+    with pytest.raises(
+        NotImplementedError,
+        match=f"Ingest.fit is not implemented for matrices of type {type(adata_new.X)}",
+    ):
+        ing.fit(adata_new)

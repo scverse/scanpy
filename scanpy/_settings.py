@@ -7,7 +7,7 @@ from enum import IntEnum
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Any, Literal, TextIO, Union
+from typing import TYPE_CHECKING
 
 from . import logging
 from ._compat import old_positionals
@@ -15,6 +15,14 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from typing import Any, Literal, TextIO, Union
+
+    # Collected from the print_* functions in matplotlib.backends
+    _Format = Union[
+        Literal["png", "jpg", "tif", "tiff"],
+        Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
+        Literal["raw", "rgba"],
+    ]
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",
@@ -26,14 +34,6 @@ _VERBOSITY_TO_LOGLEVEL = {
 # Python 3.7+ ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
-
-
-# Collected from the print_* functions in matplotlib.backends
-_Format = Union[
-    Literal["png", "jpg", "tif", "tiff"],
-    Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
-    Literal["raw", "rgba"],
-]
 
 
 class Verbosity(IntEnum):

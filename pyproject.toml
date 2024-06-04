@@ -48,8 +48,9 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    # numpy needs a version due to #1320
-    "numpy>=1.23",
+    # TODO: remove <2 requirement once PyNNDescent releases this fix:
+    # https://github.com/lmcinnes/pynndescent/issues/241
+    "numpy>=1.23,<2",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
@@ -84,7 +85,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=7.4.2,<8.1",
+    "pytest>=7.4.2,!=8.1.*",
     "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
@@ -100,6 +101,8 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
+    # optional storage modes
+    "zappy",
     # additional tested algorithms
     "scanpy[louvain]",
     "scanpy[magic]",
@@ -152,6 +155,10 @@ dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build]
 exclude = ["scanpy/tests"]
+[tool.hatch.build.targets.wheel]
+# TODO: move scanpy to src/
+only-include = ["src/testing", "scanpy"]
+sources = ["src", "."]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
@@ -162,6 +169,7 @@ addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
+    "-ptesting.scanpy._pytest",
 ]
 testpaths = ["scanpy"]
 norecursedirs = ["scanpy/tests/_images"]
@@ -198,7 +206,7 @@ filterwarnings = [
 [tool.coverage.run]
 data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
-omit = ["*/tests/*"]
+omit = ["scanpy/tests/*", "src/testing/*"]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
@@ -207,6 +215,8 @@ source = [".", "**/site-packages"]
 exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+    # https://github.com/numba/numba/issues/4268
+    "@numba.njit.*",
 ]
 
 [tool.ruff.format]
@@ -239,9 +249,12 @@ ignore = [
 # Do not assign a lambda expression, use a def
 "scanpy/tools/_rank_genes_groups.py" = ["E731"]
 [tool.ruff.lint.isort]
-known-first-party = ["scanpy"]
+known-first-party = ["scanpy", "testing.scanpy"]
 required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = []
+strict = true

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 from ..._settings import settings
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
+    from typing import Any, Literal
 
     import numpy as np
     import pandas as pd
@@ -38,10 +39,9 @@ def mnn_correct(
     list[tuple[float | None, int]] | None,
 ]:
     """\
-    Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
+    Correct batch effects by matching mutual nearest neighbors :cite:p:`Haghverdi2018` :cite:p:`Kang2018`.
 
-    This uses the implementation of `mnnpy
-    <https://github.com/chriscainx/mnnpy>`__ [Kang18]_.
+    This uses the implementation of mnnpy_ :cite:p:`Kang2018`.
 
     Depending on `do_concatenate`, returns matrices or `AnnData` objects in the
     original order containing corrected expression values or a concatenated
@@ -50,7 +50,9 @@ def mnn_correct(
     Be reminded that it is not advised to use the corrected data matrices for
     differential expression testing.
 
-    More information and bug reports `here <https://github.com/chriscainx/mnnpy>`__.
+    More information and bug reports `here <mnnpy>`__.
+
+    .. _mnnpy: https://github.com/chriscainx/mnnpy
 
     Parameters
     ----------

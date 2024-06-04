@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import partial
 from math import sqrt
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba as nb
 import numpy as np
@@ -27,6 +27,8 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
 
@@ -321,9 +323,9 @@ def highly_variable_genes(
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """\
-    Select highly variable genes using analytic Pearson residuals [Lause21]_.
+    Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
 
-    In [Lause21]_, Pearson residuals of a negative binomial offset model are computed
+    In :cite:t:`Lause2021`, Pearson residuals of a negative binomial offset model are computed
     (with overdispersion `theta` shared across genes). By default, overdispersion
     `theta=100` is used and residuals are clipped to `sqrt(n_obs)`. Finally, genes
     are ranked by residual variance.

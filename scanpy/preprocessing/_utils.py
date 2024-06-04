@@ -1,31 +1,32 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
+from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from typing import Literal
+
+    from numpy.typing import DTypeLike, NDArray
 
     from .._compat import DaskArray
+    from .._utils import AnyRandom, _SupportedArray
 
 
 @singledispatch
-def axis_mean(
-    X: DaskArray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike
-) -> DaskArray:
+def axis_mean(X: DaskArray, *, axis: Literal[0, 1], dtype: DTypeLike) -> DaskArray:
     total = axis_sum(X, axis=axis, dtype=dtype)
     return total / X.shape[axis]
 
 
 @axis_mean.register(np.ndarray)
-def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike) -> np.ndarray:
+def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
     return X.mean(axis=axis, dtype=dtype)
 
 
@@ -65,78 +66,81 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     if axis == ax_minor:
         return sparse_mean_var_major_axis(
             mtx.data,
+            mtx.indptr,
+            major_len=shape[0],
+            minor_len=shape[1],
+            n_threads=numba.get_num_threads(),
+        )
+    else:
+        return sparse_mean_var_minor_axis(
+            mtx.data,
             mtx.indices,
             mtx.indptr,
             major_len=shape[0],
             minor_len=shape[1],
-            dtype=np.float64,
+            n_threads=numba.get_num_threads(),
         )
-    else:
-        return sparse_mean_var_minor_axis(mtx.data, mtx.indices, *shape, np.float64)
 
 
-@numba.njit(cache=True)
-def sparse_mean_var_minor_axis(data, indices, major_len, minor_len, dtype):
+@numba.njit(cache=True, parallel=True)
+def sparse_mean_var_minor_axis(
+    data, indices, indptr, *, major_len, minor_len, n_threads
+):
     """
     Computes mean and variance for a sparse matrix for the minor axis.
 
     Given arrays for a csr matrix, returns the means and variances for each
     column back.
     """
-    non_zero = indices.shape[0]
-
-    means = np.zeros(minor_len, dtype=dtype)
-    variances = np.zeros_like(means, dtype=dtype)
-
-    counts = np.zeros(minor_len, dtype=np.int64)
-
-    for i in range(non_zero):
-        col_ind = indices[i]
-        means[col_ind] += data[i]
-
-    for i in range(minor_len):
-        means[i] /= major_len
-
-    for i in range(non_zero):
-        col_ind = indices[i]
-        diff = data[i] - means[col_ind]
-        variances[col_ind] += diff * diff
-        counts[col_ind] += 1
-
-    for i in range(minor_len):
-        variances[i] += (major_len - counts[i]) * means[i] ** 2
-        variances[i] /= major_len
-
+    rows = len(indptr) - 1
+    sums_minor = np.zeros((n_threads, minor_len))
+    squared_sums_minor = np.zeros((n_threads, minor_len))
+    means = np.zeros(minor_len)
+    variances = np.zeros(minor_len)
+    for i in numba.prange(n_threads):
+        for r in range(i, rows, n_threads):
+            for j in range(indptr[r], indptr[r + 1]):
+                minor_index = indices[j]
+                if minor_index >= minor_len:
+                    continue
+                value = data[j]
+                sums_minor[i, minor_index] += value
+                squared_sums_minor[i, minor_index] += value * value
+    for c in numba.prange(minor_len):
+        sum_minor = sums_minor[:, c].sum()
+        means[c] = sum_minor / major_len
+        variances[c] = (
+            squared_sums_minor[:, c].sum() / major_len - (sum_minor / major_len) ** 2
+        )
     return means, variances
 
 
-@numba.njit(cache=True)
-def sparse_mean_var_major_axis(data, indices, indptr, *, major_len, minor_len, dtype):
+@numba.njit(cache=True, parallel=True)
+def sparse_mean_var_major_axis(data, indptr, *, major_len, minor_len, n_threads):
     """
     Computes mean and variance for a sparse array for the major axis.
 
     Given arrays for a csr matrix, returns the means and variances for each
     row back.
     """
-    means = np.zeros(major_len, dtype=dtype)
-    variances = np.zeros_like(means, dtype=dtype)
+    rows = len(indptr) - 1
+    means = np.zeros(major_len)
+    variances = np.zeros_like(means)
 
-    for i in range(major_len):
-        startptr = indptr[i]
-        endptr = indptr[i + 1]
-        counts = endptr - startptr
-
-        for j in range(startptr, endptr):
-            means[i] += data[j]
-        means[i] /= minor_len
-
-        for j in range(startptr, endptr):
-            diff = data[j] - means[i]
-            variances[i] += diff * diff
-
-        variances[i] += (minor_len - counts) * means[i] ** 2
-        variances[i] /= minor_len
-
+    for i in numba.prange(n_threads):
+        for r in range(i, rows, n_threads):
+            sum_major = 0.0
+            squared_sum_minor = 0.0
+            for j in range(indptr[r], indptr[r + 1]):
+                value = np.float64(data[j])
+                sum_major += value
+                squared_sum_minor += value * value
+            means[r] = sum_major
+            variances[r] = squared_sum_minor
+    for c in numba.prange(major_len):
+        mean = means[c] / minor_len
+        means[c] = mean
+        variances[c] = variances[c] / minor_len - mean * mean
     return means, variances
 
 

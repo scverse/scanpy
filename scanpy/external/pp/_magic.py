@@ -4,16 +4,17 @@ Denoise high-dimensional data using MAGIC
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from ... import logging as logg
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
 
@@ -41,15 +42,15 @@ def magic(
     **kwargs,
 ) -> AnnData | None:
     """\
-    Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
+    Markov Affinity-based Graph Imputation of Cells (MAGIC) API :cite:p:`vanDijk2018`.
 
     MAGIC is an algorithm for denoising and transcript recover of single cells
     applied to single-cell sequencing data. MAGIC builds a graph from the data
     and uses diffusion to smooth out noise and recover the data manifold.
 
     The algorithm implemented here has changed primarily in two ways
-    compared to the algorithm described in [vanDijk18]_. Firstly, we use
-    the adaptive kernel described in Moon et al, 2019 [Moon17]_ for
+    compared to the algorithm described in :cite:t:`vanDijk2018`. Firstly, we use
+    the adaptive kernel described in :cite:t:`Moon2019` for
     improved stability. Secondly, data diffusion is applied
     in the PCA space, rather than the data space, for speed and
     memory improvements.
@@ -85,7 +86,7 @@ def magic(
         roughly log(n_samples) time. If `None`, no PCA is performed.
     solver
         Which solver to use. "exact" uses the implementation described
-        in van Dijk et al. (2018) [vanDijk18]_. "approximate" uses a faster
+        in :cite:t:`vanDijk2018`. "approximate" uses a faster
         implementation that performs imputation in the PCA space and then
         projects back to the gene space. Note, the "approximate" solver may
         return negative values.
@@ -145,7 +146,7 @@ def magic(
             "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
         )
     else:
-        if not version.parse(__version__) >= version.parse(MIN_VERSION):
+        if Version(__version__) < Version(MIN_VERSION):
             raise ImportError(
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "

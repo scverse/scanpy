@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import BinaryIO
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.request import urlopen
 from zipfile import ZipFile
@@ -14,6 +14,9 @@ from .. import logging as logg
 from .._settings import settings
 from ..readwrite import _download
 from ._utils import check_datasetdir_exists
+
+if TYPE_CHECKING:
+    from typing import BinaryIO
 
 
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:

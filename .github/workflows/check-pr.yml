@@ -45,7 +45,10 @@ jobs:
     needs: check-milestone
     if: ${{ needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
       - name: Find out if relevant release notes are modified
         uses: dorny/paths-filter@v2
         id: changes

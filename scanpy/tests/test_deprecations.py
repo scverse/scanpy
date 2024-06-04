@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 
 def test_deprecate_multicore_tsne():

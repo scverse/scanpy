@@ -4,14 +4,14 @@ import collections.abc as cabc
 import warnings
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import scipy
 from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, is_color_like
+from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
@@ -21,13 +21,17 @@ from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
 from .. import _utils
-from .._utils import _FontSize, _FontWeight, _IGraphLayout, matrix
+from .._utils import matrix
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import Any, Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap
+
+    from .._utils import _FontSize, _FontWeight, _IGraphLayout
 
 
 @old_positionals(
@@ -374,9 +378,9 @@ def paga(
     Compute a coarse-grained layout of the data. Reuse this by passing
     `init_pos='paga'` to :func:`~scanpy.tl.umap` or
     :func:`~scanpy.tl.draw_graph` and obtain embeddings with more meaningful
-    global topology [Wolf19]_.
+    global topology :cite:p:`Wolf2019`.
 
-    This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
+    This uses ForceAtlas2 or igraph's layout algorithms for most layouts :cite:p:`Csardi2006`.
 
     Parameters
     ----------
@@ -1220,7 +1224,7 @@ def paga_path(
             values = (
                 adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
             )[idcs]
-            x += (values.A if issparse(values) else values).tolist()
+            x += (values.toarray() if issparse(values) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))

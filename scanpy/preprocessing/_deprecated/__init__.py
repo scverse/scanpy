@@ -10,7 +10,7 @@ def normalize_per_cell_weinreb16_deprecated(
     mult_with_mean: bool = False,
 ) -> np.ndarray:
     """\
-    Normalize each cell [Weinreb17]_.
+    Normalize each cell :cite:p:`Weinreb2017`.
 
     This is a deprecated version. See `normalize_per_cell` instead.
 

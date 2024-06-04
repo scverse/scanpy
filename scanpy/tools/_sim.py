@@ -16,7 +16,7 @@ import shutil
 import sys
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import scipy as sp
@@ -28,6 +28,7 @@ from .._settings import settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Literal
 
     from anndata import AnnData
 
@@ -57,11 +58,11 @@ def sim(
     writedir: Path | str | None = None,
 ) -> AnnData:
     """\
-    Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
+    Simulate dynamic gene expression data :cite:p:`Wittmann2009` :cite:p:`Wolf2018`.
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by
-    [Wittmann09]_. The Scanpy implementation is due to [Wolf18]_.
+    :cite:t:`Wittmann2009`. The Scanpy implementation is due to :cite:t:`Wolf2018`.
 
     Parameters
     ----------
