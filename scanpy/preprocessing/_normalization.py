@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from operator import truediv
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
@@ -21,6 +21,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Literal
 
     from anndata import AnnData
 

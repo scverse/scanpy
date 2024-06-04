@@ -52,7 +52,7 @@ def scrublet(
     log_transform: bool = False,
     mean_center: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True,
+    use_approx_neighbors: bool | None = None,
     get_doublet_neighbor_parents: bool = False,
     n_neighbors: int | None = None,
     threshold: float | None = None,
@@ -199,10 +199,11 @@ def scrublet(
             pp.normalize_total(ad_obs)
 
             # HVG process needs log'd data.
-
-            logged = pp.log1p(ad_obs, copy=True)
-            pp.highly_variable_genes(logged)
-            ad_obs = ad_obs[:, logged.var["highly_variable"]].copy()
+            ad_obs.layers["log1p"] = ad_obs.X.copy()
+            pp.log1p(ad_obs, layer="log1p")
+            pp.highly_variable_genes(ad_obs, layer="log1p")
+            del ad_obs.layers["log1p"]
+            ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
 
             # Simulate the doublets based on the raw expressions from the normalised
             # and filtered object.
@@ -214,7 +215,7 @@ def scrublet(
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
                 random_seed=random_state,
             )
-
+            del ad_obs.layers["raw"]
             if log_transform:
                 pp.log1p(ad_obs)
                 pp.log1p(ad_sim)
@@ -245,9 +246,11 @@ def scrublet(
 
     if batch_key is not None:
         if batch_key not in adata.obs.keys():
-            raise ValueError(
-                "`batch_key` must be a column of .obs in the input annData object."
+            msg = (
+                "`batch_key` must be a column of .obs in the input AnnData object,"
+                f"but {batch_key!r} is not in {adata.obs.keys()!r}."
             )
+            raise ValueError(msg)
 
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
@@ -302,7 +305,7 @@ def _scrublet_call_doublets(
     mean_center: bool = True,
     normalize_variance: bool = True,
     n_prin_comps: int = 30,
-    use_approx_neighbors: bool = True,
+    use_approx_neighbors: bool | None = None,
     knn_dist_metric: _Metric | _MetricFn = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: float | None = None,

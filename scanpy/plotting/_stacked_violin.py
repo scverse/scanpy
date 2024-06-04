@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib.colors import Normalize, is_color_like
+from matplotlib.colors import is_color_like
 from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
-from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
+from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
-    _AxesSubplot,
     _deprecated_scale,
     check_colornorm,
     make_grid_spec,
@@ -28,8 +27,13 @@ if TYPE_CHECKING:
         Mapping,  # Special
         Sequence,  # ABCs
     )
+    from typing import Literal, Self
 
     from anndata import AnnData
+    from matplotlib.colors import Normalize
+
+    from ._baseplot_class import _VarNames
+    from ._utils import _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -275,7 +279,7 @@ class StackedViolin(BasePlot):
         y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
         # deprecated
         scale: Literal["area", "count", "width"] | None = None,
-    ):
+    ) -> Self:
         r"""\
         Modifies plot visual parameters
 

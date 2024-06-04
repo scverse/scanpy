@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import scanpy.external as sce
-from scanpy.testing._helpers.data import pbmc3k_processed
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc3k_processed
+from testing.scanpy._pytest.marks import needs
 
 pytestmark = [needs.palantir]
 

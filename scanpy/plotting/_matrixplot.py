@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -10,24 +10,25 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
-from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
+from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._utils import ColorLike, _AxesSubplot, check_colornorm, fix_kwds, savefig_or_show
+from ._utils import check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Mapping,  # Special
-        Sequence,  # ABCs
-    )
+    from collections.abc import Mapping, Sequence
+    from typing import Literal, Self
 
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
+
+    from ._baseplot_class import _VarNames
+    from ._utils import ColorLike, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -200,7 +201,7 @@ class MatrixPlot(BasePlot):
         cmap: str = DEFAULT_COLORMAP,
         edge_color: ColorLike | None = DEFAULT_EDGE_COLOR,
         edge_lw: float | None = DEFAULT_EDGE_LW,
-    ):
+    ) -> Self:
         """\
         Modifies plot visual parameters.
 

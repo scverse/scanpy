@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -15,6 +15,7 @@ from scanpy.neighbors._common import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Literal
 
     from scipy import sparse
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from scipy.sparse import spmatrix
 
 

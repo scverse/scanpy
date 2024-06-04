@@ -3,17 +3,19 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
-from packaging import version
+from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import AnyRandom, _doc_params
+from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
+    from .._utils import AnyRandom
 
 
 @old_positionals(
@@ -104,6 +106,7 @@ def tsne(
     start = logg.info("computing tSNE")
     adata = adata.copy() if copy else adata
     X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    raise_not_implemented_error_if_backed_type(X, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
@@ -115,9 +118,7 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
     )
-    if metric != "euclidean" and (
-        version.parse(sklearn.__version__) < version.parse("1.3.0rc1")
-    ):
+    if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
 
     # Backwards compat handling: Remove in scanpy 1.9.0

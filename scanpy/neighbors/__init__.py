@@ -1,37 +1,40 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, MutableMapping
 from textwrap import indent
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypedDict, get_args
+from typing import TYPE_CHECKING, NamedTuple, TypedDict, get_args
 from warnings import warn
 
 import numpy as np
 import scipy
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import issparse
 from sklearn.utils import check_random_state
-
-from .._compat import old_positionals
-
-if TYPE_CHECKING:
-    from anndata import AnnData
-    from igraph import Graph
-
-    from ._types import KnnTransformerLike
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import old_positionals
 from .._settings import settings
-from .._utils import AnyRandom, NeighborsView, _doc_params
+from .._utils import NeighborsView, _doc_params
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
 from ._doc import doc_n_pcs, doc_use_rep
-from ._types import _KnownTransformer, _Method, _Metric, _MetricFn
+from ._types import _KnownTransformer, _Method
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, MutableMapping
+    from typing import Any, Literal
+
+    from anndata import AnnData
+    from igraph import Graph
+    from scipy.sparse import csr_matrix
+
+    from .._utils import AnyRandom
+    from ._types import KnnTransformerLike, _Metric, _MetricFn
+
+    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 N_DCS = 15  # default number of diffusion components

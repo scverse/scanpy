@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import AnyRandom, _choose_graph
+from .._utils import _choose_graph
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
-_LAYOUTS = ("fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa")
-_Layout = Literal[_LAYOUTS]
+    from .._utils import AnyRandom
+
+_Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
+_LAYOUTS = get_args(_Layout)
 
 
 @old_positionals(

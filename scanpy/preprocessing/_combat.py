@@ -197,7 +197,7 @@ def combat(
 
     # only works on dense matrices so far
     if issparse(adata.X):
-        X = adata.X.A.T
+        X = adata.X.toarray().T
     else:
         X = adata.X.T
     data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
