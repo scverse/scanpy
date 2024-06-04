@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -148,16 +147,15 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    get_x = partial(_get_obs_rep, use_raw=use_raw, layer=layer)
+    def get_subset(genes: pd.Index[str]):
+        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        if len(genes) == len(var_names):
+            return x
+        idx = var_names.get_indexer(genes)
+        return x[:, idx]
 
     # average expression of genes
-    obs_avg = pd.Series(
-        _nan_means(
-            get_x(adata if len(gene_pool) == len(var_names) else adata[:, gene_pool]),
-            axis=0,
-        ),
-        index=gene_pool,
-    )
+    obs_avg = pd.Series(_nan_means(get_subset(gene_pool), axis=0), index=gene_pool)
     # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
     obs_avg = obs_avg[np.isfinite(obs_avg)]
 
@@ -173,7 +171,7 @@ def score_genes(
         control_genes = control_genes.union(r_genes.difference(gene_list))
 
     means_list, means_control = (
-        _nan_means(get_x(adata[:, genes]), axis=1, dtype="float64")
+        _nan_means(get_subset(genes), axis=1, dtype="float64")
         for genes in (gene_list, control_genes)
     )
     score = means_list - means_control
