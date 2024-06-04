@@ -325,13 +325,15 @@ def pbmc68k_reduced() -> AnnData:
 
     `PBMC 68k dataset`_ from 10x Genomics.
 
-    The original PBMC 68k dataset was preprocessed using scanpy and was saved
-    keeping only 724 cells and 221 highly variable genes.
+    The original PBMC 68k dataset was preprocessed with steps including
+    :func:`~scanpy.pp.normalize_total`\\ [#norm]_ and :func:`~scanpy.pp.scale`.
+    It was saved keeping only 724 cells and 221 highly variable genes.
 
     The saved file contains the annotation of cell types (key: `'bulk_labels'`),
     UMAP coordinates, louvain clustering and gene rankings based on the
     `bulk_labels`.
 
+    .. [#norm] Back when the dataset was created, :func:`~scanpy.pp.normalize_per_cell` was used instead.
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
