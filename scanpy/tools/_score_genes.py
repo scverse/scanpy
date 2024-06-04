@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -147,25 +148,11 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    if use_raw:
-        var_names = adata.raw.var_names
-    else:
-        var_names = adata.var_names
-
-    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
-    gene_pool_idx = var_names.get_indexer(gene_pool)
-    X = X[:, gene_pool_idx]
+    get_x = partial(_get_obs_rep, use_raw=use_raw, layer=layer)
 
     # average expression of genes
-    if issparse(X):
-        obs_avg = pd.Series(
-            np.array(_sparse_nanmean(X, axis=0)).flatten(),
-            index=gene_pool,
-        )
-    else:
-        obs_avg = pd.Series(np.nanmean(X, axis=0), index=gene_pool)
-
-    # Sometimes (and I don't know how) missing data may be there, with nansfor
+    obs_avg = pd.Series(_nan_means(get_x(adata[:, gene_pool]), axis=0), index=gene_pool)
+    # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
     obs_avg = obs_avg[np.isfinite(obs_avg)]
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
@@ -179,21 +166,11 @@ def score_genes(
             r_genes = r_genes.to_series().sample(ctrl_size).index
         control_genes = control_genes.union(r_genes.difference(gene_list))
 
-    gene_list_idx = var_names.get_indexer(gene_list)
-    X_list = X[:, gene_list_idx]
-    if issparse(X_list):
-        X_list = np.array(_sparse_nanmean(X_list, axis=1)).flatten()
-    else:
-        X_list = np.nanmean(X_list, axis=1, dtype="float64")
-
-    control_genes_idx = var_names.get_indexer(control_genes)
-    X_control = X[:, control_genes_idx]
-    if issparse(X_control):
-        X_control = np.array(_sparse_nanmean(X_control, axis=1)).flatten()
-    else:
-        X_control = np.nanmean(X_control, axis=1, dtype="float64")
-
-    score = X_list - X_control
+    means_list, means_control = (
+        _nan_means(get_x(adata[:, genes]), axis=1)
+        for genes in (gene_list, control_genes)
+    )
+    score = means_list - means_control
 
     adata.obs[score_name] = pd.Series(
         np.array(score).ravel(), index=adata.obs_names, dtype="float64"
@@ -209,6 +186,12 @@ def score_genes(
         ),
     )
     return adata if copy else None
+
+
+def _nan_means(x, *, axis: Literal[0, 1]) -> NDArray[np.float64]:
+    if issparse(x):
+        return np.array(_sparse_nanmean(x, axis=axis)).flatten()
+    return np.nanmean(x, axis=axis, dtype="float64")
 
 
 @old_positionals("s_genes", "g2m_genes", "copy")
