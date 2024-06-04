@@ -55,11 +55,9 @@ def normalize_per_cell_weinreb16_deprecated(
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:
     """\
-    Z-score standardize each variable/gene in X.
+    Z-score standardize each variable/gene in X :cite:p:`Weinreb2017`.
 
     Use `scale` instead.
-
-    Reference: Weinreb et al. (2017).
 
     Parameters
     ----------
