@@ -423,7 +423,7 @@ def pbmc3k_processed() -> AnnData:
     For preprocessing, cells are filtered out that have few gene counts or too high a `percent_mito`.
     The counts are logarithmized and only genes marked by :func:`~scanpy.pp.highly_variable_genes` are retained.
     The :attr:`~anndata.AnnData.obs` variables `n_counts` and `percent_mito` are corrected for
-    using :func:`~scanpy.pp.regress_out`, and values are :func:`scanpy.pp.scale`\\ d and clipped.
+    using :func:`~scanpy.pp.regress_out`, and values are scaled and clipped by :func:`~scanpy.pp.scale`.
     Finally, :func:`~scanpy.pp.pca` and :func:`~scanpy.pp.neighbors` are calculated.
 
     As analysis steps, the embeddings :func:`~scanpy.tl.tsne` and :func:`~scanpy.tl.umap` are performed.
