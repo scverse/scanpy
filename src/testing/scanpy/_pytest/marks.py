@@ -37,6 +37,7 @@ class needs(QuietMarkDecorator, Enum):
     gprofiler = "gprofiler-official"
     leidenalg = auto()
     louvain = auto()
+    openpyxl = auto()
     igraph = auto()
     pybiomart = auto()
     skimage = "scikit-image"
