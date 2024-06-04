@@ -10,12 +10,10 @@ from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
-from ..._utils import AnyRandom, get_random_state
+from ..._utils import get_random_state
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
-    _Metric,
-    _MetricFn,
 )
 from .._utils import sample_comb
 from .sparse_utils import subsample_counts
@@ -23,6 +21,9 @@ from .sparse_utils import subsample_counts
 if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
+
+    from ..._utils import AnyRandom
+    from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
 
@@ -184,7 +185,7 @@ class Scrublet:
     ) -> None:
         self._counts_obs = sparse.csc_matrix(counts_obs)
         self._total_counts_obs = (
-            self._counts_obs.sum(1).A.squeeze()
+            np.asarray(self._counts_obs.sum(1)).squeeze()
             if total_counts_obs is None
             else total_counts_obs
         )
@@ -277,7 +278,7 @@ class Scrublet:
 
     def calculate_doublet_scores(
         self,
-        use_approx_neighbors: bool = True,
+        use_approx_neighbors: bool | None = None,
         distance_metric: _Metric | _MetricFn = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
@@ -315,7 +316,7 @@ class Scrublet:
             k=self._n_neighbors,
             exp_doub_rate=self.expected_doublet_rate,
             stdev_doub_rate=self.stdev_doublet_rate,
-            use_approx_nn=use_approx_neighbors,
+            use_approx_neighbors=use_approx_neighbors,
             distance_metric=distance_metric,
             get_neighbor_parents=get_doublet_neighbor_parents,
         )
@@ -325,7 +326,7 @@ class Scrublet:
         self,
         k: int = 40,
         *,
-        use_approx_nn: bool = True,
+        use_approx_neighbors: bool | None = None,
         distance_metric: _Metric | _MetricFn = "euclidean",
         exp_doub_rate: float = 0.1,
         stdev_doub_rate: float = 0.03,
@@ -351,16 +352,19 @@ class Scrublet:
 
         # Find k_adj nearest neighbors
         knn = Neighbors(manifold)
+        transformer = None
+        if use_approx_neighbors is not None:
+            transformer = "pynndescent" if use_approx_neighbors else "sklearn"
         knn.compute_neighbors(
             k_adj,
             metric=distance_metric,
             knn=True,
-            transformer="pynndescent" if use_approx_nn else "sklearn",
+            transformer=transformer,
             method=None,
             random_state=self._random_state,
         )
         neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
-        if use_approx_nn:
+        if use_approx_neighbors:
             neighbors = neighbors[:, 1:]
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
         doub_neigh_mask: NDArray[np.bool_] = (

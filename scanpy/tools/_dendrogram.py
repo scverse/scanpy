@@ -4,19 +4,20 @@ Computes a dendrogram based on a given categorical observation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import _doc_params
+from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
     from anndata import AnnData
 
@@ -116,6 +117,8 @@ def dendrogram(
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
+
+    raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]

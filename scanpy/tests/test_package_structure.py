@@ -4,7 +4,7 @@ import os
 from collections import defaultdict
 from inspect import Parameter, signature
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import pytest
 from anndata import AnnData
@@ -15,6 +15,7 @@ from scanpy._utils import _import_name, descend_classes_and_funcs
 
 if TYPE_CHECKING:
     from types import FunctionType
+    from typing import Any
 
 mod_dir = Path(scanpy.__file__).parent
 proj_dir = mod_dir.parent

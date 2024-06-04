@@ -17,8 +17,8 @@ from scanpy._utils import (
     elem_mul,
     is_constant,
 )
-from scanpy.testing._pytest.marks import needs
-from scanpy.testing._pytest.params import (
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
     ARRAY_TYPES_SPARSE,
@@ -240,5 +240,5 @@ def test_is_constant_dask(axis, expected, block_type):
         [0, 0, 0, 0],
     ]
     x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-
-    np.testing.assert_array_equal(expected, is_constant(x, axis=axis))
+    result = is_constant(x, axis=axis).compute()
+    np.testing.assert_array_equal(expected, result)

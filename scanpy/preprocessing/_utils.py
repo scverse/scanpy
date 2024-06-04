@@ -1,31 +1,32 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._utils import AnyRandom, _SupportedArray, axis_sum, elem_mul
+from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from typing import Literal
+
+    from numpy.typing import DTypeLike, NDArray
 
     from .._compat import DaskArray
+    from .._utils import AnyRandom, _SupportedArray
 
 
 @singledispatch
-def axis_mean(
-    X: DaskArray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike
-) -> DaskArray:
+def axis_mean(X: DaskArray, *, axis: Literal[0, 1], dtype: DTypeLike) -> DaskArray:
     total = axis_sum(X, axis=axis, dtype=dtype)
     return total / X.shape[axis]
 
 
 @axis_mean.register(np.ndarray)
-def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: np.typing.DTypeLike) -> np.ndarray:
+def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
     return X.mean(axis=axis, dtype=dtype)
 
 

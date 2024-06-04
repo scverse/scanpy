@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 import scanpy as sc
-from scanpy.testing._helpers.data import pbmc68k_reduced
-from scanpy.testing._pytest.marks import needs
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 n_neighbors = 5
 key = "test"
@@ -30,6 +30,16 @@ def test_neighbors_key_added(adata):
     assert np.allclose(
         adata.obsp["distances"].toarray(), adata.obsp[dists_key].toarray()
     )
+
+
+def test_neighbors_pca_keys_added_without_previous_pca_run(adata):
+    assert "pca" not in adata.uns and "X_pca" not in adata.obsm
+    with pytest.warns(
+        UserWarning,
+        match=r".*Falling back to preprocessing with `sc.pp.pca` and default params",
+    ):
+        sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
+    assert "pca" in adata.uns
 
 
 # test functions with neighbors_key and obsp

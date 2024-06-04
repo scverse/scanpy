@@ -4,14 +4,16 @@ Embed high-dimensional data using PHATE
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
     from ..._utils import AnyRandom

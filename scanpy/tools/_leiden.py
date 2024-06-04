@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from anndata import AnnData
     from scipy import sparse

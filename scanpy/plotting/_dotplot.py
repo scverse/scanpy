@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -9,11 +9,9 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
-from ._baseplot_class import BasePlot, _VarNames, doc_common_groupby_plot_args
+from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
-    ColorLike,
-    _AxesSubplot,
     check_colornorm,
     fix_kwds,
     make_grid_spec,
@@ -21,15 +19,19 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Mapping,  # Special
-        Sequence,  # ABCs
-    )
+    from collections.abc import Mapping, Sequence
+    from typing import Literal, Self
 
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
+
+    from ._baseplot_class import _VarNames
+    from ._utils import (
+        ColorLike,
+        _AxesSubplot,
+    )
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -163,7 +165,7 @@ class DotPlot(BasePlot):
         vcenter: float | None = None,
         norm: Normalize | None = None,
         **kwds,
-    ):
+    ) -> None:
         BasePlot.__init__(
             self,
             adata,
@@ -309,7 +311,7 @@ class DotPlot(BasePlot):
         grid: float | None = False,
         x_padding: float | None = DEFAULT_PLOT_X_PADDING,
         y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
-    ):
+    ) -> Self:
         r"""\
         Modifies plot visual parameters
 
@@ -428,7 +430,7 @@ class DotPlot(BasePlot):
         size_title: str | None = DEFAULT_SIZE_LEGEND_TITLE,
         colorbar_title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
-    ):
+    ) -> Self:
         """\
         Configures dot size and the colorbar legends
 

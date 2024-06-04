@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from scipy.sparse import spmatrix
 
 
@@ -250,10 +252,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 
 
 def _filter_genes(X, e_cutoff, v_cutoff, meth):
-    """\
-    See `filter_genes_dispersion`.
-
-    Reference: Weinreb et al. (2017)."""
+    """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
     if issparse(X):
         raise ValueError("Not defined for sparse input. See `filter_genes_dispersion`.")
     mean_filter = np.mean(X, axis=0) > e_cutoff

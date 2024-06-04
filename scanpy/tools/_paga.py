@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import scipy as sp
@@ -12,6 +12,8 @@ from .._compat import old_positionals
 from ..neighbors import Neighbors
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
 _AVAIL_MODELS = {"v1.0", "v1.2"}

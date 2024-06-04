@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING
 
 from ..._settings import settings
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
+    from typing import Any, Literal
 
     import numpy as np
     import pandas as pd

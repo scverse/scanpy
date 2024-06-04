@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from ..._compat import old_positionals
-from ...testing._doctests import doctest_needs
+from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from typing import Callable
+
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric
 

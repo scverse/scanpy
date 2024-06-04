@@ -102,7 +102,7 @@ def spring_project(
                 )
             else:
                 raise ValueError(
-                    "Run the specified embedding method `%s` first." % embedding_method
+                    f"Run the specified embedding method `{embedding_method}` first."
                 )
 
     coords = adata.obsm[embedding_method]
@@ -285,7 +285,7 @@ def write_hdf5_genes(E, gene_list, filename):
     hf.attrs["ngenes"] = E.shape[1]
 
     for iG, g in enumerate(gene_list):
-        counts = E[:, iG].A.squeeze()
+        counts = E[:, iG].toarray().squeeze()
         cell_ix = np.nonzero(counts)[0]
         counts = counts[cell_ix]
         counts_group.create_dataset(g, data=counts)
@@ -307,7 +307,7 @@ def write_hdf5_cells(E, filename):
     hf.attrs["ngenes"] = E.shape[1]
 
     for iC in range(E.shape[0]):
-        counts = E[iC, :].A.squeeze()
+        counts = E[iC, :].toarray().squeeze()
         gene_ix = np.nonzero(counts)[0]
         counts = counts[gene_ix]
         counts_group.create_dataset(str(iC), data=counts)
@@ -332,13 +332,13 @@ def _write_graph(filename, n_nodes, edges):
 def _write_edges(filename, edges):
     with Path(filename).open("w") as f:
         for e in edges:
-            f.write("%i;%i\n" % (e[0], e[1]))
+            f.write(f"{e[0]};{e[1]}\n")
 
 
 def _write_color_tracks(ctracks, fname):
     out = []
     for name, score in ctracks.items():
-        line = name + "," + ",".join(["%.3f" % x for x in score])
+        line = f"{name}," + ",".join(f"{x:.3f}" for x in score)
         out += [line]
     out = sorted(out, key=lambda x: x.split(",")[0])
     Path(fname).write_text("\n".join(out))
