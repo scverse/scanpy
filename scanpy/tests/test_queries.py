@@ -5,9 +5,11 @@ import pytest
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 
 @pytest.mark.internet
+@needs.gprofiler
 def test_enrich():
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.shape[1])
@@ -32,6 +34,7 @@ def test_enrich():
 
 
 @pytest.mark.internet
+@needs.pybiomart
 def test_mito_genes():
     pbmc = pbmc68k_reduced()
     mt_genes = sc.queries.mitochondrial_genes("hsapiens")

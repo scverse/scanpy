@@ -144,25 +144,3 @@ def plt():
     from matplotlib import pyplot as plt
 
     return plt
-
-
-@pytest.fixture
-def tmp_dataset_dir(tmp_path_factory):
-    import scanpy
-
-    new_dir = tmp_path_factory.mktemp("scanpy_data")
-    old_dir = scanpy.settings.datasetdir
-    scanpy.settings.datasetdir = new_dir  # Set up
-    yield scanpy.settings.datasetdir
-    scanpy.settings.datasetdir = old_dir  # Tear down
-
-
-@pytest.fixture
-def tmp_write_dir(tmp_path_factory):
-    import scanpy
-
-    new_dir = tmp_path_factory.mktemp("scanpy_write")
-    old_dir = scanpy.settings.writedir
-    scanpy.settings.writedir = new_dir  # Set up
-    yield scanpy.settings.writedir
-    scanpy.settings.writedir = old_dir  # Tear down
