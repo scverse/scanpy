@@ -253,25 +253,15 @@ def score_genes_cell_cycle(
 
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
-    # add s-score
-    score_genes(
-        adata, gene_list=s_genes, score_name="S_score", ctrl_size=ctrl_size, **kwargs
-    )
-    # add g2m-score
-    score_genes(
-        adata,
-        gene_list=g2m_genes,
-        score_name="G2M_score",
-        ctrl_size=ctrl_size,
-        **kwargs,
-    )
+    for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
+        score_genes(adata, genes, score_name=name, ctrl_size=ctrl_size, **kwargs)
     scores = adata.obs[["S_score", "G2M_score"]]
 
     # default phase is S
     phase = pd.Series("S", index=scores.index)
 
     # if G2M is higher than S, it's G2M
-    phase[scores.G2M_score > scores.S_score] = "G2M"
+    phase[scores["G2M_score"] > scores["S_score"]] = "G2M"
 
     # if all scores are negative, it's G1...
     phase[np.all(scores < 0, axis=1)] = "G1"
