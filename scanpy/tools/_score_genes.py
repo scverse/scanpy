@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from numpy.typing import NDArray
+    from numpy.typing import DTypeLike, NDArray
     from scipy.sparse import csc_matrix, csr_matrix
 
     from .._utils import AnyRandom
@@ -151,7 +151,13 @@ def score_genes(
     get_x = partial(_get_obs_rep, use_raw=use_raw, layer=layer)
 
     # average expression of genes
-    obs_avg = pd.Series(_nan_means(get_x(adata[:, gene_pool]), axis=0), index=gene_pool)
+    obs_avg = pd.Series(
+        _nan_means(
+            get_x(adata if len(gene_pool) == len(var_names) else adata[:, gene_pool]),
+            axis=0,
+        ),
+        index=gene_pool,
+    )
     # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
     obs_avg = obs_avg[np.isfinite(obs_avg)]
 
@@ -167,7 +173,7 @@ def score_genes(
         control_genes = control_genes.union(r_genes.difference(gene_list))
 
     means_list, means_control = (
-        _nan_means(get_x(adata[:, genes]), axis=1)
+        _nan_means(get_x(adata[:, genes]), axis=1, dtype="float64")
         for genes in (gene_list, control_genes)
     )
     score = means_list - means_control
@@ -188,10 +194,12 @@ def score_genes(
     return adata if copy else None
 
 
-def _nan_means(x, *, axis: Literal[0, 1]) -> NDArray[np.float64]:
+def _nan_means(
+    x, *, axis: Literal[0, 1], dtype: DTypeLike | None = None
+) -> NDArray[np.float64]:
     if issparse(x):
         return np.array(_sparse_nanmean(x, axis=axis)).flatten()
-    return np.nanmean(x, axis=axis, dtype="float64")
+    return np.nanmean(x, axis=axis, dtype=dtype)
 
 
 @old_positionals("s_genes", "g2m_genes", "copy")
