@@ -433,22 +433,21 @@ def _get_obs_rep(
     is_obsm = obsm is not None
     is_obsp = obsp is not None
     choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made <= 1
+    assert choices_made in {0, 1}
     if choices_made == 0:
         return adata.X
-    elif is_layer:
+    if is_layer:
         return adata.layers[layer]
-    elif use_raw:
+    if use_raw:
         return adata.raw.X
-    elif is_obsm:
+    if is_obsm:
         return adata.obsm[obsm]
-    elif is_obsp:
+    if is_obsp:
         return adata.obsp[obsp]
-    else:
-        assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/scverse/scanpy/issues"
-        )
+    raise AssertionError(
+        "That was unexpected. Please report this bug at:\n\n\t"
+        "https://github.com/scverse/scanpy/issues"
+    )
 
 
 def _set_obs_rep(
