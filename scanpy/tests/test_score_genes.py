@@ -15,10 +15,13 @@ from testing.scanpy._helpers.data import paul15
 if TYPE_CHECKING:
     from typing import Literal
 
-HERE = Path(__file__).parent / Path("_data/")
+    from numpy.typing import NDArray
 
 
-def _create_random_gene_names(n_genes, name_length):
+HERE = Path(__file__).parent / "_data"
+
+
+def _create_random_gene_names(n_genes, name_length) -> NDArray[np.str_]:
     """
     creates a bunch of random gene names (just CAPS letters)
     """
@@ -68,7 +71,7 @@ def test_score_with_reference():
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
-    with Path(HERE, "score_genes_reference_paul2015.pkl").open("rb") as file:
+    with (HERE / "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
     # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
     np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
