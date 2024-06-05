@@ -63,7 +63,6 @@ def _compute_mean_var(
         mean[c] = s0/n
         var[c] = (ss[:,c].sum() - s0*s0/n)/(n-1)
         #std[c]=np.sqrt(var[c])
-    print(mean,var)
     return mean,var
 
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
