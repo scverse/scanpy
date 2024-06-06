@@ -22,6 +22,7 @@ from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, overload
 from weakref import WeakSet
 
+import h5py
 import numpy as np
 from anndata import __version__ as anndata_version
 from packaging.version import Version
@@ -32,6 +33,13 @@ from .. import logging as logg
 from .._compat import DaskArray
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
+
+if Version(anndata_version) >= Version("0.10.0"):
+    from anndata._core.sparse_dataset import (
+        BaseCompressedSparseDataset as SparseDataset,
+    )
+else:
+    from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -247,11 +255,7 @@ def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     if use_raw is not None:
         return use_raw
-    else:
-        if adata.raw is not None:
-            return True
-        else:
-            return False
+    return adata.raw is not None
 
 
 # --------------------------------------------------------------------------------
@@ -572,14 +576,34 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: sparse.spmatrix,
+    X: np.ndarray,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: np.ndarray | None = None,
+) -> np.ndarray:
+    check_op(op)
+    scaling_array = broadcast_axis(scaling_array, axis)
+    if op is mul:
+        return np.multiply(X, scaling_array, out=out)
+    if not allow_divide_by_zero:
+        scaling_array = scaling_array.copy() + (scaling_array == 0)
+    return np.true_divide(X, scaling_array, out=out)
+
+
+@axis_mul_or_truediv.register(sparse.csr_matrix)
+@axis_mul_or_truediv.register(sparse.csc_matrix)
+def _(
+    X: sparse.csr_matrix | sparse.csc_matrix,
     scaling_array,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: sparse.spmatrix | None = None,
-) -> sparse.spmatrix:
+    out: sparse.csr_matrix | sparse.csc_matrix | None = None,
+) -> sparse.csr_matrix | sparse.csc_matrix:
     check_op(op)
     if out is not None:
         if X.data is not out.data:
@@ -619,25 +643,6 @@ def axis_mul_or_truediv(
         out=transposed,
         allow_divide_by_zero=allow_divide_by_zero,
     ).T
-
-
-@axis_mul_or_truediv.register(np.ndarray)
-def _(
-    X: np.ndarray,
-    scaling_array: np.ndarray,
-    axis: Literal[0, 1],
-    op: Callable[[Any, Any], Any],
-    *,
-    allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
-) -> np.ndarray:
-    check_op(op)
-    scaling_array = broadcast_axis(scaling_array, axis)
-    if op is mul:
-        return np.multiply(X, scaling_array, out=out)
-    if not allow_divide_by_zero:
-        scaling_array = scaling_array.copy() + (scaling_array == 0)
-    return np.true_divide(X, scaling_array, out=out)
 
 
 def make_axis_chunks(
@@ -1084,3 +1089,14 @@ def _resolve_axis(
     if axis in {1, "var"}:
         return (1, "var")
     raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
+
+
+def is_backed_type(X: object) -> bool:
+    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
+
+
+def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
+    if is_backed_type(X):
+        raise NotImplementedError(
+            f"{method_name} is not implemented for matrices of type {type(X)}"
+        )

@@ -252,10 +252,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 
 
 def _filter_genes(X, e_cutoff, v_cutoff, meth):
-    """\
-    See `filter_genes_dispersion`.
-
-    Reference: Weinreb et al. (2017)."""
+    """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
     if issparse(X):
         raise ValueError("Not defined for sparse input. See `filter_genes_dispersion`.")
     mean_filter = np.mean(X, axis=0) > e_cutoff

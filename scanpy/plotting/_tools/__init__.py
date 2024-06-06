@@ -19,10 +19,12 @@ from ..._utils import _doc_params, sanitize_anndata, subsample
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
+    doc_cm_palette,
     doc_panels,
     doc_rank_genes_groups_plot_args,
     doc_rank_genes_groups_values_to_plot,
     doc_scatter_embedding,
+    doc_show_save,
     doc_show_save_ax,
     doc_vbound_percentile,
 )
@@ -265,6 +267,7 @@ def dpt_timeseries(
 
 
 @old_positionals("color_map", "palette", "show", "save", "marker")
+@_doc_params(cm_palette=doc_cm_palette, show_save=doc_show_save)
 def dpt_groups_pseudotime(
     adata: AnnData,
     *,
@@ -274,7 +277,18 @@ def dpt_groups_pseudotime(
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
 ):
-    """Plot groups and pseudotime."""
+    """\
+    Plot groups and pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    {cm_palette}
+    {show_save}
+    marker
+        Marker style. See :mod:`~matplotlib.markers` for details.
+    """
     _, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
         adata.obs["dpt_groups"].cat.codes,
