@@ -378,6 +378,15 @@ def test_dotplot_obj(image_comparer):
     save_and_compare_images("dotplot_std_scale_var")
 
 
+def test_dotplot_add_totals(image_comparer):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    pbmc = pbmc68k_reduced()
+    markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
+    sc.pl.dotplot(pbmc, markers, "bulk_labels", return_fig=True).add_totals().show()
+    save_and_compare_images("dotplot_totals")
+
+
 def test_matrixplot_obj(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
