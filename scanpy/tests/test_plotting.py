@@ -344,19 +344,8 @@ def test_dotplot_obj(image_comparer):
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = pbmc68k_reduced()
     genes = [
-        "CD79A",
-        "MS4A1",
-        "CD8A",
-        "CD8B",
-        "LYZ",
-        "LGALS3",
-        "S100A8",
-        "GNLY",
-        "NKG7",
-        "KLRB1",
-        "FCGR3A",
-        "FCER1A",
-        "CST3",
+        *["CD79A", "MS4A1", "CD8A", "CD8B", "LYZ", "LGALS3"],
+        *["S100A8", "GNLY", "NKG7", "KLRB1", "FCGR3A", "FCER1A", "CST3"],
     ]
     # test layer, var standardization, smallest_dot,
     # color title, size_title return_fig and dot_edge

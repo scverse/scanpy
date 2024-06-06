@@ -257,8 +257,12 @@ class DotPlot(BasePlot):
             # using the order from the doc_size_df
             dot_color_df = dot_color_df.loc[dot_size_df.index][dot_size_df.columns]
 
-        self.dot_color_df = dot_color_df
-        self.dot_size_df = dot_size_df
+        self.dot_color_df, self.dot_size_df = (
+            df.loc[
+                categories_order if categories_order is not None else self.categories
+            ]
+            for df in (dot_color_df, dot_size_df)
+        )
 
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
@@ -618,9 +622,9 @@ class DotPlot(BasePlot):
 
     @staticmethod
     def _dotplot(
-        dot_size,
-        dot_color,
-        dot_ax,
+        dot_size: pd.DataFrame,
+        dot_color: pd.DataFrame,
+        dot_ax: Axes,
         *,
         cmap: str = "Reds",
         color_on: str | None = "dot",
