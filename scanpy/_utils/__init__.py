@@ -25,6 +25,9 @@ from weakref import WeakSet
 import h5py
 import numpy as np
 from anndata import __version__ as anndata_version
+from numpy.random import MT19937
+from numpy.random import Generator as NPGenerator
+from numpy.typing import NDArray
 from packaging.version import Version
 from scipy import sparse
 from sklearn.utils import check_random_state
@@ -70,11 +73,14 @@ class RNGIgraph:
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
 
-    def __init__(self, random_state: int = 0) -> None:
-        self._rng = check_random_state(random_state)
+    def __init__(self, random_state: AnyRandom = 0) -> None:
+        mt = MT19937()
+        mt.state = check_random_state(random_state).get_state()
+        self._rng = NPGenerator(mt)
 
-    def __getattr__(self, attr: str):
-        return getattr(self._rng, "normal" if attr == "gauss" else attr)
+        self.gauss = self._rng.normal
+        self.random = self._rng.uniform
+        self.randint = partial(self._rng.integers, dtype=int)
 
 
 def ensure_igraph() -> None:
