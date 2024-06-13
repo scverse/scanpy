@@ -1702,3 +1702,47 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+
+@pytest.fixture
+def adata_small_stacked_barplot() -> AnnData:
+    X = np.random.rand(10,5)
+    obs = pd.DataFrame(
+        data={
+            'Batch': ['A' for i in range(3)] + ['B' for i in range(7)],
+            'Cluster': ['3', '2', '3', '3', '2', '3', '1', '2', '3', '1']
+        }
+    )
+    obs['Batch'] = obs['Batch'].astype('category')
+    obs['Cluster'] = obs['Cluster'].astype('category')
+    adata = AnnData(X=X, obs=obs)
+    return adata
+
+
+@pytest.mark.parametrize(
+    ("id", "groupby", "obs_key", "order_method", "orderby", "plot_dendrogram"),
+    [
+        ("stacked_barplot_dendrogram", "Batch", "Cluster", "dendrogram", None, True), 
+        ("stacked_barplot_by_value", "Cluster", "Batch", "value", "B", False)
+    ]
+)
+def test_stacked_barplot(
+    adata_small_stacked_barplot,
+    image_comparer, 
+    id, 
+    groupby, 
+    obs_key,
+    order_method,
+    orderby,
+    plot_dendrogram
+):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15) 
+    
+    sc.pl.stacked_barplot(
+        adata_small_stacked_barplot, groupby=groupby, obs_key=obs_key, 
+        order_method='dendrogram', orderby=orderby, 
+        plot_dendrogram=plot_dendrogram)
+    save_and_compare_images(id)
+
+    
+
