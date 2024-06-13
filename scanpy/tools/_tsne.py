@@ -156,6 +156,8 @@ def tsne(
                 )
             )
     if use_fast_tsne is False:  # In case MultiCore failed to import
+        from sklearnex import patch_sklearn,unpatch_sklearn
+        patch_sklearn()
         from sklearn.manifold import TSNE
 
         # unfortunately, sklearn does not allow to set a minimum number
@@ -163,7 +165,7 @@ def tsne(
         tsne = TSNE(**params_sklearn)
         logg.info("    using sklearn.manifold.TSNE")
         X_tsne = tsne.fit_transform(X)
-
+        unpatch_sklearn()
     # update AnnData instance
     adata.obsm["X_tsne"] = X_tsne  # annotate samples with tSNE coordinates
     adata.uns["tsne"] = {
