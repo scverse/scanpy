@@ -116,6 +116,7 @@ def ingest(
     Call sequence:
 
     >>> import scanpy as sc
+    >>> sc.pp.pca(adata_ref)
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
     >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
