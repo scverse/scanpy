@@ -1158,6 +1158,14 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
+    elif legend_loc is not None:
+        for label in cats:
+            ax.scatter([], [], c=palette[label], label=label)
+        ax.legend(
+            loc=legend_loc,
+            ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
+            fontsize=legend_fontsize,
+        )
 
 
 def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
