@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 def tsne(
     adata: AnnData,
     n_pcs: int | None = None,
+    n_components: int = 2,
     *,
     use_rep: str | None = None,
     perplexity: float | int = 30,
@@ -60,6 +61,8 @@ def tsne(
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
+    n_components
+        The number of dimensions of the embedding.
     perplexity
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -117,6 +120,7 @@ def tsne(
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
+        n_components=n_components,
     )
     if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
@@ -176,6 +180,7 @@ def tsne(
                 "n_jobs": n_jobs,
                 "metric": metric,
                 "use_rep": use_rep,
+                "n_components": n_components,
             }.items()
             if v is not None
         }
