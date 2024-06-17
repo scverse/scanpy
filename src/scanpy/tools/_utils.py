@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -37,14 +38,14 @@ def _choose_representation(
                 X = adata.obsm["X_pca"][:, :n_pcs]
                 logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
             else:
-                logg.warning(
+                warnings.warn(
                     f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
                     "if you really want this, set `use_rep='X'`.\n         "
                     "Falling back to preprocessing with `sc.pp.pca` and default params."
                 )
                 n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
-                X = pca(adata.X, n_comps=n_pcs_pca)
-                adata.obsm["X_pca"] = X
+                pca(adata, n_comps=n_pcs_pca)
+                X = adata.obsm["X_pca"]
         else:
             logg.info("    using data matrix X directly")
             X = adata.X
