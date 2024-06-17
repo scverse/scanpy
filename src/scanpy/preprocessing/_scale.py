@@ -43,6 +43,24 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
                     data[j] /= std[indices[j]]
 
 
+@numba.njit(parallel=True, cache=True)
+def clip_array(X: np.ndarray, max_value: float | None = 10, zero_center: bool = True):
+    a_min, a_max = -max_value, max_value
+    if X.ndim > 1:
+        for r, c in numba.pndindex(X.shape):
+            if X[r, c] > a_max:
+                X[r, c] = a_max
+            elif X[r, c] < a_min and zero_center:
+                X[r, c] = a_min
+    else:
+        for i in numba.prange(X.size):
+            if X[i] > a_max:
+                X[i] = a_max
+            elif X[i] < a_min and zero_center:
+                X[i] = a_min
+    return X
+
+
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
@@ -112,17 +130,6 @@ def scale(
     return scale_array(
         data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
-
-
-@numba.njit(parallel=True, cache=True)
-def clip_array(X: np.ndarray | DaskArray, max_value: float | None = None):
-    a_min, a_max = -max_value, max_value
-    for r, c in numba.pndindex(X.shape):
-        if X[r, c] > a_max:
-            X[r, c] = a_max
-        elif X[r, c] < a_min:
-            X[r, c] = a_min
-    return X
 
 
 @scale.register(np.ndarray)
@@ -208,13 +215,12 @@ def scale_array(
 
             X = da.map_blocks(clip_set, X)
         else:
-            if zero_center:
-                X = clip_array(X, max_value)
+            if isinstance(X, DaskArray):
+                X = X.map_blocks(clip_array, max_value, zero_center)
+            elif issparse(X):
+                X.data = clip_array(X.data, max_value=max_value, zero_center=False)
             else:
-                if issparse(X):
-                    X.data[X.data > max_value] = max_value
-                else:
-                    X[X > max_value] = max_value
+                X = clip_array(X, max_value=max_value, zero_center=zero_center)
     if return_mean_std:
         return X, mean, std
     else:
