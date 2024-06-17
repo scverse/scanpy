@@ -115,13 +115,13 @@ def scale(
 
 @numba.njit(parallel=True, cache=True)
 def clip_array(X:np.ndarray | DaskArray ,max_value:float | None = None):
-	a_min, a_max = -max_value, max_value
-	for (r,c) in numba.pndindex(X.shape):
+    a_min, a_max = -max_value, max_value
+    for (r,c) in numba.pndindex(X.shape):
         if X[r,c] > a_max:
             X[r,c] = a_max
         elif X[r,c] < a_min:
             X[r,c] = a_min
-	return X
+    return X
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
