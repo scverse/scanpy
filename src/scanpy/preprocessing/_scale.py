@@ -113,15 +113,17 @@ def scale(
         data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
 
+
 @numba.njit(parallel=True, cache=True)
-def clip_array(X:np.ndarray | DaskArray ,max_value:float | None = None):
+def clip_array(X: np.ndarray | DaskArray, max_value: float | None = None):
     a_min, a_max = -max_value, max_value
-    for (r,c) in numba.pndindex(X.shape):
-        if X[r,c] > a_max:
-            X[r,c] = a_max
-        elif X[r,c] < a_min:
-            X[r,c] = a_min
+    for r, c in numba.pndindex(X.shape):
+        if X[r, c] > a_max:
+            X[r, c] = a_max
+        elif X[r, c] < a_min:
+            X[r, c] = a_min
     return X
+
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
@@ -207,7 +209,7 @@ def scale_array(
             X = da.map_blocks(clip_set, X)
         else:
             if zero_center:
-                X=clip_array(X,max_value)
+                X = clip_array(X, max_value)
             else:
                 if issparse(X):
                     X.data[X.data > max_value] = max_value
