@@ -33,37 +33,45 @@ def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
 def _get_mean_var(
     X: _SupportedArray, *, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    if isinstance(X, sparse.spmatrix):
-        mean, var = sparse_mean_variance_axis(X, axis=axis)
-        var *= X.shape[axis] / (X.shape[axis] - 1)
+    if isinstance(X, np.ndarray):
+        mean, var = _compute_mean_var(X, axis=axis, dtype=np.float64)
     else:
-        mean,var=_compute_mean_var(X,axis=axis,dtype=np.float64)
+        if isinstance(X, sparse.spmatrix):
+            mean, var = sparse_mean_variance_axis(X, axis=axis)
+        else:
+            mean = axis_mean(X, axis=axis, dtype=np.float64)
+            mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
+            var = mean_sq - mean**2
+        # enforce R convention (unbiased estimator) for variance
+        var *= X.shape[axis] / (X.shape[axis] - 1)
     return mean, var
 
-@numba.njit(cache=True,parallel=True)
+
+@numba.njit(cache=True, parallel=True)
 def _compute_mean_var(
-        X: _SupportedArray, axis: Literal[0, 1] = 0,dtype : DTypeLike | None = None
+    X: _SupportedArray, axis: Literal[0, 1] = 0, dtype: DTypeLike | None = None
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     nthr = numba.get_num_threads()
-    axis_i = 1 if axis==0 else 0 
-    s=np.zeros((nthr,X.shape[axis_i]),dtype=dtype)
-    ss=np.zeros((nthr,X.shape[axis_i]),dtype=dtype)
-    mean=np.zeros(X.shape[axis_i],dtype=dtype)
-    #std=np.zeros(X.shape[axis_i],dtype=dtype)
-    var=np.zeros(X.shape[axis_i],dtype=dtype)
+    axis_i = 1 if axis == 0 else 0
+    s = np.zeros((nthr, X.shape[axis_i]), dtype=dtype)
+    ss = np.zeros((nthr, X.shape[axis_i]), dtype=dtype)
+    mean = np.zeros(X.shape[axis_i], dtype=dtype)
+    # std=np.zeros(X.shape[axis_i],dtype=dtype)
+    var = np.zeros(X.shape[axis_i], dtype=dtype)
     n = X.shape[axis]
     for i in numba.prange(nthr):
-        for r in range(i,n,nthr):
+        for r in range(i, n, nthr):
             for c in range(X.shape[axis_i]):
-                v = X[r,c] if axis==0 else X[c,r]
-                s[i,c]+=v
-                ss[i,c]+=v*v
+                v = X[r, c] if axis == 0 else X[c, r]
+                s[i, c] += v
+                ss[i, c] += v * v
     for c in numba.prange(X.shape[axis_i]):
-        s0 = s[:,c].sum()
-        mean[c] = s0/n
-        var[c] = (ss[:,c].sum() - s0*s0/n)/(n-1)
-        #std[c]=np.sqrt(var[c])
-    return mean,var
+        s0 = s[:, c].sum()
+        mean[c] = s0 / n
+        var[c] = (ss[:, c].sum() - s0 * s0 / n) / (n - 1)
+        # std[c]=np.sqrt(var[c])
+    return mean, var
+
 
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     """
