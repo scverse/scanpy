@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.7
+    rev: v0.4.9
     hooks:
     -   id: ruff
         types_or: [python, pyi, jupyter]
@@ -23,9 +23,9 @@ repos:
     rev: v4.6.0
     hooks:
     -   id: trailing-whitespace
-        exclude: scanpy/tests/_data
+        exclude: tests/_data
     -   id: end-of-file-fixer
-        exclude: scanpy/tests/_data
+        exclude: tests/_data
     -   id: check-added-large-files
     -   id: check-case-conflict
     -   id: check-toml
