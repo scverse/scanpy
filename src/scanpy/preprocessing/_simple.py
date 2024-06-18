@@ -612,6 +612,47 @@ def normalize_per_cell(  # noqa: PLR0917
     return X if copy else None
 
 
+@numba.njit(cache=True, parallel=True)
+def to_dense(shape, indptr, indices, data):
+    """\
+    Numba kernel for np.toarray() function
+    """
+    X = np.empty(shape, dtype=data.dtype)
+
+    for r in numba.prange(shape[0]):
+        X[r] = 0
+        for i in range(indptr[r], indptr[r + 1]):
+            X[r, indices[i]] = data[i]
+    return X
+
+
+def numpy_regress_out(
+    X: np.ndarray,
+    A: np.ndarray,
+) -> np.ndarray:
+    """\
+    Numba kernel for regress out unwanted sorces of variantion.
+    Finding coefficient using Linear regression (Linear Least Squares).
+    """
+
+    @numba.njit(cache=True, parallel=True)
+    def get_resid(
+        X: np.ndarray,
+        A: np.ndarray,
+        coeff,
+    ) -> np.ndarray:
+        for i in numba.prange(X.shape[0]):
+            X[i] -= A[i] @ coeff
+        return X
+
+    tmp0 = A.T @ A
+    tmp = np.linalg.inv(tmp0)
+    tmp0 = A.T @ X
+    coeff = tmp @ tmp0
+    X = get_resid(X, A, coeff)
+    return X
+
+
 @old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
@@ -664,7 +705,7 @@ def regress_out(
 
     if issparse(X):
         logg.info("    sparse input is densified and may " "lead to high memory use")
-        X = X.toarray()
+        X = to_dense(X.shape, X.indptr, X.indices, X.data)
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -715,14 +756,27 @@ def regress_out(
             regres = regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    from joblib import Parallel, delayed
+    flag = None
+    if not variable_is_categorical:
+        A = regres.to_numpy()
+        # checking if inverse of A.T@A matix is zero or not.
+        if np.linalg.det(A.T @ A) != 0:
+            res = numpy_regress_out(X, A)
+            flag = 1
+    # for categorical variable and failed the above code then run original code.
+    if variable_is_categorical or flag is None:
+        from joblib import Parallel, delayed
 
-    # TODO: figure out how to test that this doesn't oversubscribe resources
-    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
+        # TODO: figure out how to test that this doesn't oversubscribe resources
+        res = Parallel(n_jobs=n_jobs)(
+            delayed(_regress_out_chunk)(task) for task in tasks
+        )
 
-    # res is a list of vectors (each corresponding to a regressed gene column).
-    # The transpose is needed to get the matrix in the shape needed
-    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
+        # res is a list of vectors (each corresponding to a regressed gene column).
+        # The transpose is needed to get the matrix in the shape needed
+        res = np.vstack(res).T
+
+    _set_obs_rep(adata, res, layer=layer)
     logg.info("    finished", time=start)
     return adata if copy else None
 
