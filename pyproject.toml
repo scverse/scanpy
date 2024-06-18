@@ -48,8 +48,9 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    # numpy needs a version due to #1320
-    "numpy>=1.23",
+    # TODO: remove <2 requirement once PyNNDescent releases this fix:
+    # https://github.com/lmcinnes/pynndescent/issues/241
+    "numpy>=1.23,<2",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
@@ -84,7 +85,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=7.4.2,<8.1",
+    "pytest>=8.2",
     "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
@@ -100,6 +101,8 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
+    # optional storage modes
+    "zappy",
     # additional tested algorithms
     "scanpy[louvain]",
     "scanpy[magic]",
@@ -150,21 +153,23 @@ rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculati
 dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
-[tool.hatch.build]
-exclude = ["scanpy/tests"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/testing", "src/scanpy"]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
-version-file = "scanpy/_version.py"
+version-file = "src/scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
+    "-ptesting.scanpy._pytest",
+    "--pyargs",
 ]
-testpaths = ["scanpy"]
-norecursedirs = ["scanpy/tests/_images"]
+testpaths = ["./tests", "scanpy"]
+norecursedirs = ["tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
@@ -198,7 +203,7 @@ filterwarnings = [
 [tool.coverage.run]
 data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
-omit = ["*/tests/*"]
+omit = ["tests/*", "src/testing/*"]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
@@ -210,6 +215,9 @@ exclude_also = [
     # https://github.com/numba/numba/issues/4268
     "@numba.njit.*",
 ]
+
+[tool.ruff]
+src = ["src"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -239,11 +247,14 @@ ignore = [
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
-"scanpy/tools/_rank_genes_groups.py" = ["E731"]
+"src/scanpy/tools/_rank_genes_groups.py" = ["E731"]
 [tool.ruff.lint.isort]
-known-first-party = ["scanpy"]
+known-first-party = ["scanpy", "testing.scanpy"]
 required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = []
+strict = true

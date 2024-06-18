@@ -48,7 +48,8 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: pip install asv
+        # TODO: revert once this PR is merged: https://github.com/airspeed-velocity/asv/pull/1397
+        run: pip install 'asv @ git+https://github.com/ivirshup/asv@fix-conda-usage'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}
