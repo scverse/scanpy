@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numba
 import numpy as np
@@ -612,8 +612,16 @@ def normalize_per_cell(  # noqa: PLR0917
     return X if copy else None
 
 
+DT = TypeVar("DT")
+
+
 @numba.njit(cache=True, parallel=True)
-def to_dense(shape, indptr, indices, data):
+def to_dense(
+    shape: tuple[int, int],
+    indptr: NDArray[np.integer],
+    indices: NDArray[np.integer],
+    data: NDArray[np.number],
+) -> NDArray[DT]:
     """\
     Numba kernel for np.toarray() function
     """
@@ -627,8 +635,8 @@ def to_dense(shape, indptr, indices, data):
 
 
 def numpy_regress_out(
-    X: np.ndarray,
-    A: np.ndarray,
+    data: np.ndarray,
+    regressor: np.ndarray,
 ) -> np.ndarray:
     """\
     Numba kernel for regress out unwanted sorces of variantion.
@@ -637,20 +645,18 @@ def numpy_regress_out(
 
     @numba.njit(cache=True, parallel=True)
     def get_resid(
-        X: np.ndarray,
-        A: np.ndarray,
-        coeff,
+        data: np.ndarray,
+        regressor: np.ndarray,
+        coeff: np.ndarray,
     ) -> np.ndarray:
-        for i in numba.prange(X.shape[0]):
-            X[i] -= A[i] @ coeff
-        return X
+        for i in numba.prange(data.shape[0]):
+            data[i] -= regressor[i] @ coeff
+        return data
 
-    tmp0 = A.T @ A
-    tmp = np.linalg.inv(tmp0)
-    tmp0 = A.T @ X
-    coeff = tmp @ tmp0
-    X = get_resid(X, A, coeff)
-    return X
+    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
+    coeff = inv_gram_matrix @ (regressor.T @ data)
+    data = get_resid(data, regressor, coeff)
+    return data
 
 
 @old_positionals("layer", "n_jobs", "copy")
@@ -756,15 +762,18 @@ def regress_out(
             regres = regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    flag = None
+    res = None
     if not variable_is_categorical:
         A = regres.to_numpy()
-        # checking if inverse of A.T@A matix is zero or not.
+        # if det(A.T@A) zero, then can not take inverse and regression fails.
+        # if fails then fall back to GLM implemetation of regression.
+        # Numba kernel is used to speedup regression using Linear Least Square method
+        # on regressor of type numpy array.
         if np.linalg.det(A.T @ A) != 0:
             res = numpy_regress_out(X, A)
-            flag = 1
+
     # for categorical variable and failed the above code then run original code.
-    if variable_is_categorical or flag is None:
+    if variable_is_categorical or res is None:
         from joblib import Parallel, delayed
 
         # TODO: figure out how to test that this doesn't oversubscribe resources
