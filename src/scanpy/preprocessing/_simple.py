@@ -620,7 +620,7 @@ def to_dense(
     shape: tuple[int, int],
     indptr: NDArray[np.integer],
     indices: NDArray[np.integer],
-    data: NDArray[np.number],
+    data: NDArray[DT],
 ) -> NDArray[DT]:
     """\
     Numba kernel for np.toarray() function
