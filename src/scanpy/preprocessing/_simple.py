@@ -765,14 +765,12 @@ def regress_out(
     res = None
     if not variable_is_categorical:
         A = regres.to_numpy()
-        # if det(A.T@A) zero, then can not take inverse and regression fails.
-        # if fails then fall back to GLM implemetation of regression.
-        # Numba kernel is used to speedup regression using Linear Least Square method
-        # on regressor of type numpy array.
+        # if det(A.T@A) != 0 we can take the inverse and regress using a fast method.
         if np.linalg.det(A.T @ A) != 0:
             res = numpy_regress_out(X, A)
 
-    # for categorical variable and failed the above code then run original code.
+    # for a categorical variable or if the above checks failed,
+    # we fall back to the GLM implemetation of regression.
     if variable_is_categorical or res is None:
         from joblib import Parallel, delayed
 
