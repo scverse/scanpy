@@ -13,9 +13,10 @@ That page also explains concepts like *pre-releases* and applications thereof.
 
 1. Go to GitHub’s [releases][] page
 2. Click “Draft a new release”
-3. Click “Choose a tag” and type the version of the tag you want to release, such as `1.9.6`
+3. Click “Choose a tag” and type the version of the tag you want to release, such as `1.9.6`.
 4. Click “**+ Create new tag: 1.\<minor>.\<patch>** on publish”
-5. If the version is a *pre-release* version, such as `1.7.0rc1` or `1.10.0a1`, tick the “Set as a pre-release” checkbox
+5. In the second box "Target:", select the base branch e.g., `1.9.X` for a patch release or `main` for a minor/major release.
+6. If the version is a *pre-release* version, such as `1.7.0rc1` or `1.10.0a1`, tick the “Set as a pre-release” checkbox
 
 [releases]: https://github.com/scverse/scanpy/releases
 
