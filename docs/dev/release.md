@@ -3,6 +3,12 @@
 First, check out {doc}`versioning` to see which kind of release you want to make.
 That page also explains concepts like *pre-releases* and applications thereof.
 
+## Preparing the release
+
+1. Make a new branch off of `main` to prepare the release notes, and create a PR from this branch back into `main`.  Add a milestone for the desired version to be released.
+2. Update the date in the desired release's notes, delete empty header in the notes, and create a new blank note for the next desired release.  Update the `index.md` to include the next release's notes as well.
+3. Push the changes to the PR, and merge into `main`.  If it is a patch release, backport the updated notes into the major/minor version branch.
+
 ## Actually making the release
 
 1. Go to GitHub’s [releases][] page
