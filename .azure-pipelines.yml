@@ -4,7 +4,7 @@ trigger:
 
 variables:
   python.version: '3.12'
-  PYTEST_ADDOPTS: '-v --color=yes --nunit-xml=test-data/test-results.xml'
+  PYTEST_ADDOPTS: '-v --color=yes --internet-tests --nunit-xml=test-data/test-results.xml'
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
   TEST_TYPE: "standard" # | "coverage"
@@ -44,10 +44,18 @@ jobs:
     inputs:
       key: '"python $(python.version)" | "$(Agent.OS)" | pyproject.toml'
       restoreKeys: |
-        python | "$(Agent.OS)"
-        python
+        "python" | "$(Agent.OS)"
+        "python"
       path: $(uv_cache_dir)
     displayName: Cache pip packages
+
+
+  - task: Cache@2
+    inputs:
+      key: '"pytest"'
+      restoreKeys: '"pytest"'
+      path: $(System.DefaultWorkingDirectory)/.pytest_cache/d
+    displayName: Cache pytest data
 
   - script: |
       export MPLBACKEND="agg"
@@ -71,9 +79,6 @@ jobs:
       uv pip install --system --compile $deps "scanpy @ ."
     displayName: 'Install dependencies minimum version'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'minimum-version')
-
-  - script: uv pip list
-    displayName: 'Display installed versions'
 
   - script: pytest
     displayName: 'PyTest'
