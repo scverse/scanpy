@@ -56,7 +56,6 @@ def _compute_mean_var(
     s = np.zeros((nthr, X.shape[axis_i]), dtype=dtype)
     ss = np.zeros((nthr, X.shape[axis_i]), dtype=dtype)
     mean = np.zeros(X.shape[axis_i], dtype=dtype)
-    # std=np.zeros(X.shape[axis_i],dtype=dtype)
     var = np.zeros(X.shape[axis_i], dtype=dtype)
     n = X.shape[axis]
     for i in numba.prange(nthr):
@@ -69,7 +68,6 @@ def _compute_mean_var(
         s0 = s[:, c].sum()
         mean[c] = s0 / n
         var[c] = (ss[:, c].sum() - s0 * s0 / n) / (n - 1)
-        # std[c]=np.sqrt(var[c])
     return mean, var
 
 
