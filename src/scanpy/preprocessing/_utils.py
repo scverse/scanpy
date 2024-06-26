@@ -50,7 +50,7 @@ def _get_mean_var(
 
 @numba.njit(cache=True, parallel=True)
 def _compute_mean_var(
-    X, axis: Literal[0, 1] = 0, n_threads=1
+    X: _SupportedArray, axis: Literal[0, 1] = 0, n_threads=1
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     if axis == 0:
         axis_i = 1
