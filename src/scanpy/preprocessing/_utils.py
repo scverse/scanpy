@@ -62,7 +62,7 @@ def _compute_mean_var(
         for i in numba.prange(n_threads):
             for r in range(i, n, n_threads):
                 for c in range(X.shape[axis_i]):
-                    value = np.float64(X[r, c])
+                    value = X[r, c]
                     sums[i, c] += value
                     sums_squared[i, c] += value * value
         for c in numba.prange(X.shape[axis_i]):
@@ -75,7 +75,7 @@ def _compute_mean_var(
         var = np.zeros(X.shape[axis_i], dtype=np.float64)
         for r in numba.prange(X.shape[0]):
             for c in range(X.shape[1]):
-                value = np.float64(X[r, c])
+                value = X[r, c]
                 mean[r] += value
                 var[r] += value * value
         for c in numba.prange(X.shape[0]):
