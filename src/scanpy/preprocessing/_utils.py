@@ -34,7 +34,7 @@ def _get_mean_var(
     X: _SupportedArray, *, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     if isinstance(X, np.ndarray):
-        mean, var = _compute_mean_var(X, axis=axis, dtype=np.float64)
+        mean, var = _compute_mean_var(X, axis=axis)
     else:
         if isinstance(X, sparse.spmatrix):
             mean, var = sparse_mean_variance_axis(X, axis=axis)
@@ -49,7 +49,7 @@ def _get_mean_var(
 
 @numba.njit(cache=True, parallel=True)
 def _compute_mean_var(
-    X: _SupportedArray, axis: Literal[0, 1] = 0, dtype: DTypeLike | None = None
+    X: _SupportedArray, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     nthr = numba.get_num_threads()
     axis_i = 1 if axis == 0 else 0
