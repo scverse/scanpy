@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 from string import ascii_letters
 from typing import TYPE_CHECKING
@@ -601,54 +602,47 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
 
     n_genes = adata.shape[1]
 
-    adatas = {}
-    dfs = {}
+    adatas: dict[bool, AnnData] = {}
+    dfs: dict[bool, pd.DataFrame] = {}
     # for loops instead of parametrization to compare between settings
-    for subset in [True, False]:
-        for inplace in [True, False]:
-            adata_copy = adata.copy()
+    for subset, inplace in itertools.product([True, False], repeat=2):
+        adata_copy = adata.copy()
 
-            output_df = sc.pp.highly_variable_genes(
-                adata_copy,
-                flavor=flavor,
-                n_top_genes=15,
-                batch_key=batch_key,
-                subset=subset,
-                inplace=inplace,
-            )
+        output_df = sc.pp.highly_variable_genes(
+            adata_copy,
+            flavor=flavor,
+            n_top_genes=15,
+            batch_key=batch_key,
+            subset=subset,
+            inplace=inplace,
+        )
 
-            assert (output_df is None) == inplace
-            assert len(adata_copy.var if inplace else output_df) == (
-                15 if subset else n_genes
-            )
-            assert (
-                sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
-            )
+        assert (output_df is None) == inplace
+        assert len(adata_copy.var if inplace else output_df) == (
+            15 if subset else n_genes
+        )
+        assert sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
 
-            if not inplace:
-                assert isinstance(output_df, pd.DataFrame)
+        if not inplace:
+            assert isinstance(output_df, pd.DataFrame)
 
-            adatas[f"subset_{subset}_inplace_{inplace}"] = adata_copy
-            dfs[f"subset_{subset}_inplace_{inplace}"] = output_df
+        if inplace:
+            assert subset not in adatas
+            adatas[subset] = adata_copy
+        else:
+            assert subset not in dfs
+            dfs[subset] = output_df
 
     # check that the results are consistent for subset True/False: inplace True
-    adata_post_subset = adatas["subset_False_inplace_True"][
-        :, adatas["subset_False_inplace_True"].var["highly_variable"]
-    ]
-    assert adata_post_subset.var_names.equals(
-        adatas["subset_True_inplace_True"].var_names
-    )
+    adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
+    assert adata_subset.var_names.equals(adatas[True].var_names)
 
     # check that the results are consistent for subset True/False: inplace False
-    df_post_subset = dfs["subset_False_inplace_False"][
-        dfs["subset_False_inplace_False"]["highly_variable"]
-    ]
-    assert df_post_subset.index.equals(dfs["subset_True_inplace_False"].index)
+    df_subset = dfs[False][dfs[False]["highly_variable"]]
+    assert df_subset.index.equals(dfs[True].index)
 
     # check that the results are consistent for inplace True/False: subset True
-    assert adatas["subset_True_inplace_True"].var_names.equals(
-        dfs["subset_True_inplace_False"].index
-    )
+    assert adatas[True].var_names.equals(dfs[True].index)
 
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
