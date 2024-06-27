@@ -1,5 +1,5 @@
 ```{include} ../README.md
-:end-line: 40
+:end-before: '## Citation'
 ```
 
 ```{eval-rst}
@@ -58,8 +58,8 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 ## News
 
 ```{include} news.md
-:start-line: 9
-:end-line: 32
+:start-after: '<!-- marker: after prelude -->'
+:end-before: '<!-- marker: before old news -->'
 ```
 
 {ref}`(past news) <News>`
