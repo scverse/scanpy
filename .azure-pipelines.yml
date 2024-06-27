@@ -105,7 +105,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/data'
+      pathToPublish: '$(Pipeline.Workspace)/s/src/scanpy/tests/data'
       artifactName: data
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
