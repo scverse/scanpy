@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import sys
+
+import pytest
+
 import scanpy as sc
 import scanpy.external as sce
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
-pytestmark = [needs.scanorama]
+pytestmark = [
+    needs.scanorama,
+    pytest.mark.skipif(sys.version_info < (3, 10), reason="annoy is unstable on 3.9"),
+]
 
 
 def test_scanorama_integrate():

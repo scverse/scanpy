@@ -13,9 +13,9 @@
 # tests
 /*cache/
 /test-data/
-/scanpy/tests/test*.h5ad
-/scanpy/tests/**/*actual.png
-/scanpy/tests/**/*failed-diff.png
+/tests/test*.h5ad
+/tests/**/*actual.png
+/tests/**/*failed-diff.png
 
 # Environment management
 /hatch.toml
@@ -28,7 +28,7 @@
 
 # Python build files
 __pycache__/
-/scanpy/_version.py
+/src/scanpy/_version.py
 /dist/
 /*-env/
 /env-*/

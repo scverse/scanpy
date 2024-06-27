@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from typing import Literal, Self, Union
 
+    import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
@@ -474,7 +475,7 @@ class BasePlot:
         Makes the bar plot for totals
         """
         params = self.plot_group_extra
-        counts_df = params["counts_df"]
+        counts_df: pd.DataFrame = params["counts_df"]
         if self.categories_order is not None:
             counts_df = counts_df.loc[self.categories_order]
         if params["color"] is None:
