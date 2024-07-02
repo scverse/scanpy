@@ -99,12 +99,11 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
 
     func = _import_name(request.node.name)
     needs_mod: str | None
-    if needs_mod := getattr(func, "_doctest_needs", None):
-        needs_marker = needs[needs_mod]
-        if needs_marker.mark.args[0]:
-            pytest.skip(reason=needs_marker.mark.kwargs["reason"])
     skip_reason: str | None
-    if skip_reason := getattr(func, "_doctest_skip_reason", None):
+    if (
+        (needs_mod := getattr(func, "_doctest_needs", None))
+        and (skip_reason := needs[needs_mod].skip_reason)
+    ) or (skip_reason := getattr(func, "_doctest_skip_reason", None)):
         pytest.skip(reason=skip_reason)
     if getattr(func, "_doctest_internet", False) and not request.config.getoption(
         "--internet-tests"

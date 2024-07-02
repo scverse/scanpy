@@ -481,6 +481,8 @@ def _highly_variable_genes_batched(
     if isinstance(cutoff, int):
         # sort genes by how often they selected as hvg within each batch and
         # break ties with normalized dispersion across batches
+
+        df_orig_ind = adata.var.index.copy()
         df.sort_values(
             ["highly_variable_nbatches", "dispersions_norm"],
             ascending=False,
@@ -488,6 +490,7 @@ def _highly_variable_genes_batched(
             inplace=True,
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
+        df = df.loc[df_orig_ind]
     else:
         df["dispersions_norm"] = df["dispersions_norm"].fillna(0)  # similar to Seurat
         df["highly_variable"] = cutoff.in_bounds(df["means"], df["dispersions_norm"])

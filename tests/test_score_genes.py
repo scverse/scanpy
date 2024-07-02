@@ -239,6 +239,23 @@ def test_use_raw_None():
     sc.tl.score_genes(adata, adata_raw.var_names[:3], use_raw=None)
 
 
+def test_layer():
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    sc.pp.log1p(adata)
+
+    # score X
+    gene_set = adata.var_names[:10]
+    sc.tl.score_genes(adata, gene_set, score_name="X_score")
+    # score layer (`del` makes sure it actually uses the layer)
+    adata.layers["test"] = adata.X.copy()
+    del adata.X
+    sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
+
+    np.testing.assert_array_equal(adata.obs["X_score"], adata.obs["test_score"])
+
+
 @pytest.mark.parametrize("gene_pool", [[], ["foo", "bar"]])
 def test_invalid_gene_pool(gene_pool):
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)

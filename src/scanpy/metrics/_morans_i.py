@@ -5,8 +5,8 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import TYPE_CHECKING
 
+import numba
 import numpy as np
-from numba import njit, prange
 from scipy import sparse
 
 from .._compat import fullname
@@ -88,7 +88,7 @@ def morans_i(
     Examples
     --------
 
-    Calculate Morans I for each components of a dimensionality reduction:
+    Calculate Moran’s I for each components of a dimensionality reduction:
 
     .. code:: python
 
@@ -126,44 +126,7 @@ def morans_i(
 # This is done in a very similar way to gearys_c. See notes there for details.
 
 
-@njit(cache=True)
-def _morans_i_vec_W_sparse(  # noqa: PLR0917
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x_data: np.ndarray,
-    x_indices: np.ndarray,
-    N: int,
-    W: np.float_,
-) -> float:
-    x = np.zeros(N, dtype=x_data.dtype)
-    x[x_indices] = x_data
-    return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
-
-
-@njit(cache=True)
-def _morans_i_vec_W(
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x: np.ndarray,
-    W: np.float_,
-) -> float:
-    z = x - x.mean()
-    z2ss = (z * z).sum()
-    N = len(x)
-    inum = 0.0
-
-    for i in prange(N):
-        s = slice(g_indptr[i], g_indptr[i + 1])
-        i_indices = g_indices[s]
-        i_data = g_data[s]
-        inum += (i_data * z[i_indices]).sum() * z[i]
-
-    return len(x) / W * inum / z2ss
-
-
-@njit(cache=True, parallel=True)
+@numba.njit(cache=True, parallel=True)
 def _morans_i_vec(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -174,46 +137,83 @@ def _morans_i_vec(
     return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
 
 
-@njit(cache=True, parallel=True)
+@numba.njit(cache=True)
+def _morans_i_vec_W(
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    x: np.ndarray,
+    W: np.float64,
+) -> float:
+    z = x - x.mean()
+    z2ss = (z * z).sum()
+    n = len(x)
+    inum = 0.0
+
+    for i in numba.prange(n):
+        s = slice(g_indptr[i], g_indptr[i + 1])
+        i_indices = g_indices[s]
+        i_data = g_data[s]
+        inum += (i_data * z[i_indices]).sum() * z[i]
+
+    return len(x) / W * inum / z2ss
+
+
+@numba.njit(cache=True)
+def _morans_i_vec_W_sparse(  # noqa: PLR0917
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    x_data: np.ndarray,
+    x_indices: np.ndarray,
+    n: int,
+    W: np.float64,
+) -> float:
+    x = np.zeros(n, dtype=x_data.dtype)
+    x[x_indices] = x_data
+    return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
+
+
+@numba.njit(cache=True, parallel=True)
 def _morans_i_mtx(
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,
     X: np.ndarray,
 ) -> np.ndarray:
-    M, N = X.shape
-    assert N == len(g_indptr) - 1
+    m, n = X.shape
+    assert n == len(g_indptr) - 1
     W = g_data.sum()
-    out = np.zeros(M, dtype=np.float_)
-    for k in prange(M):
+    out = np.zeros(m, dtype=np.float64)
+    for k in numba.prange(m):
         x = X[k, :]
         out[k] = _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
     return out
 
 
-@njit(cache=True, parallel=True)
+@numba.njit(cache=True, parallel=True)
 def _morans_i_mtx_csr(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
     g_indptr: np.ndarray,
-    X_data: np.ndarray,
-    X_indices: np.ndarray,
-    X_indptr: np.ndarray,
-    X_shape: tuple,
+    x_data: np.ndarray,
+    x_indices: np.ndarray,
+    x_indptr: np.ndarray,
+    x_shape: tuple,
 ) -> np.ndarray:
-    M, N = X_shape
+    m, n = x_shape
     W = g_data.sum()
-    out = np.zeros(M, dtype=np.float_)
-    x_data_list = np.split(X_data, X_indptr[1:-1])
-    x_indices_list = np.split(X_indices, X_indptr[1:-1])
-    for k in prange(M):
+    out = np.zeros(m, dtype=np.float64)
+    x_data_list = np.split(x_data, x_indptr[1:-1])
+    x_indices_list = np.split(x_indices, x_indptr[1:-1])
+    for k in numba.prange(m):
         out[k] = _morans_i_vec_W_sparse(
             g_data,
             g_indices,
             g_indptr,
             x_data_list[k],
             x_indices_list[k],
-            N,
+            n,
             W,
         )
     return out
@@ -228,7 +228,7 @@ def _morans_i_mtx_csr(  # noqa: PLR0917
 def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
-    g_data = g.data.astype(np.float_, copy=False)
+    g_data = g.data.astype(np.float64, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
         new_vals, idxer, full_result = _check_vals(vals)
@@ -236,7 +236,7 @@ def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.nd
             g_data,
             g.indices,
             g.indptr,
-            new_vals.data.astype(np.float_, copy=False),
+            new_vals.data.astype(np.float64, copy=False),
             new_vals.indices,
             new_vals.indptr,
             new_vals.shape,
@@ -250,10 +250,7 @@ def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.nd
         assert g.shape[0] == vals.shape[1]
         new_vals, idxer, full_result = _check_vals(vals)
         result = _morans_i_mtx(
-            g_data,
-            g.indices,
-            g.indptr,
-            new_vals.astype(np.float_, copy=False),
+            g_data, g.indices, g.indptr, new_vals.astype(np.float64, copy=False)
         )
         full_result[idxer] = result
         return full_result

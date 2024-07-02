@@ -344,19 +344,8 @@ def test_dotplot_obj(image_comparer):
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = pbmc68k_reduced()
     genes = [
-        "CD79A",
-        "MS4A1",
-        "CD8A",
-        "CD8B",
-        "LYZ",
-        "LGALS3",
-        "S100A8",
-        "GNLY",
-        "NKG7",
-        "KLRB1",
-        "FCGR3A",
-        "FCER1A",
-        "CST3",
+        *["CD79A", "MS4A1", "CD8A", "CD8B", "LYZ", "LGALS3"],
+        *["S100A8", "GNLY", "NKG7", "KLRB1", "FCGR3A", "FCER1A", "CST3"],
     ]
     # test layer, var standardization, smallest_dot,
     # color title, size_title return_fig and dot_edge
@@ -376,6 +365,15 @@ def test_dotplot_obj(image_comparer):
     plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").show()
 
     save_and_compare_images("dotplot_std_scale_var")
+
+
+def test_dotplot_add_totals(image_comparer):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    pbmc = pbmc68k_reduced()
+    markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
+    sc.pl.dotplot(pbmc, markers, "bulk_labels", return_fig=True).add_totals().show()
+    save_and_compare_images("dotplot_totals")
 
 
 def test_matrixplot_obj(image_comparer):

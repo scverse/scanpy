@@ -66,6 +66,7 @@ def score_genes(
     random_state: AnyRandom = 0,
     copy: bool = False,
     use_raw: bool | None = None,
+    layer: str | None = None,
 ) -> AnnData | None:
     """\
     Score a set of genes :cite:p:`Satija2015`.
@@ -101,6 +102,8 @@ def score_genes(
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
+    layer
+        Key from `adata.layers` whose value will be used to perform tests on.
 
     Returns
     -------
@@ -145,7 +148,7 @@ def score_genes(
     # interval of expression.
 
     def get_subset(genes: pd.Index[str]):
-        x = _get_obs_rep(adata, use_raw=use_raw)
+        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
         if len(genes) == len(var_names):
             return x
         idx = var_names.get_indexer(genes)
