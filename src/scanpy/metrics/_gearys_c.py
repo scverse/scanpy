@@ -1,3 +1,5 @@
+"""Geary's C autocorrelation."""
+
 from __future__ import annotations
 
 from functools import singledispatch
@@ -87,7 +89,7 @@ def gearys_c(
     Examples
     --------
 
-    Calculate Gearys C for each components of a dimensionality reduction:
+    Calculate Geary’s C for each components of a dimensionality reduction:
 
     .. code:: python
 
@@ -135,29 +137,38 @@ def gearys_c(
 
 
 @numba.njit(cache=True, parallel=True)
-def _gearys_c_vec(data, indices, indptr, x):
+def _gearys_c_vec(
+    data: np.ndarray,
+    indices: np.ndarray,
+    indptr: np.ndarray,
+    x: np.ndarray,
+) -> float:
     W = data.sum()
     return _gearys_c_vec_W(data, indices, indptr, x, W)
 
 
 @numba.njit(cache=True, parallel=True)
-def _gearys_c_vec_W(data, indices, indptr, x, W):
-    N = len(indptr) - 1
-    x = x.astype(np.float_)
+def _gearys_c_vec_W(
+    data: np.ndarray,
+    indices: np.ndarray,
+    indptr: np.ndarray,
+    x: np.ndarray,
+    W: np.float64,
+):
+    n = len(indptr) - 1
+    x = x.astype(np.float64)
     x_bar = x.mean()
 
     total = 0.0
-    for i in numba.prange(N):
+    for i in numba.prange(n):
         s = slice(indptr[i], indptr[i + 1])
         i_indices = indices[s]
         i_data = data[s]
         total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
 
-    numer = (N - 1) * total
+    numer = (n - 1) * total
     denom = 2 * W * ((x - x_bar) ** 2).sum()
-    C = numer / denom
-
-    return C
+    return numer / denom
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -172,36 +183,47 @@ def _gearys_c_vec_W(data, indices, indptr, x, W):
 
 
 @numba.njit(cache=True)
-def _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W):
+def _gearys_c_inner_sparse_x_densevec(
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    x: np.ndarray,
+    W: np.float64,
+) -> float:
     x_bar = x.mean()
     total = 0.0
-    N = len(x)
-    for i in numba.prange(N):
+    n = len(x)
+    for i in numba.prange(n):
         s = slice(g_indptr[i], g_indptr[i + 1])
         i_indices = g_indices[s]
         i_data = g_data[s]
         total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
-    numer = (N - 1) * total
+    numer = (n - 1) * total
     denom = 2 * W * ((x - x_bar) ** 2).sum()
-    C = numer / denom
-    return C
+    return numer / denom
 
 
 @numba.njit(cache=True)
 def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
-    g_data, g_indices, g_indptr, x_data, x_indices, N, W
-):
-    x = np.zeros(N, dtype=np.float_)
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    x_data: np.ndarray,
+    x_indices: np.ndarray,
+    n: int,
+    W: np.float64,
+) -> float:
+    x = np.zeros(n, dtype=np.float64)
     x[x_indices] = x_data
-    x_bar = np.sum(x_data) / N
+    x_bar = np.sum(x_data) / n
     total = 0.0
-    N = len(x)
-    for i in numba.prange(N):
+    n = len(x)
+    for i in numba.prange(n):
         s = slice(g_indptr[i], g_indptr[i + 1])
         i_indices = g_indices[s]
         i_data = g_data[s]
         total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
-    numer = (N - 1) * total
+    numer = (n - 1) * total
     # Expanded from 2 * W * ((x_k - x_k_bar) ** 2).sum(), but uses sparsity
     # to skip some calculations
     # fmt: off
@@ -210,43 +232,53 @@ def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
         * (
             np.sum(x_data ** 2)
             - np.sum(x_data * x_bar * 2)
-            + (x_bar ** 2) * N
+            + (x_bar ** 2) * n
         )
     )
     # fmt: on
-    C = numer / denom
-    return C
+    return numer / denom
 
 
 @numba.njit(cache=True, parallel=True)
-def _gearys_c_mtx(g_data, g_indices, g_indptr, X):
-    M, N = X.shape
-    assert N == len(g_indptr) - 1
+def _gearys_c_mtx(
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    X: np.ndarray,
+) -> np.ndarray:
+    m, n = X.shape
+    assert n == len(g_indptr) - 1
     W = g_data.sum()
-    out = np.zeros(M, dtype=np.float_)
-    for k in numba.prange(M):
-        x = X[k, :].astype(np.float_)
+    out = np.zeros(m, dtype=np.float64)
+    for k in numba.prange(m):
+        x = X[k, :].astype(np.float64)
         out[k] = _gearys_c_inner_sparse_x_densevec(g_data, g_indices, g_indptr, x, W)
     return out
 
 
 @numba.njit(cache=True, parallel=True)
 def _gearys_c_mtx_csr(  # noqa: PLR0917
-    g_data, g_indices, g_indptr, x_data, x_indices, x_indptr, x_shape
-):
-    M, N = x_shape
+    g_data: np.ndarray,
+    g_indices: np.ndarray,
+    g_indptr: np.ndarray,
+    x_data: np.ndarray,
+    x_indices: np.ndarray,
+    x_indptr: np.ndarray,
+    x_shape: tuple,
+) -> np.ndarray:
+    m, n = x_shape
     W = g_data.sum()
-    out = np.zeros(M, dtype=np.float_)
+    out = np.zeros(m, dtype=np.float64)
     x_data_list = np.split(x_data, x_indptr[1:-1])
     x_indices_list = np.split(x_indices, x_indptr[1:-1])
-    for k in numba.prange(M):
+    for k in numba.prange(m):
         out[k] = _gearys_c_inner_sparse_x_sparsevec(
             g_data,
             g_indices,
             g_indptr,
             x_data_list[k],
             x_indices_list[k],
-            N,
+            n,
             W,
         )
     return out
@@ -261,7 +293,7 @@ def _gearys_c_mtx_csr(  # noqa: PLR0917
 def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
-    g_data = g.data.astype(np.float_, copy=False)
+    g_data = g.data.astype(np.float64, copy=False)
     if isinstance(vals, sparse.csr_matrix):
         assert g.shape[0] == vals.shape[1]
         new_vals, idxer, full_result = _check_vals(vals)
@@ -269,7 +301,7 @@ def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.nd
             g_data,
             g.indices,
             g.indptr,
-            new_vals.data.astype(np.float_, copy=False),
+            new_vals.data.astype(np.float64, copy=False),
             new_vals.indices,
             new_vals.indptr,
             new_vals.shape,
