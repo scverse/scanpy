@@ -121,19 +121,19 @@ def filter_cells(
     >>> sc.pp.filter_cells(adata, min_genes=0)
     >>> adata.n_obs
     640
-    >>> adata.obs['n_genes'].min()
+    >>> int(adata.obs['n_genes'].min())
     1
     >>> # filter manually
     >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
     >>> adata_copy.n_obs
     554
-    >>> adata_copy.obs['n_genes'].min()
+    >>> int(adata_copy.obs['n_genes'].min())
     3
     >>> # actually do some filtering
     >>> sc.pp.filter_cells(adata, min_genes=3)
     >>> adata.n_obs
     554
-    >>> adata.obs['n_genes'].min()
+    >>> int(adata.obs['n_genes'].min())
     3
     """
     if copy:

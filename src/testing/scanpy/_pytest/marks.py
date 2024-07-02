@@ -3,8 +3,30 @@ from __future__ import annotations
 import sys
 from enum import Enum, auto
 from importlib.util import find_spec
+from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+SKIP_EXTRA: dict[str, Callable[[], str | None]] = {}
+
+
+def _skip_if_skmisc_too_old() -> str | None:
+    import numpy as np
+    import skmisc
+
+    if Version(skmisc.__version__) <= Version("0.3.1") and Version(
+        np.__version__
+    ) >= Version("2"):
+        return "scikit-misc≤0.3.1 requires numpy<2"
+    return None
+
+
+SKIP_EXTRA["skmisc"] = _skip_if_skmisc_too_old
 
 
 def _next_val(name: str, start: int, count: int, last_values: list[str]) -> str:
@@ -30,6 +52,8 @@ class needs(QuietMarkDecorator, Enum):
     _generate_next_value_ = (
         staticmethod(_next_val) if sys.version_info >= (3, 10) else _next_val
     )
+
+    mod: str
 
     dask = auto()
     dask_ml = auto()
@@ -59,8 +83,18 @@ class needs(QuietMarkDecorator, Enum):
     wishbone = "wishbone-dev"
 
     def __init__(self, mod: str) -> None:
-        reason = f"needs module `{self._name_}`"
-        if self._name_.casefold() != mod.casefold().replace("-", "_"):
-            reason = f"{reason} (`pip install {mod}`)"
-        dec = pytest.mark.skipif(not find_spec(self._name_), reason=reason)
+        self.mod = mod
+        reason = self.skip_reason
+        dec = pytest.mark.skipif(bool(reason), reason=reason or "")
         super().__init__(dec.mark)
+
+    @property
+    def skip_reason(self) -> str | None:
+        if find_spec(self._name_):
+            if skip_extra := SKIP_EXTRA.get(self._name_):
+                return skip_extra()
+            return None
+        reason = f"needs module `{self._name_}`"
+        if self._name_.casefold() != self.mod.casefold().replace("-", "_"):
+            reason = f"{reason} (`pip install {self.mod}`)"
+        return reason

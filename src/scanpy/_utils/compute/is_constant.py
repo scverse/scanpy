@@ -81,7 +81,7 @@ def is_constant(
 def _(a: NDArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     # Should eventually support nd, not now.
     if axis is None:
-        return (a == a.flat[0]).all()
+        return bool((a == a.flat[0]).all())
     if axis == 0:
         return _is_constant_rows(a.T)
     elif axis == 1:
@@ -116,9 +116,9 @@ def _is_constant_csr_rows(
     indptr: NDArray[np.integer],
     shape: tuple[int, int],
 ):
-    N = len(indptr) - 1
-    result = np.ones(N, dtype=np.bool_)
-    for i in range(N):
+    n = len(indptr) - 1
+    result = np.ones(n, dtype=np.bool_)
+    for i in range(n):
         start = indptr[i]
         stop = indptr[i + 1]
         if stop - start == shape[1]:

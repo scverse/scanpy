@@ -230,7 +230,7 @@ def timeseries_as_heatmap(
 
     _, ax = plt.subplots(figsize=(1.5 * 4, 2 * 4))
     img = ax.imshow(
-        np.array(X, dtype=np.float_),
+        np.array(X, dtype=np.float64),
         aspect="auto",
         interpolation="nearest",
         cmap=color_map,
