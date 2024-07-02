@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -155,6 +156,18 @@ def test_scrublet_data():
         copy=True,
         random_state=random_state,
     )
+    import zarr
+
+    data_path = Path(__file__).parent / "data"
+    data_path.mkdir(exist_ok=True)
+    store_manual = zarr.ZipStore(data_path / "manual.zip", mode="w")
+    store_auto = zarr.ZipStore(data_path / "auto.zip", mode="w")
+    z_manual = zarr.zeros(
+        adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
+    )
+    z_auto = zarr.zeros(adata_scrublet_auto_sim.shape[0], chunks=10, store=store_auto)
+    z_manual[...] = adata_scrublet_manual_sim.obs["doublet_score"].values
+    z_auto[...] = adata_scrublet_auto_sim.obs["doublet_score"].values
 
     # Require that the doublet scores are the same whether simulation is via
     # the main function or manually provided
