@@ -137,7 +137,7 @@ def score_genes(
         raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
-        gene_pool = pd.Index(var_names, dtype="string")
+        gene_pool = var_names.astype("string")
     else:
         gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
     if len(gene_pool) == 0:
@@ -161,24 +161,25 @@ def score_genes(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    control_genes = pd.Index([], dtype="string")
+    obs_cut_in_list = obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
+    control_genes = pd.Index([], dtype="string")
     for cut in obs_cut.loc[gene_list].unique():
-        r_genes: pd.Index[str] = obs_cut[
-            (obs_cut == cut) & ~obs_cut.index.isin(gene_list)
-        ].index
+        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~obs_cut_in_list].index
         if len(r_genes) == 0:
-            logg.warning(
-                f"No control genes for cut={cut}. You might want to increase "
+            msg = (
+                f"No control genes for {cut=}. You might want to increase "
                 f"gene_pool size (current size: {len(gene_pool)})"
             )
+            logg.warning(msg)
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
         control_genes = control_genes.union(r_genes)
 
     if len(control_genes) == 0:
-        raise RuntimeError("No control genes found in any cut.")
+        msg = "No control genes found in any cut."
+        raise RuntimeError(msg)
 
     means_list, means_control = (
         _nan_means(get_subset(genes), axis=1, dtype="float64")
