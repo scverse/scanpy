@@ -173,7 +173,7 @@ DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
                 *DS_MARKS[ds],
             ],
         )
-        for ds in set(sc.datasets.__all__) - DS_DYNAMIC
+        for ds in sorted(set(sc.datasets.__all__) - DS_DYNAMIC)
     ],
 )
 def test_doc_shape(ds_name):
