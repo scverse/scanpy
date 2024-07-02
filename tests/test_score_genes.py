@@ -268,7 +268,7 @@ def test_no_control_gene():
     np.random.seed(0)
     adata = _create_adata(100, 1, p_zero=0, p_nan=0)
 
-    with pytest.raises(AssertionError, match="No control genes found"):
+    with pytest.raises(RuntimeError, match="No control genes found"):
         sc.tl.score_genes(adata, adata.var_names[:1], ctrl_size=1)
 
 
