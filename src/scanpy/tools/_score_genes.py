@@ -59,6 +59,7 @@ def score_genes(
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
+    ctrl_as_ref: bool = True,
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
@@ -84,6 +85,9 @@ def score_genes(
         The annotated data matrix.
     gene_list
         The list of gene names used for score calculation.
+    ctrl_as_ref
+        Allow the algorithm to use the control genes as reference.
+        Will be changed to `False` in scanpy 2.0.
     ctrl_size
         Number of reference genes to be sampled from each bin. If `len(gene_list)` is not too
         low, you can set `ctrl_size=len(gene_list)`.
@@ -161,12 +165,12 @@ def score_genes(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    obs_cut_in_list = obs_cut.index.isin(gene_list)
+    obs_cut_is_ctrl = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
     control_genes = pd.Index([], dtype="string")
-    for cut in obs_cut.loc[gene_list].unique():
-        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~obs_cut_in_list].index
+    for cut in np.unique(obs_cut.loc[gene_list]):
+        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~obs_cut_is_ctrl].index
         if len(r_genes) == 0:
             msg = (
                 f"No control genes for {cut=}. You might want to increase "
@@ -175,10 +179,14 @@ def score_genes(
             logg.warning(msg)
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
+        if ctrl_as_ref:
+            r_genes = r_genes.difference(gene_list)
         control_genes = control_genes.union(r_genes)
 
     if len(control_genes) == 0:
         msg = "No control genes found in any cut."
+        if ctrl_as_ref:
+            msg += " Try setting `ctrl_as_ref=False`."
         raise RuntimeError(msg)
 
     means_list, means_control = (

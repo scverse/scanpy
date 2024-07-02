@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -272,7 +273,15 @@ def test_no_control_gene():
         sc.tl.score_genes(adata, adata.var_names[:1], ctrl_size=1)
 
 
-def test_gene_list_is_control():
+@pytest.mark.parametrize("ctrl_as_ref", [True, False])
+def test_gene_list_is_control(ctrl_as_ref: bool):
     np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
-    sc.tl.score_genes(adata, gene_list="3", ctrl_size=1, n_bins=5)
+    with (
+        pytest.raises(RuntimeError, match=r"No control genes found in any cut")
+        if ctrl_as_ref
+        else nullcontext()
+    ):
+        sc.tl.score_genes(
+            adata, gene_list="3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
+        )
