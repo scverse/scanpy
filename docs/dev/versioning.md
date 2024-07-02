@@ -22,6 +22,7 @@ Valid version numbers are described in [PEP 440](https://peps.python.org/pep-044
 [Development versions](https://peps.python.org/pep-0440/#developmental-releases)
 :   should look like `1.8.0.dev0`, with a commit hash optionally appended as a local version identifier (e.g. `1.8.0.dev2+g00ad77b`).
 
+(versioning-tooling)=
 ## Tooling
 
 To be sure we can follow this scheme and maintain some agility in development, we use some tooling and development practices.
