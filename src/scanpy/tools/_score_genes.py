@@ -179,7 +179,7 @@ def score_genes(
             logg.warning(msg)
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
-        if ctrl_as_ref:
+        if ctrl_as_ref:  # otherwise `r_genes` is already filtered
             r_genes = r_genes.difference(gene_list)
         control_genes = control_genes.union(r_genes)
 
