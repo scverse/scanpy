@@ -59,6 +59,7 @@ def score_genes(
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
+    ctrl_as_ref: bool = True,
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
@@ -83,6 +84,9 @@ def score_genes(
         The annotated data matrix.
     gene_list
         The list of gene names used for score calculation.
+    ctrl_as_ref
+        Allow the algorithm to use the control genes as reference.
+        Will be changed to `False` in scanpy 2.0.
     ctrl_size
         Number of reference genes to be sampled from each bin. If `len(gene_list)` is not too
         low, you can set `ctrl_size=len(gene_list)`.
@@ -134,7 +138,7 @@ def score_genes(
         raise ValueError("No valid genes were passed for scoring.")
 
     if gene_pool is None:
-        gene_pool = pd.Index(var_names, dtype="string")
+        gene_pool = var_names.astype("string")
     else:
         gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
     if len(gene_pool) == 0:
@@ -158,14 +162,29 @@ def score_genes(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    control_genes = pd.Index([], dtype="string")
+    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
+    control_genes = pd.Index([], dtype="string")
     for cut in np.unique(obs_cut.loc[gene_list]):
-        r_genes: pd.Index[str] = obs_cut[obs_cut == cut].index
+        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
+        if len(r_genes) == 0:
+            msg = (
+                f"No control genes for {cut=}. You might want to increase "
+                f"gene_pool size (current size: {len(gene_pool)})"
+            )
+            logg.warning(msg)
         if ctrl_size < len(r_genes):
             r_genes = r_genes.to_series().sample(ctrl_size).index
-        control_genes = control_genes.union(r_genes.difference(gene_list))
+        if ctrl_as_ref:  # otherwise `r_genes` is already filtered
+            r_genes = r_genes.difference(gene_list)
+        control_genes = control_genes.union(r_genes)
+
+    if len(control_genes) == 0:
+        msg = "No control genes found in any cut."
+        if ctrl_as_ref:
+            msg += " Try setting `ctrl_as_ref=False`."
+        raise RuntimeError(msg)
 
     means_list, means_control = (
         _nan_means(get_subset(genes), axis=1, dtype="float64")
