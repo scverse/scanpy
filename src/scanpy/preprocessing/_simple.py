@@ -586,7 +586,7 @@ def normalize_per_cell(  # noqa: PLR0917
             adata.layers[layer] = temp
 
         logg.info(
-            "    finished ({time_passed}): normalized adata.X and added"
+            "    finished ({time_passed}): normalized adata.X and added\n"
             f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
             time=start,
         )
