@@ -165,12 +165,12 @@ def score_genes(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    obs_cut_is_ctrl = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
+    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
     control_genes = pd.Index([], dtype="string")
     for cut in np.unique(obs_cut.loc[gene_list]):
-        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~obs_cut_is_ctrl].index
+        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
         if len(r_genes) == 0:
             msg = (
                 f"No control genes for {cut=}. You might want to increase "
