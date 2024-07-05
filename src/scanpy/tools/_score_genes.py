@@ -257,7 +257,9 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
-        score_genes(adata, genes, score_name=name, ctrl_size=ctrl_size, layer=layer, **kwargs)
+        score_genes(
+            adata, genes, score_name=name, ctrl_size=ctrl_size, layer=layer, **kwargs
+        )
     scores = adata.obs[["S_score", "G2M_score"]]
 
     # default phase is S
