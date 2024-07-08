@@ -14,7 +14,7 @@ from ._utils import get_count_dataset
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from ._utils import Dataset
+    from ._utils import Dataset, KeyCount
 
 # setup variables
 
@@ -22,17 +22,20 @@ adata: AnnData
 batch_key: str | None
 
 
-def setup(dataset: Dataset, *_):
+def setup(dataset: Dataset, layer: KeyCount, *_):
     """Setup global variables before each benchmark."""
     global adata, batch_key
-    adata, batch_key = get_count_dataset(dataset)
+    adata, batch_key = get_count_dataset(dataset, layer=layer)
     assert "log1p" not in adata.uns
 
 
 # ASV suite
 
-params: list[Dataset] = ["pbmc68k_reduced", "pbmc3k"]
-param_names = ["dataset"]
+params: tuple[list[Dataset], list[KeyCount]] = (
+    ["pbmc68k_reduced", "pbmc3k"],
+    ["counts", "counts-off-axis"],
+)
+param_names = ["dataset", "layer"]
 
 
 def time_calculate_qc_metrics(*_):
@@ -84,8 +87,10 @@ def peakmem_normalize_total(*_):
 def time_log1p(*_):
     # TODO: This would fail: assert "log1p" not in adata.uns, "ASV bug?"
     # https://github.com/scverse/scanpy/issues/3052
+    adata.uns.pop("log1p", None)
     sc.pp.log1p(adata)
 
 
 def peakmem_log1p(*_):
+    adata.uns.pop("log1p", None)
     sc.pp.log1p(adata)

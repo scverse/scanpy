@@ -17,7 +17,7 @@ from ._utils import get_dataset
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from ._utils import Dataset
+    from ._utils import Dataset, KeyX
 
 # setup variables
 
@@ -26,16 +26,19 @@ adata: AnnData
 batch_key: str | None
 
 
-def setup(dataset: Dataset, *_):
+def setup(dataset: Dataset, layer: KeyX, *_):
     """Setup global variables before each benchmark."""
     global adata, batch_key
-    adata, batch_key = get_dataset(dataset)
+    adata, batch_key = get_dataset(dataset, layer=layer)
 
 
 # ASV suite
 
-params: list[Dataset] = ["pbmc68k_reduced", "pbmc3k"]
-param_names = ["dataset"]
+params: tuple[list[Dataset], list[KeyX]] = (
+    ["pbmc68k_reduced", "pbmc3k"],
+    [None, "off-axis"],
+)
+param_names = ["dataset", "layer"]
 
 
 def time_pca(*_):
@@ -76,8 +79,11 @@ def peakmem_scale(*_):
 class FastSuite:
     """Suite for fast preprocessing operations."""
 
-    params: list[Dataset] = ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"]
-    param_names = ["dataset"]
+    params: tuple[list[Dataset], list[KeyX]] = (
+        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+        [None, "off-axis"],
+    )
+    param_names = ["dataset", "layer"]
 
     def time_mean_var(self, *_):
         _get_mean_var(adata.X)

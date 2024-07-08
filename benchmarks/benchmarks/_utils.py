@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pooch
 from anndata import concat
+from scipy import sparse
 
 import scanpy as sc
 
@@ -16,14 +17,23 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
+    KeyX = Literal[None, "off-axis"]
+    KeyCount = Literal["counts", "counts-off-axis"]
 
 
 @cache
 def _pbmc68k_reduced() -> AnnData:
+    """A small datasets with a dense `.X`"""
     adata = sc.datasets.pbmc68k_reduced()
+    assert isinstance(adata.X, np.ndarray)
+    assert not np.isfortran(adata.X)
+    adata.layers["off-axis"] = adata.X.copy(order="F")
+
     # raw has the same number of genes, so we can use it for counts
     # it doesn’t actually contain counts for some reason, but close enough
-    adata.layers["counts"] = adata.raw.X.copy()
+    assert isinstance(adata.raw.X, sparse.csr_matrix)
+    adata.layers["counts"] = adata.raw.X.toarray(order="C")
+    adata.layers["counts-off-axis"] = adata.layers["counts"].copy(order="F")
     mapper = dict(
         percent_mito="pct_counts_mt",
         n_counts="total_counts",
@@ -39,12 +49,15 @@ def pbmc68k_reduced() -> AnnData:
 @cache
 def _pbmc3k() -> AnnData:
     adata = sc.datasets.pbmc3k()
+    assert isinstance(adata.X, sparse.csr_matrix)
     adata.var["mt"] = adata.var_names.str.startswith("MT-")
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    adata.layers["counts-off-axis"] = adata.layers["counts"].tocsc()
     sc.pp.log1p(adata)
+    adata.layers["off-axis"] = adata.X.tocsc()
     return adata
 
 
@@ -102,7 +115,7 @@ def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
-def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
+def _get_dataset_raw(dataset: Dataset) -> tuple[AnnData, str | None]:
     if dataset == "pbmc68k_reduced":
         return pbmc68k_reduced(), None
     if dataset == "pbmc3k":
@@ -117,10 +130,19 @@ def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
     raise AssertionError(msg)
 
 
-def get_count_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
-    adata, batch_key = get_dataset(dataset)
+def get_dataset(dataset: Dataset, *, layer: KeyX = None) -> tuple[AnnData, str | None]:
+    adata, batch_key = _get_dataset_raw(dataset)
+    if layer is not None:
+        adata.X = adata.layers.pop(layer)
+    return adata, batch_key
 
-    adata.X = adata.layers.pop("counts")
+
+def get_count_dataset(
+    dataset: Dataset, *, layer: KeyCount = "counts"
+) -> tuple[AnnData, str | None]:
+    adata, batch_key = _get_dataset_raw(dataset)
+
+    adata.X = adata.layers.pop(layer)
     # remove indicators that X was transformed
     adata.uns.pop("log1p", None)
 
