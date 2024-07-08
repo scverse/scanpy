@@ -39,14 +39,12 @@ param_names = ["dataset", "layer"]
 
 
 def time_calculate_qc_metrics(*_):
-    adata.var["mt"] = adata.var_names.str.startswith("MT-")
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
 
 
 def peakmem_calculate_qc_metrics(*_):
-    adata.var["mt"] = adata.var_names.str.startswith("MT-")
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 def _pbmc68k_reduced() -> AnnData:
     """A small datasets with a dense `.X`"""
     adata = sc.datasets.pbmc68k_reduced()
+    adata.var["mt"] = adata.var_names.str.startswith("MT-")
     assert isinstance(adata.X, np.ndarray)
     assert not np.isfortran(adata.X)
     adata.layers["off-axis"] = adata.X.copy(order="F")
@@ -49,11 +50,11 @@ def pbmc68k_reduced() -> AnnData:
 @cache
 def _pbmc3k() -> AnnData:
     adata = sc.datasets.pbmc3k()
-    assert isinstance(adata.X, sparse.csr_matrix)
     adata.var["mt"] = adata.var_names.str.startswith("MT-")
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
+    assert isinstance(adata.X, sparse.csr_matrix)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     adata.layers["counts-off-axis"] = adata.layers["counts"].tocsc()
     sc.pp.log1p(adata)
@@ -93,8 +94,9 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
     )
+    assert isinstance(adata.X, sparse.csr_matrix)
     adata.obs["n_counts"] = adata.X.sum(axis=1).A1
-
+    adata.layers["off-axis"] = adata.X.tocsc()
     return adata
 
 
@@ -108,7 +110,10 @@ def _lung93k() -> AnnData:
         url="https://figshare.com/ndownloader/files/45788454",
         known_hash="md5:4f28af5ff226052443e7e0b39f3f9212",
     )
-    return sc.read_h5ad(path)
+    adata = sc.read_h5ad(path)
+    assert isinstance(adata.X, sparse.csr_matrix)
+    adata.layers["off-axis"] = adata.X.tocsc()
+    return adata
 
 
 def lung93k() -> AnnData:
