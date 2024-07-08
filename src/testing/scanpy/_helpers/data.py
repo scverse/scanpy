@@ -6,16 +6,7 @@ i.e. without having to hit the disk or (in case of ``_pbmc3k_normalized``) recom
 from __future__ import annotations
 
 import warnings
-
-try:
-    from functools import cache
-except ImportError:  # Python < 3.9
-    from functools import lru_cache
-
-    def cache(func):
-        return lru_cache(maxsize=None)(func)
-
-
+from functools import cache
 from typing import TYPE_CHECKING
 
 import scanpy as sc
