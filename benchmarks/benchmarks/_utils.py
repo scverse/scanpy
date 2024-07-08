@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+import sys
 import warnings
 from functools import cache
 from typing import TYPE_CHECKING
@@ -7,14 +9,21 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pooch
 from anndata import concat
+from asv_runner.benchmarks.mark import skip_for_params
 from scipy import sparse
 
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable, Sequence, Set
+    from typing import Literal, Protocol, TypeVar
 
     from anndata import AnnData
+
+    C = TypeVar("C", bound=Callable)
+
+    class ParamSkipper(Protocol):
+        def __call__(self, **skipped: Set) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
     KeyX = Literal[None, "off-axis"]
@@ -152,3 +161,22 @@ def get_count_dataset(
     adata.uns.pop("log1p", None)
 
     return adata, batch_key
+
+
+def param_skipper(
+    param_names: Sequence[str], params: tuple[Sequence[object], ...]
+) -> ParamSkipper:
+    """Creates a decorator that will skip all combinations that contain any of the given parameters."""
+
+    def skip(**skipped: Set) -> Callable[[C], C]:
+        skipped_combs = [
+            tuple(record.values())
+            for record in (
+                dict(zip(param_names, vals)) for vals in itertools.product(*params)
+            )
+            if any(v in skipped.get(n, set()) for n, v in record.items())
+        ]
+        print(skipped_combs, file=sys.stderr)
+        return skip_for_params(skipped_combs)
+
+    return skip

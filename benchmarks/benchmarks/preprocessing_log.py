@@ -7,12 +7,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from asv_runner.benchmarks.mark import skip_for_params
-
 import scanpy as sc
 from scanpy.preprocessing._utils import _get_mean_var
 
-from ._utils import get_dataset
+from ._utils import get_dataset, param_skipper
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -40,6 +38,8 @@ params: tuple[list[Dataset], list[KeyX]] = (
 )
 param_names = ["dataset", "layer"]
 
+skip_when = param_skipper(param_names, params)
+
 
 def time_pca(*_):
     sc.pp.pca(adata, svd_solver="arpack")
@@ -58,12 +58,12 @@ def peakmem_highly_variable_genes(*_):
 
 
 # regress_out is very slow for this dataset
-@skip_for_params([("pbmc3k",)])
+@skip_when(dataset={"pbmc3k"})
 def time_regress_out(*_):
     sc.pp.regress_out(adata, ["total_counts", "pct_counts_mt"])
 
 
-@skip_for_params([("pbmc3k",)])
+@skip_when(dataset={"pbmc3k"})
 def peakmem_regress_out(*_):
     sc.pp.regress_out(adata, ["total_counts", "pct_counts_mt"])
 
