@@ -247,7 +247,9 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
-def _check_use_raw(adata: AnnData, use_raw: None | bool, layer: str | None) -> bool:
+def _check_use_raw(
+    adata: AnnData, use_raw: None | bool, layer: str | None = None
+) -> bool:
     """
     Normalize checking `use_raw`.
 
