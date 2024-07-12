@@ -247,9 +247,7 @@ def _check_array_function_arguments(**kwargs):
         )
 
 
-def _check_use_raw(
-    adata: AnnData, use_raw: None | bool, layer: str | None = None
-) -> bool:
+def _check_use_raw(adata: AnnData, use_raw: None | bool) -> bool:
     """
     Normalize checking `use_raw`.
 
@@ -257,8 +255,6 @@ def _check_use_raw(
     """
     if use_raw is not None:
         return use_raw
-    if layer is not None:
-        return False
     return adata.raw is not None
 
 
