@@ -356,6 +356,7 @@ def read_visium(
     library_id: str | None = None,
     load_images: bool | None = True,
     source_image_path: Path | str | None = None,
+    spaceranger_image_path: Path | str | None = None,
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
@@ -383,6 +384,9 @@ def read_visium(
     source_image_path
         Path to the high-resolution tissue image. Path will be included in
         `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
+    spaceranger_image_path
+        Path to the folder containing the spaceranger output hires/lowres tissue images. If `None`, 
+        will go with the `spatial` folder of the provided `path`.
 
     Returns
     -------
@@ -415,6 +419,12 @@ def read_visium(
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
     path = Path(path)
+    #if not provided, assume the hires/lowres images are in the same folder as everything
+    #except in the spatial subdirectory
+    if spaceranger_image_path is None:
+        spaceranger_image_path = path / "spatial"
+    else:
+        spaceranger_image_path = Path(spaceranger_image_path)
     adata = read_10x_h5(path / count_file, genome=genome)
 
     adata.uns["spatial"] = dict()
@@ -438,8 +448,8 @@ def read_visium(
         files = dict(
             tissue_positions_file=tissue_positions_file,
             scalefactors_json_file=path / "spatial/scalefactors_json.json",
-            hires_image=path / "spatial/tissue_hires_image.png",
-            lowres_image=path / "spatial/tissue_lowres_image.png",
+            hires_image=spaceranger_image_path / "tissue_hires_image.png",
+            lowres_image=spaceranger_image_path / "tissue_lowres_image.png",
         )
 
         # check if files exists, continue if images are missing
