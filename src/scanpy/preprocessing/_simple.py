@@ -121,19 +121,19 @@ def filter_cells(
     >>> sc.pp.filter_cells(adata, min_genes=0)
     >>> adata.n_obs
     640
-    >>> adata.obs['n_genes'].min()
+    >>> int(adata.obs['n_genes'].min())
     1
     >>> # filter manually
     >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
     >>> adata_copy.n_obs
     554
-    >>> adata_copy.obs['n_genes'].min()
+    >>> int(adata_copy.obs['n_genes'].min())
     3
     >>> # actually do some filtering
     >>> sc.pp.filter_cells(adata, min_genes=3)
     >>> adata.n_obs
     554
-    >>> adata.obs['n_genes'].min()
+    >>> int(adata.obs['n_genes'].min())
     3
     """
     if copy:
@@ -586,7 +586,7 @@ def normalize_per_cell(  # noqa: PLR0917
             adata.layers[layer] = temp
 
         logg.info(
-            "    finished ({time_passed}): normalized adata.X and added"
+            "    finished ({time_passed}): normalized adata.X and added\n"
             f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
             time=start,
         )

@@ -1,18 +1,12 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 
 from legacy_api_wrap import legacy_api
 from packaging.version import Version
-
-try:
-    from functools import cache
-except ImportError:  # Python < 3.9
-    from functools import lru_cache
-
-    cache = lru_cache(maxsize=None)
 
 try:
     from dask.array import Array as DaskArray
@@ -31,7 +25,6 @@ except ImportError:
 
 
 __all__ = [
-    "cache",
     "DaskArray",
     "ZappyArray",
     "fullname",
@@ -48,9 +41,9 @@ def fullname(typ: type) -> str:
     return f"{module}.{name}"
 
 
-try:
+if sys.version_info >= (3, 11):
     from contextlib import chdir
-except ImportError:  # Python < 3.11
+else:
     import os
     from contextlib import AbstractContextManager
 
