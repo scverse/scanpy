@@ -166,7 +166,22 @@ def get_count_dataset(
 def param_skipper(
     param_names: Sequence[str], params: tuple[Sequence[object], ...]
 ) -> ParamSkipper:
-    """Creates a decorator that will skip all combinations that contain any of the given parameters."""
+    """Creates a decorator that will skip all combinations that contain any of the given parameters.
+
+    Examples
+    --------
+
+    >>> param_names = ["letters", "numbers"]
+    >>> params = [["a", "b"], [3, 4, 5]]
+    >>> skip_when = param_skipper(param_names, params)
+
+    >>> @skip_when(letters={"a"}, numbers={3})
+    ... def func(a, b):
+    ...     print(a, b)
+    >>> run_as_asv_benchmark(func)
+    b 4
+    b 5
+    """
 
     def skip(**skipped: Set) -> Callable[[C], C]:
         skipped_combs = [
