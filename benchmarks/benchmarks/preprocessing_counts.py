@@ -38,18 +38,6 @@ params: tuple[list[Dataset], list[KeyCount]] = (
 param_names = ["dataset", "layer"]
 
 
-def time_calculate_qc_metrics(*_):
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
-
-
-def peakmem_calculate_qc_metrics(*_):
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
-
-
 def time_filter_cells(*_):
     sc.pp.filter_cells(adata, min_genes=100)
 
@@ -74,21 +62,37 @@ def peakmem_scrublet(*_):
     sc.pp.scrublet(adata, batch_key=batch_key)
 
 
-def time_normalize_total(*_):
-    sc.pp.normalize_total(adata, target_sum=1e4)
+class FastSuite:
+    """Suite for fast preprocessing operations."""
 
+    params: tuple[list[Dataset], list[KeyCount]] = (
+        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+        ["counts", "counts-off-axis"],
+    )
+    param_names = ["dataset", "layer"]
 
-def peakmem_normalize_total(*_):
-    sc.pp.normalize_total(adata, target_sum=1e4)
+    def time_calculate_qc_metrics(self, *_):
+        sc.pp.calculate_qc_metrics(
+            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+        )
 
+    def peakmem_calculate_qc_metrics(self, *_):
+        sc.pp.calculate_qc_metrics(
+            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+        )
 
-def time_log1p(*_):
-    # TODO: This would fail: assert "log1p" not in adata.uns, "ASV bug?"
-    # https://github.com/scverse/scanpy/issues/3052
-    adata.uns.pop("log1p", None)
-    sc.pp.log1p(adata)
+    def time_normalize_total(self, *_):
+        sc.pp.normalize_total(adata, target_sum=1e4)
 
+    def peakmem_normalize_total(self, *_):
+        sc.pp.normalize_total(adata, target_sum=1e4)
 
-def peakmem_log1p(*_):
-    adata.uns.pop("log1p", None)
-    sc.pp.log1p(adata)
+    def time_log1p(self, *_):
+        # TODO: This would fail: assert "log1p" not in adata.uns, "ASV bug?"
+        # https://github.com/scverse/scanpy/issues/3052
+        adata.uns.pop("log1p", None)
+        sc.pp.log1p(adata)
+
+    def peakmem_log1p(self, *_):
+        adata.uns.pop("log1p", None)
+        sc.pp.log1p(adata)

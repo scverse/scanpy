@@ -90,7 +90,9 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
     adata.obs_names_make_unique()
 
     assert isinstance(adata.X, sparse.csr_matrix)
-    adata.obs["n_counts"] = adata.X.sum(axis=1).A1
+    adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
+    adata.obs["n_counts"] = adata.layers["counts"].sum(axis=1).A1
     return adata
 
 
@@ -106,6 +108,8 @@ def _lung93k() -> AnnData:
     )
     adata = sc.read_h5ad(path)
     assert isinstance(adata.X, sparse.csr_matrix)
+    adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
     return adata
 
 
@@ -140,8 +144,7 @@ def _get_dataset_raw(dataset: Dataset) -> tuple[AnnData, str | None]:
 
     # add off-axis layers
     adata.layers["off-axis"] = to_off_axis(adata.X)
-    if (counts := adata.layers.get("counts")) is not None:
-        adata.layers["counts-off-axis"] = to_off_axis(counts)
+    adata.layers["counts-off-axis"] = to_off_axis(adata.layers["counts"])
 
     # add mitochondrial gene and pre-compute qc metrics
     adata.var["mt"] = adata.var_names.str.startswith("MT-")
