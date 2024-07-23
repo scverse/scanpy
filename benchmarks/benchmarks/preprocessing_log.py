@@ -50,6 +50,7 @@ def peakmem_pca(*_):
 
 
 def time_highly_variable_genes(*_):
+    # the default flavor runs on log-transformed data
     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
 
 
