@@ -163,8 +163,10 @@ def score_genes(
     # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
     obs_avg = obs_avg[np.isfinite(obs_avg)]
 
-    n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
-    obs_cut = obs_avg.rank(method="min") // n_items
+    obs_avg.sort_values(ascending=True, inplace=True)
+    n_items = int(np.ceil(len(obs_avg) / (n_bins)))
+    rank = np.repeat(np.arange(n_bins), n_items)[:len(obs_avg)]
+    obs_cut = pd.Series(rank, index=obs_avg.index)
     keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
