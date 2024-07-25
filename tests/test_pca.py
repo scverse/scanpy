@@ -405,13 +405,10 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     )
 
 
-def test_mask_order_warning(request):
+def test_mask_order_warning(request: pytest.FixtureRequest):
     if Version(ad.__version__) >= Version("0.9"):
-        request.node.add_marker(
-            pytest.mark.xfail(
-                reason="Not expected to warn in later versions of anndata"
-            )
-        )
+        reason = "Not expected to warn in later versions of anndata"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     adata = ad.AnnData(X=np.random.randn(50, 5))
     mask = np.array([True, False, True, False, True])
