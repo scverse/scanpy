@@ -42,6 +42,23 @@ _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", 
 _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
 ]
+_LegendLoc = Literal[
+    "none",
+    "right margin",
+    "on data",
+    "on data export",
+    "best",
+    "upper right",
+    "upper left",
+    "lower left",
+    "lower right",
+    "right",
+    "center left",
+    "center right",
+    "lower center",
+    "upper center",
+    "center",
+]
 ColorLike = Union[str, tuple[float, ...]]
 
 
