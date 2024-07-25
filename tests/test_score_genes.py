@@ -251,6 +251,7 @@ def test_layer():
     sc.tl.score_genes(adata, gene_set, score_name="X_score")
     # score layer (`del` makes sure it actually uses the layer)
     adata.layers["test"] = adata.X.copy()
+    adata.raw = adata
     del adata.X
     sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
 
