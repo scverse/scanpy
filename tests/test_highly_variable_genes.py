@@ -352,8 +352,8 @@ def test_compare_to_upstream(  # noqa: PLR0917
     array_type: Callable,
 ):
     if func == "fgd" and flavor == "cell_ranger":
-        msg = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
-        request.node.add_marker(pytest.mark.xfail(reason=msg))
+        reason = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
