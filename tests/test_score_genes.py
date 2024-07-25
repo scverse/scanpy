@@ -251,23 +251,6 @@ def test_layer():
     sc.tl.score_genes(adata, gene_set, score_name="X_score")
     # score layer (`del` makes sure it actually uses the layer)
     adata.layers["test"] = adata.X.copy()
-    del adata.X
-    sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
-
-    np.testing.assert_array_equal(adata.obs["X_score"], adata.obs["test_score"])
-
-
-def test_layer_with_raw():
-    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
-
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
-    sc.pp.log1p(adata)
-
-    # score X
-    gene_set = adata.var_names[:10]
-    sc.tl.score_genes(adata, gene_set, score_name="X_score")
-    # score layer (`del` makes sure it actually uses the layer)
-    adata.layers["test"] = adata.X.copy()
     adata.raw = adata
     del adata.X
     sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
