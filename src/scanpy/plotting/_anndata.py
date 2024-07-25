@@ -2036,9 +2036,7 @@ def _prepare_dataframe(
     """
 
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
-    if layer is not None:
-        use_raw = False
+    use_raw = _check_use_raw(adata, use_raw, layer=layer)
     if isinstance(var_names, str):
         var_names = [var_names]
 
