@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
 
-    from .._utils import _FontSize, _FontWeight, _IGraphLayout
+    from .._utils import _FontSize, _FontWeight, _IGraphLayout, _LegendLoc
 
 
 @old_positionals(
@@ -67,7 +67,7 @@ def paga_compare(
     groups=None,
     components=None,
     projection: Literal["2d", "3d"] = "2d",
-    legend_loc="on data",
+    legend_loc: _LegendLoc | None = "on data",
     legend_fontsize: int | float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,

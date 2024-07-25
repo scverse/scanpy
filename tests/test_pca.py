@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from functools import wraps
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -16,7 +17,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
-from testing.scanpy._helpers import as_dense_dask_array, as_sparse_dask_array
+from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
@@ -26,7 +27,10 @@ from testing.scanpy._pytest.params import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Literal
+
+    from scanpy._compat import DaskArray
 
 A_list = np.array(
     [
@@ -62,7 +66,23 @@ A_svd = np.array(
 )
 
 
-# If one uses dask for PCA it will always require dask-ml
+def _chunked_1d(
+    f: Callable[[np.ndarray], DaskArray],
+) -> Callable[[np.ndarray], DaskArray]:
+    @wraps(f)
+    def wrapper(a: np.ndarray) -> DaskArray:
+        da = f(a)
+        return da.rechunk((da.chunksize[0], -1))
+
+    return wrapper
+
+
+DASK_CONVERTERS = {
+    f: _chunked_1d(f)
+    for f in (_helpers.as_dense_dask_array, _helpers.as_sparse_dask_array)
+}
+
+
 @pytest.fixture(
     params=[
         param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
@@ -70,6 +90,13 @@ A_svd = np.array(
     ]
 )
 def array_type(request: pytest.FixtureRequest):
+    # If one uses dask for PCA it will always require dask-ml.
+    # dask-ml can’t do 2D-chunked arrays, so rechunk them.
+    if as_dask_array := DASK_CONVERTERS.get(request.param):
+        return as_dask_array
+
+    # When not using dask, just return the array type
+    assert "dask" not in request.param.__name__, "add more branches or refactor"
     return request.param
 
 
@@ -92,8 +119,7 @@ def pca_params(
     expected_warning = None
     svd_solver = None
     if svd_solver_type is not None:
-        # TODO: are these right for sparse?
-        if array_type in {as_dense_dask_array, as_sparse_dask_array}:
+        if array_type in DASK_CONVERTERS.values():
             svd_solver = (
                 {"auto", "full", "tsqr", "randomized"}
                 if zero_center
@@ -350,19 +376,19 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     )
 
 
-def test_mask(array_type, request):
-    if array_type is as_dense_dask_array:
-        pytest.xfail("TODO: Dask arrays are not supported")
+def test_mask(request: pytest.FixtureRequest, array_type):
+    if array_type in DASK_CONVERTERS.values():
+        reason = "TODO: Dask arrays are not supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
     if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
-        request.node.add_marker(
-            pytest.mark.xfail(
-                reason="TODO: Previous version of anndata would return an F ordered array for one"
-                " case here, which suprisingly considerably changes the results of PCA. "
-            )
+        reason = (
+            "TODO: Previous version of anndata would return an F ordered array for one"
+            " case here, which surprisingly considerably changes the results of PCA."
         )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     mask_var = np.random.choice([True, False], adata.shape[1])
 
     adata_masked = adata[:, mask_var].copy()
@@ -379,13 +405,10 @@ def test_mask(array_type, request):
     )
 
 
-def test_mask_order_warning(request):
+def test_mask_order_warning(request: pytest.FixtureRequest):
     if Version(ad.__version__) >= Version("0.9"):
-        request.node.add_marker(
-            pytest.mark.xfail(
-                reason="Not expected to warn in later versions of anndata"
-            )
-        )
+        reason = "Not expected to warn in later versions of anndata"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     adata = ad.AnnData(X=np.random.randn(50, 5))
     mask = np.array([True, False, True, False, True])
