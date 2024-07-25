@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -14,6 +15,10 @@ from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc3k_processed
+
+if TYPE_CHECKING:
+    from scanpy.plotting._utils import _LegendLoc
+
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
@@ -111,10 +116,10 @@ def plotfunc(request):
 
 
 @pytest.fixture(
-    params=["on data", "right margin", None],
-    ids=["legend.on_data", "legend.on_right", "legend.off"],
+    params=["on data", "right margin", "lower center", None],
+    ids=["legend.on_data", "legend.on_right", "legend.on_bottom", "legend.off"],
 )
-def legend_loc(request):
+def legend_loc(request) -> _LegendLoc | None:
     return request.param
 
 
@@ -155,7 +160,7 @@ def vbounds(request):
 
 def test_missing_values_categorical(
     *,
-    fixture_request,
+    fixture_request: pytest.FixtureRequest,
     image_comparer,
     adata,
     plotfunc,
@@ -182,7 +187,13 @@ def test_missing_values_categorical(
 
 
 def test_missing_values_continuous(
-    *, fixture_request, image_comparer, adata, plotfunc, na_color, legend_loc, vbounds
+    *,
+    fixture_request: pytest.FixtureRequest,
+    image_comparer,
+    adata,
+    plotfunc,
+    na_color,
+    vbounds,
 ):
     save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 
@@ -191,7 +202,6 @@ def test_missing_values_continuous(
     # Passing through a dict so it's easier to use default values
     kwargs = {}
     kwargs.update(vbounds)
-    kwargs["legend_loc"] = legend_loc
     if na_color is not None:
         kwargs["na_color"] = na_color
 

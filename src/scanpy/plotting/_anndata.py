@@ -5,7 +5,7 @@ from __future__ import annotations
 import collections.abc as cabc
 from collections import OrderedDict
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 import matplotlib as mpl
 import numpy as np
@@ -47,30 +47,14 @@ if TYPE_CHECKING:
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
-    from ._utils import ColorLike, _FontSize, _FontWeight
+    from ._utils import ColorLike, _FontSize, _FontWeight, _LegendLoc
 
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
     _VarNames = Union[str, Sequence[str]]
 
 
-VALID_LEGENDLOCS = {
-    "none",
-    "right margin",
-    "on data",
-    "on data export",
-    "best",
-    "upper right",
-    "upper left",
-    "lower left",
-    "lower right",
-    "right",
-    "center left",
-    "center right",
-    "lower center",
-    "upper center",
-    "center",
-}
+VALID_LEGENDLOCS = frozenset(get_args(_utils._LegendLoc))
 
 
 @old_positionals(
@@ -105,7 +89,7 @@ def scatter(
     groups: str | Iterable[str] | None = None,
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
-    legend_loc: str = "right margin",
+    legend_loc: _LegendLoc | None = "right margin",
     legend_fontsize: int | float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
@@ -202,7 +186,7 @@ def _scatter_obs(
     groups=None,
     components=None,
     projection: Literal["2d", "3d"] = "2d",
-    legend_loc="right margin",
+    legend_loc: _LegendLoc | None = "right margin",
     legend_fontsize=None,
     legend_fontweight=None,
     legend_fontoutline=None,
@@ -211,7 +195,7 @@ def _scatter_obs(
     frameon=None,
     right_margin=None,
     left_margin=None,
-    size=None,
+    size: int | float | None = None,
     marker=".",
     title=None,
     show=None,
@@ -379,7 +363,7 @@ def _scatter_obs(
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
         ]
 
-    axs = scatter_base(
+    axs: list[Axes] = scatter_base(
         Y,
         title=title,
         alpha=alpha,

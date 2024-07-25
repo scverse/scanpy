@@ -80,8 +80,8 @@ components
 projection
     Projection of plot (default: `'2d'`).
 legend_loc
-    Location of legend, either `'on data'`, `'right margin'` or a valid keyword
-    for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
+    Location of legend, either `'on data'`, `'right margin'`, `None`,
+    or a valid keyword for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
 legend_fontsize
     Numeric size in pt or string describing the size.
     See :meth:`~matplotlib.text.Text.set_fontsize`.
