@@ -62,6 +62,8 @@ def peakmem_scrublet(*_):
     sc.pp.scrublet(adata, batch_key=batch_key)
 
 
+# Can’t do seurat v3 yet: https://github.com/conda-forge/scikit-misc-feedstock/issues/17
+"""
 def time_hvg_seurat_v3(*_):
     # seurat v3 runs on counts
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3_paper")
@@ -69,6 +71,7 @@ def time_hvg_seurat_v3(*_):
 
 def peakmem_hvg_seurat_v3(*_):
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3_paper")
+"""
 
 
 class FastSuite:
