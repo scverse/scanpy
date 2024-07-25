@@ -52,6 +52,7 @@ from .._utils import (
     _FontSize,  # noqa: TCH001
     _FontWeight,  # noqa: TCH001
     _IGraphLayout,  # noqa: TCH001
+    _LegendLoc,  # noqa: TCH001
     check_colornorm,
     check_projection,
     circles,
@@ -97,7 +98,7 @@ def embedding(
     frameon: bool | None = None,
     legend_fontsize: int | float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
-    legend_loc: str = "right margin",
+    legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,
     colorbar_loc: str | None = "right",
     vmax: VBound | Sequence[VBound] | None = None,
@@ -1091,11 +1092,11 @@ def _components_to_dimensions(
 
 
 def _add_categorical_legend(
-    ax,
+    ax: Axes,
     color_source_vector,
     *,
     palette: dict,
-    legend_loc: str,
+    legend_loc: _LegendLoc | None,
     legend_fontweight,
     legend_fontsize,
     legend_fontoutline,
@@ -1124,17 +1125,7 @@ def _add_categorical_legend(
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
 
-    if legend_loc == "right margin":
-        for label in cats:
-            ax.scatter([], [], c=palette[label], label=label)
-        ax.legend(
-            frameon=False,
-            loc="center left",
-            bbox_to_anchor=(1, 0.5),
-            ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
-            fontsize=legend_fontsize,
-        )
-    elif legend_loc == "on data":
+    if legend_loc == "on data":
         # identify centroids to put labels
 
         all_pos = (
@@ -1158,6 +1149,19 @@ def _add_categorical_legend(
                 fontsize=legend_fontsize,
                 path_effects=legend_fontoutline,
             )
+    elif legend_loc not in {None, "none"}:
+        for label in cats:
+            ax.scatter([], [], c=palette[label], label=label)
+        if legend_loc == "right margin":
+            ax.legend(
+                frameon=False,
+                loc="center left",
+                bbox_to_anchor=(1, 0.5),
+                ncol=(1 if len(cats) <= 14 else 2 if len(cats) <= 30 else 3),
+                fontsize=legend_fontsize,
+            )
+        else:
+            ax.legend(loc=legend_loc, fontsize=legend_fontsize)
 
 
 def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
