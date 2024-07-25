@@ -6,11 +6,15 @@ from __future__ import annotations
 
 import warnings
 from itertools import permutations
+from typing import TYPE_CHECKING
 
 import numpy as np
 from anndata.tests.helpers import asarray, assert_equal
 
 import scanpy as sc
+
+if TYPE_CHECKING:
+    from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -124,13 +128,13 @@ def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
 
 
 # Delayed imports for case where we aren't using dask
-def as_dense_dask_array(*args, **kwargs):
+def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     return as_dense_dask_array(*args, **kwargs)
 
 
-def as_sparse_dask_array(*args, **kwargs):
+def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_sparse_dask_array
 
     return as_sparse_dask_array(*args, **kwargs)
