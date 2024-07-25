@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import warnings
 from functools import cache
 from typing import TYPE_CHECKING
@@ -7,23 +8,38 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pooch
 from anndata import concat
+from asv_runner.benchmarks.mark import skip_for_params
+from scipy import sparse
 
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable, Sequence, Set
+    from typing import Literal, Protocol, TypeVar
 
     from anndata import AnnData
 
+    C = TypeVar("C", bound=Callable)
+
+    class ParamSkipper(Protocol):
+        def __call__(self, **skipped: Set) -> Callable[[C], C]: ...
+
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
+    KeyX = Literal[None, "off-axis"]
+    KeyCount = Literal["counts", "counts-off-axis"]
 
 
 @cache
 def _pbmc68k_reduced() -> AnnData:
+    """A small datasets with a dense `.X`"""
     adata = sc.datasets.pbmc68k_reduced()
+    assert isinstance(adata.X, np.ndarray)
+    assert not np.isfortran(adata.X)
+
     # raw has the same number of genes, so we can use it for counts
     # it doesn’t actually contain counts for some reason, but close enough
-    adata.layers["counts"] = adata.raw.X.copy()
+    assert isinstance(adata.raw.X, sparse.csr_matrix)
+    adata.layers["counts"] = adata.raw.X.toarray(order="C")
     mapper = dict(
         percent_mito="pct_counts_mt",
         n_counts="total_counts",
@@ -39,10 +55,7 @@ def pbmc68k_reduced() -> AnnData:
 @cache
 def _pbmc3k() -> AnnData:
     adata = sc.datasets.pbmc3k()
-    adata.var["mt"] = adata.var_names.str.startswith("MT-")
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
+    assert isinstance(adata.X, sparse.csr_matrix)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     return adata
@@ -76,12 +89,10 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
         adata = concat(adatas, label="sample")
     adata.obs_names_make_unique()
 
-    adata.var["mt"] = adata.var_names.str.startswith("MT-")
-    sc.pp.calculate_qc_metrics(
-        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    )
-    adata.obs["n_counts"] = adata.X.sum(axis=1).A1
-
+    assert isinstance(adata.X, sparse.csr_matrix)
+    adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
+    adata.obs["n_counts"] = adata.layers["counts"].sum(axis=1).A1
     return adata
 
 
@@ -95,33 +106,104 @@ def _lung93k() -> AnnData:
         url="https://figshare.com/ndownloader/files/45788454",
         known_hash="md5:4f28af5ff226052443e7e0b39f3f9212",
     )
-    return sc.read_h5ad(path)
+    adata = sc.read_h5ad(path)
+    assert isinstance(adata.X, sparse.csr_matrix)
+    adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
+    return adata
 
 
 def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
-def get_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
-    if dataset == "pbmc68k_reduced":
-        return pbmc68k_reduced(), None
-    if dataset == "pbmc3k":
-        return pbmc3k(), None  # can’t use this with batches
-    if dataset == "bmmc":
-        # TODO: allow specifying bigger variant
-        return bmmc(400), "sample"
-    if dataset == "lung93k":
-        return lung93k(), "PatientNumber"
-
-    msg = f"Unknown dataset {dataset}"
-    raise AssertionError(msg)
+def to_off_axis(x: np.ndarray | sparse.csr_matrix) -> np.ndarray | sparse.csc_matrix:
+    if isinstance(x, sparse.csr_matrix):
+        return x.tocsc()
+    if isinstance(x, np.ndarray):
+        assert not np.isfortran(x)
+        return x.copy(order="F")
+    msg = f"Unexpected type {type(x)}"
+    raise TypeError(msg)
 
 
-def get_count_dataset(dataset: Dataset) -> tuple[AnnData, str | None]:
-    adata, batch_key = get_dataset(dataset)
+def _get_dataset_raw(dataset: Dataset) -> tuple[AnnData, str | None]:
+    match dataset:
+        case "pbmc68k_reduced":
+            adata, batch_key = pbmc68k_reduced(), None
+        case "pbmc3k":
+            adata, batch_key = pbmc3k(), None  # can’t use this with batches
+        case "bmmc":
+            # TODO: allow specifying bigger variant
+            adata, batch_key = bmmc(400), "sample"
+        case "lung93k":
+            adata, batch_key = lung93k(), "PatientNumber"
+        case _:
+            msg = f"Unknown dataset {dataset}"
+            raise AssertionError(msg)
 
-    adata.X = adata.layers.pop("counts")
+    # add off-axis layers
+    adata.layers["off-axis"] = to_off_axis(adata.X)
+    adata.layers["counts-off-axis"] = to_off_axis(adata.layers["counts"])
+
+    # add mitochondrial gene and pre-compute qc metrics
+    adata.var["mt"] = adata.var_names.str.startswith("MT-")
+    assert adata.var["mt"].sum() > 0, "no MT genes in dataset"
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+    )
+
+    return adata, batch_key
+
+
+def get_dataset(dataset: Dataset, *, layer: KeyX = None) -> tuple[AnnData, str | None]:
+    adata, batch_key = _get_dataset_raw(dataset)
+    if layer is not None:
+        adata.X = adata.layers.pop(layer)
+    return adata, batch_key
+
+
+def get_count_dataset(
+    dataset: Dataset, *, layer: KeyCount = "counts"
+) -> tuple[AnnData, str | None]:
+    adata, batch_key = _get_dataset_raw(dataset)
+
+    adata.X = adata.layers.pop(layer)
     # remove indicators that X was transformed
     adata.uns.pop("log1p", None)
 
     return adata, batch_key
+
+
+def param_skipper(
+    param_names: Sequence[str], params: tuple[Sequence[object], ...]
+) -> ParamSkipper:
+    """Creates a decorator that will skip all combinations that contain any of the given parameters.
+
+    Examples
+    --------
+
+    >>> param_names = ["letters", "numbers"]
+    >>> params = [["a", "b"], [3, 4, 5]]
+    >>> skip_when = param_skipper(param_names, params)
+
+    >>> @skip_when(letters={"a"}, numbers={3})
+    ... def func(a, b):
+    ...     print(a, b)
+    >>> run_as_asv_benchmark(func)
+    b 4
+    b 5
+    """
+
+    def skip(**skipped: Set) -> Callable[[C], C]:
+        skipped_combs = [
+            tuple(record.values())
+            for record in (
+                dict(zip(param_names, vals)) for vals in itertools.product(*params)
+            )
+            if any(v in skipped.get(n, set()) for n, v in record.items())
+        ]
+        # print(skipped_combs, file=sys.stderr)
+        return skip_for_params(skipped_combs)
+
+    return skip
