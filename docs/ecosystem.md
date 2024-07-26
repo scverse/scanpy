@@ -1,13 +1,5 @@
 # Ecosystem
 
-```{eval-rst}
-.. role:: small
-```
-
-```{eval-rst}
-.. role:: smaller
-```
-
 ```{warning}
 We are no longer accepting new tools on this page.
 Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
