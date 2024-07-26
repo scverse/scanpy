@@ -16,7 +16,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal, TypeAlias
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -24,9 +24,11 @@ if TYPE_CHECKING:
 
     from .._utils import AnyRandom
 
-    _GetSubset: TypeAlias = Callable[
-        [pd.Index[str]], np.ndarray | csr_matrix | csc_matrix
-    ]
+    try:
+        _StrIdx = pd.Index[str]
+    except TypeError:  # Sphinx
+        _StrIdx = pd.Index
+    _GetSubset = Callable[[_StrIdx], np.ndarray | csr_matrix | csc_matrix]
 
 
 def _sparse_nanmean(
