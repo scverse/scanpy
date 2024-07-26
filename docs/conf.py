@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
+from docutils import nodes
 from packaging.version import Version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -50,7 +52,14 @@ bibtex_reference_style = "author_year"
 templates_path = ["_templates"]
 master_doc = "index"
 default_role = "literal"
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    # exclude all 0.x.y.md files, but not index.md
+    "release-notes/[!i]*.md",
+]
 
 extensions = [
     "myst_nb",
@@ -96,6 +105,7 @@ myst_enable_extensions = [
     "html_admonition",
 ]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
+myst_heading_anchors = 3
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
@@ -151,6 +161,8 @@ html_title = "scanpy"
 
 def setup(app: Sphinx):
     """App setup hook."""
+    app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
+    app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
     app.add_config_value(
         "recommonmark_config",
         {

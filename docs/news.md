@@ -1,11 +1,5 @@
 (News)=
-
 ## News
-
-```{eval-rst}
-.. role:: small
-
-```
 
 <!-- marker: after prelude -->
 
