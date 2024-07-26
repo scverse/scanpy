@@ -15,7 +15,7 @@ from .._compat import old_positionals
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Generator, Sequence
     from typing import Literal
 
     from anndata import AnnData
@@ -23,6 +23,12 @@ if TYPE_CHECKING:
     from scipy.sparse import csc_matrix, csr_matrix
 
     from .._utils import AnyRandom
+
+    try:
+        _StrIdx = pd.Index[str]
+    except TypeError:  # Sphinx
+        _StrIdx = pd.Index
+    _GetSubset = Callable[[_StrIdx], np.ndarray | csr_matrix | csc_matrix]
 
 
 def _sparse_nanmean(
@@ -128,56 +134,24 @@ def score_genes(
     if random_state is not None:
         np.random.seed(random_state)
 
-    var_names = adata.raw.var_names if use_raw else adata.var_names
-    gene_list = pd.Index([gene_list] if isinstance(gene_list, str) else gene_list)
-    genes_to_ignore = gene_list.difference(var_names, sort=False)  # first get missing
-    gene_list = gene_list.intersection(var_names)  # then restrict to present
-    if len(genes_to_ignore) > 0:
-        logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
-    if len(gene_list) == 0:
-        raise ValueError("No valid genes were passed for scoring.")
-
-    if gene_pool is None:
-        gene_pool = var_names.astype("string")
-    else:
-        gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
-    if len(gene_pool) == 0:
-        raise ValueError("No valid genes were passed for reference set.")
+    gene_list, gene_pool, get_subset = _check_score_genes_args(
+        adata, gene_list, gene_pool, use_raw=use_raw
+    )
+    del use_raw, random_state
 
     # Trying here to match the Seurat approach in scoring cells.
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
-    def get_subset(genes: pd.Index[str]):
-        x = _get_obs_rep(adata, use_raw=use_raw)
-        if len(genes) == len(var_names):
-            return x
-        idx = var_names.get_indexer(genes)
-        return x[:, idx]
-
-    # average expression of genes
-    obs_avg = pd.Series(_nan_means(get_subset(gene_pool), axis=0), index=gene_pool)
-    # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
-    obs_avg = obs_avg[np.isfinite(obs_avg)]
-
-    n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
-    obs_cut = obs_avg.rank(method="min") // n_items
-    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
-
-    # now pick `ctrl_size` genes from every cut
     control_genes = pd.Index([], dtype="string")
-    for cut in np.unique(obs_cut.loc[gene_list]):
-        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
-        if len(r_genes) == 0:
-            msg = (
-                f"No control genes for {cut=}. You might want to increase "
-                f"gene_pool size (current size: {len(gene_pool)})"
-            )
-            logg.warning(msg)
-        if ctrl_size < len(r_genes):
-            r_genes = r_genes.to_series().sample(ctrl_size).index
-        if ctrl_as_ref:  # otherwise `r_genes` is already filtered
-            r_genes = r_genes.difference(gene_list)
+    for r_genes in _score_genes_bins(
+        gene_list,
+        gene_pool,
+        ctrl_as_ref=ctrl_as_ref,
+        ctrl_size=ctrl_size,
+        n_bins=n_bins,
+        get_subset=get_subset,
+    ):
         control_genes = control_genes.union(r_genes)
 
     if len(control_genes) == 0:
@@ -206,6 +180,77 @@ def score_genes(
         ),
     )
     return adata if copy else None
+
+
+def _check_score_genes_args(
+    adata: AnnData,
+    gene_list: pd.Index[str] | Sequence[str],
+    gene_pool: pd.Index[str] | Sequence[str] | None,
+    *,
+    use_raw: bool,
+) -> tuple[pd.Index[str], pd.Index[str], _GetSubset]:
+    """Restrict `gene_list` and `gene_pool` to present genes in `adata`.
+
+    Also returns a function to get subset of `adata.X` based on a set of genes passed.
+    """
+    var_names = adata.raw.var_names if use_raw else adata.var_names
+    gene_list = pd.Index([gene_list] if isinstance(gene_list, str) else gene_list)
+    genes_to_ignore = gene_list.difference(var_names, sort=False)  # first get missing
+    gene_list = gene_list.intersection(var_names)  # then restrict to present
+    if len(genes_to_ignore) > 0:
+        logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
+    if len(gene_list) == 0:
+        raise ValueError("No valid genes were passed for scoring.")
+
+    if gene_pool is None:
+        gene_pool = var_names.astype("string")
+    else:
+        gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
+    if len(gene_pool) == 0:
+        raise ValueError("No valid genes were passed for reference set.")
+
+    def get_subset(genes: pd.Index[str]):
+        x = _get_obs_rep(adata, use_raw=use_raw)
+        if len(genes) == len(var_names):
+            return x
+        idx = var_names.get_indexer(genes)
+        return x[:, idx]
+
+    return gene_list, gene_pool, get_subset
+
+
+def _score_genes_bins(
+    gene_list: pd.Index[str],
+    gene_pool: pd.Index[str],
+    *,
+    ctrl_as_ref: bool,
+    ctrl_size: int,
+    n_bins: int,
+    get_subset: _GetSubset,
+) -> Generator[pd.Index[str], None, None]:
+    # average expression of genes
+    obs_avg = pd.Series(_nan_means(get_subset(gene_pool), axis=0), index=gene_pool)
+    # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries
+    obs_avg = obs_avg[np.isfinite(obs_avg)]
+
+    n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
+    obs_cut = obs_avg.rank(method="min") // n_items
+    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
+
+    # now pick `ctrl_size` genes from every cut
+    for cut in np.unique(obs_cut.loc[gene_list]):
+        r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
+        if len(r_genes) == 0:
+            msg = (
+                f"No control genes for {cut=}. You might want to increase "
+                f"gene_pool size (current size: {len(gene_pool)})"
+            )
+            logg.warning(msg)
+        if ctrl_size < len(r_genes):
+            r_genes = r_genes.to_series().sample(ctrl_size).index
+        if ctrl_as_ref:  # otherwise `r_genes` is already filtered
+            r_genes = r_genes.difference(gene_list)
+        yield r_genes
 
 
 def _nan_means(

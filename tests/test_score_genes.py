@@ -256,15 +256,18 @@ def test_no_control_gene():
         sc.tl.score_genes(adata, adata.var_names[:1], ctrl_size=1)
 
 
-@pytest.mark.parametrize("ctrl_as_ref", [True, False])
+@pytest.mark.parametrize(
+    "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
+)
 def test_gene_list_is_control(ctrl_as_ref: bool):
     np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
+    adata.var_names = "g" + adata.var_names
     with (
         pytest.raises(RuntimeError, match=r"No control genes found in any cut")
         if ctrl_as_ref
         else nullcontext()
     ):
         sc.tl.score_genes(
-            adata, gene_list="3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
+            adata, gene_list="g3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
         )
