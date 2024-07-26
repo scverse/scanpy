@@ -2,14 +2,6 @@
 :end-before: '## Citation'
 ```
 
-```{eval-rst}
-.. role:: small
-```
-
-```{eval-rst}
-.. role:: smaller
-```
-
 ::::{grid} 1 2 3 3
 :gutter: 2
 
