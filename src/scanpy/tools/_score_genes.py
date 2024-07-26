@@ -239,7 +239,7 @@ def _score_genes_bins(
 
     obs_avg.sort_values(ascending=True, inplace=True)
     n_items = int(np.ceil(len(obs_avg) / (n_bins)))
-    rank = np.repeat(np.arange(n_bins), n_items)[:len(obs_avg)]
+    rank = np.repeat(np.arange(n_bins), n_items)[: len(obs_avg)]
     obs_cut = pd.Series(rank, index=obs_avg.index)
     keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
