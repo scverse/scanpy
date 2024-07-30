@@ -39,7 +39,6 @@ def float_dtype(request):
 
 @pytest.fixture()
 def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
-    from scanpy import settings
     from scanpy._compat import chdir
 
     showwarning_orig = warnings.showwarning
@@ -61,8 +60,6 @@ def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, N
     ] + [("ignore", None, Warning, None, 0)]
 
     warnings.showwarning = showwarning
-    old_dd, settings.datasetdir = settings.datasetdir, cache.mkdir("scanpy-data")
     with chdir(tmp_path):
         yield
     warnings.showwarning = showwarning_orig
-    settings.datasetdir = old_dd
