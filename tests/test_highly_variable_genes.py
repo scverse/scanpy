@@ -13,6 +13,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 from scipy import sparse
 
 import scanpy as sc
+from scanpy.preprocessing._utils import _get_mean_var
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -129,6 +130,27 @@ def test_keep_layer(base, flavor):
         assert False
 
     assert np.allclose(X_orig.toarray(), adata.X.toarray())
+
+
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        pytest.param(
+            "cell_ranger",
+            marks=pytest.mark.xfail(reason="can’t deal with duplicate bin edges"),
+        ),
+    ],
+)
+def test_no_filter_genes(flavor):
+    """Test that even with columns containing all-zeros in the data, n_top_genes is respected."""
+    adata = sc.datasets.pbmc3k()
+    means, _ = _get_mean_var(adata.X)
+    assert (means == 0).any()
+    sc.pp.normalize_total(adata, target_sum=10000)
+    sc.pp.log1p(adata)
+    sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=10000)
+    assert adata.var["highly_variable"].sum() == 10000
 
 
 def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
