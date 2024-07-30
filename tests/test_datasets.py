@@ -24,6 +24,15 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@pytest.fixture(autouse=True)
+def _tmp_dataset_dir(tmp_path: Path) -> None:
+    """Make sure that datasets are downloaded during the test run.
+
+    The default test environment stores them in a cached location.
+    """
+    sc.settings.datasetdir = tmp_path / "scanpy_data"
+
+
 @pytest.mark.internet
 def test_burczynski06():
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
