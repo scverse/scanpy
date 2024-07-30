@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _global_test_context(
     request: pytest.FixtureRequest,
+    cache: pytest.Cache,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Generator[None, None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
@@ -33,7 +34,9 @@ def _global_test_context(
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
-    sc.settings.datasetdir = tmp_path_factory.mktemp("scanpy_data")
+    # reuse data files between test runs (unless overwritten in the test)
+    sc.settings.datasetdir = cache.mkdir("scanpy-data")
+    # create new writedir for each test run
     sc.settings.writedir = tmp_path_factory.mktemp("scanpy_write")
 
     if isinstance(request.node, pytest.DoctestItem):
