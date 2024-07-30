@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
 
 # Used with get_args
-AggType = Literal["count_nonzero", "mean", "sum", "var"]
+AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
 
 
 class Aggregate:
@@ -138,7 +138,30 @@ class Aggregate:
             var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
         return mean_, var_
 
+    def median(self) -> Array:
+        """\
+        Compute the median per feature per group of observations.
 
+        Returns
+        -------
+        Array of median.
+        """
+        import warnings
+
+        medians = []
+        for group in np.unique(self.groupby.codes):
+            group_mask = self.groupby.codes == group
+            group_data = self.data[group_mask]
+            if sparse.issparse(group_data):
+                warnings.warn(
+                    "Converting sparse matrix to dense for median calculation. "
+                    "This may be very memory intensive for large datasets.",
+                    UserWarning
+                )
+                group_data = group_data.toarray()
+            medians.append(np.median(group_data, axis=0))
+        return np.array(medians)
+    
 def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
@@ -343,7 +366,9 @@ def aggregate_array(
         result["var"] = var_
         if "mean" in funcs:
             result["mean"] = mean_
-
+    if "median" in funcs:   
+        agg = groupby.median()
+        result["median"] = agg
     return result
 
 
