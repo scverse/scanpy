@@ -402,7 +402,7 @@ def _subset_genes(
         f"the {n_top_genes} top genes correspond to a "
         f"normalized dispersion cutoff of {disp_cut_off}"
     )
-    return np.nan_to_num(dispersion_norm) >= disp_cut_off
+    return np.nan_to_num(dispersion_norm, nan=-np.inf) >= disp_cut_off
 
 
 def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArray:
