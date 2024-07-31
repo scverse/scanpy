@@ -189,7 +189,7 @@ def timeseries_subplot(
             c=colors[i],
             label=var_names[i] if len(var_names) > 0 else "",
             cmap=color_map,
-            rasterized=settings._vector_friendly,
+            rasterized=(True - settings._vector_friendly),
         )
     ylim = ax.get_ylim()
     for h in highlights_x:
@@ -572,7 +572,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
                 edge_color=edges_color,
             )
             edge_collection.set_zorder(-2)
-            edge_collection.set_rasterized(settings._vector_friendly)
+            edge_collection.set_rasterized(True - settings._vector_friendly)
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
@@ -604,7 +604,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             V[:, 0],
             V[:, 1],
             **quiver_kwds,
-            rasterized=settings._vector_friendly,
+            rasterized=(True - settings._vector_friendly),
         )
 
 
@@ -640,7 +640,7 @@ def scatter_group(
         edgecolors="none",
         s=size,
         label=adata.obs[key].cat.categories[cat_code],
-        rasterized=settings._vector_friendly,
+        rasterized=(True - settings._vector_friendly),
     )
     return mask_obs
 
@@ -811,7 +811,7 @@ def scatter_base(
                 edgecolors="none",  # 'face',
                 s=sizes[icolor],
                 cmap=color_map,
-                rasterized=settings._vector_friendly,
+                rasterized=(True - settings._vector_friendly),
             )
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)
@@ -894,7 +894,7 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
         kwargs["s"] = 2 if Y.shape[0] > 500 else 10
     if "edgecolors" not in kwargs:
         kwargs["edgecolors"] = "face"
-    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=settings._vector_friendly)
+    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=(True - settings._vector_friendly))
     ax.set_xticks([])
     ax.set_yticks([])
 

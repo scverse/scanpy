@@ -349,7 +349,7 @@ def embedding(
                 coords[:, 1],
                 coords[:, 2],
                 c=color_vector,
-                rasterized=settings._vector_friendly,
+                rasterized=(True - settings._vector_friendly),
                 marker=marker[count],
                 **kwargs_scatter,
             )
@@ -399,7 +399,7 @@ def embedding(
                         coords[:, 1],
                         s=s,
                         c=c,
-                        rasterized=settings._vector_friendly,
+                        rasterized=(True - settings._vector_friendly),
                         marker=marker[count],
                         **kwargs_outline,
                     )
@@ -408,7 +408,7 @@ def embedding(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
-                rasterized=settings._vector_friendly,
+                rasterized=(True - settings._vector_friendly),
                 marker=marker[count],
                 **kwargs_scatter,
             )
