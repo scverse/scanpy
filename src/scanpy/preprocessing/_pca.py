@@ -338,10 +338,10 @@ def pca(
         logg.info("    finished", time=logg_start)
         logg.debug(
             "and added\n"
-            "    'X_pca', the PCA coordinates (adata.obs)\n"
-            "    'PC1', 'PC2', ..., the loadings (adata.var)\n"
-            "    'pca_variance', the variance / eigenvalues (adata.uns)\n"
-            "    'pca_variance_ratio', the variance ratio (adata.uns)"
+            f"    {key_obsm!r}, the PCA coordinates (adata.obs)\n"
+            f"    {key_varm!r}, the loadings (adata.varm)\n"
+            f"    'pca_variance', the variance / eigenvalues (adata.uns[{key_uns!r}])\n"
+            f"    'pca_variance_ratio', the variance ratio (adata.uns[{key_uns!r}])"
         )
         return adata if copy else None
     else:
