@@ -894,7 +894,9 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
         kwargs["s"] = 2 if Y.shape[0] > 500 else 10
     if "edgecolors" not in kwargs:
         kwargs["edgecolors"] = "face"
-    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=(True - settings._vector_friendly))
+    ax.scatter(
+        Y[:, 0], Y[:, 1], **kwargs, rasterized=(True - settings._vector_friendly)
+    )
     ax.set_xticks([])
     ax.set_yticks([])
 
