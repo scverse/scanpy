@@ -6,13 +6,15 @@ from warnings import warn
 
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse
 
 from ... import logging as logg
+from ..._compat import DaskArray
 from ..._utils import (
     _doc_params,
     _empty,
+    axis_sum,
     check_nonnegative_integers,
+    clip_array,
     view_to_actual,
 )
 from ...experimental._docs import (
@@ -34,8 +36,16 @@ if TYPE_CHECKING:
 
     from ..._utils import Empty
 
+    from scipy.sparse import spmatrix
 
-def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
+
+def _pearson_residuals(
+    X: np.ndarray | spmatrix | DaskArray,
+    theta: np.float64,
+    clip: np.float64,
+    check_values: bool,
+    copy: bool = False,
+) -> np.ndarray | spmatrix | DaskArray:
     X = X.copy() if copy else X
 
     # check theta
@@ -56,21 +66,24 @@ def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
             UserWarning,
         )
 
-    if issparse(X):
-        sums_genes = np.sum(X, axis=0)
-        sums_cells = np.sum(X, axis=1)
-        sum_total = np.sum(sums_genes).squeeze()
-    else:
-        sums_genes = np.sum(X, axis=0, keepdims=True)
-        sums_cells = np.sum(X, axis=1, keepdims=True)
-        sum_total = np.sum(sums_genes)
+    sums_genes = axis_sum(X, axis=0, dtype=np.float64).reshape(1, -1)
+    sums_cells = axis_sum(X, axis=1, dtype=np.float64).reshape(-1, 1)
+    sum_total = sums_genes.sum()
 
-    mu = np.array(sums_cells @ sums_genes / sum_total)
-    diff = np.array(X - mu)
+    # TODO: Consider deduplicating computations below which are similarly required in _highly_variable_genes?
+    if not isinstance(X, DaskArray):
+        mu = np.array(sums_cells @ sums_genes / sum_total)
+        diff = np.array(X - mu)
+    else:
+        mu = sums_cells @ sums_genes / sum_total
+        diff = (
+            X - mu
+        )  # here, potentially a dask sparse array and a dense sparse array are subtracted from each other
+        diff = diff.map_blocks(np.array, dtype=np.float64)
     residuals = diff / np.sqrt(mu + mu**2 / theta)
 
-    # clip
-    residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+    # residuals are dense, hence no circumventing for sparse-in-dask needed
+    residuals = clip_array(residuals, -clip, clip)
 
     return residuals
 
