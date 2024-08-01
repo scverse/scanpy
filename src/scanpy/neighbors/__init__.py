@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict, get_args
@@ -24,8 +25,8 @@ from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
-    from typing import Any, Literal
+    from collections.abc import Callable, MutableMapping
+    from typing import Any, Literal, NotRequired
 
     from anndata import AnnData
     from igraph import Graph
@@ -34,8 +35,8 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
-    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
+RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 N_DCS = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
@@ -53,6 +54,16 @@ class KwdsForTransformer(TypedDict):
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
     random_state: AnyRandom
+
+
+class NeighborsParams(TypedDict):
+    n_neighbors: int
+    method: _Method
+    random_state: AnyRandom
+    metric: _Metric | _MetricFn
+    metric_kwds: NotRequired[Mapping[str, Any]]
+    use_rep: NotRequired[str]
+    n_pcs: NotRequired[int]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -203,7 +214,7 @@ def neighbors(
     neighbors_dict["connectivities_key"] = conns_key
     neighbors_dict["distances_key"] = dists_key
 
-    neighbors_dict["params"] = dict(
+    neighbors_dict["params"] = NeighborsParams(
         n_neighbors=neighbors.n_neighbors,
         method=method,
         random_state=random_state,

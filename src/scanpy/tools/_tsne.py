@@ -35,13 +35,13 @@ def tsne(
     *,
     use_rep: str | None = None,
     perplexity: float | int = 30,
+    metric: str = "euclidean",
     early_exaggeration: float | int = 12,
     learning_rate: float | int = 1000,
     random_state: AnyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
     copy: bool = False,
-    metric: str = "euclidean",
 ) -> AnnData | None:
     """\
     t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
@@ -165,21 +165,17 @@ def tsne(
         X_tsne = tsne.fit_transform(X)
 
     # update AnnData instance
-    adata.obsm["X_tsne"] = X_tsne  # annotate samples with tSNE coordinates
-    adata.uns["tsne"] = {
-        "params": {
-            k: v
-            for k, v in {
-                "perplexity": perplexity,
-                "early_exaggeration": early_exaggeration,
-                "learning_rate": learning_rate,
-                "n_jobs": n_jobs,
-                "metric": metric,
-                "use_rep": use_rep,
-            }.items()
-            if v is not None
-        }
-    }
+    params = dict(
+        perplexity=perplexity,
+        early_exaggeration=early_exaggeration,
+        learning_rate=learning_rate,
+        n_jobs=n_jobs,
+        metric=metric,
+        use_rep=use_rep,
+    )
+    key_uns, key_obsm = ("tsne", "X_tsne")
+    adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
+    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
 
     logg.info(
         "    finished",
