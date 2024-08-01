@@ -221,7 +221,7 @@ def test_missing_genes():
     # These genes have a different length of name
     non_extant_genes = _create_random_gene_names(n_genes=3, name_length=7)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"No valid genes were passed for scoring"):
         sc.tl.score_genes(adata, non_extant_genes)
 
 

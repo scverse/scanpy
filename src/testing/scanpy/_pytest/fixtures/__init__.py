@@ -12,10 +12,10 @@ import numpy as np
 import pytest
 
 from .data import (
-    _pbmc3ks_parametrized_session,
     backed_adata,
     pbmc3k_parametrized,
     pbmc3k_parametrized_small,
+    pbmc3ks_parametrized_session,
 )
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 __all__ = [
     "float_dtype",
     "_doctest_env",
-    "_pbmc3ks_parametrized_session",
+    "pbmc3ks_parametrized_session",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
     "backed_adata",

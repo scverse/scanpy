@@ -106,9 +106,9 @@ class _DelegatingParser(ArgumentParser):
         args: Sequence[str] | None = None,
         namespace: Namespace | None = None,
     ) -> tuple[Namespace, list[str]]:
-        assert (
-            args is not None and namespace is None
-        ), "Only use DelegatingParser as subparser"
+        msg = "Only use DelegatingParser as subparser"
+        assert args is not None, msg
+        assert namespace is None, msg
         return Namespace(func=partial(run, [self.prog, *args], **self.cd.runargs)), []
 
 
