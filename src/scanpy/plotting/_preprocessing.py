@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
@@ -103,8 +104,10 @@ def highly_variable_genes(
 
 
 # backwards compat
+@legacy_api("log", "show", "save")
 def filter_genes_dispersion(
     result: np.recarray,
+    *,
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,

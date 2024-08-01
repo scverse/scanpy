@@ -530,7 +530,7 @@ class DotPlot(BasePlot):
         size_legend_ax.spines["top"].set_visible(False)
         size_legend_ax.spines["left"].set_visible(False)
         size_legend_ax.spines["bottom"].set_visible(False)
-        size_legend_ax.grid(False)
+        size_legend_ax.grid(visible=False)
 
         ymax = size_legend_ax.get_ylim()[1]
         size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
@@ -823,7 +823,7 @@ class DotPlot(BasePlot):
             minor=False,
         )
         dot_ax.tick_params(axis="both", labelsize="small")
-        dot_ax.grid(False)
+        dot_ax.grid(visible=False)
         dot_ax.set_ylabel(y_label)
 
         # to be consistent with the heatmap plot, is better to
@@ -844,7 +844,7 @@ class DotPlot(BasePlot):
             dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
 
         if grid:
-            dot_ax.grid(True, color="gray", linewidth=0.1)
+            dot_ax.grid(visible=True, color="gray", linewidth=0.1)
             dot_ax.set_axisbelow(True)
 
         return normalize, dot_min, dot_max

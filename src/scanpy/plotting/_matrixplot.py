@@ -253,7 +253,7 @@ class MatrixPlot(BasePlot):
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # MatrixPlot object, for example once with swap_axes and other without
@@ -301,7 +301,7 @@ class MatrixPlot(BasePlot):
         ax.set_xticklabels(x_labels, rotation=90, ha="center", minor=False)
 
         ax.tick_params(axis="both", labelsize="small")
-        ax.grid(False)
+        ax.grid(visible=False)
 
         # to be consistent with the heatmap plot, is better to
         # invert the order of the y-axis, such that the first group is on

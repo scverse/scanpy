@@ -277,7 +277,7 @@ def test_no_control_gene():
 @pytest.mark.parametrize(
     "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
 )
-def test_gene_list_is_control(ctrl_as_ref: bool):
+def test_gene_list_is_control(*, ctrl_as_ref: bool):
     np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
     adata.var_names = "g" + adata.var_names

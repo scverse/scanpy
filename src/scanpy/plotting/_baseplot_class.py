@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
@@ -204,7 +205,8 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    def swap_axes(self, swap_axes: bool | None = True) -> Self:
+    @legacy_api("swap_axes")
+    def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
         """
         Plots a transposed image.
 
@@ -231,8 +233,10 @@ class BasePlot:
         self.are_axes_swapped = swap_axes
         return self
 
+    @legacy_api("show", "dendrogram_key", "size")
     def add_dendrogram(
         self,
+        *,
         show: bool | None = True,
         dendrogram_key: str | None = None,
         size: float | None = 0.8,
@@ -316,8 +320,10 @@ class BasePlot:
         }
         return self
 
+    @legacy_api("show", "sort", "size", "color")
     def add_totals(
         self,
+        *,
         show: bool | None = True,
         sort: Literal["ascending", "descending"] | None = None,
         size: float | None = 0.8,
@@ -545,7 +551,7 @@ class BasePlot:
                 )
             total_barplot_ax.set_xlim(0, max_x * 1.4)
 
-        total_barplot_ax.grid(False)
+        total_barplot_ax.grid(visible=False)
         total_barplot_ax.axis("off")
 
     def _plot_colorbar(self, color_legend_ax: Axes, normalize) -> None:
@@ -597,7 +603,7 @@ class BasePlot:
         self._plot_colorbar(color_legend_ax, normalize)
         return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         y_labels = self.categories
         x_labels = self.var_names
 
@@ -622,7 +628,7 @@ class BasePlot:
         ax.set_xticklabels(x_labels, rotation=90, ha="center", minor=False)
 
         ax.tick_params(axis="both", labelsize="small")
-        ax.grid(False)
+        ax.grid(visible=False)
 
         # to be consistent with the heatmap plot, is better to
         # invert the order of the y-axis, such that the first group is on
@@ -1075,7 +1081,7 @@ class BasePlot:
         patch = patches.PathPatch(path, facecolor="none", lw=1.5)
 
         gene_groups_ax.add_patch(patch)
-        gene_groups_ax.grid(False)
+        gene_groups_ax.grid(visible=False)
         gene_groups_ax.axis("off")
         # remove y ticks
         gene_groups_ax.tick_params(axis="y", left=False, labelleft=False)

@@ -195,6 +195,7 @@ def _get_array_values(
     X,
     dim_names: pd.Index,
     keys: list[str],
+    *,
     axis: Literal[0, 1],
     backed: bool,
 ):
