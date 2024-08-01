@@ -8,6 +8,7 @@ from warnings import warn
 
 import numpy as np
 import scipy
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
@@ -713,7 +714,8 @@ class Neighbors:
         # else `transformer` is probably an instance
         return conn_method, transformer, shortcut
 
-    def compute_transitions(self, density_normalize: bool = True):
+    @legacy_api("density_normalize")
+    def compute_transitions(self, *, density_normalize: bool = True):
         """\
         Compute transition matrix.
 

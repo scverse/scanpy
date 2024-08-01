@@ -1263,7 +1263,7 @@ def paga_path(
         ax.set_frame_on(False)
         ax.set_xticks([])
         ax.tick_params(axis="both", which="both", length=0)
-        ax.grid(False)
+        ax.grid(visible=False)
         if show_colorbar:
             plt.colorbar(img, ax=ax)
         left_margin = 0.2 if left_margin is None else left_margin
@@ -1327,7 +1327,7 @@ def paga_path(
                     ),
                 )
         groups_axis.set_xticks([])
-        groups_axis.grid(False)
+        groups_axis.grid(visible=False)
         groups_axis.tick_params(axis="both", which="both", length=0)
         # further annotations
         y_shift = ax_bounds[3] / len(keys)
@@ -1364,7 +1364,7 @@ def paga_path(
                 anno_axis.set_yticks([])
             anno_axis.set_frame_on(False)
             anno_axis.set_xticks([])
-            anno_axis.grid(False)
+            anno_axis.grid(visible=False)
     if title is not None:
         ax.set_title(title, fontsize=title_fontsize)
     if show is None and not ax_was_none:
