@@ -25,7 +25,7 @@ from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
-    from typing import Any, Literal
+    from typing import Any, Literal, NotRequired
 
     from anndata import AnnData
     from igraph import Graph
@@ -53,6 +53,16 @@ class KwdsForTransformer(TypedDict):
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
     random_state: AnyRandom
+
+
+class NeighborsParams(TypedDict):
+    n_neighbors: int
+    method: _Method
+    random_state: AnyRandom
+    metric: _Metric | _MetricFn
+    metric_kwds: NotRequired[Mapping[str, Any]]
+    use_rep: NotRequired[str]
+    n_pcs: NotRequired[int]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -203,7 +213,7 @@ def neighbors(
     neighbors_dict["connectivities_key"] = conns_key
     neighbors_dict["distances_key"] = dists_key
 
-    neighbors_dict["params"] = dict(
+    neighbors_dict["params"] = NeighborsParams(
         n_neighbors=neighbors.n_neighbors,
         method=method,
         random_state=random_state,
