@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from ..._utils import Empty
 
 
-def _pearson_residuals(X, theta, clip, check_values, copy: bool = False):
+def _pearson_residuals(X, theta, clip, check_values, *, copy: bool = False):
     X = X.copy() if copy else X
 
     # check theta

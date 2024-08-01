@@ -44,7 +44,7 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
 
 
 @numba.njit(parallel=True, cache=True)
-def clip_array(X: np.ndarray, max_value: float | None = 10, zero_center: bool = True):
+def clip_array(X: np.ndarray, *, max_value: float = 10, zero_center: bool = True):
     a_min, a_max = -max_value, max_value
     if X.ndim > 1:
         for r, c in numba.pndindex(X.shape):
@@ -216,7 +216,9 @@ def scale_array(
             X = da.map_blocks(clip_set, X)
         else:
             if isinstance(X, DaskArray):
-                X = X.map_blocks(clip_array, max_value, zero_center)
+                X = X.map_blocks(
+                    clip_array, max_value=max_value, zero_center=zero_center
+                )
             elif issparse(X):
                 X.data = clip_array(X.data, max_value=max_value, zero_center=False)
             else:
