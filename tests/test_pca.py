@@ -265,7 +265,7 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     pbmc_dense.X = pbmc_dense.X.toarray()
 
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
-    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True, key_added=key_added)
+    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
 
     key_obsm, key_varm, key_uns = keys_expected
 
