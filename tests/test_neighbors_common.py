@@ -57,6 +57,7 @@ def mk_knn_matrix(
 @pytest.mark.parametrize("style", ["basic", "rapids", "sklearn"])
 @pytest.mark.parametrize("duplicates", [True, False], ids=["duplicates", "unique"])
 def test_ind_dist_shortcut_manual(
+    *,
     n_neighbors: int | None,
     style: Literal["basic", "rapids", "sklearn"],
     duplicates: bool,

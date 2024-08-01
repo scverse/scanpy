@@ -275,7 +275,7 @@ class _RankGenes:
             yield group_index, scores, pvals
 
     def wilcoxon(
-        self, tie_correct: bool
+        self, *, tie_correct: bool
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
 
@@ -408,7 +408,7 @@ class _RankGenes:
         if method in {"t-test", "t-test_overestim_var"}:
             generate_test_results = self.t_test(method)
         elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct)
+            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
