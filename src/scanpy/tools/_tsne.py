@@ -41,7 +41,6 @@ def tsne(
     random_state: AnyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """\
@@ -89,13 +88,6 @@ def tsne(
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
-    key_added
-        If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_tsne']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['tsne']`.
-        If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
     copy
         Return a copy instead of writing to `adata`.
 
@@ -103,9 +95,9 @@ def tsne(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_tsne' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
-    `adata.uns['tsne' | key_added]` : :class:`dict`
+    `adata.uns['tsne']` : :class:`dict`
         tSNE parameters.
 
     """
@@ -181,7 +173,7 @@ def tsne(
         metric=metric,
         use_rep=use_rep,
     )
-    key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
+    key_uns, key_obsm = ("tsne", "X_tsne")
     adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
     adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
 

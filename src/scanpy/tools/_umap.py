@@ -53,7 +53,6 @@ def umap(
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap", "rapids"] = "umap",
-    key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
@@ -133,13 +132,6 @@ def umap(
 
             .. deprecated:: 1.10.0
                 Use :func:`rapids_singlecell.tl.umap` instead.
-    key_added
-        If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_umap']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['umap']`.
-        If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
     neighbors_key
         Umap looks in
         :attr:`~anndata.AnnData.uns`\\ ``[neighbors_key]`` for neighbors settings and
@@ -151,15 +143,15 @@ def umap(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_umap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_umap']` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
-    `adata.uns['umap' | key_added]` : :class:`dict`
+    `adata.uns['umap']` : :class:`dict`
         UMAP parameters.
 
     """
     adata = adata.copy() if copy else adata
 
-    key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
+    key_obsm, key_uns = ("X_umap", "umap")
 
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"
