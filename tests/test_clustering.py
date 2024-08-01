@@ -8,7 +8,7 @@ from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_neighbors():
     return pbmc68k_reduced()
 
@@ -147,7 +147,7 @@ def test_leiden_objective_function(adata_neighbors):
 
 @needs.igraph
 @pytest.mark.parametrize(
-    "clustering,key",
+    ("clustering", "key"),
     [
         pytest.param(sc.tl.louvain, "louvain", marks=needs.louvain),
         pytest.param(sc.tl.leiden, "leiden", marks=needs.leidenalg),
@@ -215,7 +215,7 @@ def test_partition_type(adata_neighbors):
 
 
 @pytest.mark.parametrize(
-    "clustering,default_key,default_res,custom_resolutions",
+    ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
         pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
         pytest.param(sc.tl.louvain, "louvain", 0.8, [0.9, 1.1], marks=needs.louvain),

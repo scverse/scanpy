@@ -23,7 +23,7 @@ def assert_anndata_equal(a1, a2):
 
 
 @pytest.mark.parametrize(
-    ["mtx_path", "h5_path"],
+    ("mtx_path", "h5_path"),
     [
         pytest.param(
             ROOT / "1.2.0" / "filtered_gene_bc_matrices" / "hg19_chr21",

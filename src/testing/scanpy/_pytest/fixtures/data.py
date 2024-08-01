@@ -50,12 +50,12 @@ def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def pbmc3k_parametrized(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
     return _pbmc3ks_parametrized_session[False].copy
 
 
-@pytest.fixture
+@pytest.fixture()
 def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
     return _pbmc3ks_parametrized_session[True].copy
 

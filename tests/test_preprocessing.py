@@ -448,12 +448,12 @@ def test_recipe_weinreb():
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_cells,max_counts,min_cells,min_counts",
+    ("max_cells", "max_counts", "min_cells", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        (100, None, None, None),
+        (None, 100, None, None),
+        (None, None, 20, None),
+        (None, None, None, 20),
     ],
 )
 def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
@@ -487,12 +487,12 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_genes,max_counts,min_genes,min_counts",
+    ("max_genes", "max_counts", "min_genes", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        (100, None, None, None),
+        (None, 100, None, None),
+        (None, None, 20, None),
+        (None, None, None, 20),
     ],
 )
 def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):

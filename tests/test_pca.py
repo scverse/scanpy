@@ -110,7 +110,7 @@ def zero_center(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def pca_params(
     array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center
 ):

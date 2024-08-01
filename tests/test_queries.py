@@ -8,7 +8,7 @@ from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 
-@pytest.mark.internet
+@pytest.mark.internet()
 @needs.gprofiler
 def test_enrich():
     pbmc = pbmc68k_reduced()
@@ -33,7 +33,7 @@ def test_enrich():
     assert "set2" in enrich_list["query"].unique()
 
 
-@pytest.mark.internet
+@pytest.mark.internet()
 @needs.pybiomart
 def test_mito_genes():
     pbmc = pbmc68k_reduced()

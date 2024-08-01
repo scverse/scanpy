@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@pytest.fixture
+@pytest.fixture()
 def set_path(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("PATH", str(HERE / "_scripts"), prepend=os.pathsep)
 

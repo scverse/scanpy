@@ -22,13 +22,13 @@ def metric(request: pytest.FixtureRequest) -> AggType:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def df_base():
     ax_base = ["A", "B"]
     return pd.DataFrame(index=ax_base)
 
 
-@pytest.fixture
+@pytest.fixture()
 def df_groupby():
     ax_groupby = [
         *["v0", "v1", "v2"],
@@ -49,7 +49,7 @@ def df_groupby():
     return df_groupby
 
 
-@pytest.fixture
+@pytest.fixture()
 def X():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v

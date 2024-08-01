@@ -27,13 +27,13 @@ def _pbmc_session():
     return pbmc
 
 
-@pytest.fixture
+@pytest.fixture()
 def pbmc(_pbmc_session):
     return _pbmc_session.copy()
 
 
 @pytest.mark.parametrize(
-    "test_id,func",
+    ("test_id", "func"),
     [
         ("", sc.pl.paga),
         ("continuous", partial(sc.pl.paga, color="CST3")),

@@ -36,7 +36,7 @@ def adata_sess() -> AnnData:
     return adata
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata(adata_sess: AnnData) -> AnnData:
     return adata_sess.copy()
 
