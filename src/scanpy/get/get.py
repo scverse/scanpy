@@ -479,10 +479,11 @@ def _set_obs_rep(
     elif is_obsp:
         adata.obsp[obsp] = val
     else:
-        assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/scverse/scanpy/issues"
+        msg = (
+            "That was unexpected. Please report this bug at:\n\n"
+            "\thttps://github.com/scverse/scanpy/issues"
         )
+        raise AssertionError(msg)
 
 
 def _check_mask(

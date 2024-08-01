@@ -156,7 +156,7 @@ def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     elif adata_dist.uns["dist-mode"] == "direct":
         adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
     else:
-        assert False, "add branch for new dist-mode"
+        pytest.fail("add branch for new dist-mode")
 
     # read back as zarr directly and check it is the same as adata.X
     adata_log1p = read_zarr(temp_store)

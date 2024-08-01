@@ -109,7 +109,7 @@ def test_error_10x_h5_legacy(tmp_path):
     with h5py.File(onepth, "r") as one, h5py.File(twopth, "w") as two:
         one.copy("hg19_chr21", two)
         one.copy("hg19_chr21", two, name="hg19_chr21_copy")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"contains more than one genome"):
         sc.read_10x_h5(twopth)
     sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
 
@@ -140,7 +140,7 @@ def visium_pth(request, tmp_path) -> Path:
         (orig.parent / "tissue_positions.csv").write_text(csv)
         return visium2_pth
     else:
-        assert False
+        pytest.fail("add branch for new visium version")
 
 
 def test_read_visium_counts(visium_pth):

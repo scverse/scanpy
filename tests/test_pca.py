@@ -136,7 +136,7 @@ def pca_params(
                 else {"arpack", "randomized"}
             )
         else:
-            assert False, f"Unknown array type {array_type}"
+            pytest.fail(f"Unknown array type {array_type}")
         if svd_solver_type == "invalid":
             svd_solver = all_svd_solvers - svd_solver
             expected_warning = "Ignoring"
@@ -243,7 +243,10 @@ def test_pca_shapes():
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (20, 19)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match=r"n_components=100 must be between 1 and.*20 with svd_solver='arpack'",
+    ):
         sc.pp.pca(adata, n_comps=100)
 
 

@@ -793,7 +793,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
 
 @pytest.fixture(scope="session")
-def _gene_symbols_adatas():
+def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
     """Create two anndata objects which are equivalent except for var_names
 
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
@@ -826,8 +826,8 @@ def _gene_symbols_adatas():
 
 
 @pytest.fixture()
-def gene_symbols_adatas(_gene_symbols_adatas):
-    a, b = _gene_symbols_adatas
+def gene_symbols_adatas(gene_symbols_adatas_session) -> tuple[AnnData, AnnData]:
+    a, b = gene_symbols_adatas_session
     return a.copy(), b.copy()
 
 
@@ -955,8 +955,8 @@ def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images(f"{id}_gene_symbols")
 
 
-@pytest.fixture(scope="module")
-def _pbmc_scatterplots_session():
+@pytest.fixture(scope="session")
+def pbmc_scatterplots_session() -> AnnData:
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
     pbmc.obs["mask"] = pbmc.obs["louvain"].isin(["0", "1", "3"])
@@ -970,8 +970,8 @@ def _pbmc_scatterplots_session():
 
 
 @pytest.fixture()
-def pbmc_scatterplots(_pbmc_scatterplots_session):
-    return _pbmc_scatterplots_session.copy()
+def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
+    return pbmc_scatterplots_session.copy()
 
 
 @pytest.mark.parametrize(
@@ -1295,7 +1295,7 @@ def test_binary_scatter(image_comparer):
 def test_scatter_specify_layer_and_raw():
     pbmc = pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Cannot use both a layer and.*raw"):
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
@@ -1380,7 +1380,9 @@ def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
     raise a `ValueError`. This test checks that this happens as
     expected.
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"inputs must all come from either `\.obs` or `\.var`"
+    ):
         sc.pl.scatter(pbmc_filtered(), x=x, y=y, color=color, use_raw=use_raw)
 
 

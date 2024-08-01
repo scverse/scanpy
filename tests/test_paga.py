@@ -19,7 +19,7 @@ pytestmark = [needs.igraph]
 
 
 @pytest.fixture(scope="module")
-def _pbmc_session():
+def pbmc_session():
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, groups="bulk_labels")
     pbmc.obs["cool_feature"] = pbmc[:, "CST3"].X.squeeze().copy()
@@ -28,8 +28,8 @@ def _pbmc_session():
 
 
 @pytest.fixture()
-def pbmc(_pbmc_session):
-    return _pbmc_session.copy()
+def pbmc(pbmc_session):
+    return pbmc_session.copy()
 
 
 @pytest.mark.parametrize(

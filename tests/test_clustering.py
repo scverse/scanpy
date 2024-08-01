@@ -75,13 +75,13 @@ def test_leiden_random_state(adata_neighbors, flavor):
 
 @needs.igraph
 def test_leiden_igraph_directed(adata_neighbors):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Cannot use igraph’s leiden.*directed"):
         sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
 
 
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):
         sc.tl.leiden(adata_neighbors, flavor="foo")
 
 
@@ -90,7 +90,7 @@ def test_leiden_wrong_flavor(adata_neighbors):
 def test_leiden_igraph_partition_type(adata_neighbors):
     import leidenalg
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Do not pass in partition_type"):
         sc.tl.leiden(
             adata_neighbors,
             flavor="igraph",

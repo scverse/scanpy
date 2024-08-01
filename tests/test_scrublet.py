@@ -167,7 +167,7 @@ def test_scrublet_data():
 
 
 @pytest.fixture(scope="module")
-def _scrub_small_sess() -> AnnData:
+def scrub_small_sess() -> AnnData:
     # Reduce size of input for faster test
     adata = pbmc200()
     sc.pp.filter_genes(adata, min_counts=100)
@@ -177,8 +177,8 @@ def _scrub_small_sess() -> AnnData:
 
 
 @pytest.fixture()
-def scrub_small(_scrub_small_sess: AnnData):
-    return _scrub_small_sess.copy()
+def scrub_small(scrub_small_sess: AnnData):
+    return scrub_small_sess.copy()
 
 
 test_params = {
