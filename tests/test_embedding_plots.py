@@ -85,7 +85,7 @@ def adata():
     return adata
 
 
-@pytest.fixture
+@pytest.fixture()
 def fixture_request(request):
     """Returns a Request object.
 
@@ -234,7 +234,10 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
 def test_dimension_broadcasting(adata, tmpdir, check_same_image):
     tmpdir = Path(tmpdir)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match=r"Could not broadcast together arguments with shapes: \[2, 3, 1\]",
+    ):
         sc.pl.pca(
             adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
         )
@@ -255,7 +258,10 @@ def test_dimension_broadcasting(adata, tmpdir, check_same_image):
 def test_marker_broadcasting(adata, tmpdir, check_same_image):
     tmpdir = Path(tmpdir)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match=r"Could not broadcast together arguments with shapes: \[2, 1, 3\]",
+    ):
         sc.pl.pca(adata, color=["label", "1_missing"], marker=[".", "^", "x"])
 
     dims_pth = tmpdir / "broadcast_markers.png"

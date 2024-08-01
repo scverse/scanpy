@@ -119,7 +119,7 @@ def get_neighbors() -> Neighbors:
     return Neighbors(anndata_v0_8_constructor_compat(np.array(X)))
 
 
-@pytest.fixture
+@pytest.fixture()
 def neigh() -> Neighbors:
     return get_neighbors()
 
