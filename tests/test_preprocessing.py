@@ -356,11 +356,11 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
     adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     adata = sc.pp.downsample_counts(
@@ -389,7 +389,7 @@ def test_downsample_counts_per_cell_multiple_targets(
     X = X.astype(dtype)
     adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
     adata = sc.pp.downsample_counts(
         adata, counts_per_cell=TARGETS, replace=replace, copy=True
@@ -448,12 +448,12 @@ def test_recipe_weinreb():
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_cells,max_counts,min_cells,min_counts",
+    ("max_cells", "max_counts", "min_cells", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        (100, None, None, None),
+        (None, 100, None, None),
+        (None, None, 20, None),
+        (None, None, None, 20),
     ],
 )
 def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
@@ -487,12 +487,12 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_genes,max_counts,min_genes,min_counts",
+    ("max_genes", "max_counts", "min_genes", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        (100, None, None, None),
+        (None, 100, None, None),
+        (None, None, 20, None),
+        (None, None, None, 20),
     ],
 )
 def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
