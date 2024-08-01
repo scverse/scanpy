@@ -19,7 +19,7 @@ from functools import partial, singledispatch, wraps
 from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Union, overload
 from weakref import WeakSet
 
 import h5py
@@ -44,16 +44,17 @@ else:
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
-    from typing import Any, Callable, Literal, TypeVar, Union
+    from typing import Any, Callable, Literal, TypeVar
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
 
     from ..neighbors import NeighborsParams, RPForestDict
 
-    # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-    # maybe in the future random.Generator
-    AnyRandom = Union[int, np.random.RandomState, None]
+
+# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class Empty(Enum):

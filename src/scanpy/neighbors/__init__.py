@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict, get_args
@@ -24,7 +25,7 @@ from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
+    from collections.abc import Callable, MutableMapping
     from typing import Any, Literal, NotRequired
 
     from anndata import AnnData
@@ -34,8 +35,8 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
-    RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
+RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 N_DCS = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
