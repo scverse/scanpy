@@ -33,7 +33,7 @@ TRANSPOSE_PARAMS = pytest.mark.parametrize(
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata():
     """
     adata.X is np.ones((2, 2))
@@ -327,7 +327,7 @@ def test_non_unique_cols_value_error():
             index=[f"gene_{i}" for i in range(N)],
         ),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"adata\.obs contains duplicated columns"):
         sc.get.obs_df(adata, ["repeated_col"])
 
 
@@ -337,7 +337,7 @@ def test_non_unique_var_index_value_error():
         obs=pd.DataFrame(index=["cell-0", "cell-1"]),
         var=pd.DataFrame(index=["gene-0", "gene-0", "gene-1"]),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"adata\.var_names contains duplicated items"):
         sc.get.obs_df(adata, ["gene-0"])
 
 
@@ -456,7 +456,7 @@ def shared_key_adata(request):
             r"'var_id'.* adata\.obs .* adata\.raw\.var\['gene_symbols'\]",
         )
     else:
-        assert False
+        pytest.fail("add branch for new kind")
 
 
 def test_shared_key_errors(shared_key_adata):

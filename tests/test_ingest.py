@@ -26,7 +26,7 @@ X = np.array(
 T = np.array([[2.0, 3.5, 4.0, 1.0, 4.7], [3.2, 2.0, 5.0, 5.0, 8.0]], dtype=np.float32)
 
 
-@pytest.fixture
+@pytest.fixture()
 def adatas():
     pbmc = pbmc68k_reduced()
     n_split = 500
