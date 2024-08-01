@@ -19,7 +19,7 @@ from functools import partial, singledispatch, wraps
 from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Union, overload
 from weakref import WeakSet
 
 import h5py
@@ -44,14 +44,17 @@ else:
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
-    from typing import Any, Callable, Literal, TypeVar, Union
+    from typing import Any, Callable, Literal, TypeVar
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
 
-    # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-    # maybe in the future random.Generator
-    AnyRandom = Union[int, np.random.RandomState, None]
+    from ..neighbors import NeighborsParams, RPForestDict
+
+
+# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+# maybe in the future random.Generator
+AnyRandom = Union[int, np.random.RandomState, None]
 
 
 class Empty(Enum):
@@ -1010,7 +1013,7 @@ class NeighborsView:
         'params' in adata.uns[key]
     """
 
-    def __init__(self, adata, key=None):
+    def __init__(self, adata: AnnData, key=None):
         self._connectivities = None
         self._distances = None
 
@@ -1041,7 +1044,18 @@ class NeighborsView:
             self._dists_key,
         )
 
-    def __getitem__(self, key):
+    @overload
+    def __getitem__(
+        self, key: Literal["distances", "connectivities"]
+    ) -> sparse.csr_matrix: ...
+    @overload
+    def __getitem__(self, key: Literal["params"]) -> NeighborsParams: ...
+    @overload
+    def __getitem__(self, key: Literal["rp_forest"]) -> RPForestDict: ...
+    @overload
+    def __getitem__(self, key: Literal["connectivities_key"]) -> str: ...
+
+    def __getitem__(self, key: str):
         if key == "distances":
             if "distances" not in self:
                 raise KeyError(f'No "{self._dists_key}" in .obsp')
@@ -1050,10 +1064,12 @@ class NeighborsView:
             if "connectivities" not in self:
                 raise KeyError(f'No "{self._conns_key}" in .obsp')
             return self._connectivities
+        elif key == "connectivities_key":
+            return self._conns_key
         else:
             return self._neighbors_dict[key]
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         if key == "distances":
             return self._distances is not None
         elif key == "connectivities":
