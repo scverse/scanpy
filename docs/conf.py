@@ -172,7 +172,7 @@ def setup(app: Sphinx):
             "enable_inline_math": False,
             "enable_eval_rst": True,
         },
-        True,
+        True,  # noqa: FBT003
     )
 
 

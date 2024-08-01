@@ -395,7 +395,7 @@ def _scatter_obs(
     for ikey, palette in zip(categoricals, palettes):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
-            adata, key, palette, force_update_colors=not palette_was_none
+            adata, key, palette=palette, force_update_colors=not palette_was_none
         )
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
@@ -1272,7 +1272,7 @@ def heatmap(
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
         heatmap_ax.tick_params(axis="y", left=False, labelleft=False)
         heatmap_ax.set_ylabel("")
-        heatmap_ax.grid(False)
+        heatmap_ax.grid(visible=False)
 
         if show_gene_labels:
             heatmap_ax.tick_params(axis="x", labelsize="small")
@@ -1376,7 +1376,7 @@ def heatmap(
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis="x", bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel("")
-        heatmap_ax.grid(False)
+        heatmap_ax.grid(visible=False)
         if show_gene_labels:
             heatmap_ax.tick_params(axis="y", labelsize="small", length=1)
             heatmap_ax.set_yticks(np.arange(len(var_names)))
@@ -1653,7 +1653,7 @@ def tracksplot(
         ax.spines["left"].set_visible(False)
         ax.spines["top"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
-        ax.grid(False)
+        ax.grid(visible=False)
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
@@ -2223,7 +2223,7 @@ def _plot_gene_groups_brackets(
     patch = patches.PathPatch(path, facecolor="none", lw=1.5)
 
     gene_groups_ax.add_patch(patch)
-    gene_groups_ax.grid(False)
+    gene_groups_ax.grid(visible=False)
     gene_groups_ax.axis("off")
     # remove y ticks
     gene_groups_ax.tick_params(axis="y", left=False, labelleft=False)
@@ -2492,7 +2492,7 @@ def _plot_dendrogram(
             labelbottom=False, labeltop=False, labelleft=False, labelright=False
         )
 
-    dendro_ax.grid(False)
+    dendro_ax.grid(visible=False)
 
     dendro_ax.spines["right"].set_visible(False)
     dendro_ax.spines["top"].set_visible(False)
@@ -2549,7 +2549,7 @@ def _plot_categories_as_colorblocks(
         value_sum += value
         label2code[label] = code
 
-    groupby_ax.grid(False)
+    groupby_ax.grid(visible=False)
 
     if orientation == "left":
         groupby_ax.imshow(

@@ -535,7 +535,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 
 
 def add_colors_for_categorical_sample_annotation(
-    adata, key, palette=None, force_update_colors=False
+    adata, key, *, palette=None, force_update_colors=False
 ):
     color_key = f"{key}_colors"
     colors_needed = len(adata.obs[key].cat.categories)

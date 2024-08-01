@@ -13,6 +13,7 @@ import numba
 import numpy as np
 import scipy as sp
 from anndata import AnnData
+from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
@@ -476,8 +477,18 @@ def sqrt(
         return X.sqrt()
 
 
-def normalize_per_cell(  # noqa: PLR0917
+@legacy_api(
+    "counts_per_cell_after",
+    "counts_per_cell",
+    "key_n_counts",
+    "copy",
+    "layers",
+    "use_rep",
+    "min_counts",
+)
+def normalize_per_cell(
     data: AnnData | np.ndarray | spmatrix,
+    *,
     counts_per_cell_after: float | None = None,
     counts_per_cell: np.ndarray | None = None,
     key_n_counts: str = "n_counts",
@@ -956,7 +967,9 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
             X = original_type(X)
     else:
         v = X.reshape(np.multiply(*X.shape))
-        _downsample_array(v, total_counts, random_state, replace=replace, inplace=True)
+        _downsample_array(
+            v, total_counts, random_state=random_state, replace=replace, inplace=True
+        )
     return X
 
 
@@ -964,6 +977,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 def _downsample_array(
     col: np.ndarray,
     target: int,
+    *,
     random_state: AnyRandom = 0,
     replace: bool = True,
     inplace: bool = False,

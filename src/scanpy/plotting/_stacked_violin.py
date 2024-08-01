@@ -23,13 +23,11 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        Mapping,  # Special
-        Sequence,  # ABCs
-    )
+    from collections.abc import Mapping, Sequence
     from typing import Literal, Self
 
     from anndata import AnnData
+    from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
     from ._baseplot_class import _VarNames
@@ -375,7 +373,7 @@ class StackedViolin(BasePlot):
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # to make the stacked violin plots, the
         # `ax` is subdivided horizontally and in each horizontal sub ax
         # a seaborn violin plot is added.
@@ -442,7 +440,7 @@ class StackedViolin(BasePlot):
         if max([len(x) for x in labels]) > 2:
             ax.tick_params(axis="x", labelrotation=90)
         ax.tick_params(axis="both", labelsize="small")
-        ax.grid(False)
+        ax.grid(visible=False)
 
         return normalize
 
@@ -561,7 +559,7 @@ class StackedViolin(BasePlot):
 
             self._setup_violin_axes_ticks(row_ax, num_cols)
 
-    def _setup_violin_axes_ticks(self, row_ax, num_cols):
+    def _setup_violin_axes_ticks(self, row_ax: Axes, num_cols: int):
         """
         Configures each of the violin plot axes ticks like remove or add labels etc.
 
@@ -569,7 +567,7 @@ class StackedViolin(BasePlot):
         # remove the default seaborn grids because in such a compact
         # plot are unnecessary
 
-        row_ax.grid(False)
+        row_ax.grid(visible=False)
         if self.ylim is not None:
             row_ax.set_ylim(self.ylim)
         if self.log:

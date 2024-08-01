@@ -1357,6 +1357,7 @@ def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
     img_key: None | str | Empty,
+    *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
     """
