@@ -188,7 +188,11 @@ def tsne(
     logg.info(
         "    finished",
         time=start,
-        deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
+        deep=(
+            f"added\n"
+            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+        ),
     )
 
     return adata if copy else None

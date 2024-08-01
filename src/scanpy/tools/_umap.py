@@ -271,6 +271,10 @@ def umap(
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_umap', UMAP coordinates (adata.obsm)"),
+        deep=(
+            "added\n"
+            f"    {key_obsm!r}, UMAP coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, UMAP parameters (adata.uns)"
+        ),
     )
     return adata if copy else None
