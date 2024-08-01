@@ -156,12 +156,13 @@ class Aggregate:
                 warnings.warn(
                     "Converting sparse matrix to dense for median calculation. "
                     "This may be very memory intensive for large datasets.",
-                    UserWarning
+                    UserWarning,
                 )
                 group_data = group_data.toarray()
             medians.append(np.median(group_data, axis=0))
         return np.array(medians)
-    
+
+
 def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
@@ -366,7 +367,7 @@ def aggregate_array(
         result["var"] = var_
         if "mean" in funcs:
             result["mean"] = mean_
-    if "median" in funcs:   
+    if "median" in funcs:
         agg = groupby.median()
         result["median"] = agg
     return result
