@@ -52,9 +52,9 @@ def umap(
     random_state: AnyRandom = 0,
     a: float | None = None,
     b: float | None = None,
-    copy: bool = False,
     method: Literal["umap", "rapids"] = "umap",
-    neighbors_key: str | None = None,
+    neighbors_key: str = "neighbors",
+    copy: bool = False,
 ) -> AnnData | None:
     """\
     Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
@@ -122,8 +122,6 @@ def umap(
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
         `spread`.
-    copy
-        Return a copy instead of writing to adata.
     method
         Chosen implementation.
 
@@ -135,11 +133,11 @@ def umap(
             .. deprecated:: 1.10.0
                 Use :func:`rapids_singlecell.tl.umap` instead.
     neighbors_key
-        If not specified, umap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'] for connectivities
-        (default storage places for pp.neighbors).
-        If specified, umap looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+        Umap looks in
+        :attr:`~anndata.AnnData.uns`\\ ``[neighbors_key]`` for neighbors settings and
+        :attr:`~anndata.AnnData.obsp`\\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+    copy
+        Return a copy instead of writing to adata.
 
     Returns
     -------
@@ -153,13 +151,15 @@ def umap(
     """
     adata = adata.copy() if copy else adata
 
-    if neighbors_key is None:
-        neighbors_key = "neighbors"
+    key_obsm, key_uns = ("X_umap", "umap")
 
+    if neighbors_key is None:  # backwards compat
+        neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
         raise ValueError(
             f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
         )
+
     start = logg.info("computing UMAP")
 
     neighbors = NeighborsView(adata, neighbors_key)
@@ -178,10 +178,7 @@ def umap(
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
-    else:
-        a = a
-        b = b
-    adata.uns["umap"] = {"params": {"a": a, "b": b}}
+    adata.uns[key_uns] = dict(params=dict(a=a, b=b))
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
@@ -194,7 +191,7 @@ def umap(
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     if random_state != 0:
-        adata.uns["umap"]["params"]["random_state"] = random_state
+        adata.uns[key_uns]["params"]["random_state"] = random_state
     random_state = check_random_state(random_state)
 
     neigh_params = neighbors["params"]
@@ -262,10 +259,14 @@ def umap(
             random_state=random_state,
         )
         X_umap = umap.fit_transform(X_contiguous)
-    adata.obsm["X_umap"] = X_umap  # annotate samples with UMAP coordinates
+    adata.obsm[key_obsm] = X_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_umap', UMAP coordinates (adata.obsm)"),
+        deep=(
+            "added\n"
+            f"    {key_obsm!r}, UMAP coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, UMAP parameters (adata.uns)"
+        ),
     )
     return adata if copy else None
