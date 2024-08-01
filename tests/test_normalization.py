@@ -236,7 +236,7 @@ def test_normalize_pearson_residuals_pca(
     n_cells, n_genes = adata.shape
     n_unmasked = n_genes - 5
     adata.var["test_mask"] = np.r_[
-        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)
+        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)  # noqa: FBT003
     ]
     n_var_copy = locals()[n_var_copy_name]
     assert isinstance(n_var_copy, (int, np.integer))

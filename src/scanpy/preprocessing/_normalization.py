@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _normalize_data(X, counts, after=None, copy: bool = False):
+def _normalize_data(X, counts, after=None, *, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used

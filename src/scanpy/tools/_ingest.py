@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from legacy_api_wrap import legacy_api
 from packaging.version import Version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
@@ -467,7 +468,8 @@ class Ingest:
         else:
             raise NotImplementedError("Ingest supports knn labeling for now.")
 
-    def to_adata(self, inplace=False):
+    @legacy_api("inplace")
+    def to_adata(self, *, inplace: bool = False) -> AnnData | None:
         """\
         Returns `adata_new` with mapped embeddings and labels.
 

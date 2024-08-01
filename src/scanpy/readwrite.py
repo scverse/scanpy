@@ -20,6 +20,7 @@ from anndata import (
     read_mtx,
     read_text,
 )
+from legacy_api_wrap import legacy_api
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -672,8 +673,9 @@ def write(
 # -------------------------------------------------------------------------------
 
 
+@legacy_api("as_header")
 def read_params(
-    filename: Path | str, asheader: bool = False
+    filename: Path | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
     """\
     Read parameter dictionary from text file.
@@ -702,7 +704,7 @@ def read_params(
     params = OrderedDict([])
     for line in filename.open():
         if "=" in line:
-            if not asheader or line.startswith("#"):
+            if not as_header or line.startswith("#"):
                 line = line[1:] if line.startswith("#") else line
                 key, val = line.split("=")
                 key = key.strip()
@@ -1053,7 +1055,7 @@ def _check_datafile_present_and_download(path, backup_url=None):
     return True
 
 
-def is_valid_filename(filename: Path, return_ext=False):
+def is_valid_filename(filename: Path, *, return_ext: bool = False):
     """Check whether the argument is a filename."""
     ext = filename.suffixes
 

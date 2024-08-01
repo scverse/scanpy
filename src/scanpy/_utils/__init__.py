@@ -398,7 +398,7 @@ def get_associated_colors_of_groups(reference_colors, asso_matrix):
     ]
 
 
-def identify_groups(ref_labels, pred_labels, return_overlaps=False):
+def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
     """Which predicted label explains which reference label?
 
     A predicted label explains the reference label which maximizes the minimum
@@ -497,7 +497,8 @@ def get_random_state(seed: AnyRandom) -> np.random.RandomState:
 def update_params(
     old_params: Mapping[str, Any],
     new_params: Mapping[str, Any],
-    check=False,
+    *,
+    check: bool = False,
 ) -> dict[str, Any]:
     """\
     Update old_params with new_params.
@@ -653,7 +654,7 @@ def _(
 
 
 def make_axis_chunks(
-    X: DaskArray, axis: Literal[0, 1], pad=True
+    X: DaskArray, axis: Literal[0, 1]
 ) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
         return (X.chunks[axis], (1,))
