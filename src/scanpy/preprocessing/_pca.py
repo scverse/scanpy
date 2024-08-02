@@ -46,6 +46,7 @@ def pca(
     dtype: DTypeLike = "float32",
     chunked: bool = False,
     chunk_size: int | None = None,
+    key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | np.ndarray | spmatrix | None:
     """\
@@ -137,6 +138,15 @@ def pca(
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
+    key_added
+        If not specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ `['X_pca']`, the loadings as
+        :attr:`~anndata.AnnData.varm`\\ `['PCs']`, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ `['pca']`.
+        If specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]``, the loadings as
+        :attr:`~anndata.AnnData.varm`\\ ``[key_added]``, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
@@ -150,13 +160,13 @@ def pca(
     Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
     Sets the following fields:
 
-    `.obsm['X_pca']` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
-    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+    `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings.
-    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
-    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Explained variance, equivalent to the eigenvalues of the
         covariance matrix.
     """
@@ -313,7 +323,9 @@ def pca(
         X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
-        key_obsm, key_varm, key_uns = ("X_pca", "PCs", "pca")
+        key_obsm, key_varm, key_uns = (
+            ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
+        )
         adata.obsm[key_obsm] = X_pca
 
         if mask_var is not None:

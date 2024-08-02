@@ -250,27 +250,36 @@ def test_pca_shapes():
         sc.pp.pca(adata, n_comps=100)
 
 
-def test_pca_sparse():
+@pytest.mark.parametrize(
+    ("key_added", "keys_expected"),
+    [
+        pytest.param(None, ("X_pca", "PCs", "pca"), id="None"),
+        pytest.param("custom_key", ("custom_key",) * 3, id="custom_key"),
+    ],
+)
+def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     """
     Tests that implicitly centered pca on sparse arrays returns equivalent results to
     explicit centering on dense arrays.
     """
-    pbmc = pbmc3k_normalized()
+    pbmc = pbmc3k_normalized()[:200].copy()
 
     pbmc_dense = pbmc.copy()
     pbmc_dense.X = pbmc_dense.X.toarray()
 
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
-    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, copy=True)
+    explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
+
+    key_obsm, key_varm, key_uns = keys_expected
 
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance"], explicit.uns["pca"]["variance"]
+        implicit.uns["pca"]["variance"], explicit.uns[key_uns]["variance"]
     )
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns["pca"]["variance_ratio"]
+        implicit.uns["pca"]["variance_ratio"], explicit.uns[key_uns]["variance_ratio"]
     )
-    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm["X_pca"])
-    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm["PCs"])
+    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[key_obsm])
+    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
 
 
 def test_pca_reproducible(array_type):
