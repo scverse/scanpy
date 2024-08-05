@@ -426,7 +426,7 @@ def test_stacked_violin_obj(image_comparer, plt):
 
 # checking for https://github.com/scverse/scanpy/issues/3152
 def test_stacked_violin_swap_axes_match():
-    pbmc = pbmc68k_reduced()[:500, :]
+    pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(
         pbmc,
         "bulk_labels",
@@ -437,7 +437,7 @@ def test_stacked_violin_swap_axes_match():
     )
     swapped_plot = sc.pl.rank_genes_groups_stacked_violin(
         pbmc,
-        n_genes=5,
+        n_genes=2,
         key="wilcoxon",
         groupby="bulk_labels",
         swap_axes=True,
@@ -445,14 +445,25 @@ def test_stacked_violin_swap_axes_match():
     )
 
     orig_plot = sc.pl.rank_genes_groups_stacked_violin(
-        pbmc, n_genes=5, key="wilcoxon", groupby="bulk_labels", return_fig=True
+        pbmc, n_genes=2, key="wilcoxon", groupby="bulk_labels", return_fig=True
     )
 
-    swapped_labels = swapped_plot.get_axes()["mainplot_ax"].xaxis.get_ticklabels()
-    orig_labels = orig_plot.get_axes()["mainplot_ax"].yaxis.get_ticklabels()
-    assert len(swapped_labels) == len(orig_labels)
-    for i in range(len(swapped_labels)):
-        assert swapped_labels[i].get_text() == orig_labels[i].get_text()
+    swapped_cell_type_labels = swapped_plot.get_axes()[
+        "mainplot_ax"
+    ].xaxis.get_ticklabels()
+    orig_cell_type_labels = orig_plot.get_axes()["mainplot_ax"].yaxis.get_ticklabels()
+    assert len(swapped_cell_type_labels) == len(orig_cell_type_labels)
+    for i in range(len(swapped_cell_type_labels)):
+        assert (
+            swapped_cell_type_labels[i].get_text()
+            == orig_cell_type_labels[i].get_text()
+        )
+
+    swapped_gene_labels = swapped_plot.get_axes()["mainplot_ax"].yaxis.get_ticklabels()
+    orig_gene_labels = orig_plot.get_axes()["mainplot_ax"].xaxis.get_ticklabels()
+    assert len(swapped_gene_labels) == len(orig_gene_labels)
+    for i in range(len(swapped_gene_labels)):
+        assert swapped_gene_labels[i].get_text() == orig_gene_labels[i].get_text()
 
 
 def test_tracksplot(image_comparer):
