@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime
 from functools import partial
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
@@ -242,4 +242,4 @@ extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
 }
-rtd_links_prefix = Path("src")
+rtd_links_prefix = PurePosixPath("src")
