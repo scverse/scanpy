@@ -435,35 +435,26 @@ def test_stacked_violin_swap_axes_match():
         pts=True,
         key_added="wilcoxon",
     )
-    swapped_plot = sc.pl.rank_genes_groups_stacked_violin(
+    swapped_ax = sc.pl.rank_genes_groups_stacked_violin(
         pbmc,
         n_genes=2,
         key="wilcoxon",
         groupby="bulk_labels",
         swap_axes=True,
         return_fig=True,
-    )
+    ).get_axes()["mainplot_ax"]
 
-    orig_plot = sc.pl.rank_genes_groups_stacked_violin(
+    orig_ax = sc.pl.rank_genes_groups_stacked_violin(
         pbmc, n_genes=2, key="wilcoxon", groupby="bulk_labels", return_fig=True
-    )
-
-    swapped_cell_type_labels = swapped_plot.get_axes()[
-        "mainplot_ax"
-    ].xaxis.get_ticklabels()
-    orig_cell_type_labels = orig_plot.get_axes()["mainplot_ax"].yaxis.get_ticklabels()
-    assert len(swapped_cell_type_labels) == len(orig_cell_type_labels)
-    for i in range(len(swapped_cell_type_labels)):
-        assert (
-            swapped_cell_type_labels[i].get_text()
-            == orig_cell_type_labels[i].get_text()
-        )
-
-    swapped_gene_labels = swapped_plot.get_axes()["mainplot_ax"].yaxis.get_ticklabels()
-    orig_gene_labels = orig_plot.get_axes()["mainplot_ax"].xaxis.get_ticklabels()
-    assert len(swapped_gene_labels) == len(orig_gene_labels)
-    for i in range(len(swapped_gene_labels)):
-        assert swapped_gene_labels[i].get_text() == orig_gene_labels[i].get_text()
+    ).get_axes()["mainplot_ax"]
+    axes = [swapped_ax, orig_ax]
+    # first check x of swapped against y of orig, and then the reverse
+    for i in range(2):
+        labels_1 = axes[(i % 2)].xaxis.get_ticklabels()
+        labels_2 = axes[(i + 1) % 2].yaxis.get_ticklabels()
+        assert len(labels_1) == len(labels_2)
+        for i in range(len(labels_1)):
+            assert labels_1[i].get_text() == labels_2[i].get_text()
 
 
 def test_tracksplot(image_comparer):
