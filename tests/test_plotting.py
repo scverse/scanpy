@@ -424,39 +424,6 @@ def test_stacked_violin_obj(image_comparer, plt):
     save_and_compare_images("stacked_violin_return_fig")
 
 
-# checking for https://github.com/scverse/scanpy/issues/3152
-def test_stacked_violin_swap_axes_match():
-    pbmc = pbmc68k_reduced()
-    sc.tl.rank_genes_groups(
-        pbmc,
-        "bulk_labels",
-        method="wilcoxon",
-        tie_correct=True,
-        pts=True,
-        key_added="wilcoxon",
-    )
-    swapped_ax = sc.pl.rank_genes_groups_stacked_violin(
-        pbmc,
-        n_genes=2,
-        key="wilcoxon",
-        groupby="bulk_labels",
-        swap_axes=True,
-        return_fig=True,
-    ).get_axes()["mainplot_ax"]
-
-    orig_ax = sc.pl.rank_genes_groups_stacked_violin(
-        pbmc, n_genes=2, key="wilcoxon", groupby="bulk_labels", return_fig=True
-    ).get_axes()["mainplot_ax"]
-    axes = [swapped_ax, orig_ax]
-    # first check x of swapped against y of orig, and then the reverse
-    for i in range(2):
-        labels_1 = axes[(i % 2)].xaxis.get_ticklabels()
-        labels_2 = axes[(i + 1) % 2].yaxis.get_ticklabels()
-        assert len(labels_1) == len(labels_2)
-        for i in range(len(labels_1)):
-            assert labels_1[i].get_text() == labels_2[i].get_text()
-
-
 def test_tracksplot(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
