@@ -417,11 +417,11 @@ class StackedViolin(BasePlot):
         _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
 
         # Ensure the categories axis is always ordered identically.
-        # `_color_df` always provides the x-axis labels.
-        # So if the axes are swapped, this needs to be ensured.
-        # It would be cleaner to pass this in, but `_matrix.columns` is edited here.
+        # If the axes are not swapped, the above _matrix.columns is used in the actual violin plot (i.e., unique names).
+        # If they are swapped, then use the same as the labels used below.
+        labels = _color_df.columns
         if self.are_axes_swapped:
-            x_axis_order = _color_df.columns
+            x_axis_order = labels
         else:
             x_axis_order = _matrix.columns
 
@@ -455,7 +455,6 @@ class StackedViolin(BasePlot):
         # 0.5 to position the ticks on the center of the violins
         x_ticks = np.arange(_color_df.shape[1]) + 0.5
         ax.set_xticks(x_ticks)
-        labels = _color_df.columns
         ax.set_xticklabels(labels, minor=False, ha="center")
         # rotate x tick labels if they are longer than 2 characters
         if max([len(x) for x in labels]) > 2:
