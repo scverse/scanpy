@@ -237,8 +237,9 @@ plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
-# extlinks config
+# link config
 extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
 }
+rtd_links_prefix = Path("src")
