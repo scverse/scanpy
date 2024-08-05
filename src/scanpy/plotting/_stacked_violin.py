@@ -410,8 +410,29 @@ class StackedViolin(BasePlot):
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
+
+        # All columns should have a unique name, yet, frequently
+        # gene names are repeated in self.var_names,  otherwise the
+        # violin plot will not distinguish those genes
+        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
+
+        # Ensure the categories axis is always ordered identically.
+        # `_color_df` always provides the x-axis labels.
+        # So if the axes are swapped, this needs to be ensured.
+        # It would be cleaner to pass this in, but `_matrix.columns` is edited here.
+        if self.are_axes_swapped:
+            x_axis_order = _color_df.columns
+        else:
+            x_axis_order = _matrix.columns
+
         self._make_rows_of_violinplots(
-            ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
+            ax,
+            _matrix,
+            colormap_array,
+            _color_df,
+            x_spacer_size,
+            y_spacer_size,
+            x_axis_order,
         )
 
         # turn on axis for `ax` as this is turned off
@@ -445,7 +466,14 @@ class StackedViolin(BasePlot):
         return normalize
 
     def _make_rows_of_violinplots(
-        self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
+        self,
+        ax,
+        _matrix,
+        colormap_array,
+        _color_df,
+        x_spacer_size,
+        y_spacer_size,
+        x_axis_order,
     ):
         import seaborn as sns  # Slow import, only import if called
 
@@ -459,11 +487,6 @@ class StackedViolin(BasePlot):
             self.legends_width = 0.0
         else:
             row_colors = [None] * _color_df.shape[0]
-
-        # All columns should have a unique name, yet, frequently
-        # gene names are repeated in self.var_names,  otherwise the
-        # violin plot will not distinguish those genes
-        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
 
         # transform the  dataframe into a dataframe having three columns:
         # the categories name (from groupby),
@@ -543,9 +566,10 @@ class StackedViolin(BasePlot):
                 hue=None if palette_colors is None else x,
                 palette=palette_colors,
                 color=row_colors[idx],
+                order=x_axis_order,
+                hue_order=x_axis_order,
                 **self.kwds,
             )
-
             if self.stripplot:
                 row_ax = sns.stripplot(
                     x=x,
