@@ -419,6 +419,7 @@ class StackedViolin(BasePlot):
         # Ensure the categories axis is always ordered identically.
         # If the axes are not swapped, the above _matrix.columns is used in the actual violin plot (i.e., unique names).
         # If they are swapped, then use the same as the labels used below.
+        # Without this, `_make_rows_of_violinplots` does not know about the order of the categories in labels.
         labels = _color_df.columns
         if self.are_axes_swapped:
             x_axis_order = labels
