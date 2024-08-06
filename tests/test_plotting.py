@@ -426,7 +426,7 @@ def test_stacked_violin_obj(image_comparer, plt):
 
 # checking for https://github.com/scverse/scanpy/issues/3152
 def test_stacked_violin_swap_axes_match(image_comparer):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=10)
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(
         pbmc,
