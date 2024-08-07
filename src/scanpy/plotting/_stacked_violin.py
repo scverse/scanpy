@@ -410,8 +410,27 @@ class StackedViolin(BasePlot):
         colormap_array = cmap(normalize(_color_df.values))
         x_spacer_size = self.plot_x_padding
         y_spacer_size = self.plot_y_padding
+
+        # All columns should have a unique name, yet, frequently
+        # gene names are repeated in self.var_names,  otherwise the
+        # violin plot will not distinguish those genes
+        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
+
+        # Ensure the categories axis is always ordered identically.
+        # If the axes are not swapped, the above _matrix.columns is used in the actual violin plot (i.e., unique names).
+        # If they are swapped, then use the same as the labels used below.
+        # Without this, `_make_rows_of_violinplots` does not know about the order of the categories in labels.
+        labels = _color_df.columns
+        x_axis_order = labels if self.are_axes_swapped else _matrix.columns
+
         self._make_rows_of_violinplots(
-            ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
+            ax,
+            _matrix,
+            colormap_array,
+            _color_df,
+            x_spacer_size,
+            y_spacer_size,
+            x_axis_order,
         )
 
         # turn on axis for `ax` as this is turned off
@@ -434,7 +453,6 @@ class StackedViolin(BasePlot):
         # 0.5 to position the ticks on the center of the violins
         x_ticks = np.arange(_color_df.shape[1]) + 0.5
         ax.set_xticks(x_ticks)
-        labels = _color_df.columns
         ax.set_xticklabels(labels, minor=False, ha="center")
         # rotate x tick labels if they are longer than 2 characters
         if max([len(x) for x in labels]) > 2:
@@ -445,7 +463,14 @@ class StackedViolin(BasePlot):
         return normalize
 
     def _make_rows_of_violinplots(
-        self, ax, _matrix, colormap_array, _color_df, x_spacer_size, y_spacer_size
+        self,
+        ax,
+        _matrix,
+        colormap_array,
+        _color_df,
+        x_spacer_size,
+        y_spacer_size,
+        x_axis_order,
     ):
         import seaborn as sns  # Slow import, only import if called
 
@@ -459,11 +484,6 @@ class StackedViolin(BasePlot):
             self.legends_width = 0.0
         else:
             row_colors = [None] * _color_df.shape[0]
-
-        # All columns should have a unique name, yet, frequently
-        # gene names are repeated in self.var_names,  otherwise the
-        # violin plot will not distinguish those genes
-        _matrix.columns = [f"{x}_{idx}" for idx, x in enumerate(_matrix.columns)]
 
         # transform the  dataframe into a dataframe having three columns:
         # the categories name (from groupby),
@@ -543,9 +563,10 @@ class StackedViolin(BasePlot):
                 hue=None if palette_colors is None else x,
                 palette=palette_colors,
                 color=row_colors[idx],
+                order=x_axis_order,
+                hue_order=x_axis_order,
                 **self.kwds,
             )
-
             if self.stripplot:
                 row_ax = sns.stripplot(
                     x=x,
