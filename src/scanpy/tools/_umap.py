@@ -226,9 +226,6 @@ def umap(
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
-    else:
-        a = a
-        b = b
 
     adata.uns[key_uns] = dict(params=dict(a=a, b=b))
     if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
