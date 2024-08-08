@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime
-from pathlib import Path
+from functools import partial
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
+from docutils import nodes
 from packaging.version import Version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -21,7 +23,6 @@ if TYPE_CHECKING:
 
 # -- General configuration ------------------------------------------------
 
-
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
@@ -32,7 +33,7 @@ suppress_warnings = [
 project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
-copyright = f"{datetime.now():%Y}, the Scanpy development team."
+copyright = f"{datetime.now():%Y}, the Scanpy development team"
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
@@ -42,11 +43,23 @@ if Version(version).is_devrelease:
 
 release = version
 
+# Bibliography settings
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+
+
 # default settings
 templates_path = ["_templates"]
 master_doc = "index"
 default_role = "literal"
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    # exclude all 0.x.y.md files, but not index.md
+    "release-notes/[!i]*.md",
+]
 
 extensions = [
     "myst_nb",
@@ -59,6 +72,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinxcontrib.bibtex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
@@ -90,7 +104,8 @@ myst_enable_extensions = [
     "html_image",
     "html_admonition",
 ]
-myst_url_schemes = ("http", "https", "mailto")
+myst_url_schemes = ("http", "https", "mailto", "ftp")
+myst_heading_anchors = 3
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
@@ -127,7 +142,6 @@ intersphinx_mapping = dict(
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
-    tutorials=("https://scanpy-tutorials.readthedocs.io/en/latest/", None),
 )
 
 
@@ -147,6 +161,8 @@ html_title = "scanpy"
 
 def setup(app: Sphinx):
     """App setup hook."""
+    app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
+    app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
     app.add_config_value(
         "recommonmark_config",
         {
@@ -156,7 +172,7 @@ def setup(app: Sphinx):
             "enable_inline_math": False,
             "enable_eval_rst": True,
         },
-        True,
+        True,  # noqa: FBT003
     )
 
 
@@ -187,11 +203,14 @@ qualname_overrides = {
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
+    "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
 }
 
 nitpick_ignore = [
     # Technical issues
     ("py:class", "numpy.int64"),  # documented as “attribute”
+    ("py:class", "numpy._typing._dtype_like._SupportsDType"),
+    ("py:class", "numpy._typing._dtype_like._DTypeDict"),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
@@ -218,8 +237,9 @@ plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
-# extlinks config
+# link config
 extlinks = {
     "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
     "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
 }
+rtd_links_prefix = PurePosixPath("src")
