@@ -273,7 +273,7 @@ def umap(
         else {}
     )
     if method == "densmap":
-        adata.uns[uns_name]["params"].update(
+        adata.uns[key_uns]["params"].update(
             {
                 "dens_lambda": densmap_kwds["lambda"],
                 "dens_frac": densmap_kwds["frac"],
