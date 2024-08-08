@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
+from legacy_api_wrap import legacy_api
 from scipy.sparse import csr_matrix, issparse
 
 
+@legacy_api("max_fraction", "mult_with_mean")
 def normalize_per_cell_weinreb16_deprecated(
     X: np.ndarray,
+    *,
     max_fraction: float = 1,
     mult_with_mean: bool = False,
 ) -> np.ndarray:

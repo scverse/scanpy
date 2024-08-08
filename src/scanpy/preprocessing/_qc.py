@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
-def _choose_mtx_rep(adata, use_raw: bool = False, layer: str | None = None):
+def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
     is_layer = layer is not None
     if use_raw and is_layer:
         raise ValueError(
@@ -98,7 +98,7 @@ def describe_obs(
         )
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw, layer)
+        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
         if isspmatrix_coo(X):
             X = csr_matrix(X)  # COO not subscriptable
         if issparse(X):
@@ -185,7 +185,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw, layer)
+        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
         if isspmatrix_coo(X):
             X = csr_matrix(X)  # COO not subscriptable
         if issparse(X):
@@ -303,7 +303,7 @@ def calculate_qc_metrics(
             FutureWarning,
         )
     # Pass X so I only have to do it once
-    X = _choose_mtx_rep(adata, use_raw, layer)
+    X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
     if isspmatrix_coo(X):
         X = csr_matrix(X)  # COO not subscriptable
     if issparse(X):

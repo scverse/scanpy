@@ -195,6 +195,7 @@ def _get_array_values(
     X,
     dim_names: pd.Index,
     keys: list[str],
+    *,
     axis: Literal[0, 1],
     backed: bool,
 ):
@@ -479,10 +480,11 @@ def _set_obs_rep(
     elif is_obsp:
         adata.obsp[obsp] = val
     else:
-        assert False, (
-            "That was unexpected. Please report this bug at:\n\n\t"
-            " https://github.com/scverse/scanpy/issues"
+        msg = (
+            "That was unexpected. Please report this bug at:\n\n"
+            "\thttps://github.com/scverse/scanpy/issues"
         )
+        raise AssertionError(msg)
 
 
 def _check_mask(

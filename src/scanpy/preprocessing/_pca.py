@@ -24,6 +24,7 @@ from ._utils import _get_mean_var
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
     from scipy.sparse import spmatrix
+    from sklearn.decomposition import PCA
 
     from .._utils import AnyRandom, Empty
 
@@ -43,9 +44,10 @@ def pca(
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
-    copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
+    key_added: str | None = None,
+    copy: bool = False,
 ) -> AnnData | np.ndarray | spmatrix | None:
     """\
     Principal component analysis :cite:p:`Pedregosa2011`.
@@ -126,9 +128,6 @@ def pca(
         Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned. Is ignored otherwise.
     chunked
         If `True`, perform an incremental PCA on segments of `chunk_size`.
         The incremental PCA automatically zero centers and ignores settings of
@@ -139,6 +138,18 @@ def pca(
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
+    key_added
+        If not specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ `['X_pca']`, the loadings as
+        :attr:`~anndata.AnnData.varm`\\ `['PCs']`, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ `['pca']`.
+        If specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]``, the loadings as
+        :attr:`~anndata.AnnData.varm`\\ ``[key_added]``, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+    copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
+        is returned. Is ignored otherwise.
 
     Returns
     -------
@@ -149,13 +160,13 @@ def pca(
     Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
     Sets the following fields:
 
-    `.obsm['X_pca']` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
-    `.varm['PCs']` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
+    `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings.
-    `.uns['pca']['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
-    `.uns['pca']['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
+    `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Explained variance, equivalent to the eigenvalues of the
         covariance matrix.
     """
@@ -279,21 +290,11 @@ def pca(
         )
         X_pca = pca_.fit_transform(X)
     elif issparse(X) and zero_center:
-        from sklearn.decomposition import PCA
-
         svd_solver = _handle_sklearn_args(svd_solver, "PCA (with sparse input)")
 
-        output = _pca_with_sparse(
+        X_pca, pca_ = _pca_with_sparse(
             X, n_comps, solver=svd_solver, random_state=random_state
         )
-        # this is just a wrapper for the results
-        X_pca = output["X_pca"]
-        pca_ = PCA(
-            n_components=n_comps, svd_solver=svd_solver, random_state=random_state
-        )
-        pca_.components_ = output["components"]
-        pca_.explained_variance_ = output["variance"]
-        pca_.explained_variance_ratio_ = output["variance_ratio"]
     elif not zero_center:
         if is_dask:
             from dask_ml.decomposition import TruncatedSVD
@@ -322,34 +323,37 @@ def pca(
         X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
-        adata.obsm["X_pca"] = X_pca
+        key_obsm, key_varm, key_uns = (
+            ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
+        )
+        adata.obsm[key_obsm] = X_pca
 
         if mask_var is not None:
-            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][mask_var] = pca_.components_.T
+            adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm[key_varm][mask_var] = pca_.components_.T
         else:
-            adata.varm["PCs"] = pca_.components_.T
+            adata.varm[key_varm] = pca_.components_.T
 
-        uns_entry = {
-            "params": {
-                "zero_center": zero_center,
-                "use_highly_variable": mask_var_param == "highly_variable",
-                "mask_var": mask_var_param,
-            },
-            "variance": pca_.explained_variance_,
-            "variance_ratio": pca_.explained_variance_ratio_,
-        }
+        params = dict(
+            zero_center=zero_center,
+            use_highly_variable=mask_var_param == "highly_variable",
+            mask_var=mask_var_param,
+        )
         if layer is not None:
-            uns_entry["params"]["layer"] = layer
-        adata.uns["pca"] = uns_entry
+            params["layer"] = layer
+        adata.uns[key_uns] = dict(
+            params=params,
+            variance=pca_.explained_variance_,
+            variance_ratio=pca_.explained_variance_ratio_,
+        )
 
         logg.info("    finished", time=logg_start)
         logg.debug(
             "and added\n"
-            "    'X_pca', the PCA coordinates (adata.obs)\n"
-            "    'PC1', 'PC2', ..., the loadings (adata.var)\n"
-            "    'pca_variance', the variance / eigenvalues (adata.uns)\n"
-            "    'pca_variance_ratio', the variance ratio (adata.uns)"
+            f"    {key_obsm!r}, the PCA coordinates (adata.obs)\n"
+            f"    {key_varm!r}, the loadings (adata.varm)\n"
+            f"    'pca_variance', the variance / eigenvalues (adata.uns[{key_uns!r}])\n"
+            f"    'pca_variance_ratio', the variance ratio (adata.uns[{key_uns!r}])"
         )
         return adata if copy else None
     else:
@@ -408,7 +412,7 @@ def _pca_with_sparse(
     solver: str = "arpack",
     mu: NDArray[np.floating] | None = None,
     random_state: AnyRandom = None,
-):
+) -> tuple[NDArray[np.floating], PCA]:
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(X.shape))
@@ -461,13 +465,13 @@ def _pca_with_sparse(
     total_var = _get_mean_var(X)[1].sum()
     ev_ratio = ev / total_var
 
-    output = {
-        "X_pca": X_pca,
-        "variance": ev,
-        "variance_ratio": ev_ratio,
-        "components": v,
-    }
-    return output
+    from sklearn.decomposition import PCA
+
+    pca = PCA(n_components=n_pcs, svd_solver=solver, random_state=random_state)
+    pca.explained_variance_ = ev
+    pca.explained_variance_ratio_ = ev_ratio
+    pca.components_ = v
+    return X_pca, pca
 
 
 def _handle_dask_ml_args(svd_solver: str, method: str) -> str:
@@ -485,7 +489,7 @@ def _handle_dask_ml_args(svd_solver: str, method: str) -> str:
     return _handle_x_args("dask_ml", svd_solver, method, method2args, method2default)
 
 
-def _handle_sklearn_args(svd_solver: str, method: str) -> str:
+def _handle_sklearn_args(svd_solver: str | None, method: str) -> str:
     method2args = {
         "PCA": {"auto", "full", "arpack", "randomized"},
         "TruncatedSVD": {"arpack", "randomized"},
@@ -500,7 +504,7 @@ def _handle_sklearn_args(svd_solver: str, method: str) -> str:
     return _handle_x_args("sklearn", svd_solver, method, method2args, method2default)
 
 
-def _handle_x_args(lib, svd_solver, method, method2args, method2default):
+def _handle_x_args(lib, svd_solver: str | None, method, method2args, method2default):
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             warnings.warn(

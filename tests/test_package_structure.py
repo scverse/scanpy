@@ -53,7 +53,7 @@ api_functions = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def in_project_dir():
     wd_orig = Path.cwd()
     os.chdir(proj_dir)

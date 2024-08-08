@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     ),
     ids=lambda x: f"{x[0].__name__}-{x[1]}",
 )
-def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
+def pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     from ..._helpers.data import pbmc3k
 
     sparsity_func, dtype = request.param
@@ -50,14 +50,14 @@ def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     }
 
 
-@pytest.fixture
-def pbmc3k_parametrized(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
-    return _pbmc3ks_parametrized_session[False].copy
+@pytest.fixture()
+def pbmc3k_parametrized(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
+    return pbmc3ks_parametrized_session[False].copy
 
 
-@pytest.fixture
-def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
-    return _pbmc3ks_parametrized_session[True].copy
+@pytest.fixture()
+def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
+    return pbmc3ks_parametrized_session[True].copy
 
 
 @pytest.fixture(

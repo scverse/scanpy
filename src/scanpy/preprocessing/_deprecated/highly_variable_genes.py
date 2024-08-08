@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 
 from ... import logging as logg
@@ -18,8 +19,21 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
-def filter_genes_dispersion(  # noqa: PLR0917
+@legacy_api(
+    "flavor",
+    "min_disp",
+    "max_disp",
+    "min_mean",
+    "max_mean",
+    "n_bins",
+    "n_top_genes",
+    "log",
+    "subset",
+    "copy",
+)
+def filter_genes_dispersion(
     data: AnnData | spmatrix | np.ndarray,
+    *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
     max_disp: float | None = None,

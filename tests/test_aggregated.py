@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import get_args
+
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -9,18 +11,24 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._utils import _resolve_axis
+from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 
-@pytest.fixture
+@pytest.fixture(params=get_args(AggType))
+def metric(request: pytest.FixtureRequest) -> AggType:
+    return request.param
+
+
+@pytest.fixture()
 def df_base():
     ax_base = ["A", "B"]
     return pd.DataFrame(index=ax_base)
 
 
-@pytest.fixture
+@pytest.fixture()
 def df_groupby():
     ax_groupby = [
         *["v0", "v1", "v2"],
@@ -41,7 +49,7 @@ def df_groupby():
     return df_groupby
 
 
-@pytest.fixture
+@pytest.fixture()
 def X():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v
@@ -88,7 +96,6 @@ def test_mask(axis):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregate_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -135,7 +142,6 @@ def test_aggregate_vs_pandas(metric, array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregate_axis(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -222,7 +228,8 @@ def test_aggregate_axis_specification(axis_name):
                 {
                     "a": ["a", "a", "b", "b"],
                     "b": ["c", "d", "d", "d"],
-                }
+                },
+                index=["a_c", "a_d", "b_d1", "b_d2"],
             ),
             ["a", "b"],
             ["count_nonzero"],  # , "sum", "mean"],
@@ -253,7 +260,8 @@ def test_aggregate_axis_specification(axis_name):
                 {
                     "a": ["a", "a", "b", "b"],
                     "b": ["c", "d", "d", "d"],
-                }
+                },
+                index=["a_c", "a_d", "b_d1", "b_d2"],
             ),
             ["a", "b"],
             ["sum", "mean", "count_nonzero"],
@@ -284,7 +292,8 @@ def test_aggregate_axis_specification(axis_name):
                 {
                     "a": ["a", "a", "b", "b"],
                     "b": ["c", "d", "d", "d"],
-                }
+                },
+                index=["a_c", "a_d", "b_d1", "b_d2"],
             ),
             ["a", "b"],
             ["mean"],
@@ -381,7 +390,6 @@ def test_combine_categories(label_cols, cols, expected):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-@pytest.mark.parametrize("metric", ["sum", "mean", "var", "count_nonzero"])
 def test_aggregate_arraytype(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[

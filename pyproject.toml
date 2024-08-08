@@ -232,6 +232,8 @@ select = [
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
     "PLR0917", # Ban APIs with too many positional parameters
+    "FBT",     # No positional boolean parameters
+    "PT",      # Pytest style
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines
