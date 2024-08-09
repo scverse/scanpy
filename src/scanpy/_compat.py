@@ -4,9 +4,13 @@ import sys
 from dataclasses import dataclass, field
 from functools import cache, partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from legacy_api_wrap import legacy_api
 from packaging.version import Version
+
+if TYPE_CHECKING:
+    from importlib.metadata import PackageMetadata
 
 try:
     from dask.array import Array as DaskArray
@@ -60,14 +64,14 @@ else:
             os.chdir(self._old_cwd.pop())
 
 
-def pkg_metadata(package):
+def pkg_metadata(package) -> PackageMetadata:
     from importlib.metadata import metadata
 
     return metadata(package)
 
 
 @cache
-def pkg_version(package):
+def pkg_version(package) -> Version:
     from importlib.metadata import version
 
     return Version(version(package))

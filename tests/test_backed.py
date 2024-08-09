@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from functools import partial
 
+import h5py
 import pytest
 from anndata import read_h5ad
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 
 
 @pytest.mark.parametrize(
@@ -94,5 +97,11 @@ def test_scatter_backed(backed_adata):
     sc.pl.scatter(backed_adata, color="0", basis="pca")
 
 
-def test_dotplot_backed(backed_adata):
-    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat")
+def test_dotplot_backed(request: pytest.FixtureRequest, backed_adata):
+    if isinstance(backed_adata.X, h5py.Dataset) and pkg_version("anndata") < Version(
+        "0.11.0.dev100"
+    ):
+        reason = "anndata bug when setting X to h5py.Dataset"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    sc.tl.dendrogram(backed_adata, "cat")
+    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat", dendrogram=True)
