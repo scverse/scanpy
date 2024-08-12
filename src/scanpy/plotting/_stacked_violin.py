@@ -12,7 +12,7 @@ from packaging.version import Version
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import _AxesSubplot
 
@@ -264,19 +265,19 @@ class StackedViolin(BasePlot):
     def style(
         self,
         *,
-        cmap: str | None = DEFAULT_COLORMAP,
-        stripplot: bool | None = DEFAULT_STRIPPLOT,
-        jitter: float | bool | None = DEFAULT_JITTER,
-        jitter_size: int | None = DEFAULT_JITTER_SIZE,
-        linewidth: float | None = DEFAULT_LINE_WIDTH,
-        row_palette: str | None = DEFAULT_ROW_PALETTE,
-        density_norm: Literal["area", "count", "width"] = DEFAULT_DENSITY_NORM,
-        yticklabels: bool | None = DEFAULT_PLOT_YTICKLABELS,
-        ylim: tuple[float, float] | None = DEFAULT_YLIM,
-        x_padding: float | None = DEFAULT_PLOT_X_PADDING,
-        y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
+        cmap: str | None | Empty = _empty,
+        stripplot: bool | None | Empty = _empty,
+        jitter: float | bool | None | Empty = _empty,
+        jitter_size: int | None | Empty = _empty,
+        linewidth: float | None | Empty = _empty,
+        row_palette: str | None | Empty = _empty,
+        density_norm: Literal["area", "count", "width"] | Empty = _empty,
+        yticklabels: bool | None | Empty = _empty,
+        ylim: tuple[float, float] | None | Empty = _empty,
+        x_padding: float | None | Empty = _empty,
+        y_padding: float | None | Empty = _empty,
         # deprecated
-        scale: Literal["area", "count", "width"] | None = None,
+        scale: Literal["area", "count", "width"] | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -334,19 +335,18 @@ class StackedViolin(BasePlot):
         ...     .style(row_palette='Blues', linewidth=0).show()
         """
 
-        # modify only values that had changed
-        if cmap != self.cmap:
+        if cmap is not _empty:
             self.cmap = cmap
-        if row_palette != self.row_palette:
+        if row_palette is not _empty:
             self.row_palette = row_palette
             self.kwds["color"] = self.row_palette
-        if stripplot != self.stripplot:
+        if stripplot is not _empty:
             self.stripplot = stripplot
-        if jitter != self.jitter:
+        if jitter is not _empty:
             self.jitter = jitter
-        if jitter_size != self.jitter_size:
+        if jitter_size is not _empty:
             self.jitter_size = jitter_size
-        if yticklabels != self.plot_yticklabels:
+        if yticklabels is not _empty:
             self.plot_yticklabels = yticklabels
             if self.plot_yticklabels:
                 # space needs to be added to avoid overlapping
@@ -354,21 +354,15 @@ class StackedViolin(BasePlot):
                 self.wspace = 0.3
             else:
                 self.wspace = StackedViolin.DEFAULT_WSPACE
-        if ylim != self.ylim:
+        if ylim is not _empty:
             self.ylim = ylim
-        if x_padding != self.plot_x_padding:
+        if x_padding is not _empty:
             self.plot_x_padding = x_padding
-        if y_padding != self.plot_y_padding:
+        if y_padding is not _empty:
             self.plot_y_padding = y_padding
-        if linewidth != self.kwds["linewidth"] and linewidth != self.DEFAULT_LINE_WIDTH:
+        if linewidth is not _empty:
             self.kwds["linewidth"] = linewidth
-        density_norm = _deprecated_scale(
-            density_norm, scale, default=self.DEFAULT_DENSITY_NORM
-        )
-        if (
-            density_norm != self.kwds["density_norm"]
-            and density_norm != self.DEFAULT_DENSITY_NORM
-        ):
+        if (density_norm := _deprecated_scale(density_norm, scale)) is not _empty:
             self.kwds["density_norm"] = density_norm
 
         return self

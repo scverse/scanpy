@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
@@ -27,11 +27,9 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import (
-        ColorLike,
-        _AxesSubplot,
-    )
+    from ._utils import ColorLike, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -303,18 +301,18 @@ class DotPlot(BasePlot):
     def style(
         self,
         *,
-        cmap: str = DEFAULT_COLORMAP,
-        color_on: Literal["dot", "square"] | None = DEFAULT_COLOR_ON,
-        dot_max: float | None = DEFAULT_DOT_MAX,
-        dot_min: float | None = DEFAULT_DOT_MIN,
-        smallest_dot: float | None = DEFAULT_SMALLEST_DOT,
-        largest_dot: float | None = DEFAULT_LARGEST_DOT,
-        dot_edge_color: ColorLike | None = DEFAULT_DOT_EDGECOLOR,
-        dot_edge_lw: float | None = DEFAULT_DOT_EDGELW,
-        size_exponent: float | None = DEFAULT_SIZE_EXPONENT,
-        grid: float | None = False,
-        x_padding: float | None = DEFAULT_PLOT_X_PADDING,
-        y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
+        cmap: str | None | Empty = _empty,
+        color_on: Literal["dot", "square"] | None | Empty = _empty,
+        dot_max: float | None | Empty = _empty,
+        dot_min: float | None | Empty = _empty,
+        smallest_dot: float | None | Empty = _empty,
+        largest_dot: float | None | Empty = _empty,
+        dot_edge_color: ColorLike | None | Empty = _empty,
+        dot_edge_lw: float | None | Empty = _empty,
+        size_exponent: float | None | Empty = _empty,
+        grid: bool | None | Empty = _empty,
+        x_padding: float | None | Empty = _empty,
+        y_padding: float | None | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -389,30 +387,29 @@ class DotPlot(BasePlot):
         ...     .show()
         """
 
-        # change only the values that had changed
-        if cmap != self.cmap:
+        if cmap is not _empty:
             self.cmap = cmap
-        if dot_max != self.dot_max:
+        if dot_max is not _empty:
             self.dot_max = dot_max
-        if dot_min != self.dot_min:
+        if dot_min is not _empty:
             self.dot_min = dot_min
-        if smallest_dot != self.smallest_dot:
+        if smallest_dot is not _empty:
             self.smallest_dot = smallest_dot
-        if largest_dot != self.largest_dot:
+        if largest_dot is not _empty:
             self.largest_dot = largest_dot
-        if color_on != self.color_on:
+        if color_on is not _empty:
             self.color_on = color_on
-        if size_exponent != self.size_exponent:
+        if size_exponent is not _empty:
             self.size_exponent = size_exponent
-        if dot_edge_color != self.dot_edge_color:
+        if dot_edge_color is not _empty:
             self.dot_edge_color = dot_edge_color
-        if dot_edge_lw != self.dot_edge_lw:
+        if dot_edge_lw is not _empty:
             self.dot_edge_lw = dot_edge_lw
-        if grid != self.grid:
+        if grid is not _empty:
             self.grid = grid
-        if x_padding != self.plot_x_padding:
+        if x_padding is not _empty:
             self.plot_x_padding = x_padding
-        if y_padding != self.plot_y_padding:
+        if y_padding is not _empty:
             self.plot_y_padding = y_padding
 
         return self

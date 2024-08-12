@@ -9,7 +9,7 @@ from matplotlib import rcParams
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
@@ -198,9 +199,9 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: str = DEFAULT_COLORMAP,
-        edge_color: ColorLike | None = DEFAULT_EDGE_COLOR,
-        edge_lw: float | None = DEFAULT_EDGE_LW,
+        cmap: str | None | Empty = _empty,
+        edge_color: ColorLike | None | Empty = _empty,
+        edge_lw: float | None | Empty = _empty,
     ) -> Self:
         """\
         Modifies plot visual parameters.
@@ -243,12 +244,11 @@ class MatrixPlot(BasePlot):
 
         """
 
-        # change only the values that had changed
-        if cmap != self.cmap:
+        if cmap is not _empty:
             self.cmap = cmap
-        if edge_color != self.edge_color:
+        if edge_color is not _empty:
             self.edge_color = edge_color
-        if edge_lw != self.edge_lw:
+        if edge_lw is not _empty:
             self.edge_lw = edge_lw
 
         return self

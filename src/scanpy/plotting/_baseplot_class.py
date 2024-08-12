@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 
 from .. import logging as logg
 from .._compat import old_positionals
+from .._utils import _empty
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import check_colornorm, make_grid_spec
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
+    from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
     _VarNames = Union[str, Sequence[str]]
@@ -403,7 +405,7 @@ class BasePlot:
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> Self:
+    def style(self, *, cmap: str | None | Empty = _empty) -> Self:
         """\
         Set visual style parameters
 
@@ -417,7 +419,8 @@ class BasePlot:
         Returns `self` for method chaining.
         """
 
-        self.cmap = cmap
+        if cmap is not _empty:
+            self.cmap = cmap
         return self
 
     @old_positionals("show", "title", "width")
