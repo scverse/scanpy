@@ -1296,11 +1296,14 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 
 
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty, scale: DensityNorm | Empty
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
 ) -> DensityNorm | Empty:
     if scale is _empty:
         return density_norm
-    if density_norm is not _empty:
+    if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
         raise ValueError(msg)
     msg = "`scale` is deprecated, use `density_norm` instead"
