@@ -3,7 +3,8 @@ from __future__ import annotations
 import collections.abc as cabc
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Literal, Union
+from dataclasses import MISSING, Field, dataclass
+from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar, Union
 
 import matplotlib as mpl
 import numpy as np
@@ -36,6 +37,10 @@ if TYPE_CHECKING:
 
     # TODO: more
     DensityNorm = Literal["area", "count", "width"]
+    O = TypeVar("O")
+
+
+T = TypeVar("T")
 
 # These are needed by _wraps_plot_scatter
 _IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree"]
@@ -66,6 +71,30 @@ ColorLike = Union[str, tuple[float, ...]]
 
 class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both"""
+
+
+@dataclass
+class DefaultProxy(Generic[T]):
+    attr: str
+
+    def __get__(self, obj: O | None, objtype: type[O] | None = None) -> T:
+        if objtype is None:
+            if obj is None:
+                msg = f"Weird access to {self}"
+                raise AttributeError(msg)
+            objtype = type(obj)
+
+        v = getattr(objtype, self.attr)
+        if isinstance(v, Field):
+            if v.default is not MISSING:
+                v = v.default
+            elif v.default_factory is not MISSING:
+                v = v.default_factory()
+            else:
+                raise AttributeError(
+                    f"Field {self.attr} of class {objtype} has no default value"
+                )
+        return v
 
 
 # -------------------------------------------------------------------------------

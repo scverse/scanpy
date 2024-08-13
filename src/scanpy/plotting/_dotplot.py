@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
+@dataclass
 class DotPlot(BasePlot):
     """\
     Allows the visualization of two values that are encoded as
@@ -93,10 +95,10 @@ class DotPlot(BasePlot):
 
     """
 
-    DEFAULT_SAVE_PREFIX = "dotplot_"
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "dotplot_"
     # default style parameters
-    DEFAULT_COLORMAP = "winter"
-    DEFAULT_COLOR_ON = "dot"
+    cmap: str = "winter"
+    DEFAULT_COLOR_ON: ClassVar[Literal["dot", "square"]] = "dot"
     DEFAULT_DOT_MAX = None
     DEFAULT_DOT_MIN = None
     DEFAULT_SMALLEST_DOT = 0.0
@@ -107,8 +109,8 @@ class DotPlot(BasePlot):
 
     # default legend parameters
     DEFAULT_SIZE_LEGEND_TITLE = "Fraction of cells\nin group (%)"
-    DEFAULT_COLOR_LEGEND_TITLE = "Mean expression\nin group"
-    DEFAULT_LEGENDS_WIDTH = 1.5  # inches
+    color_legend_title = "Mean expression\nin group"
+    legends_width = 1.5  # inches
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
@@ -429,8 +431,8 @@ class DotPlot(BasePlot):
         show_size_legend: bool | None = True,
         show_colorbar: bool | None = True,
         size_title: str | None = DEFAULT_SIZE_LEGEND_TITLE,
-        colorbar_title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
-        width: float | None = DEFAULT_LEGENDS_WIDTH,
+        colorbar_title: str | Empty = _empty,
+        width: float | Empty = _empty,
     ) -> Self:
         """\
         Configures dot size and the colorbar legends
@@ -473,9 +475,11 @@ class DotPlot(BasePlot):
             # turn of legends by setting width to 0
             self.legends_width = 0
         else:
-            self.color_legend_title = colorbar_title
+            if colorbar_title is not _empty:
+                self.color_legend_title = colorbar_title
             self.size_title = size_title
-            self.legends_width = width
+            if width is not _empty:
+                self.legends_width = width
             self.show_size_legend = show_size_legend
             self.show_colorbar = show_colorbar
 

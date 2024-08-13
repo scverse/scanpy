@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from typing import TYPE_CHECKING, NamedTuple
+from dataclasses import KW_ONLY, dataclass  # noqa: TCH003
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 from warnings import warn
 
 import numpy as np
@@ -15,7 +16,7 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
-from ._utils import check_colornorm, make_grid_spec
+from ._utils import DefaultProxy, check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -25,9 +26,10 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
+    from matplotlib.figure import Figure
 
     from .._utils import Empty
-    from ._utils import ColorLike, _AxesSubplot
+    from ._utils import ColorLike
 
     _VarNames = Union[str, Sequence[str]]
 
@@ -59,6 +61,7 @@ return_fig
 """
 
 
+@dataclass
 class BasePlot:
     """\
     Generic class for the visualization of AnnData categories and
@@ -74,19 +77,80 @@ class BasePlot:
     BasePlot(adata, ...).legend(title='legend').style(cmap='binary').show()
     """
 
-    DEFAULT_SAVE_PREFIX = "baseplot_"
-    MIN_FIGURE_HEIGHT = 2.5
-    DEFAULT_CATEGORY_HEIGHT = 0.35
-    DEFAULT_CATEGORY_WIDTH = 0.37
+    adata: AnnData
+    var_names: _VarNames | Mapping[str, _VarNames]
+    groupby: str | Sequence[str]
+    _: KW_ONLY
+    use_raw: bool | None = None
+    log: bool = True
+    num_categories: int = 5
+    categories_order: Sequence[str] | None = None
+    title: str | None = None
+    figsize: tuple[float, float] | None = None
+    gene_symbols: _VarNames | None = None
+    var_group_positions: Sequence[tuple[int, int]] | None = None
+    var_group_labels: Sequence[str] | None = None
+    var_group_rotation: float | None = None
+    layer: str | None = None
+    ax: Axes | None = None
+    vmin: float | None = None
+    vmax: float | None = None
+    vcenter: float | None = None
+    norm: Normalize | None = None
+
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "baseplot_"
+    # maximum number of categories allowed to be plotted
+    MAX_NUM_CATEGORIES: ClassVar[int] = 500
+
+    # minimum height required for legends to plot properly
+    min_figure_height: float = 2.5
+    MIN_FIGURE_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy("min_figure_height")
+
+    category_height = 0.35
+    DEFAULT_CATEGORY_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "category_height"
+    )
+    category_width = 0.37
+    DEFAULT_CATEGORY_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "category_width"
+    )
 
     # gridspec parameter. Sets the space between mainplot, dendrogram and legend
-    DEFAULT_WSPACE = 0
+    wspace: float = 0
+    DEFAULT_WSPACE: ClassVar[DefaultProxy[float]] = DefaultProxy("wspace")
 
-    DEFAULT_COLORMAP = "winter"
-    DEFAULT_LEGENDS_WIDTH = 1.5
-    DEFAULT_COLOR_LEGEND_TITLE = "Expression\nlevel in group"
+    cmap: str | None = "winter"
+    DEFAULT_COLORMAP: ClassVar[DefaultProxy[str]] = DefaultProxy("cmap")
+    legends_width: float = 1.5
+    DEFAULT_LEGENDS_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy("legends_width")
+    color_legend_title: str = "Expression\nlevel in group"
+    DEFAULT_COLOR_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy(
+        "color_legend_title"
+    )
+    are_axes_swapped: bool = False
+    var_names_idx_order: Sequence[int] | None = None
+    group_extra_size: float = 0.0
+    plot_group_extra: dict[str, object] | None = None
+    # after .render() is called the fig value is assigned and ax_dict
+    # contains a dictionary of the axes used in the plot
+    fig: Figure | None = None
+    ax_dict: dict[str, Axes] | None = None
 
-    MAX_NUM_CATEGORIES = 500  # maximum number of categories allowed to be plotted
+    @property
+    def fig_title(self) -> str | None:
+        return self.title
+
+    @property
+    def width(self) -> float | None:
+        return self.figsize[0] if self.figsize is not None else None
+
+    @property
+    def height(self) -> float | None:
+        return self.figsize[1] if self.figsize is not None else None
+
+    @property
+    def vboundnorm(self) -> VBoundNorm:
+        return VBoundNorm(self.vmin, self.vmax, self.vcenter, self.norm)
 
     @old_positionals(
         "use_raw",
@@ -106,53 +170,25 @@ class BasePlot:
         "vcenter",
         "norm",
     )
-    def __init__(
-        self,
-        adata: AnnData,
-        var_names: _VarNames | Mapping[str, _VarNames],
-        groupby: str | Sequence[str],
-        *,
-        use_raw: bool | None = None,
-        log: bool = False,
-        num_categories: int = 7,
-        categories_order: Sequence[str] | None = None,
-        title: str | None = None,
-        figsize: tuple[float, float] | None = None,
-        gene_symbols: str | None = None,
-        var_group_positions: Sequence[tuple[int, int]] | None = None,
-        var_group_labels: Sequence[str] | None = None,
-        var_group_rotation: float | None = None,
-        layer: str | None = None,
-        ax: _AxesSubplot | None = None,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        vcenter: float | None = None,
-        norm: Normalize | None = None,
-        **kwds,
-    ):
-        self.var_names = var_names
-        self.var_group_labels = var_group_labels
-        self.var_group_positions = var_group_positions
-        self.var_group_rotation = var_group_rotation
-        self.width, self.height = figsize if figsize is not None else (None, None)
-
+    def __post_init__(self, **kwds):
         self.has_var_groups = (
             True
-            if var_group_positions is not None and len(var_group_positions) > 0
+            if self.var_group_positions is not None
+            and len(self.var_group_positions) > 0
             else False
         )
 
         self._update_var_groups()
 
         self.categories, self.obs_tidy = _prepare_dataframe(
-            adata,
+            self.adata,
             self.var_names,
-            groupby,
-            use_raw=use_raw,
-            log=log,
-            num_categories=num_categories,
-            layer=layer,
-            gene_symbols=gene_symbols,
+            self.groupby,
+            use_raw=self.use_raw,
+            log=self.log,
+            num_categories=self.num_categories,
+            layer=self.layer,
+            gene_symbols=self.gene_symbols,
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
@@ -160,55 +196,25 @@ class BasePlot:
                 "Plot would be very large."
             )
 
-        if categories_order is not None:
-            if set(self.obs_tidy.index.categories) != set(categories_order):
+        if self.categories_order is not None:
+            if set(self.obs_tidy.index.categories) != set(self.categories_order):
                 logg.error(
                     "Please check that the categories given by "
                     "the `order` parameter match the categories that "
                     "want to be reordered.\n\n"
                     "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                    f"{set(self.obs_tidy.index.categories).difference(self.categories_order)}\n\n"
+                    f"Given order categories: {self.categories_order}\n\n"
+                    f"{self.groupby} categories: {list(self.obs_tidy.index.categories)}\n"
                 )
                 return
 
-        self.adata = adata
-        self.groupby = [groupby] if isinstance(groupby, str) else groupby
-        self.log = log
+        if isinstance(self.groupby, str):
+            self.groupby = [self.groupby]
         self.kwds = kwds
 
-        self.vboundnorm = VBoundNorm(vmin=vmin, vmax=vmax, vcenter=vcenter, norm=norm)
-
-        # set default values for legend
-        self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
-        self.legends_width = self.DEFAULT_LEGENDS_WIDTH
-
-        # set style defaults
-        self.cmap = self.DEFAULT_COLORMAP
-
-        # style default parameters
-        self.are_axes_swapped = False
-        self.categories_order = categories_order
-        self.var_names_idx_order = None
-
-        self.wspace = self.DEFAULT_WSPACE
-
-        # minimum height required for legends to plot properly
-        self.min_figure_height = self.MIN_FIGURE_HEIGHT
-
-        self.fig_title = title
-
-        self.group_extra_size = 0
-        self.plot_group_extra = None
-        # after .render() is called the fig value is assigned and ax_dict
-        # contains a dictionary of the axes used in the plot
-        self.fig = None
-        self.ax_dict = None
-        self.ax = ax
-
     @legacy_api("swap_axes")
-    def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
+    def swap_axes(self, *, swap_axes: bool = True) -> Self:
         """
         Plots a transposed image.
 
@@ -221,17 +227,16 @@ class BasePlot:
         swap_axes
             Boolean to turn on (True) or off (False) 'swap_axes'. Default True
 
-
         Returns
         -------
         Returns `self` for method chaining.
 
         """
-        self.DEFAULT_CATEGORY_HEIGHT, self.DEFAULT_CATEGORY_WIDTH = (
-            self.DEFAULT_CATEGORY_WIDTH,
-            self.DEFAULT_CATEGORY_HEIGHT,
+        # TODO: this doesn’t make much sense
+        self.category_height, self.category_width = (
+            self.category_width,
+            self.category_height,
         )
-
         self.are_axes_swapped = swap_axes
         return self
 
@@ -241,7 +246,7 @@ class BasePlot:
         *,
         show: bool | None = True,
         dendrogram_key: str | None = None,
-        size: float | None = 0.8,
+        size: float = 0.8,
     ) -> Self:
         r"""\
         Show dendrogram based on the hierarchical clustering between the `groupby`
@@ -328,7 +333,7 @@ class BasePlot:
         *,
         show: bool | None = True,
         sort: Literal["ascending", "descending"] | None = None,
-        size: float | None = 0.8,
+        size: float = 0.8,
         color: ColorLike | Sequence[ColorLike] | None = None,
     ) -> Self:
         r"""\
@@ -428,8 +433,8 @@ class BasePlot:
         self,
         *,
         show: bool | None = True,
-        title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
-        width: float | None = DEFAULT_LEGENDS_WIDTH,
+        title: str | Empty = _empty,
+        width: float | Empty = _empty,
     ) -> Self:
         r"""\
         Configure legend parameters
@@ -467,8 +472,10 @@ class BasePlot:
             # turn of legends by setting width to 0
             self.legends_width = 0
         else:
-            self.color_legend_title = title
-            self.legends_width = width
+            if title is not _empty:
+                self.color_legend_title = title
+            if width is not _empty:
+                self.legends_width = width
 
         return self
 
@@ -669,13 +676,10 @@ class BasePlot:
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels', ax=ax1).make_figure()
         """
 
-        category_height = self.DEFAULT_CATEGORY_HEIGHT
-        category_width = self.DEFAULT_CATEGORY_WIDTH
-
         if self.height is None:
-            mainplot_height = len(self.categories) * category_height
+            mainplot_height = len(self.categories) * self.category_height
             mainplot_width = (
-                len(self.var_names) * category_width + self.group_extra_size
+                len(self.var_names) * self.category_width + self.group_extra_size
             )
             if self.are_axes_swapped:
                 mainplot_height, mainplot_width = mainplot_width, mainplot_height
@@ -684,8 +688,10 @@ class BasePlot:
 
             # if the number of categories is small use
             # a larger height, otherwise the legends do not fit
-            self.height = max([self.min_figure_height, height])
-            self.width = mainplot_width + self.legends_width
+            self.figsize = (
+                mainplot_width + self.legends_width,
+                max([self.min_figure_height, height]),
+            )
         else:
             self.min_figure_height = self.height
             mainplot_height = self.height
@@ -709,9 +715,9 @@ class BasePlot:
         if self.has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             if self.are_axes_swapped:
-                var_groups_height = category_height
+                var_groups_height = self.category_height
             else:
-                var_groups_height = category_height / 2
+                var_groups_height = self.category_height / 2
 
         else:
             var_groups_height = 0
