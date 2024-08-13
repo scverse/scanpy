@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib import rcParams
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
+@dataclass
 class MatrixPlot(BasePlot):
     """\
     Allows the visualization of values using a color map.
@@ -90,11 +91,11 @@ class MatrixPlot(BasePlot):
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
-    DEFAULT_SAVE_PREFIX = "matrixplot_"
-    DEFAULT_COLOR_LEGEND_TITLE = "Mean expression\nin group"
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "matrixplot_"
 
+    colorbar_title: str = "Mean expression\nin group"
     # default style parameters
-    DEFAULT_COLORMAP = rcParams["image.cmap"]
+    cmap = None  # aka: rcParams["image.cmap"]
     DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
