@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from dataclasses import KW_ONLY, dataclass  # noqa: TCH003
+from dataclasses import (
+    KW_ONLY,  # noqa: TCH003  # https://github.com/astral-sh/ruff/issues/12859
+    dataclass,
+    field,
+)
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
@@ -22,7 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from typing import Literal, Self, Union
 
-    import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
@@ -77,6 +81,10 @@ class BasePlot:
     BasePlot(adata, ...).legend(title='legend').style(cmap='binary').show()
     """
 
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "baseplot_"
+    # maximum number of categories allowed to be plotted
+    MAX_NUM_CATEGORIES: ClassVar[int] = 500
+
     adata: AnnData
     var_names: _VarNames | Mapping[str, _VarNames]
     groupby: str | Sequence[str]
@@ -87,7 +95,7 @@ class BasePlot:
     categories_order: Sequence[str] | None = None
     title: str | None = None
     figsize: tuple[float, float] | None = None
-    gene_symbols: _VarNames | None = None
+    gene_symbols: str | None = None
     var_group_positions: Sequence[tuple[int, int]] | None = None
     var_group_labels: Sequence[str] | None = None
     var_group_rotation: float | None = None
@@ -98,35 +106,15 @@ class BasePlot:
     vcenter: float | None = None
     norm: Normalize | None = None
 
-    DEFAULT_SAVE_PREFIX: ClassVar[str] = "baseplot_"
-    # maximum number of categories allowed to be plotted
-    MAX_NUM_CATEGORIES: ClassVar[int] = 500
-
     # minimum height required for legends to plot properly
     min_figure_height: float = 2.5
-    MIN_FIGURE_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy("min_figure_height")
-
     category_height = 0.35
-    DEFAULT_CATEGORY_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy(
-        "category_height"
-    )
     category_width = 0.37
-    DEFAULT_CATEGORY_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy(
-        "category_width"
-    )
-
     # gridspec parameter. Sets the space between mainplot, dendrogram and legend
     wspace: float = 0
-    DEFAULT_WSPACE: ClassVar[DefaultProxy[float]] = DefaultProxy("wspace")
-
     cmap: str | None = "winter"
-    DEFAULT_COLORMAP: ClassVar[DefaultProxy[str]] = DefaultProxy("cmap")
     legends_width: float = 1.5
-    DEFAULT_LEGENDS_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy("legends_width")
     color_legend_title: str = "Expression\nlevel in group"
-    DEFAULT_COLOR_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy(
-        "color_legend_title"
-    )
     are_axes_swapped: bool = False
     var_names_idx_order: Sequence[int] | None = None
     group_extra_size: float = 0.0
@@ -135,6 +123,13 @@ class BasePlot:
     # contains a dictionary of the axes used in the plot
     fig: Figure | None = None
     ax_dict: dict[str, Axes] | None = None
+
+    kwds: Mapping[str, object] = field(default_factory=dict)
+
+    # properties aliasing fields
+    @property
+    def has_var_groups(self) -> bool:
+        return len(self.var_group_positions or ()) > 0
 
     @property
     def fig_title(self) -> str | None:
@@ -152,32 +147,23 @@ class BasePlot:
     def vboundnorm(self) -> VBoundNorm:
         return VBoundNorm(self.vmin, self.vmax, self.vcenter, self.norm)
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
+    # deprecated class vars
+    MIN_FIGURE_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy("min_figure_height")
+    DEFAULT_CATEGORY_HEIGHT: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "category_height"
     )
-    def __post_init__(self, **kwds):
-        self.has_var_groups = (
-            True
-            if self.var_group_positions is not None
-            and len(self.var_group_positions) > 0
-            else False
-        )
+    DEFAULT_CATEGORY_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "category_width"
+    )
+    DEFAULT_WSPACE: ClassVar[DefaultProxy[float]] = DefaultProxy("wspace")
+    DEFAULT_COLORMAP: ClassVar[DefaultProxy[str]] = DefaultProxy("cmap")
+    DEFAULT_LEGENDS_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy("legends_width")
+    DEFAULT_COLOR_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy(
+        "color_legend_title"
+    )
 
+    def __post_init__(self):
+        cls = type(self)
         self._update_var_groups()
 
         self.categories, self.obs_tidy = _prepare_dataframe(
@@ -190,13 +176,14 @@ class BasePlot:
             layer=self.layer,
             gene_symbols=self.gene_symbols,
         )
-        if len(self.categories) > self.MAX_NUM_CATEGORIES:
+        if len(self.categories) > cls.MAX_NUM_CATEGORIES:
             warn(
-                f"Over {self.MAX_NUM_CATEGORIES} categories found. "
+                f"Over {cls.MAX_NUM_CATEGORIES} categories found. "
                 "Plot would be very large."
             )
 
         if self.categories_order is not None:
+            assert isinstance(self.obs_tidy.index, pd.CategoricalIndex)
             if set(self.obs_tidy.index.categories) != set(self.categories_order):
                 logg.error(
                     "Please check that the categories given by "
@@ -211,7 +198,6 @@ class BasePlot:
 
         if isinstance(self.groupby, str):
             self.groupby = [self.groupby]
-        self.kwds = kwds
 
     @legacy_api("swap_axes")
     def swap_axes(self, *, swap_axes: bool = True) -> Self:
@@ -482,6 +468,7 @@ class BasePlot:
     def get_axes(self) -> dict[str, Axes]:
         if self.ax_dict is None:
             self.make_figure()
+            assert self.ax_dict is not None
         return self.ax_dict
 
     def _plot_totals(
@@ -1127,7 +1114,6 @@ class BasePlot:
             self.var_names = _var_names
             self.var_group_labels = var_group_labels
             self.var_group_positions = var_group_positions
-            self.has_var_groups = True
 
         elif isinstance(self.var_names, str):
             self.var_names = [self.var_names]
