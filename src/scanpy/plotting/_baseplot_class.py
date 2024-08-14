@@ -5,6 +5,7 @@ from __future__ import annotations
 import collections.abc as cabc
 from dataclasses import (
     KW_ONLY,  # noqa: TCH003  # https://github.com/astral-sh/ruff/issues/12859
+    InitVar,
     dataclass,
     field,
 )
@@ -106,6 +107,9 @@ class BasePlot:
     vcenter: float | None = None
     norm: Normalize | None = None
 
+    # convenience
+    dendrogram: InitVar[str | None] = None
+
     # minimum height required for legends to plot properly
     min_figure_height: float = 2.5
     category_height = 0.35
@@ -162,7 +166,7 @@ class BasePlot:
         "color_legend_title"
     )
 
-    def __post_init__(self):
+    def __post_init__(self, dendrogram: str | None):
         cls = type(self)
         self._update_var_groups()
 
@@ -198,6 +202,9 @@ class BasePlot:
 
         if isinstance(self.groupby, str):
             self.groupby = [self.groupby]
+
+        if dendrogram:
+            self.add_dendrogram(dendrogram_key=dendrogram)
 
     @legacy_api("swap_axes")
     def swap_axes(self, *, swap_axes: bool = True) -> Self:

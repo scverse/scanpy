@@ -115,7 +115,6 @@ class StackedViolin(BasePlot):
     DEFAULT_SAVE_PREFIX: ClassVar[str] = "stacked_violin_"
 
     standard_scale: InitVar[Literal["var", "obs"] | None] = None
-    dendrogram: InitVar[str | None] = None
 
     # overrides
     color_legend_title: str = "Median expression\nin group"
@@ -176,19 +175,17 @@ class StackedViolin(BasePlot):
 
     def __post_init__(
         self,
-        standard_scale: Literal["var", "obs"] | None = None,
         dendrogram: str | None = None,
+        standard_scale: Literal["var", "obs"] | None = None,
     ):
-        super().__post_init__()
+        super().__post_init__(dendrogram=dendrogram)
         if standard_scale == "obs":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
         elif standard_scale == "var":
             self.obs_tidy -= self.obs_tidy.min(0)
             self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
-        elif standard_scale is None:
-            pass
-        else:
+        elif standard_scale is not None:
             logg.warning("Unknown type for standard_scale, ignored")
 
         self.kwds = dict(self.kwds)
@@ -196,9 +193,6 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("inner", self.DEFAULT_INNER)
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
         self.kwds.setdefault("density_norm", self.DEFAULT_DENSITY_NORM)
-
-        if dendrogram:
-            self.add_dendrogram(dendrogram_key=dendrogram)
 
     @old_positionals(
         "cmap",

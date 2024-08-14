@@ -107,9 +107,10 @@ class MatrixPlot(BasePlot):
 
     def __post_init__(
         self,
+        dendrogram: str | None,
         standard_scale: Literal["var", "group"] | None,
     ):
-        super().__post_init__()
+        super().__post_init__(dendrogram=dendrogram)
         if self.values_df is not None:
             return
 
@@ -281,7 +282,7 @@ def matrixplot(
     log: bool = False,
     num_categories: int = 7,
     figsize: tuple[float, float] | None = None,
-    dendrogram: bool | str = False,
+    dendrogram: str | None = None,
     title: str | None = None,
     cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
@@ -387,11 +388,9 @@ def matrixplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
+        dendrogram=dendrogram,
         kwds=kwds,
     )
-
-    if dendrogram:
-        mp.add_dendrogram(dendrogram_key=dendrogram)
     if swap_axes:
         mp.swap_axes()
 
