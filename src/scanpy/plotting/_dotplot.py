@@ -845,7 +845,7 @@ def dotplot(
     var_group_labels: Sequence[str] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    swap_axes: bool | None = False,
+    swap_axes: bool = False,
     dot_color_df: pd.DataFrame | None = None,
     show: bool | None = None,
     save: str | bool | None = None,
@@ -988,11 +988,9 @@ def dotplot(
         vcenter=vcenter,
         norm=norm,
         dendrogram=dendrogram,
+        with_swapped_axes=swap_axes,
         kwds=kwds,
     )
-
-    if swap_axes:
-        dp.swap_axes()
 
     dp = dp.style(
         cmap=cmap,

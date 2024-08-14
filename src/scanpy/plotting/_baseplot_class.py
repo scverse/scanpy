@@ -109,6 +109,7 @@ class BasePlot:
 
     # convenience
     dendrogram: InitVar[str | None] = None
+    with_swapped_axes: InitVar[bool] = False
 
     # minimum height required for legends to plot properly
     min_figure_height: float = 2.5
@@ -166,7 +167,7 @@ class BasePlot:
         "color_legend_title"
     )
 
-    def __post_init__(self, dendrogram: str | None):
+    def __post_init__(self, dendrogram: str | None, with_swapped_axes: bool):
         cls = type(self)
         self._update_var_groups()
 
@@ -205,6 +206,8 @@ class BasePlot:
 
         if dendrogram:
             self.add_dendrogram(dendrogram_key=dendrogram)
+        if with_swapped_axes:
+            self.swap_axes()
 
     @legacy_api("swap_axes")
     def swap_axes(self, *, swap_axes: bool = True) -> Self:

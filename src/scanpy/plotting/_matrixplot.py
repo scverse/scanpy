@@ -389,10 +389,9 @@ def matrixplot(
         vcenter=vcenter,
         norm=norm,
         dendrogram=dendrogram,
+        with_swapped_axes=swap_axes,
         kwds=kwds,
     )
-    if swap_axes:
-        mp.swap_axes()
 
     mp = mp.style(cmap=cmap).legend(title=colorbar_title)
     if return_fig:

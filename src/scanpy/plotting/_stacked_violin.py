@@ -175,10 +175,13 @@ class StackedViolin(BasePlot):
 
     def __post_init__(
         self,
-        dendrogram: str | None = None,
-        standard_scale: Literal["var", "obs"] | None = None,
+        dendrogram: str | None,
+        with_swapped_axes: bool,
+        standard_scale: Literal["var", "obs"] | None,
     ):
-        super().__post_init__(dendrogram=dendrogram)
+        super().__post_init__(
+            dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
+        )
         if standard_scale == "obs":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
@@ -762,11 +765,10 @@ def stacked_violin(
         vcenter=vcenter,
         norm=norm,
         dendrogram=dendrogram,
+        with_swapped_axes=swap_axes,
         kwds=kwds,
     )
 
-    if swap_axes:
-        vp.swap_axes()
     vp = vp.style(
         cmap=cmap,
         stripplot=stripplot,
