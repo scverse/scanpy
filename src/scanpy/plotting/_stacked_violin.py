@@ -768,7 +768,7 @@ def stacked_violin(
         vcenter=vcenter,
         norm=norm,
         dendrogram=dendrogram,
-        **kwds,
+        kwds=kwds,
     )
 
     if swap_axes:

@@ -387,7 +387,7 @@ def matrixplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
-        **kwds,
+        kwds=kwds,
     )
 
     if dendrogram:

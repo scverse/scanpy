@@ -839,7 +839,7 @@ def dotplot(
     colorbar_title: str | None = DotPlot.color_legend_title,
     size_title: str | None = DotPlot.size_title,
     figsize: tuple[float, float] | None = None,
-    dendrogram: bool | str = False,
+    dendrogram: str | None = None,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
@@ -987,7 +987,7 @@ def dotplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
-        **kwds,
+        kwds=kwds,
     )
 
     if dendrogram:
