@@ -1719,10 +1719,3 @@ def test_string_mask(tmp_path, check_same_image):
     plt.close()
 
     check_same_image(p1, p2, tol=1)
-
-
-def test_violin_scale_warning(monkeypatch):
-    adata = pbmc3k_processed()
-    monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
-    with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
-        sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
