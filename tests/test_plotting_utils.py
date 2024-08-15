@@ -9,7 +9,11 @@ from anndata import AnnData
 from matplotlib import colormaps
 from matplotlib.colors import ListedColormap
 
-from scanpy.plotting._utils import DefaultProxy, _validate_palette
+from scanpy.plotting._utils import (
+    ClassDescriptorEnabled,
+    DefaultProxy,
+    _validate_palette,
+)
 
 viridis = cast(ListedColormap, colormaps["viridis"])
 
@@ -39,18 +43,42 @@ def test_validate_palette_no_mod(palette, typ):
             field(default_factory=lambda: 1),
             marks=[
                 pytest.mark.xfail(
-                    "Tries to call factory while class not fully constructed"
+                    reason="Tries to call factory while class not fully constructed"
                 )
             ],
             id="default_factory",
         ),
     ],
 )
-def test_default_proxy(param):
+@pytest.mark.parametrize("set_", ["instance", "field_", "DEFAULT"])
+def test_default_proxy(param, set_: str):
     @dataclass
-    class Test:
+    class Test(metaclass=ClassDescriptorEnabled):
         field_: int = param
         DEFAULT: ClassVar[DefaultProxy[int]] = DefaultProxy("field_")
 
-    assert Test(2).field_ == 2
-    assert Test(2).DEFAULT == 1
+    instance = Test(2)
+    assert instance.field_ == 2
+    # instantiating doesn’t update the class
+    assert instance.DEFAULT == Test().field_ == 1
+
+    instance.field_ = 3
+    # updating the instance doesn’t update the class
+    assert Test.field_ == Test.DEFAULT == 1
+
+    if set_ == "instance":
+        v = 1
+    elif set_ == "field_":
+        Test.field_ = v = 4
+    elif set_ == "DEFAULT":
+        with pytest.warns(FutureWarning):
+            Test.DEFAULT = v = 5
+    else:
+        pytest.fail(f"Unknown {set_=}")
+
+    # updating anything doesn’t update existing instances
+    assert instance.field_ == 3
+    # setting the fields updates the class, but …
+    assert Test.field_ == Test.DEFAULT == v
+    # … sadly doesn’t update the __init__ method
+    assert Test().field_ == 1

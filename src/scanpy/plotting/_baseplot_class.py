@@ -22,7 +22,12 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
-from ._utils import DefaultProxy, check_colornorm, make_grid_spec
+from ._utils import (
+    ClassDescriptorEnabled,
+    DefaultProxy,
+    check_colornorm,
+    make_grid_spec,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -67,7 +72,7 @@ return_fig
 
 
 @dataclass
-class BasePlot:
+class BasePlot(metaclass=ClassDescriptorEnabled):
     """\
     Generic class for the visualization of AnnData categories and
     selected `var` (features or genes).

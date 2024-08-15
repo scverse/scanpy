@@ -73,9 +73,28 @@ class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both"""
 
 
+class ClassDescriptorEnabled(type):
+    """Metaclass to allow descriptors’ `__set__` to be called when updating a class attribute.
+
+    `DefaultProxy` below relies on that.
+    """
+
+    def __setattr__(cls, name: str, value: object) -> None:
+        desc = cls.__dict__.get(name)
+        if desc is not None and hasattr(type(desc), "__set__"):
+            return desc.__set__(None, value)
+        return super().__setattr__(name, value)
+
+
 @dataclass
 class DefaultProxy(Generic[T]):
     attr: str
+    cls: type = object  # O, set automatically by __set_name__
+    name: str = ""  # ditto
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.cls = owner
+        self.name = name
 
     def __get__(self, obj: O | None, objtype: type[O] | None = None) -> T:
         if objtype is None:
@@ -95,6 +114,16 @@ class DefaultProxy(Generic[T]):
                     f"Field {self.attr} of class {objtype} has no default value"
                 )
         return v
+
+    def __set__(self, obj: object | None, value: T) -> None:
+        if obj is None:  # This is enabled by `ClassDescriptorEnabled` above
+            msg = (
+                f"Subclass {self.cls.__name__} or "
+                f"use `functools.partial` to override {self.attr}."
+            )
+            warnings.warn(msg, FutureWarning)
+            obj = self.cls
+        setattr(obj, self.attr, value)
 
 
 # -------------------------------------------------------------------------------
