@@ -27,7 +27,7 @@ def pbmc_session():
     return pbmc
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc(pbmc_session):
     return pbmc_session.copy()
 
