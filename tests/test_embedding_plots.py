@@ -85,7 +85,7 @@ def adata():
     return adata
 
 
-@pytest.fixture()
+@pytest.fixture
 def fixture_request(request):
     """Returns a Request object.
 
