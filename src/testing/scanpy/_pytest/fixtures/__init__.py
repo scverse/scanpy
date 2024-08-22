@@ -37,7 +37,7 @@ def float_dtype(request):
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
     from scanpy._compat import chdir
 

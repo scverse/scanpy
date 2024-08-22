@@ -176,7 +176,7 @@ def scrub_small_sess() -> AnnData:
     return adata
 
 
-@pytest.fixture()
+@pytest.fixture
 def scrub_small(scrub_small_sess: AnnData):
     return scrub_small_sess.copy()
 

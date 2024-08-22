@@ -33,7 +33,7 @@ def _tmp_dataset_dir(tmp_path: Path) -> None:
     sc.settings.datasetdir = tmp_path / "scanpy_data"
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_burczynski06():
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         adata = sc.datasets.burczynski06()
@@ -41,7 +41,7 @@ def test_burczynski06():
     assert not (adata.X == 0).any()
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 @needs.openpyxl
 def test_moignard15():
     with warnings.catch_warnings():
@@ -56,19 +56,19 @@ def test_moignard15():
     assert adata.shape == (3934, 42)
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_paul15():
     sc.datasets.paul15()
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_pbmc3k():
     adata = sc.datasets.pbmc3k()
     assert adata.shape == (2700, 32738)
     assert "CD8A" in adata.var_names
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_pbmc3k_processed():
     with warnings.catch_warnings(record=True) as records:
         adata = sc.datasets.pbmc3k_processed()
@@ -78,7 +78,7 @@ def test_pbmc3k_processed():
     assert len(records) == 0
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_ebi_expression_atlas():
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     # The shape changes sometimes
@@ -111,7 +111,7 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_visium_datasets():
     """Tests that reading/ downloading works and is does not have global effects."""
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
@@ -121,7 +121,7 @@ def test_visium_datasets():
     assert_adata_equal(hheart, hheart_again)
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_visium_datasets_dir_change(tmp_path: Path):
     """Test that changing the dataset dir doesn't break reading."""
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
@@ -132,7 +132,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     assert_adata_equal(mbrain, mbrain_again)
 
 
-@pytest.mark.internet()
+@pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
 
