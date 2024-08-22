@@ -31,7 +31,7 @@ DIST_TYPES = (DaskArray, ZappyArray)
 pytestmark = [needs.zarr]
 
 
-@pytest.fixture()
+@pytest.fixture
 @filter_oldformatwarning
 def adata() -> AnnData:
     a = read_zarr(input_file)
