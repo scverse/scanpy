@@ -36,6 +36,7 @@ jobs:
     displayName: 'Use Python $(python.version)'
 
   - script: |
+      set -e
       python -m pip install --upgrade uv
       echo "##vso[task.setvariable variable=uv_cache_dir]`uv cache dir`"
     displayName: 'Install tools'
@@ -62,7 +63,11 @@ jobs:
       echo $MPLBACKEND
     displayName: 'Set env'
 
-  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
+  # This prevents broken and slow back-tracking in dependency resolution
+  - script: printf "llvmlite>=0.43" | tee /tmp/constraints.txt
+    displayName: "Create constraints file for `pre-release` and `latest` jobs"
+
+  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .' -c /tmp/constraints.txt
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
@@ -70,10 +75,12 @@ jobs:
       uv pip install --system --compile --pre
       "scanpy[dev,$(TEST_EXTRA)] @ ."
       "anndata[dev,test] @ git+https://github.com/scverse/anndata"
+      -c /tmp/constraints.txt
     displayName: 'Install dependencies release candidates'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'pre-release')
 
   - script: |
+      set -e
       uv pip install --system --compile tomli packaging
       deps=`python3 ci/scripts/min-deps.py pyproject.toml --extra dev test`
       uv pip install --system --compile $deps "scanpy @ ."
@@ -84,8 +91,7 @@ jobs:
     displayName: 'PyTest'
     condition: eq(variables['TEST_TYPE'], 'standard')
 
-  - script: |
-      pytest --cov --cov-report=xml --cov-context=test
+  - script: pytest --cov --cov-report=xml --cov-context=test
     displayName: 'PyTest (coverage)'
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
@@ -118,6 +124,7 @@ jobs:
     displayName: 'Use Python 3.12'
 
   - script: |
+      set -e
       python -m pip install --upgrade pip
       pip install build twine
     displayName: 'Install build tools and requirements'
@@ -126,6 +133,7 @@ jobs:
     displayName: 'Display installed versions'
 
   - script: |
+      set -e
       python -m build --sdist --wheel .
       twine check dist/*
     displayName: 'Build & Twine check'
