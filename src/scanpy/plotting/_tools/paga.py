@@ -222,12 +222,12 @@ def _compute_pos(
         layout = "fr"
     if layout == "fa":
         try:
-            from fa2 import ForceAtlas2
+            from fa2_modified import ForceAtlas2
         except ImportError:
             logg.warning(
-                "Package 'fa2' is not installed, falling back to layout 'fr'."
+                "Package 'fa2_modified' is not installed, falling back to layout 'fr'."
                 "To use the faster and better ForceAtlas2 layout, "
-                "install package 'fa2' (`pip install fa2`)."
+                "install package 'fa2_modified' (`pip install fa2_modified`)."
             )
             layout = "fr"
     if layout == "fa":

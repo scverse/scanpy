@@ -54,7 +54,7 @@ def draw_graph(
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2|_
-    :cite:p:`Chippada2018`, which can be installed via `pip install fa2`.
+    :cite:p:`Chippada2018`, which can be installed via `pip install fa2_modified`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
@@ -63,7 +63,7 @@ def draw_graph(
     Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
     .. |fa2| replace:: `fa2`
-    .. _fa2: https://github.com/bhargavchippada/forceatlas2
+    .. _fa2: https://github.com/AminAlam/fa2_modified
     .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
     Parameters
@@ -140,12 +140,12 @@ def draw_graph(
     # see whether fa2 is installed
     if layout == "fa":
         try:
-            from fa2 import ForceAtlas2
+            from fa2_modified import ForceAtlas2
         except ImportError:
             logg.warning(
                 "Package 'fa2' is not installed, falling back to layout 'fr'."
                 "To use the faster and better ForceAtlas2 layout, "
-                "install package 'fa2' (`pip install fa2`)."
+                "install package 'fa2' (`pip install fa2_modified`)."
             )
             layout = "fr"
     # actual drawing
