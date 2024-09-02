@@ -127,7 +127,7 @@ def test_keep_layer(base, flavor):
     elif flavor == "cell_ranger":
         sc.pp.highly_variable_genes(adata, flavor=flavor)
     else:
-        assert False
+        pytest.fail(f"Unknown {flavor=}")
 
     assert np.allclose(X_orig.toarray(), adata.X.toarray())
 

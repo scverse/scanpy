@@ -148,7 +148,7 @@ scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
+dask = ["dask[array]>=2022.09.2,<2024.8.0"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
@@ -232,6 +232,8 @@ select = [
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
     "PLR0917", # Ban APIs with too many positional parameters
+    "FBT",     # No positional boolean parameters
+    "PT",      # Pytest style
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

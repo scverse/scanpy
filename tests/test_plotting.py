@@ -156,7 +156,7 @@ def test_heatmap(image_comparer):
     reason="https://github.com/mwaskom/seaborn/issues/1953",
 )
 @pytest.mark.parametrize(
-    "obs_keys,name",
+    ("obs_keys", "name"),
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
 )
 def test_clustermap(image_comparer, obs_keys, name):
@@ -168,7 +168,7 @@ def test_clustermap(image_comparer, obs_keys, name):
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    ("id", "fn"),
     [
         (
             "dotplot",
@@ -424,6 +424,30 @@ def test_stacked_violin_obj(image_comparer, plt):
     save_and_compare_images("stacked_violin_return_fig")
 
 
+# checking for https://github.com/scverse/scanpy/issues/3152
+def test_stacked_violin_swap_axes_match(image_comparer):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=10)
+    pbmc = pbmc68k_reduced()
+    sc.tl.rank_genes_groups(
+        pbmc,
+        "bulk_labels",
+        method="wilcoxon",
+        tie_correct=True,
+        pts=True,
+        key_added="wilcoxon",
+    )
+    swapped_ax = sc.pl.rank_genes_groups_stacked_violin(
+        pbmc,
+        n_genes=2,
+        key="wilcoxon",
+        groupby="bulk_labels",
+        swap_axes=True,
+        return_fig=True,
+    )
+    swapped_ax.show()
+    save_and_compare_images("stacked_violin_swap_axes_pbmc68k_reduced")
+
+
 def test_tracksplot(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -562,7 +586,7 @@ def test_correlation(image_comparer):
 
 
 @pytest.mark.parametrize(
-    "name,fn",
+    ("name", "fn"),
     [
         (
             "ranked_genes_sharey",
@@ -793,7 +817,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
 
 @pytest.fixture(scope="session")
-def _gene_symbols_adatas():
+def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
     """Create two anndata objects which are equivalent except for var_names
 
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
@@ -826,21 +850,21 @@ def _gene_symbols_adatas():
 
 
 @pytest.fixture
-def gene_symbols_adatas(_gene_symbols_adatas):
-    a, b = _gene_symbols_adatas
+def gene_symbols_adatas(gene_symbols_adatas_session) -> tuple[AnnData, AnnData]:
+    a, b = gene_symbols_adatas_session
     return a.copy(), b.copy()
 
 
 @pytest.mark.parametrize(
     "func",
-    (
+    [
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
         sc.pl.rank_genes_groups_matrixplot,
         sc.pl.rank_genes_groups_stacked_violin,
         sc.pl.rank_genes_groups_tracksplot,
         # TODO: add other rank_genes_groups plots here once they work
-    ),
+    ],
 )
 def test_plot_rank_genes_groups_gene_symbols(
     gene_symbols_adatas, func, tmp_path, check_same_image
@@ -876,14 +900,14 @@ def test_plot_rank_genes_groups_gene_symbols(
 
 @pytest.mark.parametrize(
     "func",
-    (
+    [
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
         sc.pl.rank_genes_groups_matrixplot,
         sc.pl.rank_genes_groups_stacked_violin,
         sc.pl.rank_genes_groups_tracksplot,
         # TODO: add other rank_genes_groups plots here once they work
-    ),
+    ],
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
     """\
@@ -933,7 +957,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    ("id", "fn"),
     [
         ("heatmap", sc.pl.heatmap),
         ("dotplot", sc.pl.dotplot),
@@ -955,8 +979,8 @@ def test_genes_symbols(image_comparer, id, fn):
     save_and_compare_images(f"{id}_gene_symbols")
 
 
-@pytest.fixture(scope="module")
-def _pbmc_scatterplots_session():
+@pytest.fixture(scope="session")
+def pbmc_scatterplots_session() -> AnnData:
     # Wrapped in another fixture to avoid mutation
     pbmc = pbmc68k_reduced()
     pbmc.obs["mask"] = pbmc.obs["louvain"].isin(["0", "1", "3"])
@@ -970,12 +994,12 @@ def _pbmc_scatterplots_session():
 
 
 @pytest.fixture
-def pbmc_scatterplots(_pbmc_scatterplots_session):
-    return _pbmc_scatterplots_session.copy()
+def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
+    return pbmc_scatterplots_session.copy()
 
 
 @pytest.mark.parametrize(
-    "id,fn",
+    ("id", "fn"),
     [
         ("pca", partial(sc.pl.pca, color="bulk_labels")),
         (
@@ -1295,7 +1319,7 @@ def test_binary_scatter(image_comparer):
 def test_scatter_specify_layer_and_raw():
     pbmc = pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Cannot use both a layer and.*raw"):
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
@@ -1361,7 +1385,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
 
 
 @pytest.mark.parametrize(
-    "x,y,color,use_raw",
+    ("x", "y", "color", "use_raw"),
     [
         # test that plotting fails with a ValueError if trying to plot
         # var_names only found in raw and use_raw is False
@@ -1380,7 +1404,9 @@ def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
     raise a `ValueError`. This test checks that this happens as
     expected.
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"inputs must all come from either `\.obs` or `\.var`"
+    ):
         sc.pl.scatter(pbmc_filtered(), x=x, y=y, color=color, use_raw=use_raw)
 
 
@@ -1577,14 +1603,14 @@ def test_repeated_colors_w_missing_value():
 
 @pytest.mark.parametrize(
     "plot",
-    (
+    [
         sc.pl.rank_genes_groups_dotplot,
         sc.pl.rank_genes_groups_heatmap,
         sc.pl.rank_genes_groups_matrixplot,
         sc.pl.rank_genes_groups_stacked_violin,
         sc.pl.rank_genes_groups_tracksplot,
         # TODO: add other rank_genes_groups plots here once they work
-    ),
+    ],
 )
 def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     N_GENES = 4

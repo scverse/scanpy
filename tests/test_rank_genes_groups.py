@@ -320,7 +320,7 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
 
     pbmc = pbmc68k_reduced()
     mask_var = np.zeros(pbmc.shape[1]).astype(bool)
-    mask_var[:6].fill(True)
+    mask_var[:6].fill(True)  # noqa: FBT003
     no_genes = sum(mask_var) - 1
 
     rank_genes_groups(

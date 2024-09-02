@@ -33,7 +33,8 @@ def test_neighbors_key_added(adata):
 
 
 def test_neighbors_pca_keys_added_without_previous_pca_run(adata):
-    assert "pca" not in adata.uns and "X_pca" not in adata.obsm
+    assert "pca" not in adata.uns
+    assert "X_pca" not in adata.obsm
     with pytest.warns(
         UserWarning,
         match=r".*Falling back to preprocessing with `sc.pp.pca` and default params",

@@ -1357,6 +1357,7 @@ def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
     img_key: None | str | Empty,
+    *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
     """
@@ -1403,7 +1404,7 @@ def _broadcast_args(*args):
     lens = [len(arg) for arg in args]
     longest = max(lens)
     if not (set(lens) == {1, longest} or set(lens) == {longest}):
-        raise ValueError(f"Could not broadast together arguments with shapes: {lens}.")
+        raise ValueError(f"Could not broadcast together arguments with shapes: {lens}.")
     return list(
         [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
     )

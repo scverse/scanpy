@@ -125,7 +125,7 @@ def leiden(
     if flavor == "igraph":
         if directed:
             raise ValueError(
-                "Cannot use igraph's leiden implemntation with a directed graph."
+                "Cannot use igraph’s leiden implementation with a directed graph."
             )
         if partition_type is not None:
             raise ValueError(

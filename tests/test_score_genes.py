@@ -221,7 +221,7 @@ def test_missing_genes():
     # These genes have a different length of name
     non_extant_genes = _create_random_gene_names(n_genes=3, name_length=7)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"No valid genes were passed for scoring"):
         sc.tl.score_genes(adata, non_extant_genes)
 
 
@@ -277,7 +277,7 @@ def test_no_control_gene():
 @pytest.mark.parametrize(
     "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
 )
-def test_gene_list_is_control(ctrl_as_ref: bool):
+def test_gene_list_is_control(*, ctrl_as_ref: bool):
     np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
     adata.var_names = "g" + adata.var_names
