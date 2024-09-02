@@ -147,19 +147,20 @@ class Aggregate:
         -------
         Array of median.
         """
-        
+
         medians = []
         for group in np.unique(self.groupby.codes):
             group_mask = self.groupby.codes == group
             group_data = self.data[group_mask]
             if sparse.issparse(group_data):
-                if group_data.format != 'csc':
+                if group_data.format != "csc":
                     group_data = group_data.tocsc()
                 medians.append(csc_median_axis_0(group_data))
             else:
                 medians.append(np.median(group_data, axis=0))
         return np.array(medians)
-    
+
+
 def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
