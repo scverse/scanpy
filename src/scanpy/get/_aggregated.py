@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from .._utils import _resolve_axis
 from .get import _check_mask
@@ -146,23 +147,19 @@ class Aggregate:
         -------
         Array of median.
         """
-        import warnings
-
+        
         medians = []
         for group in np.unique(self.groupby.codes):
             group_mask = self.groupby.codes == group
             group_data = self.data[group_mask]
             if sparse.issparse(group_data):
-                warnings.warn(
-                    "Converting sparse matrix to dense for median calculation. "
-                    "This may be very memory intensive for large datasets.",
-                    UserWarning,
-                )
-                group_data = group_data.toarray()
-            medians.append(np.median(group_data, axis=0))
+                if group_data.format != 'csc':
+                    group_data = group_data.tocsc()
+                medians.append(csc_median_axis_0(group_data))
+            else:
+                medians.append(np.median(group_data, axis=0))
         return np.array(medians)
-
-
+    
 def _power(X: Array, power: float | int) -> Array:
     """\
     Generate elementwise power of a matrix.
