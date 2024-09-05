@@ -849,7 +849,7 @@ def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
     return a, b
 
 
-@pytest.fixture()
+@pytest.fixture
 def gene_symbols_adatas(gene_symbols_adatas_session) -> tuple[AnnData, AnnData]:
     a, b = gene_symbols_adatas_session
     return a.copy(), b.copy()
@@ -993,7 +993,7 @@ def pbmc_scatterplots_session() -> AnnData:
     return pbmc
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
     return pbmc_scatterplots_session.copy()
 
@@ -1352,7 +1352,7 @@ def test_scatter_no_basis_per_var(image_comparer):
     save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc_filtered() -> Callable[[], AnnData]:
     pbmc = pbmc68k_reduced()
     sc.pp.filter_genes(pbmc, min_cells=10)
