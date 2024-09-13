@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
@@ -12,10 +13,15 @@ from .._utils import _choose_graph
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
+    from typing import LiteralString, TypeVar
+
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
     from .._utils import AnyRandom
+
+    S = TypeVar("S", bound=LiteralString)
+
 
 _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 _LAYOUTS = get_args(_Layout)
@@ -137,47 +143,10 @@ def draw_graph(
     else:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2))
-    # see whether fa2 is installed
-    if layout == "fa":
-        try:
-            from fa2_modified import ForceAtlas2
-        except ImportError:
-            logg.warning(
-                "Package 'fa2' is not installed, falling back to layout 'fr'."
-                "To use the faster and better ForceAtlas2 layout, "
-                "install package 'fa2' (`pip install fa2_modified`)."
-            )
-            layout = "fr"
+    layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
-        forceatlas2 = ForceAtlas2(
-            # Behavior alternatives
-            outboundAttractionDistribution=False,  # Dissuade hubs
-            linLogMode=False,  # NOT IMPLEMENTED
-            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-            edgeWeightInfluence=1.0,
-            # Performance
-            jitterTolerance=1.0,  # Tolerance
-            barnesHutOptimize=True,
-            barnesHutTheta=1.2,
-            multiThreaded=False,  # NOT IMPLEMENTED
-            # Tuning
-            scalingRatio=2.0,
-            strongGravityMode=False,
-            gravity=1.0,
-            # Log
-            verbose=False,
-        )
-        if "maxiter" in kwds:
-            iterations = kwds["maxiter"]
-        elif "iterations" in kwds:
-            iterations = kwds["iterations"]
-        else:
-            iterations = 500
-        positions = forceatlas2.forceatlas2(
-            adjacency, pos=init_coords, iterations=iterations
-        )
-        positions = np.array(positions)
+        positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
         # igraph doesn't use numpy seed
         random.seed(random_state)
@@ -202,3 +171,51 @@ def draw_graph(
         deep=f"added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)",
     )
     return adata if copy else None
+
+
+def fa2_positions(
+    adjacency: spmatrix | np.ndarray, init_coords: np.ndarray, **kwds
+) -> list[tuple[float, float]]:
+    from fa2_modified import ForceAtlas2
+
+    forceatlas2 = ForceAtlas2(
+        # Behavior alternatives
+        outboundAttractionDistribution=False,  # Dissuade hubs
+        linLogMode=False,  # NOT IMPLEMENTED
+        adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+        edgeWeightInfluence=1.0,
+        # Performance
+        jitterTolerance=1.0,  # Tolerance
+        barnesHutOptimize=True,
+        barnesHutTheta=1.2,
+        multiThreaded=False,  # NOT IMPLEMENTED
+        # Tuning
+        scalingRatio=2.0,
+        strongGravityMode=False,
+        gravity=1.0,
+        # Log
+        verbose=False,
+    )
+    if "maxiter" in kwds:
+        iterations = kwds["maxiter"]
+    elif "iterations" in kwds:
+        iterations = kwds["iterations"]
+    else:
+        iterations = 500
+    return forceatlas2.forceatlas2(adjacency, pos=init_coords, iterations=iterations)
+
+
+def coerce_fa2_layout(layout: S) -> S | Literal["fa", "fr"]:
+    # see whether fa2 is installed
+    if layout != "fa":
+        return layout
+
+    if find_spec("fa2_modified") is None:
+        logg.warning(
+            "Package 'fa2' is not installed, falling back to layout 'fr'."
+            "To use the faster and better ForceAtlas2 layout, "
+            "install package 'fa2' (`pip install fa2-modified`)."
+        )
+        return "fr"
+
+    return "fa"
