@@ -59,8 +59,8 @@ def draw_graph(
     An alternative to tSNE that often preserves the topology of the data
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
-    The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2|_
-    :cite:p:`Chippada2018`, which can be installed via `pip install fa2_modified`.
+    The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2-modified|_
+    :cite:p:`Chippada2018`, which can be installed via `pip install fa2-modified`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
@@ -68,8 +68,8 @@ def draw_graph(
     Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
     Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
-    .. |fa2| replace:: `fa2`
-    .. _fa2: https://github.com/AminAlam/fa2_modified
+    .. |fa2-modified| replace:: `fa2-modified`
+    .. _fa2-modified: https://github.com/AminAlam/fa2_modified
     .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
     Parameters
