@@ -212,9 +212,9 @@ def coerce_fa2_layout(layout: S) -> S | Literal["fa", "fr"]:
 
     if find_spec("fa2_modified") is None:
         logg.warning(
-            "Package 'fa2' is not installed, falling back to layout 'fr'."
+            "Package 'fa2-modified' is not installed, falling back to layout 'fr'."
             "To use the faster and better ForceAtlas2 layout, "
-            "install package 'fa2' (`pip install fa2-modified`)."
+            "install package 'fa2-modified' (`pip install fa2-modified`)."
         )
         return "fr"
 
