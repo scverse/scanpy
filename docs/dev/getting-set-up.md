@@ -20,7 +20,7 @@ To get the code, and be able to push changes back to the main project, you'll ne
 
 This is very straight forward if you're using [GitHub's CLI](https://cli.github.com):
 
-```shell
+```console
 $ gh repo fork scverse/scanpy --clone --remote
 ```
 
@@ -28,14 +28,14 @@ This will fork the repo to your github account, create a clone of the repo on yo
 
 To do this manually, first make a fork of the repository by clicking the "fork" button on our main github package. Then, on your machine, run:
 
-```shell
-# Clone your fork of the repository (substitute in your username)
-git clone https://github.com/{your-username}/scanpy.git
-# Enter the cloned repository
-cd scanpy
-# Add our repository as a remote
-git remote add upstream https://github.com/scverse/scanpy.git
-# git branch --set-upstream-to "upstream/main"
+```console
+$ # Clone your fork of the repository (substitute in your username)
+$ git clone https://github.com/{your-username}/scanpy.git
+$ # Enter the cloned repository
+$ cd scanpy
+$ # Add our repository as a remote
+$ git remote add upstream https://github.com/scverse/scanpy.git
+$ # git branch --set-upstream-to "upstream/main"
 ```
 
 ### `pre-commit`
@@ -45,14 +45,14 @@ We also test against these checks, so make sure you follow them!
 
 You can install pre-commit with:
 
-```shell
-pip install pre-commit
+```console
+$ pip install pre-commit
 ```
 
 You can then install it to run while developing here with:
 
-```shell
-pre-commit install
+```console
+$ pre-commit install
 ```
 
 From the root of the repo.
@@ -67,10 +67,10 @@ All development should occur in branches dedicated to the particular work being 
 Additionally, unless you are a maintainer, all changes should be directed at the `main` branch.
 You can create a branch with:
 
-```shell
-git checkout main                 # Starting from the main branch
-git pull                          # Syncing with the repo
-git switch -c {your-branch-name}  # Making and changing to the new branch
+```console
+$ git checkout main                 # Starting from the main branch
+$ git pull                          # Syncing with the repo
+$ git switch -c {your-branch-name}  # Making and changing to the new branch
 ```
 
 (open-a-pr)=
@@ -79,11 +79,11 @@ git switch -c {your-branch-name}  # Making and changing to the new branch
 
 When you're ready to have your code reviewed, push your changes up to your fork:
 
-```shell
-# The first time you push the branch, you'll need to tell git where
-git push --set-upstream origin {your-branch-name}
-# After that, just use
-git push
+```console
+$ # The first time you push the branch, you'll need to tell git where
+$ git push --set-upstream origin {your-branch-name}
+$ # After that, just use
+$ git push
 ```
 
 And open a pull request by going to the main repo and clicking *New pull request*.

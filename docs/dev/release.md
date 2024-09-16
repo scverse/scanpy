@@ -50,26 +50,20 @@ If you changed something about the build process (e.g. [Hatchling’s build conf
 or something about the package’s structure,
 you might want to manually check if the build and upload process behaves as expected:
 
-```shell
-# Clear out old distributions
-rm -r dist
-
-# Build source distribution and wheel both
-python -m build
-
-# Now check those build artifacts
-twine check dist/*
-
-# List the wheel archive’s contents
-bsdtar -tf dist/*.whl
+```console
+$ # Clear out old distributions
+$ rm -r dist
+$ # Build source distribution and wheel both
+$ python -m build
+$ # Now check those build artifacts
+$ twine check dist/*
+$ # List the wheel archive’s contents
+$ bsdtar -tf dist/*.whl
 ```
 
 You can also upload the package to <test.pypi.org> ([tutorial][testpypi tutorial])
-
-[testpypi tutorial]: https://packaging.python.org/en/latest/tutorials/packaging-projects/#uploading-the-distribution-archives
-
-```
-twine upload --repository testpypi dist/*
+```console
+$ twine upload --repository testpypi dist/*
 ```
 
 The above approximates what the [publish workflow][] does automatically for us.
@@ -77,4 +71,5 @@ If you want to replicate the process more exactly, make sure you are careful,
 and create a version tag before building (make sure you delete it after uploading to TestPyPI!).
 
 [hatch-build]: https://hatch.pypa.io/latest/config/build/
+[testpypi tutorial]: https://packaging.python.org/en/latest/tutorials/packaging-projects/#uploading-the-distribution-archives
 [publish workflow]: https://github.com/scverse/scanpy/tree/main/.github/workflows/publish.yml

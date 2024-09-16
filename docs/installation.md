@@ -12,22 +12,22 @@ See below for how to use Scanpy’s {ref}`dev-install-instructions`.
 :::{group-tab} Pip/PyPI
 If you prefer to exclusively use PyPI run:
 
-```shell
-pip install 'scanpy[leiden]'
+```console
+$ pip install 'scanpy[leiden]'
 ```
 :::
 
 :::{group-tab} Conda
 After installing installing e.g. [Miniconda][], run:
 
-```shell
-conda install -c conda-forge scanpy python-igraph leidenalg
+```console
+$ conda install -c conda-forge scanpy python-igraph leidenalg
 ```
 
 Pull Scanpy [from PyPI][] (consider using `pip3` to access Python 3):
 
-```shell
-pip install scanpy
+```console
+$ pip install scanpy
 ```
 
 [miniconda]: https://docs.anaconda.com/miniconda/miniconda-install/
@@ -49,9 +49,9 @@ If you use conda, you should to add these dependencies to your environment indiv
 
 To work with the latest version [on GitHub][]: clone the repository and `cd` into its root directory.
 
-```shell
-gh repo clone scverse/scanpy
-cd scanpy
+```console
+$ gh repo clone scverse/scanpy
+$ cd scanpy
 ```
 
 ::::{tabs}
@@ -72,22 +72,22 @@ $ hatch run towncrier:create  # create changelog entry
 :::{group-tab} Pip/PyPI
 If you are using `pip>=21.3`, an editable install can be made:
 
-```shell
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev,test]'
+```console
+$ python -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e '.[dev,test]'
 ```
 :::
 
 :::{group-tab} Conda
 If you want to let `conda` handle the installations of dependencies, do:
 
-```shell
-pipx install beni
-beni pyproject.toml > environment.yml
-conda env create -f environment.yml
-conda activate scanpy
-pip install -e '.[dev,doc,test]'
+```console
+$ pipx install beni
+$ beni pyproject.toml > environment.yml
+$ conda env create -f environment.yml
+$ conda activate scanpy
+$ pip install -e '.[dev,doc,test]'
 ```
 
 For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
@@ -108,6 +108,6 @@ If you're using [Docker][], you can use e.g. the image [gcfntnu/scanpy][] from D
 
 If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or:
 
-```shell
-pip install --user scanpy
+```console
+$ pip install --user scanpy
 ```
