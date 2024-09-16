@@ -4,38 +4,36 @@
 
 ## Building the docs
 
-Dependencies for building the documentation for scanpy can be installed with `pip install -e "scanpy[doc]"`
-
-To build the docs, enter the `docs` directory and run `make html`. After this process completes you can take a look at the docs by opening `scanpy/docs/_build/html/index.html`.
+To build the docs, run `hatch run docs:build`.
+Afterwards, you can run `hatch run docs:open` to open {file}`docs/_build/html/index.html`.
 
 Your browser and Sphinx cache docs which have been built previously.
 Sometimes these caches are not invalidated when you've updated the docs.
 If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
-Next, if problems persist, clear the sphinx cache and try building them again (`make clean` from `docs` directory).
-
-```{note}
-If you've cloned the repository pre 1.8.0, you may need to be more thorough in cleaning.
-If you run into warnings try removing all untracked files in the docs directory.
-```
+Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and try building them again.
 
 ## Adding to the docs
 
-For any user-visible changes, please make sure a note has been added to the release notes for the relevant version so we can credit you!
-These files are found in the `docs/release-notes/` directory.
+For any user-visible changes, please make sure a note has been added to the release notes using `hatch run towncrier:create`.
 We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
 
-For tutorials and more in depth examples, consider adding a notebook to [scanpy-tutorials](https://github.com/scverse/scanpy-tutorials/).
+For tutorials and more in depth examples, consider adding a notebook to the [scanpy-tutorials][] repository.
 
-The tutorials are tied to this repository via a submodule. To update the submodule, run `git submodule update --remote` from the root of the repository. Subsequently, commit and push the changes in a PR. This should be done before each release to ensure the tutorials are up to date.
+The tutorials are tied to this repository via a submodule.
+To update the submodule, run `git submodule update --remote` from the root of the repository.
+Subsequently, commit and push the changes in a PR.
+This should be done before each release to ensure the tutorials are up to date.
+
+[scanpy-tutorials]: https://github.com/scverse/scanpy-tutorials/
 
 ## docstrings format
 
 We use the numpydoc style for writing docstrings.
-We'd primarily suggest looking at existing docstrings for examples, but the [napolean guide to numpy style docstrings](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy) is also a great source.
-If you're unfamiliar with the reStructuredText (`rst`) markup format, [Sphinx has a useful primer](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html).
+We'd primarily suggest looking at existing docstrings for examples, but the [napolean guide to numpy style docstrings][] is also a great source.
+If you're unfamiliar with the reStructuredText (rST) markup format, [Sphinx rST primer][].
 
 Some key points:
 
@@ -46,17 +44,22 @@ Some key points:
 
 Look at [sc.tl.louvain](https://github.com/scverse/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90) as an example for everything mentioned here.
 
+[napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
+[sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+
 ### Plots in docstrings
 
 One of the most useful things you can include in a docstring is examples of how the function should be used.
 These are a great way to demonstrate intended usage and give users a template they can copy and modify.
-We're able to include the plots produced by these snippets in the rendered docs using [matplotlib's plot directive](https://matplotlib.org/devel/plot_directive.html).
+We're able to include the plots produced by these snippets in the rendered docs using [matplotlib's plot directive][].
 For examples of this, see the `Examples` sections of {func}`~scanpy.pl.dotplot` or {func}`~scanpy.pp.calculate_qc_metrics`.
 
 Note that anything in these sections will need to be run when the docs are built, so please keep them computationally light.
 
 - If you need computed features (e.g. an embedding, differential expression results) load data that has this precomputed.
 - Try to re-use datasets, this reduces the amount of data that needs to be downloaded to the CI server.
+
+[matplotlib's plot directive]: https://matplotlib.org/devel/plot_directive.html
 
 ### `Params` section
 
@@ -65,7 +68,10 @@ The `Params` abbreviation is a legit replacement for `Parameters`.
 To document parameter types use type annotations on function parameters.
 These will automatically populate the docstrings on import, and when the documentation is built.
 
-Use the python standard library types (defined in [collections.abc](https://docs.python.org/3/library/collections.abc.html) and [typing](https://docs.python.org/3/library/typing.html) modules) for containers, e.g. `Sequence`s (like `list`), `Iterable`s (like `set`), and `Mapping`s (like `dict`).
+Use the python standard library types (defined in {mod}`collections.abc` and {mod}`typing` modules) for containers, e.g.
+{class}`~collections.abc.Sequence`s (like `list`),
+{class}`~collections.abc.Iterable`s (like `set`), and
+{class}`~collections.abc.Mapping`s (like `dict`).
 Always specify what these contain, e.g. `{'a': (1, 2)}` → `Mapping[str, Tuple[int, int]]`.
 If you can’t use one of those, use a concrete class like `AnnData`.
 If your parameter only accepts an enumeration of strings, specify them like so: `Literal['elem-1', 'elem-2']`.
@@ -80,8 +86,7 @@ There are three types of return sections – prose, tuple, and a mix of both.
 
 #### Examples
 
-For simple cases, use prose as in
-{func}`~scanpy.pp.normalize_total`
+For simple cases, use prose as in {func}`~scanpy.pp.normalize_total`:
 
 ```rst
 Returns
@@ -110,7 +115,7 @@ def myfunc(...) -> tuple[int, str]:
 ```
 
 Many functions also just modify parts of the passed AnnData object, like e.g. {func}`~scanpy.tl.dpt`.
-You can then combine prose and lists to best describe what happens.
+You can then combine prose and lists to best describe what happens:
 
 ```rst
 Returns

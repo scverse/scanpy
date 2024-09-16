@@ -6,8 +6,11 @@ This section of the docs covers our practices for working with `git` on our code
 
 For a more complete git tutorials we recommend checking out:
 
-- [Atlassian's git tutorial](https://www.atlassian.com/git/tutorials) -- Beginner friendly introductions to the git command line interface
-- [Setting up git for GitHub](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git) -- Configuring git to work with your GitHub user account
+[Atlassian's git tutorial](https://www.atlassian.com/git/tutorials)
+: Beginner friendly introductions to the git command line interface
+
+[Setting up git for GitHub](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
+: Configuring git to work with your GitHub user account
 
 (forking-and-cloning)=
 
@@ -37,7 +40,7 @@ git remote add upstream https://github.com/scverse/scanpy.git
 
 ### `pre-commit`
 
-We use [precommit](https://pre-commit.com) to run some styling checks in an automated way.
+We use [pre-commit](https://pre-commit.com) to run some styling checks in an automated way.
 We also test against these checks, so make sure you follow them!
 
 You can install pre-commit with:
@@ -65,9 +68,9 @@ Additionally, unless you are a maintainer, all changes should be directed at the
 You can create a branch with:
 
 ```shell
-git checkout main                   # Starting from the main branch
-git pull                            # Syncing with the repo
-git checkout -b {your-branch-name}  # Making and changing to the new branch
+git checkout main                 # Starting from the main branch
+git pull                          # Syncing with the repo
+git switch -c {your-branch-name}  # Making and changing to the new branch
 ```
 
 (open-a-pr)=
@@ -93,6 +96,10 @@ We'll try and get back to you soon!
 ## Development environments
 
 It's recommended to do development work in an isolated environment.
-There are number of ways to do this, including conda environments, virtual environments, and virtual machines.
+There are number of ways to do this, including virtual environments, conda environments, and virtual machines.
 
-We think the easiest is probably conda environments. Simply create a new environment with a supported version of python and make a {ref}`development install <dev-install-instructions>` of `scanpy`.
+We think the easiest is probably [Hatch environments][].
+Using one of the predefined environments in {file}`hatch.toml` is as simple as running `hatch test` or `hatch run docs:build` (they will be created on demand).
+For an in-depth guide, refer to the {ref}`development install instructions <dev-install-instructions>` of `scanpy`.
+
+[hatch environments]: https://hatch.pypa.io/latest/tutorials/environment/basic-usage/

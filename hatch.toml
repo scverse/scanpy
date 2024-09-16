@@ -5,9 +5,11 @@ features = ["dev"]
 [envs.docs]
 features = ["doc"]
 scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
 [envs.towncrier]
+scripts.create = "towncrier create {args}"
 scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
 scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
 

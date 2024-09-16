@@ -117,6 +117,7 @@ doc = [
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
+    "sphinx-tabs",
     "readthedocs-sphinx-search",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
