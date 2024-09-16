@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-VERSION = re.compile(_VP)
+VERSION = re.compile(_VP, re.VERBOSE | re.IGNORECASE)
 
 
 class Args(argparse.Namespace):
