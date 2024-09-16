@@ -262,7 +262,7 @@ exempt-modules = []
 strict = true
 
 [tool.towncrier]
-package = "anndata"
+package = "scanpy"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
 single_file = false
