@@ -5,12 +5,9 @@ That page also explains concepts like *pre-releases* and applications thereof.
 
 ## Preparing the release
 
-1. Make a new branch off of `main` to prepare the release notes, and create a PR from this branch back into `main`.
-   Add a milestone for the desired version to be released.
-2. Update the date in the desired release’s notes and if applicable, delete empty headers in the notes.
-   Create a new blank note for the next desired release and update the `index.md` to include it.
-3. Push the changes to the PR, and merge into `main`.
-   If it is a patch release, backport the updated notes (see [](#versioning-tooling)) into the major/minor version branch.
+1. Run `hatch towncrier:build` to generate a PR that creates a new release notes file.
+2. Merge the PR into `main` once it’s ready.
+3. If it is a patch release, backport the updated notes (see {ref}`versioning-tooling`) into the major/minor version branch.
 
 ## Actually making the release
 
@@ -28,8 +25,6 @@ That page also explains concepts like *pre-releases* and applications thereof.
 
 After *any* release has been made:
 
-- Create a new release notes file for the next bugfix release.
-  This should be included in both dev and stable branches.
 - Create a milestone for the next release (in case you made a bugfix release) or releases (in case of a major/minor release).
   For bugfix releases, this should have `on-merge: backport to 0.<minor>.x`,
   so the [meeseeksdev][] bot will create a backport PR. See {doc}`versioning` for more info.
