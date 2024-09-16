@@ -1,5 +1,6 @@
 [envs.default]
 installer = "uv"
+features = ["dev"]
 
 [envs.docs]
 features = ["doc"]

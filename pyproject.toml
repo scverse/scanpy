@@ -135,6 +135,7 @@ dev = [
     "setuptools_scm",
     # static checking
     "pre-commit",
+    "towncrier",
 ]
 # Algorithms
 paga = ["igraph"]
@@ -258,3 +259,19 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true
+
+[tool.towncrier]
+package = "anndata"
+directory = "docs/release-notes"
+filename = "docs/release-notes/{version}.md"
+single_file = false
+package_dir = "src"
+issue_format = "{{pr}}`{issue}`"
+title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+fragment.bugfix.name = "Bug fixes"
+fragment.doc.name = "Documentation"
+fragment.feature.name = "Features"
+fragment.misc.name = "Miscellaneous improvements"
+fragment.performance.name = "Performance"
+fragment.breaking.name = "Breaking changes"
+fragment.dev.name = "Development Process"
