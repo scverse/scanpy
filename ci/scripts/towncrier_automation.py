@@ -2,17 +2,13 @@
 from __future__ import annotations
 
 import argparse
-import re
 import subprocess
 from typing import TYPE_CHECKING
 
-from packaging.version import VERSION_PATTERN as _VP
+from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-
-VERSION = re.compile(_VP, re.VERBOSE | re.IGNORECASE)
 
 
 class Args(argparse.Namespace):
@@ -44,10 +40,8 @@ def parse_args(argv: Sequence[str] | None = None) -> Args:
         action="store_true",
     )
     args = parser.parse_args(argv, Args())
-    if (match := VERSION.fullmatch(args.version)) is None:
-        msg = f"Version argument {args.version} is not a valid version."
-        raise ValueError(msg)
-    if len(match["release"].split(".")) < 3:
+    # validate the version
+    if len(Version(args.version).release) != 3:
         msg = f"Version argument {args.version} must contain major, minor, and patch version."
         raise ValueError(msg)
     return args
