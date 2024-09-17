@@ -11,7 +11,7 @@ n_neighbors = 5
 key = "test"
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata():
     return sc.AnnData(pbmc68k_reduced().X)
 

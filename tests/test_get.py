@@ -33,7 +33,7 @@ TRANSPOSE_PARAMS = pytest.mark.parametrize(
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata():
     """
     adata.X is np.ones((2, 2))

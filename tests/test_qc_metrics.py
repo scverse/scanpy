@@ -15,7 +15,7 @@ from scanpy.preprocessing._qc import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def anndata():
     a = np.random.binomial(100, 0.005, (1000, 1000))
     adata = AnnData(
