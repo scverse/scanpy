@@ -76,7 +76,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     # push
     if not args.dry_run:
         subprocess.run(
-            ["git", "push", "--set-upstream=origin", branch_name], check=True
+            ["git", "push", "--set-upstream", "origin", branch_name], check=True
         )
     else:
         print("Dry run, not pushing")
