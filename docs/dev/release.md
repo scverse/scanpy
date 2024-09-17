@@ -5,9 +5,9 @@ That page also explains concepts like *pre-releases* and applications thereof.
 
 ## Preparing the release
 
-1. Run `hatch towncrier:build` to generate a PR that creates a new release notes file.
-2. Merge the PR into `main` once it’s ready.
-3. If it is a patch release, backport the updated notes (see {ref}`versioning-tooling`) into the major/minor version branch.
+1. Switch to the `main` branch for a major/minor release and the respective release series branch for a *patch* release (e.g. `1.8.x` when releasing version 1.8.4).
+2. Run `hatch towncrier:build` to generate a PR that creates a new release notes file. Wait for the PR to be auto-merged.
+3. If it is a *patch* release, merge the backport PR (see {ref}`versioning-tooling`) into the `main` branch.
 
 ## Actually making the release
 
