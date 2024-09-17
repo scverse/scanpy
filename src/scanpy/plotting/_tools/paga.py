@@ -16,6 +16,8 @@ from pandas.api.types import CategoricalDtype
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
+from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
+
 from ... import _utils as _sc_utils
 from ... import logging as logg
 from ..._compat import old_positionals
@@ -25,13 +27,17 @@ from .._utils import matrix
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from typing import Any, Literal
+    from typing import Any, Literal, Union
 
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
+    from scipy.sparse import spmatrix
 
-    from .._utils import _FontSize, _FontWeight, _IGraphLayout, _LegendLoc
+    from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
+    from .._utils import _FontSize, _FontWeight, _LegendLoc
+
+    _Layout = Union[_LayoutWithoutEqTree, Literal["eq_tree"]]
 
 
 @old_positionals(
@@ -202,13 +208,13 @@ def paga_compare(
 
 
 def _compute_pos(
-    adjacency_solid,
+    adjacency_solid: spmatrix | np.ndarray,
     *,
-    layout=None,
-    random_state=0,
-    init_pos=None,
+    layout: _Layout | None = None,
+    random_state: _sc_utils.AnyRandom = 0,
+    init_pos: np.ndarray | None = None,
     adj_tree=None,
-    root=0,
+    root: int = 0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
     import random
@@ -220,50 +226,15 @@ def _compute_pos(
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = "fr"
-    if layout == "fa":
-        try:
-            from fa2 import ForceAtlas2
-        except ImportError:
-            logg.warning(
-                "Package 'fa2' is not installed, falling back to layout 'fr'."
-                "To use the faster and better ForceAtlas2 layout, "
-                "install package 'fa2' (`pip install fa2`)."
-            )
-            layout = "fr"
+    layout = coerce_fa2_layout(layout)
     if layout == "fa":
         # np.random.seed(random_state)
         if init_pos is None:
             init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
-        forceatlas2 = ForceAtlas2(
-            # Behavior alternatives
-            outboundAttractionDistribution=False,  # Dissuade hubs
-            linLogMode=False,  # NOT IMPLEMENTED
-            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-            edgeWeightInfluence=1.0,
-            # Performance
-            jitterTolerance=1.0,  # Tolerance
-            barnesHutOptimize=True,
-            barnesHutTheta=1.2,
-            multiThreaded=False,  # NOT IMPLEMENTED
-            # Tuning
-            scalingRatio=2.0,
-            strongGravityMode=False,
-            gravity=1.0,
-            # Log
-            verbose=False,
-        )
-        if "maxiter" in layout_kwds:
-            iterations = layout_kwds["maxiter"]
-        elif "iterations" in layout_kwds:
-            iterations = layout_kwds["iterations"]
-        else:
-            iterations = 500
-        pos_list = forceatlas2.forceatlas2(
-            adjacency_solid, pos=init_coords, iterations=iterations
-        )
-        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+        pos_list = fa2_positions(adjacency_solid, init_coords, **layout_kwds)
+        pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     elif layout == "eq_tree":
         nx_g_tree = nx.Graph(adj_tree)
         pos = _utils.hierarchy_pos(nx_g_tree, root)
@@ -302,7 +273,7 @@ def _compute_pos(
                 ).coords
             except AttributeError:  # hack for empty graphs...
                 pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
-        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+        pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     if len(pos) == 1:
         pos[0] = (0.5, 0.5)
     pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
@@ -333,7 +304,7 @@ def paga(
     *,
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
-    layout: _IGraphLayout | None = None,
+    layout: _Layout | None = None,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
     init_pos: np.ndarray | None = None,
     root: int | str | Sequence[int] | None = 0,

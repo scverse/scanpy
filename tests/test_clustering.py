@@ -8,7 +8,7 @@ from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_neighbors():
     return pbmc68k_reduced()
 
