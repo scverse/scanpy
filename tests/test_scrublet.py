@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -118,7 +117,7 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     )
 
 
-def test_scrublet_data():
+def test_scrublet_data(cache: pytest.Cache):
     """
     Test that Scrublet processing is arranged correctly.
 
@@ -158,10 +157,10 @@ def test_scrublet_data():
     )
     import zarr
 
-    data_path = Path(__file__).parent / "data"
-    data_path.mkdir(exist_ok=True)
-    store_manual = zarr.ZipStore(data_path / "manual.zip", mode="w")
-    store_auto = zarr.ZipStore(data_path / "auto.zip", mode="w")
+    # try debugging https://github.com/scverse/scanpy/issues/3068
+    cache_path = cache.mkdir("debug")
+    store_manual = zarr.ZipStore(cache_path / "scrublet-manual.zip", mode="w")
+    store_auto = zarr.ZipStore(cache_path / "scrublet-auto.zip", mode="w")
     z_manual = zarr.zeros(
         adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
     )

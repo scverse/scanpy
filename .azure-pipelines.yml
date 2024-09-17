@@ -105,8 +105,8 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Pipeline.Workspace)/s/src/scanpy/tests/data'
-      artifactName: data
+      pathToPublish: '.pytest_cache/d/debug'
+      artifactName: debug-data
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
   - script: bash <(curl -s https://codecov.io/bash)
