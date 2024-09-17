@@ -18,7 +18,7 @@ For a more complete git tutorials we recommend checking out:
 
 To get the code, and be able to push changes back to the main project, you'll need to (1) fork the repository on github and (2) clone the repository to your local machine.
 
-This is very straight forward if you're using [GitHub's CLI](https://cli.github.com):
+This is very straight forward if you're using [GitHub's CLI][]:
 
 ```console
 $ gh repo fork scverse/scanpy --clone --remote
@@ -38,9 +38,11 @@ $ git remote add upstream https://github.com/scverse/scanpy.git
 $ # git branch --set-upstream-to "upstream/main"
 ```
 
+[GitHub's CLI]: https://cli.github.com
+
 ### `pre-commit`
 
-We use [pre-commit](https://pre-commit.com) to run some styling checks in an automated way.
+We use [pre-commit][] to run some styling checks in an automated way.
 We also test against these checks, so make sure you follow them!
 
 You can install pre-commit with:
@@ -58,6 +60,8 @@ $ pre-commit install
 From the root of the repo.
 
 If you choose not to run the hooks on each commit, you can run them manually with `pre-commit run --files={your files}`.
+
+[pre-commit]: https://pre-commit.com
 
 (creating-a-branch)=
 

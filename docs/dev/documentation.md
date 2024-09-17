@@ -14,7 +14,7 @@ Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and t
 
 ## Adding to the docs
 
-For any user-visible changes, please make sure a note has been added to the release notes using `hatch run towncrier:create`.
+For any user-visible changes, please make sure a note has been added to the release notes using [`hatch run towncrier:create`][towncrier create].
 We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
@@ -27,13 +27,14 @@ To update the submodule, run `git submodule update --remote` from the root of th
 Subsequently, commit and push the changes in a PR.
 This should be done before each release to ensure the tutorials are up to date.
 
+[towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
 [scanpy-tutorials]: https://github.com/scverse/scanpy-tutorials/
 
 ## docstrings format
 
 We use the numpydoc style for writing docstrings.
 We'd primarily suggest looking at existing docstrings for examples, but the [napolean guide to numpy style docstrings][] is also a great source.
-If you're unfamiliar with the reStructuredText (rST) markup format, [Sphinx rST primer][].
+If you're unfamiliar with the reStructuredText (rST) markup format, check out the [Sphinx rST primer][].
 
 Some key points:
 
