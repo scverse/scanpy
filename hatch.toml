@@ -1,0 +1,33 @@
+[envs.default]
+installer = "uv"
+features = ["dev"]
+
+[envs.docs]
+features = ["doc"]
+scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
+scripts.clean = "git clean -fdX -- {args:docs}"
+
+[envs.towncrier]
+scripts.create = "towncrier create {args}"
+scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
+scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
+
+[envs.hatch-test]
+default-args = []
+features = ["test"]
+extra-dependencies = ["ipykernel"]
+overrides.matrix.deps.env-vars = [
+    { if = ["pre"], key = "UV_PRERELEASE", value = "allow" },
+    { if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
+]
+overrides.matrix.deps.python = [
+    { if = ["min"] , value = "3.9" },
+    { if = ["stable", "full", "pre"], value = "3.12" },
+]
+overrides.matrix.deps.features = [
+    { if = ["full"] , value = "test-full" },
+]
+
+[[envs.hatch-test.matrix]]
+deps = ["stable", "full", "pre", "min"]
