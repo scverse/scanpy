@@ -95,7 +95,7 @@ class DotPlot(BasePlot):
 
     DEFAULT_SAVE_PREFIX = "dotplot_"
     # default style parameters
-    DEFAULT_COLORMAP = "winter"
+    DEFAULT_COLORMAP = "Reds"
     DEFAULT_COLOR_ON = "dot"
     DEFAULT_DOT_MAX = None
     DEFAULT_DOT_MIN = None
@@ -261,6 +261,7 @@ class DotPlot(BasePlot):
             ]
             for df in (dot_color_df, dot_size_df)
         )
+        self.standard_scale = standard_scale
 
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
@@ -596,9 +597,10 @@ class DotPlot(BasePlot):
             _color_df,
             ax,
             cmap=self.cmap,
+            color_on=self.color_on,
             dot_max=self.dot_max,
             dot_min=self.dot_min,
-            color_on=self.color_on,
+            standard_scale=self.standard_scale,
             edge_color=self.dot_edge_color,
             edge_lw=self.dot_edge_lw,
             smallest_dot=self.smallest_dot,
@@ -623,24 +625,23 @@ class DotPlot(BasePlot):
         dot_color: pd.DataFrame,
         dot_ax: Axes,
         *,
-        cmap: str = "Reds",
-        color_on: str | None = "dot",
-        y_label: str | None = None,
-        dot_max: float | None = None,
-        dot_min: float | None = None,
-        standard_scale: Literal["var", "group"] | None = None,
-        smallest_dot: float | None = 0.0,
-        largest_dot: float | None = 200,
-        size_exponent: float | None = 2,
-        edge_color: ColorLike | None = None,
-        edge_lw: float | None = None,
+        cmap: str,
+        color_on: str | None,
+        dot_max: float | None,
+        dot_min: float | None,
+        standard_scale: Literal["var", "group"] | None,
+        smallest_dot: float | None,
+        largest_dot: float | None,
+        size_exponent: float | None,
+        edge_color: ColorLike | None,
+        edge_lw: float | None,
         grid: bool | None = False,
-        x_padding: float | None = 0.8,
-        y_padding: float | None = 1.0,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        vcenter: float | None = None,
-        norm: Normalize | None = None,
+        x_padding: float | None,
+        y_padding: float | None,
+        vmin: float | None,
+        vmax: float | None,
+        vcenter: float | None,
+        norm: Normalize | None,
         **kwds,
     ):
         """\
@@ -653,10 +654,13 @@ class DotPlot(BasePlot):
 
         Parameters
         ----------
-        dot_size: Data frame containing the dot_size.
-        dot_color: Data frame containing the dot_color, should have the same,
-                shape, columns and indices as dot_size.
-        dot_ax: matplotlib axis
+        dot_size
+            Data frame containing the dot_size.
+        dot_color
+            Data frame containing the dot_color, should have the same,
+            shape, columns and indices as dot_size.
+        dot_ax
+            matplotlib axis
         cmap
             String denoting matplotlib color map.
         color_on
@@ -664,7 +668,6 @@ class DotPlot(BasePlot):
             the color of the dot. Optionally, the colormap can be applied to an
             square behind the dot, in which case the dot is transparent and only
             the edge is shown.
-        y_label: String. Label for y axis
         dot_max
             If none, the maximum dot size is set to the maximum fraction value found
             (e.g. 0.6). If given, the value should be a number between 0 and 1.
@@ -821,7 +824,6 @@ class DotPlot(BasePlot):
         )
         dot_ax.tick_params(axis="both", labelsize="small")
         dot_ax.grid(visible=False)
-        dot_ax.set_ylabel(y_label)
 
         # to be consistent with the heatmap plot, is better to
         # invert the order of the y-axis, such that the first group is on
@@ -879,7 +881,7 @@ def dotplot(
     num_categories: int = 7,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    cmap: str = "Reds",
+    cmap: str = DotPlot.DEFAULT_COLORMAP,
     dot_max: float | None = DotPlot.DEFAULT_DOT_MAX,
     dot_min: float | None = DotPlot.DEFAULT_DOT_MIN,
     standard_scale: Literal["var", "group"] | None = None,
