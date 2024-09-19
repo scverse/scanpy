@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import KW_ONLY, dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
@@ -98,6 +98,7 @@ class DotPlot(BasePlot):
 
     DEFAULT_SAVE_PREFIX: ClassVar[str] = "dotplot_"
 
+    _: KW_ONLY
     categories_order: Sequence[str] | None = None
     expression_cutoff: float = 0.0
     mean_only_expressed: bool = False

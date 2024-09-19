@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import InitVar, dataclass
+from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
@@ -114,6 +114,7 @@ class StackedViolin(BasePlot):
 
     DEFAULT_SAVE_PREFIX: ClassVar[str] = "stacked_violin_"
 
+    _: KW_ONLY
     standard_scale: InitVar[Literal["var", "obs"] | None] = None
 
     # overrides

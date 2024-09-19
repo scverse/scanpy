@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import InitVar, dataclass
+from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import numpy as np
@@ -93,6 +93,7 @@ class MatrixPlot(BasePlot):
 
     DEFAULT_SAVE_PREFIX: ClassVar[str] = "matrixplot_"
 
+    _: KW_ONLY
     colorbar_title: str = "Mean expression\nin group"
     # default style parameters
     cmap = None  # aka: rcParams["image.cmap"]

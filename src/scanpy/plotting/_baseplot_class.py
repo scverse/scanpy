@@ -3,12 +3,7 @@
 from __future__ import annotations
 
 import collections.abc as cabc
-from dataclasses import (
-    KW_ONLY,  # noqa: TCH003  # https://github.com/astral-sh/ruff/issues/12859
-    InitVar,
-    dataclass,
-    field,
-)
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 from warnings import warn
 
