@@ -103,6 +103,12 @@ jobs:
       testResultsFormat: NUnit
       testRunTitle: 'Publish test results for $(Agent.JobName)'
 
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: '.pytest_cache/d/debug'
+      artifactName: debug-data
+    condition: eq(variables['TEST_TYPE'], 'coverage')
+
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
     condition: eq(variables['TEST_TYPE'], 'coverage')
