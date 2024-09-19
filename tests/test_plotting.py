@@ -367,6 +367,17 @@ def test_dotplot_obj(image_comparer):
     save_and_compare_images("dotplot_std_scale_var")
 
 
+def test_dotplot_style_no_reset():
+    pbmc = pbmc68k_reduced()
+    plot = sc.pl.dotplot(pbmc, "CD79A", "bulk_labels", return_fig=True)
+    assert isinstance(plot, sc.pl.DotPlot)
+    assert plot.cmap == sc.pl.DotPlot.cmap
+    plot.style(cmap="winter")
+    assert plot.cmap == "winter"
+    plot.style(color_on="square")
+    assert plot.cmap == "winter", "style() should not reset unspecified parameters"
+
+
 def test_dotplot_add_totals(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
