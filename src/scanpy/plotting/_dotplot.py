@@ -1013,9 +1013,7 @@ def dotplot(
     )
 
     if dendrogram:
-        dp.add_dendrogram(
-            dendrogram_key=dendrogram if isinstance(dendrogram, str) else None
-        )
+        dp.add_dendrogram(dendrogram_key=dendrogram)
     if swap_axes:
         dp.swap_axes()
 

@@ -825,9 +825,7 @@ def stacked_violin(
     )
 
     if dendrogram:
-        vp.add_dendrogram(
-            dendrogram_key=dendrogram if isinstance(dendrogram, str) else None
-        )
+        vp.add_dendrogram(dendrogram_key=dendrogram)
     if swap_axes:
         vp.swap_axes()
     vp = vp.style(
