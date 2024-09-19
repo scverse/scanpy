@@ -34,6 +34,8 @@ def _global_test_context(
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
+    # create directory for debug data
+    cache.mkdir("debug")
     # reuse data files between test runs (unless overwritten in the test)
     sc.settings.datasetdir = cache.mkdir("scanpy-data")
     # create new writedir for each test run
