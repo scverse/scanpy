@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
@@ -199,7 +199,7 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: str | None | Empty = _empty,
+        cmap: Colormap | str | None | Empty = _empty,
         edge_color: ColorLike | None | Empty = _empty,
         edge_lw: float | None | Empty = _empty,
     ) -> Self:
@@ -209,11 +209,14 @@ class MatrixPlot(BasePlot):
         Parameters
         ----------
         cmap
-            String denoting matplotlib color map.
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
         edge_color
-            Edge color between the squares of matrix plot. Default is gray
+            Edge color between the squares of matrix plot.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["patch.edgecolor"]``
         edge_lw
             Edge line width.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["lines.linewidth"]``
 
         Returns
         -------
@@ -243,9 +246,8 @@ class MatrixPlot(BasePlot):
             )
 
         """
+        super().style(cmap=cmap)
 
-        if cmap is not _empty:
-            self.cmap = cmap
         if edge_color is not _empty:
             self.edge_color = edge_color
         if edge_lw is not _empty:

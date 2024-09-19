@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
     from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
@@ -405,14 +405,15 @@ class BasePlot:
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: str | None | Empty = _empty) -> Self:
+    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
         """\
         Set visual style parameters
 
         Parameters
         ----------
         cmap
-            colormap
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
 
         Returns
         -------

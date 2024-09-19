@@ -183,11 +183,10 @@ def embedding(
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
-    if "edgecolor" not in kwargs:
-        # by default turn off edge color. Otherwise, for
-        # very small sizes the edge will not reduce its size
-        # (https://github.com/scverse/scanpy/issues/293)
-        kwargs["edgecolor"] = "none"
+    # by default turn off edge color. Otherwise, for
+    # very small sizes the edge will not reduce its size
+    # (https://github.com/scverse/scanpy/issues/293)
+    kwargs.setdefault("edgecolor", "none")
 
     # Vectorized arguments
 
