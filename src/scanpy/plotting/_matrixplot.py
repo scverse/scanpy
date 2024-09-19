@@ -108,9 +108,12 @@ class MatrixPlot(BasePlot):
     def __post_init__(
         self,
         dendrogram: str | None,
+        with_swapped_axes: bool,
         standard_scale: Literal["var", "group"] | None,
     ):
-        super().__post_init__(dendrogram=dendrogram)
+        super().__post_init__(
+            dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
+        )
         if self.values_df is not None:
             return
 

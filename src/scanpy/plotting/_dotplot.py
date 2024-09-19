@@ -148,8 +148,10 @@ class DotPlot(BasePlot):
     )
     DEFAULT_SIZE_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy("size_title")
 
-    def __post_init__(self, dendrogram: str | None) -> None:
-        super().__post_init__(dendrogram=dendrogram)
+    def __post_init__(self, dendrogram: str | None, with_swapped_axes: bool) -> None:
+        super().__post_init__(
+            dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
+        )
         # for if category defined by groupby (if any) compute for each var_name
         # 1. the fraction of cells in the category having a value >expression_cutoff
         # 2. the mean value over the category
