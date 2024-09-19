@@ -135,7 +135,7 @@ class MatrixPlot(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         ax: _AxesSubplot | None = None,
         values_df: pd.DataFrame | None = None,
         vmin: float | None = None,
@@ -348,7 +348,7 @@ def matrixplot(
     figsize: tuple[float, float] | None = None,
     dendrogram: bool | str = False,
     title: str | None = None,
-    cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
+    cmap: Colormap | str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
@@ -456,7 +456,9 @@ def matrixplot(
     )
 
     if dendrogram:
-        mp.add_dendrogram(dendrogram_key=dendrogram)
+        mp.add_dendrogram(
+            dendrogram_key=dendrogram if isinstance(dendrogram, str) else None
+        )
     if swap_axes:
         mp.swap_axes()
 

@@ -190,7 +190,7 @@ class StackedViolin(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "group"] | None = None,
+        standard_scale: Literal["var", "obs"] | None = None,
         ax: _AxesSubplot | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
@@ -680,23 +680,24 @@ def stacked_violin(
     standard_scale: Literal["var", "obs"] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
-    jitter: float | bool = StackedViolin.DEFAULT_JITTER,
-    size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
-    yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
     return_fig: bool | None = False,
-    row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
-    cmap: str | None = StackedViolin.DEFAULT_COLORMAP,
     ax: _AxesSubplot | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
     vcenter: float | None = None,
     norm: Normalize | None = None,
+    # Style options
+    cmap: Colormap | str | None = StackedViolin.DEFAULT_COLORMAP,
+    stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
+    jitter: float | bool = StackedViolin.DEFAULT_JITTER,
+    size: int | float = StackedViolin.DEFAULT_JITTER_SIZE,
+    row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
+    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
+    yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\
@@ -814,6 +815,7 @@ def stacked_violin(
         var_group_labels=var_group_labels,
         var_group_rotation=var_group_rotation,
         layer=layer,
+        categories_order=order,
         ax=ax,
         vmin=vmin,
         vmax=vmax,
@@ -823,7 +825,9 @@ def stacked_violin(
     )
 
     if dendrogram:
-        vp.add_dendrogram(dendrogram_key=dendrogram)
+        vp.add_dendrogram(
+            dendrogram_key=dendrogram if isinstance(dendrogram, str) else None
+        )
     if swap_axes:
         vp.swap_axes()
     vp = vp.style(

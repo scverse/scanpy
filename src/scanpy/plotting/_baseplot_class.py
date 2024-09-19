@@ -878,7 +878,7 @@ class BasePlot:
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
+    def _reorder_categories_after_dendrogram(self, dendrogram: str | None) -> None:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
