@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
@@ -113,8 +113,8 @@ class DotPlot(BasePlot):
     dot_min: float | None = None
     smallest_dot: float = 0.0
     largest_dot: float = 200
-    dot_edge_color: ColorLike = "black"
-    dot_edge_lw: float = 0.2
+    dot_edge_color: ColorLike | None = "black"
+    dot_edge_lw: float | None = 0.2
     size_exponent: float = 1.5
     grid: bool = False
     # a unit is the distance between two x-axis ticks
@@ -137,10 +137,12 @@ class DotPlot(BasePlot):
     DEFAULT_DOT_MIN: ClassVar[DefaultProxy[float | None]] = DefaultProxy("dot_min")
     DEFAULT_SMALLEST_DOT: ClassVar[DefaultProxy[float]] = DefaultProxy("smallest_dot")
     DEFAULT_LARGEST_DOT: ClassVar[DefaultProxy[float]] = DefaultProxy("largest_dot")
-    DEFAULT_DOT_EDGECOLOR: ClassVar[DefaultProxy[ColorLike]] = DefaultProxy(
+    DEFAULT_DOT_EDGECOLOR: ClassVar[DefaultProxy[ColorLike | None]] = DefaultProxy(
         "dot_edge_color"
     )
-    DEFAULT_DOT_EDGELW: ClassVar[DefaultProxy[float]] = DefaultProxy("dot_edge_lw")
+    DEFAULT_DOT_EDGELW: ClassVar[DefaultProxy[float | None]] = DefaultProxy(
+        "dot_edge_lw"
+    )
     DEFAULT_SIZE_EXPONENT: ClassVar[DefaultProxy[float]] = DefaultProxy("size_exponent")
     DEFAULT_PLOT_X_PADDING: ClassVar[DefaultProxy[float]] = DefaultProxy(
         "plot_x_padding"
@@ -255,18 +257,18 @@ class DotPlot(BasePlot):
     def style(
         self,
         *,
-        cmap: str | None | Empty = _empty,
-        color_on: Literal["dot", "square"] | None | Empty = _empty,
+        cmap: Colormap | str | None | Empty = _empty,
+        color_on: Literal["dot", "square"] | Empty = _empty,
         dot_max: float | None | Empty = _empty,
         dot_min: float | None | Empty = _empty,
-        smallest_dot: float | None | Empty = _empty,
-        largest_dot: float | None | Empty = _empty,
+        smallest_dot: float | Empty = _empty,
+        largest_dot: float | Empty = _empty,
         dot_edge_color: ColorLike | None | Empty = _empty,
         dot_edge_lw: float | None | Empty = _empty,
-        size_exponent: float | None | Empty = _empty,
-        grid: bool | None | Empty = _empty,
-        x_padding: float | None | Empty = _empty,
-        y_padding: float | None | Empty = _empty,
+        size_exponent: float | Empty = _empty,
+        grid: bool | Empty = _empty,
+        x_padding: float | Empty = _empty,
+        y_padding: float | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -276,31 +278,30 @@ class DotPlot(BasePlot):
         cmap
             String denoting matplotlib color map.
         color_on
-            Options are 'dot' or 'square'. Be default the colomap is applied to
-            the color of the dot. Optionally, the colormap can be applied to an
-            square behind the dot, in which case the dot is transparent and only
-            the edge is shown.
+            By default the color map is applied to the color of the ``"dot"``.
+            Optionally, the colormap can be applied to a ``"square"`` behind the dot,
+            in which case the dot is transparent and only the edge is shown.
         dot_max
-            If none, the maximum dot size is set to the maximum fraction value found
-            (e.g. 0.6). If given, the value should be a number between 0 and 1.
+            If ``None``, the maximum dot size is set to the maximum fraction value found (e.g. 0.6).
+            If given, the value should be a number between 0 and 1.
             All fractions larger than dot_max are clipped to this value.
         dot_min
-            If none, the minimum dot size is set to 0. If given,
-            the value should be a number between 0 and 1.
+            If ``None``, the minimum dot size is set to 0.
+            If given, the value should be a number between 0 and 1.
             All fractions smaller than dot_min are clipped to this value.
         smallest_dot
-            If none, the smallest dot has size 0.
             All expression fractions with `dot_min` are plotted with this size.
         largest_dot
-            If none, the largest dot has size 200.
             All expression fractions with `dot_max` are plotted with this size.
         dot_edge_color
-            Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white for darker colors and black
-            for lighter background square colors.
+            Dot edge color.
+            When `color_on='dot'`, ``None`` means no edge.
+            When `color_on='square'`, ``None`` means that
+            the edge color is white for darker colors and black for lighter background square colors.
         dot_edge_lw
-            Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5.
+            Dot edge line width.
+            When `color_on='dot'`, ``None`` means no edge.
+            When `color_on='square'`, ``None`` means a line width of 1.5.
         size_exponent
             Dot size is computed as:
             fraction  ** size exponent and afterwards scaled to match the
@@ -340,9 +341,8 @@ class DotPlot(BasePlot):
         ...     .style(dot_edge_color='black', dot_edge_lw=1, grid=True) \
         ...     .show()
         """
+        super().style(cmap=cmap)
 
-        if cmap is not _empty:
-            self.cmap = cmap
         if dot_max is not _empty:
             self.dot_max = dot_max
         if dot_min is not _empty:
@@ -527,7 +527,7 @@ class DotPlot(BasePlot):
             self._plot_colorbar(color_legend_ax, normalize)
             return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # DotPlot object, for example once with swap_axes and other without
@@ -579,19 +579,19 @@ class DotPlot(BasePlot):
         dot_color: pd.DataFrame,
         dot_ax: Axes,
         *,
-        cmap: str | None,
-        color_on: str | None,
+        cmap: Colormap | str | None,
+        color_on: Literal["dot", "square"],
         dot_max: float | None,
         dot_min: float | None,
         standard_scale: Literal["var", "group"] | None,
-        smallest_dot: float | None,
-        largest_dot: float | None,
-        size_exponent: float | None,
+        smallest_dot: float,
+        largest_dot: float,
+        size_exponent: float,
         edge_color: ColorLike | None,
         edge_lw: float | None,
-        grid: bool | None = False,
-        x_padding: float | None,
-        y_padding: float | None,
+        grid: bool,
+        x_padding: float,
+        y_padding: float,
         vmin: float | None,
         vmax: float | None,
         vcenter: float | None,
@@ -616,41 +616,17 @@ class DotPlot(BasePlot):
         dot_ax
             matplotlib axis
         cmap
-            String denoting matplotlib color map.
         color_on
-            Options are 'dot' or 'square'. Be default the colomap is applied to
-            the color of the dot. Optionally, the colormap can be applied to an
-            square behind the dot, in which case the dot is transparent and only
-            the edge is shown.
         dot_max
-            If none, the maximum dot size is set to the maximum fraction value found
-            (e.g. 0.6). If given, the value should be a number between 0 and 1.
-            All fractions larger than dot_max are clipped to this value.
         dot_min
-            If none, the minimum dot size is set to 0. If given,
-            the value should be a number between 0 and 1.
-            All fractions smaller than dot_min are clipped to this value.
         standard_scale
-            Whether or not to standardize that dimension between 0 and 1,
-            meaning for each variable or group,
-            subtract the minimum and divide each by its maximum.
         smallest_dot
-            If none, the smallest dot has size 0.
-            All expression levels with `dot_min` are plotted with this size.
         edge_color
-            Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white
         edge_lw
-            Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5
         grid
-            Adds a grid to the plot
-        x_paddding
-            Space between the plot left/right borders and the dots center. A unit
-            is the distance between the x ticks. Only applied when color_on = dot
-        y_paddding
-            Space between the plot top/bottom borders and the dots center. A unit is
-            the distance between the y ticks. Only applied when color_on = dot
+        x_padding
+        y_padding
+            See `style`
         kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -759,7 +735,6 @@ class DotPlot(BasePlot):
                 linewidth=edge_lw,
                 edgecolor=edge_color,
             )
-
             dot_ax.scatter(x, y, **kwds)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
@@ -124,8 +124,8 @@ class StackedViolin(BasePlot):
     # style parameters
     row_palette: str | None = None
     stripplot: bool = False
-    jitter: bool = False
-    jitter_size: int = 1
+    jitter: float | bool = False
+    jitter_size: int | float = 1
     plot_yticklabels: bool = False
     ylim: tuple[float, float] | None = None
     # a unit is the distance between two x-axis ticks
@@ -138,8 +138,10 @@ class StackedViolin(BasePlot):
         "row_palette"
     )
     DEFAULT_STRIPPLOT: ClassVar[DefaultProxy[bool]] = DefaultProxy("stripplot")
-    DEFAULT_JITTER: ClassVar[DefaultProxy[bool]] = DefaultProxy("jitter")
-    DEFAULT_JITTER_SIZE: ClassVar[DefaultProxy[int]] = DefaultProxy("jitter_size")
+    DEFAULT_JITTER: ClassVar[DefaultProxy[float | bool]] = DefaultProxy("jitter")
+    DEFAULT_JITTER_SIZE: ClassVar[DefaultProxy[int | float]] = DefaultProxy(
+        "jitter_size"
+    )
     DEFAULT_PLOT_YTICKLABELS: ClassVar[DefaultProxy[bool]] = DefaultProxy(
         "plot_yticklabels"
     )
@@ -214,17 +216,17 @@ class StackedViolin(BasePlot):
     def style(
         self,
         *,
-        cmap: str | None | Empty = _empty,
-        stripplot: bool | None | Empty = _empty,
-        jitter: float | bool | None | Empty = _empty,
-        jitter_size: int | None | Empty = _empty,
+        cmap: Colormap | str | None | Empty = _empty,
+        stripplot: bool | Empty = _empty,
+        jitter: float | bool | Empty = _empty,
+        jitter_size: int | float | Empty = _empty,
         linewidth: float | None | Empty = _empty,
         row_palette: str | None | Empty = _empty,
         density_norm: Literal["area", "count", "width"] | Empty = _empty,
-        yticklabels: bool | None | Empty = _empty,
+        yticklabels: bool | Empty = _empty,
         ylim: tuple[float, float] | None | Empty = _empty,
-        x_padding: float | None | Empty = _empty,
-        y_padding: float | None | Empty = _empty,
+        x_padding: float | Empty = _empty,
+        y_padding: float | Empty = _empty,
         # deprecated
         scale: Literal["area", "count", "width"] | Empty = _empty,
     ) -> Self:
@@ -234,7 +236,8 @@ class StackedViolin(BasePlot):
         Parameters
         ----------
         cmap
-            String denoting matplotlib color map.
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["image.cmap"]``
         stripplot
             Add a stripplot on top of the violin plot.
             See :func:`~seaborn.stripplot`.
@@ -244,9 +247,11 @@ class StackedViolin(BasePlot):
         jitter_size
             Size of the jitter points.
         linewidth
-            linewidth for the violin plots.
+            line width for the violin plots.
+            If None, use :obj:`matplotlib.rcParams`\ ``["lines.linewidth"]``
         row_palette
             The row palette determines the colors to use for the stacked violins.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["axes.prop_cycle"]``
             The value should be a valid seaborn or matplotlib palette name
             (see :func:`~seaborn.color_palette`).
             Alternatively, a single color name or hex value can be passed,
@@ -259,8 +264,9 @@ class StackedViolin(BasePlot):
         yticklabels
             Set to true to view the y tick labels.
         ylim
-            minimum and maximum values for the y-axis. If set. All rows will have
-            the same y-axis range. Example: ylim=(0, 5)
+            minimum and maximum values for the y-axis.
+            If not ``None``, all rows will have the same y-axis range.
+            Example: ``ylim=(0, 5)``
         x_padding
             Space between the plot left/right borders and the violins. A unit
             is the distance between the x ticks.
@@ -283,9 +289,8 @@ class StackedViolin(BasePlot):
         >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels') \
         ...     .style(row_palette='Blues', linewidth=0).show()
         """
+        super().style(cmap=cmap)
 
-        if cmap is not _empty:
-            self.cmap = cmap
         if row_palette is not _empty:
             self.row_palette = row_palette
             self.kwds["color"] = self.row_palette
@@ -411,8 +416,8 @@ class StackedViolin(BasePlot):
         _matrix,
         colormap_array,
         _color_df,
-        x_spacer_size,
-        y_spacer_size,
+        x_spacer_size: float | int,
+        y_spacer_size: float | int,
         x_axis_order,
     ):
         import seaborn as sns  # Slow import, only import if called
@@ -778,7 +783,7 @@ def stacked_violin(
         row_palette=row_palette,
         density_norm=kwds.get("density_norm", scale),
         yticklabels=yticklabels,
-        linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
+        linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)
     if return_fig:
         return vp

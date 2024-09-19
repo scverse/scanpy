@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Mapping
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 from warnings import warn
@@ -25,12 +25,12 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, MutableMapping, Sequence
     from typing import Literal, Self, Union
 
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
     from .._utils import Empty
@@ -117,7 +117,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
     category_width = 0.37
     # gridspec parameter. Sets the space between mainplot, dendrogram and legend
     wspace: float = 0
-    cmap: str | None = "winter"
+    cmap: Colormap | str | None = "winter"
     legends_width: float = 1.5
     color_legend_title: str = "Expression\nlevel in group"
     are_axes_swapped: bool = False
@@ -129,7 +129,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
     fig: Figure | None = None
     ax_dict: dict[str, Axes] | None = None
 
-    kwds: Mapping[str, object] = field(default_factory=dict)
+    kwds: MutableMapping[str, object] = field(default_factory=dict)
 
     # properties aliasing fields
     @property
@@ -161,7 +161,9 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
         "category_width"
     )
     DEFAULT_WSPACE: ClassVar[DefaultProxy[float]] = DefaultProxy("wspace")
-    DEFAULT_COLORMAP: ClassVar[DefaultProxy[str]] = DefaultProxy("cmap")
+    DEFAULT_COLORMAP: ClassVar[DefaultProxy[Colormap | str | None]] = DefaultProxy(
+        "cmap"
+    )
     DEFAULT_LEGENDS_WIDTH: ClassVar[DefaultProxy[float]] = DefaultProxy("legends_width")
     DEFAULT_COLOR_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy(
         "color_legend_title"
@@ -406,14 +408,15 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: str | None | Empty = _empty) -> Self:
+    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
         """\
         Set visual style parameters
 
         Parameters
         ----------
         cmap
-            colormap
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
 
         Returns
         -------
@@ -1103,7 +1106,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
 
         updates var_names, var_group_labels, var_group_positions
         """
-        if isinstance(self.var_names, cabc.Mapping):
+        if isinstance(self.var_names, Mapping):
             if self.has_var_groups:
                 logg.warning(
                     "`var_names` is a dictionary. This will reset the current "
