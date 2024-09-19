@@ -4,7 +4,7 @@ import collections.abc as cabc
 import warnings
 from collections.abc import Sequence
 from dataclasses import MISSING, Field, dataclass
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Generic, Literal, TypedDict, TypeVar, Union
 
 import matplotlib as mpl
 import numpy as np
@@ -24,7 +24,7 @@ from .._utils import NeighborsView, _empty
 from . import palettes
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Mapping
 
     from anndata import AnnData
     from matplotlib.colors import Colormap
@@ -43,7 +43,6 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # These are needed by _wraps_plot_scatter
-_IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree"]
 VBound = Union[str, float, Callable[[Sequence[float]], float]]
 _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
@@ -1030,7 +1029,14 @@ def scale_to_zero_one(x):
     return xscaled
 
 
-def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
+class _Level(TypedDict):
+    total: int
+    current: int
+
+
+def hierarchy_pos(
+    G, root: int, levels_: Mapping[int, int] | None = None, width=1.0, height=1.0
+) -> dict[int, tuple[float, float]]:
     """Tree layout for networkx graph.
 
     See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
@@ -1049,37 +1055,47 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     width: horizontal space allocated for drawing
     height: vertical space allocated for drawing
     """
-    TOTAL = "total"
-    CURRENT = "current"
 
-    def make_levels(levels, node=root, currentLevel=0, parent=None):
+    def make_levels(
+        levels: dict[int, _Level],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+    ) -> dict[int, _Level]:
         """Compute the number of nodes for each level"""
-        if currentLevel not in levels:
-            levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
-        levels[currentLevel][TOTAL] += 1
-        neighbors = list(G.neighbors(node))
+        if current_level not in levels:
+            levels[current_level] = _Level(total=0, current=0)
+        levels[current_level]["total"] += 1
+        neighbors: list[int] = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            levels = make_levels(levels, neighbor, currentLevel + 1, node)
+            levels = make_levels(levels, neighbor, current_level + 1, node)
         return levels
 
-    def make_pos(pos, node=root, currentLevel=0, parent=None, vert_loc=0):
-        dx = 1 / levels[currentLevel][TOTAL]
+    if levels_ is None:
+        levels = make_levels({})
+    else:
+        levels = {k: _Level(total=0, current=0) for k, v in levels_.items()}
+
+    def make_pos(
+        pos: dict[int, tuple[float, float]],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+        vert_loc: float = 0.0,
+    ):
+        dx = 1 / levels[current_level]["total"]
         left = dx / 2
-        pos[node] = ((left + dx * levels[currentLevel][CURRENT]) * width, vert_loc)
-        levels[currentLevel][CURRENT] += 1
-        neighbors = list(G.neighbors(node))
+        pos[node] = ((left + dx * levels[current_level]["current"]) * width, vert_loc)
+        levels[current_level]["current"] += 1
+        neighbors: list[int] = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            pos = make_pos(pos, neighbor, currentLevel + 1, node, vert_loc - vert_gap)
+            pos = make_pos(pos, neighbor, current_level + 1, node, vert_loc - vert_gap)
         return pos
 
-    if levels is None:
-        levels = make_levels({})
-    else:
-        levels = {k: {TOTAL: v, CURRENT: 0} for k, v in levels.items()}
     vert_gap = height / (max(levels.keys()) + 1)
     return make_pos({})
 

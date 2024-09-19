@@ -38,6 +38,7 @@ from ..._utils import (
     sanitize_anndata,
 )
 from ...get import _check_mask
+from ...tools._draw_graph import _Layout  # noqa: TCH001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -51,7 +52,6 @@ from .._utils import (
     VBound,  # noqa: TCH001
     _FontSize,  # noqa: TCH001
     _FontWeight,  # noqa: TCH001
-    _IGraphLayout,  # noqa: TCH001
     _LegendLoc,  # noqa: TCH001
     check_colornorm,
     check_projection,
@@ -779,7 +779,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
+    adata: AnnData, *, layout: _Layout | None = None, **kwargs
 ) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in graph-drawing basis.

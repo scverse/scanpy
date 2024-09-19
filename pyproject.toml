@@ -112,11 +112,12 @@ test-full = [
 doc = [
     "sphinx>=7",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.13.4",
+    "scanpydoc>=0.14.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
+    "sphinx-tabs",
     "readthedocs-sphinx-search",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
@@ -135,6 +136,7 @@ dev = [
     "setuptools_scm",
     # static checking
     "pre-commit",
+    "towncrier",
 ]
 # Algorithms
 paga = ["igraph"]
@@ -148,13 +150,14 @@ scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
+dask = ["dask[array]>=2022.09.2,<2024.8.0"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/testing", "src/scanpy"]
 [tool.hatch.version]
 source = "vcs"
+raw-options.version_scheme = "release-branch-semver"
 [tool.hatch.build.hooks.vcs]
 version-file = "src/scanpy/_version.py"
 
@@ -258,3 +261,19 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true
+
+[tool.towncrier]
+package = "scanpy"
+directory = "docs/release-notes"
+filename = "docs/release-notes/{version}.md"
+single_file = false
+package_dir = "src"
+issue_format = "{{pr}}`{issue}`"
+title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+fragment.bugfix.name = "Bug fixes"
+fragment.doc.name = "Documentation"
+fragment.feature.name = "Features"
+fragment.misc.name = "Miscellaneous improvements"
+fragment.performance.name = "Performance"
+fragment.breaking.name = "Breaking changes"
+fragment.dev.name = "Development Process"
