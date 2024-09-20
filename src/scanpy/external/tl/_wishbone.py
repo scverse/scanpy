@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Collection
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -11,7 +11,7 @@ from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Iterable
 
     from anndata import AnnData
 
@@ -115,7 +115,7 @@ def wishbone(
             f"Start cell {start_cell} not found in data. "
             "Please rerun with correct start cell."
         )
-    if isinstance(num_waypoints, cabc.Collection):
+    if isinstance(num_waypoints, Collection):
         diff = np.setdiff1d(num_waypoints, adata.obs.index)
         if diff.size > 0:
             logging.warning(

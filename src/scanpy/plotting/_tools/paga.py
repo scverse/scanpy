@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import warnings
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING
@@ -26,7 +26,6 @@ from .. import _utils
 from .._utils import matrix
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
     from typing import Any, Literal, Union
 
     from anndata import AnnData
@@ -506,14 +505,12 @@ def paga(
     groups_key = adata.uns["paga"]["groups"]
 
     def is_flat(x):
-        has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(
+        has_one_per_category = isinstance(x, Collection) and len(x) == len(
             adata.obs[groups_key].cat.categories
         )
         return has_one_per_category or x is None or isinstance(x, str)
 
-    if isinstance(colors, cabc.Mapping) and isinstance(
-        colors[next(iter(colors))], cabc.Mapping
-    ):
+    if isinstance(colors, Mapping) and isinstance(colors[next(iter(colors))], Mapping):
         # handle paga pie, remap string keys to integers
         names_to_ixs = {
             n: i for i, n in enumerate(adata.obs[groups_key].cat.categories)
@@ -554,7 +551,7 @@ def paga(
                 f"it needs to be one of {labels} not {root!r}."
             )
         root = list(labels).index(root)
-    if isinstance(root, cabc.Sequence) and root[0] in labels:
+    if isinstance(root, Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
@@ -600,7 +597,7 @@ def paga(
             sct = _paga_graph(
                 adata,
                 axs[icolor],
-                colors=colors if isinstance(colors, cabc.Mapping) else c,
+                colors=colors if isinstance(colors, Mapping) else c,
                 solid_edges=solid_edges,
                 dashed_edges=dashed_edges,
                 transitions=transitions,
@@ -935,7 +932,7 @@ def _paga_graph(
             patheffects.withStroke(linewidth=fontoutline, foreground="w")
         ]
     # usual scatter plot
-    if not isinstance(colors[0], cabc.Mapping):
+    if not isinstance(colors[0], Mapping):
         n_groups = len(pos_array)
         sct = ax.scatter(
             pos_array[:, 0],
@@ -959,7 +956,7 @@ def _paga_graph(
     # else pie chart plot
     else:
         for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
-            if not isinstance(colors[ix], cabc.Mapping):
+            if not isinstance(colors[ix], Mapping):
                 raise ValueError(
                     f"{colors[ix]} is neither a dict of valid "
                     "matplotlib colors nor a valid matplotlib color."
