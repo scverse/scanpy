@@ -694,7 +694,7 @@ def stacked_violin(
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
     density_norm: DensityNorm = StackedViolin.DEFAULT_DENSITY_NORM,
     yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
-    order: Sequence[str] | None = None,
+    categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
@@ -707,6 +707,7 @@ def stacked_violin(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     # deprecated
+    order: Sequence[str] | None | Empty = _empty,
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
@@ -735,10 +736,6 @@ def stacked_violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    order
-        Order in which to show the categories. Note: if `dendrogram=True`
-        the categories order will be given by the dendrogram and `order`
-        will be ignored.
     density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
@@ -809,6 +806,13 @@ def stacked_violin(
         print(axes_dict)
 
     """
+    if order is not _empty:
+        msg = (
+            "`order` is deprecated (and never worked for `stacked_violin`), "
+            "use categories_order instead"
+        )
+        warnings.warn(msg, FutureWarning)
+        # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(
         adata,
@@ -817,6 +821,7 @@ def stacked_violin(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
