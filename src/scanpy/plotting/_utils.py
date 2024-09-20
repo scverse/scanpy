@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc as cabc
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union, overload
 
 import matplotlib as mpl
 import numpy as np
@@ -19,7 +19,7 @@ from matplotlib.patches import Circle
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, _empty
 from . import palettes
 
 if TYPE_CHECKING:
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
     from PIL.Image import Image
+
+    from .._utils import Empty
 
     # TODO: more
     DensityNorm = Literal["area", "count", "width"]
@@ -1309,10 +1311,31 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     return norm
 
 
+@overload
 def _deprecated_scale(
-    density_norm: DensityNorm, scale: DensityNorm | None, *, default: DensityNorm
-) -> DensityNorm:
-    if scale is None:
+    density_norm: DensityNorm,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm,
+) -> DensityNorm: ...
+
+
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty: ...
+
+
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty:
+    if scale is _empty:
         return density_norm
     if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
