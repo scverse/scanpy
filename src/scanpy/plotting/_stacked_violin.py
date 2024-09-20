@@ -687,7 +687,9 @@ def stacked_violin(
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    density_norm: Literal["area", "count", "width"] | Empty = _empty,
+    density_norm: Literal[
+        "area", "count", "width"
+    ] = StackedViolin.DEFAULT_DENSITY_NORM,
     yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Sequence[str] | None = None,
     swap_axes: bool = False,
@@ -838,7 +840,9 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        density_norm=_deprecated_scale(density_norm, scale),
+        density_norm=_deprecated_scale(
+            density_norm, scale, default=StackedViolin.DEFAULT_DENSITY_NORM
+        ),
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)
