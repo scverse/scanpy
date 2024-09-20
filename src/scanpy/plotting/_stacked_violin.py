@@ -680,7 +680,7 @@ def stacked_violin(
     standard_scale: Literal["var", "obs"] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    order: Sequence[str] | None = None,
+    categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
@@ -727,10 +727,6 @@ def stacked_violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    order
-        Order in which to show the categories. Note: if `dendrogram=True`
-        the categories order will be given by the dendrogram and `order`
-        will be ignored.
     density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
@@ -817,7 +813,7 @@ def stacked_violin(
         var_group_labels=var_group_labels,
         var_group_rotation=var_group_rotation,
         layer=layer,
-        categories_order=order,
+        categories_order=categories_order,
         ax=ax,
         vmin=vmin,
         vmax=vmax,
