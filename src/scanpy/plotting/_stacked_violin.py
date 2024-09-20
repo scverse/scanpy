@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import _AxesSubplot
+    from ._utils import DensityNorm, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -119,7 +119,7 @@ class StackedViolin(BasePlot):
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
-    DEFAULT_DENSITY_NORM: Literal["area", "count", "width"] = "width"
+    DEFAULT_DENSITY_NORM: DensityNorm = "width"
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
@@ -271,13 +271,13 @@ class StackedViolin(BasePlot):
         jitter_size: int | None = DEFAULT_JITTER_SIZE,
         linewidth: float | None = DEFAULT_LINE_WIDTH,
         row_palette: str | None = DEFAULT_ROW_PALETTE,
-        density_norm: Literal["area", "count", "width"] = DEFAULT_DENSITY_NORM,
+        density_norm: DensityNorm = DEFAULT_DENSITY_NORM,
         yticklabels: bool | None = DEFAULT_PLOT_YTICKLABELS,
         ylim: tuple[float, float] | None = DEFAULT_YLIM,
         x_padding: float | None = DEFAULT_PLOT_X_PADDING,
         y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
         # deprecated
-        scale: Literal["area", "count", "width"] | Empty = _empty,
+        scale: DensityNorm | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -687,9 +687,7 @@ def stacked_violin(
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    density_norm: Literal[
-        "area", "count", "width"
-    ] = StackedViolin.DEFAULT_DENSITY_NORM,
+    density_norm: DensityNorm = StackedViolin.DEFAULT_DENSITY_NORM,
     yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Sequence[str] | None = None,
     swap_axes: bool = False,
@@ -704,7 +702,7 @@ def stacked_violin(
     vcenter: float | None = None,
     norm: Normalize | None = None,
     # deprecated
-    scale: Literal["area", "count", "width"] | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\

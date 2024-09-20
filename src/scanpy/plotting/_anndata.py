@@ -21,7 +21,7 @@ from .. import get
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _check_use_raw, _doc_params, sanitize_anndata
+from .._utils import _check_use_raw, _doc_params, _empty, sanitize_anndata
 from . import _utils
 from ._docs import (
     doc_common_plot_args,
@@ -30,6 +30,7 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
+    _deprecated_scale,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -47,7 +48,14 @@ if TYPE_CHECKING:
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
-    from ._utils import ColorLike, _FontSize, _FontWeight, _LegendLoc
+    from .._utils import Empty
+    from ._utils import (
+        ColorLike,
+        DensityNorm,
+        _FontSize,
+        _FontWeight,
+        _LegendLoc,
+    )
 
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
@@ -688,7 +696,7 @@ def violin(
     jitter: float | bool = True,
     size: int = 1,
     layer: str | None = None,
-    scale: Literal["area", "count", "width"] = "width",
+    density_norm: DensityNorm = "width",
     order: Sequence[str] | None = None,
     multi_panel: bool | None = None,
     xlabel: str = "",
@@ -697,6 +705,8 @@ def violin(
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecatd
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
     """\
@@ -729,7 +739,7 @@ def violin(
         default adata.raw.X is plotted. If `use_raw=False` is set,
         then `adata.X` is plotted. If `layer` is set to a valid layer name,
         then the layer is plotted. `layer` takes precedence over `use_raw`.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -808,6 +818,8 @@ def violin(
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
+    density_norm = _deprecated_scale(density_norm, scale, default="width")
+    del scale
 
     if isinstance(ylabel, (str, type(None))):
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
@@ -855,7 +867,7 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
-            density_norm=scale,
+            density_norm=density_norm,
             col=x,
             col_order=keys,
             sharey=False,
@@ -903,7 +915,7 @@ def violin(
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
-                density_norm=scale,
+                density_norm=density_norm,
                 ax=ax,
                 **kwds,
             )
