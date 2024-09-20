@@ -240,7 +240,7 @@ class BasePlot:
         self,
         *,
         show: bool | None = True,
-        dendrogram_key: bool | str | None = None,
+        dendrogram_key: str | None = None,
         size: float | None = 0.8,
     ) -> Self:
         r"""\
