@@ -704,6 +704,7 @@ def stacked_violin(
     density_norm: Literal["area", "count", "width"] | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     # deprecated
+    order: Sequence[str] | None | Empty = _empty,
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
@@ -802,6 +803,13 @@ def stacked_violin(
         print(axes_dict)
 
     """
+    if order is not _empty:
+        msg = (
+            "`order` is deprecated (and never worked for `stacked_violin`), "
+            "use categories_order instead"
+        )
+        warnings.warn(msg, FutureWarning)
+        # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(
         adata,
@@ -810,6 +818,7 @@ def stacked_violin(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
@@ -818,7 +827,6 @@ def stacked_violin(
         var_group_labels=var_group_labels,
         var_group_rotation=var_group_rotation,
         layer=layer,
-        categories_order=categories_order,
         ax=ax,
         vmin=vmin,
         vmax=vmax,
