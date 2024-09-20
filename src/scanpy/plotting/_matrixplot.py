@@ -16,7 +16,7 @@ from ._docs import (
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._utils import check_colornorm, fix_kwds, savefig_or_show
+from ._utils import _dk, check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -454,7 +454,7 @@ def matrixplot(
     )
 
     if dendrogram:
-        mp.add_dendrogram(dendrogram_key=None if dendrogram is True else dendrogram)
+        mp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         mp.swap_axes()
 

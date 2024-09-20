@@ -31,6 +31,7 @@ from ._docs import (
 )
 from ._utils import (
     _deprecated_scale,
+    _dk,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -1189,7 +1190,7 @@ def heatmap(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram_key=None if dendrogram is True else dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1324,11 +1325,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax,
-                adata,
-                groupby,
-                dendrogram_key=None if dendrogram is True else dendrogram,
-                ticks=ticks,
+                dendro_ax, adata, groupby, dendrogram_key=_dk(dendrogram), ticks=ticks
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1431,7 +1428,7 @@ def heatmap(
                 dendro_ax,
                 adata,
                 groupby,
-                dendrogram_key=None if dendrogram is True else dendrogram,
+                dendrogram_key=_dk(dendrogram),
                 ticks=ticks,
                 orientation="top",
             )
@@ -1583,7 +1580,7 @@ def tracksplot(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram_key=None if dendrogram is True else dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1715,7 +1712,7 @@ def tracksplot(
             dendro_ax,
             adata,
             groupby,
-            dendrogram_key=None if dendrogram is True else dendrogram,
+            dendrogram_key=_dk(dendrogram),
             orientation="top",
             ticks=ticks,
         )
@@ -1876,7 +1873,7 @@ def correlation_matrix(
     >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
 
     index = adata.uns[dendrogram_key]["categories_idx_ordered"]
     corr_matrix = adata.uns[dendrogram_key]["correlation_matrix"]

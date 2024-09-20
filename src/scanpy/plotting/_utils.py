@@ -1342,3 +1342,8 @@ def _deprecated_scale(
     msg = "`scale` is deprecated, use `density_norm` instead"
     warnings.warn(msg, FutureWarning)
     return scale
+
+
+def _dk(dendrogram: bool | str | None) -> str | None:
+    """Helper to convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
+    return None if isinstance(dendrogram, bool) else dendrogram

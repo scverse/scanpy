@@ -12,6 +12,7 @@ from .._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
+    _dk,
     check_colornorm,
     fix_kwds,
     make_grid_spec,
@@ -1043,7 +1044,7 @@ def dotplot(
     )
 
     if dendrogram:
-        dp.add_dendrogram(dendrogram_key=None if dendrogram is True else dendrogram)
+        dp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         dp.swap_axes()
 
