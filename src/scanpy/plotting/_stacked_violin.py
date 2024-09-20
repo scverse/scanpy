@@ -12,7 +12,7 @@ from packaging.version import Version
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import _AxesSubplot
 
@@ -276,7 +277,7 @@ class StackedViolin(BasePlot):
         x_padding: float | None = DEFAULT_PLOT_X_PADDING,
         y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
         # deprecated
-        scale: Literal["area", "count", "width"] | None = None,
+        scale: Literal["area", "count", "width"] | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -686,7 +687,7 @@ def stacked_violin(
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
+    density_norm: Literal["area", "count", "width"] | Empty = _empty,
     yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     order: Sequence[str] | None = None,
     swap_axes: bool = False,
@@ -700,6 +701,8 @@ def stacked_violin(
     vmax: float | None = None,
     vcenter: float | None = None,
     norm: Normalize | None = None,
+    # deprecated
+    scale: Literal["area", "count", "width"] | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\
@@ -731,7 +734,7 @@ def stacked_violin(
         Order in which to show the categories. Note: if `dendrogram=True`
         the categories order will be given by the dendrogram and `order`
         will be ignored.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -835,7 +838,7 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        density_norm=kwds.get("density_norm", scale),
+        density_norm=_deprecated_scale(density_norm, scale),
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
     ).legend(title=colorbar_title)

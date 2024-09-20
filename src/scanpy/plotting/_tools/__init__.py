@@ -15,7 +15,7 @@ from scanpy.get import obs_df
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ..._utils import _doc_params, sanitize_anndata, subsample
+from ..._utils import _doc_params, _empty, sanitize_anndata, subsample
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -46,6 +46,9 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
+
+    from ..._utils import Empty
+    from .._utils import DensityNorm
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -1213,7 +1216,7 @@ def rank_genes_groups_violin(
     use_raw: bool | None = None,
     key: str | None = None,
     split: bool = True,
-    density_norm: Literal["area", "count", "width"] = "width",
+    density_norm: DensityNorm = "width",
     strip: bool = True,
     jitter: int | float | bool = True,
     size: int = 1,
@@ -1221,7 +1224,7 @@ def rank_genes_groups_violin(
     show: bool | None = None,
     save: bool | None = None,
     # deprecated
-    scale: Literal["area", "count", "width"] | None = None,
+    scale: DensityNorm | Empty = _empty,
 ):
     """\
     Plot ranking of genes for all tested comparisons.
