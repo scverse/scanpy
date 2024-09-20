@@ -17,6 +17,7 @@ from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
     _deprecated_scale,
+    _dk,
     check_colornorm,
     make_grid_spec,
     savefig_or_show,
@@ -833,7 +834,7 @@ def stacked_violin(
     )
 
     if dendrogram:
-        vp.add_dendrogram(dendrogram_key=dendrogram)
+        vp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         vp.swap_axes()
     vp = vp.style(
