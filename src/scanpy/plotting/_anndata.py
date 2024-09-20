@@ -31,6 +31,7 @@ from ._docs import (
 )
 from ._utils import (
     _deprecated_scale,
+    _dk,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -1189,7 +1190,7 @@ def heatmap(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1324,7 +1325,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
+                dendro_ax, adata, groupby, dendrogram_key=_dk(dendrogram), ticks=ticks
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1427,7 +1428,7 @@ def heatmap(
                 dendro_ax,
                 adata,
                 groupby,
-                dendrogram_key=dendrogram,
+                dendrogram_key=_dk(dendrogram),
                 ticks=ticks,
                 orientation="top",
             )
@@ -1579,7 +1580,7 @@ def tracksplot(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1711,7 +1712,7 @@ def tracksplot(
             dendro_ax,
             adata,
             groupby,
-            dendrogram_key=dendrogram,
+            dendrogram_key=_dk(dendrogram),
             orientation="top",
             ticks=ticks,
         )
@@ -1872,7 +1873,7 @@ def correlation_matrix(
     >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
 
     index = adata.uns[dendrogram_key]["categories_idx_ordered"]
     corr_matrix = adata.uns[dendrogram_key]["correlation_matrix"]
@@ -2247,13 +2248,13 @@ def _plot_gene_groups_brackets(
 
 def _reorder_categories_after_dendrogram(
     adata: AnnData,
-    groupby,
-    dendrogram,
+    groupby: str | Sequence[str],
     *,
-    var_names=None,
-    var_group_labels=None,
-    var_group_positions=None,
-    categories=None,
+    dendrogram_key: str | None,
+    var_names: Sequence[str],
+    var_group_labels: Sequence[str] | None,
+    var_group_positions: Sequence[tuple[int, int]] | None,
+    categories: Sequence[str],
 ):
     """\
     Function used by plotting functions that need to reorder the the groupby
@@ -2273,12 +2274,12 @@ def _reorder_categories_after_dendrogram(
     'var_group_labels', and 'var_group_positions'
     """
 
-    key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
 
     if isinstance(groupby, str):
         groupby = [groupby]
 
-    dendro_info = adata.uns[key]
+    dendro_info = adata.uns[dendrogram_key]
     if groupby != dendro_info["groupby"]:
         raise ValueError(
             "Incompatible observations. The precomputed dendrogram contains "
@@ -2305,36 +2306,35 @@ def _reorder_categories_after_dendrogram(
         )
 
     # reorder var_groups (if any)
-    if var_names is not None:
-        var_names_idx_ordered = list(range(len(var_names)))
-
-    if var_group_positions:
-        if set(var_group_labels) == set(categories):
-            positions_ordered = []
-            labels_ordered = []
-            position_start = 0
-            var_names_idx_ordered = []
-            for cat_name in categories_ordered:
-                idx = var_group_labels.index(cat_name)
-                position = var_group_positions[idx]
-                _var_names = var_names[position[0] : position[1] + 1]
-                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                positions_ordered.append(
-                    (position_start, position_start + len(_var_names) - 1)
-                )
-                position_start += len(_var_names)
-                labels_ordered.append(var_group_labels[idx])
-            var_group_labels = labels_ordered
-            var_group_positions = positions_ordered
-        else:
-            logg.warning(
-                "Groups are not reordered because the `groupby` categories "
-                "and the `var_group_labels` are different.\n"
-                f"categories: {_format_first_three_categories(categories)}\n"
-                f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
-            )
-    else:
+    if var_group_positions is None or var_group_labels is None:
+        assert var_group_positions is None
+        assert var_group_labels is None
         var_names_idx_ordered = None
+    elif set(var_group_labels) == set(categories):
+        positions_ordered = []
+        labels_ordered = []
+        position_start = 0
+        var_names_idx_ordered = []
+        for cat_name in categories_ordered:
+            idx = var_group_labels.index(cat_name)
+            position = var_group_positions[idx]
+            _var_names = var_names[position[0] : position[1] + 1]
+            var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+            positions_ordered.append(
+                (position_start, position_start + len(_var_names) - 1)
+            )
+            position_start += len(_var_names)
+            labels_ordered.append(var_group_labels[idx])
+        var_group_labels = labels_ordered
+        var_group_positions = positions_ordered
+    else:
+        logg.warning(
+            "Groups are not reordered because the `groupby` categories "
+            "and the `var_group_labels` are different.\n"
+            f"categories: {_format_first_three_categories(categories)}\n"
+            f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+        )
+        var_names_idx_ordered = list(range(len(var_names)))
 
     if var_names_idx_ordered is not None:
         var_names_ordered = [var_names[x] for x in var_names_idx_ordered]
@@ -2358,14 +2358,19 @@ def _format_first_three_categories(categories):
     return ", ".join(categories)
 
 
-def _get_dendrogram_key(adata, dendrogram_key, groupby):
+def _get_dendrogram_key(
+    adata: AnnData, dendrogram_key: str | None, groupby: str | Sequence[str]
+) -> str:
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
-    if not isinstance(dendrogram_key, str):
+    if dendrogram_key is None:
         if isinstance(groupby, str):
             dendrogram_key = f"dendrogram_{groupby}"
-        elif isinstance(groupby, list):
+        elif isinstance(groupby, Sequence):
             dendrogram_key = f'dendrogram_{"_".join(groupby)}'
+        else:
+            msg = f"groupby has wrong type: {type(groupby).__name__}."
+            raise AssertionError(msg)
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
@@ -2389,7 +2394,7 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
 def _plot_dendrogram(
     dendro_ax: Axes,
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str],
     *,
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "right",
