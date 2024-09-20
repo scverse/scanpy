@@ -736,10 +736,6 @@ def stacked_violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    categories_order
-        Order in which to show the categories. Note: if `dendrogram=True`
-        the categories order will be given by the dendrogram and `order`
-        will be ignored.
     density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
