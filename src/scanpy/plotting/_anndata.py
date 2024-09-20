@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
 from collections import OrderedDict
+from collections.abc import Collection, Mapping, Sequence
 from itertools import product
 from typing import TYPE_CHECKING, get_args
 
@@ -38,7 +38,7 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Mapping, Sequence
+    from collections.abc import Iterable
     from typing import Literal, Union
 
     from anndata import AnnData
@@ -220,7 +220,7 @@ def _scatter_obs(
         isinstance(layers, str) and layers in adata.layers.keys()
     ):
         layers = (layers, layers, layers)
-    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
+    elif isinstance(layers, Collection) and len(layers) == 3:
         layers = tuple(layers)
         for layer in layers:
             if layer not in adata.layers.keys() and layer not in ["X", None]:
@@ -299,7 +299,7 @@ def _scatter_obs(
     palette_was_none = False
     if palette is None:
         palette_was_none = True
-    if isinstance(palette, cabc.Sequence) and not isinstance(palette, str):
+    if isinstance(palette, Sequence) and not isinstance(palette, str):
         if not is_color_like(palette[0]):
             palettes = palette
         else:
@@ -2667,7 +2667,7 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
     var_names, var_group_labels, var_group_positions
 
     """
-    if isinstance(var_names, cabc.Mapping):
+    if isinstance(var_names, Mapping):
         if var_group_labels is not None or var_group_positions is not None:
             logg.warning(
                 "`var_names` is a dictionary. This will reset the current "
