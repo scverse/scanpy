@@ -2397,7 +2397,7 @@ def _get_dendrogram_key(
 def _plot_dendrogram(
     dendro_ax: Axes,
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str],
     *,
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "right",
