@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
@@ -18,7 +18,7 @@ from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
     from typing import Literal, Self, Union
 
     import pandas as pd
@@ -1103,7 +1103,7 @@ class BasePlot:
 
         updates var_names, var_group_labels, var_group_positions
         """
-        if isinstance(self.var_names, cabc.Mapping):
+        if isinstance(self.var_names, Mapping):
             if self.has_var_groups:
                 logg.warning(
                     "`var_names` is a dictionary. This will reset the current "
