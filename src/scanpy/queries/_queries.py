@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Iterable
 from functools import singledispatch
 from types import MappingProxyType
 from typing import TYPE_CHECKING
@@ -12,7 +12,7 @@ from .._utils._doctests import doctest_needs
 from ..get import rank_genes_groups_df
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Mapping
     from typing import Any
 
     import pandas as pd
@@ -60,7 +60,7 @@ def simple_query(
     """
     if isinstance(attrs, str):
         attrs = [attrs]
-    elif isinstance(attrs, cabc.Iterable):
+    elif isinstance(attrs, Iterable):
         attrs = list(attrs)
     else:
         raise TypeError(f"attrs must be of type list or str, was {type(attrs)}.")
