@@ -1324,7 +1324,11 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
+                dendro_ax,
+                adata,
+                groupby,
+                dendrogram_key=None if dendrogram is True else dendrogram,
+                ticks=ticks,
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1427,7 +1431,7 @@ def heatmap(
                 dendro_ax,
                 adata,
                 groupby,
-                dendrogram_key=dendrogram,
+                dendrogram_key=None if dendrogram is True else dendrogram,
                 ticks=ticks,
                 orientation="top",
             )
@@ -1711,7 +1715,7 @@ def tracksplot(
             dendro_ax,
             adata,
             groupby,
-            dendrogram_key=dendrogram,
+            dendrogram_key=None if dendrogram is True else dendrogram,
             orientation="top",
             ticks=ticks,
         )
@@ -2273,12 +2277,12 @@ def _reorder_categories_after_dendrogram(
     'var_group_labels', and 'var_group_positions'
     """
 
-    key = _get_dendrogram_key(adata, dendrogram_key, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
 
     if isinstance(groupby, str):
         groupby = [groupby]
 
-    dendro_info = adata.uns[key]
+    dendro_info = adata.uns[dendrogram_key]
     if groupby != dendro_info["groupby"]:
         raise ValueError(
             "Incompatible observations. The precomputed dendrogram contains "
