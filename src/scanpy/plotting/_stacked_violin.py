@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import _AxesSubplot
+    from ._utils import DensityNorm, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -119,7 +119,7 @@ class StackedViolin(BasePlot):
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
-    DEFAULT_DENSITY_NORM: Literal["area", "count", "width"] = "width"
+    DEFAULT_DENSITY_NORM: DensityNorm = "width"
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
@@ -275,13 +275,13 @@ class StackedViolin(BasePlot):
         jitter_size: int | float | Empty = _empty,
         linewidth: float | None | Empty = _empty,
         row_palette: str | None | Empty = _empty,
-        density_norm: Literal["area", "count", "width"] | Empty = _empty,
+        density_norm: DensityNorm | Empty = _empty,
         yticklabels: bool | Empty = _empty,
         ylim: tuple[float, float] | None | Empty = _empty,
         x_padding: float | Empty = _empty,
         y_padding: float | Empty = _empty,
         # deprecated
-        scale: Literal["area", "count", "width"] | Empty = _empty,
+        scale: DensityNorm | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -703,7 +703,7 @@ def stacked_violin(
     density_norm: Literal["area", "count", "width"] | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     # deprecated
-    scale: Literal["area", "count", "width"] | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\

@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from ..._utils import Empty
+    from .._utils import DensityNorm
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -1215,7 +1216,7 @@ def rank_genes_groups_violin(
     use_raw: bool | None = None,
     key: str | None = None,
     split: bool = True,
-    density_norm: Literal["area", "count", "width"] = "width",
+    density_norm: DensityNorm = "width",
     strip: bool = True,
     jitter: int | float | bool = True,
     size: int = 1,
@@ -1223,7 +1224,7 @@ def rank_genes_groups_violin(
     show: bool | None = None,
     save: bool | None = None,
     # deprecated
-    scale: Literal["area", "count", "width"] | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
 ):
     """\
     Plot ranking of genes for all tested comparisons.

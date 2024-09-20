@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc as cabc
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union, overload
 
 import matplotlib as mpl
 import numpy as np
@@ -1309,6 +1309,24 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
             norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm
+
+
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm,
+) -> DensityNorm: ...
+
+
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty: ...
 
 
 def _deprecated_scale(
