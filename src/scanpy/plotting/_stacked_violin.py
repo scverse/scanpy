@@ -190,7 +190,7 @@ class StackedViolin(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "obs"] | None = None,
+        standard_scale: Literal["var", "group"] | None = None,
         ax: _AxesSubplot | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
