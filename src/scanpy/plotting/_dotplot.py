@@ -152,7 +152,9 @@ class DotPlot(BasePlot):
     )
     DEFAULT_SIZE_LEGEND_TITLE: ClassVar[DefaultProxy[str]] = DefaultProxy("size_title")
 
-    def __post_init__(self, dendrogram: str | None, with_swapped_axes: bool) -> None:
+    def __post_init__(
+        self, dendrogram: bool | str | None, with_swapped_axes: bool
+    ) -> None:
         super().__post_init__(
             dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
         )
@@ -808,6 +810,7 @@ def dotplot(
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
+    categories_order: Sequence[str] | None = None,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
     standard_scale: Literal["var", "group"] | None = None,
@@ -815,7 +818,7 @@ def dotplot(
     colorbar_title: str | None = DotPlot.color_legend_title,
     size_title: str | None = DotPlot.size_title,
     figsize: tuple[float, float] | None = None,
-    dendrogram: str | None = None,
+    dendrogram: bool | str | None = None,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
@@ -949,6 +952,7 @@ def dotplot(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         expression_cutoff=expression_cutoff,
         mean_only_expressed=mean_only_expressed,
         standard_scale=standard_scale,

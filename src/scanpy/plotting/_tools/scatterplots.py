@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import inspect
 import sys
 from collections.abc import Mapping, Sequence  # noqa: TCH003
@@ -201,13 +200,13 @@ def embedding(
         title = [title] if isinstance(title, str) else list(title)
 
     # turn vmax and vmin into a sequence
-    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
+    if isinstance(vmax, str) or not isinstance(vmax, Sequence):
         vmax = [vmax]
-    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
+    if isinstance(vmin, str) or not isinstance(vmin, Sequence):
         vmin = [vmin]
-    if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
+    if isinstance(vcenter, str) or not isinstance(vcenter, Sequence):
         vcenter = [vcenter]
-    if isinstance(norm, Normalize) or not isinstance(norm, cabc.Sequence):
+    if isinstance(norm, Normalize) or not isinstance(norm, Sequence):
         norm = [norm]
 
     # Size
@@ -218,7 +217,7 @@ def embedding(
         # set as ndarray
         if (
             size is not None
-            and isinstance(size, (cabc.Sequence, pd.Series, np.ndarray))
+            and isinstance(size, (Sequence, pd.Series, np.ndarray))
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -244,9 +243,7 @@ def embedding(
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
     if (
-        not isinstance(color, str)
-        and isinstance(color, cabc.Sequence)
-        and len(color) > 1
+        not isinstance(color, str) and isinstance(color, Sequence) and len(color) > 1
     ) or len(dimensions) > 1:
         if ax is not None:
             raise ValueError(

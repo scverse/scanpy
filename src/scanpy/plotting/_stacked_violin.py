@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import TYPE_CHECKING, ClassVar
 
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
     from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import _AxesSubplot
+    from ._utils import DensityNorm, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -115,7 +116,7 @@ class StackedViolin(BasePlot):
     DEFAULT_SAVE_PREFIX: ClassVar[str] = "stacked_violin_"
 
     _: KW_ONLY
-    standard_scale: InitVar[Literal["var", "obs"] | None] = None
+    standard_scale: InitVar[Literal["var", "group"] | None] = None
 
     # overrides
     color_legend_title: str = "Median expression\nin group"
@@ -157,7 +158,7 @@ class StackedViolin(BasePlot):
 
     # kwds defaults: TODO: make work with proxys
     DEFAULT_LINE_WIDTH = 0.2
-    DEFAULT_DENSITY_NORM: Literal["area", "count", "width"] = "width"
+    DEFAULT_DENSITY_NORM: DensityNorm = "width"
 
     # set by default the violin plot cut=0 to limit the extend
     # of the violin plot as this produces better plots that wont extend
@@ -178,14 +179,18 @@ class StackedViolin(BasePlot):
 
     def __post_init__(
         self,
-        dendrogram: str | None,
+        dendrogram: bool | str | None,
         with_swapped_axes: bool,
-        standard_scale: Literal["var", "obs"] | None,
+        standard_scale: Literal["var", "group"] | None,
     ):
         super().__post_init__(
             dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
         )
         if standard_scale == "obs":
+            standard_scale = "group"
+            msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
+            warnings.warn(msg, FutureWarning)
+        if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
         elif standard_scale == "var":
@@ -222,13 +227,13 @@ class StackedViolin(BasePlot):
         jitter_size: int | float | Empty = _empty,
         linewidth: float | None | Empty = _empty,
         row_palette: str | None | Empty = _empty,
-        density_norm: Literal["area", "count", "width"] | Empty = _empty,
+        density_norm: DensityNorm | Empty = _empty,
         yticklabels: bool | Empty = _empty,
         ylim: tuple[float, float] | None | Empty = _empty,
         x_padding: float | Empty = _empty,
         y_padding: float | Empty = _empty,
         # deprecated
-        scale: Literal["area", "count", "width"] | Empty = _empty,
+        scale: DensityNorm | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -624,14 +629,14 @@ def stacked_violin(
     title: str | None = None,
     colorbar_title: str | None = StackedViolin.color_legend_title,
     figsize: tuple[float, float] | None = None,
-    dendrogram: str | None = None,
+    dendrogram: bool | str | None = None,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
-    standard_scale: Literal["var", "obs"] | None = None,
+    standard_scale: Literal["var", "group"] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    order: Sequence[str] | None = None,
+    categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
@@ -647,8 +652,11 @@ def stacked_violin(
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int | float = StackedViolin.DEFAULT_JITTER_SIZE,
     row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
+    density_norm: DensityNorm | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
+    # deprecated
+    order: Sequence[str] | None | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\
@@ -676,11 +684,7 @@ def stacked_violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    order
-        Order in which to show the categories. Note: if `dendrogram=True`
-        the categories order will be given by the dendrogram and `order`
-        will be ignored.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -750,6 +754,13 @@ def stacked_violin(
         print(axes_dict)
 
     """
+    if order is not _empty:
+        msg = (
+            "`order` is deprecated (and never worked for `stacked_violin`), "
+            "use categories_order instead"
+        )
+        warnings.warn(msg, FutureWarning)
+        # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(
         adata,
@@ -758,6 +769,7 @@ def stacked_violin(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
@@ -766,7 +778,6 @@ def stacked_violin(
         var_group_labels=var_group_labels,
         var_group_rotation=var_group_rotation,
         layer=layer,
-        categories_order=order,
         ax=ax,
         vmin=vmin,
         vmax=vmax,
@@ -783,7 +794,7 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        density_norm=kwds.get("density_norm", scale),
+        density_norm=_deprecated_scale(density_norm, scale),
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)

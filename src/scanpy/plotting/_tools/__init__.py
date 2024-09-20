@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import collections.abc as cabc
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import TYPE_CHECKING
 
@@ -38,7 +37,7 @@ from .._utils import (
 from .scatterplots import _panel_grid, embedding, pca
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
     from typing import Literal
 
     from anndata import AnnData
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from ..._utils import Empty
+    from .._utils import DensityNorm
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -1215,7 +1215,7 @@ def rank_genes_groups_violin(
     use_raw: bool | None = None,
     key: str | None = None,
     split: bool = True,
-    density_norm: Literal["area", "count", "width"] = "width",
+    density_norm: DensityNorm = "width",
     strip: bool = True,
     jitter: int | float | bool = True,
     size: int = 1,
@@ -1223,7 +1223,7 @@ def rank_genes_groups_violin(
     show: bool | None = None,
     save: bool | None = None,
     # deprecated
-    scale: Literal["area", "count", "width"] | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
 ):
     """\
     Plot ranking of genes for all tested comparisons.
@@ -1610,11 +1610,7 @@ def embedding_density(
 
     # if group is set, then plot it using multiple panels
     # (even if only one group is set)
-    if (
-        group is not None
-        and not isinstance(group, str)
-        and isinstance(group, cabc.Sequence)
-    ):
+    if group is not None and not isinstance(group, str) and isinstance(group, Sequence):
         if ax is not None:
             raise ValueError("Can only specify `ax` if no `group` sequence is given.")
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))

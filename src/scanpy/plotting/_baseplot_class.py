@@ -20,6 +20,7 @@ from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import (
     ClassDescriptorEnabled,
     DefaultProxy,
+    _dk,
     check_colornorm,
     make_grid_spec,
 )
@@ -108,7 +109,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
     norm: Normalize | None = None
 
     # convenience
-    dendrogram: InitVar[str | None] = None
+    dendrogram: InitVar[bool | str | None] = None
     with_swapped_axes: InitVar[bool] = False
 
     # minimum height required for legends to plot properly
@@ -169,7 +170,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
         "color_legend_title"
     )
 
-    def __post_init__(self, dendrogram: str | None, with_swapped_axes: bool):
+    def __post_init__(self, dendrogram: bool | str | None, with_swapped_axes: bool):
         cls = type(self)
         self._update_var_groups()
 
@@ -207,7 +208,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
             self.groupby = [self.groupby]
 
         if dendrogram:
-            self.add_dendrogram(dendrogram_key=dendrogram)
+            self.add_dendrogram(dendrogram_key=_dk(dendrogram))
         if with_swapped_axes:
             self.swap_axes()
 
@@ -243,7 +244,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
         self,
         *,
         show: bool | None = True,
-        dendrogram_key: bool | str | None = None,
+        dendrogram_key: str | None = None,
         size: float = 0.8,
     ) -> Self:
         r"""\
@@ -883,9 +884,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _reorder_categories_after_dendrogram(
-        self, dendrogram: bool | str | None
-    ) -> None:
+    def _reorder_categories_after_dendrogram(self, dendrogram_key: str | None) -> None:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -911,7 +910,7 @@ class BasePlot(metaclass=ClassDescriptorEnabled):
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
+        key = _get_dendrogram_key(self.adata, dendrogram_key, self.groupby)
 
         dendro_info = self.adata.uns[key]
         if self.groupby != dendro_info["groupby"]:

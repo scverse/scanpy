@@ -1,10 +1,18 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import MISSING, Field, dataclass
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypedDict, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Generic,
+    Literal,
+    TypedDict,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import matplotlib as mpl
 import numpy as np
@@ -24,7 +32,7 @@ from .._utils import NeighborsView, _empty
 from . import palettes
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping
+    from collections.abc import Collection
 
     from anndata import AnnData
     from matplotlib.colors import Colormap
@@ -503,12 +511,12 @@ def _set_colors_for_categorical_obs(
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
         cmap = plt.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-    elif isinstance(palette, cabc.Mapping):
+    elif isinstance(palette, Mapping):
         colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, cabc.Sequence):
+        if isinstance(palette, Sequence):
             if len(palette) < len(categories):
                 logg.warning(
                     "Length of palette colors is smaller than the number of "
@@ -609,7 +617,7 @@ def add_colors_for_categorical_sample_annotation(
 def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
     import networkx as nx
 
-    if not isinstance(axs, cabc.Sequence):
+    if not isinstance(axs, Sequence):
         axs = [axs]
 
     if neighbors_key is None:
@@ -635,7 +643,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
-    if not isinstance(axs, cabc.Sequence):
+    if not isinstance(axs, Sequence):
         axs = [axs]
     v_prefix = next(
         (p for p in ["velocity", "Delta"] if f"{p}_{basis}" in adata.obsm), None
@@ -782,7 +790,7 @@ def setup_axes(
                 ax = plt.axes([left, bottom, width, height], projection="3d")
             axs.append(ax)
     else:
-        axs = ax if isinstance(ax, cabc.Sequence) else [ax]
+        axs = ax if isinstance(ax, Sequence) else [ax]
 
     return axs, panel_pos, draw_region_width, figure_width
 
@@ -821,7 +829,7 @@ def scatter_base(
     Depending on whether supplying a single array or a list of arrays,
     return a single axis or a list of axes.
     """
-    if isinstance(highlights, cabc.Mapping):
+    if isinstance(highlights, Mapping):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
     else:
@@ -1369,6 +1377,24 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     return norm
 
 
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm,
+) -> DensityNorm: ...
+
+
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty: ...
+
+
 def _deprecated_scale(
     density_norm: DensityNorm | Empty,
     scale: DensityNorm | Empty,
@@ -1383,3 +1409,8 @@ def _deprecated_scale(
     msg = "`scale` is deprecated, use `density_norm` instead"
     warnings.warn(msg, FutureWarning)
     return scale
+
+
+def _dk(dendrogram: bool | str | None) -> str | None:
+    """Helper to convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
+    return None if isinstance(dendrogram, bool) else dendrogram
