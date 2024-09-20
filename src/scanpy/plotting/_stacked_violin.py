@@ -701,7 +701,7 @@ def stacked_violin(
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int | float = StackedViolin.DEFAULT_JITTER_SIZE,
     row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
-    density_norm: Literal["area", "count", "width"] | Empty = _empty,
+    density_norm: DensityNorm | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     # deprecated
     order: Sequence[str] | None | Empty = _empty,
