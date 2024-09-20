@@ -107,7 +107,7 @@ class DotPlot(BasePlot):
     dot_size_df: pd.DataFrame | None = None
 
     # default style parameters
-    cmap: str | None = "Reds"  # override BasePlot default
+    cmap: Colormap | str | None = "Reds"  # override BasePlot default
     color_on: Literal["dot", "square"] = "dot"
     dot_max: float | None = None
     dot_min: float | None = None

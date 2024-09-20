@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from collections.abc import Collection
     from typing import Any
 
+    from matplotlib.colors import Colormap
+
 
 __all__ = [
     "phate",
@@ -166,7 +168,7 @@ def sam(
     projection: str | np.ndarray = "X_umap",
     *,
     c: str | np.ndarray | None = None,
-    cmap: str = "Spectral_r",
+    cmap: Colormap | str | None = "Spectral_r",
     linewidth: float = 0.0,
     edgecolor: str = "k",
     axes: Axes | None = None,

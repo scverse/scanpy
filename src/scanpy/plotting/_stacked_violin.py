@@ -120,7 +120,7 @@ class StackedViolin(BasePlot):
 
     # overrides
     color_legend_title: str = "Median expression\nin group"
-    cmap: str | None = "Blues"
+    cmap: Colormap | str | None = "Blues"
 
     # style parameters
     row_palette: str | None = None
