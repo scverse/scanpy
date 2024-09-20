@@ -696,8 +696,10 @@ def stacked_violin(
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
     size: int | float = StackedViolin.DEFAULT_JITTER_SIZE,
     row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
+    density_norm: Literal["area", "count", "width"] | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
+    # deprecated
+    scale: Literal["area", "count", "width"] | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\
@@ -729,7 +731,7 @@ def stacked_violin(
         Order in which to show the categories. Note: if `dendrogram=True`
         the categories order will be given by the dendrogram and `order`
         will be ignored.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -834,7 +836,7 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        density_norm=kwds.get("density_norm", scale),
+        density_norm=_deprecated_scale(density_norm, scale),
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)
