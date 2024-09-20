@@ -290,7 +290,7 @@ def matrixplot(
     figsize: tuple[float, float] | None = None,
     dendrogram: str | None = None,
     title: str | None = None,
-    cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
+    cmap: Colormap | str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,

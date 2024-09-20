@@ -810,11 +810,7 @@ def dotplot(
     num_categories: int = 7,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    cmap: str | None = DotPlot.cmap,
-    dot_max: float | None = DotPlot.dot_max,
-    dot_min: float | None = DotPlot.dot_min,
     standard_scale: Literal["var", "group"] | None = None,
-    smallest_dot: float | None = DotPlot.smallest_dot,
     title: str | None = None,
     colorbar_title: str | None = DotPlot.color_legend_title,
     size_title: str | None = DotPlot.size_title,
@@ -835,6 +831,11 @@ def dotplot(
     vmax: float | None = None,
     vcenter: float | None = None,
     norm: Normalize | None = None,
+    # Style parameters
+    cmap: Colormap | str | None = DotPlot.cmap,
+    dot_max: float | None = DotPlot.dot_max,
+    dot_min: float | None = DotPlot.dot_min,
+    smallest_dot: float = DotPlot.smallest_dot,
     **kwds,
 ) -> DotPlot | dict | None:
     """\
@@ -872,15 +873,14 @@ def dotplot(
         If True, gene expression is averaged only over the cells
         expressing the given genes.
     dot_max
-        If none, the maximum dot size is set to the maximum fraction value found
+        If ``None``, the maximum dot size is set to the maximum fraction value found
         (e.g. 0.6). If given, the value should be a number between 0 and 1.
         All fractions larger than dot_max are clipped to this value.
     dot_min
-        If none, the minimum dot size is set to 0. If given,
+        If ``None``, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1.
         All fractions smaller than dot_min are clipped to this value.
     smallest_dot
-        If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
     {vminmax}
@@ -940,9 +940,7 @@ def dotplot(
 
     # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
-    cmap = kwds.get("color_map", cmap)
-    if "color_map" in kwds:
-        del kwds["color_map"]
+    cmap = kwds.pop("color_map", cmap)
 
     dp = DotPlot(
         adata,
@@ -977,7 +975,7 @@ def dotplot(
         dot_max=dot_max,
         dot_min=dot_min,
         smallest_dot=smallest_dot,
-        dot_edge_lw=kwds.pop("linewidth", DotPlot.DEFAULT_DOT_EDGELW),
+        dot_edge_lw=kwds.pop("linewidth", _empty),
     ).legend(colorbar_title=colorbar_title, size_title=size_title)
 
     if return_fig:
