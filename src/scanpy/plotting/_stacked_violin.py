@@ -223,6 +223,10 @@ class StackedViolin(BasePlot):
         )
 
         if standard_scale == "obs":
+            standard_scale = "group"
+            msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
+            warnings.warn(msg, FutureWarning)
+        if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
         elif standard_scale == "var":
@@ -677,7 +681,7 @@ def stacked_violin(
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
-    standard_scale: Literal["var", "obs"] | None = None,
+    standard_scale: Literal["var", "group"] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
     categories_order: Sequence[str] | None = None,

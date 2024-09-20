@@ -167,9 +167,9 @@ def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images(name)
 
 
-@pytest.mark.parametrize(
-    ("id", "fn"),
-    [
+params_dotplot_matrixplot_stacked_violin = [
+    pytest.param(id, fn, id=id)
+    for id, fn in [
         (
             "dotplot",
             partial(
@@ -317,10 +317,13 @@ def test_clustermap(image_comparer, obs_keys, name):
                 figsize=(8, 2.5),
             ),
         ),
-    ],
-)
+    ]
+]
+
+
+@pytest.mark.parametrize(("id", "fn"), params_dotplot_matrixplot_stacked_violin)
 def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = krumsiek11()
     adata.obs["numeric_column"] = adata.X[:, 0]
