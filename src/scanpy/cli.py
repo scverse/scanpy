@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import os
 import sys
 from argparse import ArgumentParser, Namespace, _SubParsersAction
+from collections.abc import MutableMapping
 from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
@@ -27,7 +27,7 @@ class _DelegatingSubparsersAction(_SubParsersAction):
         )
 
 
-class _CommandDelegator(cabc.MutableMapping):
+class _CommandDelegator(MutableMapping):
     """\
     Provide the ability to delegate,
     but don’t calculate the whole list until necessary
