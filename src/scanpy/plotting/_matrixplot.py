@@ -454,7 +454,7 @@ def matrixplot(
     )
 
     if dendrogram:
-        mp.add_dendrogram(dendrogram_key=dendrogram)
+        mp.add_dendrogram(dendrogram_key=None if dendrogram is True else dendrogram)
     if swap_axes:
         mp.swap_axes()
 

@@ -874,7 +874,7 @@ class BasePlot:
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
+    def _reorder_categories_after_dendrogram(self, dendrogram_key: str | None) -> None:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -900,7 +900,7 @@ class BasePlot:
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
+        key = _get_dendrogram_key(self.adata, dendrogram_key, self.groupby)
 
         dendro_info = self.adata.uns[key]
         if self.groupby != dendro_info["groupby"]:
