@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from dataclasses import KW_ONLY, InitVar, dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -16,8 +17,8 @@ from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
+    DefaultProxy,
     _deprecated_scale,
-    _dk,
     check_colornorm,
     make_grid_spec,
     savefig_or_show,
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
+@dataclass
 class StackedViolin(BasePlot):
     """\
     Stacked violin plots.
@@ -102,29 +104,61 @@ class StackedViolin(BasePlot):
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
     >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
-    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
+    StackedViolin(adata=AnnData...)
 
     Using var_names as dict:
 
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
-    <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
+    StackedViolin(adata=AnnData...)
     """
 
-    DEFAULT_SAVE_PREFIX = "stacked_violin_"
-    DEFAULT_COLOR_LEGEND_TITLE = "Median expression\nin group"
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "stacked_violin_"
 
-    DEFAULT_COLORMAP = "Blues"
-    DEFAULT_STRIPPLOT = False
-    DEFAULT_JITTER = False
-    DEFAULT_JITTER_SIZE = 1
+    _: KW_ONLY
+    standard_scale: InitVar[Literal["var", "group"] | None] = None
+
+    # overrides
+    color_legend_title: str = "Median expression\nin group"
+    cmap: Colormap | str | None = "Blues"
+
+    # style parameters
+    row_palette: str | None = None
+    stripplot: bool = False
+    jitter: float | bool = False
+    jitter_size: int | float = 1
+    plot_yticklabels: bool = False
+    ylim: tuple[float, float] | None = None
+    # a unit is the distance between two x-axis ticks
+    plot_x_padding: float = 0.5
+    # a unit is the distance between two y-axis ticks
+    plot_y_padding: float = 0.5
+
+    # deprecated default class variables
+    DEFAULT_ROW_PALETTE: ClassVar[DefaultProxy[str | None]] = DefaultProxy(
+        "row_palette"
+    )
+    DEFAULT_STRIPPLOT: ClassVar[DefaultProxy[bool]] = DefaultProxy("stripplot")
+    DEFAULT_JITTER: ClassVar[DefaultProxy[float | bool]] = DefaultProxy("jitter")
+    DEFAULT_JITTER_SIZE: ClassVar[DefaultProxy[int | float]] = DefaultProxy(
+        "jitter_size"
+    )
+    DEFAULT_PLOT_YTICKLABELS: ClassVar[DefaultProxy[bool]] = DefaultProxy(
+        "plot_yticklabels"
+    )
+    DEFAULT_YLIM: ClassVar[DefaultProxy[tuple[float, float] | None]] = DefaultProxy(
+        "ylim"
+    )
+    DEFAULT_PLOT_X_PADDING: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "plot_x_padding"
+    )
+    DEFAULT_PLOT_Y_PADDING: ClassVar[DefaultProxy[float]] = DefaultProxy(
+        "plot_y_padding"
+    )
+
+    # kwds defaults: TODO: make work with proxys
     DEFAULT_LINE_WIDTH = 0.2
-    DEFAULT_ROW_PALETTE = None
     DEFAULT_DENSITY_NORM: DensityNorm = "width"
-    DEFAULT_PLOT_YTICKLABELS = False
-    DEFAULT_YLIM = None
-    DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
-    DEFAULT_PLOT_Y_PADDING = 0.5  # a unit is the distance between two y-axis ticks
 
     # set by default the violin plot cut=0 to limit the extend
     # of the violin plot as this produces better plots that wont extend
@@ -143,86 +177,15 @@ class StackedViolin(BasePlot):
     # None will draw unadorned violins.
     DEFAULT_INNER = None
 
-    def __getattribute__(self, name: str) -> object:
-        """Called unconditionally when accessing an instance attribute"""
-        # If the user has set the deprecated version on the class,
-        # and our code accesses the new version from the instance,
-        # return the user-specified version instead and warn.
-        # This is done because class properties are hard to do.
-        if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
-            msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning)
-            return object.__getattribute__(self, "DEFAULT_SCALE")
-        return object.__getattribute__(self, name)
-
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "standard_scale",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
-    def __init__(
+    def __post_init__(
         self,
-        adata: AnnData,
-        var_names: _VarNames | Mapping[str, _VarNames],
-        groupby: str | Sequence[str],
-        *,
-        use_raw: bool | None = None,
-        log: bool = False,
-        num_categories: int = 7,
-        categories_order: Sequence[str] | None = None,
-        title: str | None = None,
-        figsize: tuple[float, float] | None = None,
-        gene_symbols: str | None = None,
-        var_group_positions: Sequence[tuple[int, int]] | None = None,
-        var_group_labels: Sequence[str] | None = None,
-        var_group_rotation: float | None = None,
-        layer: str | None = None,
-        standard_scale: Literal["var", "group"] | None = None,
-        ax: _AxesSubplot | None = None,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        vcenter: float | None = None,
-        norm: Normalize | None = None,
-        **kwds,
+        dendrogram: bool | str | None,
+        with_swapped_axes: bool,
+        standard_scale: Literal["var", "group"] | None,
     ):
-        BasePlot.__init__(
-            self,
-            adata,
-            var_names,
-            groupby,
-            use_raw=use_raw,
-            log=log,
-            num_categories=num_categories,
-            categories_order=categories_order,
-            title=title,
-            figsize=figsize,
-            gene_symbols=gene_symbols,
-            var_group_positions=var_group_positions,
-            var_group_labels=var_group_labels,
-            var_group_rotation=var_group_rotation,
-            layer=layer,
-            ax=ax,
-            vmin=vmin,
-            vmax=vmax,
-            vcenter=vcenter,
-            norm=norm,
-            **kwds,
+        super().__post_init__(
+            dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
         )
-
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
@@ -233,22 +196,10 @@ class StackedViolin(BasePlot):
         elif standard_scale == "var":
             self.obs_tidy -= self.obs_tidy.min(0)
             self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
-        elif standard_scale is None:
-            pass
-        else:
+        elif standard_scale is not None:
             logg.warning("Unknown type for standard_scale, ignored")
 
-        # Set default style parameters
-        self.cmap = self.DEFAULT_COLORMAP
-        self.row_palette = self.DEFAULT_ROW_PALETTE
-        self.stripplot = self.DEFAULT_STRIPPLOT
-        self.jitter = self.DEFAULT_JITTER
-        self.jitter_size = self.DEFAULT_JITTER_SIZE
-        self.plot_yticklabels = self.DEFAULT_PLOT_YTICKLABELS
-        self.ylim = self.DEFAULT_YLIM
-        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
-        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
-
+        self.kwds = dict(self.kwds)
         self.kwds.setdefault("cut", self.DEFAULT_CUT)
         self.kwds.setdefault("inner", self.DEFAULT_INNER)
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
@@ -676,9 +627,9 @@ def stacked_violin(
     use_raw: bool | None = None,
     num_categories: int = 7,
     title: str | None = None,
-    colorbar_title: str | None = StackedViolin.DEFAULT_COLOR_LEGEND_TITLE,
+    colorbar_title: str | None = StackedViolin.color_legend_title,
     figsize: tuple[float, float] | None = None,
-    dendrogram: bool | str = False,
+    dendrogram: bool | str | None = None,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
@@ -832,13 +783,11 @@ def stacked_violin(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
-        **kwds,
+        dendrogram=dendrogram,
+        with_swapped_axes=swap_axes,
+        kwds=kwds,
     )
 
-    if dendrogram:
-        vp.add_dendrogram(dendrogram_key=_dk(dendrogram))
-    if swap_axes:
-        vp.swap_axes()
     vp = vp.style(
         cmap=cmap,
         stripplot=stripplot,

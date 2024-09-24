@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import KW_ONLY, InitVar, dataclass
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib import rcParams
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -16,13 +17,12 @@ from ._docs import (
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._utils import _dk, check_colornorm, fix_kwds, savefig_or_show
+from ._utils import DefaultProxy, check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from typing import Literal, Self
 
-    import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
+@dataclass
 class MatrixPlot(BasePlot):
     """\
     Allows the visualization of values using a color map.
@@ -90,112 +91,53 @@ class MatrixPlot(BasePlot):
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
     """
 
-    DEFAULT_SAVE_PREFIX = "matrixplot_"
-    DEFAULT_COLOR_LEGEND_TITLE = "Mean expression\nin group"
+    DEFAULT_SAVE_PREFIX: ClassVar[str] = "matrixplot_"
 
+    _: KW_ONLY
+    colorbar_title: str = "Mean expression\nin group"
     # default style parameters
-    DEFAULT_COLORMAP = rcParams["image.cmap"]
-    DEFAULT_EDGE_COLOR = "gray"
-    DEFAULT_EDGE_LW = 0.1
+    cmap = None  # aka: rcParams["image.cmap"]
+    values_df: pd.DataFrame | None = None
+    standard_scale: InitVar[Literal["var", "group"] | None] = None
+    edge_color: ColorLike | None = "gray"
+    edge_lw: float | None = 0.1
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "standard_scale",
-        "ax",
-        "values_df",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
-    def __init__(
+    # deprecated default class variables
+    DEFAULT_EDGE_COLOR: ClassVar[DefaultProxy[ColorLike]] = DefaultProxy("edge_color")
+    DEFAULT_EDGE_LW: ClassVar[DefaultProxy[float]] = DefaultProxy("edge_lw")
+
+    def __post_init__(
         self,
-        adata: AnnData,
-        var_names: _VarNames | Mapping[str, _VarNames],
-        groupby: str | Sequence[str],
-        *,
-        use_raw: bool | None = None,
-        log: bool = False,
-        num_categories: int = 7,
-        categories_order: Sequence[str] | None = None,
-        title: str | None = None,
-        figsize: tuple[float, float] | None = None,
-        gene_symbols: str | None = None,
-        var_group_positions: Sequence[tuple[int, int]] | None = None,
-        var_group_labels: Sequence[str] | None = None,
-        var_group_rotation: float | None = None,
-        layer: str | None = None,
-        standard_scale: Literal["var", "group"] | None = None,
-        ax: _AxesSubplot | None = None,
-        values_df: pd.DataFrame | None = None,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        vcenter: float | None = None,
-        norm: Normalize | None = None,
-        **kwds,
+        dendrogram: bool | str | None,
+        with_swapped_axes: bool,
+        standard_scale: Literal["var", "group"] | None,
     ):
-        BasePlot.__init__(
-            self,
-            adata,
-            var_names,
-            groupby,
-            use_raw=use_raw,
-            log=log,
-            num_categories=num_categories,
-            categories_order=categories_order,
-            title=title,
-            figsize=figsize,
-            gene_symbols=gene_symbols,
-            var_group_positions=var_group_positions,
-            var_group_labels=var_group_labels,
-            var_group_rotation=var_group_rotation,
-            layer=layer,
-            ax=ax,
-            vmin=vmin,
-            vmax=vmax,
-            vcenter=vcenter,
-            norm=norm,
-            **kwds,
+        super().__post_init__(
+            dendrogram=dendrogram, with_swapped_axes=with_swapped_axes
+        )
+        if self.values_df is not None:
+            return
+
+        # compute mean value
+        self.values_df = cast(
+            pd.DataFrame,
+            self.obs_tidy.groupby(level=0, observed=True)
+            .mean()
+            .loc[
+                self.categories_order
+                if self.categories_order is not None
+                else self.categories
+            ],
         )
 
-        if values_df is None:
-            # compute mean value
-            values_df = (
-                self.obs_tidy.groupby(level=0, observed=True)
-                .mean()
-                .loc[
-                    self.categories_order
-                    if self.categories_order is not None
-                    else self.categories
-                ]
-            )
-
-            if standard_scale == "group":
-                values_df = values_df.sub(values_df.min(1), axis=0)
-                values_df = values_df.div(values_df.max(1), axis=0).fillna(0)
-            elif standard_scale == "var":
-                values_df -= values_df.min(0)
-                values_df = (values_df / values_df.max(0)).fillna(0)
-            elif standard_scale is None:
-                pass
-            else:
-                logg.warning("Unknown type for standard_scale, ignored")
-
-        self.values_df = values_df
-
-        self.cmap = self.DEFAULT_COLORMAP
-        self.edge_color = self.DEFAULT_EDGE_COLOR
-        self.edge_lw = self.DEFAULT_EDGE_LW
+        if standard_scale == "group":
+            self.values_df = self.values_df.sub(self.values_df.min(1), axis=0)
+            self.values_df = self.values_df.div(self.values_df.max(1), axis=0).fillna(0)
+        elif standard_scale == "var":
+            self.values_df -= self.values_df.min(0)
+            self.values_df = (self.values_df / self.values_df.max(0)).fillna(0)
+        elif standard_scale is not None:
+            logg.warning("Unknown type for standard_scale, ignored")
 
     def style(
         self,
@@ -347,7 +289,7 @@ def matrixplot(
     num_categories: int = 7,
     categories_order: Sequence[str] | None = None,
     figsize: tuple[float, float] | None = None,
-    dendrogram: bool | str = False,
+    dendrogram: bool | str | None = None,
     title: str | None = None,
     cmap: Colormap | str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
@@ -454,13 +396,10 @@ def matrixplot(
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
-        **kwds,
+        dendrogram=dendrogram,
+        with_swapped_axes=swap_axes,
+        kwds=kwds,
     )
-
-    if dendrogram:
-        mp.add_dendrogram(dendrogram_key=_dk(dendrogram))
-    if swap_axes:
-        mp.swap_axes()
 
     mp = mp.style(cmap=cmap).legend(title=colorbar_title)
     if return_fig:

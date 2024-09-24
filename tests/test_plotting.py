@@ -374,7 +374,7 @@ def test_dotplot_style_no_reset():
     pbmc = pbmc68k_reduced()
     plot = sc.pl.dotplot(pbmc, "CD79A", "bulk_labels", return_fig=True)
     assert isinstance(plot, sc.pl.DotPlot)
-    assert plot.cmap == sc.pl.DotPlot.DEFAULT_COLORMAP
+    assert plot.cmap == sc.pl.DotPlot.cmap
     plot.style(cmap="winter")
     assert plot.cmap == "winter"
     plot.style(color_on="square")
@@ -1733,10 +1733,3 @@ def test_string_mask(tmp_path, check_same_image):
     plt.close()
 
     check_same_image(p1, p2, tol=1)
-
-
-def test_violin_scale_warning(monkeypatch):
-    adata = pbmc3k_processed()
-    monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
-    with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
-        sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
