@@ -1131,7 +1131,7 @@ def paga_path(
         groups_key = adata.uns["paga"]["groups"]
     groups_names = adata.obs[groups_key].cat.categories
 
-    if "dpt_pseudotime" not in adata.obs.keys():
+    if "dpt_pseudotime" not in adata.obs.columns:
         raise ValueError(
             "`pl.paga_path` requires computation of a pseudotime `tl.dpt` "
             "for ordering at single-cell resolution"

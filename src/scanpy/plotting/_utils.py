@@ -1280,10 +1280,10 @@ def fix_kwds(kwds_dict, **kwargs):
 
 
 def _get_basis(adata: AnnData, basis: str):
-    if basis in adata.obsm.keys():
+    if basis in adata.obsm:
         basis_key = basis
 
-    elif f"X_{basis}" in adata.obsm.keys():
+    elif f"X_{basis}" in adata.obsm:
         basis_key = f"X_{basis}"
 
     return basis_key

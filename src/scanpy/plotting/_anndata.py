@@ -157,15 +157,15 @@ def scatter(
     if x is None or y is None:
         raise ValueError("Either provide a `basis` or `x` and `y`.")
     if (
-        (x in adata.obs.keys() or x in var_index)
-        and (y in adata.obs.keys() or y in var_index)
-        and (color is None or color in adata.obs.keys() or color in var_index)
+        (x in adata.obs.columns or x in var_index)
+        and (y in adata.obs.columns or y in var_index)
+        and (color is None or color in adata.obs.columns or color in var_index)
     ):
         return _scatter_obs(**args)
     if (
-        (x in adata.var.keys() or x in adata.obs.index)
-        and (y in adata.var.keys() or y in adata.obs.index)
-        and (color is None or color in adata.var.keys() or color in adata.obs.index)
+        (x in adata.var.columns or x in adata.obs.index)
+        and (y in adata.var.columns or y in adata.obs.index)
+        and (color is None or color in adata.var.columns or color in adata.obs.index)
     ):
         adata_T = adata.T
         axs = _scatter_obs(
@@ -217,14 +217,12 @@ def _scatter_obs(
     use_raw = _check_use_raw(adata, use_raw)
 
     # Process layers
-    if layers in ["X", None] or (
-        isinstance(layers, str) and layers in adata.layers.keys()
-    ):
+    if layers in ["X", None] or (isinstance(layers, str) and layers in adata.layers):
         layers = (layers, layers, layers)
     elif isinstance(layers, Collection) and len(layers) == 3:
         layers = tuple(layers)
         for layer in layers:
-            if layer not in adata.layers.keys() and layer not in ["X", None]:
+            if layer not in adata.layers and layer not in ["X", None]:
                 raise ValueError(
                     "`layers` should have elements that are "
                     "either None or in adata.layers.keys()."
@@ -256,7 +254,7 @@ def _scatter_obs(
     )
     if title is not None and isinstance(title, str):
         title = [title]
-    highlights = adata.uns["highlights"] if "highlights" in adata.uns else []
+    highlights = adata.uns.get("highlights", [])
     if basis is not None:
         try:
             # ignore the '0th' diffusion component
@@ -292,19 +290,14 @@ def _scatter_obs(
         n = Y.shape[0]
         size = 120000 / n
 
-    if legend_loc.startswith("on data") and legend_fontsize is None:
-        legend_fontsize = rcParams["legend.fontsize"]
-    elif legend_fontsize is None:
+    if legend_fontsize is None:
         legend_fontsize = rcParams["legend.fontsize"]
 
     palette_was_none = False
     if palette is None:
         palette_was_none = True
     if isinstance(palette, Sequence) and not isinstance(palette, str):
-        if not is_color_like(palette[0]):
-            palettes = palette
-        else:
-            palettes = [palette]
+        palettes = palette if not is_color_like(palette[0]) else [palette]
     else:
         palettes = [palette for _ in range(len(keys))]
     palettes = [_utils.default_palette(palette) for palette in palettes]
@@ -328,7 +321,7 @@ def _scatter_obs(
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
-    show_ticks = True if component_name is None else False
+    show_ticks = component_name is None
 
     # generate the colors
     color_ids: list[np.ndarray | ColorLike] = []
@@ -364,9 +357,8 @@ def _scatter_obs(
             categoricals.append(ikey)
         color_ids.append(c)
 
-    if right_margin is None and len(categoricals) > 0:
-        if legend_loc == "right margin":
-            right_margin = 0.5
+    if right_margin is None and len(categoricals) > 0 and legend_loc == "right margin":
+        right_margin = 0.5
     if title is None and keys[0] is not None:
         title = [
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
@@ -488,10 +480,7 @@ def _scatter_obs(
 
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
             for iname, name in enumerate(adata.obs[key].cat.categories):
-                if name in centroids:
-                    all_pos[iname] = centroids[name]
-                else:
-                    all_pos[iname] = [np.nan, np.nan]
+                all_pos[iname] = centroids.get(name, [np.nan, np.nan])
             if legend_loc == "on data export":
                 filename = settings.writedir / "pos.csv"
                 logg.warning(f"exporting label positions to {filename}")
@@ -1245,10 +1234,7 @@ def heatmap(
         groupby_width = 0.2 if categorical else 0
         if figsize is None:
             height = 6
-            if show_gene_labels:
-                heatmap_width = len(var_names) * 0.3
-            else:
-                heatmap_width = 8
+            heatmap_width = len(var_names) * 0.3 if show_gene_labels else 8
             width = heatmap_width + dendro_width + groupby_width
         else:
             width, height = figsize
@@ -1352,10 +1338,7 @@ def heatmap(
         dendro_height = 0.8 if dendrogram else 0
         groupby_height = 0.13 if categorical else 0
         if figsize is None:
-            if show_gene_labels:
-                heatmap_height = len(var_names) * 0.18
-            else:
-                heatmap_height = 4
+            heatmap_height = len(var_names) * 0.18 if show_gene_labels else 4
             width = 10
             height = heatmap_height + dendro_height + groupby_height
         else:
@@ -1440,10 +1423,7 @@ def heatmap(
             for idx, (label, pos) in enumerate(
                 zip(var_group_labels, var_group_positions)
             ):
-                if var_groups_subset_of_groupby:
-                    label_code = label2code[label]
-                else:
-                    label_code = idx
+                label_code = label2code[label] if var_groups_subset_of_groupby else idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect="auto", cmap=groupby_cmap, norm=norm
@@ -1892,10 +1872,7 @@ def correlation_matrix(
         labels = adata.obs[groupby].cat.categories
     num_rows = corr_matrix.shape[0]
     colorbar_height = 0.2
-    if dendrogram:
-        dendrogram_width = 1.8
-    else:
-        dendrogram_width = 0
+    dendrogram_width = 1.8 if dendrogram else 0
     if figsize is None:
         corr_matrix_height = num_rows * 0.6
         height = corr_matrix_height + colorbar_height
@@ -2052,7 +2029,7 @@ def _prepare_dataframe(
                     "groupby has to be a valid observation. "
                     f"Given {group}, is not in observations: {adata.obs_keys()}" + msg
                 )
-            if group in adata.obs.keys() and group == adata.obs.index.name:
+            if group in adata.obs.columns and group == adata.obs.index.name:
                 raise ValueError(
                     f"Given group {group} is both and index and a column level, "
                     "which is ambiguous."
@@ -2171,10 +2148,7 @@ def _plot_gene_groups_brackets(
     if orientation == "top":
         # rotate labels if any of them is longer than 4 characters
         if rotation is None and group_labels:
-            if max([len(x) for x in group_labels]) > 4:
-                rotation = 90
-            else:
-                rotation = 0
+            rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
         for idx in range(len(left)):
             verts.append((left[idx], 0))  # lower-left
             verts.append((left[idx], 0.6))  # upper-left
@@ -2600,11 +2574,8 @@ def _plot_categories_as_colorblocks(
         )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            if max([len(str(x)) for x in labels]) < 3:
-                # if the labels are small do not rotate them
-                rotation = 0
-            else:
-                rotation = 90
+            # if the labels are small do not rotate them
+            rotation = 0 if max(len(str(x)) for x in labels) < 3 else 90
             groupby_ax.set_xticklabels(labels, rotation=rotation)
 
         # remove x ticks

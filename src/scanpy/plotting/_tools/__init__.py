@@ -93,9 +93,7 @@ def pca_overview(adata: AnnData, **params):
     --------
     pp.pca
     """
-    show = params["show"] if "show" in params else None
-    if "show" in params:
-        del params["show"]
+    show = params.pop("show", None)
     pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
@@ -398,10 +396,7 @@ def rank_genes_groups(
     tl.rank_genes_groups
 
     """
-    if "n_panels_per_row" in kwds:
-        n_panels_per_row = kwds["n_panels_per_row"]
-    else:
-        n_panels_per_row = ncols
+    n_panels_per_row = kwds.get("n_panels_per_row", ncols)
     if n_genes < 1:
         raise NotImplementedError(
             "Specifying a negative number for n_genes has not been implemented for "
@@ -567,10 +562,7 @@ def _rank_genes_groups_plot(
             if len(genes_list) == 0:
                 logg.warning(f"No genes found for group {group}")
                 continue
-            if n_genes < 0:
-                genes_list = genes_list[n_genes:]
-            else:
-                genes_list = genes_list[:n_genes]
+            genes_list = genes_list[n_genes:] if n_genes < 0 else genes_list[:n_genes]
             var_names[group] = genes_list
             var_names_list.extend(genes_list)
 
@@ -1566,10 +1558,7 @@ def embedding_density(
 
     # turn group into a list if needed
     if group == "all":
-        if groupby is None:
-            group = None
-        else:
-            group = list(adata.obs[groupby].cat.categories)
+        group = None if groupby is None else list(adata.obs[groupby].cat.categories)
     elif isinstance(group, str):
         group = [group]
 
@@ -1633,10 +1622,7 @@ def embedding_density(
             adata.obs[density_col_name] = dens_values
             dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
 
-            if title is None:
-                _title = group_name
-            else:
-                _title = title
+            _title = group_name if title is None else title
 
             ax = embedding(
                 adata,
@@ -1773,16 +1759,15 @@ def _get_values_to_plot(
                 df["names"] = df[gene_symbols]
             # check that all genes are present in the df as sc.tl.rank_genes_groups
             # can be called with only top genes
-            if not check_done:
-                if df.shape[0] < adata.shape[1]:
-                    message = (
-                        "Please run `sc.tl.rank_genes_groups` with "
-                        "'n_genes=adata.shape[1]' to save all gene "
-                        f"scores. Currently, only {df.shape[0]} "
-                        "are found"
-                    )
-                    logg.error(message)
-                    raise ValueError(message)
+            if not check_done and df.shape[0] < adata.shape[1]:
+                message = (
+                    "Please run `sc.tl.rank_genes_groups` with "
+                    "'n_genes=adata.shape[1]' to save all gene "
+                    f"scores. Currently, only {df.shape[0]} "
+                    "are found"
+                )
+                logg.error(message)
+                raise ValueError(message)
             df["group"] = group
             df_list.append(df)
 

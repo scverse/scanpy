@@ -202,10 +202,7 @@ def pca(
 
     if n_comps is None:
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
-        if settings.N_PCS >= min_dim:
-            n_comps = min_dim - 1
-        else:
-            n_comps = settings.N_PCS
+        n_comps = min_dim - 1 if min_dim <= settings.N_PCS else settings.N_PCS
 
     logg.info(f"    with n_comps={n_comps}")
 
@@ -395,7 +392,7 @@ def _handle_mask_var(
     if use_highly_variable or (
         use_highly_variable is None
         and mask_var is _empty
-        and "highly_variable" in adata.var.keys()
+        and "highly_variable" in adata.var.columns
     ):
         mask_var = "highly_variable"
 

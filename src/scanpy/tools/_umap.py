@@ -187,7 +187,7 @@ def umap(
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
+    if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(

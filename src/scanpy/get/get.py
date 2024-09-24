@@ -121,10 +121,7 @@ def _check_indices(
     use_raw: bool = False,
 ) -> tuple[list[str], list[str], list[str]]:
     """Common logic for checking indices for obs_df and var_df."""
-    if use_raw:
-        alt_repr = "adata.raw"
-    else:
-        alt_repr = "adata"
+    alt_repr = "adata.raw" if use_raw else "adata"
 
     alt_dim = ("obs", "var")[dim == "obs"]
 
@@ -288,10 +285,7 @@ def obs_df(
         var = adata.raw.var
     else:
         var = adata.var
-    if gene_symbols is not None:
-        alias_index = pd.Index(var[gene_symbols])
-    else:
-        alias_index = None
+    alias_index = pd.Index(var[gene_symbols]) if gene_symbols is not None else None
 
     obs_cols, var_idx_keys, var_symbols = _check_indices(
         adata.obs,

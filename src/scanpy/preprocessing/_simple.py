@@ -376,10 +376,7 @@ def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
-        if not np.issubdtype(X.dtype, np.floating):
-            X = X.astype(float)
-        else:
-            X = X.copy()
+        X = X.astype(float) if not np.issubdtype(X.dtype, np.floating) else X.copy()
     elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
         X = X.astype(float)
     np.log1p(X, out=X)
@@ -700,10 +697,7 @@ def regress_out(
     # regress on one or several ordinal variables
     else:
         # create data frame with selected keys (if given)
-        if keys:
-            regressors = adata.obs[keys]
-        else:
-            regressors = adata.obs.copy()
+        regressors = adata.obs[keys] if keys else adata.obs.copy()
 
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
@@ -720,10 +714,7 @@ def regress_out(
     for idx, data_chunk in enumerate(chunk_list):
         # each task is a tuple of a data_chunk eg. (adata.X[:,0:100]) and
         # the regressors. This data will be passed to each of the jobs.
-        if variable_is_categorical:
-            regres = regressors_chunk[idx]
-        else:
-            regres = regressors
+        regres = regressors_chunk[idx] if variable_is_categorical else regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
     from joblib import Parallel, delayed

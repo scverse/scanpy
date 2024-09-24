@@ -219,7 +219,7 @@ def moignard15() -> AnnData:
     }
     # annotate each observation/cell
     adata.obs["exp_groups"] = [
-        next(gname for gname in groups.keys() if sname.startswith(gname))
+        next(gname for gname in groups if sname.startswith(gname))
         for sname in adata.obs_names
     ]
     # fix the order and colors of names in "groups"
