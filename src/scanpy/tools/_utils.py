@@ -30,7 +30,7 @@ def _choose_representation(
         use_rep = "X"
     if use_rep is None:
         if adata.n_vars > settings.N_PCS:
-            if "X_pca" in adata.obsm.keys():
+            if "X_pca" in adata.obsm:
                 if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
                     raise ValueError(
                         "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
@@ -50,7 +50,7 @@ def _choose_representation(
             logg.info("    using data matrix X directly")
             X = adata.X
     else:
-        if use_rep in adata.obsm.keys() and n_pcs is not None:
+        if use_rep in adata.obsm and n_pcs is not None:
             if n_pcs > adata.obsm[use_rep].shape[1]:
                 raise ValueError(
                     f"{use_rep} does not have enough Dimensions. Provide a "
@@ -58,7 +58,7 @@ def _choose_representation(
                     "`n_pcs` or lower `n_pcs` "
                 )
             X = adata.obsm[use_rep][:, :n_pcs]
-        elif use_rep in adata.obsm.keys() and n_pcs is None:
+        elif use_rep in adata.obsm and n_pcs is None:
             X = adata.obsm[use_rep]
         elif use_rep == "X":
             X = adata.X

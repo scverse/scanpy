@@ -297,16 +297,12 @@ class Ingest:
             self._use_rep = "X_pca"
             self._n_pcs = neighbors["params"]["n_pcs"]
             self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
-        elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm.keys():
+        elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm:
             self._use_rep = "X_pca"
             self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
-        if "metric_kwds" in neighbors["params"]:
-            self._metric_kwds = neighbors["params"]["metric_kwds"]
-        else:
-            self._metric_kwds = {}
-
+        self._metric_kwds = neighbors["params"].get("metric_kwds", {})
         self._metric = neighbors["params"]["metric"]
 
         self._neigh_random_state = neighbors["params"].get("random_state", 0)
@@ -317,7 +313,7 @@ class Ingest:
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
         mask = "highly_variable"
-        if self._pca_use_hvg and mask not in adata.var.keys():
+        if self._pca_use_hvg and mask not in adata.var.columns:
             msg = f"Did not find `adata.var[{mask!r}']`."
             raise ValueError(msg)
 
@@ -376,7 +372,7 @@ class Ingest:
             return self._pca(self._n_pcs)
         if self._use_rep == "X":
             return adata.X
-        if self._use_rep in adata.obsm.keys():
+        if self._use_rep in adata.obsm:
             return adata.obsm[self._use_rep]
         return adata.X
 

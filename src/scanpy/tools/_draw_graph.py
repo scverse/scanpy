@@ -130,7 +130,7 @@ def draw_graph(
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
-    if init_pos in adata.obsm.keys():
+    if init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif init_pos == "paga" or init_pos:
         init_coords = get_init_pos_from_paga(

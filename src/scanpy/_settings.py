@@ -371,7 +371,7 @@ class ScanpyConfig:
     def logpath(self, logpath: Path | str | None):
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open("a")
+        self.logfile = Path(logpath).open("a")  # noqa: SIM115
         self._logpath = Path(logpath)
 
     @property
@@ -519,7 +519,7 @@ class ScanpyConfig:
         return "\n".join(
             f"{k} = {v!r}"
             for k, v in inspect.getmembers(self)
-            if not k.startswith("_") and not k == "getdoc"
+            if not k.startswith("_") and k != "getdoc"
         )
 
 

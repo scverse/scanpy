@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
@@ -469,10 +470,7 @@ class Neighbors:
         -----
         This has not been tested, in contrast to `transitions_sym`.
         """
-        if issparse(self.Z):
-            Zinv = self.Z.power(-1)
-        else:
-            Zinv = np.diag(1.0 / np.diag(self.Z))
+        Zinv = self.Z.power(-1) if issparse(self.Z) else np.diag(1.0 / np.diag(self.Z))
         return self.Z @ self.transitions_sym @ Zinv
 
     @property
@@ -591,10 +589,9 @@ class Neighbors:
 
             if isinstance(index, NNDescent):
                 # very cautious here
-                try:
+                # TODO catch the correct exception
+                with contextlib.suppress(Exception):
                     self._rp_forest = _make_forest_dict(index)
-                except Exception:  # TODO catch the correct exception
-                    pass
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
 
         if method == "umap":

@@ -196,10 +196,7 @@ class PAGA:
         inter_es = inter_es.tocoo()
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             expected_random_null = (es[i] * ns[j] + es[j] * ns[i]) / (n - 1)
-            if expected_random_null != 0:
-                scaled_value = v / expected_random_null
-            else:
-                scaled_value = 1
+            scaled_value = v / expected_random_null if expected_random_null != 0 else 1
             if scaled_value > 1:
                 scaled_value = 1
             connectivities[i, j] = scaled_value
@@ -229,10 +226,7 @@ class PAGA:
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             # have n_neighbors**2 inside sqrt for backwards compat
             geom_mean_approx_knn = np.sqrt(n_neighbors_sq * ns[i] * ns[j])
-            if geom_mean_approx_knn != 0:
-                scaled_value = v / geom_mean_approx_knn
-            else:
-                scaled_value = 1
+            scaled_value = v / geom_mean_approx_knn if geom_mean_approx_knn != 0 else 1
             connectivities[i, j] = scaled_value
         # set attributes
         self.ns = ns

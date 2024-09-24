@@ -287,10 +287,7 @@ class _RankGenes:
             # initialize space for z-scores
             scores = np.zeros(n_genes)
             # initialize space for tie correction coefficients
-            if tie_correct:
-                T = np.zeros(n_genes)
-            else:
-                T = 1
+            T = np.zeros(n_genes) if tie_correct else 1
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 if group_index == self.ireference:
@@ -346,10 +343,7 @@ class _RankGenes:
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
 
-                if tie_correct:
-                    T_i = T[group_index]
-                else:
-                    T_i = 1
+                T_i = T[group_index] if tie_correct else 1
 
                 std_dev = np.sqrt(
                     T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
@@ -733,10 +727,7 @@ def rank_genes_groups(
 
 
 def _calc_frac(X):
-    if issparse(X):
-        n_nonzero = X.getnnz(axis=0)
-    else:
-        n_nonzero = np.count_nonzero(X, axis=0)
+    n_nonzero = X.getnnz(axis=0) if issparse(X) else np.count_nonzero(X, axis=0)
     return n_nonzero / X.shape[0]
 
 

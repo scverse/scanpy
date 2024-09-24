@@ -196,10 +196,7 @@ def combat(
             raise ValueError("Covariates must be unique")
 
     # only works on dense matrices so far
-    if issparse(adata.X):
-        X = adata.X.toarray().T
-    else:
-        X = adata.X.T
+    X = adata.X.toarray().T if issparse(adata.X) else adata.X.T
     data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
 
     sanitize_anndata(adata)

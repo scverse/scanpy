@@ -198,7 +198,7 @@ def sample_dynamic_data(**params):
                         X[::step],
                         dir=writedir,
                         noiseObs=noiseObs,
-                        append=(False if restart == 0 else True),
+                        append=restart != 0,
                         branching=branching,
                         nrRealizations=nrRealizations,
                     )
@@ -208,7 +208,7 @@ def sample_dynamic_data(**params):
                         noiseDyn * np.random.randn(500, 3),
                         dir=writedir,
                         noiseObs=noiseObs,
-                        append=(False if restart == 0 else True),
+                        append=restart != 0,
                         branching=branching,
                         nrRealizations=nrRealizations,
                     )
@@ -270,7 +270,7 @@ def sample_dynamic_data(**params):
                         X[::step],
                         dir=writedir,
                         noiseObs=noiseObs,
-                        append=(False if restart == 0 else True),
+                        append=restart != 0,
                         branching=branching,
                         nrRealizations=nrRealizations,
                     )
@@ -367,7 +367,7 @@ def write_data(
     # variable names
     if varNames:
         header += f'{"it":>2} '
-        for v in varNames.keys():
+        for v in varNames:
             header += f"{v:>7} "
     with (dir / f"sim_{id}.txt").open("ab" if append else "wb") as f:
         np.savetxt(
@@ -430,7 +430,7 @@ class GRNsim:
         # checks
         if initType not in ["branch", "random"]:
             raise RuntimeError("initType must be either: branch, random")
-        if model not in self.availModels.keys():
+        if model not in self.availModels:
             message = "model not among predefined models \n"  # noqa: F841  # TODO FIX
         # read from file
         from .. import sim_models
@@ -605,12 +605,12 @@ class GRNsim:
         or via sampling.
         """
         self.varNames = {str(i): i for i in range(self.dim)}
-        if self.model not in self.availModels.keys() and Coupl is None:
+        if self.model not in self.availModels and Coupl is None:
             self.read_model()
         elif "var" in self.model.name:
             # vector auto regressive process
             self.Coupl = Coupl
-            self.boolRules = {s: "" for s in self.varNames.keys()}
+            self.boolRules = {s: "" for s in self.varNames}
             names = list(self.varNames.keys())
             for gp in range(self.dim):
                 pas = []
@@ -819,7 +819,7 @@ class GRNsim:
         pa_old = []
         pa_delete = []
         for pa in rule_pa:
-            if pa not in self.varNames.keys():
+            if pa not in self.varNames:
                 settings.m(0, "list of available variables:")
                 settings.m(0, list(self.varNames.keys()))
                 message = (
@@ -842,12 +842,11 @@ class GRNsim:
     def build_boolCoeff(self):
         """Compute coefficients for tuple space."""
         # coefficients for hill functions from boolean update rules
-        self.boolCoeff = {s: [] for s in self.varNames.keys()}
+        self.boolCoeff = {s: [] for s in self.varNames}
         # parents
-        self.pas = {s: [] for s in self.varNames.keys()}
+        self.pas = {s: [] for s in self.varNames}
         #
-        for key in self.boolRules.keys():
-            rule = self.boolRules[key]
+        for key, rule in self.boolRules.items():
             self.pas[key] = self.parents_from_boolRule(rule)
             pasIndices = [self.varNames[pa] for pa in self.pas[key]]
             # check whether there are coupling matrix entries for each parent
@@ -1150,11 +1149,10 @@ class StaticCauseEffect:
         # if there is more than a child with a single parent
         # order these children (there are two in three dim)
         # by distance to the source/parent
-        if nrchildren_par[1] > 1:
-            if Adj[children_sorted[0], parents[0]] == 0:
-                help = children_sorted[0]
-                children_sorted[0] = children_sorted[1]
-                children_sorted[1] = help
+        if nrchildren_par[1] > 1 and Adj[children_sorted[0], parents[0]] == 0:
+            help = children_sorted[0]
+            children_sorted[0] = children_sorted[1]
+            children_sorted[1] = help
 
         for gp in children_sorted:
             for g in range(dim):
