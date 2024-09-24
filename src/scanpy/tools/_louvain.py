@@ -163,10 +163,7 @@ def louvain(
         if not directed:
             logg.debug("    using the undirected graph")
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-        if use_weights:
-            weights = np.array(g.es["weight"]).astype(np.float64)
-        else:
-            weights = None
+        weights = np.array(g.es["weight"]).astype(np.float64) if use_weights else None
         if flavor == "vtraag":
             import louvain
 

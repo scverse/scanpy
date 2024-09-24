@@ -129,7 +129,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
             left_margin=0.15,
             n_avg=50,
             annotations=["distance"],
-            show_yticks=True if ipath == 0 else False,
+            show_yticks=ipath == 0,
             show_colorbar=False,
             color_map="Greys",
             color_maps_annotations={"distance": "viridis"},

@@ -121,10 +121,7 @@ def _is_constant_csr_rows(
     for i in range(n):
         start = indptr[i]
         stop = indptr[i + 1]
-        if stop - start == shape[1]:
-            val = data[start]
-        else:
-            val = 0
+        val = data[start] if stop - start == shape[1] else 0
         for j in range(start, stop):
             if data[j] != val:
                 result[i] = False

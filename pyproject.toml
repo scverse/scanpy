@@ -237,6 +237,7 @@ select = [
     "PLR0917", # Ban APIs with too many positional parameters
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
+    "SIM",     # Simplify control flow
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

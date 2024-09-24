@@ -886,7 +886,7 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
-    if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
+    if "pca" not in adata.obsm and "X_pca" not in adata.obsm:
         raise KeyError(
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."
@@ -1011,10 +1011,7 @@ def spatial(
     crop_coord = _check_crop_coord(crop_coord, scale_factor)
     na_color = _check_na_color(na_color, img=img)
 
-    if bw:
-        cmap_img = "gray"
-    else:
-        cmap_img = None
+    cmap_img = "gray" if bw else None
     circle_radius = size * scale_factor * spot_size * 0.5
 
     axs = embedding(
@@ -1342,10 +1339,7 @@ def _check_spatial_data(
             library_id = list(spatial_mapping.keys())[0]
         else:
             library_id = None
-    if library_id is not None:
-        spatial_data = spatial_mapping[library_id]
-    else:
-        spatial_data = None
+    spatial_data = spatial_mapping[library_id] if library_id is not None else None
     return library_id, spatial_data
 
 
@@ -1387,10 +1381,7 @@ def _check_na_color(
     na_color: ColorLike | None, *, img: np.ndarray | None = None
 ) -> ColorLike:
     if na_color is None:
-        if img is not None:
-            na_color = (0.0, 0.0, 0.0, 0.0)
-        else:
-            na_color = "lightgray"
+        na_color = (0.0, 0.0, 0.0, 0.0) if img is not None else "lightgray"
     return na_color
 
 
