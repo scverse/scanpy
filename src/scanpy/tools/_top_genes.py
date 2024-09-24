@@ -181,10 +181,7 @@ def ROC_AUC_analysis(
     y_true = mask
     for i, j in enumerate(name_list):
         vec = adata[:, [j]].X
-        if issparse(vec):
-            y_score = vec.todense()
-        else:
-            y_score = vec
+        y_score = vec.todense() if issparse(vec) else vec
 
         (
             fpr[name_list[i]],

@@ -703,13 +703,12 @@ def read_params(
 
     params = OrderedDict([])
     for line in filename.open():
-        if "=" in line:
-            if not as_header or line.startswith("#"):
-                line = line[1:] if line.startswith("#") else line
-                key, val = line.split("=")
-                key = key.strip()
-                val = val.strip()
-                params[key] = convert_string(val)
+        if "=" in line and (not as_header or line.startswith("#")):
+            line = line[1:] if line.startswith("#") else line
+            key, val = line.split("=")
+            key = key.strip()
+            val = val.strip()
+            params[key] = convert_string(val)
     return params
 
 

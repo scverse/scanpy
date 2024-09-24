@@ -13,7 +13,7 @@ import re
 import sys
 import warnings
 from collections import namedtuple
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, singledispatch, wraps
 from operator import mul, truediv
@@ -281,10 +281,8 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets)))
-    try:
+    with suppress(KeyError):
         g.es["weight"] = weights
-    except KeyError:
-        pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
             f"The constructed graph has only {g.vcount()} nodes. "
@@ -613,11 +611,10 @@ def _(
     out: sparse.csr_matrix | sparse.csc_matrix | None = None,
 ) -> sparse.csr_matrix | sparse.csc_matrix:
     check_op(op)
-    if out is not None:
-        if X.data is not out.data:
-            raise ValueError(
-                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
-            )
+    if out is not None and X.data is not out.data:
+        raise ValueError(
+            "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+        )
     if not allow_divide_by_zero and op is truediv:
         scaling_array = scaling_array.copy() + (scaling_array == 0)
 
@@ -684,7 +681,7 @@ def _(
     column_scale = axis == 1
 
     if isinstance(scaling_array, DaskArray):
-        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+        if (row_scale and X.chunksize[0] != scaling_array.chunksize[0]) or (
             column_scale
             and (
                 (

@@ -245,7 +245,7 @@ def scrublet(
         return {"obs": ad_obs.obs, "uns": ad_obs.uns["scrublet"]}
 
     if batch_key is not None:
-        if batch_key not in adata.obs.keys():
+        if batch_key not in adata.obs.columns:
             msg = (
                 "`batch_key` must be a column of .obs in the input AnnData object,"
                 f"but {batch_key!r} is not in {adata.obs.keys()!r}."

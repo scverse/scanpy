@@ -137,9 +137,7 @@ class BasePlot:
         self.width, self.height = figsize if figsize is not None else (None, None)
 
         self.has_var_groups = (
-            True
-            if var_group_positions is not None and len(var_group_positions) > 0
-            else False
+            var_group_positions is not None and len(var_group_positions) > 0
         )
 
         self._update_var_groups()
@@ -160,18 +158,19 @@ class BasePlot:
                 "Plot would be very large."
             )
 
-        if categories_order is not None:
-            if set(self.obs_tidy.index.categories) != set(categories_order):
-                logg.error(
-                    "Please check that the categories given by "
-                    "the `order` parameter match the categories that "
-                    "want to be reordered.\n\n"
-                    "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
-                )
-                return
+        if categories_order is not None and (
+            set(self.obs_tidy.index.categories) != set(categories_order)
+        ):
+            logg.error(
+                "Please check that the categories given by "
+                "the `order` parameter match the categories that "
+                "want to be reordered.\n\n"
+                "Mismatch: "
+                f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                f"Given order categories: {categories_order}\n\n"
+                f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+            )
+            return
 
         self.adata = adata
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
@@ -388,8 +387,8 @@ class BasePlot:
             self.group_extra_size = 0
             return self
 
-        _sort = True if sort is not None else False
-        _ascending = True if sort == "ascending" else False
+        _sort = sort is not None
+        _ascending = sort == "ascending"
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
@@ -489,10 +488,7 @@ class BasePlot:
         if self.categories_order is not None:
             counts_df = counts_df.loc[self.categories_order]
         if params["color"] is None:
-            if f"{self.groupby}_colors" in self.adata.uns:
-                color = self.adata.uns[f"{self.groupby}_colors"]
-            else:
-                color = "salmon"
+            color = self.adata.uns.get(f"{self.groupby}_colors", "salmon")
         else:
             color = params["color"]
 
@@ -1027,10 +1023,7 @@ class BasePlot:
         if orientation == "top":
             # rotate labels if any of them is longer than 4 characters
             if rotation is None and group_labels:
-                if max([len(x) for x in group_labels]) > 4:
-                    rotation = 90
-                else:
-                    rotation = 0
+                rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
             for idx, (left_coor, right_coor) in enumerate(zip(left, right)):
                 verts.append((left_coor, 0))  # lower-left
                 verts.append((left_coor, 0.6))  # upper-left

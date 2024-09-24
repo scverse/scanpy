@@ -30,10 +30,7 @@ def _calc_overlap_count(markers1: dict, markers2: dict):
     overlaps = np.zeros((len(markers1), len(markers2)))
 
     for j, marker_group in enumerate(markers1):
-        tmp = [
-            len(markers2[i].intersection(markers1[marker_group]))
-            for i in markers2.keys()
-        ]
+        tmp = [len(markers2[i].intersection(markers1[marker_group])) for i in markers2]
         overlaps[j, :] = tmp
 
     return overlaps
@@ -51,7 +48,7 @@ def _calc_overlap_coef(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / max(min(len(markers2[i]), len(markers1[marker_group])), 1)
-            for i in markers2.keys()
+            for i in markers2
         ]
         overlap_coef[j, :] = tmp
 
@@ -70,7 +67,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / len(markers2[i].union(markers1[marker_group]))
-            for i in markers2.keys()
+            for i in markers2
         ]
         jacc_results[j, :] = tmp
 

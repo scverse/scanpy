@@ -206,25 +206,25 @@ def normalize_total(
 
     view_to_actual(adata)
 
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_obs_rep(adata, layer=layer)
 
     gene_subset = None
     msg = "normalizing counts per cell"
 
-    counts_per_cell = axis_sum(X, axis=1)
+    counts_per_cell = axis_sum(x, axis=1)
     if exclude_highly_expressed:
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
 
-        gene_subset = axis_sum((X > counts_per_cell[:, None] * max_fraction), axis=0)
+        gene_subset = axis_sum((x > counts_per_cell[:, None] * max_fraction), axis=0)
         gene_subset = np.asarray(np.ravel(gene_subset) == 0)
 
         msg += (
             ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
-        counts_per_cell = axis_sum(X[:, gene_subset], axis=1)
+        counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
 
     start = logg.info(msg)
     counts_per_cell = np.ravel(counts_per_cell)
@@ -237,12 +237,12 @@ def normalize_total(
         if key_added is not None:
             adata.obs[key_added] = counts_per_cell
         _set_obs_rep(
-            adata, _normalize_data(X, counts_per_cell, target_sum), layer=layer
+            adata, _normalize_data(x, counts_per_cell, target_sum), layer=layer
         )
     else:
         # not recarray because need to support sparse
         dat = dict(
-            X=_normalize_data(X, counts_per_cell, target_sum, copy=True),
+            X=_normalize_data(x, counts_per_cell, target_sum, copy=True),
             norm_factor=counts_per_cell,
         )
 
