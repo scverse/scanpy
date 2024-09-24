@@ -1590,11 +1590,13 @@ def test_color_cycler(caplog):
     colors = sns.color_palette("deep")
     cyl = sns.rcmod.cycler("color", sns.color_palette("deep"))
 
-    with caplog.at_level(logging.WARNING):
-        with plt.rc_context({"axes.prop_cycle": cyl, "patch.facecolor": colors[0]}):
-            sc.pl.umap(pbmc, color="phase")
-            plt.show()
-            plt.close()
+    with (
+        caplog.at_level(logging.WARNING),
+        plt.rc_context({"axes.prop_cycle": cyl, "patch.facecolor": colors[0]}),
+    ):
+        sc.pl.umap(pbmc, color="phase")
+        plt.show()
+        plt.close()
 
     assert caplog.text == ""
 

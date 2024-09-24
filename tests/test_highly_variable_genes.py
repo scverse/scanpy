@@ -255,7 +255,7 @@ def test_pearson_residuals_general(
         "residual_variances",
         "highly_variable_rank",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # check consistency with normalization method
     if subset:
@@ -324,7 +324,7 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
         "highly_variable_nbatches",
         "highly_variable_intersection",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # general checks on ranks, hvg flag and residual variance
     _check_pearson_hvg_columns(output_df, n_top_genes)
