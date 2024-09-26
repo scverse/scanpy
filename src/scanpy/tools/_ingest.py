@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from legacy_api_wrap import legacy_api
 from packaging.version import Version
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
@@ -154,7 +153,7 @@ def ingest(
             ing.map_labels(col, labeling_method[i])
 
     logg.info("    finished", time=start)
-    return ing.to_adata(inplace)
+    return ing.to_adata(inplace=inplace)
 
 
 def _rp_forest_generate(
@@ -464,7 +463,7 @@ class Ingest:
         else:
             raise NotImplementedError("Ingest supports knn labeling for now.")
 
-    @legacy_api("inplace")
+    @old_positionals("inplace")
     def to_adata(self, *, inplace: bool = False) -> AnnData | None:
         """\
         Returns `adata_new` with mapped embeddings and labels.

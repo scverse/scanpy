@@ -20,7 +20,6 @@ from anndata import (
     read_mtx,
     read_text,
 )
-from legacy_api_wrap import legacy_api
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -673,7 +672,7 @@ def write(
 # -------------------------------------------------------------------------------
 
 
-@legacy_api("as_header")
+@old_positionals("as_header")
 def read_params(
     filename: Path | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
