@@ -11,6 +11,7 @@ from anndata import AnnData
 from scipy.sparse import csr_matrix
 
 import scanpy as sc
+from scanpy.tools._score_genes import _check_score_genes_args, _score_genes_bins
 from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
@@ -275,18 +276,39 @@ def test_no_control_gene():
         sc.tl.score_genes(adata, adata.var_names[:1], ctrl_size=1)
 
 
-@pytest.mark.parametrize(
-    "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
-)
-def test_gene_list_is_control(*, ctrl_as_ref: bool):
+@pytest.mark.parametrize("sanitize", [True, False], ids=["sanitize", "no_sanitize"])
+def test_gene_list_is_control(*, sanitize: bool):
     np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
     adata.var_names = "g" + adata.var_names
     with (
-        pytest.raises(RuntimeError, match=r"No control genes found in any cut")
-        if ctrl_as_ref
-        else nullcontext()
+        nullcontext()
+        if sanitize
+        else pytest.raises(RuntimeError, match=r"No control genes found in any cut")
     ):
         sc.tl.score_genes(
-            adata, gene_list="g3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
+            adata, gene_list="g3", ctrl_size=1, n_bins=5, sanitize=sanitize
         )
+
+
+@pytest.mark.parametrize("sanitize", [True, False], ids=["sanitize", "no_sanitize"])
+def test_score_genes(*, sanitize: bool):
+    adata = AnnData(TODO)  # noqa: F821
+    gene_list = adata.var_names
+    gene_pool = None
+    gene_list, gene_pool, get_subset = _check_score_genes_args(
+        adata, gene_list, gene_pool, use_raw=False, layer=None
+    )
+
+    bins = list(
+        _score_genes_bins(
+            gene_list,
+            gene_pool,
+            sanitize=sanitize,
+            ctrl_size=50,
+            n_bins=25,
+            get_subset=get_subset,
+        )
+    )
+
+    assert sanitize == (0 not in map(len, bins))
