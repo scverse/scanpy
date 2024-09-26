@@ -1,30 +1,54 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol
 
-import cupy as cp
+import numpy as np
+import scipy.linalg
 from cuml.internals.memory_utils import with_cupy_rmm
 from rapids_singlecell._compat import _meta_dense
 from rapids_singlecell.preprocessing._utils import _get_mean_var
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+    from scipy import sparse
 
-class PCA_sparse_dask:
-    def __init__(self, n_components) -> None:
-        self.n_components = n_components
+    from .._compat import DaskArray
 
-    def fit(self, x):
-        if self.n_components is None:
-            n_rows = x.shape[0]
-            n_cols = x.shape[1]
-            self.n_components_ = min(n_rows, n_cols)
-        else:
-            self.n_components_ = self.n_components
+    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
+
+class PCASparseFit(Protocol):
+    _n_components: int
+
+    n_components_: int
+    n_samples_: int
+    n_features_in_: int
+    dtype_: np.dtype
+    mean_: NDArray
+    explained_variance_: NDArray
+    explained_variance_ratio_: NDArray
+    components_: NDArray
+
+    def fit(self: PCASparseFit, x: DaskArray) -> PCASparseFit: ...
+    def transform(self, X: DaskArray) -> DaskArray: ...
+
+
+@dataclass
+class PCASparseDask:
+    _n_components: int | None = None
+
+    def fit(self: PCASparseFit, x: DaskArray) -> PCASparseFit:
+        assert isinstance(x.shape, tuple)
+        self.n_components_ = (
+            min(x.shape[:2]) if self._n_components is None else self._n_components
+        )
         self.n_samples_ = x.shape[0]
         self.n_features_in_ = x.shape[1] if x.ndim == 2 else 1
-        self.dtype = x.dtype
+        self.dtype_ = x.dtype
         covariance, self.mean_, _ = _cov_sparse_dask(x=x, return_mean=True)
-        self.explained_variance_, self.components_ = cp.linalg.eigh(
+        self.explained_variance_, self.components_ = scipy.linalg.eigh(
             covariance, UPLO="U"
         )
         # NOTE: We reverse the eigen vector and eigen values here
@@ -33,17 +57,17 @@ class PCA_sparse_dask:
         # CumlArray
         self.explained_variance_ = self.explained_variance_[::-1]
 
-        self.components_ = cp.flip(self.components_, axis=1)
+        self.components_ = np.flip(self.components_, axis=1)
 
         self.components_ = self.components_.T[: self.n_components_, :]
 
-        self.explained_variance_ratio_ = self.explained_variance_ / cp.sum(
+        self.explained_variance_ratio_ = self.explained_variance_ / np.sum(
             self.explained_variance_
         )
         if self.n_components_ < min(self.n_samples_, self.n_features_in_):
             self.noise_variance_ = self.explained_variance_[self.n_components_ :].mean()
         else:
-            self.noise_variance_ = cp.array([0.0])
+            self.noise_variance_ = np.array([0.0])
         self.explained_variance_ = self.explained_variance_[: self.n_components_]
 
         self.explained_variance_ratio_ = self.explained_variance_ratio_[
@@ -51,20 +75,20 @@ class PCA_sparse_dask:
         ]
         return self
 
-    def transform(self, X):
+    def transform(self: PCASparseFit, x: DaskArray) -> DaskArray:
         def _transform(X_part, mean_, components_):
             pre_mean = mean_ @ components_.T
-            mean_impact = cp.ones((X_part.shape[0], 1)) @ pre_mean.reshape(1, -1)
+            mean_impact = np.ones((X_part.shape[0], 1)) @ pre_mean.reshape(1, -1)
             X_transformed = X_part.dot(components_.T) - mean_impact
             return X_transformed
 
-        X_pca = X.map_blocks(
+        X_pca = x.map_blocks(
             _transform,
             mean_=self.mean_,
             components_=self.components_,
-            dtype=X.dtype,
-            chunks=(X.chunks[0], self.n_components_),
-            meta=_meta_dense(X.dtype),
+            dtype=x.dtype,
+            chunks=(x.chunks[0], self.n_components_),
+            meta=_meta_dense(x.dtype),
         )
 
         self.components_ = self.components_.get()
@@ -72,12 +96,18 @@ class PCA_sparse_dask:
         self.explained_variance_ratio_ = self.explained_variance_ratio_.get()
         return X_pca
 
-    def fit_transform(self, X, y=None):
-        return self.fit(X).transform(X)
+    def fit_transform(
+        self: PCASparseFit, x: DaskArray, y: DaskArray | None = None
+    ) -> DaskArray:
+        if y is None:
+            y = x
+        return self.fit(x).transform(y)
 
 
 @with_cupy_rmm
-def _cov_sparse_dask(x, *, return_gram=False, return_mean=False):
+def _cov_sparse_dask(
+    x: DaskArray, *, return_gram: bool = False, return_mean: bool = False
+):
     """
     Computes the mean and the covariance of matrix X of
     the form Cov(X, X) = E(XX) - E(X)E(X)
@@ -126,23 +156,8 @@ def _cov_sparse_dask(x, *, return_gram=False, return_mean=False):
     compute_mean_cov.compile()
     n_cols = x.shape[1]
 
-    def __gram_block(x_part):
-        gram_matrix = cp.zeros((n_cols, n_cols), dtype=x.dtype)
-
-        block = (128,)
-        grid = (x_part.shape[0],)
-        compute_mean_cov(
-            grid,
-            block,
-            (
-                x_part.indptr,
-                x_part.indices,
-                x_part.data,
-                x_part.shape[0],
-                n_cols,
-                gram_matrix,
-            ),
-        )
+    def __gram_block(x_part: CSMatrix):
+        gram_matrix = x_part.T @ x_part
         return gram_matrix[None, ...]  # need new axis for summing
 
     n_blocks = len(x.to_delayed().ravel())
@@ -150,7 +165,7 @@ def _cov_sparse_dask(x, *, return_gram=False, return_mean=False):
         __gram_block,
         new_axis=(1,),
         chunks=((1,) * n_blocks, (x.shape[1],), (x.shape[1],)),
-        meta=cp.array([]),
+        meta=np.array([]),
         dtype=x.dtype,
     ).sum(axis=0)
     mean_x, _ = _get_mean_var(x)
@@ -168,7 +183,7 @@ def _cov_sparse_dask(x, *, return_gram=False, return_mean=False):
     gram_matrix *= 1 / x.shape[0]
 
     if return_gram:
-        cov_result = cp.zeros(
+        cov_result = np.zeros(
             (gram_matrix.shape[0], gram_matrix.shape[0]),
             dtype=gram_matrix.dtype,
         )
