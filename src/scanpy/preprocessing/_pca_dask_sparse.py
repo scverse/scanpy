@@ -117,40 +117,27 @@ def _cov_sparse_dask(
     | tuple[NDArray[np.floating], NDArray[np.floating]]
 ):
     """
-    Computes the mean and the covariance of matrix X of
-    the form Cov(X, X) = E(XX) - E(X)E(X)
-
-    This is a temporary fix for
-    cuml issue #5475 and cupy issue #7699,
-    where the operation `x.T.dot(x)` did not work for
-    larger sparse matrices.
+    Computes the mean and the covariance of matrix `x`.
 
     Parameters
     ----------
 
-    x : cupyx.scipy.sparse of size (m, n)
-    return_gram : boolean (default = False)
-        If True, gram matrix of the form (1 / n) * X.T.dot(X)
-        will be returned.
-        When True, a copy will be created
-        to store the results of the covariance.
-        When False, the local gram matrix result
-        will be overwritten
-    return_mean: boolean (default = False)
-        If True, the Maximum Likelihood Estimate used to
-        calculate the mean of X and X will be returned,
-        of the form (1 / n) * mean(X) and (1 / n) * mean(X)
+    x
+        A sparse matrix
+    return_gram
+        If `True`, the gram matrix will be returned and a copy will be created
+        to store the results of the covariance,
+        while if `False`, the local gram matrix result will be overwritten.
 
     Returns
     -------
 
-    result : cov(X, X) when return_gram and return_mean are False
-            cov(X, X), gram(X, X) when return_gram is True,
-            return_mean is False
-            cov(X, X), mean(X), mean(X) when return_gram is False,
-            return_mean is True
-            cov(X, X), gram(X, X), mean(X), mean(X)
-            when return_gram is True and return_mean is True
+    :math:`\\cov(X, X)`
+        The covariance matrix of `x` in the form :math:`\\cov(X, X) = \\E(XX) - \\E(X)\\E(X)`.
+    :math:`\\gram(X, X)`
+        When return_gram is `True`, the gram matrix of `x` in the form :math:`\\frac{1}{n} X.T \\dot X`.
+    :math:`\\mean(X)`
+        The row means of `x`.
     """
     import dask
 
