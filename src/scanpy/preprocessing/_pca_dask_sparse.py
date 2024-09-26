@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast, overload
 
 import numpy as np
 import scipy.linalg
-from cuml.internals.memory_utils import with_cupy_rmm
-from rapids_singlecell._compat import _meta_dense
-from rapids_singlecell.preprocessing._utils import _get_mean_var
+from numpy.typing import NDArray
+
+from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from typing import Literal
+
     from scipy import sparse
 
     from .._compat import DaskArray
@@ -26,12 +27,13 @@ class PCASparseFit(Protocol):
     n_samples_: int
     n_features_in_: int
     dtype_: np.dtype
-    mean_: NDArray
-    explained_variance_: NDArray
-    explained_variance_ratio_: NDArray
-    components_: NDArray
+    mean_: NDArray[np.floating]
+    components_: NDArray[np.floating]
+    explained_variance_: NDArray[np.floating]
+    explained_variance_ratio_: NDArray[np.floating]
+    noise_variance_: NDArray[np.floating]
 
-    def fit(self: PCASparseFit, x: DaskArray) -> PCASparseFit: ...
+    def fit(self, x: DaskArray) -> PCASparseFit: ...
     def transform(self, X: DaskArray) -> DaskArray: ...
 
 
@@ -39,7 +41,8 @@ class PCASparseFit(Protocol):
 class PCASparseDask:
     _n_components: int | None = None
 
-    def fit(self: PCASparseFit, x: DaskArray) -> PCASparseFit:
+    def fit(self, x: DaskArray) -> PCASparseFit:
+        self = cast(PCASparseFit, self)  # this makes `self` into the fitted version
         assert isinstance(x.shape, tuple)
         self.n_components_ = (
             min(x.shape[:2]) if self._n_components is None else self._n_components
@@ -47,9 +50,9 @@ class PCASparseDask:
         self.n_samples_ = x.shape[0]
         self.n_features_in_ = x.shape[1] if x.ndim == 2 else 1
         self.dtype_ = x.dtype
-        covariance, self.mean_, _ = _cov_sparse_dask(x=x, return_mean=True)
+        covariance, self.mean_ = _cov_sparse_dask(x)
         self.explained_variance_, self.components_ = scipy.linalg.eigh(
-            covariance, UPLO="U"
+            covariance, lower=False
         )
         # NOTE: We reverse the eigen vector and eigen values here
         # because cupy provides them in ascending order. Make a copy otherwise
@@ -88,25 +91,30 @@ class PCASparseDask:
             components_=self.components_,
             dtype=x.dtype,
             chunks=(x.chunks[0], self.n_components_),
-            meta=_meta_dense(x.dtype),
+            meta=np.zeros([0], dtype=x.dtype),
         )
 
-        self.components_ = self.components_.get()
-        self.explained_variance_ = self.explained_variance_.get()
-        self.explained_variance_ratio_ = self.explained_variance_ratio_.get()
         return X_pca
 
-    def fit_transform(
-        self: PCASparseFit, x: DaskArray, y: DaskArray | None = None
-    ) -> DaskArray:
+    def fit_transform(self, x: DaskArray, y: DaskArray | None = None) -> DaskArray:
         if y is None:
             y = x
         return self.fit(x).transform(y)
 
 
-@with_cupy_rmm
+@overload
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: bool = False, return_mean: bool = False
+    x: DaskArray, *, return_gram: Literal[False] = False
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]: ...
+@overload
+def _cov_sparse_dask(
+    x: DaskArray, *, return_gram: Literal[True]
+) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]: ...
+def _cov_sparse_dask(
+    x: DaskArray, *, return_gram: bool = False
+) -> (
+    tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
+    | tuple[NDArray[np.floating], NDArray[np.floating]]
 ):
     """
     Computes the mean and the covariance of matrix X of
@@ -156,20 +164,23 @@ def _cov_sparse_dask(
     compute_mean_cov.compile()
     n_cols = x.shape[1]
 
-    def __gram_block(x_part: CSMatrix):
-        gram_matrix = x_part.T @ x_part
-        return gram_matrix[None, ...]  # need new axis for summing
+    def gram_block(x_part: CSMatrix):
+        gram_matrix: CSMatrix = x_part.T @ x_part
+        return gram_matrix.toarray()[None, ...]  # need new axis for summing
 
     n_blocks = len(x.to_delayed().ravel())
     gram_matrix = x.map_blocks(
-        __gram_block,
+        gram_block,
         new_axis=(1,),
         chunks=((1,) * n_blocks, (x.shape[1],), (x.shape[1],)),
         meta=np.array([]),
         dtype=x.dtype,
     ).sum(axis=0)
     mean_x, _ = _get_mean_var(x)
-    gram_matrix, mean_x = dask.compute(gram_matrix, mean_x)
+    gram_matrix, mean_x = cast(
+        tuple[NDArray[np.floating], NDArray[np.floating]],
+        dask.compute(gram_matrix, mean_x),
+    )
     mean_x = mean_x.astype(x.dtype)
     copy_gram = _copy_kernel(x.dtype)
     block = (32, 32)
@@ -200,11 +211,6 @@ def _cov_sparse_dask(
         (cov_result, gram_matrix, mean_x, mean_x, gram_matrix.shape[0]),
     )
 
-    if not return_gram and not return_mean:
-        return cov_result
-    elif return_gram and not return_mean:
-        return cov_result, gram_matrix
-    elif not return_gram and return_mean:
-        return cov_result, mean_x, mean_x
-    elif return_gram and return_mean:
-        return cov_result, gram_matrix, mean_x, mean_x
+    if return_gram:
+        return cov_result, gram_matrix, mean_x
+    return cov_result, mean_x
