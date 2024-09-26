@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from scipy.sparse import issparse
 
 from ... import logging as logg
+from ..._compat import old_positionals
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
-@legacy_api(
+@old_positionals(
     "flavor",
     "min_disp",
     "max_disp",

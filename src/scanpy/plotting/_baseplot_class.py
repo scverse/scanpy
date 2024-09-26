@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
@@ -206,7 +205,7 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    @legacy_api("swap_axes")
+    @old_positionals("swap_axes")
     def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
         """
         Plots a transposed image.
@@ -234,7 +233,7 @@ class BasePlot:
         self.are_axes_swapped = swap_axes
         return self
 
-    @legacy_api("show", "dendrogram_key", "size")
+    @old_positionals("show", "dendrogram_key", "size")
     def add_dendrogram(
         self,
         *,
@@ -321,7 +320,7 @@ class BasePlot:
         }
         return self
 
-    @legacy_api("show", "sort", "size", "color")
+    @old_positionals("show", "sort", "size", "color")
     def add_totals(
         self,
         *,
