@@ -576,7 +576,11 @@ def normalize_per_cell(
             adata.obs[key_n_counts] = counts_per_cell
             adata._inplace_subset_obs(cell_subset)
             counts_per_cell = counts_per_cell[cell_subset]
-        normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
+        normalize_per_cell(
+            adata.X,
+            counts_per_cell_after=counts_per_cell_after,
+            counts_per_cell=counts_per_cell,
+        )
 
         layers = adata.layers.keys() if layers == "all" else layers
         if use_rep == "after":

@@ -7,7 +7,6 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from legacy_api_wrap import legacy_api  # noqa: TID251
 from packaging.version import Version
 
 if TYPE_CHECKING:
@@ -82,4 +81,12 @@ def pkg_version(package: str) -> Version:
     return Version(version(package))
 
 
-old_positionals = partial(legacy_api, category=FutureWarning)
+if find_spec("legacy_api_wrap") or TYPE_CHECKING:
+    from legacy_api_wrap import legacy_api  # noqa: TID251
+
+    old_positionals = partial(legacy_api, category=FutureWarning)
+else:
+    # legacy_api_wrap is currently a hard dependency,
+    # but this code makes it possible to run scanpy without it.
+    def old_positionals(*old_positionals: str):
+        return lambda func: func

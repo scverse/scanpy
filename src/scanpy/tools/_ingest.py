@@ -153,7 +153,7 @@ def ingest(
             ing.map_labels(col, labeling_method[i])
 
     logg.info("    finished", time=start)
-    return ing.to_adata(inplace)
+    return ing.to_adata(inplace=inplace)
 
 
 def _rp_forest_generate(
