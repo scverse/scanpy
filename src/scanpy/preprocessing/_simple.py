@@ -13,7 +13,6 @@ import numba
 import numpy as np
 import scipy as sp
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
@@ -474,7 +473,7 @@ def sqrt(
         return X.sqrt()
 
 
-@legacy_api(
+@old_positionals(
     "counts_per_cell_after",
     "counts_per_cell",
     "key_n_counts",

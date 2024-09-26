@@ -3,22 +3,31 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
 from functools import cache, partial
+from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from legacy_api_wrap import legacy_api
+from legacy_api_wrap import legacy_api  # noqa: TID251
 from packaging.version import Version
 
-try:
+if TYPE_CHECKING:
+    from importlib.metadata import PackageMetadata
+
+
+if TYPE_CHECKING:
+    # type checkers are confused and can only see …core.Array
+    from dask.array.core import Array as DaskArray
+elif find_spec("dask"):
     from dask.array import Array as DaskArray
-except ImportError:
+else:
 
     class DaskArray:
         pass
 
 
-try:
+if find_spec("zappy") or TYPE_CHECKING:
     from zappy.base import ZappyArray
-except ImportError:
+else:
 
     class ZappyArray:
         pass
@@ -60,14 +69,14 @@ else:
             os.chdir(self._old_cwd.pop())
 
 
-def pkg_metadata(package):
+def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
     return metadata(package)
 
 
 @cache
-def pkg_version(package):
+def pkg_version(package: str) -> Version:
     from importlib.metadata import version
 
     return Version(version(package))
