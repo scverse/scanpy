@@ -42,7 +42,8 @@ class PCASparseDask:
     _n_components: int | None = None
 
     def fit(self, x: DaskArray) -> PCASparseFit:
-        self = cast(PCASparseFit, self)  # this makes `self` into the fitted version
+        # this method makes `self` into the fitted version
+        self = cast(PCASparseFit, self)
         assert isinstance(x.shape, tuple)
         self.n_components_ = (
             min(x.shape[:2]) if self._n_components is None else self._n_components
@@ -79,22 +80,29 @@ class PCASparseDask:
         return self
 
     def transform(self: PCASparseFit, x: DaskArray) -> DaskArray:
-        def _transform(X_part, mean_, components_):
-            pre_mean = mean_ @ components_.T
-            mean_impact = np.ones((X_part.shape[0], 1)) @ pre_mean.reshape(1, -1)
-            X_transformed = X_part.dot(components_.T) - mean_impact
-            return X_transformed
+        if TYPE_CHECKING:
+            import dask.array.core as da
+        else:
+            import dask.array as da
 
-        X_pca = x.map_blocks(
-            _transform,
+        def transform_block(
+            x_part: CSMatrix,
+            mean_: NDArray[np.floating],
+            components_: NDArray[np.floating],
+        ):
+            pre_mean = mean_ @ components_.T
+            mean_impact = np.ones((x_part.shape[0], 1)) @ pre_mean.reshape(1, -1)
+            return (x_part @ components_.T) - mean_impact
+
+        return da.map_blocks(
+            x,
+            transform_block,
             mean_=self.mean_,
             components_=self.components_,
             dtype=x.dtype,
             chunks=(x.chunks[0], self.n_components_),
             meta=np.zeros([0], dtype=x.dtype),
         )
-
-        return X_pca
 
     def fit_transform(self, x: DaskArray, y: DaskArray | None = None) -> DaskArray:
         if y is None:
@@ -139,7 +147,12 @@ def _cov_sparse_dask(
     :math:`\\mean(X)`
         The row means of `x`.
     """
-    import dask
+    if TYPE_CHECKING:
+        import dask.array.core as da
+        import dask.base as dask
+    else:
+        import dask
+        import dask.array as da
 
     from ._kernels._pca_sparse_kernel import (
         _copy_kernel,
@@ -156,7 +169,8 @@ def _cov_sparse_dask(
         return gram_matrix.toarray()[None, ...]  # need new axis for summing
 
     n_blocks = len(x.to_delayed().ravel())
-    gram_matrix = x.map_blocks(
+    gram_matrix = da.map_blocks(
+        x,
         gram_block,
         new_axis=(1,),
         chunks=((1,) * n_blocks, (x.shape[1],), (x.shape[1],)),
