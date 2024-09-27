@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import warnings
 from contextlib import nullcontext
 from functools import wraps
@@ -9,10 +10,7 @@ import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import (
-    asarray,
-    assert_equal,
-)
+from anndata.tests.helpers import asarray, assert_equal
 from packaging.version import Version
 from scipy import sparse
 from scipy.sparse import issparse
@@ -127,9 +125,7 @@ def pca_params(
                 else {"tsqr", "randomized"}
             )
         elif array_type in {sparse.csr_matrix, sparse.csc_matrix}:
-            svd_solver = (
-                {"lobpcg", "arpack"} if zero_center else {"arpack", "randomized"}
-            )
+            svd_solver = {"arpack"} if zero_center else {"arpack", "randomized"}
         elif array_type is asarray:
             svd_solver = (
                 {"auto", "full", "arpack", "randomized"}
@@ -142,14 +138,14 @@ def pca_params(
             svd_solver = all_svd_solvers - svd_solver
             expected_warning = "Ignoring"
 
-        svd_solver = np.random.choice(list(svd_solver))
+        svd_solver = random.choice(list(svd_solver))
     # explicit check for special case
     if (
-        svd_solver == "randomized"
+        array_type in {sparse.csr_matrix, sparse.csc_matrix}
         and zero_center
-        and array_type in [sparse.csr_matrix, sparse.csc_matrix]
+        and svd_solver == "lobpcg"
     ):
-        expected_warning = "not work with sparse input"
+        expected_warning = "legacy code"
 
     return (svd_solver, expected_warning)
 
@@ -160,7 +156,7 @@ def test_pca_warnings(array_type, zero_center, pca_params):
     adata = AnnData(A)
 
     if expected_warning is not None:
-        with pytest.warns(UserWarning, match=expected_warning):
+        with pytest.warns((UserWarning, FutureWarning), match=expected_warning):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
         return
 
@@ -192,7 +188,7 @@ def test_pca_transform(array_type):
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
-def test_pca_transform_warning_randomized(array_type):
+def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     A_pca_abs = np.abs(A_pca)
 

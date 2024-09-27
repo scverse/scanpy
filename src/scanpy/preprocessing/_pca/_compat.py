@@ -12,6 +12,8 @@ from ..._compat import pkg_version
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
     from scipy import sparse
     from sklearn.decomposition import PCA
@@ -25,14 +27,11 @@ def _pca_with_sparse(
     x: CSMatrix,
     n_pcs: int,
     *,
-    solver: str | None = None,
+    solver: Literal["arpack", "lobpcg"],
     mu: NDArray[np.floating] | None = None,
     random_state: AnyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
     """Sparse PCA for scikit-learn <1.4"""
-    if solver is None:
-        solver = "arpack"
-
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(x.shape))

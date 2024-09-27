@@ -283,14 +283,20 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif zero_center:
-        if issparse(X) and pkg_version("scikit-learn") < Version("1.4"):
-            if svd_solver not in {"lobpcg", "arpack", None}:
-                msg = (
-                    f"Ignoring {svd_solver=} and using {None}, "
-                    "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
-                )
-                warnings.warn(msg)
-                svd_solver = None
+        if issparse(X) and (
+            pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
+        ):
+            if svd_solver not in {"lobpcg", "arpack"}:
+                if svd_solver is not None:
+                    msg = (
+                        f"Ignoring {svd_solver=} and using 'arpack', "
+                        "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
+                    )
+                    warnings.warn(msg)
+                svd_solver = "arpack"
+            elif svd_solver == "lobpcg":
+                msg = f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future."
+                warnings.warn(msg, FutureWarning)
             X_pca, pca_ = _pca_with_sparse(
                 X, n_comps, solver=svd_solver, random_state=random_state
             )
@@ -309,7 +315,7 @@ def pca(
             pca_ = PCA(
                 n_components=n_comps, svd_solver=svd_solver, random_state=random_state
             )
-        X_pca = pca_.fit_transform(X)
+            X_pca = pca_.fit_transform(X)
     else:
         if isinstance(X, DaskArray):
             from dask_ml.decomposition import TruncatedSVD
