@@ -433,13 +433,13 @@ def _handle_mask_var(
 
 @overload
 def _handle_dask_ml_args(
-    svd_solver: str, method: Literal["PCA", "IncrementalPCA"]
+    svd_solver: str | None, method: Literal["PCA", "IncrementalPCA"]
 ) -> SvdSolvPCADaskML: ...
 @overload
 def _handle_dask_ml_args(
-    svd_solver: str, method: Literal["TruncatedSVD"]
+    svd_solver: str | None, method: Literal["TruncatedSVD"]
 ) -> SvdSolvTruncatedSVDDaskML: ...
-def _handle_dask_ml_args(svd_solver: str, method: str) -> str:
+def _handle_dask_ml_args(svd_solver: str | None, method: str) -> str:
     method2args: dict[str, tuple[SvdSolvDaskML, ...]] = {
         "PCA": get_args(SvdSolvPCADaskML),
         "IncrementalPCA": get_args(SvdSolvPCADaskML),
