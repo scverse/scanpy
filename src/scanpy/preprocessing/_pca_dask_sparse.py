@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class PCASparseFit(Protocol):
-    _n_components: int
+    n_components: int
 
     n_components_: int
     n_samples_: int
@@ -39,14 +39,14 @@ class PCASparseFit(Protocol):
 
 @dataclass
 class PCASparseDask:
-    _n_components: int | None = None
+    n_components: int | None = None
 
     def fit(self, x: DaskArray) -> PCASparseFit:
         # this method makes `self` into the fitted version
         self = cast(PCASparseFit, self)
         assert isinstance(x.shape, tuple)
         self.n_components_ = (
-            min(x.shape[:2]) if self._n_components is None else self._n_components
+            min(x.shape[:2]) if self.n_components is None else self.n_components
         )
         self.n_samples_ = x.shape[0]
         self.n_features_in_ = x.shape[1] if x.ndim == 2 else 1

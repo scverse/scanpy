@@ -183,7 +183,7 @@ def pca(
         logg.info(
             "Note that scikit-learn's randomized PCA might not be exactly "
             "reproducible across different computational platforms. For exact "
-            "reproducibility, choose `svd_solver='arpack'.`"
+            "reproducibility, choose `svd_solver='arpack'`."
         )
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
@@ -227,11 +227,9 @@ def pca(
             UserWarning,
         )
 
-    is_dask = isinstance(X, DaskArray)
-
     # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state
-    if not is_dask:
+    if not isinstance(X, DaskArray):
         random_state = check_random_state(random_state)
     elif not isinstance(random_state, int):
         msg = f"random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array"
@@ -246,7 +244,7 @@ def pca(
             logg.debug("Ignoring zero_center, random_state, svd_solver")
 
         incremental_pca_kwargs = dict()
-        if is_dask:
+        if isinstance(X, DaskArray):
             from dask.array import zeros
             from dask_ml.decomposition import IncrementalPCA
 
@@ -269,25 +267,36 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif (not issparse(X) or svd_solver == "randomized") and zero_center:
-        if is_dask:
-            from dask_ml.decomposition import PCA
+        if isinstance(X, DaskArray) and issparse(X._meta):
+            from ._pca_dask_sparse import PCASparseDask
 
-            svd_solver = _handle_dask_ml_args(svd_solver, "PCA")
+            if random_state != 0:
+                msg = "random_state is ignored when using a sparse dask array"
+                warnings.warn(msg)
+            if svd_solver not in {None, "arpack", "auto"}:
+                msg = "svd_solver is ignored when using a sparse dask array"
+                warnings.warn(msg)
+            pca_ = PCASparseDask(n_components=n_comps)
         else:
-            from sklearn.decomposition import PCA
+            if isinstance(X, DaskArray):
+                from dask_ml.decomposition import PCA
 
-            svd_solver = _handle_sklearn_args(svd_solver, "PCA")
+                svd_solver = _handle_dask_ml_args(svd_solver, "PCA")
+            else:
+                from sklearn.decomposition import PCA
 
-        if issparse(X) and svd_solver == "randomized":
-            # This  is for backwards compat. Better behaviour would be to either error or use arpack.
-            warnings.warn(
-                "svd_solver 'randomized' does not work with sparse input. Densifying the array. "
-                "This may take a very large amount of memory."
+                svd_solver = _handle_sklearn_args(svd_solver, "PCA")
+
+            if issparse(X) and svd_solver == "randomized":
+                # This  is for backwards compat. Better behaviour would be to either error or use arpack.
+                warnings.warn(
+                    "svd_solver 'randomized' does not work with sparse input. Densifying the array. "
+                    "This may take a very large amount of memory."
+                )
+                X = X.toarray()
+            pca_ = PCA(
+                n_components=n_comps, svd_solver=svd_solver, random_state=random_state
             )
-            X = X.toarray()
-        pca_ = PCA(
-            n_components=n_comps, svd_solver=svd_solver, random_state=random_state
-        )
         X_pca = pca_.fit_transform(X)
     elif issparse(X) and zero_center:
         svd_solver = _handle_sklearn_args(svd_solver, "PCA (with sparse input)")
@@ -296,7 +305,7 @@ def pca(
             X, n_comps, solver=svd_solver, random_state=random_state
         )
     elif not zero_center:
-        if is_dask:
+        if isinstance(X, DaskArray):
             from dask_ml.decomposition import TruncatedSVD
 
             svd_solver = _handle_dask_ml_args(svd_solver, "TruncatedSVD")
