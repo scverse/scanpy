@@ -20,7 +20,11 @@ import scanpy as sc
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, param_with
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
+    param_with,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -81,8 +85,8 @@ DASK_CONVERTERS = {
 
 @pytest.fixture(
     params=[
-        param_with(at, marks=[needs.dask_ml]) if at.id == "dask_array_dense" else at
-        for at in ARRAY_TYPES
+        param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
+        for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
     ]
 )
 def array_type(request: pytest.FixtureRequest):
