@@ -283,17 +283,7 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif zero_center:
-        if isinstance(X, DaskArray) and issparse(X._meta):
-            from ._dask_sparse import PCASparseDask
-
-            if random_state != 0:
-                msg = "random_state is ignored when using a sparse dask array"
-                warnings.warn(msg)
-            if svd_solver not in {None, "arpack", "auto"}:
-                msg = "svd_solver is ignored when using a sparse dask array"
-                warnings.warn(msg)
-            pca_ = PCASparseDask(n_components=n_comps)
-        elif (
+        if (
             issparse(X)
             and svd_solver != "randomized"
             and pkg_version("scikit-learn") < Version("1.4")
@@ -314,12 +304,12 @@ def pca(
                 svd_solver = _handle_sklearn_args(svd_solver, "PCA")
 
             if issparse(X) and svd_solver == "randomized":
-                # This  is for backwards compat. Better behaviour would be to either error or use arpack.
-                warnings.warn(
-                    "svd_solver 'randomized' does not work with sparse input. Densifying the array. "
-                    "This may take a very large amount of memory."
+                msg = (
+                    "svd_solver 'randomized' does not work with sparse input. "
+                    "Using 'arpack' instead."
                 )
-                X = X.toarray()
+                warnings.warn(msg)
+                svd_solver = "arpack"
             pca_ = PCA(
                 n_components=n_comps, svd_solver=svd_solver, random_state=random_state
             )
