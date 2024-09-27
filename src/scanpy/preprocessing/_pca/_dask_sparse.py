@@ -8,14 +8,14 @@ import numpy as np
 import scipy.linalg
 from numpy.typing import NDArray
 
-from ._utils import _get_mean_var
+from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from scipy import sparse
 
-    from .._compat import DaskArray
+    from ..._compat import DaskArray
 
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
