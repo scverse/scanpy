@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import nullcontext
 from functools import wraps
 from typing import TYPE_CHECKING
 
@@ -180,21 +181,9 @@ def test_pca_warnings(array_type, zero_center, pca_params):
         raise
 
 
-# This warning test is out of the fixture because it is a special case in the logic of the function
-def test_pca_warnings_sparse():
-    for array_type in (sparse.csr_matrix, sparse.csc_matrix):
-        A = array_type(A_list).astype("float32")
-        adata = AnnData(A)
-        with pytest.warns(UserWarning, match="not work with sparse input"):
-            sc.pp.pca(adata, svd_solver="randomized", zero_center=True)
-
-
 def test_pca_transform(array_type):
-    A = array_type(A_list).astype("float32")
+    adata = AnnData(array_type(A_list).astype("float32"))
     A_pca_abs = np.abs(A_pca)
-    A_svd_abs = np.abs(A_svd)
-
-    adata = AnnData(A)
 
     with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
@@ -202,26 +191,31 @@ def test_pca_transform(array_type):
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    with warnings.catch_warnings(record=True) as record:
+
+def test_pca_transform_warning_randomized(array_type):
+    adata = AnnData(array_type(A_list).astype("float32"))
+    A_pca_abs = np.abs(A_pca)
+
+    with (
+        pytest.warns(UserWarning, match="Ignoring.*'randomized'")
+        if sparse.issparse(adata.X)
+        else nullcontext()
+    ):
         sc.pp.pca(
             adata,
-            n_comps=5,
+            n_comps=4,
             zero_center=True,
             svd_solver="randomized",
             dtype="float64",
             random_state=14,
         )
-    if sparse.issparse(A):
-        assert any(
-            isinstance(r.message, UserWarning)
-            and "svd_solver 'randomized' does not work with sparse input"
-            in str(r.message)
-            for r in record
-        )
-    else:
-        assert len(record) == 0
 
-    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+
+
+def test_pca_transform_no_zero_center(array_type):
+    adata = AnnData(array_type(A_list).astype("float32"))
+    A_svd_abs = np.abs(A_svd)
 
     with warnings.catch_warnings(record=True) as record:
         sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)

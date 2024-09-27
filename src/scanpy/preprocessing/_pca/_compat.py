@@ -25,11 +25,14 @@ def _pca_with_sparse(
     x: CSMatrix,
     n_pcs: int,
     *,
-    solver: str = "arpack",
+    solver: str | None = None,
     mu: NDArray[np.floating] | None = None,
     random_state: AnyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
     """Sparse PCA for scikit-learn <1.4"""
+    if solver is None:
+        solver = "arpack"
+
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(x.shape))

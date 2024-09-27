@@ -40,7 +40,7 @@ SvdSolvDaskML = Union[SvdSolvPCADaskML, SvdSolvTruncatedSVDDaskML]
 
 SvdSolvPCASklearn = Literal["auto", "full", "arpack", "randomized"]
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
-SvdSolvPCASparseSklearn = Literal["lobpcg", "arpack"]
+SvdSolvPCASparseSklearn = Literal["arpack"]
 SvdSolvSkearn = Union[
     SvdSolvPCASklearn, SvdSolvTruncatedSVDSklearn, SvdSolvPCASparseSklearn
 ]
@@ -283,13 +283,14 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif zero_center:
-        if (
-            issparse(X)
-            and svd_solver != "randomized"
-            and pkg_version("scikit-learn") < Version("1.4")
-        ):
-            svd_solver = _handle_sklearn_args(svd_solver, "PCA (with sparse input)")
-
+        if issparse(X) and pkg_version("scikit-learn") < Version("1.4"):
+            if svd_solver not in {"lobpcg", "arpack", None}:
+                msg = (
+                    f"Ignoring {svd_solver=} and using {None}, "
+                    "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
+                )
+                warnings.warn(msg)
+                svd_solver = None
             X_pca, pca_ = _pca_with_sparse(
                 X, n_comps, solver=svd_solver, random_state=random_state
             )
@@ -301,15 +302,10 @@ def pca(
             else:
                 from sklearn.decomposition import PCA
 
-                svd_solver = _handle_sklearn_args(svd_solver, "PCA")
-
-            if issparse(X) and svd_solver == "randomized":
-                msg = (
-                    "svd_solver 'randomized' does not work with sparse input. "
-                    "Using 'arpack' instead."
+                svd_solver = _handle_sklearn_args(
+                    svd_solver, "PCA (with sparse input)" if issparse(X) else "PCA"
                 )
-                warnings.warn(msg)
-                svd_solver = "arpack"
+
             pca_ = PCA(
                 n_components=n_comps, svd_solver=svd_solver, random_state=random_state
             )
@@ -326,7 +322,7 @@ def pca(
 
         logg.debug(
             "    without zero-centering: \n"
-            "    the explained variance does not correspond to the exact statistical defintion\n"
+            "    the explained variance does not correspond to the exact statistical definition\n"
             "    the first component, e.g., might be heavily influenced by different means\n"
             "    the following components often resemble the exact PCA very closely"
         )
@@ -481,7 +477,7 @@ def _handle_x_args(
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             msg = (
-                f"Ignoring {svd_solver} and using {method2default[method]}, "
+                f"Ignoring {svd_solver=} and using {method2default[method]}, "
                 f"{lib}.decomposition.{method} only supports {method2args[method]}."
             )
             warnings.warn(msg)
