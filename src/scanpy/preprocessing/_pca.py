@@ -406,7 +406,7 @@ def _handle_mask_var(
 
 
 def _pca_with_sparse(
-    X: CSMatrix,
+    x: CSMatrix,
     n_pcs: int,
     *,
     solver: str = "arpack",
@@ -415,29 +415,29 @@ def _pca_with_sparse(
 ) -> tuple[NDArray[np.floating], PCA]:
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
-    random_init = np.random.rand(np.min(X.shape))
-    X = check_array(X, accept_sparse=["csr", "csc"])
+    random_init = np.random.rand(np.min(x.shape))
+    x = check_array(x, accept_sparse=["csr", "csc"])
 
     if mu is None:
-        mu = np.asarray(X.mean(0)).flatten()[None, :]
-    ones = np.ones(X.shape[0])[None, :].dot
+        mu = np.asarray(x.mean(0)).flatten()[None, :]
+    ones = np.ones(x.shape[0])[None, :].dot
 
-    def mat_op(x: CSMatrix):
-        return (X @ x) - (mu @ x)
+    def mat_op(v: NDArray[np.floating]):
+        return (x @ v) - (mu @ v)
 
-    def rmat_op(x: CSMatrix):
-        return X.T.conj().dot(x) - (mu.T @ ones(x))
+    def rmat_op(v: NDArray[np.floating]):
+        return (x.T.conj() @ v) - (mu.T @ ones(v))
 
-    XL = LinearOperator(
-        dtype=X.dtype,
-        shape=X.shape,
+    linop = LinearOperator(
+        dtype=x.dtype,
+        shape=x.shape,
         matvec=mat_op,
         matmat=mat_op,
         rmatvec=rmat_op,
         rmatmat=rmat_op,
     )
 
-    u, s, v = svds(XL, solver=solver, k=n_pcs, v0=random_init)
+    u, s, v = svds(linop, solver=solver, k=n_pcs, v0=random_init)
     # u_based_decision was changed in https://github.com/scikit-learn/scikit-learn/pull/27491
     u, v = svd_flip(
         u, v, u_based_decision=pkg_version("scikit-learn") < Version("1.5.0rc1")
@@ -446,9 +446,9 @@ def _pca_with_sparse(
     v = v[idx, :]
 
     X_pca = (u * s)[:, idx]
-    ev = s[idx] ** 2 / (X.shape[0] - 1)
+    ev = s[idx] ** 2 / (x.shape[0] - 1)
 
-    total_var = _get_mean_var(X)[1].sum()
+    total_var = _get_mean_var(x)[1].sum()
     ev_ratio = ev / total_var
 
     from sklearn.decomposition import PCA
