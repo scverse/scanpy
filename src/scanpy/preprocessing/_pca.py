@@ -23,10 +23,13 @@ from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
+    from scipy import sparse
     from scipy.sparse import spmatrix
     from sklearn.decomposition import PCA
 
     from .._utils import AnyRandom, Empty
+
+    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
 @_doc_params(
@@ -403,7 +406,7 @@ def _handle_mask_var(
 
 
 def _pca_with_sparse(
-    X: spmatrix,
+    X: CSMatrix,
     n_pcs: int,
     *,
     solver: str = "arpack",
@@ -417,35 +420,21 @@ def _pca_with_sparse(
 
     if mu is None:
         mu = np.asarray(X.mean(0)).flatten()[None, :]
-    mdot = mu.dot
-    mmat = mdot
-    mhdot = mu.T.dot
-    mhmat = mu.T.dot
-    Xdot = X.dot
-    Xmat = Xdot
-    XHdot = X.T.conj().dot
-    XHmat = XHdot
     ones = np.ones(X.shape[0])[None, :].dot
 
-    def matvec(x):
-        return Xdot(x) - mdot(x)
+    def mat_op(x: CSMatrix):
+        return (X @ x) - (mu @ x)
 
-    def matmat(x):
-        return Xmat(x) - mmat(x)
-
-    def rmatvec(x):
-        return XHdot(x) - mhdot(ones(x))
-
-    def rmatmat(x):
-        return XHmat(x) - mhmat(ones(x))
+    def rmat_op(x: CSMatrix):
+        return X.T.conj().dot(x) - (mu.T @ ones(x))
 
     XL = LinearOperator(
-        matvec=matvec,
         dtype=X.dtype,
-        matmat=matmat,
         shape=X.shape,
-        rmatvec=rmatvec,
-        rmatmat=rmatmat,
+        matvec=mat_op,
+        matmat=mat_op,
+        rmatvec=rmat_op,
+        rmatmat=rmat_op,
     )
 
     u, s, v = svds(XL, solver=solver, k=n_pcs, v0=random_init)
