@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from scipy import sparse
     from scipy.sparse import spmatrix
 
-    from .._utils import AnyRandom, Empty
+    from ..._utils import AnyRandom, Empty
 
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
