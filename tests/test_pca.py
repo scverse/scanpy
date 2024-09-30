@@ -181,9 +181,8 @@ def test_pca_transform(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     A_pca_abs = np.abs(A_pca)
 
-    with warnings.catch_warnings(record=True) as record:
-        sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
-    assert len(record) == 0, record
+    warnings.filterwarnings("error")
+    sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
@@ -192,6 +191,7 @@ def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     A_pca_abs = np.abs(A_pca)
 
+    warnings.filterwarnings("error")
     with (
         pytest.warns(UserWarning, match="Ignoring.*'randomized'")
         if sparse.issparse(adata.X)
@@ -213,9 +213,8 @@ def test_pca_transform_no_zero_center(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     A_svd_abs = np.abs(A_svd)
 
-    with warnings.catch_warnings(record=True) as record:
-        sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
-    assert len(record) == 0
+    warnings.filterwarnings("error")
+    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
 
     assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
