@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import nullcontext
 from functools import wraps
 from typing import TYPE_CHECKING
 
@@ -187,21 +188,41 @@ def test_pca_warnings_sparse():
 
 
 def test_pca_transform(array_type):
-    A = array_type(A_list).astype("float32")
+    adata = AnnData(array_type(A_list).astype("float32"))
     A_pca_abs = np.abs(A_pca)
-    A_svd_abs = np.abs(A_svd)
 
-    adata = AnnData(A)
-
-    with warnings.catch_warnings(record=True) as record:
-        sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
-    assert len(record) == 0, record
+    warnings.filterwarnings("error")
+    sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
     if isinstance(adata.obsm["X_pca"], DaskArray):
         adata.obsm["X_pca"] = adata.obsm["X_pca"].compute()
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    with warnings.catch_warnings(record=True) as record:
+
+def test_pca_transform_randomized(array_type):
+    adata = AnnData(array_type(A_list).astype("float32"))
+    A_pca_abs = np.abs(A_pca)
+
+    warnings.filterwarnings("error")
+    if isinstance(adata.X, DaskArray) and issparse(adata.X._meta):
+        ctx = _helpers.MultiContext(
+            pytest.warns(
+                UserWarning,
+                match=r"random_state is ignored when using a sparse dask array",
+            ),
+            pytest.warns(
+                UserWarning,
+                match=r"svd_solver is ignored when using a sparse dask array",
+            ),
+        )
+    elif sparse.issparse(adata.X):
+        ctx = pytest.warns(
+            UserWarning, match="svd_solver 'randomized' does not work with sparse input"
+        )
+    else:
+        ctx = nullcontext()
+
+    with ctx:
         sc.pp.pca(
             adata,
             n_comps=5,
@@ -210,38 +231,21 @@ def test_pca_transform(array_type):
             dtype="float64",
             random_state=14,
         )
-    if sparse.issparse(A):
-        assert any(
-            isinstance(r.message, UserWarning)
-            and "svd_solver 'randomized' does not work with sparse input"
-            in str(r.message)
-            for r in record
-        )
-    elif isinstance(A, DaskArray) and issparse(A._meta):
-        assert any(
-            isinstance(r.message, UserWarning)
-            and str(r.message)
-            == "random_state is ignored when using a sparse dask array"
-            for r in record
-        )
-        assert any(
-            isinstance(r.message, UserWarning)
-            and str(r.message) == "svd_solver is ignored when using a sparse dask array"
-            for r in record
-        )
-    else:
-        assert len(record) == 0, [r.message for r in record]
 
     assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    if not (isinstance(A, DaskArray) and issparse(A._meta)):
-        with warnings.catch_warnings(record=True) as record:
-            sc.pp.pca(
-                adata, n_comps=4, zero_center=False, dtype="float64", random_state=14
-            )
-        assert len(record) == 0, [r.message for r in record]
 
-        assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type):
+    adata = AnnData(array_type(A_list).astype("float32"))
+    A_svd_abs = np.abs(A_svd)
+    if isinstance(adata.X, DaskArray) and issparse(adata.X._meta):
+        reason = "TruncatedSVD is not supported for sparse Dask yet"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    warnings.filterwarnings("error")
+    sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
+
+    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
