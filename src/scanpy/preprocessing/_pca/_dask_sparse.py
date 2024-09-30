@@ -177,8 +177,6 @@ def _cov_sparse_dask(
         dask.compute(gram_matrix_dask, mean_x_dask),
     )
     gram_matrix = gram_matrix.astype(dtype)
-    mean_x = mean_x.astype(dtype)
-
     gram_matrix /= x.shape[0]
 
     cov_result = gram_matrix.copy() if return_gram else gram_matrix

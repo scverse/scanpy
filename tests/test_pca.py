@@ -483,4 +483,5 @@ def test_cov_sparse_dask(dtype):
     cov, gram, mean = _cov_sparse_dask(x, return_gram=True)
     np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))
     np.testing.assert_allclose(gram, (x_arr.T @ x_arr) / x.shape[0])
-    np.testing.assert_allclose(cov, np.cov(x_arr, rowvar=False))
+    tol_args = dict(rtol=1e-5) if dtype == np.float32 else {}
+    np.testing.assert_allclose(cov, np.cov(x_arr, rowvar=False, bias=True), **tol_args)
