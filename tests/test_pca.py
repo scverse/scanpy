@@ -476,12 +476,20 @@ def test_pca_layer():
     np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
 
 
-@pytest.mark.parametrize("dtype", [np.float32, np.float64, np.int64])
-def test_cov_sparse_dask(dtype):
+@pytest.mark.parametrize(
+    ("dtype", "dtype_arg", "rtol"),
+    [
+        pytest.param(np.float32, None, 1e-5, id="float32"),
+        pytest.param(np.float32, np.float64, None, id="float32-float64"),
+        pytest.param(np.float64, None, None, id="float64"),
+        pytest.param(np.int64, None, None, id="int64"),
+    ],
+)
+def test_cov_sparse_dask(dtype, dtype_arg, rtol):
     x_arr = A_list.astype(dtype)
     x = DASK_CONVERTERS[_helpers.as_sparse_dask_array](x_arr)
-    cov, gram, mean = _cov_sparse_dask(x, return_gram=True)
+    cov, gram, mean = _cov_sparse_dask(x, return_gram=True, dtype=dtype_arg)
     np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))
     np.testing.assert_allclose(gram, (x_arr.T @ x_arr) / x.shape[0])
-    tol_args = dict(rtol=1e-5) if dtype == np.float32 else {}
+    tol_args = dict(rtol=rtol) if rtol is not None else {}
     np.testing.assert_allclose(cov, np.cov(x_arr, rowvar=False, bias=True), **tol_args)
