@@ -55,14 +55,10 @@ class PCASparseDask:
         self.explained_variance_, self.components_ = scipy.linalg.eigh(
             covariance, lower=False
         )
-        # NOTE: We reverse the eigen vector and eigen values here
-        # because cupy provides them in ascending order. Make a copy otherwise
-        # it is not C_CONTIGUOUS anymore and would error when converting to
-        # CumlArray
+
+        # Arrange eigenvectors and eigenvalues in descending order
         self.explained_variance_ = self.explained_variance_[::-1]
-
         self.components_ = np.flip(self.components_, axis=1)
-
         self.components_ = self.components_.T[: self.n_components_, :]
 
         self.explained_variance_ratio_ = self.explained_variance_ / np.sum(

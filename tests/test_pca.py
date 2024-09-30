@@ -17,6 +17,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
-    from scanpy._compat import DaskArray
 
 A_list = np.array(
     [
@@ -197,6 +197,8 @@ def test_pca_transform(array_type):
         sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
     assert len(record) == 0, record
 
+    if isinstance(adata.obsm["X_pca"], DaskArray):
+        adata.obsm["X_pca"] = adata.obsm["X_pca"].compute()
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
     with warnings.catch_warnings(record=True) as record:
@@ -215,16 +217,31 @@ def test_pca_transform(array_type):
             in str(r.message)
             for r in record
         )
+    elif isinstance(A, DaskArray) and issparse(A._meta):
+        assert any(
+            isinstance(r.message, UserWarning)
+            and str(r.message)
+            == "random_state is ignored when using a sparse dask array"
+            for r in record
+        )
+        assert any(
+            isinstance(r.message, UserWarning)
+            and str(r.message) == "svd_solver is ignored when using a sparse dask array"
+            for r in record
+        )
     else:
-        assert len(record) == 0
+        assert len(record) == 0, [r.message for r in record]
 
     assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
 
-    with warnings.catch_warnings(record=True) as record:
-        sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
-    assert len(record) == 0
+    if not (isinstance(A, DaskArray) and issparse(A._meta)):
+        with warnings.catch_warnings(record=True) as record:
+            sc.pp.pca(
+                adata, n_comps=4, zero_center=False, dtype="float64", random_state=14
+            )
+        assert len(record) == 0, [r.message for r in record]
 
-    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+        assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
