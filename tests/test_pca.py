@@ -17,6 +17,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
+from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
@@ -473,3 +474,13 @@ def test_pca_layer():
     )
     np.testing.assert_equal(X_adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
     np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64, np.int64])
+def test_cov_sparse_dask(dtype):
+    x_arr = A_list.astype(dtype)
+    x = DASK_CONVERTERS[_helpers.as_sparse_dask_array](x_arr)
+    cov, gram, mean = _cov_sparse_dask(x, return_gram=True)
+    np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))
+    np.testing.assert_allclose(gram, (x_arr.T @ x_arr) / x.shape[0])
+    np.testing.assert_allclose(cov, np.cov(x_arr, rowvar=False))

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, cast, overload
 
@@ -13,6 +12,7 @@ from .._utils import _get_mean_var
 if TYPE_CHECKING:
     from typing import Literal
 
+    from numpy.typing import DTypeLike
     from scipy import sparse
 
     from ..._compat import DaskArray
@@ -95,13 +95,13 @@ class PCASparseDask:
             return (x_part @ components_.T) - mean_impact
 
         return da.map_blocks(
-            x,
             transform_block,
+            x,
             mean_=self.mean_,
             components_=self.components_,
-            dtype=x.dtype,
             chunks=(x.chunks[0], self.n_components_),
             meta=np.zeros([0], dtype=x.dtype),
+            dtype=x.dtype,
         )
 
     def fit_transform(self, x: DaskArray, y: DaskArray | None = None) -> DaskArray:
@@ -112,20 +112,20 @@ class PCASparseDask:
 
 @overload
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: Literal[False] = False
+    x: DaskArray, *, return_gram: Literal[False] = False, dtype: DTypeLike | None = None
 ) -> tuple[NDArray[np.floating], NDArray[np.floating]]: ...
 @overload
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: Literal[True]
+    x: DaskArray, *, return_gram: Literal[True], dtype: DTypeLike | None = None
 ) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]: ...
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: bool = False
+    x: DaskArray, *, return_gram: bool = False, dtype: DTypeLike | None = None
 ) -> (
     tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
     | tuple[NDArray[np.floating], NDArray[np.floating]]
 ):
-    """
-    Computes the mean and the covariance of matrix `x`.
+    """\
+    Computes the covariance matrix and row/col means of matrix `x`.
 
     Parameters
     ----------
@@ -154,63 +154,35 @@ def _cov_sparse_dask(
         import dask
         import dask.array as da
 
-    from ._kernels._pca_sparse_kernel import (
-        _copy_kernel,
-        _cov_kernel,
-        _gramm_kernel_csr,
-    )
-
-    compute_mean_cov = _gramm_kernel_csr(x.dtype)
-    compute_mean_cov.compile()
-    n_cols = x.shape[1]
+    if dtype is None:
+        dtype = np.float64 if np.issubdtype(x.dtype, np.integer) else x.dtype
+    else:
+        dtype = np.dtype(dtype)
 
     def gram_block(x_part: CSMatrix):
         gram_matrix: CSMatrix = x_part.T @ x_part
         return gram_matrix.toarray()[None, ...]  # need new axis for summing
 
-    n_blocks = len(x.to_delayed().ravel())
-    gram_matrix = da.map_blocks(
-        x,
+    gram_matrix_dask: DaskArray = da.map_blocks(
         gram_block,
+        x,
         new_axis=(1,),
-        chunks=((1,) * n_blocks, (x.shape[1],), (x.shape[1],)),
-        meta=np.array([]),
+        chunks=((1,) * x.blocks.size, (x.shape[1],), (x.shape[1],)),
+        meta=np.array([], dtype=x.dtype),
         dtype=x.dtype,
     ).sum(axis=0)
-    mean_x, _ = _get_mean_var(x)
+    mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
-        tuple[NDArray[np.floating], NDArray[np.floating]],
-        dask.compute(gram_matrix, mean_x),
+        tuple[NDArray, NDArray[np.float64]],
+        dask.compute(gram_matrix_dask, mean_x_dask),
     )
-    mean_x = mean_x.astype(x.dtype)
-    copy_gram = _copy_kernel(x.dtype)
-    block = (32, 32)
-    grid = (math.ceil(n_cols / block[0]), math.ceil(n_cols / block[1]))
-    copy_gram(
-        grid,
-        block,
-        (gram_matrix, n_cols),
-    )
+    gram_matrix = gram_matrix.astype(dtype)
+    mean_x = mean_x.astype(dtype)
 
-    gram_matrix *= 1 / x.shape[0]
+    gram_matrix /= x.shape[0]
 
-    if return_gram:
-        cov_result = np.zeros(
-            (gram_matrix.shape[0], gram_matrix.shape[0]),
-            dtype=gram_matrix.dtype,
-        )
-    else:
-        cov_result = gram_matrix
-
-    compute_cov = _cov_kernel(gram_matrix.dtype)
-
-    block_size = (32, 32)
-    grid_size = (math.ceil(gram_matrix.shape[0] / 8),) * 2
-    compute_cov(
-        grid_size,
-        block_size,
-        (cov_result, gram_matrix, mean_x, mean_x, gram_matrix.shape[0]),
-    )
+    cov_result = gram_matrix.copy() if return_gram else gram_matrix
+    cov_result -= mean_x[:, None] @ mean_x[None, :]
 
     if return_gram:
         return cov_result, gram_matrix, mean_x
