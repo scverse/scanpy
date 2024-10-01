@@ -13,20 +13,20 @@ from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
-from .. import logging as logg
-from .._compat import DaskArray, pkg_version
-from .._settings import settings
-from .._utils import _doc_params, _empty, is_backed_type
-from ..get import _check_mask, _get_obs_rep
-from ._docs import doc_mask_var_hvg
-from ._utils import _get_mean_var
+from ... import logging as logg
+from ..._compat import DaskArray, pkg_version
+from ..._settings import settings
+from ..._utils import _doc_params, _empty, is_backed_type
+from ...get import _check_mask, _get_obs_rep
+from .._docs import doc_mask_var_hvg
+from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
     from scipy.sparse import spmatrix
     from sklearn.decomposition import PCA
 
-    from .._utils import AnyRandom, Empty
+    from ..._utils import AnyRandom, Empty
 
 
 @_doc_params(
@@ -265,6 +265,17 @@ def pca(
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
+    elif is_dask and issparse(X._meta):
+        from ._dask_sparse import PCASparseDask
+
+        if random_state != 0:
+            msg = f"Ignoring {random_state=} when using a sparse dask array"
+            warnings.warn(msg)
+        if svd_solver not in {None, "arpack", "auto"}:
+            msg = f"Ignoring {svd_solver=} when using a sparse dask array"
+            warnings.warn(msg)
+        pca_ = PCASparseDask(n_components=n_comps)
+        X_pca = pca_.fit_transform(X)
     elif (not issparse(X) or svd_solver == "randomized") and zero_center:
         if is_dask:
             from dask_ml.decomposition import PCA
@@ -505,7 +516,7 @@ def _handle_x_args(lib, svd_solver: str | None, method, method2args, method2defa
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             warnings.warn(
-                f"Ignoring {svd_solver} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}"
+                f"Ignoring {svd_solver=} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}"
             )
         svd_solver = method2default[method]
     return svd_solver
