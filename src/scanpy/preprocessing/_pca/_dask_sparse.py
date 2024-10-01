@@ -77,6 +77,7 @@ class PCASparseDask:
 
     def transform(self: PCASparseFit, x: DaskArray) -> DaskArray:
         if TYPE_CHECKING:
+            # The type checker does not understand imports from dask.array
             import dask.array.core as da
         else:
             import dask.array as da
@@ -132,6 +133,9 @@ def _cov_sparse_dask(
         If `True`, the gram matrix will be returned and a copy will be created
         to store the results of the covariance,
         while if `False`, the local gram matrix result will be overwritten.
+        (only used for unit testing at the moment)
+    dtype
+        The data type of the result (excluding the means)
 
     Returns
     -------
