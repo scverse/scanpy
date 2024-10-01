@@ -117,12 +117,14 @@ def pca_params(
     expected_warning = None
     svd_solver = None
     if svd_solver_type is not None:
-        if array_type in DASK_CONVERTERS.values():
+        if array_type is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
             svd_solver = (
                 {"auto", "full", "tsqr", "randomized"}
                 if zero_center
                 else {"tsqr", "randomized"}
             )
+        elif array_type is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
+            svd_solver = {"auto", "arpack"}
         elif array_type in {sparse.csr_matrix, sparse.csc_matrix}:
             svd_solver = (
                 {"lobpcg", "arpack"} if zero_center else {"arpack", "randomized"}
@@ -137,10 +139,10 @@ def pca_params(
             pytest.fail(f"Unknown array type {array_type}")
         if svd_solver_type == "invalid":
             svd_solver = all_svd_solvers - svd_solver
-            expected_warning = "Ignoring"
+            expected_warning = "Ignoring svd_solver"
 
         svd_solver = np.random.choice(list(svd_solver))
-    # explicit check for special case
+    # explicit check for special cases
     if (
         svd_solver == "randomized"
         and zero_center
@@ -311,7 +313,9 @@ def test_pca_reproducible(array_type):
     assert_equal(a, b)
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
-    assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+    # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
+    if not (isinstance(pbmc.X, DaskArray) and issparse(pbmc.X._meta)):
+        assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
 def test_pca_chunked():
@@ -400,6 +404,10 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     adata_w_mask.var["mask"] = mask_var
     sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.compute()
+    if isinstance(adata_w_mask.X, DaskArray):
+        adata_w_mask.X = adata_w_mask.X.compute()
     assert np.allclose(
         adata.X.toarray() if issparse(adata.X) else adata.X,
         adata_w_mask.X.toarray() if issparse(adata_w_mask.X) else adata_w_mask.X,

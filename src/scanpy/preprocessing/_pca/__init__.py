@@ -269,10 +269,10 @@ def pca(
         from ._dask_sparse import PCASparseDask
 
         if random_state != 0:
-            msg = "random_state is ignored when using a sparse dask array"
+            msg = f"Ignoring {random_state=} when using a sparse dask array"
             warnings.warn(msg)
         if svd_solver not in {None, "arpack", "auto"}:
-            msg = "svd_solver is ignored when using a sparse dask array"
+            msg = f"Ignoring {svd_solver=} when using a sparse dask array"
             warnings.warn(msg)
         pca_ = PCASparseDask(n_components=n_comps)
         X_pca = pca_.fit_transform(X)
@@ -516,7 +516,7 @@ def _handle_x_args(lib, svd_solver: str | None, method, method2args, method2defa
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
             warnings.warn(
-                f"Ignoring {svd_solver} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}"
+                f"Ignoring {svd_solver=} and using {method2default[method]}, {lib}.decomposition.{method} only supports {method2args[method]}"
             )
         svd_solver = method2default[method]
     return svd_solver
