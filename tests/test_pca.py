@@ -142,7 +142,7 @@ def pca_params(
             expected_warning = "Ignoring svd_solver"
 
         svd_solver = np.random.choice(list(svd_solver))
-    # explicit check for special cases
+    # explicit check for special case
     if (
         svd_solver == "randomized"
         and zero_center
