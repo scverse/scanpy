@@ -826,7 +826,7 @@ def violin(
 
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
-        if kwds.get("palette", None) is None:
+        if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 raise ValueError(
                     f"The column `adata.obs[{groupby!r}]` needs to be categorical, "
