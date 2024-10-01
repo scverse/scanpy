@@ -48,7 +48,9 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    "numpy>=1.23",
+    # TODO: remove <2 requirement once PyNNDescent releases this fix:
+    # https://github.com/lmcinnes/pynndescent/issues/241
+    "numpy>=1.23,<2",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
@@ -56,6 +58,7 @@ dependencies = [
     "h5py>=3.1",
     "tqdm",
     "scikit-learn>=0.24",
+    "scikit-learn-intelex>=2024.3.0",
     "statsmodels>=0.13",
     "patsy",
     "networkx>=2.7",
@@ -83,7 +86,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=8.2",
+    "pytest>=7.4.2,!=8.1.*",
     "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
@@ -99,8 +102,6 @@ test = [
 ]
 test-full = [
     "scanpy[test]",
-    # optional storage modes
-    "zappy",
     # additional tested algorithms
     "scanpy[louvain]",
     "scanpy[magic]",
@@ -112,12 +113,11 @@ test-full = [
 doc = [
     "sphinx>=7",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.14.1",
+    "scanpydoc>=0.13.4",
     "sphinx-autodoc-typehints>=1.25.2",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
-    "sphinx-tabs",
     "readthedocs-sphinx-search",
     "sphinxext-opengraph", # for nice cards when sharing on social
     "sphinx-copybutton",
@@ -136,7 +136,6 @@ dev = [
     "setuptools_scm",
     # static checking
     "pre-commit",
-    "towncrier",
 ]
 # Algorithms
 paga = ["igraph"]
@@ -150,16 +149,19 @@ scanorama = ["scanorama"]  # Scanorama dataset integration
 scrublet = ["scikit-image"]  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = ["cudf>=0.9", "cuml>=0.9", "cugraph>=0.9"]  # GPU accelerated calculation of neighbors
-dask = ["dask[array]>=2022.09.2,<2024.8.0"]  # Use the Dask parallelization engine
+dask = ["dask[array]>=2022.09.2"]  # Use the Dask parallelization engine
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
+[tool.hatch.build]
+exclude = ["scanpy/tests"]
 [tool.hatch.build.targets.wheel]
-packages = ["src/testing", "src/scanpy"]
+# TODO: move scanpy to src/
+only-include = ["src/testing", "scanpy"]
+sources = ["src", "."]
 [tool.hatch.version]
 source = "vcs"
-raw-options.version_scheme = "release-branch-semver"
 [tool.hatch.build.hooks.vcs]
-version-file = "src/scanpy/_version.py"
+version-file = "scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -167,10 +169,9 @@ addopts = [
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
-    "--pyargs",
 ]
-testpaths = ["./tests", "scanpy"]
-norecursedirs = ["tests/_images"]
+testpaths = ["scanpy"]
+norecursedirs = ["scanpy/tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
 markers = [
@@ -204,7 +205,7 @@ filterwarnings = [
 [tool.coverage.run]
 data_file = "test-data/coverage"
 source_pkgs = ["scanpy"]
-omit = ["tests/*", "src/testing/*"]
+omit = ["scanpy/tests/*", "src/testing/*"]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
@@ -216,9 +217,6 @@ exclude_also = [
     # https://github.com/numba/numba/issues/4268
     "@numba.njit.*",
 ]
-
-[tool.ruff]
-src = ["src"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -235,9 +233,6 @@ select = [
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
     "PLR0917", # Ban APIs with too many positional parameters
-    "FBT",     # No positional boolean parameters
-    "PT",      # Pytest style
-    "SIM",     # Simplify control flow
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines
@@ -251,7 +246,7 @@ ignore = [
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
-"src/scanpy/tools/_rank_genes_groups.py" = ["E731"]
+"scanpy/tools/_rank_genes_groups.py" = ["E731"]
 [tool.ruff.lint.isort]
 known-first-party = ["scanpy", "testing.scanpy"]
 required-imports = ["from __future__ import annotations"]
@@ -259,23 +254,6 @@ required-imports = ["from __future__ import annotations"]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
-"legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true
-
-[tool.towncrier]
-package = "scanpy"
-directory = "docs/release-notes"
-filename = "docs/release-notes/{version}.md"
-single_file = false
-package_dir = "src"
-issue_format = "{{pr}}`{issue}`"
-title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
-fragment.bugfix.name = "Bug fixes"
-fragment.doc.name = "Documentation"
-fragment.feature.name = "Features"
-fragment.misc.name = "Miscellaneous improvements"
-fragment.performance.name = "Performance"
-fragment.breaking.name = "Breaking changes"
-fragment.dev.name = "Development Process"
