@@ -46,7 +46,7 @@ class PCASparseDask:
         self = cast(PCASparseFit, self)
         assert isinstance(x.shape, tuple)
         self.n_components_ = (
-            min(x.shape[:2]) if self.n_components is None else self.n_components
+            min(x.shape) if self.n_components is None else self.n_components
         )
         self.n_samples_ = x.shape[0]
         self.n_features_in_ = x.shape[1] if x.ndim == 2 else 1
