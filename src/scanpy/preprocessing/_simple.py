@@ -742,7 +742,7 @@ def _regress_out_chunk(data):
     responses_chunk_list = []
     import statsmodels.api as sm
     import statsmodels.tools.sm_exceptions as sme
-    
+
     for col_index in range(data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
