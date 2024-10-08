@@ -35,13 +35,14 @@ def tsne(
     *,
     use_rep: str | None = None,
     perplexity: float | int = 30,
+    metric: str = "euclidean",
     early_exaggeration: float | int = 12,
     learning_rate: float | int = 1000,
     random_state: AnyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
+    key_added: str | None = None,
     copy: bool = False,
-    metric: str = "euclidean",
 ) -> AnnData | None:
     """\
     t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
@@ -88,6 +89,13 @@ def tsne(
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+    key_added
+        If not specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ `['X_tsne']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ `['tsne']`.
+        If specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
     copy
         Return a copy instead of writing to `adata`.
 
@@ -95,9 +103,9 @@ def tsne(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_tsne']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_tsne' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         tSNE coordinates of data.
-    `adata.uns['tsne']` : :class:`dict`
+    `adata.uns['tsne' | key_added]` : :class:`dict`
         tSNE parameters.
 
     """
@@ -156,8 +164,6 @@ def tsne(
                 )
             )
     if use_fast_tsne is False:  # In case MultiCore failed to import
-        from sklearnex import patch_sklearn,unpatch_sklearn
-        patch_sklearn()
         from sklearn.manifold import TSNE
 
         # unfortunately, sklearn does not allow to set a minimum number
@@ -165,28 +171,28 @@ def tsne(
         tsne = TSNE(**params_sklearn)
         logg.info("    using sklearn.manifold.TSNE")
         X_tsne = tsne.fit_transform(X)
-        unpatch_sklearn()
+
     # update AnnData instance
-    adata.obsm["X_tsne"] = X_tsne  # annotate samples with tSNE coordinates
-    adata.uns["tsne"] = {
-        "params": {
-            k: v
-            for k, v in {
-                "perplexity": perplexity,
-                "early_exaggeration": early_exaggeration,
-                "learning_rate": learning_rate,
-                "n_jobs": n_jobs,
-                "metric": metric,
-                "use_rep": use_rep,
-            }.items()
-            if v is not None
-        }
-    }
+    params = dict(
+        perplexity=perplexity,
+        early_exaggeration=early_exaggeration,
+        learning_rate=learning_rate,
+        n_jobs=n_jobs,
+        metric=metric,
+        use_rep=use_rep,
+    )
+    key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
+    adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
+    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
 
     logg.info(
         "    finished",
         time=start,
-        deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
+        deep=(
+            f"added\n"
+            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+        ),
     )
 
     return adata if copy else None
