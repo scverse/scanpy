@@ -161,7 +161,7 @@ sources = ["src", "."]
 [tool.hatch.version]
 source = "vcs"
 [tool.hatch.build.hooks.vcs]
-version-file = "scanpy/_version.py"
+version-file = "src/scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
