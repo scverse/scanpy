@@ -69,6 +69,7 @@ dependencies = [
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info",
+    "wget",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
