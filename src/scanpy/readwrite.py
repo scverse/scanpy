@@ -360,6 +360,7 @@ def read_visium(
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
+    gex_only: bool = True,
     source_image_path: Path | str | None = None,
 ) -> AnnData:
     """\
@@ -385,9 +386,13 @@ def read_visium(
         'filtered_feature_bc_matrix.h5' or 'raw_feature_bc_matrix.h5'.
     library_id
         Identifier for the visium library. Can be modified when concatenating multiple adata objects.
+    gex_only
+        Only keep 'Gene Expression' data and ignore other feature types,
+        e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
     source_image_path
         Path to the high-resolution tissue image. Path will be included in
         `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
+        
 
     Returns
     -------
@@ -420,7 +425,7 @@ def read_visium(
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
     """
     path = Path(path)
-    adata = read_10x_h5(path / count_file, genome=genome)
+    adata = read_10x_h5(path / count_file, genome=genome, gex_only=gex_only)
 
     adata.uns["spatial"] = dict()
 
