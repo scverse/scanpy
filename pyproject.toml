@@ -56,6 +56,7 @@ dependencies = [
     "h5py>=3.1",
     "tqdm",
     "scikit-learn>=0.24",
+    "scikit-learn-intelex>=2024.3.0",
     "statsmodels>=0.13",
     "patsy",
     "networkx>=2.7",
@@ -66,6 +67,7 @@ dependencies = [
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info",
+    "wget",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "get-annotations; python_version < '3.10'",
 ]
@@ -154,6 +156,7 @@ dask = ["dask[array]>=2022.09.2,<2024.8.0"]  # Use the Dask parallelization engi
 dask-ml = ["dask-ml", "scanpy[dask]"]  # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
+# TODO: move scanpy to src/
 packages = ["src/testing", "src/scanpy"]
 [tool.hatch.version]
 source = "vcs"

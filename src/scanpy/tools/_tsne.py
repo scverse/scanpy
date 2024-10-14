@@ -35,14 +35,14 @@ def tsne(
     *,
     use_rep: str | None = None,
     perplexity: float | int = 30,
-    metric: str = "euclidean",
     early_exaggeration: float | int = 12,
     learning_rate: float | int = 1000,
     random_state: AnyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | None = None,
     copy: bool = False,
+    metric: str = "euclidean",
+    key_added: str | None = None,
 ) -> AnnData | None:
     """\
     t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
@@ -164,6 +164,8 @@ def tsne(
                 )
             )
     if use_fast_tsne is False:  # In case MultiCore failed to import
+        from sklearnex import patch_sklearn,unpatch_sklearn
+        patch_sklearn()
         from sklearn.manifold import TSNE
 
         # unfortunately, sklearn does not allow to set a minimum number
@@ -171,7 +173,7 @@ def tsne(
         tsne = TSNE(**params_sklearn)
         logg.info("    using sklearn.manifold.TSNE")
         X_tsne = tsne.fit_transform(X)
-
+        unpatch_sklearn()
     # update AnnData instance
     params = dict(
         perplexity=perplexity,
@@ -196,3 +198,4 @@ def tsne(
     )
 
     return adata if copy else None
+    
