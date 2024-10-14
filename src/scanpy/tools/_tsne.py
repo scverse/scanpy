@@ -175,26 +175,26 @@ def tsne(
         X_tsne = tsne.fit_transform(X)
         unpatch_sklearn()
     # update AnnData instance
-    adata.obsm["X_tsne"] = X_tsne  # annotate samples with tSNE coordinates
-    adata.uns["tsne"] = {
-        "params": {
-            k: v
-            for k, v in {
-                "perplexity": perplexity,
-                "early_exaggeration": early_exaggeration,
-                "learning_rate": learning_rate,
-                "n_jobs": n_jobs,
-                "metric": metric,
-                "use_rep": use_rep,
-            }.items()
-            if v is not None
-        }
-    }
+    params = dict(
+        perplexity=perplexity,
+        early_exaggeration=early_exaggeration,
+        learning_rate=learning_rate,
+        n_jobs=n_jobs,
+        metric=metric,
+        use_rep=use_rep,
+    )
+    key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
+    adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
+    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
 
     logg.info(
         "    finished",
         time=start,
-        deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
+        deep=(
+            f"added\n"
+            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+        ),
     )
 
     return adata if copy else None
