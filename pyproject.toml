@@ -172,6 +172,7 @@ addopts = [
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
+    "--pyargs",
 ]
 testpaths = ["./tests", "scanpy"]
 norecursedirs = ["tests/_images"]
