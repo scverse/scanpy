@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
     T = TypeVar("T", bound=LiteralString)
+    M = TypeVar("M", bound=LiteralString)
 
 
 SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
@@ -44,6 +45,9 @@ SvdSolvPCASparseSklearn = Literal["arpack"]
 SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
 
 SvdSolver = SvdSolvDaskML | SvdSolvSkearn
+
+MethodDaskML = Literal["PCA", "IncrementalPCA", "TruncatedSVD"]
+MethodSklearn = Literal["PCA", "TruncatedSVD", "PCA (with sparse input)"]
 
 
 @_doc_params(
@@ -429,18 +433,17 @@ def _handle_dask_ml_args(
 def _handle_dask_ml_args(
     svd_solver: str | None, method: Literal["TruncatedSVD"]
 ) -> SvdSolvTruncatedSVDDaskML: ...
-def _handle_dask_ml_args(svd_solver: str | None, method: str) -> str:
-    method2args: dict[str, tuple[SvdSolvDaskML, ...]] = {
+def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> str:
+    method2args: dict[MethodDaskML, tuple[SvdSolvDaskML, ...]] = {
         "PCA": get_args(SvdSolvPCADaskML),
         "IncrementalPCA": get_args(SvdSolvPCADaskML),
         "TruncatedSVD": get_args(SvdSolvTruncatedSVDDaskML),
     }
-    method2default: dict[str, SvdSolvDaskML] = {
+    method2default: dict[MethodDaskML, SvdSolvDaskML] = {
         "PCA": "auto",
         "IncrementalPCA": "auto",
         "TruncatedSVD": "tsqr",
     }
-
     return _handle_x_args("dask_ml", svd_solver, method, method2args, method2default)
 
 
@@ -456,27 +459,26 @@ def _handle_sklearn_args(
 def _handle_sklearn_args(
     svd_solver: str | None, method: Literal["PCA (with sparse input)"]
 ) -> SvdSolvPCASparseSklearn: ...
-def _handle_sklearn_args(svd_solver: str | None, method: str) -> str:
-    method2args: dict[str, tuple[SvdSolvSkearn, ...]] = {
+def _handle_sklearn_args(svd_solver: str | None, method: MethodSklearn) -> str:
+    method2args: dict[MethodSklearn, tuple[SvdSolvSkearn, ...]] = {
         "PCA": get_args(SvdSolvPCASklearn),
         "TruncatedSVD": get_args(SvdSolvTruncatedSVDSklearn),
         "PCA (with sparse input)": get_args(SvdSolvPCASparseSklearn),
     }
-    method2default: dict[str, SvdSolvSkearn] = {
+    method2default: dict[MethodSklearn, SvdSolvSkearn] = {
         "PCA": "arpack",
         "TruncatedSVD": "randomized",
         "PCA (with sparse input)": "arpack",
     }
-
     return _handle_x_args("sklearn", svd_solver, method, method2args, method2default)
 
 
 def _handle_x_args(
     lib: str,
     svd_solver: str | None,
-    method: str,
-    method2args: Mapping[str, Container[T]],
-    method2default: Mapping[str, T],
+    method: M,
+    method2args: Mapping[M, Container[T]],
+    method2default: Mapping[M, T],
 ) -> T:
     if svd_solver not in method2args[method]:
         if svd_solver is not None:
