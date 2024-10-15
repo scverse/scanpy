@@ -16,7 +16,11 @@ if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
-    from anndata.io import sparse_dataset
+
+    if Version(anndata_version) >= Version("0.11.0rc0"):
+        from anndata.io import sparse_dataset
+    else:
+        from anndata.experimental import sparse_dataset
 
     def make_sparse(x):
         return sparse_dataset(x)
