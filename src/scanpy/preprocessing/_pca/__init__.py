@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, Union, get_args, overload
+from typing import TYPE_CHECKING, Literal, get_args, overload
 from warnings import warn
 
 import anndata as ad
@@ -36,16 +36,14 @@ if TYPE_CHECKING:
 
 SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
-SvdSolvDaskML = Union[SvdSolvPCADaskML, SvdSolvTruncatedSVDDaskML]
+SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
 SvdSolvPCASklearn = Literal["auto", "full", "arpack", "randomized"]
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvPCASparseSklearn = Literal["arpack"]
-SvdSolvSkearn = Union[
-    SvdSolvPCASklearn, SvdSolvTruncatedSVDSklearn, SvdSolvPCASparseSklearn
-]
+SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
 
-SvdSolver = Union[SvdSolvDaskML, SvdSolvSkearn]
+SvdSolver = SvdSolvDaskML | SvdSolvSkearn
 
 
 @_doc_params(
