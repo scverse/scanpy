@@ -13,12 +13,11 @@ from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
-    from typing import Union
 
     import pandas as pd
     from anndata import AnnData
 
-    Genes = Collection[Union[str, int, bool]]
+    Genes = Collection[str | int | bool]
 
 
 @doctest_needs("pypairs")

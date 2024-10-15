@@ -4,6 +4,7 @@ Denoise high-dimensional data using MAGIC
 
 from __future__ import annotations
 
+from types import NoneType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
@@ -155,7 +156,7 @@ def magic(
             )
 
     start = logg.info("computing MAGIC")
-    all_or_pca = isinstance(name_list, (str, type(None)))
+    all_or_pca = isinstance(name_list, str | NoneType)
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
         raise ValueError(
             "Invalid string value for `name_list`: "

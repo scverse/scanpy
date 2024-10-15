@@ -22,7 +22,7 @@ overrides.matrix.deps.env-vars = [
     { if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
 ]
 overrides.matrix.deps.python = [
-    { if = ["min"] , value = "3.9" },
+    { if = ["min"] , value = "3.10" },
     { if = ["stable", "full", "pre"], value = "3.12" },
 ]
 overrides.matrix.deps.features = [
