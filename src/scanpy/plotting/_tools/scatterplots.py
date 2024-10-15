@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import sys
 from collections.abc import Mapping, Sequence  # noqa: TCH003
 from copy import copy
 from functools import partial
@@ -217,7 +216,7 @@ def embedding(
         # set as ndarray
         if (
             size is not None
-            and isinstance(size, (Sequence, pd.Series, np.ndarray))
+            and isinstance(size, Sequence | pd.Series | np.ndarray)
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -593,9 +592,6 @@ def _get_vboundnorm(
 
 def _wraps_plot_scatter(wrapper):
     """Update the wrapper function to use the correct signature."""
-    if sys.version_info < (3, 10):
-        # Python 3.9 does not support `eval_str`, so we only support this in 3.10+
-        return wrapper
 
     params = inspect.signature(embedding, eval_str=True).parameters.copy()
     wrapper_sig = inspect.signature(wrapper, eval_str=True)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union, overload
+from collections.abc import Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, TypedDict, overload
 
 import matplotlib as mpl
 import numpy as np
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     DensityNorm = Literal["area", "count", "width"]
 
 # These are needed by _wraps_plot_scatter
-VBound = Union[str, float, Callable[[Sequence[float]], float]]
+VBound = str | float | Callable[[Sequence[float]], float]
 _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
@@ -59,7 +59,7 @@ _LegendLoc = Literal[
     "upper center",
     "center",
 ]
-ColorLike = Union[str, tuple[float, ...]]
+ColorLike = str | tuple[float, ...]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -156,7 +156,7 @@ def timeseries_subplot(
     """
 
     if color is not None:
-        use_color_map = isinstance(color[0], (float, np.floating))
+        use_color_map = isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
     if X.ndim == 1:
@@ -371,7 +371,7 @@ def default_palette(
 ) -> str | Cycler:
     if palette is None:
         return rcParams["axes.prop_cycle"]
-    elif not isinstance(palette, (str, Cycler)):
+    elif not isinstance(palette, str | Cycler):
         return cycler(color=palette)
     else:
         return palette
