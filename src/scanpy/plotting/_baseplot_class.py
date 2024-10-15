@@ -18,7 +18,7 @@ from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-    from typing import Literal, Self, Union
+    from typing import Literal, Self
 
     import pandas as pd
     from anndata import AnnData
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
-    _VarNames = Union[str, Sequence[str]]
+    _VarNames = str | Sequence[str]
 
 
 class VBoundNorm(NamedTuple):
