@@ -13,11 +13,10 @@ from .get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Union
 
     from numpy.typing import NDArray
 
-    Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
+    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
 
 # Used with get_args
 AggType = Literal["count_nonzero", "mean", "sum", "var"]

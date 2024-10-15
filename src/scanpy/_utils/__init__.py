@@ -19,7 +19,7 @@ from functools import partial, singledispatch, wraps
 from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Union, overload
+from typing import TYPE_CHECKING, overload
 from weakref import WeakSet
 
 import h5py
@@ -42,9 +42,9 @@ else:
     from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
-    from typing import Any, Callable, Literal, TypeVar
+    from typing import Any, Literal, TypeVar
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 # maybe in the future random.Generator
-AnyRandom = Union[int, np.random.RandomState, None]
+AnyRandom = int | np.random.RandomState | None
 
 
 class Empty(Enum):
@@ -534,9 +534,9 @@ def update_params(
 
 
 if TYPE_CHECKING:
-    _SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-    _MemoryArray = Union[NDArray, _SparseMatrix]
-    _SupportedArray = Union[_MemoryArray, DaskArray]
+    _SparseMatrix = sparse.csr_matrix | sparse.csc_matrix
+    _MemoryArray = NDArray | _SparseMatrix
+    _SupportedArray = _MemoryArray | DaskArray
 
 
 @singledispatch
@@ -746,8 +746,8 @@ def _(
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
         # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
-            args[0], (sparse.spmatrix, np.matrix)
+        if isinstance(X._meta, sparse.spmatrix | np.matrix) or isinstance(
+            args[0], sparse.spmatrix | np.matrix
         ):
             kwargs.pop("keepdims", None)
             axis = kwargs["axis"]
@@ -1106,7 +1106,7 @@ def _resolve_axis(
 
 
 def is_backed_type(X: object) -> bool:
-    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
+    return isinstance(X, SparseDataset | h5py.File | h5py.Dataset)
 
 
 def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
