@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
-def _pca_with_sparse(
+def _pca_compat_sparse(
     x: CSMatrix,
     n_pcs: int,
     *,

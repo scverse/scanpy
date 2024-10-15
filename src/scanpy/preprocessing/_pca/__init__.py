@@ -17,7 +17,7 @@ from ..._settings import settings
 from ..._utils import _doc_params, _empty, is_backed_type
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
-from ._compat import _pca_with_sparse
+from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
     from collections.abc import Container, Mapping
@@ -299,7 +299,7 @@ def pca(
             elif svd_solver == "lobpcg":
                 msg = f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future."
                 warnings.warn(msg, FutureWarning)
-            X_pca, pca_ = _pca_with_sparse(
+            X_pca, pca_ = _pca_compat_sparse(
                 X, n_comps, solver=svd_solver, random_state=random_state
             )
         else:
