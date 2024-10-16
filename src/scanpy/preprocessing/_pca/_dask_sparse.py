@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, cast, overload
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
@@ -20,30 +20,15 @@ if TYPE_CHECKING:
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
-class PCASparseFit(Protocol):
-    n_components: int
-
-    n_components_: int
-    n_samples_: int
-    n_features_in_: int
-    dtype_: np.dtype
-    mean_: NDArray[np.floating]
-    components_: NDArray[np.floating]
-    explained_variance_: NDArray[np.floating]
-    explained_variance_ratio_: NDArray[np.floating]
-    noise_variance_: NDArray[np.floating]
-
-    def fit(self, x: DaskArray) -> PCASparseFit: ...
-    def transform(self, X: DaskArray) -> DaskArray: ...
-
-
 @dataclass
 class PCASparseDask:
     n_components: int | None = None
 
     def fit(self, x: DaskArray) -> PCASparseFit:
         # this method makes `self` into the fitted version
+        self.__class__ = PCASparseFit
         self = cast(PCASparseFit, self)
+
         assert isinstance(x.shape, tuple)
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
@@ -75,7 +60,25 @@ class PCASparseDask:
         ]
         return self
 
-    def transform(self: PCASparseFit, x: DaskArray) -> DaskArray:
+    def fit_transform(self, x: DaskArray, y: DaskArray | None = None) -> DaskArray:
+        if y is None:
+            y = x
+        return self.fit(x).transform(y)
+
+
+@dataclass
+class PCASparseFit(PCASparseDask):
+    n_components_: int = field(init=False)
+    n_samples_: int = field(init=False)
+    n_features_in_: int = field(init=False)
+    dtype_: np.dtype = field(init=False)
+    mean_: NDArray[np.floating] = field(init=False)
+    components_: NDArray[np.floating] = field(init=False)
+    explained_variance_: NDArray[np.floating] = field(init=False)
+    explained_variance_ratio_: NDArray[np.floating] = field(init=False)
+    noise_variance_: NDArray[np.floating] = field(init=False)
+
+    def transform(self, x: DaskArray) -> DaskArray:
         if TYPE_CHECKING:
             # The type checker does not understand imports from dask.array
             import dask.array.core as da
@@ -100,11 +103,6 @@ class PCASparseDask:
             meta=np.zeros([0], dtype=x.dtype),
             dtype=x.dtype,
         )
-
-    def fit_transform(self, x: DaskArray, y: DaskArray | None = None) -> DaskArray:
-        if y is None:
-            y = x
-        return self.fit(x).transform(y)
 
 
 @overload
