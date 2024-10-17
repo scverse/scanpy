@@ -239,7 +239,7 @@ def test_normalize_pearson_residuals_pca(
         np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)  # noqa: FBT003
     ]
     n_var_copy = locals()[n_var_copy_name]
-    assert isinstance(n_var_copy, (int, np.integer))
+    assert isinstance(n_var_copy, int | np.integer)
 
     if do_hvg:
         sc.experimental.pp.highly_variable_genes(

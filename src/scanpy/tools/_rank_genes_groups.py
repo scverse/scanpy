@@ -620,7 +620,7 @@ def rank_genes_groups(
     # for clarity, rename variable
     if groups == "all":
         groups_order = "all"
-    elif isinstance(groups, (str, int)):
+    elif isinstance(groups, str | int):
         raise ValueError("Specify a sequence of groups")
     else:
         groups_order = list(groups)
