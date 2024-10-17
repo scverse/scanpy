@@ -24,10 +24,29 @@ if TYPE_CHECKING:
 class PCASparseDask:
     n_components: int | None = None
 
-    def fit(self, x: DaskArray) -> PCASparseFit:
-        # this method makes `self` into the fitted version
-        self.__class__ = PCASparseFit
-        self = cast(PCASparseFit, self)
+    def fit(self, x: DaskArray) -> PCASparseDaskFit:
+        """Fit the model on `x`.
+
+        This method transforms `self` into a `PCASparseDaskFit` object and returns it.
+
+        Examples
+        --------
+        >>> import dask.array as da
+        >>> import scipy.sparse as sp
+        >>> x = (
+        ...     da.array(sp.random(100, 200, density=0.3, dtype="float32").toarray())
+        ...     .rechunk((10, -1))
+        ...     .map_blocks(sp.csr_matrix)
+        ... )
+        >>> x
+        dask.array<csr_matrix, shape=(100, 200), dtype=float32, chunksize=(10, 200), chunktype=scipy.csr_matrix>
+        >>> pca_fit = PCASparseDask().fit(x)
+        >>> assert isinstance(pca_fit, PCASparseDask)
+        >>> pca_fit.transform(x)
+        dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
+        """
+        self.__class__ = PCASparseDaskFit
+        self = cast(PCASparseDaskFit, self)
 
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
@@ -66,7 +85,7 @@ class PCASparseDask:
 
 
 @dataclass
-class PCASparseFit(PCASparseDask):
+class PCASparseDaskFit(PCASparseDask):
     n_components_: int = field(init=False)
     n_samples_: int = field(init=False)
     n_features_in_: int = field(init=False)
