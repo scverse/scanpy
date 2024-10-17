@@ -22,11 +22,11 @@ if TYPE_CHECKING:
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
-@doctest_needs("dask")
 @dataclass
 class PCASparseDask:
     n_components: int | None = None
 
+    @doctest_needs("dask")
     def fit(self, x: DaskArray) -> PCASparseDaskFit:
         """Fit the model on `x`.
 
