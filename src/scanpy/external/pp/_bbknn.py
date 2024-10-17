@@ -6,7 +6,7 @@ from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from collections.abc import Callable
 
     from anndata import AnnData
     from sklearn.metrics import DistanceMetric

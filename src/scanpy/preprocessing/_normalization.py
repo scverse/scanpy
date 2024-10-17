@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 def _normalize_data(X, counts, after=None, *, copy: bool = False):
     X = X.copy() if copy else X
-    if issubclass(X.dtype.type, (int, np.integer)):
+    if issubclass(X.dtype.type, int | np.integer):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     if after is None:
         if isinstance(counts, DaskArray):

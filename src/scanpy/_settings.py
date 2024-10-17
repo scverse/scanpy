@@ -15,14 +15,14 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Any, Literal, TextIO, Union
+    from typing import Any, Literal, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
-    _Format = Union[
-        Literal["png", "jpg", "tif", "tiff"],
-        Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
-        Literal["raw", "rgba"],
-    ]
+    _Format = (
+        Literal["png", "jpg", "tif", "tiff"]
+        | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
+        | Literal["raw", "rgba"]
+    )
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",

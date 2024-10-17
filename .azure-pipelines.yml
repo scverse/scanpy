@@ -15,8 +15,8 @@ jobs:
     vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python3.9:
-        python.version: '3.9'
+      Python3.10:
+        python.version: '3.10'
       Python3.12: {}
       minimal_dependencies:
         TEST_EXTRA: 'test-min'
@@ -24,7 +24,7 @@ jobs:
         DEPENDENCIES_VERSION: "pre-release"
         TEST_TYPE: "coverage"
       minimum_versions:
-        python.version: '3.9'
+        python.version: '3.10'
         DEPENDENCIES_VERSION: "minimum-version"
         TEST_TYPE: "coverage"
 
