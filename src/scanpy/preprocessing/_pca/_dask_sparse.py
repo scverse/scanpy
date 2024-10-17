@@ -7,6 +7,8 @@ import numpy as np
 import scipy.linalg
 from numpy.typing import NDArray
 
+from scanpy._utils._doctests import doctest_needs
+
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
+@doctest_needs("dask")
 @dataclass
 class PCASparseDask:
     n_components: int | None = None
