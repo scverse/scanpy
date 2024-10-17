@@ -64,6 +64,18 @@ A_svd = np.array(
 )
 
 
+if Version(ad.__version__) < Version("0.9"):
+
+    def to_memory(self: AnnData, *, copy: bool = False) -> AnnData:
+        """Compatibility version of AnnData.to_memory() that works with old AnnData versions"""
+        adata = self
+        if adata.isbacked:
+            adata = adata.to_memory()
+        return adata.copy() if copy else adata
+else:
+    to_memory = AnnData.to_memory
+
+
 def _chunked_1d(
     f: Callable[[np.ndarray], DaskArray],
 ) -> Callable[[np.ndarray], DaskArray]:
@@ -196,7 +208,7 @@ def test_pca_transform(array_type):
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
-    adata = adata.to_memory()
+    adata = to_memory(adata)
     assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
@@ -318,7 +330,7 @@ def test_pca_reproducible(array_type):
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and issparse(pbmc.X._meta)):
-        a, c = map(AnnData.to_memory, [a, c])
+        a, c = map(to_memory, [a, c])
         assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
@@ -408,7 +420,7 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     adata_w_mask.var["mask"] = mask_var
     sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
-    adata, adata_w_mask = map(AnnData.to_memory, [adata, adata_w_mask])
+    adata, adata_w_mask = map(to_memory, [adata, adata_w_mask])
     assert np.allclose(
         adata.X.toarray() if issparse(adata.X) else adata.X,
         adata_w_mask.X.toarray() if issparse(adata_w_mask.X) else adata_w_mask.X,
@@ -475,11 +487,11 @@ def test_mask_defaults(array_type, float_dtype):
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None
     assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
-    without_var, with_var = map(AnnData.to_memory, [without_var, with_var])
+    without_var, with_var = map(to_memory, [without_var, with_var])
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
 
     with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
-    with_no_mask = with_no_mask.to_memory()
+    with_no_mask = to_memory(with_no_mask)
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
@@ -509,6 +521,7 @@ def test_pca_layer():
     np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
 
 
+@needs.dask
 @pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [
