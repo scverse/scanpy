@@ -41,7 +41,7 @@ class PCASparseDask:
         >>> x
         dask.array<csr_matrix, shape=(100, 200), dtype=float32, chunksize=(10, 200), chunktype=scipy.csr_matrix>
         >>> pca_fit = PCASparseDask().fit(x)
-        >>> assert isinstance(pca_fit, PCASparseDask)
+        >>> assert isinstance(pca_fit, PCASparseDaskFit)
         >>> pca_fit.transform(x)
         dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
         """
