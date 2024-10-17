@@ -18,7 +18,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import DaskArray, pkg_version
 from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
@@ -64,7 +64,7 @@ A_svd = np.array(
 )
 
 
-if Version(ad.__version__) < Version("0.9"):
+if pkg_version("anndata") < Version("0.9"):
 
     def to_memory(self: AnnData, *, copy: bool = False) -> AnnData:
         """Compatibility version of AnnData.to_memory() that works with old AnnData versions"""
@@ -522,6 +522,10 @@ def test_pca_layer():
 
 
 @needs.dask
+@pytest.mark.skipif(
+    pkg_version("anndata") < Version("0.10"),
+    reason="Old AnnData doesn’t have dask test helpers",
+)
 @pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [
