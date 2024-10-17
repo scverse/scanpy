@@ -29,12 +29,11 @@ class PCASparseDask:
         self.__class__ = PCASparseFit
         self = cast(PCASparseFit, self)
 
-        assert isinstance(x.shape, tuple)
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
         )
         self.n_samples_ = x.shape[0]
-        self.n_features_in_ = x.shape[1] if x.ndim == 2 else 1
+        self.n_features_in_ = x.shape[1] if x.ndim > 1 else 1
         self.dtype_ = x.dtype
         covariance, self.mean_ = _cov_sparse_dask(x)
         self.explained_variance_, self.components_ = scipy.linalg.eigh(
