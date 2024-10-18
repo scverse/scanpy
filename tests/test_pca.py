@@ -552,6 +552,23 @@ def test_pca_layer():
 
 
 @needs.dask
+def test_covariance_eigh_impls():
+    adata_mem = pbmc3k_normalized()
+    adata_dask = adata_mem.copy()
+    adata_dask.X = DASK_CONVERTERS[_helpers.as_sparse_dask_array](adata_dask.X)
+
+    sc.pp.pca(adata_mem, svd_solver="covariance_eigh")
+    sc.pp.pca(adata_dask, svd_solver="covariance_eigh")
+
+    assert (
+        np.linalg.norm(
+            np.abs(adata_mem.obsm["X_pca"]) - np.abs(adata_dask.obsm["X_pca"].compute())
+        )
+        < 2e-05
+    )
+
+
+@needs.dask
 # Skipping this test during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
 @pytest.mark.skipif(
     pkg_version("anndata") < Version("0.10"),
