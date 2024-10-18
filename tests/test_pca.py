@@ -17,6 +17,7 @@ from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
+from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
@@ -121,7 +122,8 @@ def array_type(request: pytest.FixtureRequest) -> ArrayType:
     return request.param
 
 
-SVDSolver = Literal["auto", "full", "arpack", "randomized", "tsqr", "lobpcg"]
+SVDSolverDeprecated = Literal["lobpcg"]
+SVDSolver = SvdSolverSupported | SVDSolverDeprecated
 
 
 def gen_pca_params(
@@ -146,7 +148,7 @@ def gen_pca_params(
         case (dc, False) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
             svd_solvers = {"tsqr", "randomized"}
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
-            svd_solvers = {"auto", "arpack"}
+            svd_solvers = {"covariance_eigh"}
         case ((sparse.csr_matrix | sparse.csc_matrix), True):
             svd_solvers = {"arpack"}
         case ((sparse.csr_matrix | sparse.csc_matrix), False):

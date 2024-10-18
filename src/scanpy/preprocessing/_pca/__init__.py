@@ -44,12 +44,14 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCASklearn = Literal["auto", "full", "arpack", "randomized"]
+SvdSolvPCASklearn = Literal["auto", "full", "arpack", "covariance_eigh", "randomized"]
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvPCASparseSklearn = Literal["arpack"]
 SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
 
-SvdSolver = SvdSolvDaskML | SvdSolvSkearn
+SvdSolvPCACustom = Literal["covariance_eigh"]
+
+SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
 @_doc_params(
@@ -109,6 +111,7 @@ def pca(
         `None`
             See `chunked` and `zero_center` descriptions to determine which class will be used.
             Depending on the class and the type of X different values for default will be set.
+            For sparse *dask* arrays, will use `'covariance_eigh'`.
             If *scikit-learn* :class:`~sklearn.decomposition.PCA` is used, will give `'arpack'`,
             if *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` is used, will give `'randomized'`,
             if *dask-ml* :class:`~dask_ml.decomposition.PCA` or :class:`~dask_ml.decomposition.IncrementalPCA` is used, will give `'auto'`,
@@ -116,15 +119,15 @@ def pca(
         `'arpack'`
             for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
             Not available with *dask* arrays.
+        `'covariance_eigh'`
+            Classic eigendecomposition of the covariance matrix, suited for tall-and-skinny matrices.
         `'randomized'`
             for the randomized algorithm due to Halko (2009). For *dask* arrays,
             this will use :func:`~dask.array.linalg.svd_compressed`.
         `'auto'`
             chooses automatically depending on the size of the problem.
-        `'lobpcg'`
-            An alternative SciPy solver. Not available with dask arrays.
         `'tsqr'`
-            Only available with *dask* arrays. "tsqr"
+            Only available with dense *dask* arrays. "tsqr"
             algorithm from Benson et. al. (2013).
 
         .. versionchanged:: 1.9.3
@@ -133,9 +136,10 @@ def pca(
            Default value changed from `'auto'` to `'arpack'`.
 
         Efficient computation of the principal components of a sparse matrix
-        currently only works with the `'arpack`' or `'lobpcg'` solvers.
+        currently only works with the `'arpack`' or `'covariance_eigh`' solver.
 
-        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
+        If X is a sparse *dask* array, a custom `'covariance_eigh'` solver will be used.
+        If X is a dense *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
         :class:`~dask_ml.decomposition.IncrementalPCA`, or
         :class:`~dask_ml.decomposition.TruncatedSVD` will be used.
         Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`,
@@ -323,7 +327,7 @@ def pca(
                 if random_state != 0:
                     msg = f"Ignoring {random_state=} when using a sparse dask array"
                     warnings.warn(msg)
-                if svd_solver not in {None, "arpack", "auto"}:
+                if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
                     warnings.warn(msg)
                 pca_ = PCASparseDask(n_components=n_comps)
