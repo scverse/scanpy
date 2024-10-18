@@ -560,19 +560,24 @@ needs_anndata_dask = pytest.mark.skipif(
 
 @needs.dask
 @needs_anndata_dask
-def test_covariance_eigh_impls():
-    adata_mem = pbmc3k_normalized()
-    adata_dask = adata_mem.copy()
-    adata_dask.X = DASK_CONVERTERS[_helpers.as_sparse_dask_array](adata_dask.X)
+@pytest.mark.parametrize(
+    "other_array_type",
+    [lambda x: x.toarray(), DASK_CONVERTERS[_helpers.as_sparse_dask_array]],
+    ids=["dense-mem", "sparse-dask"],
+)
+def test_covariance_eigh_impls(other_array_type):
+    warnings.filterwarnings("error")
 
-    sc.pp.pca(adata_mem, svd_solver="covariance_eigh")
-    sc.pp.pca(adata_dask, svd_solver="covariance_eigh")
+    adata_sparse_mem = pbmc3k_normalized()[:200, :100].copy()
+    adata_other = adata_sparse_mem.copy()
+    adata_other.X = other_array_type(adata_other.X)
 
-    assert (
-        np.linalg.norm(
-            np.abs(adata_mem.obsm["X_pca"]) - np.abs(adata_dask.obsm["X_pca"].compute())
-        )
-        < 2e-05
+    sc.pp.pca(adata_sparse_mem, svd_solver="covariance_eigh")
+    sc.pp.pca(adata_other, svd_solver="covariance_eigh")
+
+    to_memory(adata_other)
+    np.testing.assert_allclose(
+        np.abs(adata_sparse_mem.obsm["X_pca"]), np.abs(adata_other.obsm["X_pca"])
     )
 
 

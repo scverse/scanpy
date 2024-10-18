@@ -44,10 +44,14 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCASklearn = Literal["auto", "full", "arpack", "covariance_eigh", "randomized"]
+SvdSolvPCADenseSklearn = Literal[
+    "auto", "full", "arpack", "covariance_eigh", "randomized"
+]
+SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
-SvdSolvPCASparseSklearn = Literal["arpack"]
-SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
+SvdSolvSkearn = (
+    SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
+)
 
 SvdSolvPCACustom = Literal["covariance_eigh"]
 
@@ -459,7 +463,7 @@ def _handle_dask_ml_args(
 def _handle_dask_ml_args(
     svd_solver: str | None, method: type[dmld.TruncatedSVD]
 ) -> SvdSolvTruncatedSVDDaskML: ...
-def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> str:
+def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> SvdSolvDaskML:
     import dask_ml.decomposition as dmld
 
     args: tuple[SvdSolvDaskML, ...]
@@ -484,14 +488,14 @@ def _handle_sklearn_args(
 @overload
 def _handle_sklearn_args(
     svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[False]
-) -> SvdSolvPCASklearn: ...
+) -> SvdSolvPCADenseSklearn: ...
 @overload
 def _handle_sklearn_args(
     svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[True]
 ) -> SvdSolvPCASparseSklearn: ...
 def _handle_sklearn_args(
     svd_solver: str | None, method: MethodSklearn, *, sparse: bool | None = None
-) -> str:
+) -> SvdSolvSkearn:
     import sklearn.decomposition as skld
 
     args: tuple[SvdSolvSkearn, ...]
@@ -502,7 +506,7 @@ def _handle_sklearn_args(
             args = get_args(SvdSolvTruncatedSVDSklearn)
             default = "randomized"
         case (skld.PCA, False):
-            args = get_args(SvdSolvPCASklearn)
+            args = get_args(SvdSolvPCADenseSklearn)
             default = "arpack"
         case (skld.PCA, True):
             args = get_args(SvdSolvPCASparseSklearn)
