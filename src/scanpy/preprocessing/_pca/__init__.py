@@ -20,9 +20,11 @@ from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Mapping
+    from collections.abc import Container
     from typing import LiteralString, TypeVar
 
+    import dask_ml.decomposition as dmld
+    import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
     from scipy import sparse
     from scipy.sparse import spmatrix
@@ -30,6 +32,9 @@ if TYPE_CHECKING:
     from ..._utils import AnyRandom, Empty
 
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
+    MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
+    MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
 
     T = TypeVar("T", bound=LiteralString)
     M = TypeVar("M", bound=LiteralString)
@@ -45,9 +50,6 @@ SvdSolvPCASparseSklearn = Literal["arpack"]
 SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
 
 SvdSolver = SvdSolvDaskML | SvdSolvSkearn
-
-MethodDaskML = Literal["PCA", "IncrementalPCA", "TruncatedSVD"]
-MethodSklearn = Literal["PCA", "TruncatedSVD", "PCA (with sparse input)"]
 
 
 @_doc_params(
@@ -267,7 +269,7 @@ def pca(
             from dask_ml.decomposition import IncrementalPCA
 
             incremental_pca_kwargs["svd_solver"] = _handle_dask_ml_args(
-                svd_solver, "IncrementalPCA"
+                svd_solver, IncrementalPCA
             )
         else:
             from numpy import zeros
@@ -309,13 +311,11 @@ def pca(
             if isinstance(X, DaskArray):
                 from dask_ml.decomposition import PCA
 
-                svd_solver = _handle_dask_ml_args(svd_solver, "PCA")
+                svd_solver = _handle_dask_ml_args(svd_solver, PCA)
             else:
                 from sklearn.decomposition import PCA
 
-                svd_solver = _handle_sklearn_args(
-                    svd_solver, "PCA (with sparse input)" if issparse(X) else "PCA"
-                )
+                svd_solver = _handle_sklearn_args(svd_solver, PCA, sparse=issparse(X))
 
             pca_ = PCA(
                 n_components=n_comps, svd_solver=svd_solver, random_state=random_state
@@ -325,11 +325,11 @@ def pca(
         if isinstance(X, DaskArray):
             from dask_ml.decomposition import TruncatedSVD
 
-            svd_solver = _handle_dask_ml_args(svd_solver, "TruncatedSVD")
+            svd_solver = _handle_dask_ml_args(svd_solver, TruncatedSVD)
         else:
             from sklearn.decomposition import TruncatedSVD
 
-            svd_solver = _handle_sklearn_args(svd_solver, "TruncatedSVD")
+            svd_solver = _handle_sklearn_args(svd_solver, TruncatedSVD)
 
         logg.debug(
             "    without zero-centering: \n"
@@ -430,65 +430,82 @@ def _handle_mask_var(
 
 @overload
 def _handle_dask_ml_args(
-    svd_solver: str | None, method: Literal["PCA", "IncrementalPCA"]
+    svd_solver: str | None, method: type[dmld.PCA | dmld.IncrementalPCA]
 ) -> SvdSolvPCADaskML: ...
 @overload
 def _handle_dask_ml_args(
-    svd_solver: str | None, method: Literal["TruncatedSVD"]
+    svd_solver: str | None, method: type[dmld.TruncatedSVD]
 ) -> SvdSolvTruncatedSVDDaskML: ...
 def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> str:
-    method2args: dict[MethodDaskML, tuple[SvdSolvDaskML, ...]] = {
-        "PCA": get_args(SvdSolvPCADaskML),
-        "IncrementalPCA": get_args(SvdSolvPCADaskML),
-        "TruncatedSVD": get_args(SvdSolvTruncatedSVDDaskML),
-    }
-    method2default: dict[MethodDaskML, SvdSolvDaskML] = {
-        "PCA": "auto",
-        "IncrementalPCA": "auto",
-        "TruncatedSVD": "tsqr",
-    }
-    return _handle_x_args("dask_ml", svd_solver, method, method2args, method2default)
+    import dask_ml.decomposition as dmld
+
+    args: tuple[SvdSolvDaskML, ...]
+    default: SvdSolvDaskML
+    match method:
+        case dmld.PCA | dmld.IncrementalPCA:
+            args = get_args(SvdSolvPCADaskML)
+            default = "auto"
+        case dmld.TruncatedSVD:
+            args = get_args(SvdSolvTruncatedSVDDaskML)
+            default = "tsqr"
+        case _:
+            msg = f"Unknown {method=} in _handle_dask_ml_args"
+            raise ValueError(msg)
+    return _handle_x_args(svd_solver, method, args, default)
 
 
 @overload
 def _handle_sklearn_args(
-    svd_solver: str | None, method: Literal["PCA"]
-) -> SvdSolvPCASklearn: ...
-@overload
-def _handle_sklearn_args(
-    svd_solver: str | None, method: Literal["TruncatedSVD"]
+    svd_solver: str | None, method: type[skld.TruncatedSVD], *, sparse: None = None
 ) -> SvdSolvTruncatedSVDSklearn: ...
 @overload
 def _handle_sklearn_args(
-    svd_solver: str | None, method: Literal["PCA (with sparse input)"]
+    svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[False]
+) -> SvdSolvPCASklearn: ...
+@overload
+def _handle_sklearn_args(
+    svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[True]
 ) -> SvdSolvPCASparseSklearn: ...
-def _handle_sklearn_args(svd_solver: str | None, method: MethodSklearn) -> str:
-    method2args: dict[MethodSklearn, tuple[SvdSolvSkearn, ...]] = {
-        "PCA": get_args(SvdSolvPCASklearn),
-        "TruncatedSVD": get_args(SvdSolvTruncatedSVDSklearn),
-        "PCA (with sparse input)": get_args(SvdSolvPCASparseSklearn),
-    }
-    method2default: dict[MethodSklearn, SvdSolvSkearn] = {
-        "PCA": "arpack",
-        "TruncatedSVD": "randomized",
-        "PCA (with sparse input)": "arpack",
-    }
-    return _handle_x_args("sklearn", svd_solver, method, method2args, method2default)
+def _handle_sklearn_args(
+    svd_solver: str | None, method: MethodSklearn, *, sparse: bool | None = None
+) -> str:
+    import sklearn.decomposition as skld
+
+    args: tuple[SvdSolvSkearn, ...]
+    default: SvdSolvSkearn
+    suffix = ""
+    match (method, sparse):
+        case (skld.TruncatedSVD, None):
+            args = get_args(SvdSolvTruncatedSVDSklearn)
+            default = "randomized"
+        case (skld.PCA, False):
+            args = get_args(SvdSolvPCASklearn)
+            default = "arpack"
+        case (skld.PCA, True):
+            args = get_args(SvdSolvPCASparseSklearn)
+            default = "arpack"
+            suffix = " (with sparse input)"
+        case _:
+            msg = f"Unknown {method=} ({sparse=}) in _handle_sklearn_args"
+            raise ValueError(msg)
+
+    return _handle_x_args(svd_solver, method, args, default, suffix=suffix)
 
 
 def _handle_x_args(
-    lib: str,
     svd_solver: str | None,
-    method: M,
-    method2args: Mapping[M, Container[T]],
-    method2default: Mapping[M, T],
+    method: type,
+    args: Container[T],
+    default: T,
+    *,
+    suffix: str = "",
 ) -> T:
-    if svd_solver not in method2args[method]:
-        if svd_solver is not None:
-            msg = (
-                f"Ignoring {svd_solver=} and using {method2default[method]}, "
-                f"{lib}.decomposition.{method} only supports {method2args[method]}."
-            )
-            warnings.warn(msg)
-        svd_solver = method2default[method]
-    return svd_solver
+    if svd_solver in args:
+        return svd_solver
+    if svd_solver is not None:
+        msg = (
+            f"Ignoring {svd_solver=} and using {default}, "
+            f"{method.__module__}.{method.__qualname__}{suffix} only supports {args}."
+        )
+        warnings.warn(msg)
+    return default
