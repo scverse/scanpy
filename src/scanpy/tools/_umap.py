@@ -56,6 +56,7 @@ def umap(
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
+    parallel: bool = False,
 ) -> AnnData | None:
     """\
     Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
@@ -146,6 +147,8 @@ def umap(
         :attr:`~anndata.AnnData.obsp`\\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
     copy
         Return a copy instead of writing to adata.
+    parallel
+        Whether to run the computation using numba parallel. Running in parallel is non-deterministic, and is not used if a random seed has been set, to ensure reproducibility.
 
     Returns
     -------
@@ -232,6 +235,7 @@ def umap(
             densmap_kwds={},
             output_dens=False,
             verbose=settings.verbosity > 3,
+            parallel=parallel,
         )
     elif method == "rapids":
         msg = (
