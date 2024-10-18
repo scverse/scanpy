@@ -126,8 +126,7 @@ doc = [
     "sphinxcontrib-bibtex",
     "setuptools",
     # TODO: remove necessity for being able to import doc-linked classes
-    "dask",
-    "scanpy[paga]",
+    "scanpy[paga,dask-ml]",
     "sam-algorithm",
 ]
 dev = [
