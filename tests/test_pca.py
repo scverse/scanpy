@@ -116,7 +116,7 @@ def pca_params(
 ):
     all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
 
-    expected_warning = None
+    warn_pat_expected = None
     svd_solver = None
     if svd_solver_type is not None:
         match array_type, zero_center:
@@ -136,7 +136,7 @@ def pca_params(
                 pytest.fail(f"Unknown array type {array_type}")
         if svd_solver_type == "invalid":
             svd_solver = all_svd_solvers - svd_solver
-            expected_warning = "Ignoring"
+            warn_pat_expected = r"Ignoring"
 
         svd_solver = random.choice(list(svd_solver))
     # explicit check for special case
@@ -145,18 +145,18 @@ def pca_params(
         and zero_center
         and svd_solver == "lobpcg"
     ):
-        expected_warning = "legacy code"
+        warn_pat_expected = r"legacy code"
 
-    return (svd_solver, expected_warning)
+    return (svd_solver, warn_pat_expected)
 
 
 def test_pca_warnings(array_type, zero_center, pca_params):
-    svd_solver, expected_warning = pca_params
+    svd_solver, warn_pat_expected = pca_params
     A = array_type(A_list).astype("float32")
     adata = AnnData(A)
 
-    if expected_warning is not None:
-        with pytest.warns((UserWarning, FutureWarning), match=expected_warning):
+    if warn_pat_expected is not None:
+        with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
         return
 

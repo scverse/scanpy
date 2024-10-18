@@ -297,7 +297,10 @@ def pca(
                     warnings.warn(msg)
                 svd_solver = "arpack"
             elif svd_solver == "lobpcg":
-                msg = f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future."
+                msg = (
+                    f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
+                    "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
+                )
                 warnings.warn(msg, FutureWarning)
             X_pca, pca_ = _pca_compat_sparse(
                 X, n_comps, solver=svd_solver, random_state=random_state
