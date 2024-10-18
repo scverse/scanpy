@@ -551,7 +551,15 @@ def test_pca_layer():
     np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
 
 
+# Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
+needs_anndata_dask = pytest.mark.skipif(
+    pkg_version("anndata") < Version("0.10"),
+    reason="Old AnnData doesn’t have dask test helpers",
+)
+
+
 @needs.dask
+@needs_anndata_dask
 def test_covariance_eigh_impls():
     adata_mem = pbmc3k_normalized()
     adata_dask = adata_mem.copy()
@@ -569,11 +577,7 @@ def test_covariance_eigh_impls():
 
 
 @needs.dask
-# Skipping this test during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
-@pytest.mark.skipif(
-    pkg_version("anndata") < Version("0.10"),
-    reason="Old AnnData doesn’t have dask test helpers",
-)
+@needs_anndata_dask
 @pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [
