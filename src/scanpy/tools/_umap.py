@@ -148,8 +148,7 @@ def umap(
     copy
         Return a copy instead of writing to adata.
     parallel
-        Whether to run the computation using numba parallel. Running in parallel is non-deterministic, and is not used if a random seed has been set, to ensure reproducibility.
-
+        Whether to run the computation using numba parallel. Running in parallel is non-deterministic.
     Returns
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
