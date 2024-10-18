@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import warnings
 from contextlib import nullcontext
 from functools import wraps
@@ -9,10 +10,8 @@ import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import (
-    asarray,
-    assert_equal,
-)
+from anndata.tests import helpers
+from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 from scipy import sparse
 from scipy.sparse import issparse
@@ -117,77 +116,58 @@ def pca_params(
 ):
     all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
 
-    expected_warning = None
+    warn_pat_expected = None
     svd_solver = None
     if svd_solver_type is not None:
-        if array_type in DASK_CONVERTERS.values():
-            svd_solver = (
-                {"auto", "full", "tsqr", "randomized"}
-                if zero_center
-                else {"tsqr", "randomized"}
-            )
-        elif array_type in {sparse.csr_matrix, sparse.csc_matrix}:
-            svd_solver = (
-                {"lobpcg", "arpack"} if zero_center else {"arpack", "randomized"}
-            )
-        elif array_type is asarray:
-            svd_solver = (
-                {"auto", "full", "arpack", "randomized"}
-                if zero_center
-                else {"arpack", "randomized"}
-            )
-        else:
-            pytest.fail(f"Unknown array type {array_type}")
+        match array_type, zero_center:
+            case (dc, True) if dc in DASK_CONVERTERS.values():
+                svd_solver = {"auto", "full", "tsqr", "randomized"}
+            case (dc, False) if dc in DASK_CONVERTERS.values():
+                svd_solver = {"tsqr", "randomized"}
+            case ((sparse.csr_matrix | sparse.csc_matrix), True):
+                svd_solver = {"arpack"}
+            case ((sparse.csr_matrix | sparse.csc_matrix), False):
+                svd_solver = {"arpack", "randomized"}
+            case (helpers.asarray, True):
+                svd_solver = {"auto", "full", "arpack", "randomized"}
+            case (helpers.asarray, False):
+                svd_solver = {"arpack", "randomized"}
+            case _:
+                pytest.fail(f"Unknown array type {array_type}")
         if svd_solver_type == "invalid":
             svd_solver = all_svd_solvers - svd_solver
-            expected_warning = "Ignoring"
+            warn_pat_expected = r"Ignoring"
 
-        svd_solver = np.random.choice(list(svd_solver))
+        svd_solver = random.choice(list(svd_solver))
     # explicit check for special case
     if (
-        svd_solver == "randomized"
+        array_type in {sparse.csr_matrix, sparse.csc_matrix}
         and zero_center
-        and array_type in [sparse.csr_matrix, sparse.csc_matrix]
+        and svd_solver == "lobpcg"
     ):
-        expected_warning = "not work with sparse input"
+        warn_pat_expected = r"legacy code"
 
-    return (svd_solver, expected_warning)
+    return (svd_solver, warn_pat_expected)
 
 
 def test_pca_warnings(array_type, zero_center, pca_params):
-    svd_solver, expected_warning = pca_params
+    svd_solver, warn_pat_expected = pca_params
     A = array_type(A_list).astype("float32")
     adata = AnnData(A)
 
-    if expected_warning is not None:
-        with pytest.warns(UserWarning, match=expected_warning):
+    if warn_pat_expected is not None:
+        with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):
+            warnings.filterwarnings(
+                "ignore", r".*Using a dense eigensolver instead of LOBPCG", UserWarning
+            )
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
         return
 
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            warnings.filterwarnings(
-                "ignore",
-                "pkg_resources is deprecated as an API",
-                DeprecationWarning,
-            )
-            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
-    except UserWarning:
-        # TODO: Fix this case, maybe by increasing test data size.
-        # https://github.com/scverse/scanpy/issues/2744
-        if svd_solver == "lobpcg":
-            pytest.xfail(reason="lobpcg doesn’t work with this small test data")
-        raise
-
-
-# This warning test is out of the fixture because it is a special case in the logic of the function
-def test_pca_warnings_sparse():
-    for array_type in (sparse.csr_matrix, sparse.csc_matrix):
-        A = array_type(A_list).astype("float32")
-        adata = AnnData(A)
-        with pytest.warns(UserWarning, match="not work with sparse input"):
-            sc.pp.pca(adata, svd_solver="randomized", zero_center=True)
+    warnings.simplefilter("error")
+    warnings.filterwarnings(
+        "ignore", "pkg_resources is deprecated as an API", DeprecationWarning
+    )
+    sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
 
 
 def test_pca_transform(array_type):
@@ -206,22 +186,20 @@ def test_pca_transform_randomized(array_type):
 
     warnings.filterwarnings("error")
     with (
-        pytest.warns(
-            UserWarning, match="svd_solver 'randomized' does not work with sparse input"
-        )
+        pytest.warns(UserWarning, match="Ignoring.*'randomized'")
         if sparse.issparse(adata.X)
         else nullcontext()
     ):
         sc.pp.pca(
             adata,
-            n_comps=5,
+            n_comps=4,
             zero_center=True,
             svd_solver="randomized",
             dtype="float64",
             random_state=14,
         )
 
-    assert np.linalg.norm(A_pca_abs - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_transform_no_zero_center(array_type):
