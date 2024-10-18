@@ -10,7 +10,8 @@ import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
-from anndata.tests.helpers import asarray, assert_equal
+from anndata.tests import helpers
+from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 from scipy import sparse
 from scipy.sparse import issparse
@@ -118,22 +119,21 @@ def pca_params(
     expected_warning = None
     svd_solver = None
     if svd_solver_type is not None:
-        if array_type in DASK_CONVERTERS.values():
-            svd_solver = (
-                {"auto", "full", "tsqr", "randomized"}
-                if zero_center
-                else {"tsqr", "randomized"}
-            )
-        elif array_type in {sparse.csr_matrix, sparse.csc_matrix}:
-            svd_solver = {"arpack"} if zero_center else {"arpack", "randomized"}
-        elif array_type is asarray:
-            svd_solver = (
-                {"auto", "full", "arpack", "randomized"}
-                if zero_center
-                else {"arpack", "randomized"}
-            )
-        else:
-            pytest.fail(f"Unknown array type {array_type}")
+        match array_type, zero_center:
+            case (dc, True) if dc in DASK_CONVERTERS.values():
+                svd_solver = {"auto", "full", "tsqr", "randomized"}
+            case (dc, False) if dc in DASK_CONVERTERS.values():
+                svd_solver = {"tsqr", "randomized"}
+            case ((sparse.csr_matrix | sparse.csc_matrix), True):
+                svd_solver = {"arpack"}
+            case ((sparse.csr_matrix | sparse.csc_matrix), False):
+                svd_solver = {"arpack", "randomized"}
+            case (helpers.asarray, True):
+                svd_solver = {"auto", "full", "arpack", "randomized"}
+            case (helpers.asarray, False):
+                svd_solver = {"arpack", "randomized"}
+            case _:
+                pytest.fail(f"Unknown array type {array_type}")
         if svd_solver_type == "invalid":
             svd_solver = all_svd_solvers - svd_solver
             expected_warning = "Ignoring"
