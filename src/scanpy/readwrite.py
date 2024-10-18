@@ -10,16 +10,29 @@ import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
-from anndata import (
-    AnnData,
-    read_csv,
-    read_excel,
-    read_h5ad,
-    read_hdf,
-    read_loom,
-    read_mtx,
-    read_text,
-)
+from packaging.version import Version
+
+if Version(anndata.__version__) >= Version("0.11.0rc0"):
+    from anndata.io import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+    )
+else:
+    from anndata import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+    )
+from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
