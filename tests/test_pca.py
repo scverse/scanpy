@@ -16,6 +16,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
+from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
@@ -110,7 +111,8 @@ def array_type(request: pytest.FixtureRequest) -> ArrayType:
     return request.param
 
 
-SVDSolver = Literal["auto", "full", "arpack", "randomized", "tsqr", "lobpcg"]
+SVDSolverDeprecated = Literal["lobpcg"]
+SVDSolver = SvdSolverSupported | SVDSolverDeprecated
 
 
 def gen_pca_params(
