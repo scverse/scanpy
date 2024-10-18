@@ -157,24 +157,17 @@ def test_pca_warnings(array_type, zero_center, pca_params):
 
     if warn_pat_expected is not None:
         with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):
+            warnings.filterwarnings(
+                "ignore", r".*Using a dense eigensolver instead of LOBPCG", UserWarning
+            )
             sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
         return
 
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            warnings.filterwarnings(
-                "ignore",
-                "pkg_resources is deprecated as an API",
-                DeprecationWarning,
-            )
-            sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
-    except UserWarning:
-        # TODO: Fix this case, maybe by increasing test data size.
-        # https://github.com/scverse/scanpy/issues/2744
-        if svd_solver == "lobpcg":
-            pytest.xfail(reason="lobpcg doesn’t work with this small test data")
-        raise
+    warnings.simplefilter("error")
+    warnings.filterwarnings(
+        "ignore", "pkg_resources is deprecated as an API", DeprecationWarning
+    )
+    sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
 
 
 def test_pca_transform(array_type):
