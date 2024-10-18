@@ -88,3 +88,9 @@ def test_diffmap():
     sc.tl.diffmap(pbmc, random_state=1234)
     d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+def test_umap_parallel_randomstate():
+    pbmc = pbmc68k_reduced()[:100, :].copy()
+    sc.tl.umap(pbmc, parallel=True, random_state=42)
+    sc.tl.umap(pbmc, parallel=True, random_state=np.random.RandomState(42))
