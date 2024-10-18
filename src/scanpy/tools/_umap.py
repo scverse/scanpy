@@ -216,6 +216,12 @@ def umap(
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
+        if parallel and random_state is not None:
+            warnings.warn(
+                "Parallel execution was expected to be disabled when both `parallel=True` and `random_state` are set, "
+                "to ensure reproducibility. However, parallel execution still seems to occur, which may lead to "
+                "non-deterministic results."
+            )
         X_umap, _ = simplicial_set_embedding(
             data=X,
             graph=neighbors["connectivities"].tocoo(),
