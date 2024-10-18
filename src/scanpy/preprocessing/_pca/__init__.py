@@ -44,12 +44,18 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCASklearn = Literal["auto", "full", "arpack", "covariance_eigh", "randomized"]
+SvdSolvPCADenseSklearn = Literal[
+    "auto", "full", "arpack", "covariance_eigh", "randomized"
+]
+SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
-SvdSolvPCASparseSklearn = Literal["arpack"]
-SvdSolvSkearn = SvdSolvPCASklearn | SvdSolvTruncatedSVDSklearn | SvdSolvPCASparseSklearn
+SvdSolvSkearn = (
+    SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
+)
 
-SvdSolver = SvdSolvDaskML | SvdSolvSkearn
+SvdSolvPCACustom = Literal["covariance_eigh"]
+
+SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
 @_doc_params(
@@ -109,6 +115,7 @@ def pca(
         `None`
             See `chunked` and `zero_center` descriptions to determine which class will be used.
             Depending on the class and the type of X different values for default will be set.
+            For sparse *dask* arrays, will use `'covariance_eigh'`.
             If *scikit-learn* :class:`~sklearn.decomposition.PCA` is used, will give `'arpack'`,
             if *scikit-learn* :class:`~sklearn.decomposition.TruncatedSVD` is used, will give `'randomized'`,
             if *dask-ml* :class:`~dask_ml.decomposition.PCA` or :class:`~dask_ml.decomposition.IncrementalPCA` is used, will give `'auto'`,
@@ -124,7 +131,7 @@ def pca(
         `'auto'`
             chooses automatically depending on the size of the problem.
         `'tsqr'`
-            Only available with *dask* arrays. "tsqr"
+            Only available with dense *dask* arrays. "tsqr"
             algorithm from Benson et. al. (2013).
 
         .. versionchanged:: 1.9.3
@@ -135,7 +142,8 @@ def pca(
         Efficient computation of the principal components of a sparse matrix
         currently only works with the `'arpack`' or `'covariance_eigh`' solver.
 
-        If X is a *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
+        If X is a sparse *dask* array, a custom `'covariance_eigh'` solver will be used.
+        If X is a dense *dask* array, *dask-ml* classes :class:`~dask_ml.decomposition.PCA`,
         :class:`~dask_ml.decomposition.IncrementalPCA`, or
         :class:`~dask_ml.decomposition.TruncatedSVD` will be used.
         Otherwise their *scikit-learn* counterparts :class:`~sklearn.decomposition.PCA`,
@@ -308,21 +316,40 @@ def pca(
                 X, n_comps, solver=svd_solver, random_state=random_state
             )
         else:
-            if isinstance(X, DaskArray):
-                from dask_ml.decomposition import PCA
-
-                svd_solver = _handle_dask_ml_args(svd_solver, PCA)
-            else:
+            if not isinstance(X, DaskArray):
                 from sklearn.decomposition import PCA
 
                 svd_solver = _handle_sklearn_args(svd_solver, PCA, sparse=issparse(X))
+                pca_ = PCA(
+                    n_components=n_comps,
+                    svd_solver=svd_solver,
+                    random_state=random_state,
+                )
+            elif issparse(X._meta):
+                from ._dask_sparse import PCASparseDask
 
-            pca_ = PCA(
-                n_components=n_comps, svd_solver=svd_solver, random_state=random_state
-            )
+                if random_state != 0:
+                    msg = f"Ignoring {random_state=} when using a sparse dask array"
+                    warnings.warn(msg)
+                if svd_solver not in {None, "covariance_eigh"}:
+                    msg = f"Ignoring {svd_solver=} when using a sparse dask array"
+                    warnings.warn(msg)
+                pca_ = PCASparseDask(n_components=n_comps)
+            else:
+                from dask_ml.decomposition import PCA
+
+                svd_solver = _handle_dask_ml_args(svd_solver, PCA)
+                pca_ = PCA(
+                    n_components=n_comps,
+                    svd_solver=svd_solver,
+                    random_state=random_state,
+                )
             X_pca = pca_.fit_transform(X)
     else:
         if isinstance(X, DaskArray):
+            if issparse(X._meta):
+                msg = "Dask sparse arrays do not support zero-centering (yet)"
+                raise TypeError(msg)
             from dask_ml.decomposition import TruncatedSVD
 
             svd_solver = _handle_dask_ml_args(svd_solver, TruncatedSVD)
@@ -436,7 +463,7 @@ def _handle_dask_ml_args(
 def _handle_dask_ml_args(
     svd_solver: str | None, method: type[dmld.TruncatedSVD]
 ) -> SvdSolvTruncatedSVDDaskML: ...
-def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> str:
+def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> SvdSolvDaskML:
     import dask_ml.decomposition as dmld
 
     args: tuple[SvdSolvDaskML, ...]
@@ -461,14 +488,14 @@ def _handle_sklearn_args(
 @overload
 def _handle_sklearn_args(
     svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[False]
-) -> SvdSolvPCASklearn: ...
+) -> SvdSolvPCADenseSklearn: ...
 @overload
 def _handle_sklearn_args(
     svd_solver: str | None, method: type[skld.PCA], *, sparse: Literal[True]
 ) -> SvdSolvPCASparseSklearn: ...
 def _handle_sklearn_args(
     svd_solver: str | None, method: MethodSklearn, *, sparse: bool | None = None
-) -> str:
+) -> SvdSolvSkearn:
     import sklearn.decomposition as skld
 
     args: tuple[SvdSolvSkearn, ...]
@@ -479,7 +506,7 @@ def _handle_sklearn_args(
             args = get_args(SvdSolvTruncatedSVDSklearn)
             default = "randomized"
         case (skld.PCA, False):
-            args = get_args(SvdSolvPCASklearn)
+            args = get_args(SvdSolvPCADenseSklearn)
             default = "arpack"
         case (skld.PCA, True):
             args = get_args(SvdSolvPCASparseSklearn)
