@@ -550,6 +550,7 @@ def test_pca_layer():
 
 
 @needs.dask
+# Skipping this test during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
 @pytest.mark.skipif(
     pkg_version("anndata") < Version("0.10"),
     reason="Old AnnData doesn’t have dask test helpers",
