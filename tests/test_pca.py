@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import random
 import warnings
 from contextlib import nullcontext
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast, get_args
 
 import anndata as ad
 import numpy as np
@@ -20,15 +19,14 @@ import scanpy as sc
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL_SUPPORTED
 from testing.scanpy._pytest.params import (
-    ARRAY_TYPES,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
     param_with,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Literal
+    from collections.abc import Callable, Generator
 
     from scanpy._compat import DaskArray
 
@@ -83,75 +81,105 @@ DASK_CONVERTERS = {
 }
 
 
-@pytest.fixture(
-    params=[
-        param_with(at, marks=[needs.dask_ml]) if "dask" in at.id else at
-        for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
-    ]
-)
-def array_type(request: pytest.FixtureRequest):
+def conv_at(array_type):
     # If one uses dask for PCA it will always require dask-ml.
     # dask-ml can’t do 2D-chunked arrays, so rechunk them.
-    if as_dask_array := DASK_CONVERTERS.get(request.param):
-        return as_dask_array
+    if as_dask_array := DASK_CONVERTERS.get(array_type):
+        return (as_dask_array,)
 
     # When not using dask, just return the array type
-    assert "dask" not in request.param.__name__, "add more branches or refactor"
+    assert "dask" not in array_type.__name__, "add more branches or refactor"
+    return (array_type,)
+
+
+ARRAY_TYPES = [
+    param_with(at, conv_at, marks=[needs.dask_ml]) if "dask" in cast(str, at.id) else at
+    for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
+]
+
+
+@pytest.fixture(params=ARRAY_TYPES)
+def array_type(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(params=[None, "valid", "invalid"])
-def svd_solver_type(request: pytest.FixtureRequest):
-    return request.param
+SVDSolver = Literal["auto", "full", "arpack", "randomized", "tsqr", "lobpcg"]
 
 
-@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
-def zero_center(request: pytest.FixtureRequest):
-    return request.param
+def gen_pca_params(
+    *, array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center: bool
+) -> Generator[tuple[SVDSolver, str | None] | tuple[None, None], None, None]:
+    if svd_solver_type is None:
+        yield None, None
+        return
+
+    all_svd_solvers = set(get_args(SVDSolver))
+    svd_solvers: set[SVDSolver]
+    match array_type, zero_center:
+        case (dc, True) if dc in DASK_CONVERTERS.values():
+            svd_solvers = {"auto", "full", "tsqr", "randomized"}
+        case (dc, False) if dc in DASK_CONVERTERS.values():
+            svd_solvers = {"tsqr", "randomized"}
+        case ((sparse.csr_matrix | sparse.csc_matrix), True):
+            svd_solvers = {"arpack"}
+        case ((sparse.csr_matrix | sparse.csc_matrix), False):
+            svd_solvers = {"arpack", "randomized"}
+        case (helpers.asarray, True):
+            svd_solvers = {"auto", "full", "arpack", "randomized"}
+        case (helpers.asarray, False):
+            svd_solvers = {"arpack", "randomized"}
+        case _:
+            pytest.fail(f"Unknown array type {array_type}")
+
+    if svd_solver_type == "invalid":
+        svd_solvers = all_svd_solvers - svd_solvers
+        warn_pat_expected = r"Ignoring"
+    elif svd_solver_type == "valid":
+        warn_pat_expected = None
+    else:
+        pytest.fail(f"Unknown svd_solver_type {svd_solver_type}")
+
+    for svd_solver in svd_solvers:
+        # explicit check for special case
+        if (
+            array_type in {sparse.csr_matrix, sparse.csc_matrix}
+            and zero_center
+            and svd_solver == "lobpcg"
+        ):
+            pat = r"legacy code"
+        else:
+            pat = warn_pat_expected
+        yield (svd_solver, pat)
 
 
-@pytest.fixture
-def pca_params(
-    array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center
+@pytest.mark.parametrize(
+    ("array_type", "zero_center", "svd_solver", "warn_pat_expected"),
+    [
+        pytest.param(
+            array_type.values[0],
+            zero_center,
+            svd_solver,
+            warn_pat_expected,
+            marks=array_type.marks,
+            id=f"{array_type.id}-{'zero_center' if zero_center else 'no_zero_center'}-{svd_solver}-{warn_pat_expected}",
+        )
+        for array_type in ARRAY_TYPES
+        for zero_center in [True, False]
+        for svd_solver_type in [None, "valid", "invalid"]
+        for svd_solver, warn_pat_expected in gen_pca_params(
+            array_type=array_type.values[0],
+            zero_center=zero_center,
+            svd_solver_type=svd_solver_type,
+        )
+    ],
+)
+def test_pca_warnings(
+    *,
+    array_type,
+    zero_center: bool,
+    svd_solver: SVDSolver,
+    warn_pat_expected: str | None,
 ):
-    all_svd_solvers = {"auto", "full", "arpack", "randomized", "tsqr", "lobpcg"}
-
-    warn_pat_expected = None
-    svd_solver = None
-    if svd_solver_type is not None:
-        match array_type, zero_center:
-            case (dc, True) if dc in DASK_CONVERTERS.values():
-                svd_solver = {"auto", "full", "tsqr", "randomized"}
-            case (dc, False) if dc in DASK_CONVERTERS.values():
-                svd_solver = {"tsqr", "randomized"}
-            case ((sparse.csr_matrix | sparse.csc_matrix), True):
-                svd_solver = {"arpack"}
-            case ((sparse.csr_matrix | sparse.csc_matrix), False):
-                svd_solver = {"arpack", "randomized"}
-            case (helpers.asarray, True):
-                svd_solver = {"auto", "full", "arpack", "randomized"}
-            case (helpers.asarray, False):
-                svd_solver = {"arpack", "randomized"}
-            case _:
-                pytest.fail(f"Unknown array type {array_type}")
-        if svd_solver_type == "invalid":
-            svd_solver = all_svd_solvers - svd_solver
-            warn_pat_expected = r"Ignoring"
-
-        svd_solver = random.choice(list(svd_solver))
-    # explicit check for special case
-    if (
-        array_type in {sparse.csr_matrix, sparse.csc_matrix}
-        and zero_center
-        and svd_solver == "lobpcg"
-    ):
-        warn_pat_expected = r"legacy code"
-
-    return (svd_solver, warn_pat_expected)
-
-
-def test_pca_warnings(array_type, zero_center, pca_params):
-    svd_solver, warn_pat_expected = pca_params
     A = array_type(A_list).astype("float32")
     adata = AnnData(A)
 
@@ -331,7 +359,7 @@ def test_pca_n_pcs():
 
 # We use all ARRAY_TYPES here since this error should be raised before
 # PCA can realize that it got a Dask array
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_ALL_SUPPORTED)
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
