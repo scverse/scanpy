@@ -19,7 +19,7 @@ import scanpy as sc
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL_SUPPORTED
+from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
     param_with,
@@ -28,7 +28,12 @@ from testing.scanpy._pytest.params import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from anndata.typing import ArrayDataStructureType
+
     from scanpy._compat import DaskArray
+
+    ArrayType = Callable[[np.ndarray], ArrayDataStructureType]
+
 
 A_list = np.array(
     [
@@ -81,7 +86,7 @@ DASK_CONVERTERS = {
 }
 
 
-def conv_at(array_type):
+def maybe_convert_array_to_dask(array_type):
     # If one uses dask for PCA it will always require dask-ml.
     # dask-ml can’t do 2D-chunked arrays, so rechunk them.
     if as_dask_array := DASK_CONVERTERS.get(array_type):
@@ -93,13 +98,15 @@ def conv_at(array_type):
 
 
 ARRAY_TYPES = [
-    param_with(at, conv_at, marks=[needs.dask_ml]) if "dask" in cast(str, at.id) else at
+    param_with(at, maybe_convert_array_to_dask, marks=[needs.dask_ml])
+    if "dask" in cast(str, at.id)
+    else at
     for at in ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED
 ]
 
 
 @pytest.fixture(params=ARRAY_TYPES)
-def array_type(request: pytest.FixtureRequest):
+def array_type(request: pytest.FixtureRequest) -> ArrayType:
     return request.param
 
 
@@ -107,7 +114,10 @@ SVDSolver = Literal["auto", "full", "arpack", "randomized", "tsqr", "lobpcg"]
 
 
 def gen_pca_params(
-    *, array_type, svd_solver_type: Literal[None, "valid", "invalid"], zero_center: bool
+    *,
+    array_type: ArrayType,
+    svd_solver_type: Literal[None, "valid", "invalid"],
+    zero_center: bool,
 ) -> Generator[tuple[SVDSolver, str | None] | tuple[None, None], None, None]:
     if svd_solver_type is None:
         yield None, None
@@ -175,7 +185,7 @@ def gen_pca_params(
 )
 def test_pca_warnings(
     *,
-    array_type,
+    array_type: ArrayType,
     zero_center: bool,
     svd_solver: SVDSolver,
     warn_pat_expected: str | None,
@@ -350,9 +360,9 @@ def test_pca_n_pcs():
     )
 
 
-# We use all ARRAY_TYPES here since this error should be raised before
+# We use all possible array types here since this error should be raised before
 # PCA can realize that it got a Dask array
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_ALL_SUPPORTED)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_ALL)
 def test_mask_highly_var_error(array_type):
     """Check if use_highly_variable=True throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
