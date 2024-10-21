@@ -86,7 +86,7 @@ def highest_expr_genes(
     columns = (
         adata.var_names[top_idx]
         if gene_symbols is None
-        else adata.var[gene_symbols][top_idx]
+        else adata.var[gene_symbols].iloc[top_idx].astype("string")
     )
     counts_top_genes = pd.DataFrame(
         counts_top_genes, index=adata.obs_names, columns=columns
