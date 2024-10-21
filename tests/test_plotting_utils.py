@@ -27,3 +27,7 @@ def test_validate_palette_no_mod(palette, typ):
     adata = AnnData(uns=dict(test_colors=palette))
     _validate_palette(adata, "test")
     assert palette is adata.uns["test_colors"], "Palette should not be modified"
+
+
+def test_check_all_in_axis():
+    pass
