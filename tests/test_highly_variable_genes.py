@@ -556,6 +556,14 @@ def test_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
+def test_degenerate_batches():
+    adata = AnnData(
+        X=np.random.randn(10, 100),
+        obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
+    )
+    sc.pp.highly_variable_genes(adata, batch_key="batch")
+
+
 @needs.skmisc
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
