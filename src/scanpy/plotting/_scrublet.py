@@ -11,13 +11,13 @@ from . import _utils
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal, Union
+    from typing import Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    Scale = Union[Literal["linear", "log", "symlog", "logit"], str]
+    Scale = Literal["linear", "log", "symlog", "logit"] | str
 
 
 @old_positionals(

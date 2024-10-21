@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Collection, Mapping, Sequence
 from itertools import product
+from types import NoneType
 from typing import TYPE_CHECKING, cast, get_args
 
 import matplotlib as mpl
@@ -41,7 +42,7 @@ from ._utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Literal, Union
+    from typing import Literal
 
     from anndata import AnnData
     from cycler import Cycler
@@ -61,7 +62,7 @@ if TYPE_CHECKING:
 
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = Union[str, Sequence[str]]
+    _VarNames = str | Sequence[str]
 
 
 VALID_LEGENDLOCS = frozenset(get_args(_utils._LegendLoc))
@@ -836,7 +837,7 @@ def violin(
     density_norm = _deprecated_scale(density_norm, scale, default="width")
     del scale
 
-    if isinstance(ylabel, (str, type(None))):
+    if isinstance(ylabel, str | NoneType):
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
     if groupby is None:
         if len(ylabel) != 1:
@@ -1017,7 +1018,7 @@ def clustermap(
     """
     import seaborn as sns  # Slow import, only import if called
 
-    if not isinstance(obs_keys, (str, type(None))):
+    if not isinstance(obs_keys, str | NoneType):
         raise ValueError("Currently, only a single key is supported.")
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)

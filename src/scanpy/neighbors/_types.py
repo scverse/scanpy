@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, Protocol, Union
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
 
@@ -42,7 +42,7 @@ _MetricScipySpatial = Literal[
     "sqeuclidean",
     "yule",
 ]
-_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
+_Metric = _MetricSparseCapable | _MetricScipySpatial
 
 
 class KnnTransformerLike(Protocol):
