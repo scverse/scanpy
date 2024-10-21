@@ -33,7 +33,7 @@ set_figure_params = settings.set_figure_params
 
 import anndata
 
-if Version(anndata.__version__) >= Version("0.11.0rc0"):
+if Version(anndata.__version__) >= Version("0.11.0rc2"):
     from anndata.io import (
         read_csv,
         read_excel,
