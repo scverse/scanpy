@@ -180,10 +180,10 @@ def _check_if_annotations(
     adata: AnnData,
     axis_name: Literal["obs", "var"],
     *,
-    x: str | None,
-    y: str | None,
-    colors: Collection[str | ColorLike] | None,
-    use_raw: bool | None,
+    x: str | None = None,
+    y: str | None = None,
+    colors: Collection[str | ColorLike] | None = None,
+    use_raw: bool | None = None,
 ) -> bool:
     """Checks if `x`, `y`, and `colors` are annotations of `adata`.
     In the case of `colors`, valid matplotlib colors are also accepted.
