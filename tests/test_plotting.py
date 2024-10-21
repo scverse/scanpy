@@ -1338,7 +1338,10 @@ def test_scatter_specify_layer_and_raw():
 
 
 @pytest.mark.parametrize("color", ["n_genes", "bulk_labels"])
-def test_scatter_no_basis_per_obs(image_comparer, color):
+@pytest.mark.parametrize(
+    "color_type", [lambda c: c, lambda c: [c]], ids=["str", "list"]
+)
+def test_scatter_no_basis_per_obs(image_comparer, color, color_type):
     """Test scatterplot of per-obs points with no basis"""
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -1348,7 +1351,7 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
         pbmc,
         x="HES4",
         y="percent_mito",
-        color=color,
+        color=color_type(color),
         use_raw=False,
         # palette only applies to categorical, i.e. color=='bulk_labels'
         palette="Set2",
@@ -1373,29 +1376,19 @@ def pbmc_filtered() -> Callable[[], AnnData]:
     return pbmc.copy
 
 
-def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
+@pytest.mark.parametrize("use_raw", [True, None])
+def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw):
+    """Test scatterplots of raw layer with no basis."""
     adata = pbmc_filtered()
 
-    """Test scatterplots of raw layer with no basis."""
-    path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
-    path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
-    path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
-
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=None)
-    plt.savefig(path1)
-    plt.close()
-
-    # is equivalent to:
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=True)
-    plt.savefig(path2)
-    plt.close()
-
-    # and also to:
     sc.pl.scatter(adata.raw.to_adata(), x="EGFL7", y="F12", color="FAM185A")
-    plt.savefig(path3)
+    plt.savefig(path1 := tmp_path / "scatter-raw-to-adata.png")
+
+    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=use_raw)
+    plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
+    plt.close()
 
     check_same_image(path1, path2, tol=15)
-    check_same_image(path1, path3, tol=15)
 
 
 @pytest.mark.parametrize(
