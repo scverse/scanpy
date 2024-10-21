@@ -40,7 +40,8 @@ def _get_mean_var(
         mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
-    var *= X.shape[axis] / (X.shape[axis] - 1)
+    if X.shape[axis] != 1:
+        var *= X.shape[axis] / (X.shape[axis] - 1)
     return mean, var
 
 
