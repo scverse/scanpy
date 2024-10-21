@@ -1337,11 +1337,10 @@ def test_scatter_specify_layer_and_raw():
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
-@pytest.mark.parametrize("color", ["n_genes", "bulk_labels"])
 @pytest.mark.parametrize(
-    "color_type", [lambda c: c, lambda c: [c]], ids=["str", "list"]
+    "color", ["n_genes", "bulk_labels", ["n_genes", "bulk_labels"]]
 )
-def test_scatter_no_basis_per_obs(image_comparer, color, color_type):
+def test_scatter_no_basis_per_obs(image_comparer, color):
     """Test scatterplot of per-obs points with no basis"""
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -1351,12 +1350,13 @@ def test_scatter_no_basis_per_obs(image_comparer, color, color_type):
         pbmc,
         x="HES4",
         y="percent_mito",
-        color=color_type(color),
+        color=color,
         use_raw=False,
         # palette only applies to categorical, i.e. color=='bulk_labels'
         palette="Set2",
     )
-    save_and_compare_images(f"scatter_HES_percent_mito_{color}")
+    color_str = color if isinstance(color, str) else "_".join(color)
+    save_and_compare_images(f"scatter_HES_percent_mito_{color_str}")
 
 
 def test_scatter_no_basis_per_var(image_comparer):
