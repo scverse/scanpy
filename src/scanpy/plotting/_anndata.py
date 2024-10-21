@@ -164,7 +164,7 @@ def scatter(
     if _check_if_annotations(adata, "obs", x=x, y=y, colors=color, use_raw=use_raw):
         return _scatter_obs(**args)
     if _check_if_annotations(adata, "var", x=x, y=y, colors=color, use_raw=use_raw):
-        args_t = { **args, "adata": adata.T }
+        args_t = {**args, "adata": adata.T}
         axs = _scatter_obs(**args_t)
         # store .uns annotations that were added to the new adata object
         adata.uns = args_t["adata"].uns
