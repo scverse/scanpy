@@ -625,23 +625,46 @@ def normalize_per_cell(
 DT = TypeVar("DT")
 
 
-@numba.njit(cache=True, parallel=True)
 def to_dense(
-    shape: tuple[int, int],
-    indptr: NDArray[np.integer],
-    indices: NDArray[np.integer],
-    data: NDArray[DT],
+    X: sp.sparse.spmatrix,
 ) -> NDArray[DT]:
     """\
     Numba kernel for np.toarray() function
     """
-    X = np.empty(shape, dtype=data.dtype)
+    order = "C" if X.format == "csr" else "F"
+    out = np.empty(X.shape, dtype=X.dtype, order=order)
+    if X.format == "csr":
+        _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
+    elif X.format == "csc":
+        _to_dense_csc_numba(X.indptr, X.indices, X.data, out,X.shape)
+    else:
+        out = X.toarray()
+    return out
 
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csc_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+):
+    for c in numba.prange(X.shape[1]):
+        for i in range(indptr[c], indptr[c + 1]):
+            X[indices[i], c] = data[i]
+
+
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csr_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+):
     for r in numba.prange(shape[0]):
-        X[r] = 0
         for i in range(indptr[r], indptr[r + 1]):
             X[r, indices[i]] = data[i]
-    return X
 
 
 def numpy_regress_out(
@@ -720,7 +743,7 @@ def regress_out(
 
     if issparse(X):
         logg.info("    sparse input is densified and may " "lead to high memory use")
-        X = to_dense(X.shape, X.indptr, X.indices, X.data)
+        X = to_dense(X)
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -784,7 +807,7 @@ def regress_out(
 
         # res is a list of vectors (each corresponding to a regressed gene column).
         # The transpose is needed to get the matrix in the shape needed
-        
+
         res = np.vstack(res).T
 
     _set_obs_rep(adata, res, layer=layer)
