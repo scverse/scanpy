@@ -58,7 +58,7 @@ class PCASparseDask:
             msg = (
                 "Only dask arrays with chunking along the first axis are supported. "
                 f"Got chunksize {x.chunksize} with shape {x.shape}. "
-                "Rechunking should be simple and cost nothing from AnnData's on-disk format the on-disk layout has this chunking."
+                "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
             )
             raise ValueError(msg)
         self.__class__ = PCASparseDaskFit
