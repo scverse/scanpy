@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8
+    rev: v0.7.0
     hooks:
     -   id: ruff
         types_or: [python, pyi, jupyter]
@@ -20,7 +20,7 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
     -   id: trailing-whitespace
         exclude: tests/_data
