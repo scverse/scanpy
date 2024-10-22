@@ -622,6 +622,7 @@ def normalize_per_cell(
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
     return X if copy else None
 
+
 DT = TypeVar("DT")
 
 
@@ -636,10 +637,11 @@ def to_dense(
     if X.format == "csr":
         _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
     elif X.format == "csc":
-        _to_dense_csc_numba(X.indptr, X.indices, X.data, out,X.shape)
+        _to_dense_csc_numba(X.indptr, X.indices, X.data, out, X.shape)
     else:
         out = X.toarray()
     return out
+
 
 @numba.njit(cache=True, parallel=True)
 def _to_dense_csc_numba(
@@ -690,6 +692,7 @@ def numpy_regress_out(
     coeff = inv_gram_matrix @ (regressor.T @ data)
     data = get_resid(data, regressor, coeff)
     return data
+
 
 @old_positionals("layer", "n_jobs", "copy")
 def regress_out(
