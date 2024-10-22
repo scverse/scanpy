@@ -627,7 +627,7 @@ DT = TypeVar("DT")
 
 
 def to_dense(
-    X: sp.sparse.spmatrix,
+    X: spmatrix,
 ) -> NDArray[DT]:
     """\
     Numba kernel for np.toarray() function
