@@ -650,7 +650,7 @@ def _to_dense_csc_numba(
     data: NDArray,
     X: NDArray,
     shape: tuple[int, int],
-):
+) -> None:
     for c in numba.prange(X.shape[1]):
         for i in range(indptr[c], indptr[c + 1]):
             X[indices[i], c] = data[i]
@@ -663,10 +663,21 @@ def _to_dense_csr_numba(
     data: NDArray,
     X: NDArray,
     shape: tuple[int, int],
-):
+) -> None:
     for r in numba.prange(shape[0]):
         for i in range(indptr[r], indptr[r + 1]):
             X[r, indices[i]] = data[i]
+
+
+@numba.njit(cache=True, parallel=True)
+def get_resid(
+    data: np.ndarray,
+    regressor: np.ndarray,
+    coeff: np.ndarray,
+) -> np.ndarray:
+    for i in numba.prange(data.shape[0]):
+        data[i] -= regressor[i] @ coeff
+    return data
 
 
 def numpy_regress_out(
@@ -677,17 +688,6 @@ def numpy_regress_out(
     Numba kernel for regress out unwanted sorces of variantion.
     Finding coefficient using Linear regression (Linear Least Squares).
     """
-
-    @numba.njit(cache=True, parallel=True)
-    def get_resid(
-        data: np.ndarray,
-        regressor: np.ndarray,
-        coeff: np.ndarray,
-    ) -> np.ndarray:
-        for i in numba.prange(data.shape[0]):
-            data[i] -= regressor[i] @ coeff
-        return data
-
     inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
     coeff = inv_gram_matrix @ (regressor.T @ data)
     data = get_resid(data, regressor, coeff)
