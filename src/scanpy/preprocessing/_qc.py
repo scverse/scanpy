@@ -9,7 +9,10 @@ import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
-from .._utils import _doc_params
+from scanpy.preprocessing._utils import _get_mean_var
+
+from .._compat import DaskArray
+from .._utils import _doc_params, axis_sum
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -106,13 +109,20 @@ def describe_obs(
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     if issparse(X):
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
+    elif isinstance(X, DaskArray) and issparse(X._meta):
+        obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.map_blocks(
+            lambda x: x.getnnz(axis=1),
+            dtype=np.int64,
+            meta=np.array([], dtype=np.int64),
+            drop_axis=1,
+        ).compute()
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
     if log1p:
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
         )
-    obs_metrics[f"total_{expr_type}"] = np.ravel(X.sum(axis=1))
+    obs_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=1))
     if log1p:
         obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             obs_metrics[f"total_{expr_type}"]
@@ -126,7 +136,7 @@ def describe_obs(
             )
     for qc_var in qc_vars:
         obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
-            X[:, adata.var[qc_var].values].sum(axis=1)
+            axis_sum(X[:, adata.var[qc_var].values], axis=1)
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -141,6 +151,7 @@ def describe_obs(
         adata.obs[obs_metrics.columns] = obs_metrics
     else:
         return obs_metrics
+    return None
 
 
 @_doc_params(
@@ -191,7 +202,15 @@ def describe_var(
         if issparse(X):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
-    if issparse(X):
+    if isinstance(X, DaskArray) and issparse(X._meta):
+        var_metrics["n_cells_by_{expr_type}"] = X.map_blocks(
+            lambda x: x.getnnz(axis=0),
+            dtype=np.int64,
+            meta=np.array([], dtype=np.int64),
+            drop_axis=0,
+        ).compute()
+        var_metrics["mean_{expr_type}"] = _get_mean_var(X, axis=0)[0].compute()
+    elif issparse(X):
         # Current memory bottleneck for csr matrices:
         var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
         var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
@@ -205,7 +224,7 @@ def describe_var(
     var_metrics["pct_dropout_by_{expr_type}"] = (
         1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
-    var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
+    var_metrics["total_{expr_type}"] = np.ravel(axis_sum(X, axis=0))
     if log1p:
         var_metrics["log1p_total_{expr_type}"] = np.log1p(
             var_metrics["total_{expr_type}"]
@@ -219,6 +238,7 @@ def describe_var(
         adata.var[var_metrics.columns] = var_metrics
     else:
         return var_metrics
+    return None
 
 
 @_doc_params(
@@ -405,6 +425,10 @@ def top_segment_proportions(
     # Pretty much just does dispatch
     if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
         raise IndexError("Positions outside range of features.")
+    if isinstance(mtx, DaskArray):
+        return mtx.map_blocks(
+            lambda x: top_segment_proportions(mtx=x, ns=ns), meta=np.array([])
+        ).compute()
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
@@ -413,9 +437,7 @@ def top_segment_proportions(
         return top_segment_proportions_dense(mtx, ns)
 
 
-def top_segment_proportions_dense(
-    mtx: np.ndarray | spmatrix, ns: Collection[int]
-) -> np.ndarray:
+def top_segment_proportions_dense(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
@@ -432,7 +454,7 @@ def top_segment_proportions_dense(
     return values / sums[:, None]
 
 
-@numba.njit(cache=True, parallel=True)
+# @numba.njit(cache=True, parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
     # work around https://github.com/numba/numba/issues/5056
     indptr = indptr.astype(np.int64)

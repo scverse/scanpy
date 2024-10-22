@@ -7,12 +7,15 @@ from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
+from scanpy._utils import axis_sum
 from scanpy.preprocessing._qc import (
     describe_obs,
     describe_var,
     top_proportions,
     top_segment_proportions,
 )
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 
 @pytest.fixture
@@ -67,8 +70,13 @@ def test_top_segments(cls):
 
 # While many of these are trivial,
 # they’re also just making sure the metrics are there
-def test_qc_metrics():
-    adata = AnnData(X=sparse.csr_matrix(np.random.binomial(100, 0.005, (1000, 1000))))
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_qc_metrics(array_type):
+    adata = AnnData(
+        X=array_type(sparse.csr_matrix(np.random.binomial(100, 0.005, (1000, 1000))))
+    )
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.rechunk((100, adata.shape[1]))
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
     )
@@ -78,7 +86,7 @@ def test_qc_metrics():
     assert (
         adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]
     ).all()
-    assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
+    assert (adata.obs["total_counts"] == np.ravel(axis_sum(adata.X, axis=1))).all()
     assert (adata.obs["total_counts"] >= adata.obs["log1p_total_counts"]).all()
     assert (
         adata.obs["total_counts_mito"] >= adata.obs["log1p_total_counts_mito"]
@@ -96,7 +104,13 @@ def test_qc_metrics():
             assert (adata.obs[col] >= 0).all()
     for col in adata.var.columns:
         assert (adata.var[col] >= 0).all()
-    assert (adata.var["mean_counts"] < np.ravel(adata.X.max(axis=0).todense())).all()
+    X = adata.X.compute() if isinstance(adata.X, DaskArray) else adata.X
+    max_X = X.max(axis=0)
+    if isinstance(max_X, sparse.spmatrix):
+        max_X = max_X.toarray()
+    elif isinstance(max_X, DaskArray):
+        max_X = max_X.compute()
+    assert (adata.var["mean_counts"] < np.ravel(max_X)).all()
     assert (adata.var["mean_counts"] >= adata.var["log1p_mean_counts"]).all()
     assert (adata.var["total_counts"] >= adata.var["log1p_total_counts"]).all()
     # Should return the same thing if run again
