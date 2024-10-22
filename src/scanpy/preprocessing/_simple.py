@@ -632,7 +632,7 @@ def to_dense(
     """\
     Numba kernel for np.toarray() function
     """
-    order = "C" if X.format == "csr" else "F"
+    order = "C"  # if X.format == "csr" else "F"
     out = np.zeros(X.shape, dtype=X.dtype, order=order)
     if X.format == "csr":
         _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
