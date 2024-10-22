@@ -426,8 +426,9 @@ def top_segment_proportions(
     if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
         raise IndexError("Positions outside range of features.")
     if isinstance(mtx, DaskArray):
-        if not isinstance(mtx._meta, csr_matrix):
-            raise ValueError("DaskArray must have CSR matrix meta.")
+        if not isinstance(mtx._meta, csr_matrix | np.ndarray):
+            msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
+            raise ValueError(msg)
         return mtx.map_blocks(
             lambda x: top_segment_proportions(mtx=x, ns=ns), meta=np.array([])
         ).compute()
