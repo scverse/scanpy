@@ -48,6 +48,19 @@ class PCASparseDask:
         >>> pca_fit.transform(x)
         dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
         """
+        if x._meta.format != "csr":
+            msg = (
+                "Only dask arrays with CSR-meta format are supported. "
+                f"Got {x._meta.format} as meta."
+            )
+            raise ValueError(msg)
+        if x.chunksize[1] != x.shape[1]:
+            msg = (
+                "Only dask arrays with chunking along the first axis are supported. "
+                f"Got chunksize {x.chunksize} with shape {x.shape}. "
+                "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
+            )
+            raise ValueError(msg)
         self.__class__ = PCASparseDaskFit
         self = cast(PCASparseDaskFit, self)
 
