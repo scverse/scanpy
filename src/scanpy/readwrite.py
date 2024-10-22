@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-if Version(anndata.__version__) >= Version("0.11.0rc0"):
+if Version(anndata.__version__) >= Version("0.11.0rc2"):
     from anndata.io import (
         read_csv,
         read_excel,
