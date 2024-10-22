@@ -17,7 +17,7 @@ if Version(anndata_version) >= Version("0.10.0"):
         BaseCompressedSparseDataset as SparseDataset,
     )
 
-    if Version(anndata_version) >= Version("0.11.0rc0"):
+    if Version(anndata_version) >= Version("0.11.0rc2"):
         from anndata.io import sparse_dataset
     else:
         from anndata.experimental import sparse_dataset
