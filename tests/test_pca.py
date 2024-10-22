@@ -584,6 +584,29 @@ def test_covariance_eigh_impls(other_array_type):
 @needs.dask
 @needs_anndata_dask
 @pytest.mark.parametrize(
+    ("msg_re", "op"),
+    [
+        (
+            r"Only dask arrays with CSR-meta",
+            lambda a: a.map_blocks(
+                sparse.csc_matrix, meta=sparse.csc_matrix(np.array([]))
+            ),
+        ),
+        (r"Only dask arrays with chunking", lambda a: a.rechunk((a.shape[0], 100))),
+    ],
+    ids=["as-csc", "bad-chunking"],
+)
+def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArray]):
+    adata_sparse = pbmc3k_normalized()
+    adata_sparse.X = op(DASK_CONVERTERS[_helpers.as_sparse_dask_array](adata_sparse.X))
+
+    with pytest.raises(ValueError, match=msg_re):
+        sc.pp.pca(adata_sparse, svd_solver="covariance_eigh")
+
+
+@needs.dask
+@needs_anndata_dask
+@pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [
         pytest.param(np.float32, None, 1e-5, id="float32"),
