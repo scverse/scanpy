@@ -36,6 +36,17 @@ ROOT = HERE / "_images"
 # If test images need to be updated, simply copy actual.png to expected.png.
 
 
+@pytest.mark.parametrize("col", [None, "symb"])
+def test_highest_expr_genes(image_comparer, col):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    adata = pbmc3k()
+    # check that only existing categories are shown
+    adata.var["symb"] = adata.var_names.astype("category")
+    sc.pl.highest_expr_genes(adata, 20, gene_symbols=col, show=False)
+    save_and_compare_images("highest_expr_genes")
+
+
 @needs.leidenalg
 def test_heatmap(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
