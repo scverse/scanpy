@@ -171,7 +171,7 @@ def combat(
 
     Returns
     -------
-    Returns :class:`numpy.ndarray` if `inplace=True`, else returns `None` and sets the following field in the `adata` object:
+    Returns :class:`numpy.ndarray` if `inplace=False`, else returns `None` and sets the following field in the `adata` object:
 
     `adata.X` : :class:`numpy.ndarray` (dtype `float`)
         Corrected data matrix.
