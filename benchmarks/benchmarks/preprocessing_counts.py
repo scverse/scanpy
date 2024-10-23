@@ -32,7 +32,7 @@ def setup(dataset: Dataset, layer: KeyCount, *_):
 # ASV suite
 
 params: tuple[list[Dataset], list[KeyCount]] = (
-    ["pbmc68k_reduced", "pbmc3k"],
+    ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
     ["counts", "counts-off-axis"],
 )
 param_names = ["dataset", "layer"]
