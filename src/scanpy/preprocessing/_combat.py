@@ -261,7 +261,7 @@ def combat(
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
     for j, batch_idxs in enumerate(batch_info):
-        # we basically substract the additive batch effect, rescale by the ratio
+        # we basically subtract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
         dsq = np.sqrt(delta_star[j, :])
