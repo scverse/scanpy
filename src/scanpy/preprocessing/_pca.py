@@ -263,9 +263,9 @@ def pca(
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
-            try:
+            if n_comps <= chunk.shape[0]:
                 pca_.partial_fit(chunk)
-            except:
+            else:
                 continue
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
