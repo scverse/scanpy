@@ -758,8 +758,7 @@ def _regress_out_chunk(data):
             err_classes = (sme.PerfectSeparationError,)
             with warnings.catch_warnings():
                 if hasattr(sme, "PerfectSeparationWarning"):
-                    # statsmodels>=0.14.0
-                    # Issue #3260
+                    # See issue #3260 - for statsmodels>=0.14.0
                     warnings.simplefilter("error", sme.PerfectSeparationWarning)
                     err_classes = (*err_classes, sme.PerfectSeparationWarning)
                 result = sm.GLM(
