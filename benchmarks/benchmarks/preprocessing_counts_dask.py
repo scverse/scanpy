@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import dask.array as dd
 from dask.distributed import Client, LocalCluster
 import scanpy as sc
+from scipy import sparse
 
 from ._utils import get_count_dataset
 
@@ -50,16 +51,31 @@ param_names = ["dataset", "layer"]
 
 ### Dask-Based Benchmarks ###
 
+# def time_filter_cells_dask(*_):
+#     client = setup_dask_cluster()
+#     try:
+#         adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10)) 
+#         adata.X = adata.X.persist()
+#         client.rebalance() 
+#         sc.pp.filter_cells(adata, min_genes=100)
+#     finally:
+#         client.close()
+
 def time_filter_cells_dask(*_):
     client = setup_dask_cluster()
     try:
         adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10)) 
-        adata.X = adata.X.persist()
-        client.rebalance() 
+        adata.X = adata.X.map_blocks(sparse.csr_matrix)  # Convert to sparse chunks
+
+        # If Scanpy requires dense arrays, convert to dense
+        adata.X = adata.X.map_blocks(lambda x: x.toarray(), dtype=adata.X.dtype, meta=np.array([]))
+
+        # Rechunk after conversion
+        adata.X = adata.X.rechunk((adata.X.shape[0] // 50, adata.X.shape[1] // 50))
+
         sc.pp.filter_cells(adata, min_genes=100)
     finally:
         client.close()
-
 
 def peakmem_filter_cells_dask(*_):
     client = setup_dask_cluster()
@@ -104,14 +120,30 @@ class FastSuite:
     def time_calculate_qc_metrics_dask(self, *_):
         client = setup_dask_cluster()
         try:
+            # Use sparse chunks
             adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
-            print(f"Dask Array Shape: {adata.X.shape}")
-            print(f"Dask Array Type: {type(adata.X)}")
+            adata.X = adata.X.map_blocks(sparse.csr_matrix)  # Convert dense to sparse chunks
+            
+            # Rechunk if necessary
+            adata.X = adata.X.rechunk((adata.X.shape[0] // 50, adata.X.shape[1] // 50))
+        
             sc.pp.calculate_qc_metrics(
                 adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
             )
         finally:
             client.close()
+
+    # def time_calculate_qc_metrics_dask(self, *_):
+    #     client = setup_dask_cluster()
+    #     try:
+    #         adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
+    #         print(f"Dask Array Shape: {adata.X.shape}")
+    #         print(f"Dask Array Type: {type(adata.X)}")
+    #         sc.pp.calculate_qc_metrics(
+    #             adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+    #         )
+    #     finally:
+    #         client.close()
 
     
     def peakmem_calculate_qc_metrics_dask(self, *_):
