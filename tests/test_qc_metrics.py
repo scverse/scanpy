@@ -16,7 +16,7 @@ from scanpy.preprocessing._qc import (
     top_proportions,
     top_segment_proportions,
 )
-from testing.scanpy._helpers import as_sparse_dask_array
+from testing.scanpy._helpers import as_sparse_dask_array, maybe_dask_process_context
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 
@@ -89,9 +89,10 @@ def test_top_segments(cls):
 # While many of these are trivial,
 # they’re also just making sure the metrics are there
 def test_qc_metrics(adata_prepared: AnnData):
-    sc.pp.calculate_qc_metrics(
-        adata_prepared, qc_vars=["mito", "negative"], inplace=True
-    )
+    with maybe_dask_process_context():
+        sc.pp.calculate_qc_metrics(
+            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+        )
     X = (
         adata_prepared.X.compute()
         if isinstance(adata_prepared.X, DaskArray)
@@ -141,13 +142,14 @@ def test_qc_metrics(adata_prepared: AnnData):
 
 
 def test_qc_metrics_idempotent(adata_prepared: AnnData):
-    sc.pp.calculate_qc_metrics(
-        adata_prepared, qc_vars=["mito", "negative"], inplace=True
-    )
-    old_obs, old_var = adata_prepared.obs.copy(), adata_prepared.var.copy()
-    sc.pp.calculate_qc_metrics(
-        adata_prepared, qc_vars=["mito", "negative"], inplace=True
-    )
+    with maybe_dask_process_context():
+        sc.pp.calculate_qc_metrics(
+            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+        )
+        old_obs, old_var = adata_prepared.obs.copy(), adata_prepared.var.copy()
+        sc.pp.calculate_qc_metrics(
+            adata_prepared, qc_vars=["mito", "negative"], inplace=True
+        )
     assert set(adata_prepared.obs.columns) == set(old_obs.columns)
     assert set(adata_prepared.var.columns) == set(old_var.columns)
     for col in adata_prepared.obs:
@@ -157,9 +159,10 @@ def test_qc_metrics_idempotent(adata_prepared: AnnData):
 
 
 def test_qc_metrics_no_log1p(adata_prepared: AnnData):
-    sc.pp.calculate_qc_metrics(
-        adata_prepared, qc_vars=["mito", "negative"], log1p=False, inplace=True
-    )
+    with maybe_dask_process_context():
+        sc.pp.calculate_qc_metrics(
+            adata_prepared, qc_vars=["mito", "negative"], log1p=False, inplace=True
+        )
     assert not np.any(adata_prepared.obs.columns.str.startswith("log1p_"))
     assert not np.any(adata_prepared.var.columns.str.startswith("log1p_"))
 
@@ -170,9 +173,10 @@ def test_dask_against_in_memory(adata, log1p):
     adata_as_dask.X = as_sparse_dask_array(adata.X)
     adata = prepare_adata(adata)
     adata_as_dask = prepare_adata(adata_as_dask)
-    sc.pp.calculate_qc_metrics(
-        adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
-    )
+    with maybe_dask_process_context():
+        sc.pp.calculate_qc_metrics(
+            adata_as_dask, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
+        )
     sc.pp.calculate_qc_metrics(
         adata, qc_vars=["mito", "negative"], log1p=log1p, inplace=True
     )

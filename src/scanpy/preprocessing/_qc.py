@@ -430,8 +430,29 @@ def top_segment_proportions(
             msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
             raise ValueError(msg)
         return mtx.map_blocks(
-            lambda x: top_segment_proportions(mtx=x, ns=ns), meta=np.array([])
+            lambda x: top_segment_proportions_in_memory(mtx=x, ns=ns), meta=np.array([])
         ).compute()
+    return top_segment_proportions_in_memory(mtx, ns)
+
+
+def top_segment_proportions_in_memory(
+    mtx: np.ndarray | spmatrix, ns: Collection[int]
+) -> np.ndarray:
+    """
+    Calculates total percentage of counts in top ns genes.
+
+    Parameters
+    ----------
+    mtx
+        Matrix, where each row is a sample, each column a feature.
+    ns
+        Positions to calculate cumulative proportion at. Values are considered
+        1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
+        the 50th most expressed gene.
+    """
+    # Pretty much just does dispatch
+    if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
+        raise IndexError("Positions outside range of features.")
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
@@ -457,7 +478,7 @@ def top_segment_proportions_dense(mtx: np.ndarray, ns: Collection[int]) -> np.nd
     return values / sums[:, None]
 
 
-# @numba.njit(cache=True, parallel=True)
+@numba.njit(cache=True, parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
     # work around https://github.com/numba/numba/issues/5056
     indptr = indptr.astype(np.int64)

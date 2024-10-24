@@ -5,8 +5,9 @@ This file contains helper functions for the scanpy test suite.
 from __future__ import annotations
 
 import warnings
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
+from importlib.util import find_spec
 from itertools import permutations
 from typing import TYPE_CHECKING
 
@@ -158,3 +159,22 @@ class MultiContext(AbstractContextManager):
     def __exit__(self, exc_type, exc_value, traceback):
         for ctx in reversed(self.contexts):
             ctx.__exit__(exc_type, exc_value, traceback)
+
+
+@contextmanager
+def maybe_dask_process_context():
+    """
+    Running numba with dask's threaded scheduler causes crashes,
+    so we need to switch to single-threaded (or processes, which is slower)
+    scheduler for tests that use numba.
+    """
+    if find_spec("dask"):
+        import dask
+
+        prev_scheduler = dask.config.get("scheduler", "threads")
+        dask.config.set(scheduler="single-threaded")
+        yield
+        dask.config.set(scheduler=prev_scheduler)
+    else:
+        dask = None
+        yield
