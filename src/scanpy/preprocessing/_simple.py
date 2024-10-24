@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numba
 import numpy as np
@@ -622,6 +622,77 @@ def normalize_per_cell(
     return X if copy else None
 
 
+DT = TypeVar("DT")
+
+
+def to_dense(
+    X: spmatrix,
+) -> NDArray[DT]:
+    """\
+    Numba kernel for np.toarray() function
+    """
+    order = "C"  # if X.format == "csr" else "F"
+    out = np.zeros(X.shape, dtype=X.dtype, order=order)
+    if X.format == "csr":
+        _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
+    elif X.format == "csc":
+        _to_dense_csc_numba(X.indptr, X.indices, X.data, out, X.shape)
+    else:
+        out = X.toarray()
+    return out
+
+
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csc_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+) -> None:
+    for c in numba.prange(X.shape[1]):
+        for i in range(indptr[c], indptr[c + 1]):
+            X[indices[i], c] = data[i]
+
+
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csr_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+) -> None:
+    for r in numba.prange(shape[0]):
+        for i in range(indptr[r], indptr[r + 1]):
+            X[r, indices[i]] = data[i]
+
+
+@numba.njit(cache=True, parallel=True)
+def get_resid(
+    data: np.ndarray,
+    regressor: np.ndarray,
+    coeff: np.ndarray,
+) -> np.ndarray:
+    for i in numba.prange(data.shape[0]):
+        data[i] -= regressor[i] @ coeff
+    return data
+
+
+def numpy_regress_out(
+    data: np.ndarray,
+    regressor: np.ndarray,
+) -> np.ndarray:
+    """\
+    Numba kernel for regress out unwanted sorces of variantion.
+    Finding coefficient using Linear regression (Linear Least Squares).
+    """
+    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
+    coeff = inv_gram_matrix @ (regressor.T @ data)
+    data = get_resid(data, regressor, coeff)
+    return data
+
+
 @old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
@@ -674,7 +745,7 @@ def regress_out(
 
     if issparse(X):
         logg.info("    sparse input is densified and may " "lead to high memory use")
-        X = X.toarray()
+        X = to_dense(X)
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -719,14 +790,29 @@ def regress_out(
         regres = regressors_chunk[idx] if variable_is_categorical else regressors
         tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
 
-    from joblib import Parallel, delayed
+    res = None
+    if not variable_is_categorical:
+        A = regres.to_numpy()
+        # if det(A.T@A) != 0 we can take the inverse and regress using a fast method.
+        if np.linalg.det(A.T @ A) != 0:
+            res = numpy_regress_out(X, A)
 
-    # TODO: figure out how to test that this doesn't oversubscribe resources
-    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
+    # for a categorical variable or if the above checks failed,
+    # we fall back to the GLM implemetation of regression.
+    if variable_is_categorical or res is None:
+        from joblib import Parallel, delayed
 
-    # res is a list of vectors (each corresponding to a regressed gene column).
-    # The transpose is needed to get the matrix in the shape needed
-    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
+        # TODO: figure out how to test that this doesn't oversubscribe resources
+        res = Parallel(n_jobs=n_jobs)(
+            delayed(_regress_out_chunk)(task) for task in tasks
+        )
+
+        # res is a list of vectors (each corresponding to a regressed gene column).
+        # The transpose is needed to get the matrix in the shape needed
+
+        res = np.vstack(res).T
+
+    _set_obs_rep(adata, res, layer=layer)
     logg.info("    finished", time=start)
     return adata if copy else None
 
