@@ -582,6 +582,19 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
+    X: Any,
+    scaling_array: Any,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: Any | None = None,
+) -> Any:
+    raise NotImplementedError
+
+
+@axis_mul_or_truediv.register(np.ndarray)
+def _(
     X: np.ndarray,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
