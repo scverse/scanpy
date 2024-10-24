@@ -32,7 +32,8 @@ def setup(dataset: Dataset, layer: KeyCount, *_):
 # ASV suite
 
 params: tuple[list[Dataset], list[KeyCount]] = (
-    ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+    ["lung93k"],
+    # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
     ["counts", "counts-off-axis"],
 )
 param_names = ["dataset", "layer"]
@@ -78,7 +79,8 @@ class FastSuite:
     """Suite for fast preprocessing operations."""
 
     params: tuple[list[Dataset], list[KeyCount]] = (
-        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+        # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+        ["lung93k"],
         ["counts", "counts-off-axis"],
     )
     param_names = ["dataset", "layer"]

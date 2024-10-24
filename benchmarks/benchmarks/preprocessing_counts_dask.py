@@ -34,7 +34,7 @@ def setup(dataset: Dataset, layer: KeyCount, *_):
 # Dask Setup for Dask-based benchmarks
 def setup_dask_cluster():
     """Set up a local Dask cluster for benchmarking."""
-    cluster = LocalCluster(n_workers=6, threads_per_worker=2)
+    cluster = LocalCluster(n_workers=4, threads_per_worker=2)
     client = Client(cluster)
     return client
 
@@ -42,37 +42,11 @@ def setup_dask_cluster():
 # ASV suite
 
 params: tuple[list[Dataset], list[KeyCount]] = (
-    ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-    # ["pbmc68k_reduced", "pbmc3k"],
+    # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+    ["lung93k"],
     ["counts", "counts-off-axis"],
 )
 param_names = ["dataset", "layer"]
-
-# ### Non-Dask Benchmarks ###
-
-# def time_filter_cells(*_):
-#     sc.pp.filter_cells(adata, min_genes=100)
-
-
-# def peakmem_filter_cells(*_):
-#     sc.pp.filter_cells(adata, min_genes=100)
-
-
-# def time_filter_genes(*_):
-#     sc.pp.filter_genes(adata, min_cells=3)
-
-
-# def peakmem_filter_genes(*_):
-#     sc.pp.filter_genes(adata, min_cells=3)
-
-
-# def time_scrublet(*_):
-#     sc.pp.scrublet(adata, batch_key=batch_key)
-
-
-# def peakmem_scrublet(*_):
-#     sc.pp.scrublet(adata, batch_key=batch_key)
-
 
 ### Dask-Based Benchmarks ###
 
@@ -90,7 +64,7 @@ def time_filter_cells_dask(*_):
 def peakmem_filter_cells_dask(*_):
     client = setup_dask_cluster()
     try:
-        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 50, adata.X.shape[1] // 50))
         sc.pp.filter_cells(adata, min_genes=100)
     finally:
         client.close()
@@ -120,54 +94,30 @@ class FastSuite:
     """Suite for fast preprocessing operations."""
 
     params: tuple[list[Dataset], list[KeyCount]] = (
-        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-        # ["pbmc3k", "pbmc68k_reduced"],#, "bmmc", "lung93k"],
+        # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
+        ["lung93k"],
         ["counts", "counts-off-axis"],
     )
     param_names = ["dataset", "layer"]
 
-    ### Non-Dask Versions ###
-
-    def time_calculate_qc_metrics(self, *_):
-        sc.pp.calculate_qc_metrics(
-            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-        )
-
-    def peakmem_calculate_qc_metrics(self, *_):
-        sc.pp.calculate_qc_metrics(
-            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-        )
-
-    def time_normalize_total(self, *_):
-        sc.pp.normalize_total(adata, target_sum=1e4)
-
-    def peakmem_normalize_total(self, *_):
-        sc.pp.normalize_total(adata, target_sum=1e4)
-
-    def time_log1p(self, *_):
-        adata.uns.pop("log1p", None)
-        sc.pp.log1p(adata)
-
-    def peakmem_log1p(self, *_):
-        adata.uns.pop("log1p", None)
-        sc.pp.log1p(adata)
-
     ### Dask Versions ###
-
     def time_calculate_qc_metrics_dask(self, *_):
         client = setup_dask_cluster()
         try:
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
+            print(f"Dask Array Shape: {adata.X.shape}")
+            print(f"Dask Array Type: {type(adata.X)}")
             sc.pp.calculate_qc_metrics(
                 adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
             )
         finally:
             client.close()
 
+    
     def peakmem_calculate_qc_metrics_dask(self, *_):
         client = setup_dask_cluster()
         try:
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 50, adata.X.shape[1] // 50))
             sc.pp.calculate_qc_metrics(
                 adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
             )
@@ -177,7 +127,7 @@ class FastSuite:
     def time_normalize_total_dask(self, *_):
         client = setup_dask_cluster()
         try:
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 50, adata.X.shape[1] // 50))
             sc.pp.normalize_total(adata, target_sum=1e4)
         finally:
             client.close()
@@ -203,7 +153,7 @@ class FastSuite:
         client = setup_dask_cluster()
         try:
             adata.uns.pop("log1p", None)
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 100, adata.X.shape[1] // 100))
             sc.pp.log1p(adata)
         finally:
             client.close()
