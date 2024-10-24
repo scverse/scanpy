@@ -753,8 +753,9 @@ def _regress_out_chunk(data):
             regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
         else:
             regres = regressors
+
+        err_classes = (sme.PerfectSeparationError,)
         try:
-            err_classes = (sme.PerfectSeparationError,)
             with warnings.catch_warnings():
                 if hasattr(sme, "PerfectSeparationWarning"):
                     # See issue #3260 - for statsmodels>=0.14.0
