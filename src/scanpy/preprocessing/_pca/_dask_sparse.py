@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast, overload
 
@@ -185,13 +186,24 @@ def _cov_sparse_dask(
     else:
         import dask
         import dask.array as da
+    try:
+        import sparse_dot_mkl
+    except ImportError:
+        warnings.warn(
+            "Could not import sparse_dot_mkl, likely because MKL runtime linking library is not installed or because you do not have an Intel processor.  Falling back to normal matrix multiplication."
+        )
+        sparse_dot_mkl = None
 
     if dtype is None:
         dtype = np.float64 if np.issubdtype(x.dtype, np.integer) else x.dtype
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: CSMatrix):
+    def gram_block(x_part: CSMatrix) -> NDArray[np.floating]:
+        if sparse_dot_mkl is not None:
+            return sparse_dot_mkl.gram_matrix_mkl(x_part, dense=True)[
+                None, ...
+            ]  # need new axis for summing
         gram_matrix: CSMatrix = x_part.T @ x_part
         return gram_matrix.toarray()[None, ...]  # need new axis for summing
 
