@@ -811,7 +811,7 @@ def _regress_out_chunk(data):
 
     responses_chunk_list = []
     import statsmodels.api as sm
-    from statsmodels.tools.sm_exceptions import PerfectSeparationError
+    import statsmodels.tools.sm_exceptions as sme
 
     for col_index in range(data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
@@ -825,11 +825,17 @@ def _regress_out_chunk(data):
         else:
             regres = regressors
         try:
-            result = sm.GLM(
-                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-            ).fit()
-            new_column = result.resid_response
-        except PerfectSeparationError:  # this emulates R's behavior
+            err_classes = (sme.PerfectSeparationError,)
+            with warnings.catch_warnings():
+                if hasattr(sme, "PerfectSeparationWarning"):
+                    # See issue #3260 - for statsmodels>=0.14.0
+                    warnings.simplefilter("error", sme.PerfectSeparationWarning)
+                    err_classes = (*err_classes, sme.PerfectSeparationWarning)
+                result = sm.GLM(
+                    data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+                ).fit()
+                new_column = result.resid_response
+        except err_classes:  # this emulates R's behavior
             logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
 
