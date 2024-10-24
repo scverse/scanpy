@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from typing import Any, Literal, TypeVar
 
     from anndata import AnnData
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from ..neighbors import NeighborsParams, RPForestDict
 
@@ -582,26 +582,13 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: Any,
-    scaling_array: Any,
-    axis: Literal[0, 1],
-    op: Callable[[Any, Any], Any],
-    *,
-    allow_divide_by_zero: bool = True,
-    out: Any | None = None,
-) -> Any:
-    raise NotImplementedError
-
-
-@axis_mul_or_truediv.register(np.ndarray)
-def _(
-    X: np.ndarray,
+    X: ArrayLike,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
+    out: ArrayLike | None = None,
 ) -> np.ndarray:
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
