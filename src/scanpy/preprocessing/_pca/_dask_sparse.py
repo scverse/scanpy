@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 @dataclass
 class PCASparseDask:
     n_components: int | None = None
+    mean_computed: np.ndarray | None = None
 
     @doctest_needs("dask")
     def fit(self, x: DaskArray) -> PCASparseDaskFit:
@@ -70,7 +71,7 @@ class PCASparseDask:
         self.n_samples_ = x.shape[0]
         self.n_features_in_ = x.shape[1] if x.ndim > 1 else 1
         self.dtype_ = x.dtype
-        covariance, self.mean_ = _cov_sparse_dask(x)
+        covariance, self.mean_ = _cov_sparse_dask(x, mean=self.mean_computed)
         self.explained_variance_, self.components_ = scipy.linalg.eigh(
             covariance, lower=False
         )
@@ -141,14 +142,26 @@ class PCASparseDaskFit(PCASparseDask):
 
 @overload
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: Literal[False] = False, dtype: DTypeLike | None = None
+    x: DaskArray,
+    *,
+    return_gram: Literal[False] = False,
+    dtype: DTypeLike | None = None,
+    mean: NDArray[np.floating] | None = None,
 ) -> tuple[NDArray[np.floating], NDArray[np.floating]]: ...
 @overload
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: Literal[True], dtype: DTypeLike | None = None
+    x: DaskArray,
+    *,
+    return_gram: Literal[True],
+    dtype: DTypeLike | None = None,
+    mean: NDArray[np.floating] | None = None,
 ) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]: ...
 def _cov_sparse_dask(
-    x: DaskArray, *, return_gram: bool = False, dtype: DTypeLike | None = None
+    x: DaskArray,
+    *,
+    return_gram: bool = False,
+    dtype: DTypeLike | None = None,
+    mean: NDArray[np.floating] | None = None,
 ) -> (
     tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
     | tuple[NDArray[np.floating], NDArray[np.floating]]
@@ -203,11 +216,16 @@ def _cov_sparse_dask(
         meta=np.array([], dtype=x.dtype),
         dtype=x.dtype,
     ).sum(axis=0)
-    mean_x_dask, _ = _get_mean_var(x)
-    gram_matrix, mean_x = cast(
-        tuple[NDArray, NDArray[np.float64]],
-        dask.compute(gram_matrix_dask, mean_x_dask),
-    )
+    if mean is None:
+        mean_x_dask, _ = _get_mean_var(x)
+        gram_matrix, mean_x = cast(
+            tuple[NDArray, NDArray[np.float64]],
+            dask.compute(gram_matrix_dask, mean_x_dask),
+        )
+    else:
+        mean_x = mean
+        gram_matrix = gram_matrix_dask.compute()
+
     gram_matrix = gram_matrix.astype(dtype)
     gram_matrix /= x.shape[0]
 

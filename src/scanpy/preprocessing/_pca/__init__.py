@@ -335,7 +335,9 @@ def pca(
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
                     warnings.warn(msg)
-                pca_ = PCASparseDask(n_components=n_comps)
+                pca_ = PCASparseDask(
+                    n_components=n_comps, mean_computed=adata_comp.var["mean"].values
+                )
             else:
                 from dask_ml.decomposition import PCA
 
