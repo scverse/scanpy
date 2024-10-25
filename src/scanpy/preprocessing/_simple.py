@@ -52,6 +52,36 @@ if TYPE_CHECKING:
     from .._utils import AnyRandom
 
 
+# @numba.jit(cache=True,parallel=True)
+def get_rows_to_keep_1(indptr, data):
+    lens = np.zeros(len(indptr) - 1, dtype=type(data[0]))
+    for i in range(len(lens)):
+        lens[i] = np.sum(data[indptr[i] : indptr[i + 1]])
+    return lens
+
+
+def get_rows_to_keep(indptr, dtype):
+    lens = indptr[1:] - indptr[:-1]
+    # lens.astype(dtype)
+    return lens
+
+
+@numba.njit(cache=True, parallel=True)
+def get_cols_to_keep(indices, data, colcount, nthr, Flag):
+    counts = np.zeros((nthr, colcount), dtype=type(data[0]))
+    for i in numba.prange(nthr):
+        start = i * indices.shape[0] // nthr
+        end = (i + 1) * indices.shape[0] // nthr
+        for j in range(start, end):
+            if data[j] != 0:  # and indices[j]<colcount:
+                if Flag:
+                    counts[i, indices[j]] += 1
+                else:
+                    counts[i, indices[j]] += data[j]  # 1
+    counts = np.sum(counts, axis=0, dtype=type(data[0]))
+    return counts  # , keep_cols
+
+
 @old_positionals(
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
@@ -169,11 +199,36 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = axis_sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
-    )
+    print(type(X))
+    import time
+
+    t0 = time.time()
+    if isinstance(X, sp.sparse._csr.csr_matrix):
+        if min_genes is None and max_genes is None:
+            number_per_cell = get_rows_to_keep_1(X.indptr, X.data)
+        else:
+            number_per_cell = get_rows_to_keep(X.indptr, type(X.data[0]))
+
+    # and ( min_genes is not None or max_genes is not None)  :
+    #    #number_per_cell=np.sum(X>0,axis=1)
+    #    number_per_cell = get_rows_to_keep(X.indptr,type(X.data[0]))
+    elif isinstance(X, sp.sparse._csc.csc_matrix):
+        nclos = X.shape[0]
+        nthr = numba.get_num_threads()
+        if min_genes is None and max_genes is None:
+            number_per_cell = get_cols_to_keep(X.indices, X.data, nclos, nthr, False)
+        else:
+            number_per_cell = get_cols_to_keep(X.indices, X.data, nclos, nthr, True)
+
+    else:
+        number_per_cell = axis_sum(
+            X if min_genes is None and max_genes is None else X > 0, axis=1
+        )
+
+    print("Number_per_Cell", time.time() - t0)
+
     if issparse(X):
-        number_per_cell = number_per_cell.A1
+        number_per_cell = number_per_cell
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
     if max_number is not None:
@@ -286,11 +341,61 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = axis_sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
-    )
+    import time
+
+    t0 = time.time()
+
+    if isinstance(X, sp.sparse._csr.csr_matrix):
+        ncols = X.shape[1]
+        nthr = numba.get_num_threads()
+        print(
+            "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
+            X.shape,
+            nthr,
+            X.indices.shape,
+            X.data.shape,
+        )
+        # number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr)
+        if min_cells is None and max_cells is None:
+            number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr, False)
+        else:
+            number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr, True)
+
+    elif isinstance(X, sp.sparse._csc.csc_matrix):
+        # ncols = X.shape[1]
+        # nthr = numba.get_num_threads()
+        print(
+            "HHHHHHHHHHHHHHHHHHcscHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+        )  # X.shape,nthr,X.indices.shape,X.data.shape)
+        # number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr)
+        if min_cells is None and max_cells is None:
+            number_per_gene = get_rows_to_keep_1(
+                X.indptr, X.data
+            )  # get_cols_to_keep(X.indices, X.data, ncols, nthr,False)
+        else:
+            number_per_gene = get_rows_to_keep(X.indptr, type(X.data[0]))
+        # if isinstance(number_per_gene,np.matrix):
+        #    number_per_gene=number_per_gene.A1
+        #    print("I am here")
+
+        print("Cols to keep,", time.time() - t0)
+        # print(number_per_gene,type(number_per_gene),number_per_gene.shape,ncols)
+        # number_per_gene = axis_sum(
+        #                        X if min_cells is None and max_cells is None else X > 0, axis=0
+        #                            )
+        # print(number_per_gene.A1)
+    else:
+        print("inside print")
+        number_per_gene = axis_sum(
+            X if min_cells is None and max_cells is None else X > 0, axis=0
+        )
     if issparse(X):
-        number_per_gene = number_per_gene.A1
+        if isinstance(X, sp.sparse._csr.csr_matrix) or isinstance(
+            X, sp.sparse._csc.csc_matrix
+        ):  # isinstance(X, sp.sparse._csr.csr_matrix):
+            number_per_gene = number_per_gene  # cols_to_keep#number_per_gene
+        else:
+            number_per_gene = number_per_gene
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
@@ -597,6 +702,7 @@ def normalize_per_cell(  # noqa: PLR0917
         if not copy:
             raise ValueError("Can only be run with copy=True")
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
+        print(type(cell_subset), type(counts_per_cell))
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
     if counts_per_cell_after is None:
@@ -604,6 +710,8 @@ def normalize_per_cell(  # noqa: PLR0917
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
+        print("!!!!!!!!!!!", type(counts_per_cell[0]), type(counts_per_cell_after))
+        # counts_per_cell.astype(type(counts_per_cell_after))
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
             X /= counts_per_cell[:, np.newaxis]
