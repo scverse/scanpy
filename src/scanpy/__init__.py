@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 
+from packaging.version import Version
+
 try:  # See https://github.com/maresb/hatch-vcs-footgun-example
     from setuptools_scm import get_version
 
@@ -29,18 +31,31 @@ from ._settings import Verbosity, settings
 
 set_figure_params = settings.set_figure_params
 
-from anndata import (
-    AnnData,
-    concat,
-    read_csv,
-    read_excel,
-    read_h5ad,
-    read_hdf,
-    read_loom,
-    read_mtx,
-    read_text,
-    read_umi_tools,
-)
+import anndata
+
+if Version(anndata.__version__) >= Version("0.11.0rc2"):
+    from anndata.io import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+        read_umi_tools,
+    )
+else:
+    from anndata import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+        read_umi_tools,
+    )
+from anndata import AnnData, concat
 
 from . import datasets, experimental, external, get, logging, metrics, queries
 from . import plotting as pl
