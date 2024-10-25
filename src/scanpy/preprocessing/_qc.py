@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
+from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import DaskArray
@@ -107,12 +108,9 @@ def describe_obs(
         if issparse(X):
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
-    if issparse(X):
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
-    elif isinstance(X, DaskArray) and issparse(X._meta):
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = axis_nnz(X, axis=1).compute()
-    else:
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
+    obs_metrics[f"n_{var_type}_by_{expr_type}"] = materialize_as_ndarray(
+        axis_nnz(X, axis=1)
+    )
     if log1p:
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
@@ -197,15 +195,17 @@ def describe_var(
         if issparse(X):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
+    n_cells_by_expr_type = axis_nnz(X, axis=0)
     if isinstance(X, DaskArray) and issparse(X._meta):
-        var_metrics["n_cells_by_{expr_type}"] = axis_nnz(X, axis=0).compute()
-        var_metrics["mean_{expr_type}"] = _get_mean_var(X, axis=0)[0].compute()
+        var_metrics["n_cells_by_{expr_type}"], var_metrics["mean_{expr_type}"] = (
+            materialize_as_ndarray((n_cells_by_expr_type, _get_mean_var(X, axis=0)[0]))
+        )
     elif issparse(X):
         # Current memory bottleneck for csr matrices:
-        var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
+        var_metrics["n_cells_by_{expr_type}"] = n_cells_by_expr_type
         var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
     else:
-        var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
+        var_metrics["n_cells_by_{expr_type}"] = n_cells_by_expr_type
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
     if log1p:
         var_metrics["log1p_mean_{expr_type}"] = np.log1p(

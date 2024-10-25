@@ -726,7 +726,7 @@ def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
 @axis_nnz.register(DaskArray)
 def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
     return X.map_blocks(
-        lambda x: x.getnnz(axis=axis),
+        partial(axis_nnz, axis=axis),
         dtype=np.int64,
         meta=np.array([], dtype=np.int64),
         drop_axis=0,
