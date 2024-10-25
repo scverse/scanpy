@@ -17,6 +17,7 @@ from scanpy.preprocessing._qc import (
     top_segment_proportions,
 )
 from testing.scanpy._helpers import as_sparse_dask_array, maybe_dask_process_context
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 
@@ -167,6 +168,7 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
     assert not np.any(adata_prepared.var.columns.str.startswith("log1p_"))
 
 
+@needs.dask
 @pytest.mark.parametrize("log1p", [True, False], ids=["log1p", "no_log1p"])
 def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = adata.copy()
