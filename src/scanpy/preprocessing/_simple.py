@@ -629,11 +629,11 @@ DT = TypeVar("DT")
 
 def to_dense(
     X: spmatrix,
+    order: Literal["C", "F"] = "C",
 ) -> NDArray[DT]:
     """\
     Numba kernel for np.toarray() function
     """
-    order = "C"  # if X.format == "csr" else "F"
     out = np.zeros(X.shape, dtype=X.dtype, order=order)
     if X.format == "csr":
         _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
@@ -749,7 +749,6 @@ def regress_out(
 
     if issparse(X):
         logg.info("    sparse input is densified and may lead to high memory use")
-        X = to_dense(X)
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -779,11 +778,9 @@ def regress_out(
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
 
-    len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
-    n_chunks = int(np.ceil(X.shape[1] / len_chunk))
-
     res = None
     if not variable_is_categorical:
+        X = to_dense(X, order="C") if issparse(X) else X
         A = regressors.to_numpy()
         # if det(A.T@A) != 0 we can take the inverse and regress using a fast method.
         if np.linalg.det(A.T @ A) != 0:
@@ -794,6 +791,9 @@ def regress_out(
     if res is None:
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
+        len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
+        n_chunks = int(np.ceil(X.shape[1] / len_chunk))
+        X = to_dense(X, order="F") if issparse(X) else X
         chunk_list = np.array_split(X, n_chunks, axis=1)
         regressors_chunk = (
             np.array_split(regressors, n_chunks, axis=1)
