@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from functools import partial, singledispatch
+from functools import singledispatch
 from operator import truediv
 from typing import TYPE_CHECKING
 
@@ -46,7 +46,8 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
                     data[j] /= std[indices[j]]
 
 
-def _clip_array(
+@numba.njit(cache=True, parallel=True)
+def clip_array(
     X: NDArray[np.floating], *, max_value: float, zero_center: bool
 ) -> NDArray[np.floating]:
     a_min, a_max = -max_value, max_value
@@ -63,22 +64,6 @@ def _clip_array(
             elif X[i] < a_min and zero_center:
                 X[i] = a_min
     return X
-
-
-_clip_array_fns = {
-    parallel: numba.njit(_clip_array, parallel=parallel, cache=True)
-    for parallel in (True, False)
-}
-
-
-def clip_array(
-    x: NDArray[np.floating],
-    *,
-    max_value: float = 10,
-    zero_center: bool = True,
-    parallel: bool = True,
-) -> NDArray[np.floating]:
-    return _clip_array_fns[parallel](x, max_value=max_value, zero_center=zero_center)
 
 
 def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
@@ -234,9 +219,7 @@ def scale_array(
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
         if isinstance(X, DaskArray):
-            clip = (
-                clip_set if issparse(X._meta) else partial(clip_array, parallel=False)
-            )
+            clip = clip_set if issparse(X._meta) else clip_array
             X = X.map_blocks(clip, max_value=max_value, zero_center=zero_center)
         elif issparse(X):
             X.data = clip_array(X.data, max_value=max_value, zero_center=False)
