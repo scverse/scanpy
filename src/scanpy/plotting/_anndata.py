@@ -198,7 +198,7 @@ def _check_if_annotations(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
     ).index
 
-    def is_annotation(needle: pd.Index) -> NDArray[np.bool]:
+    def is_annotation(needle: pd.Index) -> NDArray[np.bool_]:
         return needle.isin({None}) | needle.isin(annotations) | needle.isin(names)
 
     if not is_annotation(pd.Index([x, y])).all():
@@ -206,8 +206,8 @@ def _check_if_annotations(
 
     color_idx = pd.Index(colors if colors is not None else [])
     # Colors are valid
-    color_valid: NDArray[np.bool] = np.fromiter(
-        map(is_color_like, color_idx), dtype=np.bool, count=len(color_idx)
+    color_valid: NDArray[np.bool_] = np.fromiter(
+        map(is_color_like, color_idx), dtype=np.bool_, count=len(color_idx)
     )
     # Annotation names are valid too
     color_valid[~color_valid] = is_annotation(color_idx[~color_valid])
