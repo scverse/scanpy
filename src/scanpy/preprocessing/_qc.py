@@ -193,28 +193,23 @@ def describe_var(
     var_metrics = pd.DataFrame(index=adata.var_names)
     if issparse(X):
         # Current memory bottleneck for csr matrices:
-        var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
-        var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
+        var_metrics[f"n_cells_by_{expr_type}"] = X.getnnz(axis=0)
+        var_metrics[f"mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
     else:
-        var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
-        var_metrics["mean_{expr_type}"] = X.mean(axis=0)
+        var_metrics[f"n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
+        var_metrics[f"mean_{expr_type}"] = X.mean(axis=0)
     if log1p:
-        var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-            var_metrics["mean_{expr_type}"]
+        var_metrics[f"log1p_mean_{expr_type}"] = np.log1p(
+            var_metrics[f"mean_{expr_type}"]
         )
-    var_metrics["pct_dropout_by_{expr_type}"] = (
-        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
+    var_metrics[f"pct_dropout_by_{expr_type}"] = (
+        1 - var_metrics[f"n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
-    var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
+    var_metrics[f"total_{expr_type}"] = np.ravel(X.sum(axis=0))
     if log1p:
-        var_metrics["log1p_total_{expr_type}"] = np.log1p(
-            var_metrics["total_{expr_type}"]
+        var_metrics[f"log1p_total_{expr_type}"] = np.log1p(
+            var_metrics[f"total_{expr_type}"]
         )
-    # Relabel
-    new_colnames = []
-    for col in var_metrics.columns:
-        new_colnames.append(col.format(**locals()))
-    var_metrics.columns = new_colnames
     if inplace:
         adata.var[var_metrics.columns] = var_metrics
     else:

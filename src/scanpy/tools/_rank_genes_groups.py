@@ -123,10 +123,11 @@ class _RankGenes:
         )
 
         if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(", ".join(invalid_groups_selected))
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
             )
+            raise ValueError(msg)
 
         adata_comp = adata
         if layer is not None:
