@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
+from itertools import repeat
 from typing import TYPE_CHECKING
 
 import numba
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from numbers import Number
     from typing import Literal
 
+    import pandas as pd
     from numpy.typing import NDArray
 
     from .._compat import DaskArray
@@ -660,6 +662,8 @@ def regress_out(
     `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Corrected count data matrix.
     """
+    from joblib import Parallel, delayed
+
     start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
 
@@ -674,7 +678,7 @@ def regress_out(
     raise_not_implemented_error_if_backed_type(X, "regress_out")
 
     if issparse(X):
-        logg.info("    sparse input is densified and may " "lead to high memory use")
+        logg.info("    sparse input is densified and may lead to high memory use")
         X = X.toarray()
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -705,25 +709,27 @@ def regress_out(
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
 
-    len_chunk = np.ceil(min(1000, X.shape[1]) / n_jobs).astype(int)
-    n_chunks = np.ceil(X.shape[1] / len_chunk).astype(int)
+    len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
+    n_chunks = int(np.ceil(X.shape[1] / len_chunk))
 
-    tasks = []
     # split the adata.X matrix by columns in chunks of size n_chunk
     # (the last chunk could be of smaller size than the others)
     chunk_list = np.array_split(X, n_chunks, axis=1)
-    if variable_is_categorical:
-        regressors_chunk = np.array_split(regressors, n_chunks, axis=1)
-    for idx, data_chunk in enumerate(chunk_list):
-        # each task is a tuple of a data_chunk eg. (adata.X[:,0:100]) and
-        # the regressors. This data will be passed to each of the jobs.
-        regres = regressors_chunk[idx] if variable_is_categorical else regressors
-        tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
+    regressors_chunk = (
+        np.array_split(regressors, n_chunks, axis=1)
+        if variable_is_categorical
+        else repeat(regressors)
+    )
 
-    from joblib import Parallel, delayed
-
+    # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
+    # This data will be passed to each of the jobs.
     # TODO: figure out how to test that this doesn't oversubscribe resources
-    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
+    res = Parallel(n_jobs=n_jobs)(
+        delayed(_regress_out_chunk)(
+            data_chunk, regres, variable_is_categorical=variable_is_categorical
+        )
+        for data_chunk, regres in zip(chunk_list, regressors_chunk, strict=False)
+    )
 
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
@@ -732,17 +738,22 @@ def regress_out(
     return adata if copy else None
 
 
-def _regress_out_chunk(data):
-    # data is a tuple containing the selected columns from adata.X
-    # and the regressors dataFrame
-    data_chunk = data[0]
-    regressors = data[1]
-    variable_is_categorical = data[2]
-
-    responses_chunk_list = []
+def _regress_out_chunk(
+    data_chunk: NDArray[np.floating],
+    regressors: pd.DataFrame | NDArray[np.floating],
+    *,
+    variable_is_categorical: bool,
+) -> NDArray[np.floating]:
     import statsmodels.api as sm
     import statsmodels.tools.sm_exceptions as sme
 
+    Psw = (
+        sme.PerfectSeparationWarning
+        if hasattr(sme, "PerfectSeparationWarning")
+        else None
+    )
+
+    responses_chunk_list = []
     for col_index in range(data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
@@ -754,19 +765,18 @@ def _regress_out_chunk(data):
             regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
         else:
             regres = regressors
+
         try:
-            err_classes = (sme.PerfectSeparationError,)
             with warnings.catch_warnings():
-                if hasattr(sme, "PerfectSeparationWarning"):
-                    # See issue #3260 - for statsmodels>=0.14.0
-                    warnings.simplefilter("error", sme.PerfectSeparationWarning)
-                    err_classes = (*err_classes, sme.PerfectSeparationWarning)
+                # See issue #3260 - for statsmodels>=0.14.0
+                if Psw:
+                    warnings.simplefilter("error", Psw)
                 result = sm.GLM(
                     data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
                 new_column = result.resid_response
-        except err_classes:  # this emulates R's behavior
-            logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
+        except (sme.PerfectSeparationError, *([Psw] if Psw else [])):
+            logg.warning("Encountered perfect separation, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)
