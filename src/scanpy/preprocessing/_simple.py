@@ -791,7 +791,7 @@ def regress_out(
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
-    if variable_is_categorical or res is None:
+    if res is None:
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
         chunk_list = np.array_split(X, n_chunks, axis=1)
@@ -800,6 +800,7 @@ def regress_out(
             if variable_is_categorical
             else repeat(regressors)
         )
+
         # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
         # This data will be passed to each of the jobs.
         # TODO: figure out how to test that this doesn't oversubscribe resources
