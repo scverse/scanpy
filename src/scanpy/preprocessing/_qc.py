@@ -12,7 +12,7 @@ from sklearn.utils.sparsefuncs import mean_variance_axis
 from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import DaskArray
-from .._utils import _doc_params, axis_sum
+from .._utils import _doc_params, axis_nnz, axis_sum
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -110,12 +110,7 @@ def describe_obs(
     if issparse(X):
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
     elif isinstance(X, DaskArray) and issparse(X._meta):
-        obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.map_blocks(
-            lambda x: x.getnnz(axis=1),
-            dtype=np.int64,
-            meta=np.array([], dtype=np.int64),
-            drop_axis=1,
-        ).compute()
+        obs_metrics[f"n_{var_type}_by_{expr_type}"] = axis_nnz(X, axis=1).compute()
     else:
         obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
     if log1p:
@@ -203,12 +198,7 @@ def describe_var(
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     if isinstance(X, DaskArray) and issparse(X._meta):
-        var_metrics["n_cells_by_{expr_type}"] = X.map_blocks(
-            lambda x: x.getnnz(axis=0),
-            dtype=np.int64,
-            meta=np.array([], dtype=np.int64),
-            drop_axis=0,
-        ).compute()
+        var_metrics["n_cells_by_{expr_type}"] = axis_nnz(X, axis=0).compute()
         var_metrics["mean_{expr_type}"] = _get_mean_var(X, axis=0)[0].compute()
     elif issparse(X):
         # Current memory bottleneck for csr matrices:

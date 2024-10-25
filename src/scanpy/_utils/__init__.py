@@ -713,6 +713,27 @@ def _(
     )
 
 
+@singledispatch
+def axis_nnz(X: np.ndarray, axis: Literal[0, 1]) -> np.ndarray:
+    return np.count_nonzero(X, axis=axis)
+
+
+@axis_nnz.register(sparse.spmatrix)
+def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
+    return X.getnnz(axis=axis)
+
+
+@axis_nnz.register(DaskArray)
+def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
+    return X.map_blocks(
+        lambda x: x.getnnz(axis=axis),
+        dtype=np.int64,
+        meta=np.array([], dtype=np.int64),
+        drop_axis=0,
+        chunks=len(X.to_delayed()) * (X.chunksize[int(not axis)],),
+    )
+
+
 @overload
 def axis_sum(
     X: sparse.spmatrix,
