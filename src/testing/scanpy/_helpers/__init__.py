@@ -168,13 +168,15 @@ def maybe_dask_process_context():
     so we need to switch to single-threaded (or processes, which is slower)
     scheduler for tests that use numba.
     """
-    if find_spec("dask"):
-        import dask
+    if not find_spec("dask"):
+        yield
+        return
 
-        prev_scheduler = dask.config.get("scheduler", "threads")
-        dask.config.set(scheduler="single-threaded")
+    import dask.config
+
+    prev_scheduler = dask.config.get("scheduler", "threads")
+    dask.config.set(scheduler="single-threaded")
+    try:
         yield
+    finally:
         dask.config.set(scheduler=prev_scheduler)
-    else:
-        dask = None
-        yield
