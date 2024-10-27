@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import os
 from collections import defaultdict
 from inspect import Parameter, signature
@@ -67,6 +68,13 @@ def in_project_dir():
 def test_descend_classes_and_funcs():
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs
+
+
+@pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")
+def test_import_future_anndata_import_warning():
+    import scanpy
+
+    importlib.reload(scanpy)
 
 
 @pytest.mark.parametrize(("f", "qualname"), api_functions)

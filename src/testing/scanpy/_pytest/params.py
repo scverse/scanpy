@@ -15,19 +15,22 @@ from .._helpers import (
 from .._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from typing import Literal
+    from collections.abc import Callable, Iterable
+    from typing import Any, Literal
 
     from _pytest.mark.structures import ParameterSet
 
 
 def param_with(
     at: ParameterSet,
+    transform: Callable[..., Iterable[Any]] = lambda x: (x,),
     *,
     marks: Iterable[pytest.Mark | pytest.MarkDecorator] = (),
     id: str | None = None,
 ) -> ParameterSet:
-    return pytest.param(*at.values, marks=[*at.marks, *marks], id=id or at.id)
+    return pytest.param(
+        *transform(*at.values), marks=[*at.marks, *marks], id=id or at.id
+    )
 
 
 MAP_ARRAY_TYPES: dict[

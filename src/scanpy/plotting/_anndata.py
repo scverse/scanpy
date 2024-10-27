@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Collection, Mapping, Sequence
 from itertools import product
-from typing import TYPE_CHECKING, get_args
+from types import NoneType
+from typing import TYPE_CHECKING, cast, get_args
 
 import matplotlib as mpl
 import numpy as np
@@ -30,6 +31,7 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
+    ColorLike,
     _deprecated_scale,
     _dk,
     check_colornorm,
@@ -40,18 +42,18 @@ from ._utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Literal, Union
+    from typing import Literal
 
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, ListedColormap, Normalize
+    from numpy.typing import NDArray
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
     from .._utils import Empty
     from ._utils import (
-        ColorLike,
         DensityNorm,
         _FontSize,
         _FontWeight,
@@ -60,7 +62,7 @@ if TYPE_CHECKING:
 
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = Union[str, Sequence[str]]
+    _VarNames = str | Sequence[str]
 
 
 VALID_LEGENDLOCS = frozenset(get_args(_utils._LegendLoc))
@@ -89,7 +91,7 @@ def scatter(
     x: str | None = None,
     y: str | None = None,
     *,
-    color: str | Collection[str] | None = None,
+    color: str | ColorLike | Collection[str | ColorLike] | None = None,
     use_raw: bool | None = None,
     layers: str | Collection[str] | None = None,
     sort_order: bool = True,
@@ -109,7 +111,7 @@ def scatter(
     left_margin: float | None = None,
     size: int | float | None = None,
     marker: str | Sequence[str] = ".",
-    title: str | None = None,
+    title: str | Collection[str] | None = None,
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
@@ -147,33 +149,25 @@ def scatter(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    # color can be a obs column name or a matplotlib color specification (or a collection thereof)
+    if color is not None:
+        color = cast(
+            Collection[str | ColorLike],
+            [color] if isinstance(color, str) or is_color_like(color) else color,
+        )
     args = locals()
-    if _check_use_raw(adata, use_raw):
-        var_index = adata.raw.var.index
-    else:
-        var_index = adata.var.index
+
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
         raise ValueError("Either provide a `basis` or `x` and `y`.")
-    if (
-        (x in adata.obs.columns or x in var_index)
-        and (y in adata.obs.columns or y in var_index)
-        and (color is None or color in adata.obs.columns or color in var_index)
-    ):
+    if _check_if_annotations(adata, "obs", x=x, y=y, colors=color, use_raw=use_raw):
         return _scatter_obs(**args)
-    if (
-        (x in adata.var.columns or x in adata.obs.index)
-        and (y in adata.var.columns or y in adata.obs.index)
-        and (color is None or color in adata.var.columns or color in adata.obs.index)
-    ):
-        adata_T = adata.T
-        axs = _scatter_obs(
-            adata=adata_T,
-            **{name: val for name, val in args.items() if name != "adata"},
-        )
+    if _check_if_annotations(adata, "var", x=x, y=y, colors=color, use_raw=use_raw):
+        args_t = {**args, "adata": adata.T}
+        axs = _scatter_obs(**args_t)
         # store .uns annotations that were added to the new adata object
-        adata.uns = adata_T.uns
+        adata.uns = args_t["adata"].uns
         return axs
     raise ValueError(
         "`x`, `y`, and potential `color` inputs must all "
@@ -181,35 +175,74 @@ def scatter(
     )
 
 
+def _check_if_annotations(
+    adata: AnnData,
+    axis_name: Literal["obs", "var"],
+    *,
+    x: str | None = None,
+    y: str | None = None,
+    colors: Collection[str | ColorLike] | None = None,
+    use_raw: bool | None = None,
+) -> bool:
+    """Checks if `x`, `y`, and `colors` are annotations of `adata`.
+    In the case of `colors`, valid matplotlib colors are also accepted.
+
+    If `axis_name` is `obs`, checks in `adata.obs.columns` and `adata.var_names`,
+    if `axis_name` is `var`, checks in `adata.var.columns` and `adata.obs_names`.
+    """
+    annotations: pd.Index[str] = getattr(adata, axis_name).columns
+    other_ax_obj = (
+        adata.raw if _check_use_raw(adata, use_raw) and axis_name == "obs" else adata
+    )
+    names: pd.Index[str] = getattr(
+        other_ax_obj, "var" if axis_name == "obs" else "obs"
+    ).index
+
+    def is_annotation(needle: pd.Index) -> NDArray[np.bool_]:
+        return needle.isin({None}) | needle.isin(annotations) | needle.isin(names)
+
+    if not is_annotation(pd.Index([x, y])).all():
+        return False
+
+    color_idx = pd.Index(colors if colors is not None else [])
+    # Colors are valid
+    color_valid: NDArray[np.bool_] = np.fromiter(
+        map(is_color_like, color_idx), dtype=np.bool_, count=len(color_idx)
+    )
+    # Annotation names are valid too
+    color_valid[~color_valid] = is_annotation(color_idx[~color_valid])
+    return bool(color_valid.all())
+
+
 def _scatter_obs(
     *,
     adata: AnnData,
-    x=None,
-    y=None,
-    color=None,
-    use_raw=None,
-    layers=None,
-    sort_order=True,
-    alpha=None,
-    basis=None,
-    groups=None,
-    components=None,
+    x: str | None = None,
+    y: str | None = None,
+    color: Collection[str | ColorLike] | None = None,
+    use_raw: bool | None = None,
+    layers: str | Collection[str] | None = None,
+    sort_order: bool = True,
+    alpha: float | None = None,
+    basis: _Basis | None = None,
+    groups: str | Iterable[str] | None = None,
+    components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "right margin",
-    legend_fontsize=None,
-    legend_fontweight=None,
-    legend_fontoutline=None,
-    color_map=None,
-    palette=None,
-    frameon=None,
-    right_margin=None,
-    left_margin=None,
+    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontweight: int | _FontWeight | None = None,
+    legend_fontoutline: float | None = None,
+    color_map: str | Colormap | None = None,
+    palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] | None = None,
+    frameon: bool | None = None,
+    right_margin: float | None = None,
+    left_margin: float | None = None,
     size: int | float | None = None,
-    marker=".",
-    title=None,
-    show=None,
-    save=None,
-    ax=None,
+    marker: str | Sequence[str] = ".",
+    title: str | Collection[str] | None = None,
+    show: bool | None = None,
+    save: str | bool | None = None,
+    ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
     """See docstring of scatter."""
     sanitize_anndata(adata)
@@ -244,14 +277,7 @@ def _scatter_obs(
     if isinstance(components, str):
         components = components.split(",")
     components = np.array(components).astype(int) - 1
-    # color can be a obs column name or a matplotlib color specification
-    keys = (
-        ["grey"]
-        if color is None
-        else [color]
-        if isinstance(color, str) or is_color_like(color)
-        else color
-    )
+    keys = ["grey"] if color is None else color
     if title is not None and isinstance(title, str):
         title = [title]
     highlights = adata.uns.get("highlights", [])
@@ -811,7 +837,7 @@ def violin(
     density_norm = _deprecated_scale(density_norm, scale, default="width")
     del scale
 
-    if isinstance(ylabel, (str, type(None))):
+    if isinstance(ylabel, str | NoneType):
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
     if groupby is None:
         if len(ylabel) != 1:
@@ -992,7 +1018,7 @@ def clustermap(
     """
     import seaborn as sns  # Slow import, only import if called
 
-    if not isinstance(obs_keys, (str, type(None))):
+    if not isinstance(obs_keys, str | NoneType):
         raise ValueError("Currently, only a single key is supported.")
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)

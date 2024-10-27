@@ -615,7 +615,7 @@ def highly_variable_genes(
 
     Returns
     -------
-    Returns a :class:`pandas.DataFrame` with calculated metrics if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+    Returns a :class:`pandas.DataFrame` with calculated metrics if `inplace=False`, else returns an `AnnData` object where it sets the following field:
 
     `adata.var['highly_variable']` : :class:`pandas.Series` (dtype `bool`)
         boolean indicator of highly-variable genes
