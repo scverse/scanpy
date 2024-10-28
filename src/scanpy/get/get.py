@@ -338,7 +338,7 @@ def obs_df(
 
 def var_df(
     adata: AnnData,
-    keys: Iterable[str] = (),
+    keys: Collection[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str | None = None,
@@ -353,7 +353,7 @@ def var_df(
     keys
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
-        Tuple of `(key from varm, column index of varm[key])`.
+        Tuples of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
 
@@ -363,6 +363,8 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
+    if isinstance(keys, str):
+        keys = [keys]
     var_cols, obs_idx_keys, _ = _check_indices(
         adata.var, adata.obs_names, dim="var", keys=keys
     )
