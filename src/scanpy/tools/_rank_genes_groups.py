@@ -582,7 +582,7 @@ def rank_genes_groups(
     Notes
     -----
     There are slight inconsistencies depending on whether sparse
-    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/scanpy/tests/test_rank_genes_groups.py>`__.
+    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/tests/test_rank_genes_groups.py>`__.
 
     Examples
     --------
