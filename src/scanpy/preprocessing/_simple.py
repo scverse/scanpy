@@ -723,6 +723,7 @@ def regress_out(
             )
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
+        X = _to_dense(X, order="F") if issparse(X) else X
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(X.T):
