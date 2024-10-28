@@ -159,3 +159,46 @@ def sample_comb(
         np.prod(dims), nsamp, random_state=random_state, method=method
     )
     return np.vstack(np.unravel_index(idx, dims)).T
+
+
+def _to_dense(
+    X: sparse.spmatrix,
+    order: Literal["C", "F"] = "C",
+) -> NDArray:
+    """\
+    Numba kernel for np.toarray() function
+    """
+    out = np.zeros(X.shape, dtype=X.dtype, order=order)
+    if X.format == "csr":
+        _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
+    elif X.format == "csc":
+        _to_dense_csc_numba(X.indptr, X.indices, X.data, out, X.shape)
+    else:
+        out = X.toarray(order=order)
+    return out
+
+
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csc_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+) -> None:
+    for c in numba.prange(X.shape[1]):
+        for i in range(indptr[c], indptr[c + 1]):
+            X[indices[i], c] = data[i]
+
+
+@numba.njit(cache=True, parallel=True)
+def _to_dense_csr_numba(
+    indptr: NDArray,
+    indices: NDArray,
+    data: NDArray,
+    X: NDArray,
+    shape: tuple[int, int],
+) -> None:
+    for r in numba.prange(shape[0]):
+        for i in range(indptr[r], indptr[r + 1]):
+            X[r, indices[i]] = data[i]

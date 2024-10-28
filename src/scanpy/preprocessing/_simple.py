@@ -31,6 +31,7 @@ from .._utils import (
 )
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
+from ._utils import _to_dense
 
 # install dask if available
 try:
@@ -627,49 +628,6 @@ def normalize_per_cell(
 DT = TypeVar("DT")
 
 
-def to_dense(
-    X: spmatrix,
-    order: Literal["C", "F"] = "C",
-) -> NDArray[DT]:
-    """\
-    Numba kernel for np.toarray() function
-    """
-    out = np.zeros(X.shape, dtype=X.dtype, order=order)
-    if X.format == "csr":
-        _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
-    elif X.format == "csc":
-        _to_dense_csc_numba(X.indptr, X.indices, X.data, out, X.shape)
-    else:
-        out = X.toarray()
-    return out
-
-
-@numba.njit(cache=True, parallel=True)
-def _to_dense_csc_numba(
-    indptr: NDArray,
-    indices: NDArray,
-    data: NDArray,
-    X: NDArray,
-    shape: tuple[int, int],
-) -> None:
-    for c in numba.prange(X.shape[1]):
-        for i in range(indptr[c], indptr[c + 1]):
-            X[indices[i], c] = data[i]
-
-
-@numba.njit(cache=True, parallel=True)
-def _to_dense_csr_numba(
-    indptr: NDArray,
-    indices: NDArray,
-    data: NDArray,
-    X: NDArray,
-    shape: tuple[int, int],
-) -> None:
-    for r in numba.prange(shape[0]):
-        for i in range(indptr[r], indptr[r + 1]):
-            X[r, indices[i]] = data[i]
-
-
 @numba.njit(cache=True, parallel=True)
 def get_resid(
     data: np.ndarray,
@@ -780,10 +738,10 @@ def regress_out(
 
     res = None
     if not variable_is_categorical:
-        X = to_dense(X, order="C") if issparse(X) else X
         A = regressors.to_numpy()
         # if det(A.T@A) != 0 we can take the inverse and regress using a fast method.
         if np.linalg.det(A.T @ A) != 0:
+            X = _to_dense(X, order="C") if issparse(X) else X
             res = numpy_regress_out(X, A)
 
     # for a categorical variable or if the above checks failed,
@@ -793,7 +751,7 @@ def regress_out(
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
         n_chunks = int(np.ceil(X.shape[1] / len_chunk))
-        X = to_dense(X, order="F") if issparse(X) else X
+        X = _to_dense(X, order="F") if issparse(X) else X
         chunk_list = np.array_split(X, n_chunks, axis=1)
         regressors_chunk = (
             np.array_split(regressors, n_chunks, axis=1)
