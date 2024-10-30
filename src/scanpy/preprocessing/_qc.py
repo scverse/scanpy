@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from functools import singledispatch
 from typing import TYPE_CHECKING
 from warnings import warn
 
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
+from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr, spmatrix
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
 
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
@@ -386,9 +386,18 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(
-    mtx: np.ndarray | spmatrix, ns: Collection[int]
-) -> np.ndarray:
+def check_ns(func):
+    def check_ns_inner(mtx: np.ndarray | spmatrix | DaskArray, ns: Collection[int]):
+        if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
+            raise IndexError("Positions outside range of features.")
+        return func(mtx, ns)
+
+    return check_ns_inner
+
+
+@singledispatch
+@check_ns
+def top_segment_proportions(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
 
@@ -401,46 +410,6 @@ def top_segment_proportions(
         1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
         the 50th most expressed gene.
     """
-    # Pretty much just does dispatch
-    if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
-        raise IndexError("Positions outside range of features.")
-    if isinstance(mtx, DaskArray):
-        if not isinstance(mtx._meta, csr_matrix | np.ndarray):
-            msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
-            raise ValueError(msg)
-        return mtx.map_blocks(
-            lambda x: top_segment_proportions_in_memory(mtx=x, ns=ns), meta=np.array([])
-        ).compute()
-    return top_segment_proportions_in_memory(mtx, ns)
-
-
-def top_segment_proportions_in_memory(
-    mtx: np.ndarray | spmatrix, ns: Collection[int]
-) -> np.ndarray:
-    """
-    Calculates total percentage of counts in top ns genes.
-
-    Parameters
-    ----------
-    mtx
-        Matrix, where each row is a sample, each column a feature.
-    ns
-        Positions to calculate cumulative proportion at. Values are considered
-        1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
-        the 50th most expressed gene.
-    """
-    # Pretty much just does dispatch
-    if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
-        raise IndexError("Positions outside range of features.")
-    if issparse(mtx):
-        if not isspmatrix_csr(mtx):
-            mtx = csr_matrix(mtx)
-        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
-    else:
-        return top_segment_proportions_dense(mtx, ns)
-
-
-def top_segment_proportions_dense(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
@@ -455,6 +424,25 @@ def top_segment_proportions_dense(mtx: np.ndarray, ns: Collection[int]) -> np.nd
         values[:, j] = acc
         prev = n
     return values / sums[:, None]
+
+
+@top_segment_proportions.register(DaskArray)
+@check_ns
+def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
+    if not isinstance(mtx._meta, csr_matrix | np.ndarray):
+        msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
+        raise ValueError(msg)
+    return mtx.map_blocks(
+        lambda x: top_segment_proportions(x, ns), meta=np.array([])
+    ).compute()
+
+
+@top_segment_proportions.register(spmatrix)
+@check_ns
+def _(mtx: spmatrix, ns: Collection[int]) -> DaskArray:
+    if not isspmatrix_csr(mtx):
+        mtx = csr_matrix(mtx)
+    return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
 
 
 @numba.njit(cache=True, parallel=True)
