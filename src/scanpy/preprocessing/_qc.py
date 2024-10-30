@@ -216,9 +216,8 @@ def describe_var(
     var_metrics.columns = new_colnames
     if inplace:
         adata.var[var_metrics.columns] = var_metrics
-    else:
-        return var_metrics
-    return None
+        return None
+    return var_metrics
 
 
 @_doc_params(
