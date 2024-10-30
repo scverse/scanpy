@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from typing import Any, Literal, TypeVar
 
     from anndata import AnnData
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from ..neighbors import NeighborsParams, RPForestDict
 
@@ -714,7 +714,7 @@ def _(
 
 
 @singledispatch
-def axis_nnz(X: np.ndarray, axis: Literal[0, 1]) -> np.ndarray:
+def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
