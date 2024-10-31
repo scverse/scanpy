@@ -183,31 +183,34 @@ def gen_pca_params(
 
 @pytest.mark.parametrize(
     ("array_type", "zero_center", "svd_solver", "warn_pat_expected"),
-    [
-        pytest.param(
-            array_type.values[0],
-            zero_center,
-            svd_solver,
-            warn_pat_expected,
-            marks=(
-                array_type.marks
-                if xfail_reason is None
-                else [pytest.mark.xfail(reason=xfail_reason)]
-            ),
-            id=(
-                f"{array_type.id}-{'zero_center' if zero_center else 'no_zero_center'}-"
-                f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
-            ),
-        )
-        for array_type in ARRAY_TYPES
-        for zero_center in [True, False]
-        for svd_solver_type in [None, "valid", "invalid"]
-        for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
-            array_type=array_type.values[0],
-            zero_center=zero_center,
-            svd_solver_type=svd_solver_type,
-        )
-    ],
+    sorted(
+        [
+            pytest.param(
+                array_type.values[0],
+                zero_center,
+                svd_solver,
+                warn_pat_expected,
+                marks=(
+                    array_type.marks
+                    if xfail_reason is None
+                    else [pytest.mark.xfail(reason=xfail_reason)]
+                ),
+                id=(
+                    f"{array_type.id}-{'zero_center' if zero_center else 'no_zero_center'}-"
+                    f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
+                ),
+            )
+            for array_type in ARRAY_TYPES
+            for zero_center in [True, False]
+            for svd_solver_type in [None, "valid", "invalid"]
+            for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
+                array_type=array_type.values[0],
+                zero_center=zero_center,
+                svd_solver_type=svd_solver_type,
+            )
+        ],
+        key=lambda x: x.id,
+    ),
 )
 def test_pca_warnings(
     *,
