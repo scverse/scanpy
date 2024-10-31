@@ -11,7 +11,7 @@ from packaging.version import Version
 from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Collection, Iterable
     from typing import Any, Literal
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
@@ -116,7 +116,7 @@ def _check_indices(
     alt_index: pd.Index,
     *,
     dim: Literal["obs", "var"],
-    keys: list[str],
+    keys: Iterable[str],
     alias_index: pd.Index | None = None,
     use_raw: bool = False,
 ) -> tuple[list[str], list[str], list[str]]:
@@ -159,7 +159,7 @@ def _check_indices(
 
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
-    for key in np.unique(keys):
+    for key in dict.fromkeys(keys):
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
@@ -191,7 +191,7 @@ def _check_indices(
 def _get_array_values(
     X,
     dim_names: pd.Index,
-    keys: list[str],
+    keys: Iterable[str],
     *,
     axis: Literal[0, 1],
     backed: bool,
@@ -221,7 +221,7 @@ def _get_array_values(
 
 def obs_df(
     adata: AnnData,
-    keys: Iterable[str] = (),
+    keys: Collection[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str | None = None,
@@ -238,7 +238,7 @@ def obs_df(
     keys
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
-        Tuple of `(key from obsm, column index of obsm[key])`.
+        Tuples of `(key from obsm, column index of obsm[key])`.
     layer
         Layer of `adata` to use as expression values.
     gene_symbols
@@ -278,6 +278,8 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
     """
+    if isinstance(keys, str):
+        keys = [keys]
     if use_raw:
         assert (
             layer is None
@@ -336,7 +338,7 @@ def obs_df(
 
 def var_df(
     adata: AnnData,
-    keys: Iterable[str] = (),
+    keys: Collection[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str | None = None,
@@ -351,7 +353,7 @@ def var_df(
     keys
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
-        Tuple of `(key from varm, column index of varm[key])`.
+        Tuples of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
 
@@ -361,6 +363,8 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
+    if isinstance(keys, str):
+        keys = [keys]
     var_cols, obs_idx_keys, _ = _check_indices(
         adata.var, adata.obs_names, dim="var", keys=keys
     )
