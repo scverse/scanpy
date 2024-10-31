@@ -136,7 +136,7 @@ def gearys_c(
 #   tests to fail.
 
 
-# TODO: this was `njit`ed but doesn’t need to be
+@njit
 def _gearys_c_vec(
     data: np.ndarray,
     indices: np.ndarray,

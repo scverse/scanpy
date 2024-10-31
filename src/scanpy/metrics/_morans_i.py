@@ -159,7 +159,7 @@ def _morans_i_vec_W(
     return len(x) / W * inum / z2ss
 
 
-# TODO: this was `njit`ed but doesn’t need to be
+@njit
 def _morans_i_vec_W_sparse(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
