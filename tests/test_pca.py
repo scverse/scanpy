@@ -183,6 +183,8 @@ def gen_pca_params(
 
 @pytest.mark.parametrize(
     ("array_type", "zero_center", "svd_solver", "warn_pat_expected"),
+    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
+    # since `gen_pca_params` is a generator which is based on a set
     sorted(
         [
             pytest.param(
