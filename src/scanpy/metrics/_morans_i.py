@@ -9,7 +9,7 @@ import numba
 import numpy as np
 from scipy import sparse
 
-from .._compat import fullname
+from .._compat import fullname, njit
 from ..get import _get_obs_rep
 from ._common import _check_vals, _resolve_vals
 
@@ -126,7 +126,7 @@ def morans_i(
 # This is done in a very similar way to gearys_c. See notes there for details.
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _morans_i_vec(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -137,7 +137,7 @@ def _morans_i_vec(
     return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
 
 
-@numba.njit(cache=True)
+@njit  # TODO: this didn’t have `parallel=True` but used `prange`…
 def _morans_i_vec_W(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -159,7 +159,7 @@ def _morans_i_vec_W(
     return len(x) / W * inum / z2ss
 
 
-@numba.njit(cache=True)
+# TODO: this was `njit`ed but doesn’t need to be
 def _morans_i_vec_W_sparse(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -174,7 +174,7 @@ def _morans_i_vec_W_sparse(  # noqa: PLR0917
     return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _morans_i_mtx(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -191,7 +191,7 @@ def _morans_i_mtx(
     return out
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _morans_i_mtx_csr(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,

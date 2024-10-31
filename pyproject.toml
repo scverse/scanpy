@@ -259,6 +259,8 @@ required-imports = ["from __future__ import annotations"]
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
 "legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
 "numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
+"numba.jit".msg = "Use `scanpy._compat.njit` instead"
+"numba.njit".msg = "Use `scanpy._compat.njit` instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true

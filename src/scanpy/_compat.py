@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from functools import cache, partial
+from functools import cache, partial, update_wrapper
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar, overload
 
 from packaging.version import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from importlib.metadata import PackageMetadata
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 if TYPE_CHECKING:
@@ -90,3 +94,28 @@ else:
     # but this code makes it possible to run scanpy without it.
     def old_positionals(*old_positionals: str):
         return lambda func: func
+
+
+@dataclass(unsafe_hash=True)
+class NumbaWrapper(Generic[P, R]):
+    fn: Callable[P, R]
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        return self._njit(parallel=True)(*args, **kwargs)
+
+    @cache
+    def _njit(self, *, parallel: bool) -> Callable[P, R]:
+        import numba
+
+        return numba.njit(self.fn, cache=True, parallel=parallel)  # noqa: TID251
+
+
+@overload
+def njit(fn: Callable[P, R], /) -> Callable[P, R]: ...
+@overload
+def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def njit(fn: Callable[P, R] | None = None, /) -> Callable[[]]:
+    def decorator(f: Callable[P, R], /) -> Callable[P, R]:
+        return update_wrapper(NumbaWrapper(f), f)
+
+    return decorator if fn is None else decorator(fn)

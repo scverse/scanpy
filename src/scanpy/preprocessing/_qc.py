@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
+from .._compat import njit
 from .._utils import _doc_params
 from ._docs import (
     doc_adata_basic,
@@ -432,7 +433,7 @@ def top_segment_proportions_dense(
     return values / sums[:, None]
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def top_segment_proportions_sparse_csr(data, indptr, ns):
     # work around https://github.com/numba/numba/issues/5056
     indptr = indptr.astype(np.int64)
