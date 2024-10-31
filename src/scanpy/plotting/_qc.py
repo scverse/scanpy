@@ -24,11 +24,12 @@ def highest_expr_genes(
     adata: AnnData,
     n_top: int = 30,
     *,
+    layer: str | None = None,
+    gene_symbols: str | None = None,
+    log: bool = False,
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
-    gene_symbols: str | None = None,
-    log: bool = False,
     **kwds,
 ):
     """\
@@ -56,11 +57,13 @@ def highest_expr_genes(
         Annotated data matrix.
     n_top
         Number of top
-    {show_save_ax}
+    layer
+        Layer from which to pull data.
     gene_symbols
         Key for field in .var that stores gene symbols if you do not want to use .var_names.
     log
         Plot x-axis in log scale
+    {show_save_ax}
     **kwds
         Are passed to :func:`~seaborn.boxplot`.
 
@@ -72,7 +75,7 @@ def highest_expr_genes(
     from scipy.sparse import issparse
 
     # compute the percentage of each gene per cell
-    norm_dict = normalize_total(adata, target_sum=100, inplace=False)
+    norm_dict = normalize_total(adata, target_sum=100, layer=layer, inplace=False)
 
     # identify the genes with the highest mean
     if issparse(norm_dict["X"]):

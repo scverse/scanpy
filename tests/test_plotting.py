@@ -37,13 +37,19 @@ ROOT = HERE / "_images"
 
 
 @pytest.mark.parametrize("col", [None, "symb"])
-def test_highest_expr_genes(image_comparer, col):
+@pytest.mark.parametrize("layer", [None, "layer_name"])
+def test_highest_expr_genes(image_comparer, col, layer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = pbmc3k()
+    if layer is not None:
+        adata.layers[layer] = adata.X
+        del adata.X
     # check that only existing categories are shown
     adata.var["symb"] = adata.var_names.astype("category")
-    sc.pl.highest_expr_genes(adata, 20, gene_symbols=col, show=False)
+
+    sc.pl.highest_expr_genes(adata, 20, gene_symbols=col, layer=layer, show=False)
+
     save_and_compare_images("highest_expr_genes")
 
 
