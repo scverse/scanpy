@@ -140,7 +140,10 @@ def gen_pca_params(
         yield None, None, None
         return
 
-    all_svd_solvers = set(get_args(SVDSolver))
+    all_svd_solvers = {
+        solver for literal in get_args(SVDSolver) for solver in get_args(literal)
+    }
+    assert not {s for s in all_svd_solvers if not isinstance(s, str)}
     svd_solvers: set[SVDSolver]
     match array_type, zero_center:
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
@@ -150,11 +153,11 @@ def gen_pca_params(
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
             svd_solvers = {"covariance_eigh"}
         case ((sparse.csr_matrix | sparse.csc_matrix), True):
-            svd_solvers = {"arpack"}
+            svd_solvers = {"arpack", "covariance_eigh"}
         case ((sparse.csr_matrix | sparse.csc_matrix), False):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
-            svd_solvers = {"auto", "full", "arpack", "randomized"}
+            svd_solvers = {"auto", "full", "arpack", "covariance_eigh", "randomized"}
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
@@ -168,7 +171,8 @@ def gen_pca_params(
     else:
         pytest.fail(f"Unknown {svd_solver_type=}")
 
-    for svd_solver in svd_solvers:
+    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
+    for svd_solver in sorted(svd_solvers):
         # explicit check for special case
         if (
             array_type in {sparse.csr_matrix, sparse.csc_matrix}
@@ -183,36 +187,31 @@ def gen_pca_params(
 
 @pytest.mark.parametrize(
     ("array_type", "zero_center", "svd_solver", "warn_pat_expected"),
-    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
-    # since `gen_pca_params` is a generator which is based on a set
-    sorted(
-        [
-            pytest.param(
-                array_type.values[0],
-                zero_center,
-                svd_solver,
-                warn_pat_expected,
-                marks=(
-                    array_type.marks
-                    if xfail_reason is None
-                    else [pytest.mark.xfail(reason=xfail_reason)]
-                ),
-                id=(
-                    f"{array_type.id}-{'zero_center' if zero_center else 'no_zero_center'}-"
-                    f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
-                ),
-            )
-            for array_type in ARRAY_TYPES
-            for zero_center in [True, False]
-            for svd_solver_type in [None, "valid", "invalid"]
-            for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
-                array_type=array_type.values[0],
-                zero_center=zero_center,
-                svd_solver_type=svd_solver_type,
-            )
-        ],
-        key=lambda x: x.id,
-    ),
+    [
+        pytest.param(
+            array_type.values[0],
+            zero_center,
+            svd_solver,
+            warn_pat_expected,
+            marks=(
+                array_type.marks
+                if xfail_reason is None
+                else [pytest.mark.xfail(reason=xfail_reason)]
+            ),
+            id=(
+                f"{array_type.id}-{'zero_center' if zero_center else 'no_zero_center'}-"
+                f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
+            ),
+        )
+        for array_type in ARRAY_TYPES
+        for zero_center in [True, False]
+        for svd_solver_type in [None, "valid", "invalid"]
+        for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
+            array_type=array_type.values[0],
+            zero_center=zero_center,
+            svd_solver_type=svd_solver_type,
+        )
+    ],
 )
 def test_pca_warnings(
     *,
