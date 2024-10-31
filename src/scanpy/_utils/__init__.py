@@ -42,7 +42,7 @@ else:
     from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
     from pathlib import Path
     from typing import Any, Literal, TypeVar
 
@@ -805,7 +805,7 @@ def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
 
 def select_groups(
     adata: AnnData,
-    groups_order_subset: list[str] | Literal["all"] = "all",
+    groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
 ) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
