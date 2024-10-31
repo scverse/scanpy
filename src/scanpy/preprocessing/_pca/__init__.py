@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, get_args, overload
+from typing import TYPE_CHECKING, Literal, overload
 from warnings import warn
 
 import anndata as ad
@@ -14,7 +14,7 @@ from sklearn.utils import check_random_state
 from ... import logging as logg
 from ..._compat import DaskArray, pkg_version
 from ..._settings import settings
-from ..._utils import _doc_params, _empty, is_backed_type
+from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
@@ -471,10 +471,10 @@ def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> SvdSol
     default: SvdSolvDaskML
     match method:
         case dmld.PCA | dmld.IncrementalPCA:
-            args = get_args(SvdSolvPCADaskML)
+            args = get_literal_vals(SvdSolvPCADaskML)
             default = "auto"
         case dmld.TruncatedSVD:
-            args = get_args(SvdSolvTruncatedSVDDaskML)
+            args = get_literal_vals(SvdSolvTruncatedSVDDaskML)
             default = "tsqr"
         case _:
             msg = f"Unknown {method=} in _handle_dask_ml_args"
@@ -499,18 +499,18 @@ def _handle_sklearn_args(
 ) -> SvdSolvSkearn:
     import sklearn.decomposition as skld
 
-    args: tuple[SvdSolvSkearn, ...]
+    args: frozenset[SvdSolvSkearn]
     default: SvdSolvSkearn
     suffix = ""
     match (method, sparse):
         case (skld.TruncatedSVD, None):
-            args = get_args(SvdSolvTruncatedSVDSklearn)
+            args = get_literal_vals(SvdSolvTruncatedSVDSklearn)
             default = "randomized"
         case (skld.PCA, False):
-            args = get_args(SvdSolvPCADenseSklearn)
+            args = get_literal_vals(SvdSolvPCADenseSklearn)
             default = "arpack"
         case (skld.PCA, True):
-            args = get_args(SvdSolvPCASparseSklearn)
+            args = get_literal_vals(SvdSolvPCASparseSklearn)
             default = "arpack"
             suffix = " (with sparse input)"
         case _:

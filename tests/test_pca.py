@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from contextlib import nullcontext
 from functools import wraps
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import anndata as ad
 import numpy as np
@@ -17,6 +17,7 @@ from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
+from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
@@ -140,10 +141,7 @@ def gen_pca_params(
         yield None, None, None
         return
 
-    all_svd_solvers = {
-        solver for literal in get_args(SVDSolver) for solver in get_args(literal)
-    }
-    assert not {s for s in all_svd_solvers if not isinstance(s, str)}
+    all_svd_solvers = get_literal_vals(SVDSolver)
     svd_solvers: set[SVDSolver]
     match array_type, zero_center:
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
