@@ -19,7 +19,11 @@ features = ["test", "dask-ml"]
 extra-dependencies = ["ipykernel"]
 overrides.matrix.deps.env-vars = [
     { if = ["pre"], key = "UV_PRERELEASE", value = "allow" },
-    { if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
+    #{ if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
+    { if = ["min"], key = "UV_CONSTRAINT", value = "/tmp/scanpy-min-deps.txt" },
+]
+overrides.matrix.deps.pre-install-commands = [
+    { if = ["min"] , value = "uv pip install tomli packaging && python ci/scripts/min-deps.py pyproject.toml -o /tmp/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = ["min"] , value = "3.10" },
