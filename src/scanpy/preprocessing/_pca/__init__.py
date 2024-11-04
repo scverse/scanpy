@@ -21,6 +21,7 @@ from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
     from collections.abc import Container
+    from collections.abc import Set as AbstractSet
     from typing import LiteralString, TypeVar
 
     import dask_ml.decomposition as dmld
@@ -44,11 +45,11 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCASparseSklearn = (
-    Literal["arpack", "covariance_eigh"]
-    if pkg_version("scikit-learn") >= Version("1.5")
-    else Literal["arpack"]
-)
+if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
+    SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+else:
+    SvdSolvPCASparseSklearn = Literal["arpack"]
+
 SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvSkearn = (
@@ -471,7 +472,7 @@ def _handle_dask_ml_args(
 def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> SvdSolvDaskML:
     import dask_ml.decomposition as dmld
 
-    args: tuple[SvdSolvDaskML, ...]
+    args: AbstractSet[SvdSolvDaskML]
     default: SvdSolvDaskML
     match method:
         case dmld.PCA | dmld.IncrementalPCA:
@@ -503,7 +504,7 @@ def _handle_sklearn_args(
 ) -> SvdSolvSkearn:
     import sklearn.decomposition as skld
 
-    args: frozenset[SvdSolvSkearn]
+    args: AbstractSet[SvdSolvSkearn]
     default: SvdSolvSkearn
     suffix = ""
     match (method, sparse):
