@@ -126,6 +126,10 @@ def array_type(request: pytest.FixtureRequest) -> ArrayType:
 SVDSolverDeprecated = Literal["lobpcg"]
 SVDSolver = SvdSolverSupported | SVDSolverDeprecated
 
+SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
+    {"covariance_eigh"} if pkg_version("scikit-learn") >= Version("1.5") else ()
+)
+
 
 def gen_pca_params(
     *,
@@ -151,11 +155,11 @@ def gen_pca_params(
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
             svd_solvers = {"covariance_eigh"}
         case ((sparse.csr_matrix | sparse.csc_matrix), True):
-            svd_solvers = {"arpack", "covariance_eigh"}
+            svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
         case ((sparse.csr_matrix | sparse.csc_matrix), False):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
-            svd_solvers = {"auto", "full", "arpack", "covariance_eigh", "randomized"}
+            svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:

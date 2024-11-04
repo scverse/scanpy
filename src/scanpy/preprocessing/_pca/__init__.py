@@ -44,10 +44,12 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCADenseSklearn = Literal[
-    "auto", "full", "arpack", "covariance_eigh", "randomized"
-]
-SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+SvdSolvPCASparseSklearn = (
+    Literal["arpack", "covariance_eigh"]
+    if pkg_version("scikit-learn") >= Version("1.5")
+    else Literal["arpack"]
+)
+SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvSkearn = (
     SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
