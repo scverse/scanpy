@@ -49,7 +49,6 @@ if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
     SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 else:
     SvdSolvPCASparseSklearn = Literal["arpack"]
-
 SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvSkearn = (
