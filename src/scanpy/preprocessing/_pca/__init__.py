@@ -299,7 +299,9 @@ def pca(
         if issparse(X) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
         ):
-            if svd_solver not in {"lobpcg", "arpack"}:
+            if svd_solver not in (
+                {"lobpcg"} | get_literal_vals(SvdSolvPCASparseSklearn)
+            ):
                 if svd_solver is not None:
                     msg = (
                         f"Ignoring {svd_solver=} and using 'arpack', "
