@@ -136,7 +136,6 @@ def gearys_c(
 #   tests to fail.
 
 
-@njit
 def _gearys_c_vec(
     data: np.ndarray,
     indices: np.ndarray,
@@ -147,7 +146,6 @@ def _gearys_c_vec(
     return _gearys_c_vec_W(data, indices, indptr, x, W)
 
 
-@njit
 def _gearys_c_vec_W(
     data: np.ndarray,
     indices: np.ndarray,
@@ -182,7 +180,7 @@ def _gearys_c_vec_W(
 # https://github.com/numba/numba/issues/6774#issuecomment-788789663
 
 
-@njit  # TODO: this didn’t have `parallel=True` but used `prange` …
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _gearys_c_inner_sparse_x_densevec(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -203,7 +201,7 @@ def _gearys_c_inner_sparse_x_densevec(
     return numer / denom
 
 
-@njit  # TODO: this didn’t have `parallel=True` but used `prange` …
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,

@@ -111,7 +111,6 @@ def njit(
             for parallel in (True, False)
         }
 
-        @numba.njit(cache=True, parallel=False)  # noqa: TID251
         @wraps(f)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             return fns[True](*args, **kwargs)

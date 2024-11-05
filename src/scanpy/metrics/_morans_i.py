@@ -137,7 +137,7 @@ def _morans_i_vec(
     return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
 
 
-@njit  # TODO: this didn’t have `parallel=True` but used `prange`…
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _morans_i_vec_W(
     g_data: np.ndarray,
     g_indices: np.ndarray,
@@ -159,7 +159,7 @@ def _morans_i_vec_W(
     return len(x) / W * inum / z2ss
 
 
-@njit
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _morans_i_vec_W_sparse(  # noqa: PLR0917
     g_data: np.ndarray,
     g_indices: np.ndarray,
