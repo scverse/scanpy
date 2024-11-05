@@ -783,9 +783,13 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     raise NotImplementedError
 
 
-@check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.spmatrix)
-def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
+@check_nonnegative_integers.register(DaskArray)
+def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
+    # we lie to dask about the chunks here, but it doesn't seem to matter
+    return X.map_blocks(mask_data, chunks=(1,) * X.blocks.size, dtype=bool).any(axis=0)
+
+
+def mask_data(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -795,12 +799,13 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     # Check all are integers
     elif issubclass(data.dtype.type, Integral):
         return True
-    return not np.any((data % 1) != 0)
+    return ((data % 1) != 0).ravel()
 
 
-@check_nonnegative_integers.register(DaskArray)
-def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
-    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+@check_nonnegative_integers.register(np.ndarray)
+@check_nonnegative_integers.register(sparse.spmatrix)
+def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
+    return not np.any(mask_data(X))
 
 
 def select_groups(
