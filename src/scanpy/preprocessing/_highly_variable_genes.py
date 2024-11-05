@@ -12,7 +12,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import DaskArray, njit, old_positionals
+from .._compat import DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
@@ -200,7 +200,8 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
-@njit  # TODO: this didn’t have `parallel=True`, should it be?
+# parallel=False needed for accuracy
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _sum_and_sum_squares_clipped(
     indices: NDArray[np.integer],
     data: NDArray[np.floating],
