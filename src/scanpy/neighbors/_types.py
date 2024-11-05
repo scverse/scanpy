@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
-# These two are used with get_args elsewhere
+# These two are used with get_literal_vals elsewhere
 _Method = Literal["umap", "gauss"]
 _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
