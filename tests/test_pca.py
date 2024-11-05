@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from contextlib import nullcontext
 from functools import wraps
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import anndata as ad
 import numpy as np
@@ -17,6 +17,7 @@ from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
+from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
 from testing.scanpy import _helpers
@@ -125,6 +126,10 @@ def array_type(request: pytest.FixtureRequest) -> ArrayType:
 SVDSolverDeprecated = Literal["lobpcg"]
 SVDSolver = SvdSolverSupported | SVDSolverDeprecated
 
+SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
+    {"covariance_eigh"} if pkg_version("scikit-learn") >= Version("1.5") else ()
+)
+
 
 def gen_pca_params(
     *,
@@ -140,7 +145,7 @@ def gen_pca_params(
         yield None, None, None
         return
 
-    all_svd_solvers = set(get_args(SVDSolver))
+    all_svd_solvers = get_literal_vals(SVDSolver)
     svd_solvers: set[SVDSolver]
     match array_type, zero_center:
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
@@ -150,11 +155,11 @@ def gen_pca_params(
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
             svd_solvers = {"covariance_eigh"}
         case ((sparse.csr_matrix | sparse.csc_matrix), True):
-            svd_solvers = {"arpack"}
+            svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
         case ((sparse.csr_matrix | sparse.csc_matrix), False):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
-            svd_solvers = {"auto", "full", "arpack", "randomized"}
+            svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
@@ -168,7 +173,8 @@ def gen_pca_params(
     else:
         pytest.fail(f"Unknown {svd_solver_type=}")
 
-    for svd_solver in svd_solvers:
+    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
+    for svd_solver in sorted(svd_solvers):
         # explicit check for special case
         if (
             array_type in {sparse.csr_matrix, sparse.csc_matrix}
