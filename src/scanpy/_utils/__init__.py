@@ -15,11 +15,11 @@ import warnings
 from collections import namedtuple
 from contextlib import contextmanager, suppress
 from enum import Enum
-from functools import partial, singledispatch, wraps
-from operator import mul, truediv
+from functools import partial, reduce, singledispatch, wraps
+from operator import mul, or_, truediv
 from textwrap import dedent
-from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, overload
+from types import MethodType, ModuleType, UnionType
+from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin, overload
 from weakref import WeakSet
 
 import h5py
@@ -42,9 +42,9 @@ else:
     from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, KeysView, Mapping
     from pathlib import Path
-    from typing import Any, Literal, TypeVar
+    from typing import Any, TypeVar
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
 # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 # maybe in the future random.Generator
 AnyRandom = int | np.random.RandomState | None
+LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
 class Empty(Enum):
@@ -530,6 +531,19 @@ def update_params(
             if val is not None:
                 updated_params[key] = val
     return updated_params
+
+
+# `get_args` returns `tuple[Any]` so I don’t think it’s possible to get the correct type here
+def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
+    """Get all literal values from a Literal or Union of … of Literal type."""
+    if isinstance(typ, UnionType | LegacyUnionType):
+        return reduce(
+            or_, (dict.fromkeys(get_literal_vals(t)) for t in get_args(typ))
+        ).keys()
+    if get_origin(typ) is Literal:
+        return dict.fromkeys(get_args(typ)).keys()
+    msg = f"{typ} is not a valid Literal"
+    raise TypeError(msg)
 
 
 # --------------------------------------------------------------------------------
