@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from functools import singledispatch
 from inspect import signature
 from typing import TYPE_CHECKING, cast
 
@@ -24,6 +25,62 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
+
+
+@singledispatch
+def clip_square_sum(
+    data_batch: np.ndarray, clip_val: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    batch_counts = data_batch.astype(np.float64).copy()
+    clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
+    np.putmask(
+        batch_counts,
+        batch_counts > clip_val_broad,
+        clip_val_broad,
+    )
+
+    squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
+    batch_counts_sum = batch_counts.sum(axis=0)
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(DaskArray)
+def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    n_blocks = data_batch.blocks.size
+
+    def sum_and_sum_squares_clipped_from_block(block):
+        return np.vstack(clip_square_sum(block, clip_val))[None, ...]
+
+    squared_batch_counts_sum, batch_counts_sum = (
+        data_batch.map_blocks(
+            sum_and_sum_squares_clipped_from_block,
+            new_axis=(1,),
+            chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
+            meta=np.array([]),
+            dtype=np.float64,
+        )
+        .sum(axis=0)
+        .compute()
+    )
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(sp_sparse.spmatrix)
+def _(
+    data_batch: sp_sparse.spmatrix, clip_val: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    if sp_sparse.isspmatrix_csr(data_batch):
+        batch_counts = data_batch
+    else:
+        batch_counts = sp_sparse.csr_matrix(data_batch)
+
+    return _sum_and_sum_squares_clipped(
+        batch_counts.indices,
+        batch_counts.data,
+        n_cols=batch_counts.shape[1],
+        clip_val=clip_val,
+        nnz=batch_counts.nnz,
+    )
 
 
 def _highly_variable_genes_seurat_v3(
@@ -89,6 +146,10 @@ def _highly_variable_genes_seurat_v3(
         data_batch = data[batch_info == b]
 
         mean, var = _get_mean_var(data_batch)
+        if isinstance(mean, DaskArray) and isinstance(var, DaskArray):
+            import dask.array as da
+
+            mean, var = da.compute(mean, var)
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -103,30 +164,9 @@ def _highly_variable_genes_seurat_v3(
         N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
-        if sp_sparse.issparse(data_batch):
-            if sp_sparse.isspmatrix_csr(data_batch):
-                batch_counts = data_batch
-            else:
-                batch_counts = sp_sparse.csr_matrix(data_batch)
-
-            squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
-                batch_counts.indices,
-                batch_counts.data,
-                n_cols=batch_counts.shape[1],
-                clip_val=clip_val,
-                nnz=batch_counts.nnz,
-            )
-        else:
-            batch_counts = data_batch.astype(np.float64).copy()
-            clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
-            np.putmask(
-                batch_counts,
-                batch_counts > clip_val_broad,
-                clip_val_broad,
-            )
-
-            squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
-            batch_counts_sum = batch_counts.sum(axis=0)
+        squared_batch_counts_sum, batch_counts_sum = clip_square_sum(
+            data_batch, clip_val
+        )
 
         norm_gene_var = (1 / ((N - 1) * np.square(reg_std))) * (
             (N * np.square(mean))
@@ -198,6 +238,7 @@ def _highly_variable_genes_seurat_v3(
             df = df.iloc[df["highly_variable"].to_numpy(), :]
 
         return df
+    return None
 
 
 @numba.njit(cache=True)
