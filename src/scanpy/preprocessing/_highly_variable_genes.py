@@ -87,6 +87,8 @@ def _highly_variable_genes_seurat_v3(
     norm_gene_vars = []
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
+        if isinstance(data_batch, DaskArray):
+            data_batch = data_batch.compute()
 
         mean, var = _get_mean_var(data_batch)
         not_const = var > 0

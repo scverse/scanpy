@@ -676,23 +676,30 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     assert adatas[True].var_names.equals(dfs[True].index)
 
 
-@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
+@pytest.mark.parametrize(
+    "flavor", ["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+)
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize(
     "to_dask", [p for p in ARRAY_TYPES if "dask" in p.values[0].__name__]
 )
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
+    # current blob produces singularities in loess....maybe a bad sign of the data?
+    if "seurat_v3" in flavor:
+        adata = pbmc3k()
     adata.X = np.abs(adata.X).astype(int)
     if batch_key is not None:
         adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
-
     adata_dask = adata.copy()
     adata_dask.X = to_dask(adata_dask.X)
+    adata_dask.X = adata_dask.X.rechunk((adata_dask.X.chunksize[0], -1))
 
     output_mem, output_dask = (
-        sc.pp.highly_variable_genes(ad, flavor=flavor, n_top_genes=15, inplace=False)
+        sc.pp.highly_variable_genes(
+            ad, flavor=flavor, n_top_genes=15, inplace=False, batch_key=batch_key
+        )
         for ad in [adata, adata_dask]
     )
 
