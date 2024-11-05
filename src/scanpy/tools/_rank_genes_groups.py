@@ -99,7 +99,7 @@ class _RankGenes:
     def __init__(
         self,
         adata: AnnData,
-        groups: list[str] | Literal["all"],
+        groups: Iterable[str] | Literal["all"],
         groupby: str,
         *,
         mask_var: NDArray[np.bool_] | None = None,
