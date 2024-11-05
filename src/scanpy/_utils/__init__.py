@@ -17,10 +17,16 @@ from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import dedent
-from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Literal, NamedTuple, overload
 from types import MethodType, ModuleType, UnionType
-from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin, overload
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    NamedTuple,
+    Union,
+    get_args,
+    get_origin,
+    overload,
+)
 from weakref import WeakSet
 
 import h5py
