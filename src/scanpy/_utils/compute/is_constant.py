@@ -150,4 +150,8 @@ def _(a: DaskArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool
         v = a[tuple(0 for _ in range(a.ndim))].compute()
         return (a == v).all()
     # TODO: use overlapping blocks and reduction instead of `drop_axis`
-    return a.map_blocks(partial(is_constant, axis=axis), drop_axis=axis)
+    return a.map_blocks(
+        partial(is_constant, axis=axis),
+        drop_axis=axis,
+        meta=np.array([], dtype=a.dtype),
+    )

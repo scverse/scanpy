@@ -174,11 +174,15 @@ def _is_threading_layer_threadsafe() -> bool:
     for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
         if layer not in available:
             continue
-        try:  # `importlib.util.find_spec` doesn’t work here
-            importlib.import_module(f"numba.np.ufunc.{layer}pool")
-        except ImportError:
-            continue
+        if layer != "workqueue":
+            try:  # `importlib.util.find_spec` doesn’t work here
+                importlib.import_module(f"numba.np.ufunc.{layer}pool")
+            except ImportError:
+                continue
         # the layer has been found
         return layer in LAYERS["threadsafe"]
-    msg = f"No loadable threading layer: {numba.config.THREADING_LAYER=}"
+    msg = (
+        f"No loadable threading layer: {numba.config.THREADING_LAYER=} "
+        f" ({available=}, {numba.config.THREADING_LAYER_PRIORITY=})"
+    )
     raise ValueError(msg)
