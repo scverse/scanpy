@@ -146,6 +146,7 @@ def _gearys_c_vec(
     return _gearys_c_vec_W(data, indices, indptr, x, W)
 
 
+@njit
 def _gearys_c_vec_W(
     data: np.ndarray,
     indices: np.ndarray,
