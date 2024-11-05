@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 from dataclasses import dataclass, field
 from functools import cache, partial, wraps
 from importlib.util import find_spec
@@ -123,6 +124,12 @@ def njit(
         @wraps(f)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             parallel = not _is_in_unsafe_thread_pool()
+            if not parallel:
+                msg = (
+                    "Numba function called from a non-threadsafe context. "
+                    "Try installing `tbb`."
+                )
+                warnings.warn(msg, stacklevel=2)
             return fns[parallel](*args, **kwargs)
 
         return wrapper
