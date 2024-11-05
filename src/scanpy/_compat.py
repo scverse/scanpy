@@ -12,6 +12,7 @@ from packaging.version import Version
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
+    from typing import Literal
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -103,6 +104,14 @@ def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 def njit(
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
+    """Jit-compile a function using numba.
+
+    On call, this function dispatches to a parallel or sequential numba function,
+    depending on if it has been called from a thread pool.
+
+    See <https://github.com/numbagg/numbagg/pull/201/files#r1409374809>
+    """
+
     def decorator(f: Callable[P, R], /) -> Callable[P, R]:
         import numba
 
@@ -113,8 +122,44 @@ def njit(
 
         @wraps(f)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            return fns[True](*args, **kwargs)
+            parallel = not _is_in_unsafe_thread_pool()
+            return fns[parallel](*args, **kwargs)
 
         return wrapper
 
     return decorator if fn is None else decorator(fn)
+
+
+def _is_in_unsafe_thread_pool() -> bool:
+    import threading
+
+    current_thread = threading.current_thread()
+    # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
+    return (
+        current_thread.name.startswith("ThreadPoolExecutor")
+        and _thread_backend() == "workqueue"
+    )
+
+
+@cache
+def _thread_backend() -> Literal["tbb", "omp", "workqueue"]:
+    import importlib
+
+    import numba
+
+    if numba.config.THREADING_LAYER != "default":
+        return numba.config.THREADING_LAYER
+
+    for layer in numba.config.THREADING_LAYER_PRIORITY:
+        if layer not in {"tbb", "omp"}:
+            continue
+        # Note that `importlib.util.find_spec` doesn't work for these
+        # it will falsely return True
+        try:
+            importlib.import_module(f"numba.np.ufunc.{layer}pool")
+        except ImportError:
+            pass
+        else:
+            return layer
+
+    return "workqueue"
