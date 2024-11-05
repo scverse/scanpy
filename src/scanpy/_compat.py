@@ -159,14 +159,13 @@ def _is_threading_layer_threadsafe() -> bool:
 
     import numba
 
-    layer_choice = cast(str, numba.config.THREADING_LAYER)
-    if layer_choice not in LAYERS:
+    if (available := LAYERS.get(numba.config.THREADING_LAYER)) is None:
         # given by direct name
-        return layer_choice in LAYERS["threadsafe"]
+        return numba.config.THREADING_LAYER in LAYERS["threadsafe"]
 
     # given by layer type (safe, …)
     for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
-        if layer not in LAYERS[layer_choice]:
+        if layer not in available:
             continue
         try:  # `importlib.util.find_spec` doesn’t work here
             importlib.import_module(f"numba.np.ufunc.{layer}pool")
