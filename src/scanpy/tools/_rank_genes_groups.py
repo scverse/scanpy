@@ -749,7 +749,7 @@ def filter_rank_genes_groups(
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
-    min_fold_change: int | float = 1,
+    min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:

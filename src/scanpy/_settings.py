@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
-        Literal["png", "jpg", "tif", "tiff"]
+        Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
@@ -340,7 +340,7 @@ class ScanpyConfig:
         return self._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory: int | float):
+    def max_memory(self, max_memory: float):
         _type_check(max_memory, "max_memory", (int, float))
         self._max_memory = max_memory
 

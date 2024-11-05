@@ -12,14 +12,21 @@ import random
 import re
 import sys
 import warnings
-from collections import namedtuple
 from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType, UnionType
-from typing import TYPE_CHECKING, Literal, Union, get_args, get_origin, overload
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    NamedTuple,
+    Union,
+    get_args,
+    get_origin,
+    overload,
+)
 from weakref import WeakSet
 
 import h5py
@@ -297,6 +304,11 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 # --------------------------------------------------------------------------------
 
 
+class AssoResult(NamedTuple):
+    asso_names: list[str]
+    asso_matrix: NDArray[np.floating]
+
+
 def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
@@ -305,7 +317,7 @@ def compute_association_matrix_of_groups(
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: int | None = 2,
-):
+) -> AssoResult:
     """Compute overlaps between groups.
 
     See ``identify_groups`` for identifying the groups.
@@ -347,8 +359,8 @@ def compute_association_matrix_of_groups(
                 f"Ignoring category {cat!r} "
                 "as it’s in `settings.categories_to_ignore`."
             )
-    asso_names = []
-    asso_matrix = []
+    asso_names: list[str] = []
+    asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
             pred_group = str(ipred_group)
@@ -381,13 +393,12 @@ def compute_association_matrix_of_groups(
             if asso_matrix[-1][i] > threshold
         ]
         asso_names += ["\n".join(name_list_pred[:max_n_names])]
-    Result = namedtuple(
-        "compute_association_matrix_of_groups", ["asso_names", "asso_matrix"]
-    )
-    return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
+    return AssoResult(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-def get_associated_colors_of_groups(reference_colors, asso_matrix):
+def get_associated_colors_of_groups(
+    reference_colors: Mapping[int, str], asso_matrix: NDArray[np.floating]
+) -> list[dict[str, float]]:
     return [
         {
             reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
