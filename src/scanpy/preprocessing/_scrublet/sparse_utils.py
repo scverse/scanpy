@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 def sparse_multiply(
     E: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.float64],
-    a: float | int | NDArray[np.float64],
+    a: float | NDArray[np.float64],
 ) -> sparse.csr_matrix | sparse.csc_matrix:
     """multiply each row of E by a scalar"""
 

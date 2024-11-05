@@ -160,7 +160,7 @@ class Aggregate:
         return np.array(medians)
 
 
-def _power(X: Array, power: float | int) -> Array:
+def _power(X: Array, power: float) -> Array:
     """\
     Generate elementwise power of a matrix.
 
