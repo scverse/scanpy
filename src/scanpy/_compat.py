@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from functools import cache, partial, update_wrapper
+from functools import cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar, overload
+from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
 
 from packaging.version import Version
 
@@ -96,26 +96,26 @@ else:
         return lambda func: func
 
 
-@dataclass(unsafe_hash=True)
-class NumbaWrapper(Generic[P, R]):
-    fn: Callable[P, R]
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        return self._njit(parallel=True)(*args, **kwargs)
-
-    @cache
-    def _njit(self, *, parallel: bool) -> Callable[P, R]:
-        import numba
-
-        return numba.njit(self.fn, cache=True, parallel=parallel)  # noqa: TID251
-
-
 @overload
 def njit(fn: Callable[P, R], /) -> Callable[P, R]: ...
 @overload
 def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
-def njit(fn: Callable[P, R] | None = None, /) -> Callable[[]]:
+def njit(
+    fn: Callable[P, R] | None = None, /
+) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(f: Callable[P, R], /) -> Callable[P, R]:
-        return update_wrapper(NumbaWrapper(f), f)
+        import numba
+
+        fns: dict[bool, Callable[P, R]] = {
+            parallel: numba.njit(f, cache=True, parallel=parallel)  # noqa: TID251
+            for parallel in (True, False)
+        }
+
+        @numba.njit(cache=True, parallel=False)  # noqa: TID251
+        @wraps(f)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            return fns[True](*args, **kwargs)
+
+        return wrapper
 
     return decorator if fn is None else decorator(fn)
