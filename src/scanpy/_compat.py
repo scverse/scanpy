@@ -1,18 +1,18 @@
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from functools import cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, ParamSpec, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
-    from typing import Literal
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -137,29 +137,42 @@ def _is_in_unsafe_thread_pool() -> bool:
     # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
     return (
         current_thread.name.startswith("ThreadPoolExecutor")
-        and _thread_backend() == "workqueue"
+        and not _is_threading_layer_threadsafe()
     )
 
 
+LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
+Layer = Literal["tbb", "omp", "workqueue"]
+
+
+LAYERS: dict[LayerType, set[Layer]] = {
+    "default": {"tbb", "omp", "workqueue"},
+    "safe": {"tbb"},
+    "threadsafe": {"tbb", "omp"},
+    "forksafe": {"tbb", "workqueue", *(() if sys.platform == "linux" else {"omp"})},
+}
+
+
 @cache
-def _thread_backend() -> Literal["tbb", "omp", "workqueue"]:
+def _is_threading_layer_threadsafe() -> bool:
     import importlib
 
     import numba
 
-    if numba.config.THREADING_LAYER != "default":
-        return numba.config.THREADING_LAYER
+    layer_choice = cast(str, numba.config.THREADING_LAYER)
+    if layer_choice not in LAYERS:
+        # given by direct name
+        return layer_choice in LAYERS["threadsafe"]
 
-    for layer in numba.config.THREADING_LAYER_PRIORITY:
-        if layer not in {"tbb", "omp"}:
+    # given by layer type (safe, …)
+    for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
+        if layer not in LAYERS[layer_choice]:
             continue
-        # Note that `importlib.util.find_spec` doesn't work for these
-        # it will falsely return True
-        try:
+        try:  # `importlib.util.find_spec` doesn’t work here
             importlib.import_module(f"numba.np.ufunc.{layer}pool")
         except ImportError:
-            pass
-        else:
-            return layer
-
-    return "workqueue"
+            continue
+        # the layer has been found
+        return layer in LAYERS["threadsafe"]
+    msg = f"No loadable threading layer: {numba.config.THREADING_LAYER=}"
+    raise ValueError(msg)
