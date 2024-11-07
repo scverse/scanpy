@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from typing import Any, TypeVar
 
     from anndata import AnnData
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from ..neighbors import NeighborsParams, RPForestDict
 
@@ -735,6 +735,27 @@ def _(
         meta=X._meta,
         out=out,
         allow_divide_by_zero=allow_divide_by_zero,
+    )
+
+
+@singledispatch
+def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
+    return np.count_nonzero(X, axis=axis)
+
+
+@axis_nnz.register(sparse.spmatrix)
+def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
+    return X.getnnz(axis=axis)
+
+
+@axis_nnz.register(DaskArray)
+def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
+    return X.map_blocks(
+        partial(axis_nnz, axis=axis),
+        dtype=np.int64,
+        meta=np.array([], dtype=np.int64),
+        drop_axis=0,
+        chunks=len(X.to_delayed()) * (X.chunksize[int(not axis)],),
     )
 
 
