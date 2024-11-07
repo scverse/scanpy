@@ -1,13 +1,6 @@
-"""
-This module will benchmark preprocessing operations in Scanpy that run on counts,
-with both Dask and non-Dask implementations.
-API documentation: https://scanpy.readthedocs.io/en/stable/api/preprocessing.html
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
 import dask.array as dd
 from dask.distributed import Client, LocalCluster
 import scanpy as sc
@@ -19,11 +12,9 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from ._utils import Dataset, KeyCount
 
-# Setup variables
-
+# Setup global variables
 adata: AnnData
 batch_key: str | None
-
 
 def setup(dataset: Dataset, layer: KeyCount, *_):
     """Setup global variables before each benchmark."""
@@ -32,7 +23,6 @@ def setup(dataset: Dataset, layer: KeyCount, *_):
     assert "log1p" not in adata.uns
 
 
-# Dask Setup for Dask-based benchmarks
 def setup_dask_cluster():
     """Set up a local Dask cluster for benchmarking."""
     cluster = LocalCluster(n_workers=4, threads_per_worker=2)
@@ -41,41 +31,23 @@ def setup_dask_cluster():
 
 
 # ASV suite
-
 params: tuple[list[Dataset], list[KeyCount]] = (
-    # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-    ["lung93k"],
+    ["pbmc3k"],  # Extend with larger datasets as needed
     ["counts", "counts-off-axis"],
 )
 param_names = ["dataset", "layer"]
 
 ### Dask-Based Benchmarks ###
 
-# def time_filter_cells_dask(*_):
-#     client = setup_dask_cluster()
-#     try:
-#         adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10)) 
-#         adata.X = adata.X.persist()
-#         client.rebalance() 
-#         sc.pp.filter_cells(adata, min_genes=100)
-#     finally:
-#         client.close()
-
 def time_filter_cells_dask(*_):
     client = setup_dask_cluster()
     try:
-        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10)) 
-        adata.X = adata.X.map_blocks(sparse.csr_matrix)  # Convert to sparse chunks
-
-        # If Scanpy requires dense arrays, convert to dense
-        adata.X = adata.X.map_blocks(lambda x: x.toarray(), dtype=adata.X.dtype, meta=np.array([]))
-
-        # Rechunk after conversion
-        adata.X = adata.X.rechunk((adata.X.shape[0] // 50, adata.X.shape[1] // 50))
-
+        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
+        adata.X = adata.X.map_blocks(sparse.csr_matrix)  # Ensure sparse chunks
         sc.pp.filter_cells(adata, min_genes=100)
     finally:
         client.close()
+
 
 def peakmem_filter_cells_dask(*_):
     client = setup_dask_cluster()
@@ -89,7 +61,7 @@ def peakmem_filter_cells_dask(*_):
 def time_filter_genes_dask(*_):
     client = setup_dask_cluster()
     try:
-        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
         sc.pp.filter_genes(adata, min_cells=3)
     finally:
         client.close()
@@ -98,58 +70,38 @@ def time_filter_genes_dask(*_):
 def peakmem_filter_genes_dask(*_):
     client = setup_dask_cluster()
     try:
-        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+        adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
         sc.pp.filter_genes(adata, min_cells=3)
     finally:
         client.close()
 
 
-### Suite for Dask and Non-Dask Operations ###
+### General Dask and Non-Dask Preprocessing Benchmarks ###
 
 class FastSuite:
-    """Suite for fast preprocessing operations."""
+    """Suite for benchmarking preprocessing operations with Dask."""
 
     params: tuple[list[Dataset], list[KeyCount]] = (
-        # ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-        ["lung93k"],
+        ["pbmc3k"],  # Extend as needed with larger datasets
         ["counts", "counts-off-axis"],
     )
     param_names = ["dataset", "layer"]
 
-    ### Dask Versions ###
     def time_calculate_qc_metrics_dask(self, *_):
         client = setup_dask_cluster()
         try:
-            # Use sparse chunks
             adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
-            adata.X = adata.X.map_blocks(sparse.csr_matrix)  # Convert dense to sparse chunks
-            
-            # Rechunk if necessary
-            adata.X = adata.X.rechunk((adata.X.shape[0] // 50, adata.X.shape[1] // 50))
-        
+            adata.X = adata.X.map_blocks(sparse.csr_matrix)
             sc.pp.calculate_qc_metrics(
                 adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
             )
         finally:
             client.close()
 
-    # def time_calculate_qc_metrics_dask(self, *_):
-    #     client = setup_dask_cluster()
-    #     try:
-    #         adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
-    #         print(f"Dask Array Shape: {adata.X.shape}")
-    #         print(f"Dask Array Type: {type(adata.X)}")
-    #         sc.pp.calculate_qc_metrics(
-    #             adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
-    #         )
-    #     finally:
-    #         client.close()
-
-    
     def peakmem_calculate_qc_metrics_dask(self, *_):
         client = setup_dask_cluster()
         try:
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 50, adata.X.shape[1] // 50))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 10, adata.X.shape[1] // 10))
             sc.pp.calculate_qc_metrics(
                 adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
             )
@@ -176,7 +128,7 @@ class FastSuite:
         client = setup_dask_cluster()
         try:
             adata.uns.pop("log1p", None)
-            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0], adata.X.shape[1]))
+            adata.X = dd.from_array(adata.X, chunks=(adata.X.shape[0] // 50, adata.X.shape[1] // 50))
             sc.pp.log1p(adata)
         finally:
             client.close()
