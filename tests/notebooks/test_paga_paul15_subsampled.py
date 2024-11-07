@@ -138,6 +138,6 @@ def test_paga_paul15_subsampled(image_comparer, plt):
             show=False,
         )
         # add a test for this at some point
-        # data.to_csv('./write/paga_path_{}.csv'.format(descr))
+        # data.to_csv(f"./write/paga_path_{descr}.csv")
 
     save_and_compare_images("paga_path")

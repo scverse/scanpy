@@ -345,8 +345,8 @@ def _write_color_tracks(ctracks, fname):
 
 
 def _frac_to_hex(frac):
-    rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
-    return "#{:02x}{:02x}{:02x}".format(*rgb)
+    r, g, b = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 def _get_color_stats_genes(color_stats, E, gene_list):

@@ -701,11 +701,11 @@ def _paga_graph(
         and isinstance(node_labels, str)
         and node_labels != adata.uns["paga"]["groups"]
     ):
-        raise ValueError(
-            "Provide a list of group labels for the PAGA groups {}, not {}.".format(
-                adata.uns["paga"]["groups"], node_labels
-            )
+        msg = (
+            "Provide a list of group labels for the PAGA groups "
+            f"{adata.uns['paga']['groups']}, not {node_labels}."
         )
+        raise ValueError(msg)
     groups_key = adata.uns["paga"]["groups"]
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
