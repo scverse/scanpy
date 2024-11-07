@@ -232,6 +232,7 @@ select = [
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
+    "PYI",     # Typing
     "PLR0917", # Ban APIs with too many positional parameters
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
@@ -246,6 +247,8 @@ ignore = [
     "E262",
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
+    # `Literal["..."] | str` is useful for autocompletion
+    "PYI051",
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def

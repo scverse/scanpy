@@ -14,7 +14,8 @@ from scipy import sparse
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence, Set
+    from collections.abc import Callable, Sequence
+    from collections.abc import Set as AbstractSet
     from typing import Literal, Protocol, TypeVar
 
     from anndata import AnnData
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     C = TypeVar("C", bound=Callable)
 
     class ParamSkipper(Protocol):
-        def __call__(self, **skipped: Set) -> Callable[[C], C]: ...
+        def __call__(self, **skipped: AbstractSet) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
     KeyX = Literal[None, "off-axis"]
@@ -195,7 +196,7 @@ def param_skipper(
     b 5
     """
 
-    def skip(**skipped: Set) -> Callable[[C], C]:
+    def skip(**skipped: AbstractSet) -> Callable[[C], C]:
         skipped_combs = [
             tuple(record.values())
             for record in (
