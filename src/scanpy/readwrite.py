@@ -131,7 +131,7 @@ def read(
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
-        Parameters passed to :func:`~anndata.read_loom`.
+        Parameters passed to :func:`~anndata.io.read_loom`.
 
     Returns
     -------
