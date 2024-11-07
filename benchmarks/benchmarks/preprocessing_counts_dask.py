@@ -32,7 +32,7 @@ def setup_dask_cluster():
 
 # ASV suite
 params: tuple[list[Dataset], list[KeyCount]] = (
-    ["pbmc3k"],  # Extend with larger datasets as needed
+    ["pbmc68k_reduced"],  
     ["counts", "counts-off-axis"],
 )
 param_names = ["dataset", "layer"]
@@ -82,7 +82,7 @@ class FastSuite:
     """Suite for benchmarking preprocessing operations with Dask."""
 
     params: tuple[list[Dataset], list[KeyCount]] = (
-        ["pbmc3k"],  # Extend as needed with larger datasets
+        ["pbmc68k_reduced"],  
         ["counts", "counts-off-axis"],
     )
     param_names = ["dataset", "layer"]
