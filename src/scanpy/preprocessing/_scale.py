@@ -161,7 +161,6 @@ def scale_array(
     | tuple[
         np.ndarray | DaskArray, NDArray[np.float64] | DaskArray, NDArray[np.float64]
     ]
-    | DaskArray
 ):
     if copy:
         X = X.copy()

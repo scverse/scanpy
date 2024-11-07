@@ -94,7 +94,7 @@ def embedding(
     na_in_legend: bool = True,
     size: float | Sequence[float] | None = None,
     frameon: bool | None = None,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,

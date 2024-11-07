@@ -6,7 +6,7 @@ from collections import OrderedDict
 from collections.abc import Collection, Mapping, Sequence
 from itertools import product
 from types import NoneType
-from typing import TYPE_CHECKING, cast, get_args
+from typing import TYPE_CHECKING, cast
 
 import matplotlib as mpl
 import numpy as np
@@ -22,7 +22,13 @@ from .. import get
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _check_use_raw, _doc_params, _empty, sanitize_anndata
+from .._utils import (
+    _check_use_raw,
+    _doc_params,
+    _empty,
+    get_literal_vals,
+    sanitize_anndata,
+)
 from . import _utils
 from ._docs import (
     doc_common_plot_args,
@@ -65,9 +71,6 @@ if TYPE_CHECKING:
     _VarNames = str | Sequence[str]
 
 
-VALID_LEGENDLOCS = frozenset(get_args(_utils._LegendLoc))
-
-
 @old_positionals(
     "color",
     "use_raw",
@@ -101,7 +104,7 @@ def scatter(
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "right margin",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
     color_map: str | Colormap | None = None,
@@ -109,7 +112,7 @@ def scatter(
     frameon: bool | None = None,
     right_margin: float | None = None,
     left_margin: float | None = None,
-    size: int | float | None = None,
+    size: float | None = None,
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
     show: bool | None = None,
@@ -198,7 +201,7 @@ def _check_if_annotations(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
     ).index
 
-    def is_annotation(needle: pd.Index) -> NDArray[np.bool]:
+    def is_annotation(needle: pd.Index) -> NDArray[np.bool_]:
         return needle.isin({None}) | needle.isin(annotations) | needle.isin(names)
 
     if not is_annotation(pd.Index([x, y])).all():
@@ -206,8 +209,8 @@ def _check_if_annotations(
 
     color_idx = pd.Index(colors if colors is not None else [])
     # Colors are valid
-    color_valid: NDArray[np.bool] = np.fromiter(
-        map(is_color_like, color_idx), dtype=np.bool, count=len(color_idx)
+    color_valid: NDArray[np.bool_] = np.fromiter(
+        map(is_color_like, color_idx), dtype=np.bool_, count=len(color_idx)
     )
     # Annotation names are valid too
     color_valid[~color_valid] = is_annotation(color_idx[~color_valid])
@@ -229,7 +232,7 @@ def _scatter_obs(
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "right margin",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
     color_map: str | Colormap | None = None,
@@ -237,7 +240,7 @@ def _scatter_obs(
     frameon: bool | None = None,
     right_margin: float | None = None,
     left_margin: float | None = None,
-    size: int | float | None = None,
+    size: float | None = None,
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
     show: bool | None = None,
@@ -268,9 +271,9 @@ def _scatter_obs(
     if use_raw and layers not in [("X", "X", "X"), (None, None, None)]:
         ValueError("`use_raw` must be `False` if layers are used.")
 
-    if legend_loc not in VALID_LEGENDLOCS:
+    if legend_loc not in (valid_legend_locs := get_literal_vals(_utils._LegendLoc)):
         raise ValueError(
-            f"Invalid `legend_loc`, need to be one of: {VALID_LEGENDLOCS}."
+            f"Invalid `legend_loc`, need to be one of: {valid_legend_locs}."
         )
     if components is None:
         components = "1,2" if "2d" in projection else "1,2,3"
