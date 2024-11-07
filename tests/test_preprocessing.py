@@ -9,7 +9,7 @@ from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
 from scipy import sparse as sp
-from scipy.sparse import issparse
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
 
 import scanpy as sc
 from testing.scanpy._helpers import (
@@ -522,3 +522,14 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     if issparse(adata.X):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", [csr_matrix, csc_matrix, coo_matrix])
+@pytest.mark.parametrize("order", ["C", "F"])
+def test_todense(array_type, order):
+    x_org = np.array([[0, 1, 2], [3, 0, 4]])
+    x_sparse = array_type(x_org)
+    x_dense = sc.pp._utils._to_dense(x_sparse, order=order)
+    np.testing.assert_array_equal(x_dense, x_org)
+    assert x_dense.flags["C_CONTIGUOUS"] == (order == "C")
+    assert x_dense.flags["F_CONTIGUOUS"] == (order == "F")
