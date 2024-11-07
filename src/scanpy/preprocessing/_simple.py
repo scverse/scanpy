@@ -737,18 +737,17 @@ def regress_out(
 
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
+        regressors = regressors.to_numpy()
 
-    res = None
-    if not variable_is_categorical:
-        A = regressors.to_numpy()
-        # if det(A.T@A) != 0 we can take the inverse and regress using a fast method.
-        if np.linalg.det(A.T @ A) != 0:
-            X = _to_dense(X, order="C") if issparse(X) else X
-            res = numpy_regress_out(X, A)
+    # if the regressors are not categorical and the matrix is not singular
+    # use the shortcut numpy_regress_out
+    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
+        X = _to_dense(X, order="C") if issparse(X) else X
+        res = numpy_regress_out(X, regressors)
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
-    if res is None:
+    else:
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
