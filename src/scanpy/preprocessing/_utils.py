@@ -35,7 +35,9 @@ def _get_mean_var(
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     if isinstance(X, np.ndarray):
         n_threads = numba.get_num_threads()
-        mean, var = _compute_mean_var(X, axis=axis, n_threads=n_threads)
+        mean, var = _compute_mean_var_dense(X, axis=axis, n_threads=n_threads)
+    elif isinstance(X, sparse.spmatrix):
+        mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
         mean = axis_mean(X, axis=axis, dtype=np.float64)
         mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
@@ -43,8 +45,8 @@ def _get_mean_var(
     # enforce R convention (unbiased estimator) for variance
     if X.shape[axis] != 1:
         var *= X.shape[axis] / (X.shape[axis] - 1)
-
     return mean, var
+
 
 @numba.njit(cache=True, parallel=True)
 def _compute_mean_var_dense(
