@@ -4,7 +4,7 @@ Calculate overlaps of rank_genes_groups marker genes with marker gene dictionari
 
 from __future__ import annotations
 
-from collections.abc import Set
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -187,7 +187,7 @@ def marker_gene_overlap(
     if normalize is not None and method != "overlap_count":
         raise ValueError("Can only normalize with method=`overlap_count`.")
 
-    if not all(isinstance(val, Set) for val in reference_markers.values()):
+    if not all(isinstance(val, AbstractSet) for val in reference_markers.values()):
         try:
             reference_markers = {
                 key: set(val) for key, val in reference_markers.items()

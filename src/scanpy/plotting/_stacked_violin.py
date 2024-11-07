@@ -273,7 +273,7 @@ class StackedViolin(BasePlot):
         cmap: Colormap | str | None | Empty = _empty,
         stripplot: bool | Empty = _empty,
         jitter: float | bool | Empty = _empty,
-        jitter_size: int | float | Empty = _empty,
+        jitter_size: float | Empty = _empty,
         linewidth: float | None | Empty = _empty,
         row_palette: str | None | Empty = _empty,
         density_norm: DensityNorm | Empty = _empty,
@@ -470,8 +470,8 @@ class StackedViolin(BasePlot):
         _matrix,
         colormap_array,
         _color_df,
-        x_spacer_size: float | int,
-        y_spacer_size: float | int,
+        x_spacer_size: float,
+        y_spacer_size: float,
         x_axis_order,
     ):
         import seaborn as sns  # Slow import, only import if called
@@ -699,7 +699,7 @@ def stacked_violin(
     cmap: Colormap | str | None = StackedViolin.DEFAULT_COLORMAP,
     stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
     jitter: float | bool = StackedViolin.DEFAULT_JITTER,
-    size: int | float = StackedViolin.DEFAULT_JITTER_SIZE,
+    size: float = StackedViolin.DEFAULT_JITTER_SIZE,
     row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
     density_norm: DensityNorm | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
