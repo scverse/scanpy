@@ -37,16 +37,14 @@ def _get_mean_var(
         n_threads = numba.get_num_threads()
         mean, var = _compute_mean_var(X, axis=axis, n_threads=n_threads)
     else:
-        if isinstance(X, sparse.spmatrix):
-            mean, var = sparse_mean_variance_axis(X, axis=axis)
-        else:
-            mean = axis_mean(X, axis=axis, dtype=np.float64)
-            mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
-            var = mean_sq - mean**2
-        # enforce R convention (unbiased estimator) for variance
+        mean = axis_mean(X, axis=axis, dtype=np.float64)
+        mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
+        var = mean_sq - mean**2
+    # enforce R convention (unbiased estimator) for variance
+    if X.shape[axis] != 1:
         var *= X.shape[axis] / (X.shape[axis] - 1)
-    return mean, var
 
+    return mean, var
 
 @numba.njit(cache=True, parallel=True)
 def _compute_mean_var(
@@ -81,8 +79,6 @@ def _compute_mean_var(
         for c in numba.prange(X.shape[0]):
             mean[c] = mean[c] / X.shape[1]
             var[c] = (var[c] - mean[c] ** 2) / (X.shape[1] - 1)
-
-    return mean, var
 
 
 def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):

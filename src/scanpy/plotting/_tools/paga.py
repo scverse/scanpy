@@ -26,7 +26,7 @@ from .. import _utils
 from .._utils import matrix
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Union
+    from typing import Any, Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
-    _Layout = Union[_LayoutWithoutEqTree, Literal["eq_tree"]]
+    _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
 @old_positionals(
@@ -73,7 +73,7 @@ def paga_compare(
     components=None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "on data",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,
     color_map=None,
@@ -725,7 +725,7 @@ def _paga_graph(
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
     # convert pos to array and dict
-    if not isinstance(pos, (Path, str)):
+    if not isinstance(pos, Path | str):
         pos_array = pos
     else:
         pos = Path(pos)
@@ -1053,7 +1053,7 @@ def paga_path(
     show_node_names: bool = True,
     show_yticks: bool = True,
     show_colorbar: bool = True,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,
