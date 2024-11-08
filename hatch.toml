@@ -22,7 +22,7 @@ overrides.matrix.deps.env-vars = [
     { if = ["min"], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
-    { if = ["min"], value = "UV_CONSTRAINT= uv pip install tomli packaging && python ci/scripts/min-deps.py pyproject.toml -o ci/scanpy-min-deps.txt" },
+    { if = ["min"], value = "uv pip install -c '' tomli packaging && python ci/scripts/min-deps.py pyproject.toml -o ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = ["min"], value = "3.10" },
