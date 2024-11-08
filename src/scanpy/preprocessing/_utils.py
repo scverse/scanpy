@@ -8,6 +8,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
+from .._compat import njit
 from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
@@ -83,7 +84,7 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
         )
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def sparse_mean_var_minor_axis(
     data, indices, indptr, *, major_len, minor_len, n_threads
 ):
@@ -116,7 +117,7 @@ def sparse_mean_var_minor_axis(
     return means, variances
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def sparse_mean_var_major_axis(data, indptr, *, major_len, minor_len, n_threads):
     """
     Computes mean and variance for a sparse array for the major axis.
