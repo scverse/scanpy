@@ -127,8 +127,9 @@ def njit(
             parallel = not _is_in_unsafe_thread_pool()
             if not parallel:
                 msg = (
-                    "Numba function called from a non-threadsafe context. "
-                    "Try installing `tbb`."
+                    "Detected unsupported threading environment. "
+                    f"Trying to run {f.__name__} in serial mode. "
+                    "In case of problems, install `tbb`."
                 )
                 warnings.warn(msg, stacklevel=2)
             return fns[parallel](*args, **kwargs)
