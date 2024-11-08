@@ -11,7 +11,7 @@ from anndata import AnnData
 from scipy.sparse import issparse, isspmatrix_csc, spmatrix
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     CSMatrix = sp.csr_matrix | sp.csc_matrix
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
     for i in numba.prange(len(indptr) - 1):
         if mask_obs[i]:
@@ -46,7 +46,7 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
                     data[j] /= std[indices[j]]
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def clip_array(
     X: NDArray[np.floating], *, max_value: float, zero_center: bool
 ) -> NDArray[np.floating]:
