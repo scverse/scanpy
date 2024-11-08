@@ -105,7 +105,8 @@ def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 def njit(
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
-    """Jit-compile a function using numba.
+    """\
+    Jit-compile a function using numba.
 
     On call, this function dispatches to a parallel or sequential numba function,
     depending on if it has been called from a thread pool.
@@ -137,17 +138,6 @@ def njit(
     return decorator if fn is None else decorator(fn)
 
 
-def _is_in_unsafe_thread_pool() -> bool:
-    import threading
-
-    current_thread = threading.current_thread()
-    # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
-    return (
-        current_thread.name.startswith("ThreadPoolExecutor")
-        and not _is_threading_layer_threadsafe()
-    )
-
-
 LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
 Layer = Literal["tbb", "omp", "workqueue"]
 
@@ -160,15 +150,32 @@ LAYERS: dict[LayerType, set[Layer]] = {
 }
 
 
+def _is_in_unsafe_thread_pool() -> bool:
+    import threading
+
+    current_thread = threading.current_thread()
+    # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
+    return (
+        current_thread.name.startswith("ThreadPoolExecutor")
+        and _numba_threading_layer() not in LAYERS["threadsafe"]
+    )
+
+
 @cache
-def _is_threading_layer_threadsafe() -> bool:
+def _numba_threading_layer() -> Layer:
+    """\
+    Get numba’s threading layer.
+
+    This function implements the algorithm as described in
+    <https://numba.readthedocs.io/en/stable/user/threading-layer.html>
+    """
     import importlib
 
     import numba
 
     if (available := LAYERS.get(numba.config.THREADING_LAYER)) is None:
         # given by direct name
-        return numba.config.THREADING_LAYER in LAYERS["threadsafe"]
+        return numba.config.THREADING_LAYER
 
     # given by layer type (safe, …)
     for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
@@ -180,7 +187,7 @@ def _is_threading_layer_threadsafe() -> bool:
             except ImportError:
                 continue
         # the layer has been found
-        return layer in LAYERS["threadsafe"]
+        return layer
     msg = (
         f"No loadable threading layer: {numba.config.THREADING_LAYER=} "
         f" ({available=}, {numba.config.THREADING_LAYER_PRIORITY=})"
