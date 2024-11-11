@@ -179,7 +179,7 @@ def _to_dense(
     return out
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _to_dense_csc_numba(
     indptr: NDArray,
     indices: NDArray,
@@ -192,7 +192,7 @@ def _to_dense_csc_numba(
             X[indices[i], c] = data[i]
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _to_dense_csr_numba(
     indptr: NDArray,
     indices: NDArray,

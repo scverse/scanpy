@@ -18,7 +18,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -628,7 +628,7 @@ def normalize_per_cell(
 DT = TypeVar("DT")
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def get_resid(
     data: np.ndarray,
     regressor: np.ndarray,
