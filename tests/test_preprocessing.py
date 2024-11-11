@@ -329,6 +329,8 @@ def test_regress_out_reproducible():
     adata = pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
     sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    # This file was gerneated from the original implementation in version 1.10.3
+    # Now we compare new implementation with the old one
     tester = np.load(DATA_PATH / "regress_test_small.npy")
     np.testing.assert_allclose(adata.X, tester)
 
