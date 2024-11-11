@@ -607,13 +607,13 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: np.ndarray,
+    X: ArrayLike,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
+    out: ArrayLike | None = None,
 ) -> np.ndarray:
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
