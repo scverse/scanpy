@@ -16,6 +16,7 @@ from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
+    maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
@@ -168,7 +169,8 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
     sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
-    sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
+    with maybe_dask_process_context():
+        sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
