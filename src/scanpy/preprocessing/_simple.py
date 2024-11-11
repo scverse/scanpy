@@ -629,8 +629,10 @@ DT = TypeVar("DT")
 
 
 @njit
-def _create_regressor_categorical(X, cats, filters):
-    # create regressor matrix faster
+def _create_regressor_categorical(
+    X: np.ndarray, cats: np.ndarray, filters: np.ndarray
+) -> np.ndarray:
+    # create regressor matrix faster for categorical variables
     regressors = np.zeros(X.shape, dtype=X.dtype)
     XT = X.T
     for category in range(cats):
@@ -735,9 +737,11 @@ def regress_out(
                 "we regress on the mean for each category."
             )
         logg.debug("... regressing on per-gene means within categories")
+        # Create numpy array's from categorical variable
         cats = np.int64(len(adata.obs[keys[0]].cat.categories))
         filters = adata.obs[keys[0]].cat.codes.to_numpy()
         cats = cats.astype(filters.dtype)
+
         X = _to_dense(X, order="F") if issparse(X) else X
         regressors = _create_regressor_categorical(X, cats, filters)
         variable_is_categorical = True
