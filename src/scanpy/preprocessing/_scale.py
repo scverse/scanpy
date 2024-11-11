@@ -30,10 +30,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
-    from numpy.typing import NDArray
-    from scipy import sparse as sp
-
-    CSMatrix = sp.csr_matrix | sp.csc_matrix
 
     CSMatrix = csr_matrix | csc_matrix
 
@@ -77,14 +73,6 @@ def clip_array(
             elif X[i] < a_min and zero_center:
                 X[i] = a_min
     return X
-
-
-def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
-    x = x.copy()
-    x[x > max_value] = max_value
-    if zero_center:
-        x[x < -max_value] = -max_value
-    return x
 
 
 @renamed_arg("X", "data", pos_0=True)
