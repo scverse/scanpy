@@ -11,7 +11,7 @@ from anndata import AnnData
 from scipy.sparse import issparse, isspmatrix_csc, spmatrix
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-@numba.njit(cache=True, parallel=True)
+@njit
 def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
     for i in numba.prange(len(indptr) - 1):
         if mask_obs[i]:
@@ -43,7 +43,7 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
                     data[j] /= std[indices[j]]
 
 
-@numba.njit(parallel=True, cache=True)
+@njit
 def clip_array(X: np.ndarray, *, max_value: float = 10, zero_center: bool = True):
     a_min, a_max = -max_value, max_value
     if X.ndim > 1:
@@ -148,7 +148,6 @@ def scale_array(
     | tuple[
         np.ndarray | DaskArray, NDArray[np.float64] | DaskArray, NDArray[np.float64]
     ]
-    | DaskArray
 ):
     if copy:
         X = X.copy()

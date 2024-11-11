@@ -11,7 +11,7 @@ from subprocess import run
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
     from subprocess import CompletedProcess
     from typing import Any
 
@@ -64,7 +64,7 @@ class _CommandDelegator(MutableMapping):
 
     # These methods retrieve the command list or help with doing it
 
-    def __iter__(self) -> Generator[str, None, None]:
+    def __iter__(self) -> Iterator[str]:
         yield from self.parser_map
         yield from self.commands
 

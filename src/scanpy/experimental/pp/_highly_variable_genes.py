@@ -12,6 +12,7 @@ import scipy.sparse as sp_sparse
 from anndata import AnnData
 
 from scanpy import logging as logg
+from scanpy._compat import njit
 from scanpy._settings import Verbosity, settings
 from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-@nb.njit(parallel=True)
+@njit
 def _calculate_res_sparse(
     indptr: NDArray[np.integer],
     index: NDArray[np.integer],
@@ -92,7 +93,7 @@ def _calculate_res_sparse(
     return residuals
 
 
-@nb.njit(parallel=True)
+@njit
 def _calculate_res_dense(
     matrix,
     *,

@@ -982,7 +982,8 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
     return X
 
 
-@numba.njit(cache=True)
+# TODO: can/should this be parallelized?
+@numba.njit(cache=True)  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
