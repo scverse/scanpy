@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numba
 import numpy as np
@@ -19,7 +19,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -32,6 +32,7 @@ from .._utils import (
 )
 from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
+from ._utils import _to_dense
 
 # install dask if available
 try:
@@ -625,6 +626,34 @@ def normalize_per_cell(
     return X if copy else None
 
 
+DT = TypeVar("DT")
+
+
+@njit
+def get_resid(
+    data: np.ndarray,
+    regressor: np.ndarray,
+    coeff: np.ndarray,
+) -> np.ndarray:
+    for i in numba.prange(data.shape[0]):
+        data[i] -= regressor[i] @ coeff
+    return data
+
+
+def numpy_regress_out(
+    data: np.ndarray,
+    regressor: np.ndarray,
+) -> np.ndarray:
+    """\
+    Numba kernel for regress out unwanted sorces of variantion.
+    Finding coefficient using Linear regression (Linear Least Squares).
+    """
+    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
+    coeff = inv_gram_matrix @ (regressor.T @ data)
+    data = get_resid(data, regressor, coeff)
+    return data
+
+
 @old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
@@ -679,7 +708,6 @@ def regress_out(
 
     if issparse(X):
         logg.info("    sparse input is densified and may lead to high memory use")
-        X = X.toarray()
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -696,6 +724,8 @@ def regress_out(
             )
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
+        X = _to_dense(X, order="F") if issparse(X) else X
+        # TODO figure out if we should use a numba kernel for this
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(X.T):
@@ -708,32 +738,44 @@ def regress_out(
 
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
+        regressors = regressors.to_numpy()
 
-    len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
-    n_chunks = int(np.ceil(X.shape[1] / len_chunk))
+    # if the regressors are not categorical and the matrix is not singular
+    # use the shortcut numpy_regress_out
+    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
+        X = _to_dense(X, order="C") if issparse(X) else X
+        res = numpy_regress_out(X, regressors)
 
-    # split the adata.X matrix by columns in chunks of size n_chunk
-    # (the last chunk could be of smaller size than the others)
-    chunk_list = np.array_split(X, n_chunks, axis=1)
-    regressors_chunk = (
-        np.array_split(regressors, n_chunks, axis=1)
-        if variable_is_categorical
-        else repeat(regressors)
-    )
-
-    # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
-    # This data will be passed to each of the jobs.
-    # TODO: figure out how to test that this doesn't oversubscribe resources
-    res = Parallel(n_jobs=n_jobs)(
-        delayed(_regress_out_chunk)(
-            data_chunk, regres, variable_is_categorical=variable_is_categorical
+    # for a categorical variable or if the above checks failed,
+    # we fall back to the GLM implemetation of regression.
+    else:
+        # split the adata.X matrix by columns in chunks of size n_chunk
+        # (the last chunk could be of smaller size than the others)
+        len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
+        n_chunks = int(np.ceil(X.shape[1] / len_chunk))
+        X = _to_dense(X, order="F") if issparse(X) else X
+        chunk_list = np.array_split(X, n_chunks, axis=1)
+        regressors_chunk = (
+            np.array_split(regressors, n_chunks, axis=1)
+            if variable_is_categorical
+            else repeat(regressors)
         )
-        for data_chunk, regres in zip(chunk_list, regressors_chunk, strict=False)
-    )
 
-    # res is a list of vectors (each corresponding to a regressed gene column).
-    # The transpose is needed to get the matrix in the shape needed
-    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
+        # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
+        # This data will be passed to each of the jobs.
+        # TODO: figure out how to test that this doesn't oversubscribe resources
+        res = Parallel(n_jobs=n_jobs)(
+            delayed(_regress_out_chunk)(
+                data_chunk, regres, variable_is_categorical=variable_is_categorical
+            )
+            for data_chunk, regres in zip(chunk_list, regressors_chunk, strict=False)
+        )
+
+        # res is a list of vectors (each corresponding to a regressed gene column).
+        # The transpose is needed to get the matrix in the shape needed
+        res = np.vstack(res).T
+
+    _set_obs_rep(adata, res, layer=layer)
     logg.info("    finished", time=start)
     return adata if copy else None
 
