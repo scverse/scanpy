@@ -335,6 +335,16 @@ def test_regress_out_reproducible():
     np.testing.assert_allclose(adata.X, tester)
 
 
+def test_regress_out_reproducible_category():
+    adata = sc.datasets.pbmc68k_reduced()
+    adata = adata.raw.to_adata()[:200, :200].copy()
+    sc.pp.regress_out(adata, keys=["bulk_labels"])
+    # This file was generated from the original implementation in version 1.10.3
+    # Now we compare new implementation with the old one
+    tester = np.load(DATA_PATH / "regress_test_small_cat.npy")
+    np.testing.assert_allclose(adata.X, tester)
+
+
 def test_regress_out_constants_equivalent():
     # Tests that constant values don't change results
     # (since support for constant values is implemented by us)
