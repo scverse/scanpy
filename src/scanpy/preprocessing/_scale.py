@@ -30,6 +30,9 @@ except ImportError:
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+    from scipy import sparse as sp
+
+    CSMatrix = sp.csr_matrix | sp.csc_matrix
 
 
 @njit
@@ -44,7 +47,9 @@ def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
 
 
 @njit
-def clip_array(X: np.ndarray, *, max_value: float = 10, zero_center: bool = True):
+def clip_array(
+    X: NDArray[np.floating], *, max_value: float, zero_center: bool
+) -> NDArray[np.floating]:
     a_min, a_max = -max_value, max_value
     if X.ndim > 1:
         for r, c in numba.pndindex(X.shape):
@@ -59,6 +64,14 @@ def clip_array(X: np.ndarray, *, max_value: float = 10, zero_center: bool = True
             elif X[i] < a_min and zero_center:
                 X[i] = a_min
     return X
+
+
+def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
+    x = x.copy()
+    x[x > max_value] = max_value
+    if zero_center:
+        x[x < -max_value] = -max_value
+    return x
 
 
 @renamed_arg("X", "data", pos_0=True)
@@ -187,7 +200,8 @@ def scale_array(
     if zero_center:
         if isinstance(X, DaskArray) and issparse(X._meta):
             warnings.warn(
-                "zero-center being used with `DaskArray` sparse chunks.  This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
+                "zero-center being used with `DaskArray` sparse chunks. "
+                "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
                 UserWarning,
             )
         X -= mean
@@ -203,25 +217,13 @@ def scale_array(
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
-        if isinstance(X, DaskArray) and issparse(X._meta):
-
-            def clip_set(x):
-                x = x.copy()
-                x[x > max_value] = max_value
-                if zero_center:
-                    x[x < -max_value] = -max_value
-                return x
-
-            X = da.map_blocks(clip_set, X)
+        if isinstance(X, DaskArray):
+            clip = clip_set if issparse(X._meta) else clip_array
+            X = X.map_blocks(clip, max_value=max_value, zero_center=zero_center)
+        elif issparse(X):
+            X.data = clip_array(X.data, max_value=max_value, zero_center=False)
         else:
-            if isinstance(X, DaskArray):
-                X = X.map_blocks(
-                    clip_array, max_value=max_value, zero_center=zero_center
-                )
-            elif issparse(X):
-                X.data = clip_array(X.data, max_value=max_value, zero_center=False)
-            else:
-                X = clip_array(X, max_value=max_value, zero_center=zero_center)
+            X = clip_array(X, max_value=max_value, zero_center=zero_center)
     if return_mean_std:
         return X, mean, std
     else:
