@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import floor
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import (
     check_nonnegative_integers,
+    get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
-# Used with get_args
+# Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
 
@@ -607,8 +608,7 @@ def rank_genes_groups(
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    avail_methods = set(get_args(_Method))
-    if method not in avail_methods:
+    if method not in (avail_methods := get_literal_vals(_Method)):
         raise ValueError(f"Method must be one of {avail_methods}.")
 
     avail_corr = {"benjamini-hochberg", "bonferroni"}
@@ -749,7 +749,7 @@ def filter_rank_genes_groups(
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
-    min_fold_change: int | float = 1,
+    min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:
