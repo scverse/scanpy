@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,9 @@ from testing.scanpy._helpers import (
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
+
+HERE = Path(__file__).parent
+DATA_PATH = HERE / "_data"
 
 
 def test_log1p(tmp_path):
@@ -319,6 +323,14 @@ def test_regress_out_constants():
 
     sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
     assert_equal(adata, adata_copy)
+
+
+def test_regress_out_reproducible():
+    adata = pbmc68k_reduced()
+    adata = adata.raw.to_adata()[:200, :200].copy()
+    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    tester = np.load(DATA_PATH / "regress_test_small.npy")
+    np.testing.assert_allclose(adata.X, tester)
 
 
 def test_regress_out_constants_equivalent():
