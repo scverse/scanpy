@@ -630,7 +630,7 @@ DT = TypeVar("DT")
 
 @njit
 def _create_regressor_categorical(
-    X: np.ndarray, cats: np.ndarray, filters: np.ndarray
+    X: np.ndarray, cats: int, filters: np.ndarray
 ) -> np.ndarray:
     # create regressor matrix faster for categorical variables
     regressors = np.zeros(X.shape, dtype=X.dtype)
