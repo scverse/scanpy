@@ -55,8 +55,8 @@ dependencies = [
     "h5py>=3.6",
     "tqdm",
     "scikit-learn>=1.1",
-    "statsmodels>=0.13", # https://github.com/pydata/patsy/issues/215
-    "patsy!=1.0.0",
+    "statsmodels>=0.13",
+    "patsy!=1.0.0", # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
     "joblib",
