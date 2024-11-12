@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
-    key: str,
+    key: str | Sequence[str],
     *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
@@ -42,7 +42,9 @@ def harmony_integrate(
         The annotated data matrix.
     key
         The name of the column in ``adata.obs`` that differentiates
-        among experiments/batches.
+        among experiments/batches. To integrate over two or more covariates, 
+        you can pass multiple column names as a list. See ``vars_use`` 
+        parameter of the ``harmonypy`` pacakage for more details.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is
         stored. Defaults to ``'X_pca'``, which is the default for
