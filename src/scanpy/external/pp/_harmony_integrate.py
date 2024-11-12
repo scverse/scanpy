@@ -44,8 +44,8 @@ def harmony_integrate(
         The annotated data matrix.
     key
         The name of the column in ``adata.obs`` that differentiates
-        among experiments/batches. To integrate over two or more covariates, 
-        you can pass multiple column names as a list. See ``vars_use`` 
+        among experiments/batches. To integrate over two or more covariates,
+        you can pass multiple column names as a list. See ``vars_use``
         parameter of the ``harmonypy`` package for more details.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is
