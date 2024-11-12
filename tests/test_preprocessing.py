@@ -336,7 +336,7 @@ def test_regress_out_constants():
         (["bulk_labels"], "regress_test_small_cat.npy"),
     ],
 )
-def test_regress_out_reproducible(keys, tester_file):
+def test_regress_out_reproducible(keys, expected_result_file_path):
     adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
     sc.pp.regress_out(adata, keys=keys)
