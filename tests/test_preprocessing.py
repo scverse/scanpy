@@ -330,7 +330,7 @@ def test_regress_out_constants():
 
 
 @pytest.mark.parametrize(
-    ("keys", "tester_file"),
+    ("keys", "expected_result_file_path"),
     [
         (["n_counts", "percent_mito"], "regress_test_small.npy"),
         (["bulk_labels"], "regress_test_small_cat.npy"),
