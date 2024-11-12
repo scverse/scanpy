@@ -342,7 +342,7 @@ def test_regress_out_reproducible(keys, tester_file):
     sc.pp.regress_out(adata, keys=keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare the new implementation with the old one
-    tester = np.load(DATA_PATH / tester_file)
+    tester = np.load(DATA_PATH / expected_result_file_path)
     np.testing.assert_array_almost_equal(adata.X, tester)
 
 
