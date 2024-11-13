@@ -13,8 +13,6 @@ from scipy import sparse as sp
 from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
 
 import scanpy as sc
-from scanpy.preprocessing._simple import _create_regressor_categorical
-from scanpy.preprocessing._utils import _to_dense
 from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
@@ -344,36 +342,6 @@ def test_regress_out_reproducible(keys, expected_result_file_path):
     # Now we compare the new implementation with the old one
     tester = np.load(DATA_PATH / expected_result_file_path)
     np.testing.assert_array_almost_equal(adata.X, tester)
-
-
-def _gen_org_regressors(adata, keys, X_org):
-    # helper function to generate the original regressors
-    regressors = np.zeros(X_org.shape, dtype=X_org.dtype)
-    X = _to_dense(X_org, order="F")
-    for category in adata.obs[keys[0]].cat.categories:
-        mask = (category == adata.obs[keys[0]]).values
-        for ix, x in enumerate(X.T):
-            regressors[mask, ix] = x[mask].mean()
-    return regressors
-
-
-def test_regressor_categorical():
-    adata = sc.datasets.pbmc68k_reduced()
-    adata = adata.raw.to_adata()[:200, :200]
-    X_org = adata.X.copy().astype(np.float64)
-    keys = ["bulk_labels"]
-    # Create org regressors
-    regressors = _gen_org_regressors(adata, keys, X_org)
-
-    # Create new regressors
-    cats = np.int64(len(adata.obs[keys[0]].cat.categories))
-    filters = adata.obs[keys[0]].cat.codes.to_numpy()
-    cats = cats.astype(filters.dtype)
-    X = _to_dense(X_org, order="F")
-    new_reg = _create_regressor_categorical(X, cats, filters)
-
-    # Compare the two implementations
-    np.testing.assert_allclose(new_reg, regressors)
 
 
 def test_regress_out_constants_equivalent():
