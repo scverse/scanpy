@@ -846,25 +846,10 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
 
 @check_nonnegative_integers.register(DaskArray)
 def _check_nonnegative_integers_dask(X: DaskArray) -> bool:
-    import dask.distributed as dd
-
     X_nonnegative: DaskArray = X.map_blocks(
         check_nonnegative_integers, dtype=bool, drop_axis=(0, 1)
     )
-    try:
-        client = dd.default_client()
-        has_client = True
-    except ValueError:
-        has_client = False
-    if has_client:
-        blocks = X_nonnegative.to_delayed().ravel()
-        return any(
-            not block.result()
-            for block in dd.as_completed(
-                client.submit(lambda block: block.compute(), block) for block in blocks
-            )
-        )
-    return X_nonnegative.compute()
+    return X_nonnegative.any().compute()
 
 
 def select_groups(
