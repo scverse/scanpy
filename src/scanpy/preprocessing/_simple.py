@@ -638,8 +638,7 @@ def _create_regressor_categorical(
     for category in range(number_categories):
         mask = category == filters
         for ix in numba.prange(XT.shape[0]):
-            x = XT[ix]
-            regressors[mask, ix] = x[mask].mean()
+            regressors[mask, ix] = XT[ix][mask].mean()
     return regressors
 
 
