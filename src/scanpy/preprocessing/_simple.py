@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import numba
 import numpy as np
@@ -22,6 +22,7 @@ from .._compat import njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _resolve_axis,
     axis_sum,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
@@ -33,7 +34,6 @@ from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _to_dense
 
-# install dask if available
 try:
     import dask.array as da
 except ImportError:
@@ -49,9 +49,12 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix
 
     from .._compat import DaskArray
     from .._utils import AnyRandom
+
+    CSMatrix = csr_matrix | csc_matrix
 
 
 @old_positionals(
@@ -825,16 +828,49 @@ def _regress_out_chunk(
     return np.vstack(responses_chunk_list)
 
 
+@overload
 def sample(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    random_state: AnyRandom = 0,
+    copy: Literal[False] = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> None: ...
+@overload
+def sample(
+    data: AnnData,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    random_state: AnyRandom = 0,
+    copy: Literal[True],
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> AnnData | None: ...
+@overload
+def sample(
+    data: np.ndarray | CSMatrix,
     fraction: float | None = None,
     *,
     n: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
     replace: bool = False,
-    axis: int = 0,
-) -> AnnData | None:
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> tuple[np.ndarray | CSMatrix, NDArray[np.int64]]: ...
+def sample(
+    data: AnnData | np.ndarray | CSMatrix,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    random_state: AnyRandom = 0,
+    copy: bool = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> AnnData | None | tuple[np.ndarray | CSMatrix, NDArray[np.int64]]:
     """\
     Sample observations or variables with or without replacement.
 
@@ -845,7 +881,7 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
-        This can be larger than 1.0, if replace=True.
+        This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
@@ -857,58 +893,64 @@ def sample(
     replace
         If True, samples are drawn with replacement.
     axis
-        Sample observations (axis=0) or variables (axis=1). Default is 0.
+        Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
 
     Returns
     -------
-    Returns `X[indices] or X[:, indices], indices` depending on the axis
-    argument if data is array-like, otherwise samples the passed
-    :class:`~anndata.AnnData` (`copy == False`) or returns a sampled
-    copy of it (`copy == True`).
+    If `isinstance(data, AnnData)` and `copy=False`,
+    this function returns `None`. Otherwise:
+
+    `data[indices, :]` | `data[:, indices]` (depending on `axis`)
+        If `data` is array-like or `copy=True`, returns the subset.
+    `indices` : numpy.ndarray
+        If `data` is array-like, also returns the indices into the original.
     """
-    np.random.seed(random_state)
+    axis, axis_name = _resolve_axis(axis)
+    match (fraction, n):
+        case (None, None):
+            msg = "Either `fraction` or `n` must be set."
+            raise TypeError(msg)
+        case (float(), int()):
+            msg = "Providing both `fraction` and `n` is not allowed."
+            raise TypeError(msg)
+
     old_n = data.shape[axis]
-    if axis not in (0, 1):
-        raise ValueError("`axis` must be either 0 or 1.")
-    if fraction is None and n is None:
-        raise ValueError("Either `fraction` or `n` must be set.")
-    if fraction is not None and n is not None:
-        raise ValueError("Providing both `fraction` and `n` is not allowed.")
     if n is not None:
         new_n = n
     elif fraction is not None:
         if fraction < 0:
-            raise ValueError(f"`fraction needs to be nonnegative`, not {fraction}")
+            msg = f"fraction needs to be nonnegative, not {fraction}"
+            raise ValueError(msg)
         if not replace and fraction > 1:
-            raise ValueError(
-                f"If replace=False, `fraction` needs to be within [0, 1], not {fraction}"
-            )
+            msg = f"If replace=False, `fraction` needs to be within [0, 1], not {fraction}"
+            raise ValueError(msg)
         new_n = int(fraction * old_n)
-        obs_or_var_str = "observations" if axis == 0 else "variables"
-        logg.debug(f"... sampled to {new_n} {obs_or_var_str}")
+        logg.debug(f"... sampled to {new_n} {axis_name}")
     else:
-        raise ValueError("Either pass `n_obs` or `fraction`.")
+        msg = "Either pass `n_obs` or `fraction`."
+        raise ValueError(msg)
+
+    np.random.seed(random_state)
     indices = np.random.choice(old_n, size=new_n, replace=replace)
-    if isinstance(data, AnnData):
-        if data.isbacked:
-            if copy:
-                view = data[indices] if axis == 0 else data[:, indices]
-                return view.to_memory()
-            else:
-                raise NotImplementedError(
-                    "Inplace sampling is not implemented for backed objects."
-                )
-        else:
-            if copy:
-                view = data[indices] if axis == 0 else data[:, indices]
-                return view.copy()
-            elif axis == 0:
-                data._inplace_subset_obs(indices)
-            else:
-                data._inplace_subset_var(indices)
+    subset = data[indices] if axis_name == "obs" else data[:, indices]
+
+    if not isinstance(data, AnnData):
+        assert not isinstance(subset, AnnData)
+        if copy:
+            subset = subset.copy()
+        return subset, indices
+    assert isinstance(subset, AnnData)
+    if copy:
+        return subset.to_memory() if data.isbacked else subset.copy()
+
+    # in-place
+    if data.isbacked:
+        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
+        raise NotImplementedError(msg)
+    if axis_name == "obs":
+        data._inplace_subset_obs(indices)
     else:
-        X = data
-        return X[indices] if axis == 0 else X[:, indices], indices
+        data._inplace_subset_var(indices)
 
 
 @old_positionals("n_obs", "random_state", "copy")
