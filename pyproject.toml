@@ -166,7 +166,7 @@ addopts = [
     "-ptesting.scanpy._pytest",
     "--pyargs",
 ]
-testpaths = ["./tests", "scanpy"]
+testpaths = ["./tests", "./ci", "scanpy"]
 norecursedirs = ["tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
