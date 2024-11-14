@@ -166,7 +166,7 @@ addopts = [
     "-ptesting.scanpy._pytest",
     "--pyargs",
 ]
-testpaths = ["./tests", "scanpy"]
+testpaths = ["./tests", "./ci", "scanpy"]
 norecursedirs = ["tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
@@ -211,7 +211,7 @@ exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
-    "@numba.njit.*",
+    '@(numba\.|nb\.)njit.*',
 ]
 
 [tool.ruff]

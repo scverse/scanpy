@@ -6,9 +6,10 @@ from types import ModuleType
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
+from packaging.version import Version
 from scipy.sparse import csr_matrix, issparse
 
-from scanpy._compat import DaskArray
+from scanpy._compat import DaskArray, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
@@ -225,11 +226,15 @@ def test_is_constant(array_type):
     ],
 )
 @pytest.mark.parametrize("block_type", [np.array, csr_matrix])
-def test_is_constant_dask(axis, expected, block_type):
+def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_type):
     import dask.array as da
 
-    if (axis is None) and block_type is csr_matrix:
-        pytest.skip("Dask has weak support for scipy sparse matrices")
+    if block_type is csr_matrix and (
+        axis is None or pkg_version("dask") < Version("2023.2.0")
+    ):
+        reason = "Dask has weak support for scipy sparse matrices"
+        # This test is flaky for old dask versions, but when `axis=None` it reliably fails
+        request.applymarker(pytest.mark.xfail(reason=reason, strict=axis is None))
 
     x_data = [
         [0, 0, 1, 1],
