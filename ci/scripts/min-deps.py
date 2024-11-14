@@ -35,7 +35,7 @@ def min_dep(req: Requirement) -> Requirement:
     -------
 
     >>> min_dep(Requirement("numpy>=1.0"))
-    "numpy==1.0"
+    <Requirement('numpy==1.0.*')>
     """
     req_name = req.name
     if req.extras:
