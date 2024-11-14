@@ -501,16 +501,16 @@ def normalize_per_cell(
     """\
     Normalize total counts per cell.
 
-    .. warning::
-        .. deprecated:: 1.3.7
-            Use :func:`~scanpy.pp.normalize_total` instead.
-            The new function is equivalent to the present
-            function, except that
+    .. deprecated:: 1.3.7
 
-            * the new function doesn't filter cells based on `min_counts`,
-              use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-            * some arguments were renamed
-            * `copy` is replaced by `inplace`
+       Use :func:`~scanpy.pp.normalize_total` instead.
+       The new function is equivalent to the present
+       function, except that
+
+       * the new function doesn't filter cells based on `min_counts`,
+         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
+       * some arguments were renamed
+       * `copy` is replaced by `inplace`
 
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
@@ -962,9 +962,9 @@ def subsample(
     """\
     Subsample to a fraction of the number of observations.
 
-    .. warning::
-        .. deprecated:: 1.4.7
-            Use :func:`~scanpy.pp.sample` instead.
+    .. deprecated:: 1.11.0
+
+       Use :func:`~scanpy.pp.sample` instead.
 
     Parameters
     ----------
