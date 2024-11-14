@@ -906,32 +906,29 @@ def sample(
         If `data` is array-like, also returns the indices into the original.
     """
     axis, axis_name = _resolve_axis(axis)
+    old_n = data.shape[axis]
     match (fraction, n):
         case (None, None):
             msg = "Either `fraction` or `n` must be set."
             raise TypeError(msg)
-        case (float(), int()):
+        case (None, _):
+            pass
+        case (_, None):
+            if fraction < 0:
+                msg = f"`{fraction=}` needs to be nonnegative."
+                raise ValueError(msg)
+            if not replace and fraction > 1:
+                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
+                raise ValueError(msg)
+            n = int(fraction * old_n)
+            logg.debug(f"... sampled to {n} {axis_name}")
+        case _:
             msg = "Providing both `fraction` and `n` is not allowed."
             raise TypeError(msg)
-
-    old_n = data.shape[axis]
-    if n is not None:
-        new_n = n
-    elif fraction is not None:
-        if fraction < 0:
-            msg = f"fraction needs to be nonnegative, not {fraction}"
-            raise ValueError(msg)
-        if not replace and fraction > 1:
-            msg = f"If replace=False, `fraction` needs to be within [0, 1], not {fraction}"
-            raise ValueError(msg)
-        new_n = int(fraction * old_n)
-        logg.debug(f"... sampled to {new_n} {axis_name}")
-    else:
-        msg = "Either pass `n` or `fraction`."
-        raise ValueError(msg)
+    del fraction
 
     np.random.seed(random_state)
-    indices = np.random.choice(old_n, size=new_n, replace=replace)
+    indices = np.random.choice(old_n, size=n, replace=replace)
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 
     if not isinstance(data, AnnData):

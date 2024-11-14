@@ -26,7 +26,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Literal
+    from typing import Any, Literal
 
     CSMatrix = sp.csc_matrix | sp.csr_matrix
 
@@ -200,6 +200,38 @@ def test_sample(
             pytest.fail(f"Unknown `{which=}`")
 
     assert subset.shape == ((expected, 10) if axis == 0 else (200, expected))
+
+
+@pytest.mark.parametrize(
+    ("args", "exc", "pattern"),
+    [
+        pytest.param(
+            dict(), TypeError, r"Either `fraction` or `n` must be set", id="empty"
+        ),
+        pytest.param(
+            dict(n=10, fraction=0.2),
+            TypeError,
+            r"Providing both `fraction` and `n` is not allowed",
+            id="both",
+        ),
+        pytest.param(
+            dict(fraction=2),
+            ValueError,
+            r"If `replace=False`, `fraction=2` needs to be",
+            id="frac>1",
+        ),
+        pytest.param(
+            dict(fraction=-0.3),
+            ValueError,
+            r"`fraction=-0\.3` needs to be nonnegative",
+            id="frac<0",
+        ),
+    ],
+)
+def test_sample_error(args: dict[str, Any], exc: type[Exception], pattern: str):
+    adata = AnnData(np.ones((200, 10)))
+    with pytest.raises(exc, match=pattern):
+        sc.pp.sample(adata, **args)
 
 
 def test_sample_copy_backed(tmp_path):
