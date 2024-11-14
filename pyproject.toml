@@ -212,6 +212,7 @@ exclude_also = [
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
     "@numba.njit.*",
+    "@njit.*",
 ]
 
 [tool.ruff]
