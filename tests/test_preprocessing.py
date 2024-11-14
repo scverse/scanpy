@@ -22,7 +22,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, param_with
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -143,7 +143,16 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+ignore_dask_perf = pytest.mark.filterwarnings("ignore::dask.array.PerformanceWarning")
+
+
+@pytest.mark.parametrize(
+    "array_type",
+    [
+        param_with(p, marks=[ignore_dask_perf] if "dask" in (p.id or "") else [])
+        for p in ARRAY_TYPES
+    ],
+)
 @pytest.mark.parametrize("which", ["copy", "inplace", "array"])
 @pytest.mark.parametrize(
     ("axis", "fraction", "n", "replace", "expected"),
@@ -156,7 +165,6 @@ def test_normalize_per_cell():
         pytest.param(1, 2.0, None, True, 20, id="var-2.0-replace"),
     ],
 )
-@pytest.mark.filterwarnings("ignore::dask.array.PerformanceWarning")
 def test_sample(
     *,
     array_type: Callable[[np.ndarray], np.ndarray | CSMatrix],
