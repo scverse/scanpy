@@ -849,7 +849,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-) -> AnnData | None: ...
+) -> AnnData: ...
 @overload
 def sample(
     data: np.ndarray | CSMatrix,
@@ -927,7 +927,7 @@ def sample(
         new_n = int(fraction * old_n)
         logg.debug(f"... sampled to {new_n} {axis_name}")
     else:
-        msg = "Either pass `n_obs` or `fraction`."
+        msg = "Either pass `n` or `fraction`."
         raise ValueError(msg)
 
     np.random.seed(random_state)
@@ -955,13 +955,13 @@ def sample(
 
 @old_positionals("n_obs", "random_state", "copy")
 def subsample(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | CSMatrix,
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
     random_state: AnyRandom = 0,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
+) -> AnnData | tuple[np.ndarray | CSMatrix, NDArray[np.int64]] | None:
     """\
     Subsample to a fraction of the number of observations.
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from itertools import product
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,13 @@ from testing.scanpy._helpers import (
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Literal
+
+    CSMatrix = sp.csc_matrix | sp.csr_matrix
+
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
@@ -135,52 +143,64 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
-def test_sample():
-    warnings.filterwarnings("ignore", r".*names are not unique", UserWarning)
-    adata = AnnData(np.ones((200, 10)))
-    sc.pp.sample(adata, n=40)
-    assert adata.n_obs == 40
-    sc.pp.sample(adata, fraction=0.1)
-    assert adata.n_obs == 4
-    sc.pp.sample(adata, n=201, replace=True)
-    assert adata.n_obs == 201
-    sc.pp.sample(adata, n=10, axis=1)
-    assert adata.n_vars == 10
-    sc.pp.sample(adata, n=11, axis=1, replace=True)
-    assert adata.n_vars == 11
-    sc.pp.sample(adata, fraction=2.0, axis=1, replace=True)
-    assert adata.n_vars == 22
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("copy", [True, False], ids=["copy", "inplace"])
+@pytest.mark.parametrize(
+    ("axis", "fraction", "n", "replace", "expected"),
+    [
+        pytest.param(0, None, 40, False, 40, id="obs-40-no_replace"),
+        pytest.param(0, 0.1, None, False, 20, id="obs-0.1-no_replace"),
+        pytest.param(0, None, 201, True, 201, id="obs-201-replace"),
+        pytest.param(1, None, 10, False, 10, id="var-10-no_replace"),
+        pytest.param(1, None, 11, True, 11, id="var-11-replace"),
+        pytest.param(1, 2.0, None, True, 20, id="var-2.0-replace"),
+    ],
+)
+@pytest.mark.filterwarnings("ignore::dask.array.PerformanceWarning")
+def test_sample(
+    *,
+    array_type: Callable[[np.ndarray], np.ndarray | CSMatrix],
+    copy: bool,
+    axis: Literal[0, 1],
+    fraction: float | None,
+    n: int | None,
+    replace: bool,
+    expected: int,
+):
+    adata = AnnData(array_type(np.ones((200, 10))))
 
-    adata = AnnData(sp.csr_matrix(np.ones((200, 10))))
-    sc.pp.sample(adata, fraction=2.0, axis=1, replace=True)
-    assert adata.n_vars == 20
+    # can’t guarantee that duplicates are drawn when `replace=True`,
+    # so we just ignore the warning instead using `with pytest.warns(...)`
+    warnings.filterwarnings(
+        "ignore" if replace else "error", r".*names are not unique", UserWarning
+    )
+    rv = sc.pp.sample(adata, fraction, n=n, replace=replace, axis=axis, copy=copy)
 
+    if copy:
+        assert adata.shape == (200, 10)
+        subset = rv
+    else:
+        assert rv is None
+        subset = adata
 
-def test_sample_copy():
-    adata = AnnData(np.ones((200, 10)))
-    assert sc.pp.sample(adata, n=40, copy=True).shape == (40, 10)
-    assert sc.pp.sample(adata, fraction=0.1, copy=True).shape == (20, 10)
-    assert sc.pp.sample(adata, fraction=0.1, copy=True).shape == (20, 10)
-    X = sc.pp.sample(adata, fraction=2.0, axis=1, replace=True, copy=True)
-    assert X.shape == (200, 20)
-
-    adata = AnnData(sp.csr_matrix(np.ones((200, 10))))
-    X = sc.pp.sample(adata, fraction=2.0, axis=1, replace=True, copy=True)
-    assert X.shape == (200, 20)
+    assert subset.shape == ((expected, 10) if axis == 0 else (200, expected))
 
 
 def test_sample_copy_backed(tmp_path):
-    A = np.random.rand(200, 10).astype(np.float32)
-    adata_m = AnnData(A.copy())
-    adata_d = AnnData(A.copy())
-    filename = tmp_path / "test.h5ad"
-    adata_d.filename = filename
-    # This should not throw an error
+    adata_m = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d = adata_m.copy()
+    adata_d.filename = tmp_path / "test.h5ad"
+
     assert sc.pp.sample(adata_d, n=40, copy=True).shape == (40, 10)
     np.testing.assert_array_equal(
         sc.pp.sample(adata_m, n=40, copy=True).X,
         sc.pp.sample(adata_d, n=40, copy=True).X,
     )
+
+
+def test_sample_copy_backed_error(tmp_path):
+    adata_d = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d.filename = tmp_path / "test.h5ad"
     with pytest.raises(NotImplementedError):
         sc.pp.sample(adata_d, n=40, copy=False)
 
