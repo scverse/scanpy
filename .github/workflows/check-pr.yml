@@ -1,0 +1,61 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      # milestone changes
+      - milestoned
+      - demilestoned
+      # label changes for “no milestone”
+      - labeled
+      - unlabeled
+      # initial check
+      - opened
+      - edited
+      - reopened
+      # code change (e.g. this workflow)
+      - synchronize
+
+jobs:
+  # This job verifies that the milestone is present or not necessary
+  # and determines if “check-relnotes” needs to be run.
+  check-milestone:
+    name: Check Milestone
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if milestone or “no milestone” label is present
+        uses: flying-sheep/check@v1
+        with:
+          success: ${{ github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+      - name: Check if the “Release notes” checkbox is checked and filled
+        uses: kaisugi/action-regex-match@v1.0.0
+        id: checked-relnotes
+        with:
+          text: ${{ github.event.pull_request.body }}
+          regex: '^\s*- \[x\] Release notes not necessary because:(.*)$'
+          flags: m
+    outputs:
+      no-relnotes-reason: ${{ steps.checked-relnotes.outputs.group1 }}
+  # This job verifies that the relevant release notes file has been modified.
+  check-relnotes:
+    name: Check for release notes
+    runs-on: ubuntu-latest
+    needs: check-milestone
+    if: ${{ needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Find out if a relevant release fragment is added
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: | # this is intentionally a string
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.*.md'
+      - name: Check if a relevant release fragment is added
+        uses: flying-sheep/check@v1
+        with:
+          success: ${{ steps.changes.outputs.relnotes }}

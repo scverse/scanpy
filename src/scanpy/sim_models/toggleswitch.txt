@@ -1,0 +1,16 @@
+# For each "variable = ", there must be a right hand side:
+# either an empty string or a python-style logical expression
+# involving variable names, "or", "and", "(", ")".
+# The order of equations matters!
+#
+# modelType = hill
+# invTimeStep = 0.1
+#
+# boolean update rules:
+0 = 0 and not 1
+1 = 1 and not 0
+# coupling list:
+0          0             1.0
+0          1            -1.0
+1          1             1.0
+1          0            -1.0

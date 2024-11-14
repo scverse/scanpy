@@ -1,0 +1,54 @@
+# See Table 1 in Krumsiek et al. (2011), p. 3 or
+# Table 1, in Suppl. Mat. of Moignard et al. (2015), p. 28.
+#
+# For each "variable = ", there must be a right hand side:
+# either an empty string or a python-style logical expression
+# involving variable names, "or", "and", "(", ")".
+# The order of equations matters!
+#
+# modelType = hill
+# invTimeStep = 0.02
+#
+# boolean update rules:
+Gata2 = Gata2 and not (Gata1 and Fog1) and not Pu.1
+Gata1 = (Gata1 or Gata2 or Fli1) and not Pu.1
+Fog1 = Gata1
+EKLF = Gata1 and not Fli1
+Fli1 = Gata1 and not EKLF
+SCL = Gata1 and not Pu.1
+Cebpa = Cebpa and not (Gata1 and Fog1 and SCL)
+Pu.1 = (Cebpa or Pu.1) and not (Gata1 or Gata2)
+cJun = Pu.1 and not Gfi1
+EgrNab = (Pu.1 and cJun) and not Gfi1
+Gfi1 = Cebpa and not EgrNab
+# coupling list:
+Gata2      Gata2                 1.0
+Gata2      Gata1                -0.1
+Gata2      Fog1                 -1.0
+Gata2      Pu.1                -1.15
+Gata1      Gata2                 1.0
+Gata1      Gata1                 0.1
+Gata1      Fli1                  1.0
+Gata1      Pu.1                -1.21
+Fog1       Gata1                 0.1
+EKLF       Gata1                 0.2
+EKLF       Fli1                 -1.0
+Fli1       Gata1                 0.2
+Fli1       EKLF                 -1.0
+SCL        Gata1                 1.0
+SCL        Pu.1                 -1.0
+Cebpa      Gata1                -1.0
+Cebpa      Fog1                 -1.0
+Cebpa      SCL                  -1.0
+Cebpa      Cebpa                10.0
+Pu.1       Gata2                -1.0
+Pu.1       Gata1                -1.0
+Pu.1       Cebpa                10.0
+Pu.1       Pu.1                 10.0
+cJun       Pu.1                  1.0
+cJun       Gfi1                 -1.0
+EgrNab     Pu.1                  1.0
+EgrNab     cJun                  1.0
+EgrNab     Gfi1                 -1.3
+Gfi1       Cebpa                 1.0
+Gfi1       EgrNab               -5.0
