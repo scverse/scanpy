@@ -51,8 +51,6 @@ if TYPE_CHECKING:
     from .._compat import DaskArray
     from .._utils import AnyRandom
 
-
-# @numba.jit(cache=True,parallel=True)
 def get_rows_to_keep_1(indptr, data):
     lens = np.zeros(len(indptr) - 1, dtype=type(data[0]))
     for i in range(len(lens)):
@@ -62,7 +60,6 @@ def get_rows_to_keep_1(indptr, data):
 
 def get_rows_to_keep(indptr, dtype):
     lens = indptr[1:] - indptr[:-1]
-    # lens.astype(dtype)
     return lens
 
 
@@ -199,7 +196,6 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    print(type(X))
     import time
 
     t0 = time.time()
@@ -209,9 +205,6 @@ def filter_cells(
         else:
             number_per_cell = get_rows_to_keep(X.indptr, type(X.data[0]))
 
-    # and ( min_genes is not None or max_genes is not None)  :
-    #    #number_per_cell=np.sum(X>0,axis=1)
-    #    number_per_cell = get_rows_to_keep(X.indptr,type(X.data[0]))
     elif isinstance(X, sp.sparse._csc.csc_matrix):
         nclos = X.shape[0]
         nthr = numba.get_num_threads()
@@ -224,8 +217,6 @@ def filter_cells(
         number_per_cell = axis_sum(
             X if min_genes is None and max_genes is None else X > 0, axis=1
         )
-
-    print("Number_per_Cell", time.time() - t0)
 
     if issparse(X):
         number_per_cell = number_per_cell
@@ -348,52 +339,27 @@ def filter_genes(
     if isinstance(X, sp.sparse._csr.csr_matrix):
         ncols = X.shape[1]
         nthr = numba.get_num_threads()
-        print(
-            "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-            X.shape,
-            nthr,
-            X.indices.shape,
-            X.data.shape,
-        )
-        # number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr)
         if min_cells is None and max_cells is None:
             number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr, False)
         else:
             number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr, True)
 
     elif isinstance(X, sp.sparse._csc.csc_matrix):
-        # ncols = X.shape[1]
-        # nthr = numba.get_num_threads()
-        print(
-            "HHHHHHHHHHHHHHHHHHcscHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-        )  # X.shape,nthr,X.indices.shape,X.data.shape)
-        # number_per_gene = get_cols_to_keep(X.indices, X.data, ncols, nthr)
         if min_cells is None and max_cells is None:
             number_per_gene = get_rows_to_keep_1(
                 X.indptr, X.data
-            )  # get_cols_to_keep(X.indices, X.data, ncols, nthr,False)
+            )
         else:
             number_per_gene = get_rows_to_keep(X.indptr, type(X.data[0]))
-        # if isinstance(number_per_gene,np.matrix):
-        #    number_per_gene=number_per_gene.A1
-        #    print("I am here")
-
-        print("Cols to keep,", time.time() - t0)
-        # print(number_per_gene,type(number_per_gene),number_per_gene.shape,ncols)
-        # number_per_gene = axis_sum(
-        #                        X if min_cells is None and max_cells is None else X > 0, axis=0
-        #                            )
-        # print(number_per_gene.A1)
     else:
-        print("inside print")
         number_per_gene = axis_sum(
             X if min_cells is None and max_cells is None else X > 0, axis=0
         )
     if issparse(X):
         if isinstance(X, sp.sparse._csr.csr_matrix) or isinstance(
             X, sp.sparse._csc.csc_matrix
-        ):  # isinstance(X, sp.sparse._csr.csr_matrix):
-            number_per_gene = number_per_gene  # cols_to_keep#number_per_gene
+        ):
+            number_per_gene = number_per_gene
         else:
             number_per_gene = number_per_gene
     if min_number is not None:
@@ -478,7 +444,6 @@ def log1p_sparse(X: spmatrix, *, base: Number | None = None, copy: bool = False)
 @log1p.register(np.ndarray)
 def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
-    # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         if not np.issubdtype(X.dtype, np.floating):
             X = X.astype(float)
@@ -702,7 +667,6 @@ def normalize_per_cell(  # noqa: PLR0917
         if not copy:
             raise ValueError("Can only be run with copy=True")
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
-        print(type(cell_subset), type(counts_per_cell))
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
     if counts_per_cell_after is None:
@@ -710,8 +674,6 @@ def normalize_per_cell(  # noqa: PLR0917
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
-        print("!!!!!!!!!!!", type(counts_per_cell[0]), type(counts_per_cell_after))
-        # counts_per_cell.astype(type(counts_per_cell_after))
         counts_per_cell /= counts_per_cell_after
         if not issparse(X):
             X /= counts_per_cell[:, np.newaxis]
@@ -1113,7 +1075,6 @@ def _pca_fallback(data, n_comps=2):
     # calculate eigenvectors & eigenvalues of the covariance matrix
     # use 'eigh' rather than 'eig' since C is symmetric,
     # the performance gain is substantial
-    # evals, evecs = np.linalg.eigh(C)
     evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
     # sort eigenvalues in decreasing order
     idcs = np.argsort(evals)[::-1]
