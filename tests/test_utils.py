@@ -9,7 +9,7 @@ from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy.sparse import csr_matrix, issparse
 
-from scanpy._compat import DaskArray, pkg_version
+from scanpy._compat import DaskArray, _legacy_numpy_gen, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
@@ -247,3 +247,22 @@ def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_
     x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
     result = is_constant(x, axis=axis).compute()
     np.testing.assert_array_equal(expected, result)
+
+
+@pytest.mark.parametrize("seed", [0, 1, 1256712675])
+@pytest.mark.parametrize("func", ["choice"])
+def test_legacy_numpy_gen(seed: int, func: str):
+    arr_module = _mk_random(seed, func, legacy=True)
+    arr_generator = _mk_random(seed, func, legacy=False)
+    np.testing.assert_array_equal(arr_module, arr_generator)
+
+
+def _mk_random(seed: int, func: str, *, legacy: bool) -> np.ndarray:
+    np.random.seed(seed)
+    gen = np.random if legacy else _legacy_numpy_gen()
+    match func:
+        case "choice":
+            arr = np.arange(1000)
+            return gen.choice(arr, size=(100, 100))
+        case _:
+            pytest.fail(f"Unknown {func=}")

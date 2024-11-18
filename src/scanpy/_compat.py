@@ -9,11 +9,13 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
+import numpy as np
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -194,3 +196,23 @@ def _numba_threading_layer() -> Layer:
         f" ({available=}, {numba.config.THREADING_LAYER_PRIORITY=})"
     )
     raise ValueError(msg)
+
+
+_LegacyRandom = int | np.random.RandomState | None
+
+
+def _legacy_numpy_gen(
+    random_state: _LegacyRandom | None = None,
+) -> np.random.RandomState:
+    """Return a random generator that behaves like the legacy one."""
+
+    if random_state is not None:
+        if isinstance(random_state, np.random.RandomState):
+            np.random.set_state(random_state.get_state(legacy=False))
+            return random_state
+        np.random.seed(random_state)
+    state = np.random.get_state(legacy=True)
+    assert isinstance(state, tuple)
+    bit_gen = np.random.MT19937()
+    bit_gen.state = state
+    return np.random.RandomState(bit_gen)

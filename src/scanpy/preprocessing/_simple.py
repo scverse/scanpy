@@ -18,7 +18,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import njit, old_positionals
+from .._compat import _legacy_numpy_gen, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -51,8 +51,8 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from scipy.sparse import csc_matrix
 
-    from .._compat import DaskArray
-    from .._utils import AnyRandom
+    from .._compat import DaskArray, _LegacyRandom
+    from .._utils import RNGLike, SeedLike
 
     CSMatrix = csr_matrix | csc_matrix
 
@@ -834,7 +834,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    random_state: AnyRandom = 0,
+    rng: RNGLike | SeedLike | None = 0,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
@@ -845,7 +845,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    random_state: AnyRandom = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
@@ -856,7 +856,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    random_state: AnyRandom = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
@@ -866,7 +866,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    random_state: AnyRandom = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
@@ -927,8 +927,9 @@ def sample(
             raise TypeError(msg)
     del fraction
 
-    np.random.seed(random_state)
-    indices = np.random.choice(old_n, size=n, replace=replace)
+    if not isinstance(rng, np.random.RandomState):
+        rng = np.random.default_rng(rng)
+    indices = rng.choice(old_n, size=n, replace=replace)
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 
     if not isinstance(data, AnnData):
@@ -956,7 +957,7 @@ def subsample(
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray | CSMatrix, NDArray[np.int64]] | None:
     """\
@@ -991,7 +992,7 @@ def subsample(
         data=data,
         fraction=fraction,
         n=n_obs,
-        random_state=random_state,
+        rng=_legacy_numpy_gen(random_state),
         copy=copy,
         replace=False,
         axis=0,
@@ -1004,7 +1005,7 @@ def downsample_counts(
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1140,7 +1141,7 @@ def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):
