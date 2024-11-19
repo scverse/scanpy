@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from scipy import sparse
 
+    from .._compat import _LegacyRandom
+
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -32,7 +34,7 @@ def leiden(
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
-    random_state: _utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
     adjacency: sparse.spmatrix | None = None,
     directed: bool | None = None,

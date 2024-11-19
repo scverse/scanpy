@@ -30,7 +30,8 @@ if TYPE_CHECKING:
     from scipy import sparse
     from scipy.sparse import spmatrix
 
-    from ..._utils import AnyRandom, Empty
+    from ..._compat import _LegacyRandom
+    from ..._utils import Empty
 
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
@@ -70,7 +71,7 @@ def pca(
     layer: str | None = None,
     zero_center: bool | None = True,
     svd_solver: SvdSolver | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
