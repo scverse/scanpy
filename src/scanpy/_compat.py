@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 P = ParamSpec("P")
 R = TypeVar("R")
 
+_LegacyRandom = int | np.random.RandomState | None
+
 
 if TYPE_CHECKING:
     # type checkers are confused and can only see …core.Array

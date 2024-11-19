@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
+    from .._compat import _LegacyRandom
+
 try:
     from louvain.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -50,7 +52,7 @@ def louvain(
     adata: AnnData,
     resolution: float | None = None,
     *,
-    random_state: _utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
     adjacency: spmatrix | None = None,
