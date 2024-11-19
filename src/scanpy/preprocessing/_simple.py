@@ -927,8 +927,7 @@ def sample(
             raise TypeError(msg)
     del fraction
 
-    if not isinstance(rng, np.random.RandomState):
-        rng = np.random.default_rng(rng)
+    rng = np.random.default_rng(rng)
     indices = rng.choice(old_n, size=n, replace=replace)
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 
