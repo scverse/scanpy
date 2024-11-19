@@ -242,6 +242,15 @@ def test_sample_error(args: dict[str, Any], exc: type[Exception], pattern: str):
         sc.pp.sample(adata, **args)
 
 
+def test_sample_backwards_compat():
+    expected = np.array(
+        [26, 86, 2, 55, 75, 93, 16, 73, 54, 95, 53, 92, 78, 13, 7, 30, 22, 24, 33, 8]
+    )
+    legacy_result, indices = sc.pp.subsample(np.arange(100), n_obs=20)
+    assert np.array_equal(indices, legacy_result), "arange choices should match indices"
+    assert np.array_equal(legacy_result, expected)
+
+
 def test_sample_copy_backed(tmp_path):
     adata_m = AnnData(np.random.rand(200, 10).astype(np.float32))
     adata_d = adata_m.copy()
