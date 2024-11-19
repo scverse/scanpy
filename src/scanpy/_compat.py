@@ -9,14 +9,18 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
+import numpy as np
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
 
+
 P = ParamSpec("P")
 R = TypeVar("R")
+
+_LegacyRandom = int | np.random.RandomState | None
 
 
 if TYPE_CHECKING:

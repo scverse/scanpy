@@ -9,7 +9,7 @@ from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
-from ..._utils import get_random_state
+from ..._utils import _get_legacy_random
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
@@ -73,7 +73,7 @@ class Scrublet:
     n_neighbors: InitVar[int | None] = None
     expected_doublet_rate: float = 0.1
     stdev_doublet_rate: float = 0.02
-    random_state: InitVar[AnyRandom] = 0
+    random_state: InitVar[_LegacyRandom] = 0
 
     # private fields
 
@@ -174,7 +174,7 @@ class Scrublet:
         counts_obs: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
-        random_state: AnyRandom,
+        random_state: _LegacyRandom,
     ) -> None:
         self._counts_obs = sparse.csc_matrix(counts_obs)
         self._total_counts_obs = (
@@ -187,7 +187,7 @@ class Scrublet:
             if n_neighbors is None
             else n_neighbors
         )
-        self._random_state = get_random_state(random_state)
+        self._random_state = _get_legacy_random(random_state)
 
     def simulate_doublets(
         self,

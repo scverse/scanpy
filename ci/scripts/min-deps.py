@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import deque
+from contextlib import ExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -23,7 +24,7 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Generator, Iterable, Sequence
 
 
 def min_dep(req: Requirement) -> Requirement:
@@ -34,7 +35,7 @@ def min_dep(req: Requirement) -> Requirement:
     -------
 
     >>> min_dep(Requirement("numpy>=1.0"))
-    "numpy==1.0"
+    <Requirement('numpy==1.0.*')>
     """
     req_name = req.name
     if req.extras:
@@ -75,12 +76,19 @@ def extract_min_deps(
             yield min_dep(req)
 
 
-def main():
+class Args(argparse.Namespace):
+    path: Path
+    output: Path | None
+    extras: list[str]
+
+
+def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="min-deps",
-        description="""Parse a pyproject.toml file and output a list of minimum dependencies.
-
-        Output is directly passable to `pip install`.""",
+        description=(
+            "Parse a pyproject.toml file and output a list of minimum dependencies. "
+            "Output is optimized for `[uv] pip install` (see `-o`/`--output` for details)."
+        ),
         usage="pip install `python min-deps.py pyproject.toml`",
     )
     parser.add_argument(
@@ -89,8 +97,18 @@ def main():
     parser.add_argument(
         "--extras", type=str, nargs="*", default=(), help="extras to install"
     )
+    parser.add_argument(
+        *("--output", "-o"),
+        type=Path,
+        default=None,
+        help=(
+            "output file (default: stdout). "
+            "Without this option, output is space-separated for direct passing to `pip install`. "
+            "With this option, output written to a file newline-separated file usable as `requirements.txt` or `constraints.txt`."
+        ),
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv, Args())
 
     pyproject = tomllib.loads(args.path.read_text())
 
@@ -102,7 +120,10 @@ def main():
 
     min_deps = extract_min_deps(deps, pyproject=pyproject)
 
-    print(" ".join(map(str, min_deps)))
+    sep = "\n" if args.output else " "
+    with ExitStack() as stack:
+        f = stack.enter_context(args.output.open("w")) if args.output else sys.stdout
+        print(sep.join(map(str, min_deps)), file=f)
 
 
 if __name__ == "__main__":
