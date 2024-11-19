@@ -51,8 +51,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray
-    from .._utils import AnyRandom
+    from .._compat import DaskArray, _LegacyRandom
 
 
 @old_positionals(
@@ -832,7 +831,7 @@ def subsample(
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
     """\
@@ -895,7 +894,7 @@ def downsample_counts(
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1030,7 +1029,7 @@ def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):

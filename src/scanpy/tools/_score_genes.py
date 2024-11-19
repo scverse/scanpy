@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
     from scipy.sparse import csc_matrix, csr_matrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     try:
         _StrIdx = pd.Index[str]
@@ -70,7 +70,7 @@ def score_genes(
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
     use_raw: bool | None = None,
 ) -> AnnData | None:

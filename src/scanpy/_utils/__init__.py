@@ -13,13 +13,14 @@ import re
 import sys
 import warnings
 from collections import namedtuple
+from collections.abc import Sequence
 from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, singledispatch, wraps
 from operator import mul, truediv
 from textwrap import dedent
 from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Union, overload
 from weakref import WeakSet
 
 import h5py
@@ -49,12 +50,14 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
+    from .._compat import _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
 
-# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-# maybe in the future random.Generator
-AnyRandom = int | np.random.RandomState | None
+SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
+RNGLike = np.random.Generator | np.random.BitGenerator
+
+LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
 class Empty(Enum):
@@ -477,7 +480,7 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
-def get_random_state(seed: AnyRandom) -> np.random.RandomState:
+def _get_legacy_random(seed: _LegacyRandom) -> np.random.RandomState:
     if isinstance(seed, np.random.RandomState):
         return seed
     return np.random.RandomState(seed)

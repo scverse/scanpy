@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
     from numpy.typing import DTypeLike, NDArray
 
-    from .._compat import DaskArray
-    from .._utils import AnyRandom, _SupportedArray
+    from .._compat import DaskArray, _LegacyRandom
+    from .._utils import _SupportedArray
 
 
 @singledispatch
@@ -149,7 +149,7 @@ def sample_comb(
     dims: tuple[int, ...],
     nsamp: int,
     *,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     method: Literal[
         "auto", "tracking_selection", "reservoir_sampling", "pool"
     ] = "auto",

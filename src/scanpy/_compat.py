@@ -7,10 +7,13 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from importlib.metadata import PackageMetadata
+
+_LegacyRandom = int | np.random.RandomState | None
 
 
 if TYPE_CHECKING:
