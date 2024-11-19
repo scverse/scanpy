@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
 
 MIN_VERSION = "2.0"
 
@@ -36,7 +36,7 @@ def magic(
     n_pca: int | None = 100,
     solver: Literal["exact", "approximate"] = "exact",
     knn_dist: str = "euclidean",
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     n_jobs: int | None = None,
     verbose: bool = False,
     copy: bool | None = None,

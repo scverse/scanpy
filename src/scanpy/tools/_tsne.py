@@ -15,7 +15,7 @@ from ._utils import _choose_representation
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
 
 @old_positionals(
@@ -38,7 +38,7 @@ def tsne(
     metric: str = "euclidean",
     early_exaggeration: float = 12,
     learning_rate: float = 1000,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
     key_added: str | None = None,
