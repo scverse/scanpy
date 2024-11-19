@@ -200,9 +200,6 @@ def _numba_threading_layer() -> Layer:
     raise ValueError(msg)
 
 
-_LegacyRandom = int | np.random.RandomState | None
-
-
 def _legacy_numpy_gen(
     random_state: _LegacyRandom | None = None,
 ) -> np.random.RandomState:
