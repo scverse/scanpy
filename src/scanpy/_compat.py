@@ -202,16 +202,41 @@ def _numba_threading_layer() -> Layer:
 
 def _legacy_numpy_gen(
     random_state: _LegacyRandom | None = None,
-) -> np.random.RandomState:
+) -> np.random.Generator:
     """Return a random generator that behaves like the legacy one."""
 
     if random_state is not None:
         if isinstance(random_state, np.random.RandomState):
             np.random.set_state(random_state.get_state(legacy=False))
-            return random_state
+            return _FakeRandomGen(random_state)
         np.random.seed(random_state)
     state = np.random.get_state(legacy=True)
     assert isinstance(state, tuple)
     bit_gen = np.random.MT19937()
     bit_gen.state = state
-    return np.random.RandomState(bit_gen)
+    return _FakeRandomGen(np.random.RandomState(bit_gen))
+
+
+class _FakeRandomGen(np.random.Generator):
+    _state: np.random.RandomState
+
+    def __init__(self, random_state: np.random.RandomState) -> None:
+        self._state = random_state
+
+    @classmethod
+    def _delegate(cls) -> None:
+        for name, meth in np.random.Generator.__dict__.items():
+            if name.startswith("_") or not callable(meth):
+                continue
+
+            def mk_wrapper(name: str):
+                @wraps(meth)
+                def wrapper(self: _FakeRandomGen, *args, **kwargs):
+                    return getattr(self._state, name)(*args, **kwargs)
+
+                return wrapper
+
+            setattr(cls, name, mk_wrapper(name))
+
+
+_FakeRandomGen._delegate()
