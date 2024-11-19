@@ -4,8 +4,7 @@ Use harmony to integrate cells from different experiments.
 
 from __future__ import annotations
 
-from collections.abc import Sequence # noqa: TCH003
-
+from collections.abc import Sequence  # noqa: TCH003
 from typing import TYPE_CHECKING
 
 import numpy as np
