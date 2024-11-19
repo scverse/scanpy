@@ -114,13 +114,22 @@ def _fast_copy(data,dataA,indices,indicesA,starts,ends,k,m):
             with numba.objmode():
                 _signalcopy(i)
 
-def fastload(fname): #, firstn=1):
+def fastload(fname, backed): #, firstn=1):
     t0 = time.time()
-    f = h5py.File(fname,'r')
+    f = h5py.File(fname,backed)
     assert ('X' in f.keys() and 'var' in f.keys() and 'obs' in f.keys())
 
     # get obs dataframe
     rows = f['obs'][ list(f['obs'].keys())[0] ].size
+    # load index pointers, prepare shared arrays
+    indptr = f['X']['indptr'][0:rows+1]
+    datalen = int(indptr[-1])
+
+    
+    print(f"datalen {datalen} {1024*1024}")
+    if datalen<1024*1024:
+        f.close()
+        return read_h5ad(fname, backed=backed)
     if '_index' in f['obs'].keys():
         dfobsind = pd.Series(f['obs']['_index'].asstr()[0:rows])
         dfobs = pd.DataFrame(index=dfobsind)
@@ -139,10 +148,6 @@ def fastload(fname): #, firstn=1):
     for k in f['var'].keys():
         if k=='_index': continue
         dfvar[k] = f['var'][k].asstr()[...]
-
-    # load index pointers, prepare shared arrays
-    indptr = f['X']['indptr'][0:rows+1]
-    datalen = int(indptr[-1])
 
     f.close()
     k = numba.get_num_threads()
@@ -275,7 +280,7 @@ def read(
             f"ending on one of the available extensions {avail_exts} "
             "or pass the parameter `ext`."
         )
-    return fastload(filename)
+    return fastload(filename, backed)
 
 
 @old_positionals("genome", "gex_only", "backup_url")
@@ -887,7 +892,7 @@ def _read(
     # read hdf5 files
     if ext in {"h5", "h5ad"}:
         if sheet is None:
-            return fastload(filename)
+            return fastload(filename, backed)
         else:
             logg.debug(f"reading sheet {sheet} from file {filename}")
             return read_hdf(filename, sheet)
@@ -899,7 +904,7 @@ def _read(
         path_cache = path_cache.with_suffix("")
     if cache and path_cache.is_file():
         logg.info(f"... reading from cache file {path_cache}")
-        return fastload(path_cache)
+        return fastload(path_cache, backed)
 
     if not is_present:
         raise FileNotFoundError(f"Did not find file {filename}.")
