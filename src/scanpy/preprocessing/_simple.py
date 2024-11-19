@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import numba
 import numpy as np
@@ -927,7 +927,10 @@ def sample(
             raise TypeError(msg)
     del fraction
 
-    rng = np.random.default_rng(rng)
+    # Our backwards compat code passes a `RandomState` here
+    rng: RNGLike | SeedLike | np.random.RandomState | None
+    if not isinstance(rng, np.random.RandomState):
+        rng = np.random.default_rng(rng)
     indices = rng.choice(old_n, size=n, replace=replace)
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 
@@ -987,14 +990,10 @@ def subsample(
     subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
     """
+    # `sample` can use `RandomState`, but we don’t want to advertise that
+    rng = cast(np.random.Generator, _legacy_numpy_gen(random_state))
     return sample(
-        data=data,
-        fraction=fraction,
-        n=n_obs,
-        rng=_legacy_numpy_gen(random_state),
-        copy=copy,
-        replace=False,
-        axis=0,
+        data=data, fraction=fraction, n=n_obs, rng=rng, copy=copy, replace=False, axis=0
     )
 
 

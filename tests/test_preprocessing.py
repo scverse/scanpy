@@ -249,8 +249,8 @@ def test_sample_copy_backed(tmp_path):
 
     assert sc.pp.sample(adata_d, n=40, copy=True).shape == (40, 10)
     np.testing.assert_array_equal(
-        sc.pp.sample(adata_m, n=40, copy=True).X,
-        sc.pp.sample(adata_d, n=40, copy=True).X,
+        sc.pp.sample(adata_m, n=40, copy=True, rng=0).X,
+        sc.pp.sample(adata_d, n=40, copy=True, rng=0).X,
     )
 
 
