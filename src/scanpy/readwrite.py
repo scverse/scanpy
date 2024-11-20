@@ -200,7 +200,7 @@ def fastload(fname, backed): #, firstn=1):
 )
 def read(
     filename: Path | str,
-    backed: Literal["r", "r+"] | None = None,
+    backed: Literal["r", "r+"] | None = 'r+',
     *,
     sheet: str | None = None,
     ext: str | None = None,
