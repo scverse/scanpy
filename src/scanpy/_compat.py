@@ -204,17 +204,12 @@ def _legacy_numpy_gen(
     random_state: _LegacyRandom | None = None,
 ) -> np.random.Generator:
     """Return a random generator that behaves like the legacy one."""
-
-    if random_state is not None:
-        if isinstance(random_state, np.random.RandomState):
-            np.random.set_state(random_state.get_state(legacy=False))
-            return _FakeRandomGen(random_state)
-        np.random.seed(random_state)
-    state = np.random.get_state(legacy=True)
-    assert isinstance(state, tuple)
-    bit_gen = np.random.MT19937()
-    bit_gen.state = state
-    return _FakeRandomGen(np.random.RandomState(bit_gen))
+    if random_state is None:
+        return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
+    if isinstance(random_state, np.random.RandomState):
+        np.random.set_state(random_state.get_state(legacy=False))
+        return _FakeRandomGen(random_state)
+    np.random.seed(random_state)
 
 
 class _FakeRandomGen(np.random.Generator):

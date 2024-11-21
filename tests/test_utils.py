@@ -252,14 +252,27 @@ def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])
 @pytest.mark.parametrize("func", ["choice"])
 def test_legacy_numpy_gen(seed: int, func: str):
-    arr_module = _mk_random(seed, func, legacy=True)
-    arr_generator = _mk_random(seed, func, legacy=False)
-    np.testing.assert_array_equal(arr_module, arr_generator)
-
-
-def _mk_random(seed: int, func: str, *, legacy: bool) -> np.ndarray:
     np.random.seed(seed)
-    gen = np.random if legacy else _legacy_numpy_gen()
+    state_before = np.random.get_state(legacy=False)
+
+    arrs = {}
+    states_after = {}
+    for direct in [True, False]:
+        np.random.seed(seed)
+        arrs[direct] = _mk_random(func, direct=direct)
+        states_after[direct] = np.random.get_state(legacy=False)
+
+    np.testing.assert_array_equal(arrs[True], arrs[False])
+    np.testing.assert_equal(
+        *states_after.values(), err_msg="both should affect global state the same"
+    )
+    # they should affect the global state
+    with pytest.raises(AssertionError):
+        np.testing.assert_equal(states_after[True], state_before)
+
+
+def _mk_random(func: str, *, direct: bool) -> np.ndarray:
+    gen = np.random if direct else _legacy_numpy_gen()
     match func:
         case "choice":
             arr = np.arange(1000)
