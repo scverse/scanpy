@@ -736,6 +736,7 @@ def regress_out(
             )
         logg.debug("... regressing on per-gene means within categories")
         # Create numpy array's from categorical variable
+        # The dtype of the array needs to be the dtype of the categories
         number_categories = np.int64(len(adata.obs[keys[0]].cat.categories))
         filters = adata.obs[keys[0]].cat.codes.to_numpy()
         number_categories = number_categories.astype(filters.dtype)
