@@ -9,7 +9,7 @@ from anndata import AnnData
 from scipy.sparse import issparse
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
+@deprecated("Use sc.pp.highly_variable_genes instead")
 @old_positionals(
     "flavor",
     "min_disp",
@@ -50,9 +51,8 @@ def filter_genes_dispersion(
 
     .. deprecated:: 1.3.6
 
-       Use :func:`~scanpy.pp.highly_variable_genes`
-       instead. The new function is equivalent to the present
-       function, except that
+       Use :func:`~scanpy.pp.highly_variable_genes` instead.
+       The new function is equivalent to the present function, except that
 
        * the new function always expects logarithmized data
        * `subset=False` in the new function, it suffices to

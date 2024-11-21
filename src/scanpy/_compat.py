@@ -48,6 +48,10 @@ __all__ = [
     "fullname",
     "pkg_metadata",
     "pkg_version",
+    "old_positionals",
+    "deprecated",
+    "njit",
+    "_numba_threading_layer",
 ]
 
 
@@ -100,6 +104,15 @@ else:
     # but this code makes it possible to run scanpy without it.
     def old_positionals(*old_positionals: str):
         return lambda func: func
+
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated as _deprecated
+else:
+    from typing_extensions import deprecated as _deprecated
+
+
+deprecated = partial(_deprecated, category=FutureWarning)
 
 
 @overload
