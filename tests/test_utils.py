@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from operator import mul, truediv
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -25,6 +26,9 @@ from testing.scanpy._pytest.params import (
     ARRAY_TYPES_SPARSE,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def test_descend_classes_and_funcs():
@@ -256,8 +260,8 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
     np.random.seed(seed)
     state_before = np.random.get_state(legacy=False)
 
-    arrs = {}
-    states_after = {}
+    arrs: dict[bool, np.ndarray] = {}
+    states_after: dict[bool, dict[str, Any]] = {}
     for direct in [True, False]:
         if not pass_seed:
             np.random.seed(seed)
