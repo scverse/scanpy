@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..neighbors import neighbors
 from ._combat import combat
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
+from ._deprecated.sampling import subsample
 from ._highly_variable_genes import highly_variable_genes
 from ._normalization import normalize_total
 from ._pca import pca
@@ -19,7 +20,6 @@ from ._simple import (
     regress_out,
     sample,
     sqrt,
-    subsample,
 )
 
 __all__ = [
