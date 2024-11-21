@@ -12,6 +12,7 @@ import random
 import re
 import sys
 import warnings
+from collections.abc import Sequence
 from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
@@ -56,12 +57,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
+    from .._compat import _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
 
-# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-# maybe in the future random.Generator
-AnyRandom = int | np.random.RandomState | None
+SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
+RNGLike = np.random.Generator | np.random.BitGenerator
+
 LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
@@ -493,7 +495,7 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
-def get_random_state(seed: AnyRandom) -> np.random.RandomState:
+def _get_legacy_random(seed: _LegacyRandom) -> np.random.RandomState:
     if isinstance(seed, np.random.RandomState):
         return seed
     return np.random.RandomState(seed)
@@ -607,13 +609,13 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: np.ndarray,
+    X: ArrayLike,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
+    out: ArrayLike | None = None,
 ) -> np.ndarray:
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)

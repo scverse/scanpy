@@ -12,7 +12,7 @@ from .sparse_utils import sparse_multiply, sparse_zscore
 if TYPE_CHECKING:
     from typing import Literal
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
     from .core import Scrublet
 
 
@@ -49,7 +49,7 @@ def truncated_svd(
     self: Scrublet,
     n_prin_comps: int = 30,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     algorithm: Literal["arpack", "randomized"] = "arpack",
 ) -> None:
     if self._counts_sim_norm is None:
@@ -68,7 +68,7 @@ def pca(
     self: Scrublet,
     n_prin_comps: int = 50,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     svd_solver: Literal["auto", "full", "arpack", "randomized"] = "arpack",
 ) -> None:
     if self._counts_sim_norm is None:
