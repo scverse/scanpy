@@ -66,6 +66,7 @@ dependencies = [
     "packaging>=21.3",
     "session-info",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
+    "typing-extensions; python_version < '3.13'",
 ]
 dynamic = ["version"]
 
