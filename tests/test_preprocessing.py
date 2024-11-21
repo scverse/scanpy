@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from importlib.util import find_spec
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,7 +23,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES, param_with
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -143,16 +144,7 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
-ignore_dask_perf = pytest.mark.filterwarnings("ignore::dask.array.PerformanceWarning")
-
-
-@pytest.mark.parametrize(
-    "array_type",
-    [
-        param_with(p, marks=[ignore_dask_perf] if "dask" in (p.id or "") else [])
-        for p in ARRAY_TYPES
-    ],
-)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("which", ["copy", "inplace", "array"])
 @pytest.mark.parametrize(
     ("axis", "fraction", "n", "replace", "expected"),
@@ -177,6 +169,11 @@ def test_sample(
 ):
     adata = AnnData(array_type(np.ones((200, 10))))
 
+    # ignoring this warning declaratively is a pain so do it here
+    if find_spec("dask"):
+        import dask.array as da
+
+        warnings.filterwarnings(category=da.PerformanceWarning)
     # can’t guarantee that duplicates are drawn when `replace=True`,
     # so we just ignore the warning instead using `with pytest.warns(...)`
     warnings.filterwarnings(
