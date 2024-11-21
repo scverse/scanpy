@@ -250,16 +250,18 @@ def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_
 
 
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])
+@pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
 @pytest.mark.parametrize("func", ["choice"])
-def test_legacy_numpy_gen(seed: int, func: str):
+def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
     np.random.seed(seed)
     state_before = np.random.get_state(legacy=False)
 
     arrs = {}
     states_after = {}
     for direct in [True, False]:
-        np.random.seed(seed)
-        arrs[direct] = _mk_random(func, direct=direct)
+        if not pass_seed:
+            np.random.seed(seed)
+        arrs[direct] = _mk_random(func, direct=direct, seed=seed if pass_seed else None)
         states_after[direct] = np.random.get_state(legacy=False)
 
     np.testing.assert_array_equal(arrs[True], arrs[False])
@@ -271,8 +273,10 @@ def test_legacy_numpy_gen(seed: int, func: str):
         np.testing.assert_equal(states_after[True], state_before)
 
 
-def _mk_random(func: str, *, direct: bool) -> np.ndarray:
-    gen = np.random if direct else _legacy_numpy_gen()
+def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
+    if direct and seed is not None:
+        np.random.seed(seed)
+    gen = np.random if direct else _legacy_numpy_gen(seed)
     match func:
         case "choice":
             arr = np.arange(1000)
