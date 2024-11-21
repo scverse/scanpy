@@ -634,11 +634,10 @@ def _create_regressor_categorical(
 ) -> np.ndarray:
     # create regressor matrix faster for categorical variables
     regressors = np.zeros(X.shape, dtype=X.dtype)
-    XT = X.T
     for category in range(number_categories):
         mask = category == filters
-        for ix in numba.prange(XT.shape[0]):
-            regressors[mask, ix] = XT[ix][mask].mean()
+        for ix in numba.prange(X.T.shape[0]):
+            regressors[mask, ix] = X.T[ix][mask].mean()
     return regressors
 
 
