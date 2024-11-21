@@ -173,7 +173,7 @@ def test_sample(
     if find_spec("dask"):
         import dask.array as da
 
-        warnings.filterwarnings(category=da.PerformanceWarning)
+        warnings.filterwarnings("ignore", category=da.PerformanceWarning)
     # can’t guarantee that duplicates are drawn when `replace=True`,
     # so we just ignore the warning instead using `with pytest.warns(...)`
     warnings.filterwarnings(
