@@ -4,7 +4,7 @@ import os
 import sys
 import warnings
 from dataclasses import dataclass, field
-from functools import cache, partial, wraps
+from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
@@ -230,7 +230,8 @@ class _FakeRandomGen(np.random.Generator):
                 continue
 
             def mk_wrapper(name: str):
-                @wraps(meth)
+                # Old pytest versions try to run the doctests
+                @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
                 def wrapper(self: _FakeRandomGen, *args, **kwargs):
                     return getattr(self._state, name)(*args, **kwargs)
 
