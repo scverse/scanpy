@@ -26,7 +26,8 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
     from sklearn.decomposition import PCA
 
-    from .._utils import AnyRandom, Empty
+    from .._compat import _LegacyRandom
+    from .._utils import Empty
 
 
 @_doc_params(
@@ -39,7 +40,7 @@ def pca(
     layer: str | None = None,
     zero_center: bool | None = True,
     svd_solver: str | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
@@ -396,7 +397,7 @@ def _pca_with_sparse(
     *,
     solver: str = "arpack",
     mu: NDArray[np.floating] | None = None,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())

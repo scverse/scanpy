@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from igraph import Graph
     from scipy.sparse import csr_matrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
 
@@ -54,13 +54,13 @@ class KwdsForTransformer(TypedDict):
     n_neighbors: int
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
-    random_state: AnyRandom
+    random_state: _LegacyRandom
 
 
 class NeighborsParams(TypedDict):
     n_neighbors: int
     method: _Method
-    random_state: AnyRandom
+    random_state: _LegacyRandom
     metric: _Metric | _MetricFn
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
@@ -79,7 +79,7 @@ def neighbors(
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -521,7 +521,7 @@ class Neighbors:
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-        random_state: AnyRandom = 0,
+        random_state: _LegacyRandom = 0,
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.
@@ -755,7 +755,7 @@ class Neighbors:
         n_comps: int = 15,
         sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
-        random_state: AnyRandom = 0,
+        random_state: _LegacyRandom = 0,
     ):
         """\
         Compute eigen decomposition of transition matrix.

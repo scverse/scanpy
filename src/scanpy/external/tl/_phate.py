@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
 
 
 @old_positionals(
@@ -49,7 +49,7 @@ def phate(
     mds_dist: str = "euclidean",
     mds: Literal["classic", "metric", "nonmetric"] = "metric",
     n_jobs: int | None = None,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     verbose: bool | int | None = None,
     copy: bool = False,
     **kwargs,

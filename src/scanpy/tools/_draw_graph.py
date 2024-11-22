@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     S = TypeVar("S", bound=LiteralString)
 
@@ -44,7 +44,7 @@ def draw_graph(
     *,
     init_pos: str | bool | None = None,
     root: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
     adjacency: spmatrix | None = None,
     key_added_ext: str | None = None,
