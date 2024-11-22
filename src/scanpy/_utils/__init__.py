@@ -847,8 +847,11 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
 
 
 @check_nonnegative_integers.register(DaskArray)
-def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
-    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+def _check_nonnegative_integers_dask(X: DaskArray) -> bool:
+    X_nonnegative: DaskArray = X.map_blocks(
+        check_nonnegative_integers, dtype=bool, drop_axis=(0, 1)
+    )
+    return X_nonnegative.any().compute()
 
 
 def select_groups(
