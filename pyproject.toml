@@ -64,7 +64,7 @@ dependencies = [
     "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
-    "session-info",
+    "session-info2",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
 ]
