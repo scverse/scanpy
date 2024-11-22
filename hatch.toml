@@ -22,7 +22,7 @@ overrides.matrix.deps.env-vars = [
     { if = ["min"], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
-    { if = ["min"], value = "uv run ci/scripts/min-deps.py pyproject.toml -o ci/scanpy-min-deps.txt" },
+    { if = ["min"], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = ["min"], value = "3.10" },
