@@ -9,7 +9,7 @@ from anndata import AnnData
 from scipy.sparse import issparse
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from scipy.sparse import spmatrix
 
 
+@deprecated("Use sc.pp.highly_variable_genes instead")
 @old_positionals(
     "flavor",
     "min_disp",
@@ -48,18 +49,17 @@ def filter_genes_dispersion(
     """\
     Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
-    .. warning::
-        .. deprecated:: 1.3.6
-            Use :func:`~scanpy.pp.highly_variable_genes`
-            instead. The new function is equivalent to the present
-            function, except that
+    .. deprecated:: 1.3.6
 
-            * the new function always expects logarithmized data
-            * `subset=False` in the new function, it suffices to
-              merely annotate the genes, tools like `pp.pca` will
-              detect the annotation
-            * you can now call: `sc.pl.highly_variable_genes(adata)`
-            * `copy` is replaced by `inplace`
+       Use :func:`~scanpy.pp.highly_variable_genes` instead.
+       The new function is equivalent to the present function, except that
+
+       * the new function always expects logarithmized data
+       * `subset=False` in the new function, it suffices to
+         merely annotate the genes, tools like `pp.pca` will
+         detect the annotation
+       * you can now call: `sc.pl.highly_variable_genes(adata)`
+       * `copy` is replaced by `inplace`
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
