@@ -70,17 +70,18 @@ def _compute_mean_var_dense(
             sum_ = sums[:, c].sum()
             mean[c] = sum_ / n
             var[c] = (sums_squared[:, c].sum() - sum_ * sum_ / n) / (n - 1)
-    axis_i = 0
-    mean = np.zeros(X.shape[axis_i], dtype=np.float64)
-    var = np.zeros(X.shape[axis_i], dtype=np.float64)
-    for r in numba.prange(X.shape[0]):
-        for c in range(X.shape[1]):
-            value = X[r, c]
-            mean[r] += value
-            var[r] += value * value
-    for c in numba.prange(X.shape[0]):
-        mean[c] = mean[c] / X.shape[1]
-        var[c] = (var[c] - mean[c] ** 2) / (X.shape[1] - 1)
+    else:
+        axis_i = 0
+        mean = np.zeros(X.shape[axis_i], dtype=np.float64)
+        var = np.zeros(X.shape[axis_i], dtype=np.float64)
+        for r in numba.prange(X.shape[0]):
+            for c in range(X.shape[1]):
+                value = X[r, c]
+                mean[r] += value
+                var[r] += value * value
+        for c in numba.prange(X.shape[0]):
+            mean[c] = mean[c] / X.shape[1]
+            var[c] = (var[c] - mean[c] ** 2) / (X.shape[1] - 1)
 
     return mean, var
 
