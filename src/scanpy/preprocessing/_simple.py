@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import numba
 import numpy as np
@@ -22,6 +22,7 @@ from .._compat import deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _resolve_axis,
     axis_sum,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
@@ -33,14 +34,10 @@ from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _to_dense
 
-# install dask if available
 try:
     import dask.array as da
 except ImportError:
     da = None
-
-# backwards compat
-from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: F401
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
@@ -49,8 +46,12 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix
 
     from .._compat import DaskArray, _LegacyRandom
+    from .._utils import RNGLike, SeedLike
+
+    CSMatrix = csr_matrix | csc_matrix
 
 
 @old_positionals(
@@ -825,17 +826,51 @@ def _regress_out_chunk(
     return np.vstack(responses_chunk_list)
 
 
-@old_positionals("n_obs", "random_state", "copy")
-def subsample(
-    data: AnnData | np.ndarray | spmatrix,
+@overload
+def sample(
+    data: AnnData,
     fraction: float | None = None,
     *,
-    n_obs: int | None = None,
-    random_state: _LegacyRandom = 0,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = 0,
+    copy: Literal[False] = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> None: ...
+@overload
+def sample(
+    data: AnnData,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: Literal[True],
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> AnnData: ...
+@overload
+def sample(
+    data: np.ndarray | CSMatrix,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> tuple[np.ndarray | CSMatrix, NDArray[np.int64]]: ...
+def sample(
+    data: AnnData | np.ndarray | CSMatrix,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: bool = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+) -> AnnData | None | tuple[np.ndarray | CSMatrix, NDArray[np.int64]]:
     """\
-    Subsample to a fraction of the number of observations.
+    Sample observations or variables with or without replacement.
 
     Parameters
     ----------
@@ -843,49 +878,74 @@ def subsample(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     fraction
-        Subsample to this `fraction` of the number of observations.
-    n_obs
-        Subsample to this number of observations.
+        Sample to this `fraction` of the number of observations or variables.
+        This can be larger than 1.0, if `replace=True`.
+        See `axis` and `replace`.
+    n
+        Sample to this number of observations or variables. See `axis`.
     random_state
         Random seed to change subsampling.
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
+    replace
+        If True, samples are drawn with replacement.
+    axis
+        Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
 
     Returns
     -------
-    Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
-    subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
-    returns a subsampled copy of it (`copy == True`).
+    If `isinstance(data, AnnData)` and `copy=False`,
+    this function returns `None`. Otherwise:
+
+    `data[indices, :]` | `data[:, indices]` (depending on `axis`)
+        If `data` is array-like or `copy=True`, returns the subset.
+    `indices` : numpy.ndarray
+        If `data` is array-like, also returns the indices into the original.
     """
-    np.random.seed(random_state)
-    old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
-    if n_obs is not None:
-        new_n_obs = n_obs
-    elif fraction is not None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError(f"`fraction` needs to be within [0, 1], not {fraction}")
-        new_n_obs = int(fraction * old_n_obs)
-        logg.debug(f"... subsampled to {new_n_obs} data points")
+    axis, axis_name = _resolve_axis(axis)
+    old_n = data.shape[axis]
+    match (fraction, n):
+        case (None, None):
+            msg = "Either `fraction` or `n` must be set."
+            raise TypeError(msg)
+        case (None, _):
+            pass
+        case (_, None):
+            if fraction < 0:
+                msg = f"`{fraction=}` needs to be nonnegative."
+                raise ValueError(msg)
+            if not replace and fraction > 1:
+                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
+                raise ValueError(msg)
+            n = int(fraction * old_n)
+            logg.debug(f"... sampled to {n} {axis_name}")
+        case _:
+            msg = "Providing both `fraction` and `n` is not allowed."
+            raise TypeError(msg)
+    del fraction
+
+    rng = np.random.default_rng(rng)
+    indices = rng.choice(old_n, size=n, replace=replace)
+    subset = data[indices] if axis_name == "obs" else data[:, indices]
+
+    if not isinstance(data, AnnData):
+        assert not isinstance(subset, AnnData)
+        if copy:
+            subset = subset.copy()
+        return subset, indices
+    assert isinstance(subset, AnnData)
+    if copy:
+        return subset.to_memory() if data.isbacked else subset.copy()
+
+    # in-place
+    if data.isbacked:
+        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
+        raise NotImplementedError(msg)
+    if axis_name == "obs":
+        data._inplace_subset_obs(indices)
     else:
-        raise ValueError("Either pass `n_obs` or `fraction`.")
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
-    if isinstance(data, AnnData):
-        if data.isbacked:
-            if copy:
-                return data[obs_indices].to_memory()
-            else:
-                raise NotImplementedError(
-                    "Inplace subsampling is not implemented for backed objects."
-                )
-        else:
-            if copy:
-                return data[obs_indices].copy()
-            else:
-                data._inplace_subset_obs(obs_indices)
-    else:
-        X = data
-        return X[obs_indices], obs_indices
+        data._inplace_subset_var(indices)
 
 
 @renamed_arg("target_counts", "counts_per_cell")
