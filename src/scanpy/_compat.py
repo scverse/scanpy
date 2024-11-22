@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from functools import cache, partial
@@ -38,6 +39,8 @@ __all__ = [
     "fullname",
     "pkg_metadata",
     "pkg_version",
+    "old_positionals",
+    "deprecated",
 ]
 
 
@@ -90,3 +93,12 @@ else:
     # but this code makes it possible to run scanpy without it.
     def old_positionals(*old_positionals: str):
         return lambda func: func
+
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated as _deprecated
+else:
+    from typing_extensions import deprecated as _deprecated
+
+
+deprecated = partial(_deprecated, category=FutureWarning)
