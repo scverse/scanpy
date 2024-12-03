@@ -55,6 +55,8 @@ indices_shm_type = "l"
 semDataLoaded = None  # will be initialized later
 semDataCopied = None  # will be initialized later
 
+thread_workload = 4000000 # experimented value
+
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
     "csv",
@@ -81,16 +83,16 @@ def _load_helper(fname, i, k, datalen, dataArray, indicesArray, startsArray, end
     indicesA = np.frombuffer(indicesArray,dtype=indices_type)
     startsA = np.frombuffer(startsArray,dtype=np.int64)
     endsA = np.frombuffer(endsArray,dtype=np.int64)
-    for j in range(datalen//(k*1024*1024)+1):
+    for j in range(datalen//(k*thread_workload)+1):
         # compute start, end
-        s = i*datalen//k + j*1024*1024
-        e = min(s+1024*1024, (i+1)*datalen//k)
+        s = i*datalen//k + j*thread_workload
+        e = min(s+thread_workload, (i+1)*datalen//k)
         length = e-s
         startsA[i]=s
         endsA[i]=e
         # read direct
-        f['X']['data'].read_direct(dataA, np.s_[s:e], np.s_[i*1024*1024:i*1024*1024+length])
-        f['X']['indices'].read_direct(indicesA, np.s_[s:e], np.s_[i*1024*1024:i*1024*1024+length])
+        f['X']['data'].read_direct(dataA, np.s_[s:e], np.s_[i*thread_workload:i*thread_workload+length])
+        f['X']['indices'].read_direct(indicesA, np.s_[s:e], np.s_[i*thread_workload:i*thread_workload+length])
         
         # coordinate with copy threads
         semDataLoaded[i].release()  # done data load
@@ -109,8 +111,8 @@ def _fast_copy(data,dataA,indices,indicesA,starts,ends,k,m):
             with numba.objmode():
                 _waitload(i)
             length = ends[i]-starts[i]
-            data[starts[i]:ends[i]] = dataA[i*1024*1024:i*1024*1024+length]
-            indices[starts[i]:ends[i]] = indicesA[i*1024*1024:i*1024*1024+length]
+            data[starts[i]:ends[i]] = dataA[i*thread_workload:i*thread_workload+length]
+            indices[starts[i]:ends[i]] = indicesA[i*thread_workload:i*thread_workload+length]
             with numba.objmode():
                 _signalcopy(i)
 
@@ -125,9 +127,7 @@ def fastload(fname, backed): #, firstn=1):
     indptr = f['X']['indptr'][0:rows+1]
     datalen = int(indptr[-1])
 
-    
-    print(f"datalen {datalen} {1024*1024}")
-    if datalen<1024*1024:
+    if datalen<thread_workload:
         f.close()
         return read_h5ad(fname, backed=backed)
     if '_index' in f['obs'].keys():
@@ -151,8 +151,8 @@ def fastload(fname, backed): #, firstn=1):
 
     f.close()
     k = numba.get_num_threads()
-    dataArray = mp.Array('f',k*1024*1024,lock=False)     # should be in shared memory
-    indicesArray = mp.Array(indices_shm_type,k*1024*1024,lock=False)  # should be in shared memory
+    dataArray = mp.Array('f',k*thread_workload,lock=False)     # should be in shared memory
+    indicesArray = mp.Array(indices_shm_type,k*thread_workload,lock=False)  # should be in shared memory
     startsArray = mp.Array('l',k,lock=False)  # start index of data read
     endsArray = mp.Array('l',k,lock=False)    # end index (noninclusive) of data read
     global semDataLoaded
@@ -169,7 +169,7 @@ def fastload(fname, backed): #, firstn=1):
     procs = [mp.Process(target=_load_helper, args=(fname, i, k, datalen, dataArray, indicesArray, startsArray, endsArray))  for i in range(k)]
     for p in procs: p.start()
 
-    _fast_copy(data,dataA,indices,indicesA,startsA,endsA,k,datalen//(k*1024*1024)+1)
+    _fast_copy(data,dataA,indices,indicesA,startsA,endsA,k,datalen//(k*thread_workload)+1)
 
     for p in procs: p.join()
     
@@ -455,7 +455,7 @@ def _read_v3_10x_h5(filename, *, start=None):
                     (
                         feature_metadata_name,
                         dsets[feature_metadata_name].astype(
-                            bool if feature_metadata_item.dtype.kind == "b" else str
+                            bool if feature_metadata_item.dtype.kind == "thread_workload" else str
                         ),
                     )
                     for feature_metadata_name, feature_metadata_item in f["matrix"][
@@ -1143,7 +1143,7 @@ def _download(url: str, path: Path):
             total = resp.info().get("content-length", None)
             with (
                 tqdm(
-                    unit="B",
+                    unit="thread_workload",
                     unit_scale=True,
                     miniters=1,
                     unit_divisor=1024,
