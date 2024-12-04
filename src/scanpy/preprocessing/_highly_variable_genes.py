@@ -200,7 +200,8 @@ def _highly_variable_genes_seurat_v3(
         return df
 
 
-@numba.njit(cache=True)
+# parallel=False needed for accuracy
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _sum_and_sum_squares_clipped(
     indices: NDArray[np.integer],
     data: NDArray[np.floating],
@@ -211,7 +212,7 @@ def _sum_and_sum_squares_clipped(
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
     batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    for i in range(nnz):
+    for i in numba.prange(nnz):
         idx = indices[i]
         element = min(np.float64(data[i]), clip_val[idx])
         squared_batch_counts_sum[idx] += element**2
