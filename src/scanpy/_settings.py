@@ -118,6 +118,7 @@ class ScanpyConfig:
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
         n_pcs=50,
+        use_64_bit_elem_mul=False,
     ):
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
@@ -156,6 +157,7 @@ class ScanpyConfig:
         """Stores the previous memory usage."""
 
         self.N_PCS = n_pcs
+        self.use_64_bit_elem_mul = use_64_bit_elem_mul
 
     @property
     def verbosity(self) -> Verbosity:
@@ -411,6 +413,20 @@ class ScanpyConfig:
         for i, cat in enumerate(categories_to_ignore):
             _type_check(cat, f"categories_to_ignore[{i}]", str)
         self._categories_to_ignore = categories_to_ignore
+
+    @property
+    def use_64_bit_elem_mul(self) -> bool:
+        """\
+        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
+
+        Do not show plots/figures interactively.
+        """
+        return self._use_64_bit_elem_mul
+
+    @use_64_bit_elem_mul.setter
+    def use_64_bit_elem_mul(self, use_64_bit_elem_mul: bool):
+        _type_check(use_64_bit_elem_mul, "use_64_bit_elem_mul", bool)
+        self._use_64_bit_elem_mul = use_64_bit_elem_mul
 
     # --------------------------------------------------------------------------------
     # Functions

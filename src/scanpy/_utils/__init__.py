@@ -570,6 +570,12 @@ if TYPE_CHECKING:
     _SupportedArray = _MemoryArray | DaskArray
 
 
+def use_64_bit_float(arrays: Iterable[np.ndarray | DaskArray]) -> bool:
+    return settings.use_64_bit_elem_mul and any(
+        np.issubdtype(a.dtype, np.floating) for a in arrays
+    )
+
+
 @singledispatch
 def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
     raise NotImplementedError
@@ -581,14 +587,16 @@ def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
     if isinstance(x, sparse.spmatrix):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
-    return x * y
+    return np.multiply(x, y, dtype=np.float64 if use_64_bit_float((x, y)) else None)
 
 
 @elem_mul.register(DaskArray)
 def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
     import dask.array as da
 
-    return da.map_blocks(elem_mul, x, y)
+    return da.map_blocks(
+        elem_mul, x, y, dtype=np.float64 if use_64_bit_float((x, y)) else None
+    )
 
 
 if TYPE_CHECKING:
