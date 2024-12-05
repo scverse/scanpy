@@ -14,7 +14,7 @@ from anndata import AnnData
 from scanpy import logging as logg
 from scanpy._compat import njit
 from scanpy._settings import Verbosity, settings
-from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from scanpy._utils import _doc_params, has_only_nonnegative_integers, view_to_actual
 from scanpy.experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -150,7 +150,7 @@ def _highly_variable_pearson_residuals(
     computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and not check_nonnegative_integers(X):
+    if check_values and not has_only_nonnegative_integers(X):
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,

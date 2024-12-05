@@ -15,7 +15,7 @@ from anndata import AnnData
 from .. import logging as logg
 from .._compat import DaskArray, old_positionals
 from .._settings import Verbosity, settings
-from .._utils import check_nonnegative_integers, sanitize_anndata
+from .._utils import has_only_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -128,7 +128,7 @@ def _highly_variable_genes_seurat_v3(
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
 
-    if check_values and not check_nonnegative_integers(data):
+    if check_values and not has_only_nonnegative_integers(data):
         warnings.warn(
             f"`flavor='{flavor}'` expects raw count data, but non-integers were found.",
             UserWarning,

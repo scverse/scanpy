@@ -12,7 +12,7 @@ from ... import logging as logg
 from ..._utils import (
     _doc_params,
     _empty,
-    check_nonnegative_integers,
+    has_only_nonnegative_integers,
     view_to_actual,
 )
 from ...experimental._docs import (
@@ -50,7 +50,7 @@ def _pearson_residuals(X, theta, clip, check_values, *, copy: bool = False):
     if clip < 0:
         raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
 
-    if check_values and not check_nonnegative_integers(X):
+    if check_values and not has_only_nonnegative_integers(X):
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,

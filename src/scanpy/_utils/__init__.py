@@ -824,14 +824,14 @@ def _(
 
 
 @singledispatch
-def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
+def has_only_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Checks values of X to ensure it is count data"""
     raise NotImplementedError
 
 
-@check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.spmatrix)
-def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
+@has_only_nonnegative_integers.register(np.ndarray)
+@has_only_nonnegative_integers.register(sparse.spmatrix)
+def _has_only_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
     data = X if isinstance(X, np.ndarray) else X.data
@@ -844,12 +844,12 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     return not np.any((data % 1) != 0)
 
 
-@check_nonnegative_integers.register(DaskArray)
-def _check_nonnegative_integers_dask(X: DaskArray) -> bool:
+@has_only_nonnegative_integers.register(DaskArray)
+def _has_only_nonnegative_integers_dask(X: DaskArray) -> bool:
     X_nonnegative: DaskArray = X.map_blocks(
-        check_nonnegative_integers, dtype=bool, drop_axis=(0, 1)
+        has_only_nonnegative_integers, dtype=bool, drop_axis=(0, 1)
     )
-    return X_nonnegative.any().compute()
+    return X_nonnegative.all().compute()
 
 
 def select_groups(

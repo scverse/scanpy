@@ -13,8 +13,8 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import (
-    check_nonnegative_integers,
     get_literal_vals,
+    has_only_nonnegative_integers,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask
@@ -657,7 +657,7 @@ def rank_genes_groups(
         comp_pts=pts,
     )
 
-    if check_nonnegative_integers(test_obj.X) and method != "logreg":
+    if has_only_nonnegative_integers(test_obj.X) and method != "logreg":
         logg.warning(
             "It seems you use rank_genes_groups on the raw count data. "
             "Please logarithmize your data before calling rank_genes_groups."

@@ -25,7 +25,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from ..._compat import old_positionals
-from ..._utils import check_nonnegative_integers
+from ..._utils import has_only_nonnegative_integers
 from ..._utils._doctests import doctest_skip
 
 if TYPE_CHECKING:
@@ -351,7 +351,7 @@ def hashsolo(
     )
     adata = adata.copy() if not inplace else adata
     data = adata.obs[cell_hashing_columns].values
-    if not check_nonnegative_integers(data):
+    if not has_only_nonnegative_integers(data):
         raise ValueError("Cell hashing counts must be non-negative")
     if (number_of_noise_barcodes is not None) and (
         number_of_noise_barcodes >= len(cell_hashing_columns)

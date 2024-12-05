@@ -12,9 +12,9 @@ from scanpy._compat import DaskArray
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
-    check_nonnegative_integers,
     descend_classes_and_funcs,
     elem_mul,
+    has_only_nonnegative_integers,
     is_constant,
 )
 from testing.scanpy._pytest.marks import needs
@@ -178,10 +178,10 @@ def test_axis_sum(array_type):
         pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"),
     ],
 )
-def test_check_nonnegative_integers(array_type, array_value, expected):
+def test_has_only_nonnegative_integers(array_type, array_value, expected):
     X = array_type(array_value)
 
-    received = check_nonnegative_integers(X)
+    received = has_only_nonnegative_integers(X)
     if isinstance(X, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
