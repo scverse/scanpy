@@ -417,9 +417,7 @@ class ScanpyConfig:
     @property
     def use_64_bit_elem_mul(self) -> bool:
         """\
-        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
-
-        Do not show plots/figures interactively.
+        Use a 64bit float buffer as the output target for element-wise multiplication.
         """
         return self._use_64_bit_elem_mul
 
