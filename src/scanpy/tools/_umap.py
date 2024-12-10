@@ -197,7 +197,8 @@ def umap(
 
     key_obsm, key_uns = (
         (("X_densmap", "densmap") if method == "densmap" else ("X_umap", "umap"))
-        if key_added is None else [key_added] * 2
+        if key_added is None
+        else [key_added] * 2
     )
     method_name = "DensMAP" if method == "densmap" else "UMAP"
 
