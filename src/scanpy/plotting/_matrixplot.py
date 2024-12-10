@@ -9,14 +9,14 @@ from matplotlib import rcParams
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._utils import check_colornorm, fix_kwds, savefig_or_show
+from ._utils import _dk, check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -25,8 +25,9 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
@@ -134,7 +135,7 @@ class MatrixPlot(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         ax: _AxesSubplot | None = None,
         values_df: pd.DataFrame | None = None,
         vmin: float | None = None,
@@ -198,9 +199,9 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: str = DEFAULT_COLORMAP,
-        edge_color: ColorLike | None = DEFAULT_EDGE_COLOR,
-        edge_lw: float | None = DEFAULT_EDGE_LW,
+        cmap: Colormap | str | None | Empty = _empty,
+        edge_color: ColorLike | None | Empty = _empty,
+        edge_lw: float | None | Empty = _empty,
     ) -> Self:
         """\
         Modifies plot visual parameters.
@@ -208,11 +209,14 @@ class MatrixPlot(BasePlot):
         Parameters
         ----------
         cmap
-            String denoting matplotlib color map.
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
         edge_color
-            Edge color between the squares of matrix plot. Default is gray
+            Edge color between the squares of matrix plot.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["patch.edgecolor"]``
         edge_lw
             Edge line width.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["lines.linewidth"]``
 
         Returns
         -------
@@ -242,13 +246,11 @@ class MatrixPlot(BasePlot):
             )
 
         """
+        super().style(cmap=cmap)
 
-        # change only the values that had changed
-        if cmap != self.cmap:
-            self.cmap = cmap
-        if edge_color != self.edge_color:
+        if edge_color is not _empty:
             self.edge_color = edge_color
-        if edge_lw != self.edge_lw:
+        if edge_lw is not _empty:
             self.edge_lw = edge_lw
 
         return self
@@ -343,10 +345,11 @@ def matrixplot(
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
+    categories_order: Sequence[str] | None = None,
     figsize: tuple[float, float] | None = None,
     dendrogram: bool | str = False,
     title: str | None = None,
-    cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
+    cmap: Colormap | str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
@@ -436,6 +439,7 @@ def matrixplot(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
@@ -454,7 +458,7 @@ def matrixplot(
     )
 
     if dendrogram:
-        mp.add_dendrogram(dendrogram_key=dendrogram)
+        mp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         mp.swap_axes()
 

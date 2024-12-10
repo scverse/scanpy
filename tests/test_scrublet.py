@@ -117,7 +117,7 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     )
 
 
-def test_scrublet_data():
+def test_scrublet_data(cache: pytest.Cache):
     """
     Test that Scrublet processing is arranged correctly.
 
@@ -156,14 +156,32 @@ def test_scrublet_data():
         random_state=random_state,
     )
 
-    # Require that the doublet scores are the same whether simulation is via
-    # the main function or manually provided
-    assert_allclose(
-        adata_scrublet_manual_sim.obs["doublet_score"],
-        adata_scrublet_auto_sim.obs["doublet_score"],
-        atol=1e-15,
-        rtol=1e-15,
-    )
+    try:
+        # Require that the doublet scores are the same whether simulation is via
+        # the main function or manually provided
+        assert_allclose(
+            adata_scrublet_manual_sim.obs["doublet_score"],
+            adata_scrublet_auto_sim.obs["doublet_score"],
+            atol=1e-15,
+            rtol=1e-15,
+        )
+    except AssertionError:
+        import zarr
+
+        # try debugging https://github.com/scverse/scanpy/issues/3068
+        cache_path = cache.mkdir("debug")
+        store_manual = zarr.ZipStore(cache_path / "scrublet-manual.zip", mode="w")
+        store_auto = zarr.ZipStore(cache_path / "scrublet-auto.zip", mode="w")
+        z_manual = zarr.zeros(
+            adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
+        )
+        z_auto = zarr.zeros(
+            adata_scrublet_auto_sim.shape[0], chunks=10, store=store_auto
+        )
+        z_manual[...] = adata_scrublet_manual_sim.obs["doublet_score"].values
+        z_auto[...] = adata_scrublet_auto_sim.obs["doublet_score"].values
+
+        raise
 
 
 @pytest.fixture(scope="module")
@@ -176,7 +194,7 @@ def scrub_small_sess() -> AnnData:
     return adata
 
 
-@pytest.fixture()
+@pytest.fixture
 def scrub_small(scrub_small_sess: AnnData):
     return scrub_small_sess.copy()
 

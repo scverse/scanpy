@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
 from collections import OrderedDict
+from collections.abc import Collection, Mapping, Sequence
 from itertools import product
-from typing import TYPE_CHECKING, get_args
+from types import NoneType
+from typing import TYPE_CHECKING, cast
 
 import matplotlib as mpl
 import numpy as np
@@ -21,7 +22,13 @@ from .. import get
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _check_use_raw, _doc_params, sanitize_anndata
+from .._utils import (
+    _check_use_raw,
+    _doc_params,
+    _empty,
+    get_literal_vals,
+    sanitize_anndata,
+)
 from . import _utils
 from ._docs import (
     doc_common_plot_args,
@@ -30,6 +37,9 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
+    ColorLike,
+    _deprecated_scale,
+    _dk,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -37,24 +47,28 @@ from ._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Mapping, Sequence
-    from typing import Literal, Union
+    from collections.abc import Iterable
+    from typing import Literal
 
     from anndata import AnnData
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, ListedColormap, Normalize
+    from numpy.typing import NDArray
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
-    from ._utils import ColorLike, _FontSize, _FontWeight, _LegendLoc
+    from .._utils import Empty
+    from ._utils import (
+        DensityNorm,
+        _FontSize,
+        _FontWeight,
+        _LegendLoc,
+    )
 
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = Union[str, Sequence[str]]
-
-
-VALID_LEGENDLOCS = frozenset(get_args(_utils._LegendLoc))
+    _VarNames = str | Sequence[str]
 
 
 @old_positionals(
@@ -80,7 +94,7 @@ def scatter(
     x: str | None = None,
     y: str | None = None,
     *,
-    color: str | Collection[str] | None = None,
+    color: str | ColorLike | Collection[str | ColorLike] | None = None,
     use_raw: bool | None = None,
     layers: str | Collection[str] | None = None,
     sort_order: bool = True,
@@ -90,7 +104,7 @@ def scatter(
     components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "right margin",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
     color_map: str | Colormap | None = None,
@@ -98,9 +112,9 @@ def scatter(
     frameon: bool | None = None,
     right_margin: float | None = None,
     left_margin: float | None = None,
-    size: int | float | None = None,
+    size: float | None = None,
     marker: str | Sequence[str] = ".",
-    title: str | None = None,
+    title: str | Collection[str] | None = None,
     show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
@@ -138,33 +152,25 @@ def scatter(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    # color can be a obs column name or a matplotlib color specification (or a collection thereof)
+    if color is not None:
+        color = cast(
+            Collection[str | ColorLike],
+            [color] if isinstance(color, str) or is_color_like(color) else color,
+        )
     args = locals()
-    if _check_use_raw(adata, use_raw):
-        var_index = adata.raw.var.index
-    else:
-        var_index = adata.var.index
+
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
         raise ValueError("Either provide a `basis` or `x` and `y`.")
-    if (
-        (x in adata.obs.keys() or x in var_index)
-        and (y in adata.obs.keys() or y in var_index)
-        and (color is None or color in adata.obs.keys() or color in var_index)
-    ):
+    if _check_if_annotations(adata, "obs", x=x, y=y, colors=color, use_raw=use_raw):
         return _scatter_obs(**args)
-    if (
-        (x in adata.var.keys() or x in adata.obs.index)
-        and (y in adata.var.keys() or y in adata.obs.index)
-        and (color is None or color in adata.var.keys() or color in adata.obs.index)
-    ):
-        adata_T = adata.T
-        axs = _scatter_obs(
-            adata=adata_T,
-            **{name: val for name, val in args.items() if name != "adata"},
-        )
+    if _check_if_annotations(adata, "var", x=x, y=y, colors=color, use_raw=use_raw):
+        args_t = {**args, "adata": adata.T}
+        axs = _scatter_obs(**args_t)
         # store .uns annotations that were added to the new adata object
-        adata.uns = adata_T.uns
+        adata.uns = args_t["adata"].uns
         return axs
     raise ValueError(
         "`x`, `y`, and potential `color` inputs must all "
@@ -172,35 +178,74 @@ def scatter(
     )
 
 
+def _check_if_annotations(
+    adata: AnnData,
+    axis_name: Literal["obs", "var"],
+    *,
+    x: str | None = None,
+    y: str | None = None,
+    colors: Collection[str | ColorLike] | None = None,
+    use_raw: bool | None = None,
+) -> bool:
+    """Checks if `x`, `y`, and `colors` are annotations of `adata`.
+    In the case of `colors`, valid matplotlib colors are also accepted.
+
+    If `axis_name` is `obs`, checks in `adata.obs.columns` and `adata.var_names`,
+    if `axis_name` is `var`, checks in `adata.var.columns` and `adata.obs_names`.
+    """
+    annotations: pd.Index[str] = getattr(adata, axis_name).columns
+    other_ax_obj = (
+        adata.raw if _check_use_raw(adata, use_raw) and axis_name == "obs" else adata
+    )
+    names: pd.Index[str] = getattr(
+        other_ax_obj, "var" if axis_name == "obs" else "obs"
+    ).index
+
+    def is_annotation(needle: pd.Index) -> NDArray[np.bool_]:
+        return needle.isin({None}) | needle.isin(annotations) | needle.isin(names)
+
+    if not is_annotation(pd.Index([x, y])).all():
+        return False
+
+    color_idx = pd.Index(colors if colors is not None else [])
+    # Colors are valid
+    color_valid: NDArray[np.bool_] = np.fromiter(
+        map(is_color_like, color_idx), dtype=np.bool_, count=len(color_idx)
+    )
+    # Annotation names are valid too
+    color_valid[~color_valid] = is_annotation(color_idx[~color_valid])
+    return bool(color_valid.all())
+
+
 def _scatter_obs(
     *,
     adata: AnnData,
-    x=None,
-    y=None,
-    color=None,
-    use_raw=None,
-    layers=None,
-    sort_order=True,
-    alpha=None,
-    basis=None,
-    groups=None,
-    components=None,
+    x: str | None = None,
+    y: str | None = None,
+    color: Collection[str | ColorLike] | None = None,
+    use_raw: bool | None = None,
+    layers: str | Collection[str] | None = None,
+    sort_order: bool = True,
+    alpha: float | None = None,
+    basis: _Basis | None = None,
+    groups: str | Iterable[str] | None = None,
+    components: str | Collection[str] | None = None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "right margin",
-    legend_fontsize=None,
-    legend_fontweight=None,
-    legend_fontoutline=None,
-    color_map=None,
-    palette=None,
-    frameon=None,
-    right_margin=None,
-    left_margin=None,
-    size: int | float | None = None,
-    marker=".",
-    title=None,
-    show=None,
-    save=None,
-    ax=None,
+    legend_fontsize: float | _FontSize | None = None,
+    legend_fontweight: int | _FontWeight | None = None,
+    legend_fontoutline: float | None = None,
+    color_map: str | Colormap | None = None,
+    palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] | None = None,
+    frameon: bool | None = None,
+    right_margin: float | None = None,
+    left_margin: float | None = None,
+    size: float | None = None,
+    marker: str | Sequence[str] = ".",
+    title: str | Collection[str] | None = None,
+    show: bool | None = None,
+    save: str | bool | None = None,
+    ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
     """See docstring of scatter."""
     sanitize_anndata(adata)
@@ -208,14 +253,12 @@ def _scatter_obs(
     use_raw = _check_use_raw(adata, use_raw)
 
     # Process layers
-    if layers in ["X", None] or (
-        isinstance(layers, str) and layers in adata.layers.keys()
-    ):
+    if layers in ["X", None] or (isinstance(layers, str) and layers in adata.layers):
         layers = (layers, layers, layers)
-    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
+    elif isinstance(layers, Collection) and len(layers) == 3:
         layers = tuple(layers)
         for layer in layers:
-            if layer not in adata.layers.keys() and layer not in ["X", None]:
+            if layer not in adata.layers and layer not in ["X", None]:
                 raise ValueError(
                     "`layers` should have elements that are "
                     "either None or in adata.layers.keys()."
@@ -228,26 +271,19 @@ def _scatter_obs(
     if use_raw and layers not in [("X", "X", "X"), (None, None, None)]:
         ValueError("`use_raw` must be `False` if layers are used.")
 
-    if legend_loc not in VALID_LEGENDLOCS:
+    if legend_loc not in (valid_legend_locs := get_literal_vals(_utils._LegendLoc)):
         raise ValueError(
-            f"Invalid `legend_loc`, need to be one of: {VALID_LEGENDLOCS}."
+            f"Invalid `legend_loc`, need to be one of: {valid_legend_locs}."
         )
     if components is None:
         components = "1,2" if "2d" in projection else "1,2,3"
     if isinstance(components, str):
         components = components.split(",")
     components = np.array(components).astype(int) - 1
-    # color can be a obs column name or a matplotlib color specification
-    keys = (
-        ["grey"]
-        if color is None
-        else [color]
-        if isinstance(color, str) or is_color_like(color)
-        else color
-    )
+    keys = ["grey"] if color is None else color
     if title is not None and isinstance(title, str):
         title = [title]
-    highlights = adata.uns["highlights"] if "highlights" in adata.uns else []
+    highlights = adata.uns.get("highlights", [])
     if basis is not None:
         try:
             # ignore the '0th' diffusion component
@@ -283,19 +319,14 @@ def _scatter_obs(
         n = Y.shape[0]
         size = 120000 / n
 
-    if legend_loc.startswith("on data") and legend_fontsize is None:
-        legend_fontsize = rcParams["legend.fontsize"]
-    elif legend_fontsize is None:
+    if legend_fontsize is None:
         legend_fontsize = rcParams["legend.fontsize"]
 
     palette_was_none = False
     if palette is None:
         palette_was_none = True
-    if isinstance(palette, cabc.Sequence) and not isinstance(palette, str):
-        if not is_color_like(palette[0]):
-            palettes = palette
-        else:
-            palettes = [palette]
+    if isinstance(palette, Sequence) and not isinstance(palette, str):
+        palettes = palette if not is_color_like(palette[0]) else [palette]
     else:
         palettes = [palette for _ in range(len(keys))]
     palettes = [_utils.default_palette(palette) for palette in palettes]
@@ -319,7 +350,7 @@ def _scatter_obs(
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
-    show_ticks = True if component_name is None else False
+    show_ticks = component_name is None
 
     # generate the colors
     color_ids: list[np.ndarray | ColorLike] = []
@@ -355,9 +386,8 @@ def _scatter_obs(
             categoricals.append(ikey)
         color_ids.append(c)
 
-    if right_margin is None and len(categoricals) > 0:
-        if legend_loc == "right margin":
-            right_margin = 0.5
+    if right_margin is None and len(categoricals) > 0 and legend_loc == "right margin":
+        right_margin = 0.5
     if title is None and keys[0] is not None:
         title = [
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
@@ -479,10 +509,7 @@ def _scatter_obs(
 
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
             for iname, name in enumerate(adata.obs[key].cat.categories):
-                if name in centroids:
-                    all_pos[iname] = centroids[name]
-                else:
-                    all_pos[iname] = [np.nan, np.nan]
+                all_pos[iname] = centroids.get(name, [np.nan, np.nan])
             if legend_loc == "on data export":
                 filename = settings.writedir / "pos.csv"
                 logg.warning(f"exporting label positions to {filename}")
@@ -688,7 +715,7 @@ def violin(
     jitter: float | bool = True,
     size: int = 1,
     layer: str | None = None,
-    scale: Literal["area", "count", "width"] = "width",
+    density_norm: DensityNorm = "width",
     order: Sequence[str] | None = None,
     multi_panel: bool | None = None,
     xlabel: str = "",
@@ -697,6 +724,8 @@ def violin(
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecatd
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
     """\
@@ -729,7 +758,7 @@ def violin(
         default adata.raw.X is plotted. If `use_raw=False` is set,
         then `adata.X` is plotted. If `layer` is set to a valid layer name,
         then the layer is plotted. `layer` takes precedence over `use_raw`.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -808,8 +837,10 @@ def violin(
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
+    density_norm = _deprecated_scale(density_norm, scale, default="width")
+    del scale
 
-    if isinstance(ylabel, (str, type(None))):
+    if isinstance(ylabel, str | NoneType):
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
     if groupby is None:
         if len(ylabel) != 1:
@@ -824,7 +855,7 @@ def violin(
 
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
-        if kwds.get("palette", None) is None:
+        if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 raise ValueError(
                     f"The column `adata.obs[{groupby!r}]` needs to be categorical, "
@@ -855,7 +886,7 @@ def violin(
             y=y,
             data=obs_tidy,
             kind="violin",
-            density_norm=scale,
+            density_norm=density_norm,
             col=x,
             col_order=keys,
             sharey=False,
@@ -903,7 +934,7 @@ def violin(
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
-                density_norm=scale,
+                density_norm=density_norm,
                 ax=ax,
                 **kwds,
             )
@@ -990,7 +1021,7 @@ def clustermap(
     """
     import seaborn as sns  # Slow import, only import if called
 
-    if not isinstance(obs_keys, (str, type(None))):
+    if not isinstance(obs_keys, str | NoneType):
         raise ValueError("Currently, only a single key is supported.")
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
@@ -1177,7 +1208,7 @@ def heatmap(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1232,10 +1263,7 @@ def heatmap(
         groupby_width = 0.2 if categorical else 0
         if figsize is None:
             height = 6
-            if show_gene_labels:
-                heatmap_width = len(var_names) * 0.3
-            else:
-                heatmap_width = 8
+            heatmap_width = len(var_names) * 0.3 if show_gene_labels else 8
             width = heatmap_width + dendro_width + groupby_width
         else:
             width, height = figsize
@@ -1312,7 +1340,7 @@ def heatmap(
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(
-                dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram
+                dendro_ax, adata, groupby, dendrogram_key=_dk(dendrogram), ticks=ticks
             )
 
         # plot group legends on top of heatmap_ax (if given)
@@ -1339,10 +1367,7 @@ def heatmap(
         dendro_height = 0.8 if dendrogram else 0
         groupby_height = 0.13 if categorical else 0
         if figsize is None:
-            if show_gene_labels:
-                heatmap_height = len(var_names) * 0.18
-            else:
-                heatmap_height = 4
+            heatmap_height = len(var_names) * 0.18 if show_gene_labels else 4
             width = 10
             height = heatmap_height + dendro_height + groupby_height
         else:
@@ -1415,7 +1440,7 @@ def heatmap(
                 dendro_ax,
                 adata,
                 groupby,
-                dendrogram_key=dendrogram,
+                dendrogram_key=_dk(dendrogram),
                 ticks=ticks,
                 orientation="top",
             )
@@ -1427,10 +1452,7 @@ def heatmap(
             for idx, (label, pos) in enumerate(
                 zip(var_group_labels, var_group_positions)
             ):
-                if var_groups_subset_of_groupby:
-                    label_code = label2code[label]
-                else:
-                    label_code = idx
+                label_code = label2code[label] if var_groups_subset_of_groupby else idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
                 np.array([arr]).T, aspect="auto", cmap=groupby_cmap, norm=norm
@@ -1567,7 +1589,7 @@ def tracksplot(
         dendro_data = _reorder_categories_after_dendrogram(
             adata,
             groupby,
-            dendrogram,
+            dendrogram_key=_dk(dendrogram),
             var_names=var_names,
             var_group_labels=var_group_labels,
             var_group_positions=var_group_positions,
@@ -1699,7 +1721,7 @@ def tracksplot(
             dendro_ax,
             adata,
             groupby,
-            dendrogram_key=dendrogram,
+            dendrogram_key=_dk(dendrogram),
             orientation="top",
             ticks=ticks,
         )
@@ -1860,7 +1882,7 @@ def correlation_matrix(
     >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
 
     index = adata.uns[dendrogram_key]["categories_idx_ordered"]
     corr_matrix = adata.uns[dendrogram_key]["correlation_matrix"]
@@ -1879,10 +1901,7 @@ def correlation_matrix(
         labels = adata.obs[groupby].cat.categories
     num_rows = corr_matrix.shape[0]
     colorbar_height = 0.2
-    if dendrogram:
-        dendrogram_width = 1.8
-    else:
-        dendrogram_width = 0
+    dendrogram_width = 1.8 if dendrogram else 0
     if figsize is None:
         corr_matrix_height = num_rows * 0.6
         height = corr_matrix_height + colorbar_height
@@ -2039,7 +2058,7 @@ def _prepare_dataframe(
                     "groupby has to be a valid observation. "
                     f"Given {group}, is not in observations: {adata.obs_keys()}" + msg
                 )
-            if group in adata.obs.keys() and group == adata.obs.index.name:
+            if group in adata.obs.columns and group == adata.obs.index.name:
                 raise ValueError(
                     f"Given group {group} is both and index and a column level, "
                     "which is ambiguous."
@@ -2158,10 +2177,7 @@ def _plot_gene_groups_brackets(
     if orientation == "top":
         # rotate labels if any of them is longer than 4 characters
         if rotation is None and group_labels:
-            if max([len(x) for x in group_labels]) > 4:
-                rotation = 90
-            else:
-                rotation = 0
+            rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
         for idx in range(len(left)):
             verts.append((left[idx], 0))  # lower-left
             verts.append((left[idx], 0.6))  # upper-left
@@ -2235,13 +2251,13 @@ def _plot_gene_groups_brackets(
 
 def _reorder_categories_after_dendrogram(
     adata: AnnData,
-    groupby,
-    dendrogram,
+    groupby: str | Sequence[str],
     *,
-    var_names=None,
-    var_group_labels=None,
-    var_group_positions=None,
-    categories=None,
+    dendrogram_key: str | None,
+    var_names: Sequence[str],
+    var_group_labels: Sequence[str] | None,
+    var_group_positions: Sequence[tuple[int, int]] | None,
+    categories: Sequence[str],
 ):
     """\
     Function used by plotting functions that need to reorder the the groupby
@@ -2261,12 +2277,12 @@ def _reorder_categories_after_dendrogram(
     'var_group_labels', and 'var_group_positions'
     """
 
-    key = _get_dendrogram_key(adata, dendrogram, groupby)
+    dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
 
     if isinstance(groupby, str):
         groupby = [groupby]
 
-    dendro_info = adata.uns[key]
+    dendro_info = adata.uns[dendrogram_key]
     if groupby != dendro_info["groupby"]:
         raise ValueError(
             "Incompatible observations. The precomputed dendrogram contains "
@@ -2293,36 +2309,35 @@ def _reorder_categories_after_dendrogram(
         )
 
     # reorder var_groups (if any)
-    if var_names is not None:
-        var_names_idx_ordered = list(range(len(var_names)))
-
-    if var_group_positions:
-        if set(var_group_labels) == set(categories):
-            positions_ordered = []
-            labels_ordered = []
-            position_start = 0
-            var_names_idx_ordered = []
-            for cat_name in categories_ordered:
-                idx = var_group_labels.index(cat_name)
-                position = var_group_positions[idx]
-                _var_names = var_names[position[0] : position[1] + 1]
-                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                positions_ordered.append(
-                    (position_start, position_start + len(_var_names) - 1)
-                )
-                position_start += len(_var_names)
-                labels_ordered.append(var_group_labels[idx])
-            var_group_labels = labels_ordered
-            var_group_positions = positions_ordered
-        else:
-            logg.warning(
-                "Groups are not reordered because the `groupby` categories "
-                "and the `var_group_labels` are different.\n"
-                f"categories: {_format_first_three_categories(categories)}\n"
-                f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
-            )
-    else:
+    if var_group_positions is None or var_group_labels is None:
+        assert var_group_positions is None
+        assert var_group_labels is None
         var_names_idx_ordered = None
+    elif set(var_group_labels) == set(categories):
+        positions_ordered = []
+        labels_ordered = []
+        position_start = 0
+        var_names_idx_ordered = []
+        for cat_name in categories_ordered:
+            idx = var_group_labels.index(cat_name)
+            position = var_group_positions[idx]
+            _var_names = var_names[position[0] : position[1] + 1]
+            var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+            positions_ordered.append(
+                (position_start, position_start + len(_var_names) - 1)
+            )
+            position_start += len(_var_names)
+            labels_ordered.append(var_group_labels[idx])
+        var_group_labels = labels_ordered
+        var_group_positions = positions_ordered
+    else:
+        logg.warning(
+            "Groups are not reordered because the `groupby` categories "
+            "and the `var_group_labels` are different.\n"
+            f"categories: {_format_first_three_categories(categories)}\n"
+            f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+        )
+        var_names_idx_ordered = list(range(len(var_names)))
 
     if var_names_idx_ordered is not None:
         var_names_ordered = [var_names[x] for x in var_names_idx_ordered]
@@ -2346,14 +2361,19 @@ def _format_first_three_categories(categories):
     return ", ".join(categories)
 
 
-def _get_dendrogram_key(adata, dendrogram_key, groupby):
+def _get_dendrogram_key(
+    adata: AnnData, dendrogram_key: str | None, groupby: str | Sequence[str]
+) -> str:
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
-    if not isinstance(dendrogram_key, str):
+    if dendrogram_key is None:
         if isinstance(groupby, str):
             dendrogram_key = f"dendrogram_{groupby}"
-        elif isinstance(groupby, list):
+        elif isinstance(groupby, Sequence):
             dendrogram_key = f'dendrogram_{"_".join(groupby)}'
+        else:
+            msg = f"groupby has wrong type: {type(groupby).__name__}."
+            raise AssertionError(msg)
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
@@ -2377,7 +2397,7 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
 def _plot_dendrogram(
     dendro_ax: Axes,
     adata: AnnData,
-    groupby: str,
+    groupby: str | Sequence[str],
     *,
     dendrogram_key: str | None = None,
     orientation: Literal["top", "bottom", "left", "right"] = "right",
@@ -2583,11 +2603,8 @@ def _plot_categories_as_colorblocks(
         )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            if max([len(str(x)) for x in labels]) < 3:
-                # if the labels are small do not rotate them
-                rotation = 0
-            else:
-                rotation = 90
+            # if the labels are small do not rotate them
+            rotation = 0 if max(len(str(x)) for x in labels) < 3 else 90
             groupby_ax.set_xticklabels(labels, rotation=rotation)
 
         # remove x ticks
@@ -2653,7 +2670,7 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
     var_names, var_group_labels, var_group_positions
 
     """
-    if isinstance(var_names, cabc.Mapping):
+    if isinstance(var_names, Mapping):
         if var_group_labels is not None or var_group_positions is not None:
             logg.warning(
                 "`var_names` is a dictionary. This will reset the current "

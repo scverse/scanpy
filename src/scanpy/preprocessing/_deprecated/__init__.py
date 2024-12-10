@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from scipy.sparse import csr_matrix, issparse
 
+from ..._compat import old_positionals
 
-@legacy_api("max_fraction", "mult_with_mean")
+
+@old_positionals("max_fraction", "mult_with_mean")
 def normalize_per_cell_weinreb16_deprecated(
-    X: np.ndarray,
+    x: np.ndarray,
     *,
     max_fraction: float = 1,
     mult_with_mean: bool = False,
@@ -37,23 +38,23 @@ def normalize_per_cell_weinreb16_deprecated(
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError("Choose max_fraction between 0 and 1.")
 
-    counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
-    gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
-    if issparse(X):
+    counts_per_cell = x.sum(1).A1 if issparse(x) else x.sum(1)
+    gene_subset = np.all(x <= counts_per_cell[:, None] * max_fraction, axis=0)
+    if issparse(x):
         gene_subset = gene_subset.A1
     tc_include = (
-        X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
+        x[:, gene_subset].sum(1).A1 if issparse(x) else x[:, gene_subset].sum(1)
     )
 
-    X_norm = (
-        X.multiply(csr_matrix(1 / tc_include[:, None]))
-        if issparse(X)
-        else X / tc_include[:, None]
+    x_norm = (
+        x.multiply(csr_matrix(1 / tc_include[:, None]))
+        if issparse(x)
+        else x / tc_include[:, None]
     )
     if mult_with_mean:
-        X_norm *= np.mean(counts_per_cell)
+        x_norm *= np.mean(counts_per_cell)
 
-    return X_norm
+    return x_norm
 
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:

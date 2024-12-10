@@ -18,7 +18,7 @@ from ._utils import check_datasetdir_exists, filter_oldformatwarning
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
@@ -63,7 +63,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
 ) -> AnnData:
     """\
     Gaussian Blobs.
@@ -219,7 +219,7 @@ def moignard15() -> AnnData:
     }
     # annotate each observation/cell
     adata.obs["exp_groups"] = [
-        next(gname for gname in groups.keys() if sname.startswith(gname))
+        next(gname for gname in groups if sname.startswith(gname))
         for sname in adata.obs_names
     ]
     # fix the order and colors of names in "groups"

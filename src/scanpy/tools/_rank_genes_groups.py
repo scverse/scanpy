@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from math import floor
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import (
     check_nonnegative_integers,
+    get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
-# Used with get_args
+# Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
 
@@ -98,7 +99,7 @@ class _RankGenes:
     def __init__(
         self,
         adata: AnnData,
-        groups: list[str] | Literal["all"],
+        groups: Iterable[str] | Literal["all"],
         groupby: str,
         *,
         mask_var: NDArray[np.bool_] | None = None,
@@ -123,10 +124,11 @@ class _RankGenes:
         )
 
         if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(", ".join(invalid_groups_selected))
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
             )
+            raise ValueError(msg)
 
         adata_comp = adata
         if layer is not None:
@@ -287,10 +289,7 @@ class _RankGenes:
             # initialize space for z-scores
             scores = np.zeros(n_genes)
             # initialize space for tie correction coefficients
-            if tie_correct:
-                T = np.zeros(n_genes)
-            else:
-                T = 1
+            T = np.zeros(n_genes) if tie_correct else 1
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 if group_index == self.ireference:
@@ -346,10 +345,7 @@ class _RankGenes:
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
 
-                if tie_correct:
-                    T_i = T[group_index]
-                else:
-                    T_i = 1
+                T_i = T[group_index] if tie_correct else 1
 
                 std_dev = np.sqrt(
                     T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
@@ -588,7 +584,7 @@ def rank_genes_groups(
     Notes
     -----
     There are slight inconsistencies depending on whether sparse
-    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/scanpy/tests/test_rank_genes_groups.py>`__.
+    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/tests/test_rank_genes_groups.py>`__.
 
     Examples
     --------
@@ -613,8 +609,7 @@ def rank_genes_groups(
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    avail_methods = set(get_args(_Method))
-    if method not in avail_methods:
+    if method not in (avail_methods := get_literal_vals(_Method)):
         raise ValueError(f"Method must be one of {avail_methods}.")
 
     avail_corr = {"benjamini-hochberg", "bonferroni"}
@@ -626,7 +621,7 @@ def rank_genes_groups(
     # for clarity, rename variable
     if groups == "all":
         groups_order = "all"
-    elif isinstance(groups, (str, int)):
+    elif isinstance(groups, str | int):
         raise ValueError("Specify a sequence of groups")
     else:
         groups_order = list(groups)
@@ -733,10 +728,7 @@ def rank_genes_groups(
 
 
 def _calc_frac(X):
-    if issparse(X):
-        n_nonzero = X.getnnz(axis=0)
-    else:
-        n_nonzero = np.count_nonzero(X, axis=0)
+    n_nonzero = X.getnnz(axis=0) if issparse(X) else np.count_nonzero(X, axis=0)
     return n_nonzero / X.shape[0]
 
 
@@ -758,7 +750,7 @@ def filter_rank_genes_groups(
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
-    min_fold_change: int | float = 1,
+    min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:

@@ -19,7 +19,8 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-HERE = Path(__file__).parent / "_data"
+HERE = Path(__file__).parent
+DATA_PATH = HERE / "_data"
 
 
 def _create_random_gene_names(n_genes, name_length) -> NDArray[np.str_]:
@@ -72,7 +73,7 @@ def test_score_with_reference():
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
-    with (HERE / "score_genes_reference_paul2015.pkl").open("rb") as file:
+    with (DATA_PATH / "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
     # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
     np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())

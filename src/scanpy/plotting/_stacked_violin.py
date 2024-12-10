@@ -12,11 +12,12 @@ from packaging.version import Version
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
     _deprecated_scale,
+    _dk,
     check_colornorm,
     make_grid_spec,
     savefig_or_show,
@@ -28,10 +29,11 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import _AxesSubplot
+    from ._utils import DensityNorm, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
@@ -118,7 +120,7 @@ class StackedViolin(BasePlot):
     DEFAULT_JITTER_SIZE = 1
     DEFAULT_LINE_WIDTH = 0.2
     DEFAULT_ROW_PALETTE = None
-    DEFAULT_DENSITY_NORM: Literal["area", "count", "width"] = "width"
+    DEFAULT_DENSITY_NORM: DensityNorm = "width"
     DEFAULT_PLOT_YTICKLABELS = False
     DEFAULT_YLIM = None
     DEFAULT_PLOT_X_PADDING = 0.5  # a unit is the distance between two x-axis ticks
@@ -222,6 +224,10 @@ class StackedViolin(BasePlot):
         )
 
         if standard_scale == "obs":
+            standard_scale = "group"
+            msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
+            warnings.warn(msg, FutureWarning)
+        if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
         elif standard_scale == "var":
@@ -264,19 +270,19 @@ class StackedViolin(BasePlot):
     def style(
         self,
         *,
-        cmap: str | None = DEFAULT_COLORMAP,
-        stripplot: bool | None = DEFAULT_STRIPPLOT,
-        jitter: float | bool | None = DEFAULT_JITTER,
-        jitter_size: int | None = DEFAULT_JITTER_SIZE,
-        linewidth: float | None = DEFAULT_LINE_WIDTH,
-        row_palette: str | None = DEFAULT_ROW_PALETTE,
-        density_norm: Literal["area", "count", "width"] = DEFAULT_DENSITY_NORM,
-        yticklabels: bool | None = DEFAULT_PLOT_YTICKLABELS,
-        ylim: tuple[float, float] | None = DEFAULT_YLIM,
-        x_padding: float | None = DEFAULT_PLOT_X_PADDING,
-        y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
+        cmap: Colormap | str | None | Empty = _empty,
+        stripplot: bool | Empty = _empty,
+        jitter: float | bool | Empty = _empty,
+        jitter_size: float | Empty = _empty,
+        linewidth: float | None | Empty = _empty,
+        row_palette: str | None | Empty = _empty,
+        density_norm: DensityNorm | Empty = _empty,
+        yticklabels: bool | Empty = _empty,
+        ylim: tuple[float, float] | None | Empty = _empty,
+        x_padding: float | Empty = _empty,
+        y_padding: float | Empty = _empty,
         # deprecated
-        scale: Literal["area", "count", "width"] | None = None,
+        scale: DensityNorm | Empty = _empty,
     ) -> Self:
         r"""\
         Modifies plot visual parameters
@@ -284,7 +290,8 @@ class StackedViolin(BasePlot):
         Parameters
         ----------
         cmap
-            String denoting matplotlib color map.
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["image.cmap"]``
         stripplot
             Add a stripplot on top of the violin plot.
             See :func:`~seaborn.stripplot`.
@@ -294,9 +301,11 @@ class StackedViolin(BasePlot):
         jitter_size
             Size of the jitter points.
         linewidth
-            linewidth for the violin plots.
+            line width for the violin plots.
+            If None, use :obj:`matplotlib.rcParams`\ ``["lines.linewidth"]``
         row_palette
             The row palette determines the colors to use for the stacked violins.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["axes.prop_cycle"]``
             The value should be a valid seaborn or matplotlib palette name
             (see :func:`~seaborn.color_palette`).
             Alternatively, a single color name or hex value can be passed,
@@ -309,8 +318,9 @@ class StackedViolin(BasePlot):
         yticklabels
             Set to true to view the y tick labels.
         ylim
-            minimum and maximum values for the y-axis. If set. All rows will have
-            the same y-axis range. Example: ylim=(0, 5)
+            minimum and maximum values for the y-axis.
+            If not ``None``, all rows will have the same y-axis range.
+            Example: ``ylim=(0, 5)``
         x_padding
             Space between the plot left/right borders and the violins. A unit
             is the distance between the x ticks.
@@ -333,20 +343,18 @@ class StackedViolin(BasePlot):
         >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels') \
         ...     .style(row_palette='Blues', linewidth=0).show()
         """
+        super().style(cmap=cmap)
 
-        # modify only values that had changed
-        if cmap != self.cmap:
-            self.cmap = cmap
-        if row_palette != self.row_palette:
+        if row_palette is not _empty:
             self.row_palette = row_palette
             self.kwds["color"] = self.row_palette
-        if stripplot != self.stripplot:
+        if stripplot is not _empty:
             self.stripplot = stripplot
-        if jitter != self.jitter:
+        if jitter is not _empty:
             self.jitter = jitter
-        if jitter_size != self.jitter_size:
+        if jitter_size is not _empty:
             self.jitter_size = jitter_size
-        if yticklabels != self.plot_yticklabels:
+        if yticklabels is not _empty:
             self.plot_yticklabels = yticklabels
             if self.plot_yticklabels:
                 # space needs to be added to avoid overlapping
@@ -354,21 +362,15 @@ class StackedViolin(BasePlot):
                 self.wspace = 0.3
             else:
                 self.wspace = StackedViolin.DEFAULT_WSPACE
-        if ylim != self.ylim:
+        if ylim is not _empty:
             self.ylim = ylim
-        if x_padding != self.plot_x_padding:
+        if x_padding is not _empty:
             self.plot_x_padding = x_padding
-        if y_padding != self.plot_y_padding:
+        if y_padding is not _empty:
             self.plot_y_padding = y_padding
-        if linewidth != self.kwds["linewidth"] and linewidth != self.DEFAULT_LINE_WIDTH:
+        if linewidth is not _empty:
             self.kwds["linewidth"] = linewidth
-        density_norm = _deprecated_scale(
-            density_norm, scale, default=self.DEFAULT_DENSITY_NORM
-        )
-        if (
-            density_norm != self.kwds["density_norm"]
-            and density_norm != self.DEFAULT_DENSITY_NORM
-        ):
+        if (density_norm := _deprecated_scale(density_norm, scale)) is not _empty:
             self.kwds["density_norm"] = density_norm
 
         return self
@@ -468,8 +470,8 @@ class StackedViolin(BasePlot):
         _matrix,
         colormap_array,
         _color_df,
-        x_spacer_size,
-        y_spacer_size,
+        x_spacer_size: float,
+        y_spacer_size: float,
         x_axis_order,
     ):
         import seaborn as sns  # Slow import, only import if called
@@ -680,26 +682,30 @@ def stacked_violin(
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
     var_group_labels: Sequence[str] | None = None,
-    standard_scale: Literal["var", "obs"] | None = None,
+    standard_scale: Literal["var", "group"] | None = None,
     var_group_rotation: float | None = None,
     layer: str | None = None,
-    stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
-    jitter: float | bool = StackedViolin.DEFAULT_JITTER,
-    size: int = StackedViolin.DEFAULT_JITTER_SIZE,
-    scale: Literal["area", "count", "width"] = StackedViolin.DEFAULT_DENSITY_NORM,
-    yticklabels: bool | None = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
-    order: Sequence[str] | None = None,
+    categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
     return_fig: bool | None = False,
-    row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
-    cmap: str | None = StackedViolin.DEFAULT_COLORMAP,
     ax: _AxesSubplot | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
     vcenter: float | None = None,
     norm: Normalize | None = None,
+    # Style options
+    cmap: Colormap | str | None = StackedViolin.DEFAULT_COLORMAP,
+    stripplot: bool = StackedViolin.DEFAULT_STRIPPLOT,
+    jitter: float | bool = StackedViolin.DEFAULT_JITTER,
+    size: float = StackedViolin.DEFAULT_JITTER_SIZE,
+    row_palette: str | None = StackedViolin.DEFAULT_ROW_PALETTE,
+    density_norm: DensityNorm | Empty = _empty,
+    yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
+    # deprecated
+    order: Sequence[str] | None | Empty = _empty,
+    scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> StackedViolin | dict | None:
     """\
@@ -727,11 +733,7 @@ def stacked_violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    order
-        Order in which to show the categories. Note: if `dendrogram=True`
-        the categories order will be given by the dendrogram and `order`
-        will be ignored.
-    scale
+    density_norm
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -801,6 +803,13 @@ def stacked_violin(
         print(axes_dict)
 
     """
+    if order is not _empty:
+        msg = (
+            "`order` is deprecated (and never worked for `stacked_violin`), "
+            "use categories_order instead"
+        )
+        warnings.warn(msg, FutureWarning)
+        # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(
         adata,
@@ -809,6 +818,7 @@ def stacked_violin(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
@@ -826,7 +836,7 @@ def stacked_violin(
     )
 
     if dendrogram:
-        vp.add_dendrogram(dendrogram_key=dendrogram)
+        vp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         vp.swap_axes()
     vp = vp.style(
@@ -835,9 +845,9 @@ def stacked_violin(
         jitter=jitter,
         jitter_size=size,
         row_palette=row_palette,
-        density_norm=kwds.get("density_norm", scale),
+        density_norm=_deprecated_scale(density_norm, scale),
         yticklabels=yticklabels,
-        linewidth=kwds.get("linewidth", StackedViolin.DEFAULT_LINE_WIDTH),
+        linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)
     if return_fig:
         return vp

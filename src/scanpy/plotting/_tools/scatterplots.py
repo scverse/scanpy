@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import inspect
-import sys
 from collections.abc import Mapping, Sequence  # noqa: TCH003
 from copy import copy
 from functools import partial
@@ -38,6 +36,7 @@ from ..._utils import (
     sanitize_anndata,
 )
 from ...get import _check_mask
+from ...tools._draw_graph import _Layout  # noqa: TCH001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -51,7 +50,6 @@ from .._utils import (
     VBound,  # noqa: TCH001
     _FontSize,  # noqa: TCH001
     _FontWeight,  # noqa: TCH001
-    _IGraphLayout,  # noqa: TCH001
     _LegendLoc,  # noqa: TCH001
     check_colornorm,
     check_projection,
@@ -96,7 +94,7 @@ def embedding(
     na_in_legend: bool = True,
     size: float | Sequence[float] | None = None,
     frameon: bool | None = None,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,
@@ -183,11 +181,10 @@ def embedding(
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
-    if "edgecolor" not in kwargs:
-        # by default turn off edge color. Otherwise, for
-        # very small sizes the edge will not reduce its size
-        # (https://github.com/scverse/scanpy/issues/293)
-        kwargs["edgecolor"] = "none"
+    # by default turn off edge color. Otherwise, for
+    # very small sizes the edge will not reduce its size
+    # (https://github.com/scverse/scanpy/issues/293)
+    kwargs.setdefault("edgecolor", "none")
 
     # Vectorized arguments
 
@@ -202,13 +199,13 @@ def embedding(
         title = [title] if isinstance(title, str) else list(title)
 
     # turn vmax and vmin into a sequence
-    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
+    if isinstance(vmax, str) or not isinstance(vmax, Sequence):
         vmax = [vmax]
-    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
+    if isinstance(vmin, str) or not isinstance(vmin, Sequence):
         vmin = [vmin]
-    if isinstance(vcenter, str) or not isinstance(vcenter, cabc.Sequence):
+    if isinstance(vcenter, str) or not isinstance(vcenter, Sequence):
         vcenter = [vcenter]
-    if isinstance(norm, Normalize) or not isinstance(norm, cabc.Sequence):
+    if isinstance(norm, Normalize) or not isinstance(norm, Sequence):
         norm = [norm]
 
     # Size
@@ -219,7 +216,7 @@ def embedding(
         # set as ndarray
         if (
             size is not None
-            and isinstance(size, (cabc.Sequence, pd.Series, np.ndarray))
+            and isinstance(size, Sequence | pd.Series | np.ndarray)
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -245,9 +242,7 @@ def embedding(
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
     if (
-        not isinstance(color, str)
-        and isinstance(color, cabc.Sequence)
-        and len(color) > 1
+        not isinstance(color, str) and isinstance(color, Sequence) and len(color) > 1
     ) or len(dimensions) > 1:
         if ax is not None:
             raise ValueError(
@@ -597,9 +592,6 @@ def _get_vboundnorm(
 
 def _wraps_plot_scatter(wrapper):
     """Update the wrapper function to use the correct signature."""
-    if sys.version_info < (3, 10):
-        # Python 3.9 does not support `eval_str`, so we only support this in 3.10+
-        return wrapper
 
     params = inspect.signature(embedding, eval_str=True).parameters.copy()
     wrapper_sig = inspect.signature(wrapper, eval_str=True)
@@ -779,7 +771,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def draw_graph(
-    adata: AnnData, *, layout: _IGraphLayout | None = None, **kwargs
+    adata: AnnData, *, layout: _Layout | None = None, **kwargs
 ) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in graph-drawing basis.
@@ -890,7 +882,7 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
-    if "pca" not in adata.obsm.keys() and "X_pca" not in adata.obsm.keys():
+    if "pca" not in adata.obsm and "X_pca" not in adata.obsm:
         raise KeyError(
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."
@@ -1015,10 +1007,7 @@ def spatial(
     crop_coord = _check_crop_coord(crop_coord, scale_factor)
     na_color = _check_na_color(na_color, img=img)
 
-    if bw:
-        cmap_img = "gray"
-    else:
-        cmap_img = None
+    cmap_img = "gray" if bw else None
     circle_radius = size * scale_factor * spot_size * 0.5
 
     axs = embedding(
@@ -1346,10 +1335,7 @@ def _check_spatial_data(
             library_id = list(spatial_mapping.keys())[0]
         else:
             library_id = None
-    if library_id is not None:
-        spatial_data = spatial_mapping[library_id]
-    else:
-        spatial_data = None
+    spatial_data = spatial_mapping[library_id] if library_id is not None else None
     return library_id, spatial_data
 
 
@@ -1391,10 +1377,7 @@ def _check_na_color(
     na_color: ColorLike | None, *, img: np.ndarray | None = None
 ) -> ColorLike:
     if na_color is None:
-        if img is not None:
-            na_color = (0.0, 0.0, 0.0, 0.0)
-        else:
-            na_color = "lightgray"
+        na_color = (0.0, 0.0, 0.0, 0.0) if img is not None else "lightgray"
     return na_color
 
 

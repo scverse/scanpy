@@ -2,32 +2,33 @@
 
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
 import numpy as np
-from legacy_api_wrap import legacy_api
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
 from .._compat import old_positionals
+from .._utils import _empty
 from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
-    from typing import Literal, Self, Union
+    from collections.abc import Iterable, Sequence
+    from typing import Literal, Self
 
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
+    from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
-    _VarNames = Union[str, Sequence[str]]
+    _VarNames = str | Sequence[str]
 
 
 class VBoundNorm(NamedTuple):
@@ -135,9 +136,7 @@ class BasePlot:
         self.width, self.height = figsize if figsize is not None else (None, None)
 
         self.has_var_groups = (
-            True
-            if var_group_positions is not None and len(var_group_positions) > 0
-            else False
+            var_group_positions is not None and len(var_group_positions) > 0
         )
 
         self._update_var_groups()
@@ -158,18 +157,19 @@ class BasePlot:
                 "Plot would be very large."
             )
 
-        if categories_order is not None:
-            if set(self.obs_tidy.index.categories) != set(categories_order):
-                logg.error(
-                    "Please check that the categories given by "
-                    "the `order` parameter match the categories that "
-                    "want to be reordered.\n\n"
-                    "Mismatch: "
-                    f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
-                    f"Given order categories: {categories_order}\n\n"
-                    f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
-                )
-                return
+        if categories_order is not None and (
+            set(self.obs_tidy.index.categories) != set(categories_order)
+        ):
+            logg.error(
+                "Please check that the categories given by "
+                "the `order` parameter match the categories that "
+                "want to be reordered.\n\n"
+                "Mismatch: "
+                f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                f"Given order categories: {categories_order}\n\n"
+                f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+            )
+            return
 
         self.adata = adata
         self.groupby = [groupby] if isinstance(groupby, str) else groupby
@@ -205,7 +205,7 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    @legacy_api("swap_axes")
+    @old_positionals("swap_axes")
     def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
         """
         Plots a transposed image.
@@ -233,7 +233,7 @@ class BasePlot:
         self.are_axes_swapped = swap_axes
         return self
 
-    @legacy_api("show", "dendrogram_key", "size")
+    @old_positionals("show", "dendrogram_key", "size")
     def add_dendrogram(
         self,
         *,
@@ -320,7 +320,7 @@ class BasePlot:
         }
         return self
 
-    @legacy_api("show", "sort", "size", "color")
+    @old_positionals("show", "sort", "size", "color")
     def add_totals(
         self,
         *,
@@ -386,8 +386,8 @@ class BasePlot:
             self.group_extra_size = 0
             return self
 
-        _sort = True if sort is not None else False
-        _ascending = True if sort == "ascending" else False
+        _sort = sort is not None
+        _ascending = sort == "ascending"
         counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
@@ -403,21 +403,23 @@ class BasePlot:
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: str | None = DEFAULT_COLORMAP) -> Self:
+    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
         """\
         Set visual style parameters
 
         Parameters
         ----------
         cmap
-            colormap
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
 
         Returns
         -------
         Returns `self` for method chaining.
         """
 
-        self.cmap = cmap
+        if cmap is not _empty:
+            self.cmap = cmap
         return self
 
     @old_positionals("show", "title", "width")
@@ -485,10 +487,7 @@ class BasePlot:
         if self.categories_order is not None:
             counts_df = counts_df.loc[self.categories_order]
         if params["color"] is None:
-            if f"{self.groupby}_colors" in self.adata.uns:
-                color = self.adata.uns[f"{self.groupby}_colors"]
-            else:
-                color = "salmon"
+            color = self.adata.uns.get(f"{self.groupby}_colors", "salmon")
         else:
             color = params["color"]
 
@@ -874,7 +873,7 @@ class BasePlot:
         self.make_figure()
         plt.savefig(filename, bbox_inches=bbox_inches, **kwargs)
 
-    def _reorder_categories_after_dendrogram(self, dendrogram) -> None:
+    def _reorder_categories_after_dendrogram(self, dendrogram_key: str | None) -> None:
         """\
         Function used by plotting functions that need to reorder the the groupby
         observations based on the dendrogram results.
@@ -900,7 +899,7 @@ class BasePlot:
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        key = _get_dendrogram_key(self.adata, dendrogram, self.groupby)
+        key = _get_dendrogram_key(self.adata, dendrogram_key, self.groupby)
 
         dendro_info = self.adata.uns[key]
         if self.groupby != dendro_info["groupby"]:
@@ -1023,10 +1022,7 @@ class BasePlot:
         if orientation == "top":
             # rotate labels if any of them is longer than 4 characters
             if rotation is None and group_labels:
-                if max([len(x) for x in group_labels]) > 4:
-                    rotation = 90
-                else:
-                    rotation = 0
+                rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
             for idx, (left_coor, right_coor) in enumerate(zip(left, right)):
                 verts.append((left_coor, 0))  # lower-left
                 verts.append((left_coor, 0.6))  # upper-left
@@ -1097,7 +1093,7 @@ class BasePlot:
 
         updates var_names, var_group_labels, var_group_positions
         """
-        if isinstance(self.var_names, cabc.Mapping):
+        if isinstance(self.var_names, Mapping):
             if self.has_var_groups:
                 logg.warning(
                     "`var_names` is a dictionary. This will reset the current "

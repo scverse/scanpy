@@ -36,6 +36,23 @@ ROOT = HERE / "_images"
 # If test images need to be updated, simply copy actual.png to expected.png.
 
 
+@pytest.mark.parametrize("col", [None, "symb"])
+@pytest.mark.parametrize("layer", [None, "layer_name"])
+def test_highest_expr_genes(image_comparer, col, layer):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    adata = pbmc3k()
+    if layer is not None:
+        adata.layers[layer] = adata.X
+        del adata.X
+    # check that only existing categories are shown
+    adata.var["symb"] = adata.var_names.astype("category")
+
+    sc.pl.highest_expr_genes(adata, 20, gene_symbols=col, layer=layer, show=False)
+
+    save_and_compare_images("highest_expr_genes")
+
+
 @needs.leidenalg
 def test_heatmap(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -167,9 +184,9 @@ def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images(name)
 
 
-@pytest.mark.parametrize(
-    ("id", "fn"),
-    [
+params_dotplot_matrixplot_stacked_violin = [
+    pytest.param(id, fn, id=id)
+    for id, fn in [
         (
             "dotplot",
             partial(
@@ -317,10 +334,13 @@ def test_clustermap(image_comparer, obs_keys, name):
                 figsize=(8, 2.5),
             ),
         ),
-    ],
-)
+    ]
+]
+
+
+@pytest.mark.parametrize(("id", "fn"), params_dotplot_matrixplot_stacked_violin)
 def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = krumsiek11()
     adata.obs["numeric_column"] = adata.X[:, 0]
@@ -365,6 +385,17 @@ def test_dotplot_obj(image_comparer):
     plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").show()
 
     save_and_compare_images("dotplot_std_scale_var")
+
+
+def test_dotplot_style_no_reset():
+    pbmc = pbmc68k_reduced()
+    plot = sc.pl.dotplot(pbmc, "CD79A", "bulk_labels", return_fig=True)
+    assert isinstance(plot, sc.pl.DotPlot)
+    assert plot.cmap == sc.pl.DotPlot.DEFAULT_COLORMAP
+    plot.style(cmap="winter")
+    assert plot.cmap == "winter"
+    plot.style(color_on="square")
+    assert plot.cmap == "winter", "style() should not reset unspecified parameters"
 
 
 def test_dotplot_add_totals(image_comparer):
@@ -585,221 +616,220 @@ def test_correlation(image_comparer):
     save_and_compare_images("correlation")
 
 
+_RANK_GENES_GROUPS_PARAMS = [
+    (
+        "sharey",
+        partial(sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False),
+    ),
+    (
+        "basic",
+        partial(
+            sc.pl.rank_genes_groups,
+            n_genes=12,
+            n_panels_per_row=3,
+            sharey=False,
+            show=False,
+        ),
+    ),
+    (
+        "heatmap",
+        partial(sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap="YlGnBu", show=False),
+    ),
+    (
+        "heatmap_swap_axes",
+        partial(
+            sc.pl.rank_genes_groups_heatmap,
+            n_genes=20,
+            swap_axes=True,
+            use_raw=False,
+            show_gene_labels=False,
+            show=False,
+            vmin=-3,
+            vmax=3,
+            cmap="bwr",
+        ),
+    ),
+    (
+        "heatmap_swap_axes_vcenter",
+        partial(
+            sc.pl.rank_genes_groups_heatmap,
+            n_genes=20,
+            swap_axes=True,
+            use_raw=False,
+            show_gene_labels=False,
+            show=False,
+            vmin=-3,
+            vcenter=1,
+            vmax=3,
+            cmap="RdBu_r",
+        ),
+    ),
+    (
+        "stacked_violin",
+        partial(
+            sc.pl.rank_genes_groups_stacked_violin,
+            n_genes=3,
+            show=False,
+            groups=["3", "0", "5"],
+        ),
+    ),
+    (
+        "dotplot",
+        partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
+    ),
+    (
+        "dotplot_gene_names",
+        partial(
+            sc.pl.rank_genes_groups_dotplot,
+            var_names={
+                "T-cell": ["CD3D", "CD3E", "IL32"],
+                "B-cell": ["CD79A", "CD79B", "MS4A1"],
+                "myeloid": ["CST3", "LYZ"],
+            },
+            values_to_plot="logfoldchanges",
+            cmap="bwr",
+            vmin=-3,
+            vmax=3,
+            show=False,
+        ),
+    ),
+    (
+        "dotplot_logfoldchange",
+        partial(
+            sc.pl.rank_genes_groups_dotplot,
+            n_genes=4,
+            values_to_plot="logfoldchanges",
+            vmin=-5,
+            vmax=5,
+            min_logfoldchange=3,
+            cmap="RdBu_r",
+            swap_axes=True,
+            title="log fold changes swap_axes",
+            show=False,
+        ),
+    ),
+    (
+        "dotplot_logfoldchange_vcenter",
+        partial(
+            sc.pl.rank_genes_groups_dotplot,
+            n_genes=4,
+            values_to_plot="logfoldchanges",
+            vmin=-5,
+            vcenter=1,
+            vmax=5,
+            min_logfoldchange=3,
+            cmap="RdBu_r",
+            swap_axes=True,
+            title="log fold changes swap_axes",
+            show=False,
+        ),
+    ),
+    (
+        "matrixplot",
+        partial(
+            sc.pl.rank_genes_groups_matrixplot,
+            n_genes=5,
+            show=False,
+            title="matrixplot",
+            gene_symbols="symbol",
+            use_raw=False,
+        ),
+    ),
+    (
+        "matrixplot_gene_names_symbol",
+        partial(
+            sc.pl.rank_genes_groups_matrixplot,
+            var_names={
+                "T-cell": ["CD3D__", "CD3E__", "IL32__"],
+                "B-cell": ["CD79A__", "CD79B__", "MS4A1__"],
+                "myeloid": ["CST3__", "LYZ__"],
+            },
+            values_to_plot="logfoldchanges",
+            cmap="bwr",
+            vmin=-3,
+            vmax=3,
+            gene_symbols="symbol",
+            use_raw=False,
+            show=False,
+        ),
+    ),
+    (
+        "matrixplot_n_genes_negative",
+        partial(
+            sc.pl.rank_genes_groups_matrixplot,
+            n_genes=-5,
+            show=False,
+            title="matrixplot n_genes=-5",
+        ),
+    ),
+    (
+        "matrixplot_swap_axes",
+        partial(
+            sc.pl.rank_genes_groups_matrixplot,
+            n_genes=5,
+            show=False,
+            swap_axes=True,
+            values_to_plot="logfoldchanges",
+            vmin=-6,
+            vmax=6,
+            cmap="bwr",
+            title="log fold changes swap_axes",
+        ),
+    ),
+    (
+        "matrixplot_swap_axes_vcenter",
+        partial(
+            sc.pl.rank_genes_groups_matrixplot,
+            n_genes=5,
+            show=False,
+            swap_axes=True,
+            values_to_plot="logfoldchanges",
+            vmin=-6,
+            vcenter=1,
+            vmax=6,
+            cmap="bwr",
+            title="log fold changes swap_axes",
+        ),
+    ),
+    (
+        "tracksplot",
+        partial(
+            sc.pl.rank_genes_groups_tracksplot,
+            n_genes=3,
+            show=False,
+            groups=["3", "2", "1"],
+        ),
+    ),
+    (
+        "violin",
+        partial(
+            sc.pl.rank_genes_groups_violin,
+            groups="0",
+            n_genes=5,
+            use_raw=True,
+            jitter=False,
+            strip=False,
+            show=False,
+        ),
+    ),
+    (
+        "violin_not_raw",
+        partial(
+            sc.pl.rank_genes_groups_violin,
+            groups="0",
+            n_genes=5,
+            use_raw=False,
+            jitter=False,
+            strip=False,
+            show=False,
+        ),
+    ),
+]
+
+
 @pytest.mark.parametrize(
     ("name", "fn"),
-    [
-        (
-            "ranked_genes_sharey",
-            partial(
-                sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False
-            ),
-        ),
-        (
-            "ranked_genes",
-            partial(
-                sc.pl.rank_genes_groups,
-                n_genes=12,
-                n_panels_per_row=3,
-                sharey=False,
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_heatmap",
-            partial(
-                sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap="YlGnBu", show=False
-            ),
-        ),
-        (
-            "ranked_genes_heatmap_swap_axes",
-            partial(
-                sc.pl.rank_genes_groups_heatmap,
-                n_genes=20,
-                swap_axes=True,
-                use_raw=False,
-                show_gene_labels=False,
-                show=False,
-                vmin=-3,
-                vmax=3,
-                cmap="bwr",
-            ),
-        ),
-        (
-            "ranked_genes_heatmap_swap_axes_vcenter",
-            partial(
-                sc.pl.rank_genes_groups_heatmap,
-                n_genes=20,
-                swap_axes=True,
-                use_raw=False,
-                show_gene_labels=False,
-                show=False,
-                vmin=-3,
-                vcenter=1,
-                vmax=3,
-                cmap="RdBu_r",
-            ),
-        ),
-        (
-            "ranked_genes_stacked_violin",
-            partial(
-                sc.pl.rank_genes_groups_stacked_violin,
-                n_genes=3,
-                show=False,
-                groups=["3", "0", "5"],
-            ),
-        ),
-        (
-            "ranked_genes_dotplot",
-            partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
-        ),
-        (
-            "ranked_genes_dotplot_gene_names",
-            partial(
-                sc.pl.rank_genes_groups_dotplot,
-                var_names={
-                    "T-cell": ["CD3D", "CD3E", "IL32"],
-                    "B-cell": ["CD79A", "CD79B", "MS4A1"],
-                    "myeloid": ["CST3", "LYZ"],
-                },
-                values_to_plot="logfoldchanges",
-                cmap="bwr",
-                vmin=-3,
-                vmax=3,
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_dotplot_logfoldchange",
-            partial(
-                sc.pl.rank_genes_groups_dotplot,
-                n_genes=4,
-                values_to_plot="logfoldchanges",
-                vmin=-5,
-                vmax=5,
-                min_logfoldchange=3,
-                cmap="RdBu_r",
-                swap_axes=True,
-                title="log fold changes swap_axes",
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_dotplot_logfoldchange_vcenter",
-            partial(
-                sc.pl.rank_genes_groups_dotplot,
-                n_genes=4,
-                values_to_plot="logfoldchanges",
-                vmin=-5,
-                vcenter=1,
-                vmax=5,
-                min_logfoldchange=3,
-                cmap="RdBu_r",
-                swap_axes=True,
-                title="log fold changes swap_axes",
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_matrixplot",
-            partial(
-                sc.pl.rank_genes_groups_matrixplot,
-                n_genes=5,
-                show=False,
-                title="matrixplot",
-                gene_symbols="symbol",
-                use_raw=False,
-            ),
-        ),
-        (
-            "ranked_genes_matrixplot_gene_names_symbol",
-            partial(
-                sc.pl.rank_genes_groups_matrixplot,
-                var_names={
-                    "T-cell": ["CD3D__", "CD3E__", "IL32__"],
-                    "B-cell": ["CD79A__", "CD79B__", "MS4A1__"],
-                    "myeloid": ["CST3__", "LYZ__"],
-                },
-                values_to_plot="logfoldchanges",
-                cmap="bwr",
-                vmin=-3,
-                vmax=3,
-                gene_symbols="symbol",
-                use_raw=False,
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_matrixplot_n_genes_negative",
-            partial(
-                sc.pl.rank_genes_groups_matrixplot,
-                n_genes=-5,
-                show=False,
-                title="matrixplot n_genes=-5",
-            ),
-        ),
-        (
-            "ranked_genes_matrixplot_swap_axes",
-            partial(
-                sc.pl.rank_genes_groups_matrixplot,
-                n_genes=5,
-                show=False,
-                swap_axes=True,
-                values_to_plot="logfoldchanges",
-                vmin=-6,
-                vmax=6,
-                cmap="bwr",
-                title="log fold changes swap_axes",
-            ),
-        ),
-        (
-            "ranked_genes_matrixplot_swap_axes_vcenter",
-            partial(
-                sc.pl.rank_genes_groups_matrixplot,
-                n_genes=5,
-                show=False,
-                swap_axes=True,
-                values_to_plot="logfoldchanges",
-                vmin=-6,
-                vcenter=1,
-                vmax=6,
-                cmap="bwr",
-                title="log fold changes swap_axes",
-            ),
-        ),
-        (
-            "ranked_genes_tracksplot",
-            partial(
-                sc.pl.rank_genes_groups_tracksplot,
-                n_genes=3,
-                show=False,
-                groups=["3", "2", "1"],
-            ),
-        ),
-        (
-            "ranked_genes_violin",
-            partial(
-                sc.pl.rank_genes_groups_violin,
-                groups="0",
-                n_genes=5,
-                use_raw=True,
-                jitter=False,
-                strip=False,
-                show=False,
-            ),
-        ),
-        (
-            "ranked_genes_violin_not_raw",
-            partial(
-                sc.pl.rank_genes_groups_violin,
-                groups="0",
-                n_genes=5,
-                use_raw=False,
-                jitter=False,
-                strip=False,
-                show=False,
-            ),
-        ),
-    ],
+    [pytest.param(name, fn, id=name) for name, fn in _RANK_GENES_GROUPS_PARAMS],
 )
 def test_rank_genes_groups(image_comparer, name, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -812,7 +842,8 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
     with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
         fn(pbmc)
-        save_and_compare_images(name)
+        key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
+        save_and_compare_images(key)
         plt.close()
 
 
@@ -849,7 +880,7 @@ def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
     return a, b
 
 
-@pytest.fixture()
+@pytest.fixture
 def gene_symbols_adatas(gene_symbols_adatas_session) -> tuple[AnnData, AnnData]:
     a, b = gene_symbols_adatas_session
     return a.copy(), b.copy()
@@ -993,7 +1024,7 @@ def pbmc_scatterplots_session() -> AnnData:
     return pbmc
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
     return pbmc_scatterplots_session.copy()
 
@@ -1323,7 +1354,9 @@ def test_scatter_specify_layer_and_raw():
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
-@pytest.mark.parametrize("color", ["n_genes", "bulk_labels"])
+@pytest.mark.parametrize(
+    "color", ["n_genes", "bulk_labels", ["n_genes", "bulk_labels"]]
+)
 def test_scatter_no_basis_per_obs(image_comparer, color):
     """Test scatterplot of per-obs points with no basis"""
 
@@ -1339,7 +1372,8 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
         # palette only applies to categorical, i.e. color=='bulk_labels'
         palette="Set2",
     )
-    save_and_compare_images(f"scatter_HES_percent_mito_{color}")
+    color_str = color if isinstance(color, str) else "_".join(color)
+    save_and_compare_images(f"scatter_HES_percent_mito_{color_str}")
 
 
 def test_scatter_no_basis_per_var(image_comparer):
@@ -1352,36 +1386,26 @@ def test_scatter_no_basis_per_var(image_comparer):
     save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc_filtered() -> Callable[[], AnnData]:
     pbmc = pbmc68k_reduced()
     sc.pp.filter_genes(pbmc, min_cells=10)
     return pbmc.copy
 
 
-def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
+@pytest.mark.parametrize("use_raw", [True, None])
+def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw):
+    """Test scatterplots of raw layer with no basis."""
     adata = pbmc_filtered()
 
-    """Test scatterplots of raw layer with no basis."""
-    path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
-    path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
-    path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
-
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=None)
-    plt.savefig(path1)
-    plt.close()
-
-    # is equivalent to:
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=True)
-    plt.savefig(path2)
-    plt.close()
-
-    # and also to:
     sc.pl.scatter(adata.raw.to_adata(), x="EGFL7", y="F12", color="FAM185A")
-    plt.savefig(path3)
+    plt.savefig(path1 := tmp_path / "scatter-raw-to-adata.png")
+
+    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=use_raw)
+    plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
+    plt.close()
 
     check_same_image(path1, path2, tol=15)
-    check_same_image(path1, path3, tol=15)
 
 
 @pytest.mark.parametrize(
@@ -1576,11 +1600,13 @@ def test_color_cycler(caplog):
     colors = sns.color_palette("deep")
     cyl = sns.rcmod.cycler("color", sns.color_palette("deep"))
 
-    with caplog.at_level(logging.WARNING):
-        with plt.rc_context({"axes.prop_cycle": cyl, "patch.facecolor": colors[0]}):
-            sc.pl.umap(pbmc, color="phase")
-            plt.show()
-            plt.close()
+    with (
+        caplog.at_level(logging.WARNING),
+        plt.rc_context({"axes.prop_cycle": cyl, "patch.facecolor": colors[0]}),
+    ):
+        sc.pl.umap(pbmc, color="phase")
+        plt.show()
+        plt.close()
 
     assert caplog.text == ""
 

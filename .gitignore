@@ -18,7 +18,6 @@
 /tests/**/*failed-diff.png
 
 # Environment management
-/hatch.toml
 /Pipfile
 /Pipfile.lock
 /requirements*.lock
@@ -29,6 +28,7 @@
 # Python build files
 __pycache__/
 /src/scanpy/_version.py
+/ci/scanpy-min-deps.txt
 /dist/
 /*-env/
 /env-*/

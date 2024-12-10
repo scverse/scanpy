@@ -1,26 +1,26 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
 from scipy import sparse
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from .._utils import _resolve_axis
+from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Union
 
     from numpy.typing import NDArray
 
-    Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
+    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
 
-# Used with get_args
-AggType = Literal["count_nonzero", "mean", "sum", "var"]
+# Used with get_literal_vals
+AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
 
 
 class Aggregate:
@@ -138,8 +138,29 @@ class Aggregate:
             var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
         return mean_, var_
 
+    def median(self) -> Array:
+        """\
+        Compute the median per feature per group of observations.
 
-def _power(X: Array, power: float | int) -> Array:
+        Returns
+        -------
+        Array of median.
+        """
+
+        medians = []
+        for group in np.unique(self.groupby.codes):
+            group_mask = self.groupby.codes == group
+            group_data = self.data[group_mask]
+            if sparse.issparse(group_data):
+                if group_data.format != "csc":
+                    group_data = group_data.tocsc()
+                medians.append(csc_median_axis_0(group_data))
+            else:
+                medians.append(np.median(group_data, axis=0))
+        return np.array(medians)
+
+
+def _power(X: Array, power: float) -> Array:
     """\
     Generate elementwise power of a matrix.
 
@@ -326,8 +347,8 @@ def aggregate_array(
     result = {}
 
     funcs = set([func] if isinstance(func, str) else func)
-    if unknown := funcs - set(get_args(AggType)):
-        raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+    if unknown := funcs - get_literal_vals(AggType):
+        raise ValueError(f"func {unknown} is not one of {get_literal_vals(AggType)}")
 
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()
@@ -343,7 +364,9 @@ def aggregate_array(
         result["var"] = var_
         if "mean" in funcs:
             result["mean"] = mean_
-
+    if "median" in funcs:
+        agg = groupby.median()
+        result["median"] = agg
     return result
 
 

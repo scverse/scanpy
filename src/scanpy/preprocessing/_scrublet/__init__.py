@@ -15,7 +15,7 @@ from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 
@@ -58,7 +58,7 @@ def scrublet(
     threshold: float | None = None,
     verbose: bool = True,
     copy: bool = False,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
 ) -> AnnData | None:
     """\
     Predict doublets using Scrublet :cite:p:`Wolock2019`.
@@ -245,7 +245,7 @@ def scrublet(
         return {"obs": ad_obs.obs, "uns": ad_obs.uns["scrublet"]}
 
     if batch_key is not None:
-        if batch_key not in adata.obs.keys():
+        if batch_key not in adata.obs.columns:
             msg = (
                 "`batch_key` must be a column of .obs in the input AnnData object,"
                 f"but {batch_key!r} is not in {adata.obs.keys()!r}."
@@ -309,7 +309,7 @@ def _scrublet_call_doublets(
     knn_dist_metric: _Metric | _MetricFn = "euclidean",
     get_doublet_neighbor_parents: bool = False,
     threshold: float | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     verbose: bool = True,
 ) -> AnnData:
     """\
@@ -503,7 +503,7 @@ def scrublet_simulate_doublets(
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    random_seed: AnyRandom = 0,
+    random_seed: _LegacyRandom = 0,
 ) -> AnnData:
     """\
     Simulate doublets by adding the counts of random observed transcriptome pairs.

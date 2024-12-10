@@ -3,11 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from legacy_api_wrap import legacy_api
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._settings import settings
 from . import _utils
 
@@ -104,7 +103,8 @@ def highly_variable_genes(
 
 
 # backwards compat
-@legacy_api("log", "show", "save")
+@deprecated("Use sc.pl.highly_variable_genes instead")
+@old_positionals("log", "show", "save")
 def filter_genes_dispersion(
     result: np.recarray,
     *,

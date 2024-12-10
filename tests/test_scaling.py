@@ -120,7 +120,7 @@ def test_mask_string():
     adata.obs["some cells"] = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
     sc.pp.scale(adata, mask_obs="some cells")
     assert np.array_equal(adata.X, X_centered_for_mask)
-    assert "mean of some cells" in adata.var.keys()
+    assert "mean of some cells" in adata.var.columns
 
 
 @pytest.mark.parametrize("zero_center", [True, False])

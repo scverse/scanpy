@@ -16,7 +16,11 @@ if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
-    from anndata.experimental import sparse_dataset
+
+    if Version(anndata_version) >= Version("0.11.0rc2"):
+        from anndata.io import sparse_dataset
+    else:
+        from anndata.experimental import sparse_dataset
 
     def make_sparse(x):
         return sparse_dataset(x)
@@ -50,12 +54,12 @@ def pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc3k_parametrized(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
     return pbmc3ks_parametrized_session[False].copy
 
 
-@pytest.fixture()
+@pytest.fixture
 def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
     return pbmc3ks_parametrized_session[True].copy
 

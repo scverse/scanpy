@@ -12,14 +12,22 @@ import random
 import re
 import sys
 import warnings
-from collections import namedtuple
-from contextlib import contextmanager
+from collections.abc import Sequence
+from contextlib import contextmanager, suppress
 from enum import Enum
-from functools import partial, singledispatch, wraps
-from operator import mul, truediv
+from functools import partial, reduce, singledispatch, wraps
+from operator import mul, or_, truediv
 from textwrap import dedent
-from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, Union, overload
+from types import MethodType, ModuleType, UnionType
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    NamedTuple,
+    Union,
+    get_args,
+    get_origin,
+    overload,
+)
 from weakref import WeakSet
 
 import h5py
@@ -42,19 +50,21 @@ else:
     from anndata._core.sparse_dataset import SparseDataset
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
-    from typing import Any, Callable, Literal, TypeVar
+    from typing import Any, TypeVar
 
     from anndata import AnnData
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
+    from .._compat import _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
 
-# e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-# maybe in the future random.Generator
-AnyRandom = Union[int, np.random.RandomState, None]
+SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
+RNGLike = np.random.Generator | np.random.BitGenerator
+
+LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
 class Empty(Enum):
@@ -281,10 +291,8 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets)))
-    try:
+    with suppress(KeyError):
         g.es["weight"] = weights
-    except KeyError:
-        pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
             f"The constructed graph has only {g.vcount()} nodes. "
@@ -298,6 +306,11 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 # --------------------------------------------------------------------------------
 
 
+class AssoResult(NamedTuple):
+    asso_names: list[str]
+    asso_matrix: NDArray[np.floating]
+
+
 def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
@@ -306,7 +319,7 @@ def compute_association_matrix_of_groups(
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: int | None = 2,
-):
+) -> AssoResult:
     """Compute overlaps between groups.
 
     See ``identify_groups`` for identifying the groups.
@@ -348,8 +361,8 @@ def compute_association_matrix_of_groups(
                 f"Ignoring category {cat!r} "
                 "as it’s in `settings.categories_to_ignore`."
             )
-    asso_names = []
-    asso_matrix = []
+    asso_names: list[str] = []
+    asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
             pred_group = str(ipred_group)
@@ -382,13 +395,12 @@ def compute_association_matrix_of_groups(
             if asso_matrix[-1][i] > threshold
         ]
         asso_names += ["\n".join(name_list_pred[:max_n_names])]
-    Result = namedtuple(
-        "compute_association_matrix_of_groups", ["asso_names", "asso_matrix"]
-    )
-    return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
+    return AssoResult(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-def get_associated_colors_of_groups(reference_colors, asso_matrix):
+def get_associated_colors_of_groups(
+    reference_colors: Mapping[int, str], asso_matrix: NDArray[np.floating]
+) -> list[dict[str, float]]:
     return [
         {
             reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
@@ -483,7 +495,7 @@ def moving_average(a: np.ndarray, n: int):
     return ret[n - 1 :] / n
 
 
-def get_random_state(seed: AnyRandom) -> np.random.RandomState:
+def _get_legacy_random(seed: _LegacyRandom) -> np.random.RandomState:
     if isinstance(seed, np.random.RandomState):
         return seed
     return np.random.RandomState(seed)
@@ -534,15 +546,28 @@ def update_params(
     return updated_params
 
 
+# `get_args` returns `tuple[Any]` so I don’t think it’s possible to get the correct type here
+def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
+    """Get all literal values from a Literal or Union of … of Literal type."""
+    if isinstance(typ, UnionType | LegacyUnionType):
+        return reduce(
+            or_, (dict.fromkeys(get_literal_vals(t)) for t in get_args(typ))
+        ).keys()
+    if get_origin(typ) is Literal:
+        return dict.fromkeys(get_args(typ)).keys()
+    msg = f"{typ} is not a valid Literal"
+    raise TypeError(msg)
+
+
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
 
 
 if TYPE_CHECKING:
-    _SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-    _MemoryArray = Union[NDArray, _SparseMatrix]
-    _SupportedArray = Union[_MemoryArray, DaskArray]
+    _SparseMatrix = sparse.csr_matrix | sparse.csc_matrix
+    _MemoryArray = NDArray | _SparseMatrix
+    _SupportedArray = _MemoryArray | DaskArray
 
 
 @singledispatch
@@ -584,13 +609,13 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: np.ndarray,
+    X: ArrayLike,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
+    out: ArrayLike | None = None,
 ) -> np.ndarray:
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
@@ -613,11 +638,10 @@ def _(
     out: sparse.csr_matrix | sparse.csc_matrix | None = None,
 ) -> sparse.csr_matrix | sparse.csc_matrix:
     check_op(op)
-    if out is not None:
-        if X.data is not out.data:
-            raise ValueError(
-                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
-            )
+    if out is not None and X.data is not out.data:
+        raise ValueError(
+            "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+        )
     if not allow_divide_by_zero and op is truediv:
         scaling_array = scaling_array.copy() + (scaling_array == 0)
 
@@ -684,7 +708,7 @@ def _(
     column_scale = axis == 1
 
     if isinstance(scaling_array, DaskArray):
-        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+        if (row_scale and X.chunksize[0] != scaling_array.chunksize[0]) or (
             column_scale
             and (
                 (
@@ -713,6 +737,27 @@ def _(
         meta=X._meta,
         out=out,
         allow_divide_by_zero=allow_divide_by_zero,
+    )
+
+
+@singledispatch
+def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
+    return np.count_nonzero(X, axis=axis)
+
+
+@axis_nnz.register(sparse.spmatrix)
+def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
+    return X.getnnz(axis=axis)
+
+
+@axis_nnz.register(DaskArray)
+def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
+    return X.map_blocks(
+        partial(axis_nnz, axis=axis),
+        dtype=np.int64,
+        meta=np.array([], dtype=np.int64),
+        drop_axis=0,
+        chunks=len(X.to_delayed()) * (X.chunksize[int(not axis)],),
     )
 
 
@@ -753,8 +798,8 @@ def _(
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
         # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
-            args[0], (sparse.spmatrix, np.matrix)
+        if isinstance(X._meta, sparse.spmatrix | np.matrix) or isinstance(
+            args[0], sparse.spmatrix | np.matrix
         ):
             kwargs.pop("keepdims", None)
             axis = kwargs["axis"]
@@ -808,7 +853,7 @@ def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
 
 def select_groups(
     adata: AnnData,
-    groups_order_subset: list[str] | Literal["all"] = "all",
+    groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
 ) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
@@ -1113,7 +1158,7 @@ def _resolve_axis(
 
 
 def is_backed_type(X: object) -> bool:
-    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
+    return isinstance(X, SparseDataset | h5py.File | h5py.Dataset)
 
 
 def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
@@ -214,12 +215,10 @@ def sam(
         return axes
 
     if isinstance(c, str):
-        try:
+        with contextlib.suppress(KeyError):
             c = np.array(list(adata.obs[c]))
-        except KeyError:
-            pass
 
-    if isinstance(c[0], (str, np.str_)) and isinstance(c, (np.ndarray, list)):
+    if isinstance(c[0], str | np.str_) and isinstance(c, np.ndarray | list):
         import samalg.utilities as ut
 
         i = ut.convert_annotations(c)
@@ -239,7 +238,7 @@ def sam(
             cbar = plt.colorbar(cax, ax=axes, ticks=ui)
             cbar.ax.set_yticklabels(c[ai])
     else:
-        if not isinstance(c, (np.ndarray, list)):
+        if not isinstance(c, np.ndarray | list):
             colorbar = False
         i = c
 

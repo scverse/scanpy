@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     _InitPos = Literal["paga", "spectral", "random"]
 
@@ -55,7 +55,7 @@ def umap(
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: _InitPos | np.ndarray | None = "spectral",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap", "rapids", "densmap"] = "umap",
@@ -228,7 +228,7 @@ def umap(
         a, b = find_ab_params(spread, min_dist)
 
     adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
+    if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(

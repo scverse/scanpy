@@ -4,7 +4,7 @@ Calculate overlaps of rank_genes_groups marker genes with marker gene dictionari
 
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,10 +30,7 @@ def _calc_overlap_count(markers1: dict, markers2: dict):
     overlaps = np.zeros((len(markers1), len(markers2)))
 
     for j, marker_group in enumerate(markers1):
-        tmp = [
-            len(markers2[i].intersection(markers1[marker_group]))
-            for i in markers2.keys()
-        ]
+        tmp = [len(markers2[i].intersection(markers1[marker_group])) for i in markers2]
         overlaps[j, :] = tmp
 
     return overlaps
@@ -51,7 +48,7 @@ def _calc_overlap_coef(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / max(min(len(markers2[i]), len(markers1[marker_group])), 1)
-            for i in markers2.keys()
+            for i in markers2
         ]
         overlap_coef[j, :] = tmp
 
@@ -70,7 +67,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / len(markers2[i].union(markers1[marker_group]))
-            for i in markers2.keys()
+            for i in markers2
         ]
         jacc_results[j, :] = tmp
 
@@ -138,7 +135,7 @@ def marker_gene_overlap(
 
     Returns
     -------
-    Returns :class:`pandas.DataFrame` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+    Returns :class:`pandas.DataFrame` if `inplace=False`, else returns an `AnnData` object where it sets the following field:
 
     `adata.uns[key_added]` : :class:`pandas.DataFrame` (dtype `float`)
         Marker gene overlap scores. Default for `key_added` is `'marker_gene_overlap'`.
@@ -190,7 +187,7 @@ def marker_gene_overlap(
     if normalize is not None and method != "overlap_count":
         raise ValueError("Can only normalize with method=`overlap_count`.")
 
-    if not all(isinstance(val, cabc.Set) for val in reference_markers.values()):
+    if not all(isinstance(val, AbstractSet) for val in reference_markers.values()):
         try:
             reference_markers = {
                 key: set(val) for key, val in reference_markers.items()

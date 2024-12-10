@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, TypedDict, Union, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import pytest
 
@@ -56,7 +56,7 @@ def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, N
     sc.settings._root_logger.removeHandler(caplog.handler)
 
 
-@pytest.fixture()
+@pytest.fixture
 def imported_modules():
     return IMPORTED
 
@@ -69,7 +69,7 @@ class CompareResult(TypedDict):
     tol: int
 
 
-@pytest.fixture()
+@pytest.fixture
 def check_same_image(add_nunit_attachment):
     from urllib.parse import quote
 
@@ -88,7 +88,7 @@ def check_same_image(add_nunit_attachment):
             return f"{descr} ({basename})" if basename else descr
 
         result = cast(
-            Union[CompareResult, None],
+            CompareResult | None,
             compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:
@@ -117,7 +117,7 @@ def check_same_image(add_nunit_attachment):
     return check_same_image
 
 
-@pytest.fixture()
+@pytest.fixture
 def image_comparer(check_same_image):
     from matplotlib import pyplot as plt
 
@@ -139,7 +139,7 @@ def image_comparer(check_same_image):
     return save_and_compare
 
 
-@pytest.fixture()
+@pytest.fixture
 def plt():
     from matplotlib import pyplot as plt
 

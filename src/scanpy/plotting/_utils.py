@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import warnings
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Literal, Union
+from collections.abc import Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, TypedDict, overload
 
 import matplotlib as mpl
 import numpy as np
@@ -19,7 +18,7 @@ from matplotlib.patches import Circle
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, _empty
 from . import palettes
 
 if TYPE_CHECKING:
@@ -32,12 +31,13 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from PIL.Image import Image
 
+    from .._utils import Empty
+
     # TODO: more
     DensityNorm = Literal["area", "count", "width"]
 
 # These are needed by _wraps_plot_scatter
-_IGraphLayout = Literal["fa", "fr", "rt", "rt_circular", "drl", "eq_tree"]
-VBound = Union[str, float, Callable[[Sequence[float]], float]]
+VBound = str | float | Callable[[Sequence[float]], float]
 _FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
 _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
@@ -59,7 +59,7 @@ _LegendLoc = Literal[
     "upper center",
     "center",
 ]
-ColorLike = Union[str, tuple[float, ...]]
+ColorLike = str | tuple[float, ...]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -156,7 +156,7 @@ def timeseries_subplot(
     """
 
     if color is not None:
-        use_color_map = isinstance(color[0], (float, np.floating))
+        use_color_map = isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
     if X.ndim == 1:
@@ -371,7 +371,7 @@ def default_palette(
 ) -> str | Cycler:
     if palette is None:
         return rcParams["axes.prop_cycle"]
-    elif not isinstance(palette, (str, Cycler)):
+    elif not isinstance(palette, str | Cycler):
         return cycler(color=palette)
     else:
         return palette
@@ -444,12 +444,12 @@ def _set_colors_for_categorical_obs(
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
         cmap = plt.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-    elif isinstance(palette, cabc.Mapping):
+    elif isinstance(palette, Mapping):
         colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, cabc.Sequence):
+        if isinstance(palette, Sequence):
             if len(palette) < len(categories):
                 logg.warning(
                     "Length of palette colors is smaller than the number of "
@@ -550,7 +550,7 @@ def add_colors_for_categorical_sample_annotation(
 def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
     import networkx as nx
 
-    if not isinstance(axs, cabc.Sequence):
+    if not isinstance(axs, Sequence):
         axs = [axs]
 
     if neighbors_key is None:
@@ -576,7 +576,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
-    if not isinstance(axs, cabc.Sequence):
+    if not isinstance(axs, Sequence):
         axs = [axs]
     v_prefix = next(
         (p for p in ["velocity", "Delta"] if f"{p}_{basis}" in adata.obsm), None
@@ -723,7 +723,7 @@ def setup_axes(
                 ax = plt.axes([left, bottom, width, height], projection="3d")
             axs.append(ax)
     else:
-        axs = ax if isinstance(ax, cabc.Sequence) else [ax]
+        axs = ax if isinstance(ax, Sequence) else [ax]
 
     return axs, panel_pos, draw_region_width, figure_width
 
@@ -762,7 +762,7 @@ def scatter_base(
     Depending on whether supplying a single array or a list of arrays,
     return a single axis or a list of axes.
     """
-    if isinstance(highlights, cabc.Mapping):
+    if isinstance(highlights, Mapping):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
     else:
@@ -970,7 +970,14 @@ def scale_to_zero_one(x):
     return xscaled
 
 
-def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
+class _Level(TypedDict):
+    total: int
+    current: int
+
+
+def hierarchy_pos(
+    G, root: int, levels_: Mapping[int, int] | None = None, width=1.0, height=1.0
+) -> dict[int, tuple[float, float]]:
     """Tree layout for networkx graph.
 
     See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
@@ -989,37 +996,47 @@ def hierarchy_pos(G, root, levels=None, width=1.0, height=1.0):
     width: horizontal space allocated for drawing
     height: vertical space allocated for drawing
     """
-    TOTAL = "total"
-    CURRENT = "current"
 
-    def make_levels(levels, node=root, currentLevel=0, parent=None):
+    def make_levels(
+        levels: dict[int, _Level],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+    ) -> dict[int, _Level]:
         """Compute the number of nodes for each level"""
-        if currentLevel not in levels:
-            levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
-        levels[currentLevel][TOTAL] += 1
-        neighbors = list(G.neighbors(node))
+        if current_level not in levels:
+            levels[current_level] = _Level(total=0, current=0)
+        levels[current_level]["total"] += 1
+        neighbors: list[int] = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            levels = make_levels(levels, neighbor, currentLevel + 1, node)
+            levels = make_levels(levels, neighbor, current_level + 1, node)
         return levels
 
-    def make_pos(pos, node=root, currentLevel=0, parent=None, vert_loc=0):
-        dx = 1 / levels[currentLevel][TOTAL]
+    if levels_ is None:
+        levels = make_levels({})
+    else:
+        levels = {k: _Level(total=0, current=0) for k, v in levels_.items()}
+
+    def make_pos(
+        pos: dict[int, tuple[float, float]],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+        vert_loc: float = 0.0,
+    ):
+        dx = 1 / levels[current_level]["total"]
         left = dx / 2
-        pos[node] = ((left + dx * levels[currentLevel][CURRENT]) * width, vert_loc)
-        levels[currentLevel][CURRENT] += 1
-        neighbors = list(G.neighbors(node))
+        pos[node] = ((left + dx * levels[current_level]["current"]) * width, vert_loc)
+        levels[current_level]["current"] += 1
+        neighbors: list[int] = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            pos = make_pos(pos, neighbor, currentLevel + 1, node, vert_loc - vert_gap)
+            pos = make_pos(pos, neighbor, current_level + 1, node, vert_loc - vert_gap)
         return pos
 
-    if levels is None:
-        levels = make_levels({})
-    else:
-        levels = {k: {TOTAL: v, CURRENT: 0} for k, v in levels.items()}
     vert_gap = height / (max(levels.keys()) + 1)
     return make_pos({})
 
@@ -1263,10 +1280,10 @@ def fix_kwds(kwds_dict, **kwargs):
 
 
 def _get_basis(adata: AnnData, basis: str):
-    if basis in adata.obsm.keys():
+    if basis in adata.obsm:
         basis_key = basis
 
-    elif f"X_{basis}" in adata.obsm.keys():
+    elif f"X_{basis}" in adata.obsm:
         basis_key = f"X_{basis}"
 
     return basis_key
@@ -1293,10 +1310,31 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
     return norm
 
 
+@overload
 def _deprecated_scale(
-    density_norm: DensityNorm, scale: DensityNorm | None, *, default: DensityNorm
-) -> DensityNorm:
-    if scale is None:
+    density_norm: DensityNorm,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm,
+) -> DensityNorm: ...
+
+
+@overload
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty: ...
+
+
+def _deprecated_scale(
+    density_norm: DensityNorm | Empty,
+    scale: DensityNorm | Empty,
+    *,
+    default: DensityNorm | Empty = _empty,
+) -> DensityNorm | Empty:
+    if scale is _empty:
         return density_norm
     if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
@@ -1304,3 +1342,8 @@ def _deprecated_scale(
     msg = "`scale` is deprecated, use `density_norm` instead"
     warnings.warn(msg, FutureWarning)
     return scale
+
+
+def _dk(dendrogram: bool | str | None) -> str | None:
+    """Helper to convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
+    return None if isinstance(dendrogram, bool) else dendrogram

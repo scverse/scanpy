@@ -20,7 +20,8 @@ from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
-    from typing import Callable, Literal
+    from collections.abc import Callable
+    from typing import Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -36,7 +37,7 @@ def adata_sess() -> AnnData:
     return adata
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata(adata_sess: AnnData) -> AnnData:
     return adata_sess.copy()
 
@@ -255,7 +256,7 @@ def test_pearson_residuals_general(
         "residual_variances",
         "highly_variable_rank",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # check consistency with normalization method
     if subset:
@@ -324,7 +325,7 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
         "highly_variable_nbatches",
         "highly_variable_intersection",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # general checks on ranks, hvg flag and residual variance
     _check_pearson_hvg_columns(output_df, n_top_genes)
@@ -554,6 +555,14 @@ def test_batches():
     ]
 
     assert np.all(np.isin(colnames, hvg1.columns))
+
+
+def test_degenerate_batches():
+    adata = AnnData(
+        X=np.random.randn(10, 100),
+        obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
+    )
+    sc.pp.highly_variable_genes(adata, batch_key="batch")
 
 
 @needs.skmisc

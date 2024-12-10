@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import get_args
-
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -10,25 +8,25 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._utils import _resolve_axis
+from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 
-@pytest.fixture(params=get_args(AggType))
+@pytest.fixture(params=get_literal_vals(AggType))
 def metric(request: pytest.FixtureRequest) -> AggType:
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def df_base():
     ax_base = ["A", "B"]
     return pd.DataFrame(index=ax_base)
 
 
-@pytest.fixture()
+@pytest.fixture
 def df_groupby():
     ax_groupby = [
         *["v0", "v1", "v2"],
@@ -49,7 +47,7 @@ def df_groupby():
     return df_groupby
 
 
-@pytest.fixture()
+@pytest.fixture
 def X():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v

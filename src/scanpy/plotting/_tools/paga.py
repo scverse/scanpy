@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import warnings
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING
@@ -16,6 +16,8 @@ from pandas.api.types import CategoricalDtype
 from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
+from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
+
 from ... import _utils as _sc_utils
 from ... import logging as logg
 from ..._compat import old_positionals
@@ -24,14 +26,18 @@ from .. import _utils
 from .._utils import matrix
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
     from typing import Any, Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
+    from scipy.sparse import spmatrix
 
-    from .._utils import _FontSize, _FontWeight, _IGraphLayout, _LegendLoc
+    from ..._compat import _LegacyRandom
+    from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
+    from .._utils import _FontSize, _FontWeight, _LegendLoc
+
+    _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
 @old_positionals(
@@ -68,7 +74,7 @@ def paga_compare(
     components=None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "on data",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,
     color_map=None,
@@ -202,13 +208,13 @@ def paga_compare(
 
 
 def _compute_pos(
-    adjacency_solid,
+    adjacency_solid: spmatrix | np.ndarray,
     *,
-    layout=None,
-    random_state=0,
-    init_pos=None,
+    layout: _Layout | None = None,
+    random_state: _LegacyRandom = 0,
+    init_pos: np.ndarray | None = None,
     adj_tree=None,
-    root=0,
+    root: int = 0,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
     import random
@@ -220,50 +226,15 @@ def _compute_pos(
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = "fr"
-    if layout == "fa":
-        try:
-            from fa2 import ForceAtlas2
-        except ImportError:
-            logg.warning(
-                "Package 'fa2' is not installed, falling back to layout 'fr'."
-                "To use the faster and better ForceAtlas2 layout, "
-                "install package 'fa2' (`pip install fa2`)."
-            )
-            layout = "fr"
+    layout = coerce_fa2_layout(layout)
     if layout == "fa":
         # np.random.seed(random_state)
         if init_pos is None:
             init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
-        forceatlas2 = ForceAtlas2(
-            # Behavior alternatives
-            outboundAttractionDistribution=False,  # Dissuade hubs
-            linLogMode=False,  # NOT IMPLEMENTED
-            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-            edgeWeightInfluence=1.0,
-            # Performance
-            jitterTolerance=1.0,  # Tolerance
-            barnesHutOptimize=True,
-            barnesHutTheta=1.2,
-            multiThreaded=False,  # NOT IMPLEMENTED
-            # Tuning
-            scalingRatio=2.0,
-            strongGravityMode=False,
-            gravity=1.0,
-            # Log
-            verbose=False,
-        )
-        if "maxiter" in layout_kwds:
-            iterations = layout_kwds["maxiter"]
-        elif "iterations" in layout_kwds:
-            iterations = layout_kwds["iterations"]
-        else:
-            iterations = 500
-        pos_list = forceatlas2.forceatlas2(
-            adjacency_solid, pos=init_coords, iterations=iterations
-        )
-        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+        pos_list = fa2_positions(adjacency_solid, init_coords, **layout_kwds)
+        pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     elif layout == "eq_tree":
         nx_g_tree = nx.Graph(adj_tree)
         pos = _utils.hierarchy_pos(nx_g_tree, root)
@@ -302,7 +273,7 @@ def _compute_pos(
                 ).coords
             except AttributeError:  # hack for empty graphs...
                 pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
-        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+        pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     if len(pos) == 1:
         pos[0] = (0.5, 0.5)
     pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
@@ -333,7 +304,7 @@ def paga(
     *,
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
-    layout: _IGraphLayout | None = None,
+    layout: _Layout | None = None,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
     init_pos: np.ndarray | None = None,
     root: int | str | Sequence[int] | None = 0,
@@ -535,14 +506,12 @@ def paga(
     groups_key = adata.uns["paga"]["groups"]
 
     def is_flat(x):
-        has_one_per_category = isinstance(x, cabc.Collection) and len(x) == len(
+        has_one_per_category = isinstance(x, Collection) and len(x) == len(
             adata.obs[groups_key].cat.categories
         )
         return has_one_per_category or x is None or isinstance(x, str)
 
-    if isinstance(colors, cabc.Mapping) and isinstance(
-        colors[next(iter(colors))], cabc.Mapping
-    ):
+    if isinstance(colors, Mapping) and isinstance(colors[next(iter(colors))], Mapping):
         # handle paga pie, remap string keys to integers
         names_to_ixs = {
             n: i for i, n in enumerate(adata.obs[groups_key].cat.categories)
@@ -583,7 +552,7 @@ def paga(
                 f"it needs to be one of {labels} not {root!r}."
             )
         root = list(labels).index(root)
-    if isinstance(root, cabc.Sequence) and root[0] in labels:
+    if isinstance(root, Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
@@ -629,7 +598,7 @@ def paga(
             sct = _paga_graph(
                 adata,
                 axs[icolor],
-                colors=colors if isinstance(colors, cabc.Mapping) else c,
+                colors=colors if isinstance(colors, Mapping) else c,
                 solid_edges=solid_edges,
                 dashed_edges=dashed_edges,
                 transitions=transitions,
@@ -733,11 +702,11 @@ def _paga_graph(
         and isinstance(node_labels, str)
         and node_labels != adata.uns["paga"]["groups"]
     ):
-        raise ValueError(
-            "Provide a list of group labels for the PAGA groups {}, not {}.".format(
-                adata.uns["paga"]["groups"], node_labels
-            )
+        msg = (
+            "Provide a list of group labels for the PAGA groups "
+            f"{adata.uns['paga']['groups']}, not {node_labels}."
         )
+        raise ValueError(msg)
     groups_key = adata.uns["paga"]["groups"]
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
@@ -757,7 +726,7 @@ def _paga_graph(
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
     # convert pos to array and dict
-    if not isinstance(pos, (Path, str)):
+    if not isinstance(pos, Path | str):
         pos_array = pos
     else:
         pos = Path(pos)
@@ -964,7 +933,7 @@ def _paga_graph(
             patheffects.withStroke(linewidth=fontoutline, foreground="w")
         ]
     # usual scatter plot
-    if not isinstance(colors[0], cabc.Mapping):
+    if not isinstance(colors[0], Mapping):
         n_groups = len(pos_array)
         sct = ax.scatter(
             pos_array[:, 0],
@@ -988,7 +957,7 @@ def _paga_graph(
     # else pie chart plot
     else:
         for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
-            if not isinstance(colors[ix], cabc.Mapping):
+            if not isinstance(colors[ix], Mapping):
                 raise ValueError(
                     f"{colors[ix]} is neither a dict of valid "
                     "matplotlib colors nor a valid matplotlib color."
@@ -1085,7 +1054,7 @@ def paga_path(
     show_node_names: bool = True,
     show_yticks: bool = True,
     show_colorbar: bool = True,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,
@@ -1163,7 +1132,7 @@ def paga_path(
         groups_key = adata.uns["paga"]["groups"]
     groups_names = adata.obs[groups_key].cat.categories
 
-    if "dpt_pseudotime" not in adata.obs.keys():
+    if "dpt_pseudotime" not in adata.obs.columns:
         raise ValueError(
             "`pl.paga_path` requires computation of a pseudotime `tl.dpt` "
             "for ordering at single-cell resolution"

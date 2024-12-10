@@ -10,17 +10,29 @@ import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
-from anndata import (
-    AnnData,
-    read_csv,
-    read_excel,
-    read_h5ad,
-    read_hdf,
-    read_loom,
-    read_mtx,
-    read_text,
-)
-from legacy_api_wrap import legacy_api
+from packaging.version import Version
+
+if Version(anndata.__version__) >= Version("0.11.0rc2"):
+    from anndata.io import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+    )
+else:
+    from anndata import (
+        read_csv,
+        read_excel,
+        read_h5ad,
+        read_hdf,
+        read_loom,
+        read_mtx,
+        read_text,
+    )
+from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -119,7 +131,7 @@ def read(
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
-        Parameters passed to :func:`~anndata.read_loom`.
+        Parameters passed to :func:`~anndata.io.read_loom`.
 
     Returns
     -------
@@ -673,7 +685,7 @@ def write(
 # -------------------------------------------------------------------------------
 
 
-@legacy_api("as_header")
+@old_positionals("as_header")
 def read_params(
     filename: Path | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
@@ -703,13 +715,12 @@ def read_params(
 
     params = OrderedDict([])
     for line in filename.open():
-        if "=" in line:
-            if not as_header or line.startswith("#"):
-                line = line[1:] if line.startswith("#") else line
-                key, val = line.split("=")
-                key = key.strip()
-                val = val.strip()
-                params[key] = convert_string(val)
+        if "=" in line and (not as_header or line.startswith("#")):
+            line = line[1:] if line.startswith("#") else line
+            key, val = line.split("=")
+            key = key.strip()
+            val = val.strip()
+            params[key] = convert_string(val)
     return params
 
 

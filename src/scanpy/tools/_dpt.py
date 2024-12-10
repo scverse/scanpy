@@ -137,7 +137,7 @@ def dpt(
             "    adata.uns['iroot'] = root_cell_index\n"
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
-    if "X_diffmap" not in adata.obsm.keys():
+    if "X_diffmap" not in adata.obsm:
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import collections.abc as cabc
 import os
 import sys
 from argparse import ArgumentParser, Namespace, _SubParsersAction
+from collections.abc import MutableMapping
 from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
@@ -11,7 +11,7 @@ from subprocess import run
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
     from subprocess import CompletedProcess
     from typing import Any
 
@@ -27,7 +27,7 @@ class _DelegatingSubparsersAction(_SubParsersAction):
         )
 
 
-class _CommandDelegator(cabc.MutableMapping):
+class _CommandDelegator(MutableMapping):
     """\
     Provide the ability to delegate,
     but don’t calculate the whole list until necessary
@@ -64,7 +64,7 @@ class _CommandDelegator(cabc.MutableMapping):
 
     # These methods retrieve the command list or help with doing it
 
-    def __iter__(self) -> Generator[str, None, None]:
+    def __iter__(self) -> Iterator[str]:
         yield from self.parser_map
         yield from self.commands
 
