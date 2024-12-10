@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING
-
+import anndata
 import anndata.utils
 import h5py
 import numpy as np
@@ -33,6 +33,10 @@ else:
         read_text,
     )
 from anndata import AnnData
+import multiprocessing as mp
+import time
+import numba
+import scipy
 from matplotlib.image import imread
 
 from . import logging as logg
@@ -44,6 +48,14 @@ if TYPE_CHECKING:
     from typing import BinaryIO, Literal
 
     from ._utils import Empty
+
+indices_type = np.int64
+indices_shm_type = "l"
+
+semDataLoaded = None  # will be initialized later
+semDataCopied = None  # will be initialized later
+
+thread_workload = 4000000 # experimented value
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -65,6 +77,112 @@ avail_exts = {
 } | text_exts
 """Available file formats for reading data. """
 
+def _load_helper(fname, i, k, datalen, dataArray, indicesArray, startsArray, endsArray):
+    f = h5py.File(fname,'r')
+    dataA = np.frombuffer(dataArray,dtype=np.float32)
+    indicesA = np.frombuffer(indicesArray,dtype=indices_type)
+    startsA = np.frombuffer(startsArray,dtype=np.int64)
+    endsA = np.frombuffer(endsArray,dtype=np.int64)
+    for j in range(datalen//(k*thread_workload)+1):
+        # compute start, end
+        s = i*datalen//k + j*thread_workload
+        e = min(s+thread_workload, (i+1)*datalen//k)
+        length = e-s
+        startsA[i]=s
+        endsA[i]=e
+        # read direct
+        f['X']['data'].read_direct(dataA, np.s_[s:e], np.s_[i*thread_workload:i*thread_workload+length])
+        f['X']['indices'].read_direct(indicesA, np.s_[s:e], np.s_[i*thread_workload:i*thread_workload+length])
+        
+        # coordinate with copy threads
+        semDataLoaded[i].release()  # done data load
+        semDataCopied[i].acquire()  # wait until  data copied
+
+def _waitload(i):
+    semDataLoaded[i].acquire()
+
+def _signalcopy(i):
+    semDataCopied[i].release()
+
+@numba.njit(parallel=True)
+def _fast_copy(data,dataA,indices,indicesA,starts,ends,k,m):
+    for i in numba.prange(k):
+        for _ in range(m):
+            with numba.objmode():
+                _waitload(i)
+            length = ends[i]-starts[i]
+            data[starts[i]:ends[i]] = dataA[i*thread_workload:i*thread_workload+length]
+            indices[starts[i]:ends[i]] = indicesA[i*thread_workload:i*thread_workload+length]
+            with numba.objmode():
+                _signalcopy(i)
+
+def fastload(fname, backed): #, firstn=1):
+    t0 = time.time()
+    f = h5py.File(fname,backed)
+    assert ('X' in f.keys() and 'var' in f.keys() and 'obs' in f.keys())
+
+    # get obs dataframe
+    rows = f['obs'][ list(f['obs'].keys())[0] ].size
+    # load index pointers, prepare shared arrays
+    indptr = f['X']['indptr'][0:rows+1]
+    datalen = int(indptr[-1])
+
+    if datalen<thread_workload:
+        f.close()
+        return read_h5ad(fname, backed=backed)
+    if '_index' in f['obs'].keys():
+        dfobsind = pd.Series(f['obs']['_index'].asstr()[0:rows])
+        dfobs = pd.DataFrame(index=dfobsind)
+    else:
+        dfobs = pd.DataFrame()
+    for k in f['obs'].keys():
+        if k=='_index': continue
+        dfobs[k] = f['obs'][k].asstr()[...]
+
+    # get var dataframe
+    if '_index' in f['var'].keys():
+        dfvarind = pd.Series(f['var']['_index'].asstr()[...])
+        dfvar = pd.DataFrame(index=dfvarind)
+    else:
+        dfvar = pd.DataFrame()
+    for k in f['var'].keys():
+        if k=='_index': continue
+        dfvar[k] = f['var'][k].asstr()[...]
+
+    f.close()
+    k = numba.get_num_threads()
+    dataArray = mp.Array('f',k*thread_workload,lock=False)     # should be in shared memory
+    indicesArray = mp.Array(indices_shm_type,k*thread_workload,lock=False)  # should be in shared memory
+    startsArray = mp.Array('l',k,lock=False)  # start index of data read
+    endsArray = mp.Array('l',k,lock=False)    # end index (noninclusive) of data read
+    global semDataLoaded
+    global semDataCopied
+    semDataLoaded = [mp.Semaphore(0) for _ in range(k)]
+    semDataCopied = [mp.Semaphore(0) for _ in range(k)]
+    dataA = np.frombuffer(dataArray,dtype=np.float32)
+    indicesA = np.frombuffer(indicesArray,dtype=indices_type)
+    startsA = np.frombuffer(startsArray, dtype=np.int64)
+    endsA = np.frombuffer(endsArray, dtype=np.int64)
+    data = np.empty(datalen, dtype=np.float32)
+    indices = np.empty(datalen, dtype=indices_type)
+
+    procs = [mp.Process(target=_load_helper, args=(fname, i, k, datalen, dataArray, indicesArray, startsArray, endsArray))  for i in range(k)]
+    for p in procs: p.start()
+
+    _fast_copy(data,dataA,indices,indicesA,startsA,endsA,k,datalen//(k*thread_workload)+1)
+
+    for p in procs: p.join()
+    
+    X = scipy.sparse.csr_matrix((0,0))
+    X.data = data
+    X.indices = indices
+    X.indptr = indptr
+    X._shape = ((rows, dfvar.shape[0]))
+
+    # create AnnData
+    adata = anndata.AnnData(X, dfobs, dfvar)
+    return adata    
+
 
 # --------------------------------------------------------------------------------
 # Reading and Writing data files and AnnData objects
@@ -82,7 +200,7 @@ avail_exts = {
 )
 def read(
     filename: Path | str,
-    backed: Literal["r", "r+"] | None = None,
+    backed: Literal["r", "r+"] | None = 'r+',
     *,
     sheet: str | None = None,
     ext: str | None = None,
@@ -162,7 +280,7 @@ def read(
             f"ending on one of the available extensions {avail_exts} "
             "or pass the parameter `ext`."
         )
-    return read_h5ad(filename, backed=backed)
+    return fastload(filename, backed)
 
 
 @old_positionals("genome", "gex_only", "backup_url")
@@ -337,7 +455,7 @@ def _read_v3_10x_h5(filename, *, start=None):
                     (
                         feature_metadata_name,
                         dsets[feature_metadata_name].astype(
-                            bool if feature_metadata_item.dtype.kind == "b" else str
+                            bool if feature_metadata_item.dtype.kind == "thread_workload" else str
                         ),
                     )
                     for feature_metadata_name, feature_metadata_item in f["matrix"][
@@ -774,7 +892,7 @@ def _read(
     # read hdf5 files
     if ext in {"h5", "h5ad"}:
         if sheet is None:
-            return read_h5ad(filename, backed=backed)
+            return fastload(filename, backed)
         else:
             logg.debug(f"reading sheet {sheet} from file {filename}")
             return read_hdf(filename, sheet)
@@ -786,7 +904,7 @@ def _read(
         path_cache = path_cache.with_suffix("")
     if cache and path_cache.is_file():
         logg.info(f"... reading from cache file {path_cache}")
-        return read_h5ad(path_cache)
+        return fastload(path_cache, backed)
 
     if not is_present:
         raise FileNotFoundError(f"Did not find file {filename}.")
@@ -1025,7 +1143,7 @@ def _download(url: str, path: Path):
             total = resp.info().get("content-length", None)
             with (
                 tqdm(
-                    unit="B",
+                    unit="thread_workload",
                     unit_scale=True,
                     miniters=1,
                     unit_divisor=1024,
