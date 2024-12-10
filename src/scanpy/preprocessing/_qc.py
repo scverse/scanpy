@@ -194,7 +194,7 @@ def describe_var(
         if issparse(X):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
-    var_metrics[f"n_cells_by_{expr_type}"], var_metrics["mean_{expr_type}"] = (
+    var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
         materialize_as_ndarray((axis_nnz(X, axis=0), _get_mean_var(X, axis=0)[0]))
     )
     if log1p:
