@@ -366,7 +366,7 @@ def densmap(
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: _InitPos | np.ndarray | None = "spectral",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     a: float | None = None,
     b: float | None = None,
     copy: bool = False,
