@@ -8,7 +8,7 @@ from ._dpt import _diffmap
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
 
 @old_positionals("neighbors_key", "random_state", "copy")
@@ -17,7 +17,7 @@ def diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | None:
     """\

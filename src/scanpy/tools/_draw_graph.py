@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import random
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import _choose_graph
+from .._utils import _choose_graph, get_literal_vals
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -18,13 +18,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     S = TypeVar("S", bound=LiteralString)
 
 
 _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
-_LAYOUTS = get_args(_Layout)
 
 
 @old_positionals(
@@ -44,7 +43,7 @@ def draw_graph(
     *,
     init_pos: str | bool | None = None,
     root: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
     adjacency: spmatrix | None = None,
     key_added_ext: str | None = None,
@@ -124,8 +123,8 @@ def draw_graph(
         `draw_graph` parameters.
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
-    if layout not in _LAYOUTS:
-        raise ValueError(f"Provide a valid layout, one of {_LAYOUTS}.")
+    if layout not in (layouts := get_literal_vals(_Layout)):
+        raise ValueError(f"Provide a valid layout, one of {layouts}.")
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)

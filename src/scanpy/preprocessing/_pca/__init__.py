@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, get_args, overload
+from typing import TYPE_CHECKING, Literal, overload
 from warnings import warn
 
 import anndata as ad
@@ -14,13 +14,14 @@ from sklearn.utils import check_random_state
 from ... import logging as logg
 from ..._compat import DaskArray, pkg_version
 from ..._settings import settings
-from ..._utils import _doc_params, _empty, is_backed_type
+from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
     from collections.abc import Container
+    from collections.abc import Set as AbstractSet
     from typing import LiteralString, TypeVar
 
     import dask_ml.decomposition as dmld
@@ -29,7 +30,8 @@ if TYPE_CHECKING:
     from scipy import sparse
     from scipy.sparse import spmatrix
 
-    from ..._utils import AnyRandom, Empty
+    from ..._compat import _LegacyRandom
+    from ..._utils import Empty
 
     CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
@@ -44,10 +46,11 @@ SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-SvdSolvPCADenseSklearn = Literal[
-    "auto", "full", "arpack", "covariance_eigh", "randomized"
-]
-SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
+    SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+else:
+    SvdSolvPCASparseSklearn = Literal["arpack"]
+SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
 SvdSolvSkearn = (
     SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
@@ -68,7 +71,7 @@ def pca(
     layer: str | None = None,
     zero_center: bool | None = True,
     svd_solver: SvdSolver | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
@@ -299,7 +302,9 @@ def pca(
         if issparse(X) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
         ):
-            if svd_solver not in {"lobpcg", "arpack"}:
+            if svd_solver not in (
+                {"lobpcg"} | get_literal_vals(SvdSolvPCASparseSklearn)
+            ):
                 if svd_solver is not None:
                     msg = (
                         f"Ignoring {svd_solver=} and using 'arpack', "
@@ -467,14 +472,14 @@ def _handle_dask_ml_args(
 def _handle_dask_ml_args(svd_solver: str | None, method: MethodDaskML) -> SvdSolvDaskML:
     import dask_ml.decomposition as dmld
 
-    args: tuple[SvdSolvDaskML, ...]
+    args: AbstractSet[SvdSolvDaskML]
     default: SvdSolvDaskML
     match method:
         case dmld.PCA | dmld.IncrementalPCA:
-            args = get_args(SvdSolvPCADaskML)
+            args = get_literal_vals(SvdSolvPCADaskML)
             default = "auto"
         case dmld.TruncatedSVD:
-            args = get_args(SvdSolvTruncatedSVDDaskML)
+            args = get_literal_vals(SvdSolvTruncatedSVDDaskML)
             default = "tsqr"
         case _:
             msg = f"Unknown {method=} in _handle_dask_ml_args"
@@ -499,18 +504,18 @@ def _handle_sklearn_args(
 ) -> SvdSolvSkearn:
     import sklearn.decomposition as skld
 
-    args: tuple[SvdSolvSkearn, ...]
+    args: AbstractSet[SvdSolvSkearn]
     default: SvdSolvSkearn
     suffix = ""
     match (method, sparse):
         case (skld.TruncatedSVD, None):
-            args = get_args(SvdSolvTruncatedSVDSklearn)
+            args = get_literal_vals(SvdSolvTruncatedSVDSklearn)
             default = "randomized"
         case (skld.PCA, False):
-            args = get_args(SvdSolvPCADenseSklearn)
+            args = get_literal_vals(SvdSolvPCADenseSklearn)
             default = "arpack"
         case (skld.PCA, True):
-            args = get_args(SvdSolvPCASparseSklearn)
+            args = get_literal_vals(SvdSolvPCASparseSklearn)
             default = "arpack"
             suffix = " (with sparse input)"
         case _:

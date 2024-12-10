@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from scipy.sparse import spmatrix
 
+    from ..._compat import _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
@@ -73,7 +74,7 @@ def paga_compare(
     components=None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "on data",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,
     color_map=None,
@@ -210,7 +211,7 @@ def _compute_pos(
     adjacency_solid: spmatrix | np.ndarray,
     *,
     layout: _Layout | None = None,
-    random_state: _sc_utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     init_pos: np.ndarray | None = None,
     adj_tree=None,
     root: int = 0,
@@ -1053,7 +1054,7 @@ def paga_path(
     show_node_names: bool = True,
     show_yticks: bool = True,
     show_colorbar: bool = True,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,

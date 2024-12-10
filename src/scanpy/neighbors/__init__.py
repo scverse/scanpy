@@ -4,7 +4,7 @@ import contextlib
 from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
-from typing import TYPE_CHECKING, NamedTuple, TypedDict, get_args
+from typing import TYPE_CHECKING, NamedTuple, TypedDict
 from warnings import warn
 
 import numpy as np
@@ -16,7 +16,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import NeighborsView, _doc_params
+from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from igraph import Graph
     from scipy.sparse import csr_matrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
 
@@ -54,13 +54,13 @@ class KwdsForTransformer(TypedDict):
     n_neighbors: int
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
-    random_state: AnyRandom
+    random_state: _LegacyRandom
 
 
 class NeighborsParams(TypedDict):
     n_neighbors: int
     method: _Method
-    random_state: AnyRandom
+    random_state: _LegacyRandom
     metric: _Metric | _MetricFn
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
@@ -79,7 +79,7 @@ def neighbors(
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -521,7 +521,7 @@ class Neighbors:
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-        random_state: AnyRandom = 0,
+        random_state: _LegacyRandom = 0,
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.
@@ -652,7 +652,9 @@ class Neighbors:
                 raise ValueError(msg)
             method = "umap"
             transformer = "rapids"
-        elif method not in (methods := set(get_args(_Method))) and method is not None:
+        elif (
+            method not in (methods := get_literal_vals(_Method)) and method is not None
+        ):
             msg = f"`method` needs to be one of {methods}."
             raise ValueError(msg)
 
@@ -704,7 +706,7 @@ class Neighbors:
         elif isinstance(transformer, str):
             msg = (
                 f"Unknown transformer: {transformer}. "
-                f"Try passing a class or one of {set(get_args(_KnownTransformer))}"
+                f"Try passing a class or one of {get_literal_vals(_KnownTransformer)}"
             )
             raise ValueError(msg)
         # else `transformer` is probably an instance
@@ -755,7 +757,7 @@ class Neighbors:
         n_comps: int = 15,
         sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
-        random_state: AnyRandom = 0,
+        random_state: _LegacyRandom = 0,
     ):
         """\
         Compute eigen decomposition of transition matrix.

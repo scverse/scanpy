@@ -52,11 +52,11 @@ dependencies = [
     "pandas >=1.5",
     "scipy>=1.8",
     "seaborn>=0.13",
-    "h5py>=3.6",
+    "h5py>=3.7",
     "tqdm",
-    "scikit-learn>=1.1",
+    "scikit-learn>=1.1,<1.6.0",
     "statsmodels>=0.13",
-    "patsy",
+    "patsy!=1.0.0", # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
     "joblib",
@@ -66,7 +66,7 @@ dependencies = [
     "packaging>=21.3",
     "session-info",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
-    "get-annotations; python_version < '3.10'",
+    "typing-extensions; python_version < '3.13'",
 ]
 dynamic = ["version"]
 
@@ -124,7 +124,7 @@ doc = [
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
-    "setuptools",
+    "setuptools", # undeclared dependency of sphinxcontrib-bibtex→pybtex
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga,dask-ml]",
     "sam-algorithm",
@@ -167,7 +167,7 @@ addopts = [
     "-ptesting.scanpy._pytest",
     "--pyargs",
 ]
-testpaths = ["./tests", "scanpy"]
+testpaths = ["./tests", "./ci", "scanpy"]
 norecursedirs = ["tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
@@ -212,7 +212,7 @@ exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
-    "@numba.njit.*",
+    '@(numba\.|nb\.)njit.*',
 ]
 
 [tool.ruff]
@@ -232,6 +232,7 @@ select = [
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
+    "PYI",     # Typing
     "PLR0917", # Ban APIs with too many positional parameters
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
@@ -246,6 +247,8 @@ ignore = [
     "E262",
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
+    # `Literal["..."] | str` is useful for autocompletion
+    "PYI051",
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
@@ -259,6 +262,8 @@ required-imports = ["from __future__ import annotations"]
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
 "legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
 "numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
+"numba.jit".msg = "Use `scanpy._compat.njit` instead"
+"numba.njit".msg = "Use `scanpy._compat.njit` instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true
