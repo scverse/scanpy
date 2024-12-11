@@ -371,7 +371,7 @@ def densmap(
     dens_var_shift: float | None = 0.1,
 ) -> AnnData | None:
     """\
-    Embed the neighborhood graph using densMAP :cite:p:`Narayan21`.
+    Embed the neighborhood graph using densMAP :cite:p:`Narayan2021`.
 
     We use the implementation of densMAP defined in
     umap-learn_ :cite:p:`McInnes2018`.
