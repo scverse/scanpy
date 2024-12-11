@@ -327,14 +327,21 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
-def test_regress_out_reproducible():
-    adata = pbmc68k_reduced()
+@pytest.mark.parametrize(
+    ("keys", "test_file"),
+    [
+        (["n_counts", "percent_mito"], "regress_test_small.npy"),
+        (["bulk_labels"], "regress_test_small_cat.npy"),
+    ],
+)
+def test_regress_out_reproducible(keys, test_file):
+    adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
-    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    sc.pp.regress_out(adata, keys=keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
-    tester = np.load(DATA_PATH / "regress_test_small.npy")
-    np.testing.assert_allclose(adata.X, tester)
+    tester = np.load(DATA_PATH / test_file)
+    np.testing.assert_array_almost_equal(adata.X, tester)
 
 
 def test_regress_out_constants_equivalent():
