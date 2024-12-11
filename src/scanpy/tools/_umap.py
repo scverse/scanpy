@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from sklearn.utils import check_array, check_random_state
@@ -18,14 +18,9 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._compat import _LegacyRandom
+    from ._types import UmapMethodKwds
 
     _InitPos = Literal["paga", "spectral", "random"]
-
-
-class _MethodKwds(TypedDict, total=False):
-    dens_lambda: float
-    dens_frac: float
-    dens_var_shift: float
 
 
 @old_positionals(
@@ -59,7 +54,7 @@ def umap(
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap", "rapids", "densmap"] = "umap",
-    method_kwds: _MethodKwds | None = None,
+    method_kwds: UmapMethodKwds | None = None,
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
