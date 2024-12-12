@@ -60,7 +60,7 @@ dependencies = [
     "networkx>=2.7",
     "natsort",
     "joblib",
-    "numba>=0.56",
+    "numba>=0.57",
     "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
