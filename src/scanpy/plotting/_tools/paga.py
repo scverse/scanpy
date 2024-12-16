@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from scipy.sparse import spmatrix
 
+    from ..._compat import _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
@@ -210,7 +211,7 @@ def _compute_pos(
     adjacency_solid: spmatrix | np.ndarray,
     *,
     layout: _Layout | None = None,
-    random_state: _sc_utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     init_pos: np.ndarray | None = None,
     adj_tree=None,
     root: int = 0,
@@ -701,11 +702,11 @@ def _paga_graph(
         and isinstance(node_labels, str)
         and node_labels != adata.uns["paga"]["groups"]
     ):
-        raise ValueError(
-            "Provide a list of group labels for the PAGA groups {}, not {}.".format(
-                adata.uns["paga"]["groups"], node_labels
-            )
+        msg = (
+            "Provide a list of group labels for the PAGA groups "
+            f"{adata.uns['paga']['groups']}, not {node_labels}."
         )
+        raise ValueError(msg)
     groups_key = adata.uns["paga"]["groups"]
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories

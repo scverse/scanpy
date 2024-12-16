@@ -1,8 +1,8 @@
 name: Bug report
 description: Scanpy doesn’t do what it should? Please help us fix it!
 #title: ...
+type: Bug
 labels:
-- Bug 🐛
 - Triage 🩺
 #assignees: []
 body:

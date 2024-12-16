@@ -18,7 +18,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import njit, old_positionals
+from .._compat import deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -50,8 +50,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray
-    from .._utils import AnyRandom
+    from .._compat import DaskArray, _LegacyRandom
 
 
 @old_positionals(
@@ -475,6 +474,7 @@ def sqrt(
         return X.sqrt()
 
 
+@deprecated("Use sc.pp.normalize_total instead")
 @old_positionals(
     "counts_per_cell_after",
     "counts_per_cell",
@@ -498,16 +498,16 @@ def normalize_per_cell(
     """\
     Normalize total counts per cell.
 
-    .. warning::
-        .. deprecated:: 1.3.7
-            Use :func:`~scanpy.pp.normalize_total` instead.
-            The new function is equivalent to the present
-            function, except that
+    .. deprecated:: 1.3.7
 
-            * the new function doesn't filter cells based on `min_counts`,
-              use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-            * some arguments were renamed
-            * `copy` is replaced by `inplace`
+       Use :func:`~scanpy.pp.normalize_total` instead.
+       The new function is equivalent to the present
+       function, except that
+
+       * the new function doesn't filter cells based on `min_counts`,
+         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
+       * some arguments were renamed
+       * `copy` is replaced by `inplace`
 
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
@@ -845,7 +845,7 @@ def subsample(
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
     """\
@@ -908,7 +908,7 @@ def downsample_counts(
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1044,7 +1044,7 @@ def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):

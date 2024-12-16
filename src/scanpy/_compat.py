@@ -9,14 +9,18 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
+import numpy as np
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
 
+
 P = ParamSpec("P")
 R = TypeVar("R")
+
+_LegacyRandom = int | np.random.RandomState | None
 
 
 if TYPE_CHECKING:
@@ -44,6 +48,10 @@ __all__ = [
     "fullname",
     "pkg_metadata",
     "pkg_version",
+    "old_positionals",
+    "deprecated",
+    "njit",
+    "_numba_threading_layer",
 ]
 
 
@@ -96,6 +104,15 @@ else:
     # but this code makes it possible to run scanpy without it.
     def old_positionals(*old_positionals: str):
         return lambda func: func
+
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated as _deprecated
+else:
+    from typing_extensions import deprecated as _deprecated
+
+
+deprecated = partial(_deprecated, category=FutureWarning)
 
 
 @overload
