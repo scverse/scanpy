@@ -106,6 +106,19 @@ else:
         return lambda func: func
 
 
+if sys.version_info >= (3, 11):
+
+    @wraps(BaseException.add_note)
+    def add_note(exc: BaseException, note: str) -> None:
+        exc.add_note(note)
+else:
+
+    def add_note(exc: BaseException, note: str) -> None:
+        if not hasattr(exc, "__notes__"):
+            exc.__notes__ = []
+        exc.__notes__.append(note)
+
+
 if sys.version_info >= (3, 13):
     from warnings import deprecated as _deprecated
 else:
