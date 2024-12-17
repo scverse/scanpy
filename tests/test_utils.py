@@ -9,6 +9,7 @@ from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy.sparse import csr_matrix, issparse
 
+from scanpy import settings
 from scanpy._compat import DaskArray, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
@@ -144,6 +145,26 @@ def test_elem_mul(array_type):
     m2 = array_type(asarray([[2, 2, 1], [3, 2, 0]]))
     expd = np.array([[0, 2, 1], [3, 0, 0]])
     res = asarray(elem_mul(m1, m2))
+    np.testing.assert_array_equal(res, expd)
+
+
+@pytest.mark.parametrize(
+    ("elem_dtype", "expected_dtype", "use_64_bit_elem_mul"),
+    [
+        pytest.param(np.float32, np.float64, True, id="use_64_bit_elem_mul"),
+        pytest.param(np.float32, np.float32, False, id="use_default_elem_mul_dtype"),
+        pytest.param(np.int8, np.int8, True, id="ignore_64_bit_elem_for_int_elem"),
+    ],
+)
+def test_elem_mul_64_bit(
+    elem_dtype: np.dtype, expected_dtype: np.dtype, *, use_64_bit_elem_mul: bool
+):
+    settings.use_64_bit_elem_mul = use_64_bit_elem_mul
+    m1 = np.array([[0, 1, 1], [1, 0, 1]], dtype=elem_dtype)
+    m2 = np.array([[2, 2, 1], [3, 2, 0]], dtype=elem_dtype)
+    expd = np.array([[0, 2, 1], [3, 0, 0]], dtype=expected_dtype)
+    res = elem_mul(m1, m2)
+    assert res.dtype == expected_dtype
     np.testing.assert_array_equal(res, expd)
 
 
