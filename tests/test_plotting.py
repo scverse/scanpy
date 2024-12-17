@@ -1021,6 +1021,7 @@ def pbmc_scatterplots_session() -> AnnData:
     sc.pp.neighbors(pbmc)
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
+    sc.tl.umap(pbmc, method="densmap")
     return pbmc
 
 
@@ -1169,6 +1170,13 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
                 sc.pl.pca,
                 color=["LYZ", "CD79A", "louvain"],
                 mask_obs="mask",
+            ),
+        ),
+        (
+            "densmap_nocolor",
+            partial(
+                sc.pl.embedding,
+                basis="X_densmap",
             ),
         ),
     ],
