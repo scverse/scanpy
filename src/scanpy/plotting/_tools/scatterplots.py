@@ -28,6 +28,7 @@ from numpy.typing import NDArray  # noqa: TCH002
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
     Empty,  # noqa: TCH001
@@ -919,6 +920,7 @@ def pca(
     return axs
 
 
+@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -947,6 +949,9 @@ def spatial(
 ) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
