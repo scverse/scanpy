@@ -142,6 +142,8 @@ def test_call_outputs(func):
     """
     output_io = StringIO()
     with redirect_stdout(output_io):
-        func()
+        out = func()
+        if out is not None:
+            print(out)
     output = output_io.getvalue()
     assert output != ""
