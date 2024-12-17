@@ -999,8 +999,6 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :doc:`/tutorials/spatial/basic-analysis`
-        Tutorial on spatial analysis.
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
