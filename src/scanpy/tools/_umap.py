@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from functools import partial
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -346,7 +345,3 @@ def umap(
         ),
     )
     return adata if copy else None
-
-
-# Convenience function for densMAP
-densmap = partial(umap, method="densmap")

@@ -20,7 +20,6 @@ Any transformation of the data matrix that is not *preprocessing*. In contrast t
    pp.pca
    tl.tsne
    tl.umap
-   tl.densmap
    tl.draw_graph
    tl.diffmap
 ```
