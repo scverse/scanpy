@@ -12,7 +12,8 @@ from matplotlib.testing.compare import compare_images
 import scanpy as sc
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = HERE.parent / "_images"
+DATA_DIR = HERE.parent / "_data"
 
 
 pytestmark = [
@@ -20,15 +21,15 @@ pytestmark = [
 ]
 
 
-def check_images(pth1, pth2, *, tol):
-    result = compare_images(pth1, pth2, tol=tol)
+def check_images(pth1: Path, pth2: Path, *, tol: int) -> None:
+    result = compare_images(str(pth1), str(pth2), tol=tol)
     assert result is None, result
 
 
 def test_visium_circles(image_comparer):  # standard visium data
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(
@@ -52,7 +53,7 @@ def test_visium_default(image_comparer):  # default values
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
-    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     # Points default to transparent if an image is included
@@ -64,7 +65,7 @@ def test_visium_default(image_comparer):  # default values
 def test_visium_empty_img_key(image_comparer):  # visium coordinates but image empty
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(adata, img_key=None, color="array_row", show=False)
@@ -78,7 +79,7 @@ def test_visium_empty_img_key(image_comparer):  # visium coordinates but image e
 def test_spatial_general(image_comparer):  # general coordinates
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
     spatial_metadata = adata.uns.pop(
         "spatial"
@@ -103,7 +104,7 @@ def test_spatial_general(image_comparer):  # general coordinates
 def test_spatial_external_img(image_comparer):  # external image
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
-    adata = sc.read_visium(HERE / "_data" / "visium_data" / "1.0.0")
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     img = adata.uns["spatial"]["custom"]["images"]["hires"]
@@ -172,15 +173,14 @@ def spatial_kwargs(request):
     return request.param
 
 
-def test_manual_equivalency(equivalent_spatial_plotters, tmpdir, spatial_kwargs):
+def test_manual_equivalency(equivalent_spatial_plotters, tmp_path, spatial_kwargs):
     """
     Tests that manually passing values to sc.pl.spatial is similar to automatic extraction.
     """
     orig, removed = equivalent_spatial_plotters
 
-    TESTDIR = Path(tmpdir)
-    orig_pth = TESTDIR / "orig.png"
-    removed_pth = TESTDIR / "removed.png"
+    orig_pth = tmp_path / "orig.png"
+    removed_pth = tmp_path / "removed.png"
 
     orig(**spatial_kwargs)
     plt.savefig(orig_pth, dpi=40)
@@ -193,16 +193,15 @@ def test_manual_equivalency(equivalent_spatial_plotters, tmpdir, spatial_kwargs)
 
 
 def test_manual_equivalency_no_img(
-    equivalent_spatial_plotters_no_img, tmpdir, spatial_kwargs
+    equivalent_spatial_plotters_no_img, tmp_path, spatial_kwargs
 ):
     if "bw" in spatial_kwargs:
         # Has no meaning when there is no image
         pytest.skip()
     orig, removed = equivalent_spatial_plotters_no_img
 
-    TESTDIR = Path(tmpdir)
-    orig_pth = TESTDIR / "orig.png"
-    removed_pth = TESTDIR / "removed.png"
+    orig_pth = tmp_path / "orig.png"
+    removed_pth = tmp_path / "removed.png"
 
     orig(**spatial_kwargs)
     plt.savefig(orig_pth, dpi=40)
@@ -214,7 +213,7 @@ def test_manual_equivalency_no_img(
     check_images(orig_pth, removed_pth, tol=1)
 
 
-def test_white_background_vs_no_img(adata, tmpdir, spatial_kwargs):
+def test_white_background_vs_no_img(adata, tmp_path, spatial_kwargs):
     if {"bw", "img", "img_key", "na_color"}.intersection(spatial_kwargs):
         # These arguments don't make sense for this check
         pytest.skip()
@@ -222,9 +221,8 @@ def test_white_background_vs_no_img(adata, tmpdir, spatial_kwargs):
     white_background = np.ones_like(
         adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
     )
-    TESTDIR = Path(tmpdir)
-    white_pth = TESTDIR / "white_background.png"
-    noimg_pth = TESTDIR / "no_img.png"
+    white_pth = tmp_path / "white_background.png"
+    noimg_pth = tmp_path / "no_img.png"
 
     sc.pl.spatial(
         adata,
@@ -241,18 +239,17 @@ def test_white_background_vs_no_img(adata, tmpdir, spatial_kwargs):
     check_images(white_pth, noimg_pth, tol=1)
 
 
-def test_spatial_na_color(adata, tmpdir):
+def test_spatial_na_color(adata, tmp_path):
     """
     Check that na_color defaults to transparent when an image is present, light gray when not.
     """
     white_background = np.ones_like(
         adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
     )
-    TESTDIR = Path(tmpdir)
-    lightgray_pth = TESTDIR / "lightgray.png"
-    transparent_pth = TESTDIR / "transparent.png"
-    noimg_pth = TESTDIR / "noimg.png"
-    whiteimg_pth = TESTDIR / "whiteimg.png"
+    lightgray_pth = tmp_path / "lightgray.png"
+    transparent_pth = tmp_path / "transparent.png"
+    noimg_pth = tmp_path / "noimg.png"
+    whiteimg_pth = tmp_path / "whiteimg.png"
 
     def plot(pth, **kwargs):
         sc.pl.spatial(adata, color="1_missing", show=False, **kwargs)

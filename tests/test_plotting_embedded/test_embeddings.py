@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from functools import partial
+from functools import partial, wraps
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pytest
 import seaborn as sns
 from matplotlib.colors import Normalize
@@ -20,77 +19,14 @@ if TYPE_CHECKING:
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = HERE.parent / "_images"
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 
 
-def check_images(pth1, pth2, *, tol):
-    result = compare_images(pth1, pth2, tol=tol)
+def check_images(pth1: Path, pth2: Path, *, tol: int) -> None:
+    result = compare_images(str(pth1), str(pth2), tol=tol)
     assert result is None, result
-
-
-@pytest.fixture(scope="module")
-def adata():
-    """A bit cute."""
-    from matplotlib.image import imread
-    from sklearn.cluster import DBSCAN
-    from sklearn.datasets import make_blobs
-
-    empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(HERE.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
-    x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
-
-    # Just using to calculate the hex coords
-    hexes = plt.hexbin(x, y, gridsize=(44, 100))
-    counts = hexes.get_array()
-    pixels = hexes.get_offsets()[counts != 0]
-    plt.close()
-
-    labels = DBSCAN(eps=20, min_samples=2).fit(pixels).labels_
-    order = np.argsort(labels)
-    adata = sc.AnnData(
-        make_blobs(
-            pd.Series(labels[order]).value_counts().values,
-            n_features=20,
-            shuffle=False,
-            random_state=42,
-        )[0],
-        obs={"label": pd.Categorical(labels[order].astype(str))},
-        obsm={"spatial": pixels[order, ::-1]},
-        uns={
-            "spatial": {
-                "scanpy_img": {
-                    "images": {"hires": image},
-                    "scalefactors": {
-                        "tissue_hires_scalef": 1,
-                        "spot_diameter_fullres": 10,
-                    },
-                }
-            }
-        },
-    )
-    sc.pp.pca(adata)
-
-    # Adding some missing values
-    adata.obs["label_missing"] = adata.obs["label"].copy()
-    adata.obs["label_missing"][::2] = np.nan
-
-    adata.obs["1_missing"] = adata.obs_vector("1")
-    adata.obs.loc[
-        adata.obsm["spatial"][:, 0] < adata.obsm["spatial"][:, 0].mean(), "1_missing"
-    ] = np.nan
-
-    return adata
-
-
-@pytest.fixture
-def fixture_request(request):
-    """Returns a Request object.
-
-    Allows you to access names of parameterized tests from within a test.
-    """
-    return request
 
 
 @pytest.fixture(
@@ -106,12 +42,18 @@ def na_in_legend(request):
     return request.param
 
 
-@pytest.fixture(
-    params=[partial(sc.pl.pca, show=False), partial(sc.pl.spatial, show=False)],
-    ids=["pca", "spatial"],
-)
+@pytest.fixture(params=[sc.pl.pca, sc.pl.spatial])
 def plotfunc(request):
-    return request.param
+    if request.param is sc.pl.spatial:
+
+        @wraps(request.param)
+        def f(adata, **kwargs):
+            with pytest.warns(FutureWarning, match=r"Use `squidpy.*` instead"):
+                return sc.pl.spatial(adata, **kwargs)
+
+    else:
+        f = request.param
+    return partial(f, show=False)
 
 
 @pytest.fixture(
@@ -159,7 +101,7 @@ def vbounds(request):
 
 def test_missing_values_categorical(
     *,
-    fixture_request: pytest.FixtureRequest,
+    request: pytest.FixtureRequest,
     image_comparer,
     adata,
     plotfunc,
@@ -170,7 +112,7 @@ def test_missing_values_categorical(
 ):
     save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 
-    base_name = fixture_request.node.name
+    base_name = request.node.name
 
     # Passing through a dict so it's easier to use default values
     kwargs = {}
@@ -187,7 +129,7 @@ def test_missing_values_categorical(
 
 def test_missing_values_continuous(
     *,
-    fixture_request: pytest.FixtureRequest,
+    request: pytest.FixtureRequest,
     image_comparer,
     adata,
     plotfunc,
@@ -196,7 +138,7 @@ def test_missing_values_continuous(
 ):
     save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
 
-    base_name = fixture_request.node.name
+    base_name = request.node.name
 
     # Passing through a dict so it's easier to use default values
     kwargs = {}
@@ -209,15 +151,14 @@ def test_missing_values_continuous(
     save_and_compare_images(base_name)
 
 
-def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
-    tmpdir = Path(tmpdir)
-    base_name = fixture_request.node.name
+def test_enumerated_palettes(request, adata, tmp_path, plotfunc):
+    base_name = request.node.name
 
     categories = adata.obs["label"].cat.categories
     colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12)))
 
-    dict_pth = tmpdir / f"rgbdict_{base_name}.png"
-    list_pth = tmpdir / f"rgblist_{base_name}.png"
+    dict_pth = tmp_path / f"rgbdict_{base_name}.png"
+    list_pth = tmp_path / f"rgblist_{base_name}.png"
 
     # making a copy so colors aren't saved
     plotfunc(adata.copy(), color="label", palette=colors_rgb)
@@ -230,9 +171,7 @@ def test_enumerated_palettes(fixture_request, adata, tmpdir, plotfunc):
     check_images(dict_pth, list_pth, tol=15)
 
 
-def test_dimension_broadcasting(adata, tmpdir, check_same_image):
-    tmpdir = Path(tmpdir)
-
+def test_dimension_broadcasting(adata, tmp_path, check_same_image):
     with pytest.raises(
         ValueError,
         match=r"Could not broadcast together arguments with shapes: \[2, 3, 1\]",
@@ -241,8 +180,8 @@ def test_dimension_broadcasting(adata, tmpdir, check_same_image):
             adata, color=["label", "1_missing"], dimensions=[(0, 1), (1, 2), (2, 3)]
         )
 
-    dims_pth = tmpdir / "broadcast_dims.png"
-    color_pth = tmpdir / "broadcast_colors.png"
+    dims_pth = tmp_path / "broadcast_dims.png"
+    color_pth = tmp_path / "broadcast_colors.png"
 
     sc.pl.pca(adata, color=["label", "label", "label"], dimensions=(2, 3), show=False)
     plt.savefig(dims_pth, dpi=40)
@@ -254,17 +193,15 @@ def test_dimension_broadcasting(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, color_pth, tol=5)
 
 
-def test_marker_broadcasting(adata, tmpdir, check_same_image):
-    tmpdir = Path(tmpdir)
-
+def test_marker_broadcasting(adata, tmp_path, check_same_image):
     with pytest.raises(
         ValueError,
         match=r"Could not broadcast together arguments with shapes: \[2, 1, 3\]",
     ):
         sc.pl.pca(adata, color=["label", "1_missing"], marker=[".", "^", "x"])
 
-    dims_pth = tmpdir / "broadcast_markers.png"
-    color_pth = tmpdir / "broadcast_colors_for_markers.png"
+    dims_pth = tmp_path / "broadcast_markers.png"
+    color_pth = tmp_path / "broadcast_colors_for_markers.png"
 
     sc.pl.pca(adata, color=["label", "label", "label"], marker="^", show=False)
     plt.savefig(dims_pth, dpi=40)
@@ -276,13 +213,12 @@ def test_marker_broadcasting(adata, tmpdir, check_same_image):
     check_same_image(dims_pth, color_pth, tol=5)
 
 
-def test_dimensions_same_as_components(adata, tmpdir, check_same_image):
-    tmpdir = Path(tmpdir)
+def test_dimensions_same_as_components(adata, tmp_path, check_same_image):
     adata = adata.copy()
     adata.obs["mean"] = np.ravel(adata.X.mean(axis=1))
 
-    comp_pth = tmpdir / "components_plot.png"
-    dims_pth = tmpdir / "dimension_plot.png"
+    comp_pth = tmp_path / "components_plot.png"
+    dims_pth = tmp_path / "dimension_plot.png"
 
     # TODO: Deprecate components kwarg
     # with pytest.warns(FutureWarning, match=r"components .* deprecated"):
