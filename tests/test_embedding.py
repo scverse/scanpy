@@ -110,6 +110,6 @@ def test_densmap():
     assert_raises(AssertionError, assert_array_equal, d1, d4)
 
     # Checking if specifying dens_lambda  works, arrays shouldn't be equal
-    sc.tl.densmap(pbmc, dens_lambda=2.3456)
+    sc.tl.densmap(pbmc, method_kwds=dict(dens_lambda=2.3456))
     d5 = pbmc.obsm["X_densmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d5)
