@@ -36,7 +36,7 @@ from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
-from ._compat import add_note, old_positionals
+from ._compat import add_note, deprecated, old_positionals
 from ._settings import settings
 from ._utils import _empty
 
@@ -366,6 +366,7 @@ def _read_v3_10x_h5(filename, *, start=None):
             raise Exception("File is missing one or more required datasets.")
 
 
+@deprecated("Use `squidpy.read.visium` instead.")
 def read_visium(
     path: Path | str,
     genome: str | None = None,
@@ -377,6 +378,9 @@ def read_visium(
 ) -> AnnData:
     """\
     Read 10x-Genomics-formatted visum dataset.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.read.visium` instead.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,
