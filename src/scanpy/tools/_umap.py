@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from functools import partial
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -131,7 +132,7 @@ def umap(
         ``'umap'``
             Umap’s simplical set embedding.
         ``'densmap'``
-            Umap’s simplical set embedding with densmap=True.
+            Umap’s simplical set embedding with densmap=True :cite:p:`Narayan2021`.
         ``'rapids'``
             GPU accelerated implementation.
 
@@ -348,139 +349,4 @@ def umap(
 
 
 # Convenience function for densMAP
-
-
-def densmap(
-    adata: AnnData,
-    *,
-    min_dist: float = 0.5,
-    spread: float = 1.0,
-    n_components: int = 2,
-    maxiter: int | None = None,
-    alpha: float = 1.0,
-    gamma: float = 1.0,
-    negative_sample_rate: int = 5,
-    init_pos: _InitPos | np.ndarray | None = "spectral",
-    random_state: _LegacyRandom = 0,
-    a: float | None = None,
-    b: float | None = None,
-    copy: bool = False,
-    neighbors_key: str | None = "neighbors",
-    dens_lambda: float | None = 2.0,
-    dens_frac: float | None = 0.3,
-    dens_var_shift: float | None = 0.1,
-) -> AnnData | None:
-    """\
-    Embed the neighborhood graph using densMAP :cite:p:`Narayan2021`.
-
-    We use the implementation of densMAP defined in
-    umap-learn_ :cite:p:`McInnes2018`.
-
-    .. _umap-learn: https://github.com/lmcinnes/umap
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    min_dist
-        The effective minimum distance between embedded points. Smaller values
-        will result in a more clustered/clumped embedding where nearby points on
-        the manifold are drawn closer together, while larger values will result
-        on a more even dispersal of points. The value should be set relative to
-        the ``spread`` value, which determines the scale at which embedded
-        points will be spread out. The default of in the `umap-learn` package is
-        0.1.
-    spread
-        The effective scale of embedded points. In combination with `min_dist`
-        this determines how clustered/clumped the embedded points are.
-    n_components
-        The number of dimensions of the embedding.
-    maxiter
-        The number of iterations (epochs) of the optimization. Called `n_epochs`
-        in the original UMAP.
-    alpha
-        The initial learning rate for the embedding optimization.
-    gamma
-        Weighting applied to negative samples in low dimensional embedding
-        optimization. Values higher than one will result in greater weight
-        being given to negative samples.
-    negative_sample_rate
-        The number of negative edge/1-simplex samples to use per positive
-        edge/1-simplex sample in optimizing the low dimensional embedding.
-    init_pos
-        How to initialize the low dimensional embedding. Called `init` in the
-        original UMAP. Options are:
-
-        * Any key for `adata.obsm`.
-        * 'paga': positions from :func:`~scanpy.pl.paga`.
-        * 'spectral': use a spectral embedding of the graph.
-        * 'random': assign initial embedding positions at random.
-        * A numpy array of initial embedding positions.
-    random_state
-        If `int`, `random_state` is the seed used by the random number generator;
-        If `RandomState` or `Generator`, `random_state` is the random number generator;
-        If `None`, the random number generator is the `RandomState` instance used
-        by `np.random`.
-    a
-        More specific parameters controlling the embedding. If `None` these
-        values are set automatically as determined by `min_dist` and
-        `spread`.
-    b
-        More specific parameters controlling the embedding. If `None` these
-        values are set automatically as determined by `min_dist` and
-        `spread`.
-    copy
-        Return a copy instead of writing to adata.
-    neighbors_key
-        If not specified, umap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'] for connectivities
-        (default storage places for pp.neighbors).
-        If specified, umap looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    dens_lambda
-        Controls the regularization weight of the density correlation term
-        in densMAP. Higher values prioritize density preservation over the
-        UMAP objective, and vice versa for values closer to zero. Setting this
-        parameter to zero is equivalent to running the original UMAP algorithm.
-    dens_frac
-        Controls the fraction of epochs (between 0 and 1) where the
-        density-augmented objective is used in densMAP. The first
-        (1 - dens_frac) fraction of epochs optimize the original UMAP objective
-        before introducing the density correlation term.
-    dens_var_shift
-        A small constant added to the variance of local radii in the
-        embedding when calculating the density correlation objective to
-        prevent numerical instability from dividing by a small number
-
-    Returns
-    -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
-
-    `adata.obsm['X_densmap']` : :class:`numpy.ndarray` (dtype `float`)
-        DensMAP coordinates of data.
-    `adata.uns['densmap']` : :class:`dict`
-        DensMAP parameters.
-
-    """
-    return umap(
-        adata,
-        min_dist=min_dist,
-        spread=spread,
-        n_components=n_components,
-        maxiter=maxiter,
-        alpha=alpha,
-        gamma=gamma,
-        negative_sample_rate=negative_sample_rate,
-        init_pos=init_pos,
-        random_state=random_state,
-        a=a,
-        b=b,
-        copy=copy,
-        method="densmap",
-        method_kwds={
-            "dens_lambda": dens_lambda,
-            "dens_frac": dens_frac,
-            "dens_var_shift": dens_var_shift,
-        },
-        neighbors_key=neighbors_key,
-    )
+densmap = partial(umap, method="densmap")
