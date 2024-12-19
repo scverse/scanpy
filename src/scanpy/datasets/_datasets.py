@@ -9,7 +9,7 @@ import pandas as pd
 from anndata import AnnData
 
 from .. import _utils
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
 from ..readwrite import read, read_visium
@@ -509,6 +509,7 @@ def _download_visium_dataset(
     return sample_dir
 
 
+@deprecated("Use `squidpy.datasets.visium` instead.")
 @doctest_internet
 @check_datasetdir_exists
 def visium_sge(
@@ -518,6 +519,9 @@ def visium_sge(
 ) -> AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.datasets.visium` instead.
 
     The database_ can be browsed online to find the ``sample_id`` you want.
 
