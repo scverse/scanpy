@@ -36,7 +36,7 @@ from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
-from ._compat import old_positionals
+from ._compat import add_note, old_positionals
 from ._settings import settings
 from ._utils import _empty
 
@@ -993,14 +993,10 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    try:
-        import ipywidgets  # noqa: F401
-        from tqdm.auto import tqdm
-    except ImportError:
-        from tqdm import tqdm
-
     from urllib.error import URLError
     from urllib.request import Request, urlopen
+
+    from tqdm.auto import tqdm
 
     blocksize = 1024 * 8
     blocknum = 0
@@ -1011,13 +1007,16 @@ def _download(url: str, path: Path):
         try:
             open_url = urlopen(req)
         except URLError:
-            logg.warning(
-                "Failed to open the url with default certificates, trying with certifi."
-            )
+            msg = "Failed to open the url with default certificates."
+            try:
+                from certifi import where
+            except ImportError as e:
+                add_note(e, f"{msg} Please install `certifi` and try again.")
+                raise
+            else:
+                logg.warning(f"{msg} Trying to use certifi.")
 
             from ssl import create_default_context
-
-            from certifi import where
 
             open_url = urlopen(req, context=create_default_context(cafile=where()))
 
