@@ -53,6 +53,8 @@ if TYPE_CHECKING:
 
 CSMatrix = csr_matrix | csc_matrix
 
+A = TypeVar("A", bound=np.ndarray | CSMatrix | DaskArray)
+
 
 @old_positionals(
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
@@ -850,7 +852,7 @@ def sample(
 ) -> AnnData: ...
 @overload
 def sample(
-    data: np.ndarray | CSMatrix | DaskArray,
+    data: A,
     fraction: float | None = None,
     *,
     n: int | None = None,
@@ -858,7 +860,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-) -> tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]: ...
+) -> tuple[A, NDArray[np.int64]]: ...
 def sample(
     data: AnnData | np.ndarray | CSMatrix | DaskArray,
     fraction: float | None = None,
