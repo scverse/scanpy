@@ -1456,11 +1456,10 @@ def test_rankings(image_comparer):
 
 
 # TODO: Make more generic
-def test_scatter_rep(tmpdir):
+def test_scatter_rep(tmp_path):
     """
     Test to make sure I can predict when scatter reps should be the same
     """
-    TESTDIR = Path(tmpdir)
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1475,7 +1474,7 @@ def test_scatter_rep(tmpdir):
         columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
-        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+        tmp_path / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))

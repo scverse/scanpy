@@ -31,7 +31,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.normalize_total
    pp.regress_out
    pp.scale
-   pp.subsample
+   pp.sample
    pp.downsample_counts
 ```
 

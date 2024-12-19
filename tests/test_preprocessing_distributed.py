@@ -40,13 +40,13 @@ def adata() -> AnnData:
     return a
 
 
-@filter_oldformatwarning
 @pytest.fixture(
     params=[
         pytest.param("direct", marks=[needs.zappy]),
         pytest.param("dask", marks=[needs.dask, pytest.mark.anndata_dask_support]),
     ]
 )
+@filter_oldformatwarning
 def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     # regular anndata except for X, which we replace on the next line
     a = read_zarr(input_file)
@@ -75,6 +75,7 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
+@pytest.mark.filterwarnings("ignore:Use sc.pp.normalize_total instead:FutureWarning")
 def test_normalize_per_cell(
     request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
 ):
