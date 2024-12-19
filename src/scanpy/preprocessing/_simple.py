@@ -939,7 +939,7 @@ def sample(
             data._inplace_subset_obs(indices)
         else:
             data._inplace_subset_var(indices)
-        return
+        return None
 
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 

@@ -152,6 +152,7 @@ def test_normalize_per_cell():
         pytest.param(0, None, 40, False, 40, id="obs-40-no_replace"),
         pytest.param(0, 0.1, None, False, 20, id="obs-0.1-no_replace"),
         pytest.param(0, None, 201, True, 201, id="obs-201-replace"),
+        pytest.param(0, None, 1, True, 1, id="obs-1-replace"),
         pytest.param(1, None, 10, False, 10, id="var-10-no_replace"),
         pytest.param(1, None, 11, True, 11, id="var-11-replace"),
         pytest.param(1, 2.0, None, True, 20, id="var-2.0-replace"),
