@@ -14,11 +14,11 @@ import numba
 import numpy as np
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import deprecated, njit, old_positionals
+from .._compat import DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -46,12 +46,12 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from numpy.typing import NDArray
-    from scipy.sparse import csc_matrix
 
-    from .._compat import DaskArray, _LegacyRandom
+    from .._compat import _LegacyRandom
     from .._utils import RNGLike, SeedLike
 
-    CSMatrix = csr_matrix | csc_matrix
+
+CSMatrix = csr_matrix | csc_matrix
 
 
 @old_positionals(
@@ -850,7 +850,7 @@ def sample(
 ) -> AnnData: ...
 @overload
 def sample(
-    data: np.ndarray | CSMatrix,
+    data: np.ndarray | CSMatrix | DaskArray,
     fraction: float | None = None,
     *,
     n: int | None = None,
@@ -858,9 +858,9 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-) -> tuple[np.ndarray | CSMatrix, NDArray[np.int64]]: ...
+) -> tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]: ...
 def sample(
-    data: AnnData | np.ndarray | CSMatrix,
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
     fraction: float | None = None,
     *,
     n: int | None = None,
@@ -868,7 +868,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-) -> AnnData | None | tuple[np.ndarray | CSMatrix, NDArray[np.int64]]:
+) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
     Sample observations or variables with or without replacement.
 
@@ -903,6 +903,10 @@ def sample(
     `indices` : numpy.ndarray
         If `data` is array-like, also returns the indices into the original.
     """
+    # parameter validation
+    if not copy and isinstance(data, AnnData) and data.isbacked:
+        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
+        raise NotImplementedError(msg)
     axis, axis_name = _resolve_axis(axis)
     old_n = data.shape[axis]
     match (fraction, n):
@@ -925,27 +929,30 @@ def sample(
             raise TypeError(msg)
     del fraction
 
+    # actually do subsampling
     rng = np.random.default_rng(rng)
     indices = rng.choice(old_n, size=n, replace=replace)
+
+    # overload 1: inplace AnnData subset
+    if not copy and isinstance(data, AnnData):
+        if axis_name == "obs":
+            data._inplace_subset_obs(indices)
+        else:
+            data._inplace_subset_var(indices)
+        return
+
     subset = data[indices] if axis_name == "obs" else data[:, indices]
 
-    if not isinstance(data, AnnData):
-        assert not isinstance(subset, AnnData)
-        if copy:
-            subset = subset.copy()
-        return subset, indices
-    assert isinstance(subset, AnnData)
-    if copy:
+    # overload 2: copy AnnData subset
+    if copy and isinstance(data, AnnData):
+        assert isinstance(subset, AnnData)
         return subset.to_memory() if data.isbacked else subset.copy()
 
-    # in-place
-    if data.isbacked:
-        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
-        raise NotImplementedError(msg)
-    if axis_name == "obs":
-        data._inplace_subset_obs(indices)
-    else:
-        data._inplace_subset_var(indices)
+    # overload 3: return array and indices
+    assert isinstance(subset, np.ndarray | CSMatrix | DaskArray), type(subset)
+    if copy:
+        subset = subset.copy()
+    return subset, indices
 
 
 @renamed_arg("target_counts", "counts_per_cell")
