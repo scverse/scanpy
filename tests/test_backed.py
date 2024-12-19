@@ -91,8 +91,8 @@ def test_log1p_backed_errors(backed_adata):
 
 def test_scatter_backed(backed_adata):
     sc.pp.pca(backed_adata, chunked=True)
-    sc.pl.scatter(backed_adata, color="0", basis="pca")
+    sc.pl.scatter(backed_adata, color="0", basis="pca", show=False)
 
 
 def test_dotplot_backed(backed_adata):
-    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat")
+    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat", show=False)
