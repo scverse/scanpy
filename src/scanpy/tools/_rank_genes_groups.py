@@ -854,7 +854,7 @@ def filter_rank_genes_groups(
 
         if not use_logfolds or not use_fraction:
             sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
-            in_group = adata.obs[groupby] == cluster
+            in_group = (adata.obs[groupby] == cluster).to_numpy()
             X_in = sub_X[in_group]
             X_out = sub_X[~in_group]
 
