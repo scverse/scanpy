@@ -259,6 +259,12 @@ def test_sample(
             r"`fraction=-0\.3` needs to be nonnegative",
             id="frac<0",
         ),
+        pytest.param(
+            dict(n=3, p=np.ones(200, dtype=np.int32)),
+            ValueError,
+            r"mask/probabilities array must be boolean or floating point",
+            id="type(p)",
+        ),
     ],
 )
 def test_sample_error(args: dict[str, Any], exc: type[Exception], pattern: str):
