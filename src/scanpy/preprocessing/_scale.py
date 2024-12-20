@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse, isspmatrix_csc, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 from .. import logging as logg
 from .._compat import DaskArray, njit, old_positionals
@@ -29,21 +29,30 @@ except ImportError:
     da = None
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
-    from scipy import sparse as sp
+    from numpy.typing import ArrayLike, NDArray
 
-    CSMatrix = sp.csr_matrix | sp.csc_matrix
+    CSMatrix = csr_matrix | csc_matrix
 
 
-@njit
-def _scale_sparse_numba(indptr, indices, data, *, std, mask_obs, clip):
-    for i in numba.prange(len(indptr) - 1):
-        if mask_obs[i]:
-            for j in range(indptr[i], indptr[i + 1]):
-                if clip:
-                    data[j] = min(clip, data[j] / std[indices[j]])
-                else:
-                    data[j] /= std[indices[j]]
+@singledispatch
+def clip(
+    x: ArrayLike, *, max_value: float, zero_center: bool = True
+) -> NDArray[np.floating]:
+    return clip_array(x, max_value=max_value, zero_center=zero_center)
+
+
+@clip.register(csr_matrix)
+@clip.register(csc_matrix)
+def _(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
+    x.data = clip(x.data, max_value=max_value, zero_center=zero_center)
+    return x
+
+
+@clip.register(DaskArray)
+def _(x: DaskArray, *, max_value: float, zero_center: bool = True):
+    return x.map_blocks(
+        clip, max_value=max_value, zero_center=zero_center, dtype=x.dtype, meta=x._meta
+    )
 
 
 @njit
@@ -66,19 +75,11 @@ def clip_array(
     return X
 
 
-def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
-    x = x.copy()
-    x[x > max_value] = max_value
-    if zero_center:
-        x[x < -max_value] = -max_value
-    return x
-
-
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | spmatrix | np.ndarray | DaskArray,
+    data: AnnData | CSMatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +87,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | DaskArray | None:
+) -> AnnData | CSMatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -147,8 +148,10 @@ def scale(
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
+@scale.register(csc_matrix)
+@scale.register(csr_matrix)
 def scale_array(
-    X: np.ndarray | DaskArray,
+    X: np.ndarray | DaskArray | CSMatrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -210,87 +213,13 @@ def scale_array(
         X,
         std,
         op=truediv,
-        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
+        out=X if isinstance(X, np.ndarray | csr_matrix | csc_matrix) else None,
         axis=1,
     )
 
     # do the clipping
     if max_value is not None:
-        logg.debug(f"... clipping at max_value {max_value}")
-        if isinstance(X, DaskArray):
-            clip = clip_set if issparse(X._meta) else clip_array
-            X = X.map_blocks(clip, max_value=max_value, zero_center=zero_center)
-        elif issparse(X):
-            X.data = clip_array(X.data, max_value=max_value, zero_center=False)
-        else:
-            X = clip_array(X, max_value=max_value, zero_center=zero_center)
-    if return_mean_std:
-        return X, mean, std
-    else:
-        return X
-
-
-@scale.register(spmatrix)
-def scale_sparse(
-    X: spmatrix,
-    *,
-    zero_center: bool = True,
-    max_value: float | None = None,
-    copy: bool = False,
-    return_mean_std: bool = False,
-    mask_obs: NDArray[np.bool_] | None = None,
-) -> np.ndarray | tuple[np.ndarray, NDArray[np.float64], NDArray[np.float64]]:
-    # need to add the following here to make inplace logic work
-    if zero_center:
-        logg.info(
-            "... as `zero_center=True`, sparse input is "
-            "densified and may lead to large memory consumption"
-        )
-        X = X.toarray()
-        copy = False  # Since the data has been copied
-        return scale_array(
-            X,
-            zero_center=zero_center,
-            copy=copy,
-            max_value=max_value,
-            return_mean_std=return_mean_std,
-            mask_obs=mask_obs,
-        )
-    elif mask_obs is None:
-        return scale_array(
-            X,
-            zero_center=zero_center,
-            copy=copy,
-            max_value=max_value,
-            return_mean_std=return_mean_std,
-            mask_obs=mask_obs,
-        )
-    else:
-        if isspmatrix_csc(X):
-            X = X.tocsr()
-        elif copy:
-            X = X.copy()
-
-        if mask_obs is not None:
-            mask_obs = _check_mask(X, mask_obs, "obs")
-
-    mean, var = _get_mean_var(X[mask_obs, :])
-
-    std = np.sqrt(var)
-    std[std == 0] = 1
-
-    if max_value is None:
-        max_value = 0
-
-    _scale_sparse_numba(
-        X.indptr,
-        X.indices,
-        X.data,
-        std=std.astype(X.dtype),
-        mask_obs=mask_obs,
-        clip=max_value,
-    )
-
+        X = clip(X, max_value=max_value, zero_center=zero_center)
     if return_mean_std:
         return X, mean, std
     else:
