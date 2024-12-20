@@ -150,8 +150,7 @@ def embedding(
     # Checking the mask format and if used together with groups
     if groups is not None and mask_obs is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
-    if mask_obs is not None:
-        mask_obs = _check_mask(adata, mask_obs, "obs")
+    mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:

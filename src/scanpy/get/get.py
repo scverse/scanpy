@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
 from packaging.version import Version
 from scipy.sparse import spmatrix
 
@@ -16,7 +17,11 @@ if TYPE_CHECKING:
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix, csr_matrix
+
+    from .._compat import DaskArray
+
+    CSMatrix = csr_matrix | csc_matrix
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -485,11 +490,16 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
+M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
+
+
 def _check_mask(
-    data: AnnData | np.ndarray,
-    mask: NDArray[np.bool_] | str,
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    mask: str | M,
     dim: Literal["obs", "var"],
-) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+    *,
+    allow_probabilities: bool = False,
+) -> M:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
     Params
@@ -497,30 +507,45 @@ def _check_mask(
     data
         Annotated data matrix or numpy array.
     mask
-        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+        Mask (or probabilities if `allow_probabilities=True`).
+        Either an appropriatley sized array, or name of a column.
     dim
         The dimension being masked.
+    allow_probabilities
+        Whether to allow probabilities as `mask`
     """
+    if mask is None:
+        return mask
+    desc = "mask/probabilities" if allow_probabilities else "mask"
+
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
-            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
             raise ValueError(msg)
 
         annot: pd.DataFrame = getattr(data, dim)
         if mask not in annot.columns:
             msg = (
                 f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the mask first to `adata.{dim}`"
-                "or consider using the mask argument with a boolean array."
+                f"Either add the {desc} first to `adata.{dim}`"
+                f"or consider using the {desc} argument with an array."
             )
             raise ValueError(msg)
         mask_array = annot[mask].to_numpy()
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            raise ValueError("The shape of the mask do not match the data.")
+            msg = f"The shape of the {desc} do not match the data."
+            raise ValueError(msg)
         mask_array = mask
 
-    if not pd.api.types.is_bool_dtype(mask_array.dtype):
-        raise ValueError("Mask array must be boolean.")
+    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
+    if not allow_probabilities and not is_bool:
+        msg = "Mask array must be boolean."
+        raise ValueError(msg)
+    elif allow_probabilities and not (
+        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
+    ):
+        msg = f"{desc} array must be boolean or floating point."
+        raise ValueError(msg)
 
     return mask_array
