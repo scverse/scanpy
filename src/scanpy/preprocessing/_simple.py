@@ -885,6 +885,7 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
+        (All of them, even if there are `0`s/`False`s in `p`.)
         This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
@@ -899,8 +900,9 @@ def sample(
     axis
         Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
     p
-        Drawing probabilities or mask.
-        Either an appropriatley sized array, or name of a column.
+        Drawing probabilities (floats) or mask (bools).
+        Either an `axis`-sized array, or the name of a column.
+        If `p` is an array of probabilities, it must sum to 1.
 
     Returns
     -------
@@ -917,7 +919,9 @@ def sample(
         msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
         raise NotImplementedError(msg)
     axis, axis_name = _resolve_axis(axis)
-    p = _check_mask(data, p, dim=axis_name)
+    p = _check_mask(data, p, dim=axis_name, allow_probabilities=True)
+    if p is not None and p.dtype == bool:
+        p = p.astype(np.float64) / p.sum()
     old_n = data.shape[axis]
     match (fraction, n):
         case (None, None):
