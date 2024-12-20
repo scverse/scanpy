@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal
 
+    from numpy.typing import NDArray
+
     CSMatrix = sp.csc_matrix | sp.csr_matrix
 
 
@@ -144,31 +146,55 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
+def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
+    """
+    Generate a random probability distribution of `n` values between 0 and 1.
+    """
+    probs = np.random.randint(0, 10000, n).astype(np.float64)
+    probs[probs < np.quantile(probs, frac_zero)] = 0
+    probs /= probs.sum()
+    np.testing.assert_almost_equal(probs.sum(), 1)
+    return probs
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("which", ["copy", "inplace", "array"])
 @pytest.mark.parametrize(
-    ("axis", "fraction", "n", "replace", "expected"),
+    ("axis", "f_or_n", "replace"),
     [
-        pytest.param(0, None, 40, False, 40, id="obs-40-no_replace"),
-        pytest.param(0, 0.1, None, False, 20, id="obs-0.1-no_replace"),
-        pytest.param(0, None, 201, True, 201, id="obs-201-replace"),
-        pytest.param(0, None, 1, True, 1, id="obs-1-replace"),
-        pytest.param(1, None, 10, False, 10, id="var-10-no_replace"),
-        pytest.param(1, None, 11, True, 11, id="var-11-replace"),
-        pytest.param(1, 2.0, None, True, 20, id="var-2.0-replace"),
+        pytest.param(0, 40, False, id="obs-40-no_replace"),
+        pytest.param(0, 0.1, False, id="obs-0.1-no_replace"),
+        pytest.param(0, 201, True, id="obs-201-replace"),
+        pytest.param(0, 1, True, id="obs-1-replace"),
+        pytest.param(1, 10, False, id="var-10-no_replace"),
+        pytest.param(1, 11, True, id="var-11-replace"),
+        pytest.param(1, 2.0, True, id="var-2.0-replace"),
     ],
+)
+@pytest.mark.parametrize(
+    "ps",
+    [
+        dict(obs=None, var=None),
+        dict(obs=np.tile([True, False], 100), var=np.tile([True, False], 5)),
+        dict(obs=_random_probs(200, 0.3), var=_random_probs(10, 0.7)),
+    ],
+    ids=["all", "mask", "p"],
 )
 def test_sample(
     *,
+    request: pytest.FixtureRequest,
     array_type: Callable[[np.ndarray], np.ndarray | CSMatrix],
     which: Literal["copy", "inplace", "array"],
     axis: Literal[0, 1],
-    fraction: float | None,
-    n: int | None,
+    f_or_n: float | int,  # noqa: PYI041
     replace: bool,
-    expected: int,
+    ps: dict[Literal["obs", "var"], NDArray[np.bool_] | None],
 ):
     adata = AnnData(array_type(np.ones((200, 10))))
+    p = ps["obs" if axis == 0 else "var"]
+    expected = int(adata.shape[axis] * f_or_n) if isinstance(f_or_n, float) else f_or_n
+    if p is not None and not replace and expected > (n_possible := (p != 0).sum()):
+        request.applymarker(pytest.xfail(f"Can’t draw {expected} out of {n_possible}"))
 
     # ignoring this warning declaratively is a pain so do it here
     if find_spec("dask"):
@@ -182,12 +208,13 @@ def test_sample(
     )
     rv = sc.pp.sample(
         adata.X if which == "array" else adata,
-        fraction,
-        n=n,
+        f_or_n if isinstance(f_or_n, float) else None,
+        n=f_or_n if isinstance(f_or_n, int) else None,
         replace=replace,
         axis=axis,
         # `copy` only effects AnnData inputs
         copy=dict(copy=True, inplace=False, array=False)[which],
+        p=p,
     )
 
     match which:
@@ -231,6 +258,12 @@ def test_sample(
             ValueError,
             r"`fraction=-0\.3` needs to be nonnegative",
             id="frac<0",
+        ),
+        pytest.param(
+            dict(n=3, p=np.ones(200, dtype=np.int32)),
+            ValueError,
+            r"mask/probabilities array must be boolean or floating point",
+            id="type(p)",
         ),
     ],
 )

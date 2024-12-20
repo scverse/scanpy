@@ -31,7 +31,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _to_dense
 
@@ -909,6 +909,7 @@ def sample(
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -920,6 +921,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample(
@@ -931,6 +933,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(
     data: AnnData | np.ndarray | CSMatrix | DaskArray,
@@ -941,6 +944,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
     Sample observations or variables with or without replacement.
@@ -952,6 +956,7 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
+        (All of them, even if there are `0`s/`False`s in `p`.)
         This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
@@ -965,6 +970,10 @@ def sample(
         If True, samples are drawn with replacement.
     axis
         Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
+    p
+        Drawing probabilities (floats) or mask (bools).
+        Either an `axis`-sized array, or the name of a column.
+        If `p` is an array of probabilities, it must sum to 1.
 
     Returns
     -------
@@ -981,6 +990,9 @@ def sample(
         msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
         raise NotImplementedError(msg)
     axis, axis_name = _resolve_axis(axis)
+    p = _check_mask(data, p, dim=axis_name, allow_probabilities=True)
+    if p is not None and p.dtype == bool:
+        p = p.astype(np.float64) / p.sum()
     old_n = data.shape[axis]
     match (fraction, n):
         case (None, None):
@@ -1004,7 +1016,7 @@ def sample(
 
     # actually do subsampling
     rng = np.random.default_rng(rng)
-    indices = rng.choice(old_n, size=n, replace=replace)
+    indices = rng.choice(old_n, size=n, replace=replace, p=p)
 
     # overload 1: inplace AnnData subset
     if not copy and isinstance(data, AnnData):

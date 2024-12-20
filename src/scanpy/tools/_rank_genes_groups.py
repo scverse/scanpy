@@ -594,8 +594,7 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    if mask_var is not None:
-        mask_var = _check_mask(adata, mask_var, "var")
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None
