@@ -30,7 +30,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _to_dense
 
@@ -838,6 +838,7 @@ def sample(
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -849,6 +850,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample(
@@ -860,6 +862,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(
     data: AnnData | np.ndarray | CSMatrix | DaskArray,
@@ -870,6 +873,7 @@ def sample(
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
     Sample observations or variables with or without replacement.
@@ -894,6 +898,9 @@ def sample(
         If True, samples are drawn with replacement.
     axis
         Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
+    p
+        Drawing probabilities or mask.
+        Either an appropriatley sized array, or name of a column.
 
     Returns
     -------
@@ -910,6 +917,7 @@ def sample(
         msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
         raise NotImplementedError(msg)
     axis, axis_name = _resolve_axis(axis)
+    p = _check_mask(data, p, dim=axis_name)
     old_n = data.shape[axis]
     match (fraction, n):
         case (None, None):
@@ -933,7 +941,7 @@ def sample(
 
     # actually do subsampling
     rng = np.random.default_rng(rng)
-    indices = rng.choice(old_n, size=n, replace=replace)
+    indices = rng.choice(old_n, size=n, replace=replace, p=p)
 
     # overload 1: inplace AnnData subset
     if not copy and isinstance(data, AnnData):

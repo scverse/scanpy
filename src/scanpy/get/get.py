@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
 from packaging.version import Version
 from scipy.sparse import spmatrix
 
@@ -16,7 +17,11 @@ if TYPE_CHECKING:
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix, csr_matrix
+
+    from .._compat import DaskArray
+
+    CSMatrix = csr_matrix | csc_matrix
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -485,11 +490,14 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
+M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
+
+
 def _check_mask(
-    data: AnnData | np.ndarray,
-    mask: NDArray[np.bool_] | str,
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    mask: str | M,
     dim: Literal["obs", "var"],
-) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+) -> M:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
     Params
@@ -497,10 +505,13 @@ def _check_mask(
     data
         Annotated data matrix or numpy array.
     mask
-        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+        Mask or probabilities.
+        Either an appropriatley sized array, or name of a column.
     dim
         The dimension being masked.
     """
+    if mask is None:
+        return mask
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
             msg = "Cannot refer to mask with string without providing anndata object as argument"
