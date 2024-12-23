@@ -164,8 +164,8 @@ def scale_array(
 ):
     if copy:
         X = X.copy()
+    mask_obs = _check_mask(X, mask_obs, "obs")
     if mask_obs is not None:
-        mask_obs = _check_mask(X, mask_obs, "obs")
         scale_rv = scale_array(
             X[mask_obs, :],
             zero_center=zero_center,

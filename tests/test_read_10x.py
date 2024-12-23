@@ -143,6 +143,7 @@ def visium_pth(request, tmp_path) -> Path:
         pytest.fail("add branch for new visium version")
 
 
+@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
 def test_read_visium_counts(visium_pth):
     """Test checking that read_visium reads the right genome"""
     spec_genome_v3 = sc.read_visium(visium_pth, genome="GRCh38")

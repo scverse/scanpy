@@ -47,24 +47,24 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    "numpy>=1.23",
+    "numpy>=1.24",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
     "seaborn>=0.13",
     "h5py>=3.7",
     "tqdm",
-    "scikit-learn>=1.1",
+    "scikit-learn>=1.1,<1.6.0",
     "statsmodels>=0.13",
     "patsy!=1.0.0", # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
     "joblib",
-    "numba>=0.56",
+    "numba>=0.57",
     "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
-    "session-info",
+    "session-info2",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
 ]
