@@ -49,7 +49,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
 
 ### Batch effect correction
 
-Also see [Data integration]. Note that a simple batch correction method is available via {func}`pp.regress_out`. Checkout {mod}`scanpy.external` for more.
+Also see [Data integration](tools.md#data-integration). Note that a simple batch correction method is available via {func}`pp.regress_out`. Checkout {mod}`scanpy.external` for more.
 
 ```{eval-rst}
 .. autosummary::
