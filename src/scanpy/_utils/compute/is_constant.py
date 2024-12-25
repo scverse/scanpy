@@ -5,11 +5,11 @@ from functools import partial, singledispatch, wraps
 from numbers import Integral
 from typing import TYPE_CHECKING, TypeVar, overload
 
+import numba
 import numpy as np
-from numba import njit
 from scipy import sparse
 
-from ..._compat import DaskArray
+from ..._compat import DaskArray, njit
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -103,22 +103,21 @@ def _(
         else:
             return (a.data == 0).all()
     if axis == 1:
-        return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape)
+        return _is_constant_csr_rows(a.data, a.indptr, a.shape)
     elif axis == 0:
         a = a.T.tocsr()
-        return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape)
+        return _is_constant_csr_rows(a.data, a.indptr, a.shape)
 
 
 @njit
 def _is_constant_csr_rows(
     data: NDArray[np.number],
-    indices: NDArray[np.integer],
     indptr: NDArray[np.integer],
     shape: tuple[int, int],
-):
+) -> NDArray[np.bool_]:
     n = len(indptr) - 1
     result = np.ones(n, dtype=np.bool_)
-    for i in range(n):
+    for i in numba.prange(n):
         start = indptr[i]
         stop = indptr[i + 1]
         val = data[start] if stop - start == shape[1] else 0
@@ -139,10 +138,10 @@ def _(
         else:
             return (a.data == 0).all()
     if axis == 0:
-        return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])
+        return _is_constant_csr_rows(a.data, a.indptr, a.shape[::-1])
     elif axis == 1:
         a = a.T.tocsc()
-        return _is_constant_csr_rows(a.data, a.indices, a.indptr, a.shape[::-1])
+        return _is_constant_csr_rows(a.data, a.indptr, a.shape[::-1])
 
 
 @is_constant.register(DaskArray)
@@ -151,4 +150,8 @@ def _(a: DaskArray, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool
         v = a[tuple(0 for _ in range(a.ndim))].compute()
         return (a == v).all()
     # TODO: use overlapping blocks and reduction instead of `drop_axis`
-    return a.map_blocks(partial(is_constant, axis=axis), drop_axis=axis)
+    return a.map_blocks(
+        partial(is_constant, axis=axis),
+        drop_axis=axis,
+        meta=np.array([], dtype=a.dtype),
+    )

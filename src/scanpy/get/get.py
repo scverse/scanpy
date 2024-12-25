@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
 from packaging.version import Version
 from scipy.sparse import spmatrix
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Collection, Iterable
     from typing import Any, Literal
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from numpy.typing import NDArray
+    from scipy.sparse import csc_matrix, csr_matrix
+
+    from .._compat import DaskArray
+
+    CSMatrix = csr_matrix | csc_matrix
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -116,7 +121,7 @@ def _check_indices(
     alt_index: pd.Index,
     *,
     dim: Literal["obs", "var"],
-    keys: list[str],
+    keys: Iterable[str],
     alias_index: pd.Index | None = None,
     use_raw: bool = False,
 ) -> tuple[list[str], list[str], list[str]]:
@@ -159,7 +164,7 @@ def _check_indices(
 
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
-    for key in np.unique(keys):
+    for key in dict.fromkeys(keys):
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
@@ -191,7 +196,7 @@ def _check_indices(
 def _get_array_values(
     X,
     dim_names: pd.Index,
-    keys: list[str],
+    keys: Iterable[str],
     *,
     axis: Literal[0, 1],
     backed: bool,
@@ -221,7 +226,7 @@ def _get_array_values(
 
 def obs_df(
     adata: AnnData,
-    keys: Iterable[str] = (),
+    keys: Collection[str] = (),
     obsm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str | None = None,
@@ -238,7 +243,7 @@ def obs_df(
     keys
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
-        Tuple of `(key from obsm, column index of obsm[key])`.
+        Tuples of `(key from obsm, column index of obsm[key])`.
     layer
         Layer of `adata` to use as expression values.
     gene_symbols
@@ -278,6 +283,8 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
     """
+    if isinstance(keys, str):
+        keys = [keys]
     if use_raw:
         assert (
             layer is None
@@ -336,7 +343,7 @@ def obs_df(
 
 def var_df(
     adata: AnnData,
-    keys: Iterable[str] = (),
+    keys: Collection[str] = (),
     varm_keys: Iterable[tuple[str, int]] = (),
     *,
     layer: str | None = None,
@@ -351,7 +358,7 @@ def var_df(
     keys
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
-        Tuple of `(key from varm, column index of varm[key])`.
+        Tuples of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
 
@@ -361,6 +368,8 @@ def var_df(
     and `varm_keys`.
     """
     # Argument handling
+    if isinstance(keys, str):
+        keys = [keys]
     var_cols, obs_idx_keys, _ = _check_indices(
         adata.var, adata.obs_names, dim="var", keys=keys
     )
@@ -481,11 +490,16 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
+M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
+
+
 def _check_mask(
-    data: AnnData | np.ndarray,
-    mask: NDArray[np.bool_] | str,
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    mask: str | M,
     dim: Literal["obs", "var"],
-) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+    *,
+    allow_probabilities: bool = False,
+) -> M:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
     Params
@@ -493,30 +507,45 @@ def _check_mask(
     data
         Annotated data matrix or numpy array.
     mask
-        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+        Mask (or probabilities if `allow_probabilities=True`).
+        Either an appropriatley sized array, or name of a column.
     dim
         The dimension being masked.
+    allow_probabilities
+        Whether to allow probabilities as `mask`
     """
+    if mask is None:
+        return mask
+    desc = "mask/probabilities" if allow_probabilities else "mask"
+
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
-            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
             raise ValueError(msg)
 
         annot: pd.DataFrame = getattr(data, dim)
         if mask not in annot.columns:
             msg = (
                 f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the mask first to `adata.{dim}`"
-                "or consider using the mask argument with a boolean array."
+                f"Either add the {desc} first to `adata.{dim}`"
+                f"or consider using the {desc} argument with an array."
             )
             raise ValueError(msg)
         mask_array = annot[mask].to_numpy()
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            raise ValueError("The shape of the mask do not match the data.")
+            msg = f"The shape of the {desc} do not match the data."
+            raise ValueError(msg)
         mask_array = mask
 
-    if not pd.api.types.is_bool_dtype(mask_array.dtype):
-        raise ValueError("Mask array must be boolean.")
+    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
+    if not allow_probabilities and not is_bool:
+        msg = "Mask array must be boolean."
+        raise ValueError(msg)
+    elif allow_probabilities and not (
+        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
+    ):
+        msg = f"{desc} array must be boolean or floating point."
+        raise ValueError(msg)
 
     return mask_array

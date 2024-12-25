@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -9,18 +9,17 @@ from anndata import AnnData, utils
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from .._utils import _resolve_axis
+from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Union
 
     from numpy.typing import NDArray
 
-    Array = Union[np.ndarray, sparse.csc_matrix, sparse.csr_matrix]
+    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
 
-# Used with get_args
+# Used with get_literal_vals
 AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
 
 
@@ -161,7 +160,7 @@ class Aggregate:
         return np.array(medians)
 
 
-def _power(X: Array, power: float | int) -> Array:
+def _power(X: Array, power: float) -> Array:
     """\
     Generate elementwise power of a matrix.
 
@@ -264,8 +263,7 @@ def aggregate(
     if axis is None:
         axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
-    if mask is not None:
-        mask = _check_mask(adata, mask, axis_name)
+    mask = _check_mask(adata, mask, axis_name)
     data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
@@ -348,8 +346,8 @@ def aggregate_array(
     result = {}
 
     funcs = set([func] if isinstance(func, str) else func)
-    if unknown := funcs - set(get_args(AggType)):
-        raise ValueError(f"func {unknown} is not one of {get_args(AggType)}")
+    if unknown := funcs - get_literal_vals(AggType):
+        raise ValueError(f"func {unknown} is not one of {get_literal_vals(AggType)}")
 
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()

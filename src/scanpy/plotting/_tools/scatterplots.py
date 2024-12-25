@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import sys
 from collections.abc import Mapping, Sequence  # noqa: TCH003
 from copy import copy
 from functools import partial
@@ -29,6 +28,7 @@ from numpy.typing import NDArray  # noqa: TCH002
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
     Empty,  # noqa: TCH001
@@ -95,7 +95,7 @@ def embedding(
     na_in_legend: bool = True,
     size: float | Sequence[float] | None = None,
     frameon: bool | None = None,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,
@@ -150,8 +150,7 @@ def embedding(
     # Checking the mask format and if used together with groups
     if groups is not None and mask_obs is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
-    if mask_obs is not None:
-        mask_obs = _check_mask(adata, mask_obs, "obs")
+    mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -217,7 +216,7 @@ def embedding(
         # set as ndarray
         if (
             size is not None
-            and isinstance(size, (Sequence, pd.Series, np.ndarray))
+            and isinstance(size, Sequence | pd.Series | np.ndarray)
             and len(size) == adata.shape[0]
         ):
             size = np.array(size, dtype=float)
@@ -593,9 +592,6 @@ def _get_vboundnorm(
 
 def _wraps_plot_scatter(wrapper):
     """Update the wrapper function to use the correct signature."""
-    if sys.version_info < (3, 10):
-        # Python 3.9 does not support `eval_str`, so we only support this in 3.10+
-        return wrapper
 
     params = inspect.signature(embedding, eval_str=True).parameters.copy()
     wrapper_sig = inspect.signature(wrapper, eval_str=True)
@@ -923,6 +919,7 @@ def pca(
     return axs
 
 
+@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -951,6 +948,9 @@ def spatial(
 ) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
@@ -998,8 +998,6 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :doc:`/tutorials/spatial/basic-analysis`
-        Tutorial on spatial analysis.
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)

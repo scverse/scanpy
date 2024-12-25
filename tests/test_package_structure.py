@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import os
 from collections import defaultdict
 from inspect import Parameter, signature
@@ -69,6 +70,13 @@ def test_descend_classes_and_funcs():
     assert {p.values[0] for p in api_functions} == funcs
 
 
+@pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")
+def test_import_future_anndata_import_warning():
+    import scanpy
+
+    importlib.reload(scanpy)
+
+
 @pytest.mark.parametrize(("f", "qualname"), api_functions)
 def test_function_headers(f, qualname):
     filename = getsourcefile(f)
@@ -130,6 +138,7 @@ copy_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
 copy_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.subsample"] = None  # returns indices along matrix
+copy_sigs["sc.pp.sample"] = None  # returns indices along matrix
 # partial exceptions: “data” instead of “adata”
 copy_sigs["sc.pp.log1p"]["first_name"] = "data"
 copy_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"

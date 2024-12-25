@@ -26,17 +26,18 @@ from .. import _utils
 from .._utils import matrix
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Union
+    from typing import Any, Literal
 
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
     from scipy.sparse import spmatrix
 
+    from ..._compat import _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
-    _Layout = Union[_LayoutWithoutEqTree, Literal["eq_tree"]]
+    _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
 @old_positionals(
@@ -73,7 +74,7 @@ def paga_compare(
     components=None,
     projection: Literal["2d", "3d"] = "2d",
     legend_loc: _LegendLoc | None = "on data",
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight = "bold",
     legend_fontoutline=None,
     color_map=None,
@@ -210,7 +211,7 @@ def _compute_pos(
     adjacency_solid: spmatrix | np.ndarray,
     *,
     layout: _Layout | None = None,
-    random_state: _sc_utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     init_pos: np.ndarray | None = None,
     adj_tree=None,
     root: int = 0,
@@ -701,11 +702,11 @@ def _paga_graph(
         and isinstance(node_labels, str)
         and node_labels != adata.uns["paga"]["groups"]
     ):
-        raise ValueError(
-            "Provide a list of group labels for the PAGA groups {}, not {}.".format(
-                adata.uns["paga"]["groups"], node_labels
-            )
+        msg = (
+            "Provide a list of group labels for the PAGA groups "
+            f"{adata.uns['paga']['groups']}, not {node_labels}."
         )
+        raise ValueError(msg)
     groups_key = adata.uns["paga"]["groups"]
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
@@ -725,7 +726,7 @@ def _paga_graph(
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
     # convert pos to array and dict
-    if not isinstance(pos, (Path, str)):
+    if not isinstance(pos, Path | str):
         pos_array = pos
     else:
         pos = Path(pos)
@@ -1053,7 +1054,7 @@ def paga_path(
     show_node_names: bool = True,
     show_yticks: bool = True,
     show_colorbar: bool = True,
-    legend_fontsize: int | float | _FontSize | None = None,
+    legend_fontsize: float | _FontSize | None = None,
     legend_fontweight: int | _FontWeight | None = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,

@@ -4,6 +4,7 @@ Denoise high-dimensional data using MAGIC
 
 from __future__ import annotations
 
+from types import NoneType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
 
 MIN_VERSION = "2.0"
 
@@ -35,7 +36,7 @@ def magic(
     n_pca: int | None = 100,
     solver: Literal["exact", "approximate"] = "exact",
     knn_dist: str = "euclidean",
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     n_jobs: int | None = None,
     verbose: bool = False,
     copy: bool | None = None,
@@ -155,7 +156,7 @@ def magic(
             )
 
     start = logg.info("computing MAGIC")
-    all_or_pca = isinstance(name_list, (str, type(None)))
+    all_or_pca = isinstance(name_list, str | NoneType)
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
         raise ValueError(
             "Invalid string value for `name_list`: "

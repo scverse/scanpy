@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, TypedDict, Union, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import pytest
 
@@ -88,7 +88,7 @@ def check_same_image(add_nunit_attachment):
             return f"{descr} ({basename})" if basename else descr
 
         result = cast(
-            Union[CompareResult, None],
+            CompareResult | None,
             compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:

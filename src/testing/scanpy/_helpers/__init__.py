@@ -5,6 +5,9 @@ This file contains helper functions for the scanpy test suite.
 from __future__ import annotations
 
 import warnings
+from contextlib import AbstractContextManager, contextmanager
+from dataclasses import dataclass
+from importlib.util import find_spec
 from itertools import permutations
 from typing import TYPE_CHECKING
 
@@ -14,6 +17,8 @@ from anndata.tests.helpers import asarray, assert_equal
 import scanpy as sc
 
 if TYPE_CHECKING:
+    from collections.abc import MutableSequence
+
     from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
@@ -138,3 +143,40 @@ def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_sparse_dask_array
 
     return as_sparse_dask_array(*args, **kwargs)
+
+
+@dataclass(init=False)
+class MultiContext(AbstractContextManager):
+    contexts: MutableSequence[AbstractContextManager]
+
+    def __init__(self, *contexts: AbstractContextManager):
+        self.contexts = list(contexts)
+
+    def __enter__(self):
+        for ctx in self.contexts:
+            ctx.__enter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        for ctx in reversed(self.contexts):
+            ctx.__exit__(exc_type, exc_value, traceback)
+
+
+@contextmanager
+def maybe_dask_process_context():
+    """
+    Running numba with dask's threaded scheduler causes crashes,
+    so we need to switch to single-threaded (or processes, which is slower)
+    scheduler for tests that use numba.
+    """
+    if not find_spec("dask"):
+        yield
+        return
+
+    import dask.config
+
+    prev_scheduler = dask.config.get("scheduler", "threads")
+    dask.config.set(scheduler="single-threaded")
+    try:
+        yield
+    finally:
+        dask.config.set(scheduler=prev_scheduler)

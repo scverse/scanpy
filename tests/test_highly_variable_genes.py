@@ -20,7 +20,8 @@ from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
-    from typing import Callable, Literal
+    from collections.abc import Callable
+    from typing import Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -554,6 +555,14 @@ def test_batches():
     ]
 
     assert np.all(np.isin(colnames, hvg1.columns))
+
+
+def test_degenerate_batches():
+    adata = AnnData(
+        X=np.random.randn(10, 100),
+        obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
+    )
+    sc.pp.highly_variable_genes(adata, batch_key="batch")
 
 
 @needs.skmisc

@@ -36,6 +36,23 @@ ROOT = HERE / "_images"
 # If test images need to be updated, simply copy actual.png to expected.png.
 
 
+@pytest.mark.parametrize("col", [None, "symb"])
+@pytest.mark.parametrize("layer", [None, "layer_name"])
+def test_highest_expr_genes(image_comparer, col, layer):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
+
+    adata = pbmc3k()
+    if layer is not None:
+        adata.layers[layer] = adata.X
+        del adata.X
+    # check that only existing categories are shown
+    adata.var["symb"] = adata.var_names.astype("category")
+
+    sc.pl.highest_expr_genes(adata, 20, gene_symbols=col, layer=layer, show=False)
+
+    save_and_compare_images("highest_expr_genes")
+
+
 @needs.leidenalg
 def test_heatmap(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -1337,7 +1354,9 @@ def test_scatter_specify_layer_and_raw():
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
 
-@pytest.mark.parametrize("color", ["n_genes", "bulk_labels"])
+@pytest.mark.parametrize(
+    "color", ["n_genes", "bulk_labels", ["n_genes", "bulk_labels"]]
+)
 def test_scatter_no_basis_per_obs(image_comparer, color):
     """Test scatterplot of per-obs points with no basis"""
 
@@ -1353,7 +1372,8 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
         # palette only applies to categorical, i.e. color=='bulk_labels'
         palette="Set2",
     )
-    save_and_compare_images(f"scatter_HES_percent_mito_{color}")
+    color_str = color if isinstance(color, str) else "_".join(color)
+    save_and_compare_images(f"scatter_HES_percent_mito_{color_str}")
 
 
 def test_scatter_no_basis_per_var(image_comparer):
@@ -1373,29 +1393,19 @@ def pbmc_filtered() -> Callable[[], AnnData]:
     return pbmc.copy
 
 
-def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmpdir):
+@pytest.mark.parametrize("use_raw", [True, None])
+def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw):
+    """Test scatterplots of raw layer with no basis."""
     adata = pbmc_filtered()
 
-    """Test scatterplots of raw layer with no basis."""
-    path1 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawNone.png"
-    path2 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawTrue.png"
-    path3 = tmpdir / "scatter_EGFL7_F12_FAM185A_rawToAdata.png"
-
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=None)
-    plt.savefig(path1)
-    plt.close()
-
-    # is equivalent to:
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=True)
-    plt.savefig(path2)
-    plt.close()
-
-    # and also to:
     sc.pl.scatter(adata.raw.to_adata(), x="EGFL7", y="F12", color="FAM185A")
-    plt.savefig(path3)
+    plt.savefig(path1 := tmp_path / "scatter-raw-to-adata.png")
+
+    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=use_raw)
+    plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
+    plt.close()
 
     check_same_image(path1, path2, tol=15)
-    check_same_image(path1, path3, tol=15)
 
 
 @pytest.mark.parametrize(
@@ -1446,11 +1456,10 @@ def test_rankings(image_comparer):
 
 
 # TODO: Make more generic
-def test_scatter_rep(tmpdir):
+def test_scatter_rep(tmp_path):
     """
     Test to make sure I can predict when scatter reps should be the same
     """
-    TESTDIR = Path(tmpdir)
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1465,7 +1474,7 @@ def test_scatter_rep(tmpdir):
         columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
-        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+        tmp_path / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [ "towncrier", "packaging" ]
+# ///
+
 from __future__ import annotations
 
 import argparse
@@ -62,9 +66,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    pr_description = (
-        "" if base_branch == "main" else "@meeseeksmachine backport to main"
-    )
+    pr_description = "" if base_branch == "main" else "@meeseeksdev backport to main"
     branch_name = f"release_notes_{args.version}"
 
     # Create a new branch + commit
@@ -90,7 +92,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             f"--base={base_branch}",
             f"--title={pr_title}",
             f"--body={pr_description}",
-            *(["--label=no milestone"] if base_branch == "main" else []),
+            *(
+                ["--label=no milestone", "--label=Development Process 🚀"]
+                if base_branch == "main"
+                else []
+            ),
             *(["--dry-run"] if args.dry_run else []),
         ],
         check=True,

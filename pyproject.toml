@@ -5,7 +5,7 @@ requires = ["hatchling", "hatch-vcs"]
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "BSD-3-clause"
 authors = [
     {name = "Alex Wolf"},
@@ -39,7 +39,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -48,26 +47,26 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    "numpy>=1.23",
+    "numpy>=1.24",
     "matplotlib>=3.6",
     "pandas >=1.5",
     "scipy>=1.8",
     "seaborn>=0.13",
-    "h5py>=3.1",
+    "h5py>=3.7",
     "tqdm",
-    "scikit-learn>=0.24",
+    "scikit-learn>=1.1,<1.6.0",
     "statsmodels>=0.13",
-    "patsy",
+    "patsy!=1.0.0", # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
     "joblib",
-    "numba>=0.56",
+    "numba>=0.57",
     "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
-    "session-info",
+    "session-info2",
     "legacy-api-wrap>=1.4",  # for positional API deprecations
-    "get-annotations; python_version < '3.10'",
+    "typing-extensions; python_version < '3.13'",
 ]
 dynamic = ["version"]
 
@@ -125,10 +124,9 @@ doc = [
     "ipython>=7.20",  # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
-    "setuptools",
+    "setuptools", # undeclared dependency of sphinxcontrib-bibtex→pybtex
     # TODO: remove necessity for being able to import doc-linked classes
-    "dask",
-    "scanpy[paga]",
+    "scanpy[paga,dask-ml]",
     "sam-algorithm",
 ]
 dev = [
@@ -169,7 +167,7 @@ addopts = [
     "-ptesting.scanpy._pytest",
     "--pyargs",
 ]
-testpaths = ["./tests", "scanpy"]
+testpaths = ["./tests", "./ci", "scanpy"]
 norecursedirs = ["tests/_images"]
 xfail_strict = true
 nunit_attach_on = "fail"
@@ -214,7 +212,7 @@ exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
-    "@numba.njit.*",
+    '@(numba\.|nb\.)njit.*',
 ]
 
 [tool.ruff]
@@ -234,6 +232,7 @@ select = [
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
+    "PYI",     # Typing
     "PLR0917", # Ban APIs with too many positional parameters
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
@@ -248,6 +247,8 @@ ignore = [
     "E262",
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
+    # `Literal["..."] | str` is useful for autocompletion
+    "PYI051",
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
@@ -260,6 +261,9 @@ required-imports = ["from __future__ import annotations"]
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
 "legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
+"numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
+"numba.jit".msg = "Use `scanpy._compat.njit` instead"
+"numba.njit".msg = "Use `scanpy._compat.njit` instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = []
 strict = true

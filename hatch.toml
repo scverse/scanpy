@@ -15,18 +15,21 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = []
-features = ["test"]
+features = ["test", "dask-ml"]
 extra-dependencies = ["ipykernel"]
 overrides.matrix.deps.env-vars = [
     { if = ["pre"], key = "UV_PRERELEASE", value = "allow" },
-    { if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
+    { if = ["min"], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
+]
+overrides.matrix.deps.pre-install-commands = [
+    { if = ["min"], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = ["min"] , value = "3.9" },
+    { if = ["min"], value = "3.10" },
     { if = ["stable", "full", "pre"], value = "3.12" },
 ]
 overrides.matrix.deps.features = [
-    { if = ["full"] , value = "test-full" },
+    { if = ["full"], value = "test-full" },
 ]
 
 [[envs.hatch-test.matrix]]

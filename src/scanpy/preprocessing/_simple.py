@@ -7,21 +7,22 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING
+from itertools import repeat
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import numba
 import numpy as np
-import scipy as sp
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _resolve_axis,
     axis_sum,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
@@ -29,27 +30,30 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
+from ._utils import _to_dense
 
-# install dask if available
 try:
     import dask.array as da
 except ImportError:
     da = None
-
-# backwards compat
-from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: F401
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
     from typing import Literal
 
+    import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
+    from .._utils import RNGLike, SeedLike
+
+
+CSMatrix = csr_matrix | csc_matrix
+
+A = TypeVar("A", bound=np.ndarray | CSMatrix | DaskArray)
 
 
 @old_positionals(
@@ -473,6 +477,7 @@ def sqrt(
         return X.sqrt()
 
 
+@deprecated("Use sc.pp.normalize_total instead")
 @old_positionals(
     "counts_per_cell_after",
     "counts_per_cell",
@@ -496,16 +501,16 @@ def normalize_per_cell(
     """\
     Normalize total counts per cell.
 
-    .. warning::
-        .. deprecated:: 1.3.7
-            Use :func:`~scanpy.pp.normalize_total` instead.
-            The new function is equivalent to the present
-            function, except that
+    .. deprecated:: 1.3.7
 
-            * the new function doesn't filter cells based on `min_counts`,
-              use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-            * some arguments were renamed
-            * `copy` is replaced by `inplace`
+       Use :func:`~scanpy.pp.normalize_total` instead.
+       The new function is equivalent to the present
+       function, except that
+
+       * the new function doesn't filter cells based on `min_counts`,
+         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
+       * some arguments were renamed
+       * `copy` is replaced by `inplace`
 
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
@@ -623,6 +628,34 @@ def normalize_per_cell(
     return X if copy else None
 
 
+DT = TypeVar("DT")
+
+
+@njit
+def get_resid(
+    data: np.ndarray,
+    regressor: np.ndarray,
+    coeff: np.ndarray,
+) -> np.ndarray:
+    for i in numba.prange(data.shape[0]):
+        data[i] -= regressor[i] @ coeff
+    return data
+
+
+def numpy_regress_out(
+    data: np.ndarray,
+    regressor: np.ndarray,
+) -> np.ndarray:
+    """\
+    Numba kernel for regress out unwanted sorces of variantion.
+    Finding coefficient using Linear regression (Linear Least Squares).
+    """
+    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
+    coeff = inv_gram_matrix @ (regressor.T @ data)
+    data = get_resid(data, regressor, coeff)
+    return data
+
+
 @old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
@@ -660,6 +693,8 @@ def regress_out(
     `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Corrected count data matrix.
     """
+    from joblib import Parallel, delayed
+
     start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
 
@@ -674,8 +709,7 @@ def regress_out(
     raise_not_implemented_error_if_backed_type(X, "regress_out")
 
     if issparse(X):
-        logg.info("    sparse input is densified and may " "lead to high memory use")
-        X = X.toarray()
+        logg.info("    sparse input is densified and may lead to high memory use")
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
@@ -692,6 +726,8 @@ def regress_out(
             )
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
+        X = _to_dense(X, order="F") if issparse(X) else X
+        # TODO figure out if we should use a numba kernel for this
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(X.T):
@@ -704,45 +740,64 @@ def regress_out(
 
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
+        regressors = regressors.to_numpy()
 
-    len_chunk = np.ceil(min(1000, X.shape[1]) / n_jobs).astype(int)
-    n_chunks = np.ceil(X.shape[1] / len_chunk).astype(int)
+    # if the regressors are not categorical and the matrix is not singular
+    # use the shortcut numpy_regress_out
+    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
+        X = _to_dense(X, order="C") if issparse(X) else X
+        res = numpy_regress_out(X, regressors)
 
-    tasks = []
-    # split the adata.X matrix by columns in chunks of size n_chunk
-    # (the last chunk could be of smaller size than the others)
-    chunk_list = np.array_split(X, n_chunks, axis=1)
-    if variable_is_categorical:
-        regressors_chunk = np.array_split(regressors, n_chunks, axis=1)
-    for idx, data_chunk in enumerate(chunk_list):
-        # each task is a tuple of a data_chunk eg. (adata.X[:,0:100]) and
-        # the regressors. This data will be passed to each of the jobs.
-        regres = regressors_chunk[idx] if variable_is_categorical else regressors
-        tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
+    # for a categorical variable or if the above checks failed,
+    # we fall back to the GLM implemetation of regression.
+    else:
+        # split the adata.X matrix by columns in chunks of size n_chunk
+        # (the last chunk could be of smaller size than the others)
+        len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
+        n_chunks = int(np.ceil(X.shape[1] / len_chunk))
+        X = _to_dense(X, order="F") if issparse(X) else X
+        chunk_list = np.array_split(X, n_chunks, axis=1)
+        regressors_chunk = (
+            np.array_split(regressors, n_chunks, axis=1)
+            if variable_is_categorical
+            else repeat(regressors)
+        )
 
-    from joblib import Parallel, delayed
+        # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
+        # This data will be passed to each of the jobs.
+        # TODO: figure out how to test that this doesn't oversubscribe resources
+        res = Parallel(n_jobs=n_jobs)(
+            delayed(_regress_out_chunk)(
+                data_chunk, regres, variable_is_categorical=variable_is_categorical
+            )
+            for data_chunk, regres in zip(chunk_list, regressors_chunk, strict=False)
+        )
 
-    # TODO: figure out how to test that this doesn't oversubscribe resources
-    res = Parallel(n_jobs=n_jobs)(delayed(_regress_out_chunk)(task) for task in tasks)
+        # res is a list of vectors (each corresponding to a regressed gene column).
+        # The transpose is needed to get the matrix in the shape needed
+        res = np.vstack(res).T
 
-    # res is a list of vectors (each corresponding to a regressed gene column).
-    # The transpose is needed to get the matrix in the shape needed
-    _set_obs_rep(adata, np.vstack(res).T, layer=layer)
+    _set_obs_rep(adata, res, layer=layer)
     logg.info("    finished", time=start)
     return adata if copy else None
 
 
-def _regress_out_chunk(data):
-    # data is a tuple containing the selected columns from adata.X
-    # and the regressors dataFrame
-    data_chunk = data[0]
-    regressors = data[1]
-    variable_is_categorical = data[2]
+def _regress_out_chunk(
+    data_chunk: NDArray[np.floating],
+    regressors: pd.DataFrame | NDArray[np.floating],
+    *,
+    variable_is_categorical: bool,
+) -> NDArray[np.floating]:
+    import statsmodels.api as sm
+    import statsmodels.tools.sm_exceptions as sme
+
+    Psw = (
+        sme.PerfectSeparationWarning
+        if hasattr(sme, "PerfectSeparationWarning")
+        else None
+    )
 
     responses_chunk_list = []
-    import statsmodels.api as sm
-    from statsmodels.tools.sm_exceptions import PerfectSeparationError
-
     for col_index in range(data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
         # but then no regression is necessary anyways...
@@ -754,13 +809,18 @@ def _regress_out_chunk(data):
             regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
         else:
             regres = regressors
+
         try:
-            result = sm.GLM(
-                data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-            ).fit()
-            new_column = result.resid_response
-        except PerfectSeparationError:  # this emulates R's behavior
-            logg.warning("Encountered PerfectSeparationError, setting to 0 as in R.")
+            with warnings.catch_warnings():
+                # See issue #3260 - for statsmodels>=0.14.0
+                if Psw:
+                    warnings.simplefilter("error", Psw)
+                result = sm.GLM(
+                    data_chunk[:, col_index], regres, family=sm.families.Gaussian()
+                ).fit()
+                new_column = result.resid_response
+        except (sme.PerfectSeparationError, *([Psw] if Psw else [])):
+            logg.warning("Encountered perfect separation, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)
@@ -768,17 +828,55 @@ def _regress_out_chunk(data):
     return np.vstack(responses_chunk_list)
 
 
-@old_positionals("n_obs", "random_state", "copy")
-def subsample(
-    data: AnnData | np.ndarray | spmatrix,
+@overload
+def sample(
+    data: AnnData,
     fraction: float | None = None,
     *,
-    n_obs: int | None = None,
-    random_state: AnyRandom = 0,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = 0,
+    copy: Literal[False] = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> None: ...
+@overload
+def sample(
+    data: AnnData,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: Literal[True],
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> AnnData: ...
+@overload
+def sample(
+    data: A,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> tuple[A, NDArray[np.int64]]: ...
+def sample(
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: bool = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
-    Subsample to a fraction of the number of observations.
+    Sample observations or variables with or without replacement.
 
     Parameters
     ----------
@@ -786,49 +884,89 @@ def subsample(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     fraction
-        Subsample to this `fraction` of the number of observations.
-    n_obs
-        Subsample to this number of observations.
+        Sample to this `fraction` of the number of observations or variables.
+        (All of them, even if there are `0`s/`False`s in `p`.)
+        This can be larger than 1.0, if `replace=True`.
+        See `axis` and `replace`.
+    n
+        Sample to this number of observations or variables. See `axis`.
     random_state
         Random seed to change subsampling.
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
+    replace
+        If True, samples are drawn with replacement.
+    axis
+        Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
+    p
+        Drawing probabilities (floats) or mask (bools).
+        Either an `axis`-sized array, or the name of a column.
+        If `p` is an array of probabilities, it must sum to 1.
 
     Returns
     -------
-    Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
-    subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
-    returns a subsampled copy of it (`copy == True`).
+    If `isinstance(data, AnnData)` and `copy=False`,
+    this function returns `None`. Otherwise:
+
+    `data[indices, :]` | `data[:, indices]` (depending on `axis`)
+        If `data` is array-like or `copy=True`, returns the subset.
+    `indices` : numpy.ndarray
+        If `data` is array-like, also returns the indices into the original.
     """
-    np.random.seed(random_state)
-    old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
-    if n_obs is not None:
-        new_n_obs = n_obs
-    elif fraction is not None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError(f"`fraction` needs to be within [0, 1], not {fraction}")
-        new_n_obs = int(fraction * old_n_obs)
-        logg.debug(f"... subsampled to {new_n_obs} data points")
-    else:
-        raise ValueError("Either pass `n_obs` or `fraction`.")
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
-    if isinstance(data, AnnData):
-        if data.isbacked:
-            if copy:
-                return data[obs_indices].to_memory()
-            else:
-                raise NotImplementedError(
-                    "Inplace subsampling is not implemented for backed objects."
-                )
+    # parameter validation
+    if not copy and isinstance(data, AnnData) and data.isbacked:
+        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
+        raise NotImplementedError(msg)
+    axis, axis_name = _resolve_axis(axis)
+    p = _check_mask(data, p, dim=axis_name, allow_probabilities=True)
+    if p is not None and p.dtype == bool:
+        p = p.astype(np.float64) / p.sum()
+    old_n = data.shape[axis]
+    match (fraction, n):
+        case (None, None):
+            msg = "Either `fraction` or `n` must be set."
+            raise TypeError(msg)
+        case (None, _):
+            pass
+        case (_, None):
+            if fraction < 0:
+                msg = f"`{fraction=}` needs to be nonnegative."
+                raise ValueError(msg)
+            if not replace and fraction > 1:
+                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
+                raise ValueError(msg)
+            n = int(fraction * old_n)
+            logg.debug(f"... sampled to {n} {axis_name}")
+        case _:
+            msg = "Providing both `fraction` and `n` is not allowed."
+            raise TypeError(msg)
+    del fraction
+
+    # actually do subsampling
+    rng = np.random.default_rng(rng)
+    indices = rng.choice(old_n, size=n, replace=replace, p=p)
+
+    # overload 1: inplace AnnData subset
+    if not copy and isinstance(data, AnnData):
+        if axis_name == "obs":
+            data._inplace_subset_obs(indices)
         else:
-            if copy:
-                return data[obs_indices].copy()
-            else:
-                data._inplace_subset_obs(obs_indices)
-    else:
-        X = data
-        return X[obs_indices], obs_indices
+            data._inplace_subset_var(indices)
+        return None
+
+    subset = data[indices] if axis_name == "obs" else data[:, indices]
+
+    # overload 2: copy AnnData subset
+    if copy and isinstance(data, AnnData):
+        assert isinstance(subset, AnnData)
+        return subset.to_memory() if data.isbacked else subset.copy()
+
+    # overload 3: return array and indices
+    assert isinstance(subset, np.ndarray | CSMatrix | DaskArray), type(subset)
+    if copy:
+        subset = subset.copy()
+    return subset, indices
 
 
 @renamed_arg("target_counts", "counts_per_cell")
@@ -837,7 +975,7 @@ def downsample_counts(
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -967,12 +1105,13 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
     return X
 
 
-@numba.njit(cache=True)
+# TODO: can/should this be parallelized?
+@numba.njit(cache=True)  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     replace: bool = True,
     inplace: bool = False,
 ):
@@ -998,29 +1137,3 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
-
-
-# --------------------------------------------------------------------------------
-# Helper Functions
-# --------------------------------------------------------------------------------
-
-
-def _pca_fallback(data, n_comps=2):
-    # mean center the data
-    data -= data.mean(axis=0)
-    # calculate the covariance matrix
-    C = np.cov(data, rowvar=False)
-    # calculate eigenvectors & eigenvalues of the covariance matrix
-    # use 'eigh' rather than 'eig' since C is symmetric,
-    # the performance gain is substantial
-    # evals, evecs = np.linalg.eigh(C)
-    evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
-    # sort eigenvalues in decreasing order
-    idcs = np.argsort(evals)[::-1]
-    evecs = evecs[:, idcs]
-    evals = evals[idcs]
-    # select the first n eigenvectors (n is desired dimension
-    # of rescaled data array, or n_comps)
-    evecs = evecs[:, :n_comps]
-    # project data points on eigenvectors
-    return np.dot(evecs.T, data.T).T

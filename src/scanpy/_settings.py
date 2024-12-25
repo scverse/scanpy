@@ -15,14 +15,14 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Any, Literal, TextIO, Union
+    from typing import Any, Literal, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
-    _Format = Union[
-        Literal["png", "jpg", "tif", "tiff"],
-        Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"],
-        Literal["raw", "rgba"],
-    ]
+    _Format = (
+        Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
+        | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
+        | Literal["raw", "rgba"]
+    )
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",
@@ -82,9 +82,7 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
         possible_types_str = types.__name__
     else:
         type_names = [t.__name__ for t in types]
-        possible_types_str = "{} or {}".format(
-            ", ".join(type_names[:-1]), type_names[-1]
-        )
+        possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
     raise TypeError(f"{varname} must be of type {possible_types_str}")
 
 
@@ -340,7 +338,7 @@ class ScanpyConfig:
         return self._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory: int | float):
+    def max_memory(self, max_memory: float):
         _type_check(max_memory, "max_memory", (int, float))
         self._max_memory = max_memory
 

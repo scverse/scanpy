@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import warnings
+from importlib.util import find_spec
 from itertools import product
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -9,16 +13,29 @@ from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
 from scipy import sparse as sp
-from scipy.sparse import issparse
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
 
 import scanpy as sc
 from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
+    maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any, Literal
+
+    from numpy.typing import NDArray
+
+    CSMatrix = sp.csc_matrix | sp.csr_matrix
+
+
+HERE = Path(__file__).parent
+DATA_PATH = HERE / "_data"
 
 
 def test_log1p(tmp_path):
@@ -129,34 +146,159 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
-def test_subsample():
-    adata = AnnData(np.ones((200, 10)))
-    sc.pp.subsample(adata, n_obs=40)
-    assert adata.n_obs == 40
-    sc.pp.subsample(adata, fraction=0.1)
-    assert adata.n_obs == 4
+def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
+    """
+    Generate a random probability distribution of `n` values between 0 and 1.
+    """
+    probs = np.random.randint(0, 10000, n).astype(np.float64)
+    probs[probs < np.quantile(probs, frac_zero)] = 0
+    probs /= probs.sum()
+    np.testing.assert_almost_equal(probs.sum(), 1)
+    return probs
 
 
-def test_subsample_copy():
-    adata = AnnData(np.ones((200, 10)))
-    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
-    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("which", ["copy", "inplace", "array"])
+@pytest.mark.parametrize(
+    ("axis", "f_or_n", "replace"),
+    [
+        pytest.param(0, 40, False, id="obs-40-no_replace"),
+        pytest.param(0, 0.1, False, id="obs-0.1-no_replace"),
+        pytest.param(0, 201, True, id="obs-201-replace"),
+        pytest.param(0, 1, True, id="obs-1-replace"),
+        pytest.param(1, 10, False, id="var-10-no_replace"),
+        pytest.param(1, 11, True, id="var-11-replace"),
+        pytest.param(1, 2.0, True, id="var-2.0-replace"),
+    ],
+)
+@pytest.mark.parametrize(
+    "ps",
+    [
+        dict(obs=None, var=None),
+        dict(obs=np.tile([True, False], 100), var=np.tile([True, False], 5)),
+        dict(obs=_random_probs(200, 0.3), var=_random_probs(10, 0.7)),
+    ],
+    ids=["all", "mask", "p"],
+)
+def test_sample(
+    *,
+    request: pytest.FixtureRequest,
+    array_type: Callable[[np.ndarray], np.ndarray | CSMatrix],
+    which: Literal["copy", "inplace", "array"],
+    axis: Literal[0, 1],
+    f_or_n: float | int,  # noqa: PYI041
+    replace: bool,
+    ps: dict[Literal["obs", "var"], NDArray[np.bool_] | None],
+):
+    adata = AnnData(array_type(np.ones((200, 10))))
+    p = ps["obs" if axis == 0 else "var"]
+    expected = int(adata.shape[axis] * f_or_n) if isinstance(f_or_n, float) else f_or_n
+    if p is not None and not replace and expected > (n_possible := (p != 0).sum()):
+        request.applymarker(pytest.xfail(f"Can’t draw {expected} out of {n_possible}"))
 
+    # ignoring this warning declaratively is a pain so do it here
+    if find_spec("dask"):
+        import dask.array as da
 
-def test_subsample_copy_backed(tmp_path):
-    A = np.random.rand(200, 10).astype(np.float32)
-    adata_m = AnnData(A.copy())
-    adata_d = AnnData(A.copy())
-    filename = tmp_path / "test.h5ad"
-    adata_d.filename = filename
-    # This should not throw an error
-    assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
-    np.testing.assert_array_equal(
-        sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
-        sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
+        warnings.filterwarnings("ignore", category=da.PerformanceWarning)
+    # can’t guarantee that duplicates are drawn when `replace=True`,
+    # so we just ignore the warning instead using `with pytest.warns(...)`
+    warnings.filterwarnings(
+        "ignore" if replace else "error", r".*names are not unique", UserWarning
     )
+    rv = sc.pp.sample(
+        adata.X if which == "array" else adata,
+        f_or_n if isinstance(f_or_n, float) else None,
+        n=f_or_n if isinstance(f_or_n, int) else None,
+        replace=replace,
+        axis=axis,
+        # `copy` only effects AnnData inputs
+        copy=dict(copy=True, inplace=False, array=False)[which],
+        p=p,
+    )
+
+    match which:
+        case "copy":
+            subset = rv
+            assert rv is not adata
+            assert adata.shape == (200, 10)
+        case "inplace":
+            subset = adata
+            assert rv is None
+        case "array":
+            subset, indices = rv
+            assert len(indices) == expected
+            assert adata.shape == (200, 10)
+        case _:
+            pytest.fail(f"Unknown `{which=}`")
+
+    assert subset.shape == ((expected, 10) if axis == 0 else (200, expected))
+
+
+@pytest.mark.parametrize(
+    ("args", "exc", "pattern"),
+    [
+        pytest.param(
+            dict(), TypeError, r"Either `fraction` or `n` must be set", id="empty"
+        ),
+        pytest.param(
+            dict(n=10, fraction=0.2),
+            TypeError,
+            r"Providing both `fraction` and `n` is not allowed",
+            id="both",
+        ),
+        pytest.param(
+            dict(fraction=2),
+            ValueError,
+            r"If `replace=False`, `fraction=2` needs to be",
+            id="frac>1",
+        ),
+        pytest.param(
+            dict(fraction=-0.3),
+            ValueError,
+            r"`fraction=-0\.3` needs to be nonnegative",
+            id="frac<0",
+        ),
+        pytest.param(
+            dict(n=3, p=np.ones(200, dtype=np.int32)),
+            ValueError,
+            r"mask/probabilities array must be boolean or floating point",
+            id="type(p)",
+        ),
+    ],
+)
+def test_sample_error(args: dict[str, Any], exc: type[Exception], pattern: str):
+    adata = AnnData(np.ones((200, 10)))
+    with pytest.raises(exc, match=pattern):
+        sc.pp.sample(adata, **args)
+
+
+def test_sample_backwards_compat():
+    expected = np.array(
+        [26, 86, 2, 55, 75, 93, 16, 73, 54, 95, 53, 92, 78, 13, 7, 30, 22, 24, 33, 8]
+    )
+    legacy_result, indices = sc.pp.subsample(np.arange(100), n_obs=20)
+    assert np.array_equal(indices, legacy_result), "arange choices should match indices"
+    assert np.array_equal(legacy_result, expected)
+
+
+def test_sample_copy_backed(tmp_path):
+    adata_m = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d = adata_m.copy()
+    adata_d.filename = tmp_path / "test.h5ad"
+
+    assert sc.pp.sample(adata_d, n=40, copy=True).shape == (40, 10)
+    np.testing.assert_array_equal(
+        sc.pp.sample(adata_m, n=40, copy=True, rng=0).X,
+        sc.pp.sample(adata_d, n=40, copy=True, rng=0).X,
+    )
+
+
+def test_sample_copy_backed_error(tmp_path):
+    adata_d = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d.filename = tmp_path / "test.h5ad"
     with pytest.raises(NotImplementedError):
-        sc.pp.subsample(adata_d, n_obs=40, copy=False)
+        sc.pp.sample(adata_d, n=40, copy=False)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -168,7 +310,8 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
     sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
-    sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
+    with maybe_dask_process_context():
+        sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
@@ -319,6 +462,16 @@ def test_regress_out_constants():
 
     sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
     assert_equal(adata, adata_copy)
+
+
+def test_regress_out_reproducible():
+    adata = pbmc68k_reduced()
+    adata = adata.raw.to_adata()[:200, :200].copy()
+    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    # This file was generated from the original implementation in version 1.10.3
+    # Now we compare new implementation with the old one
+    tester = np.load(DATA_PATH / "regress_test_small.npy")
+    np.testing.assert_allclose(adata.X, tester)
 
 
 def test_regress_out_constants_equivalent():
@@ -522,3 +675,14 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     if issparse(adata.X):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", [csr_matrix, csc_matrix, coo_matrix])
+@pytest.mark.parametrize("order", ["C", "F"])
+def test_todense(array_type, order):
+    x_org = np.array([[0, 1, 2], [3, 0, 4]])
+    x_sparse = array_type(x_org)
+    x_dense = sc.pp._utils._to_dense(x_sparse, order=order)
+    np.testing.assert_array_equal(x_dense, x_org)
+    assert x_dense.flags["C_CONTIGUOUS"] == (order == "C")
+    assert x_dense.flags["F_CONTIGUOUS"] == (order == "F")
