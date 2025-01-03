@@ -88,3 +88,24 @@ def test_diffmap():
     sc.tl.diffmap(pbmc, random_state=1234)
     d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+def test_densmap():
+    pbmc = pbmc68k_reduced()
+
+    # Checking that the results are reproducible
+    sc.tl.umap(pbmc, method="densmap")
+    d1 = pbmc.obsm["X_densmap"].copy()
+    sc.tl.umap(pbmc, method="densmap")
+    d2 = pbmc.obsm["X_densmap"].copy()
+    assert_array_equal(d1, d2)
+
+    # Checking if specifying random_state  works, arrays shouldn't be equal
+    sc.tl.umap(pbmc, method="densmap", random_state=1234)
+    d3 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+    # Checking if specifying dens_lambda  works, arrays shouldn't be equal
+    sc.tl.umap(pbmc, method="densmap", method_kwds=dict(dens_lambda=2.3456))
+    d4 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d4)
