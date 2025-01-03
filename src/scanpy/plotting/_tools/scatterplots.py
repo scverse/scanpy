@@ -28,6 +28,7 @@ from numpy.typing import NDArray  # noqa: TCH002
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
     Empty,  # noqa: TCH001
@@ -149,8 +150,7 @@ def embedding(
     # Checking the mask format and if used together with groups
     if groups is not None and mask_obs is not None:
         raise ValueError("Groups and mask arguments are incompatible.")
-    if mask_obs is not None:
-        mask_obs = _check_mask(adata, mask_obs, "obs")
+    mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
     if use_raw is None:
@@ -919,6 +919,7 @@ def pca(
     return axs
 
 
+@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -947,6 +948,9 @@ def spatial(
 ) -> Figure | Axes | list[Axes] | None:
     """\
     Scatter plot in spatial coordinates.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
@@ -994,8 +998,6 @@ def spatial(
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
-    :doc:`/tutorials/spatial/basic-analysis`
-        Tutorial on spatial analysis.
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
