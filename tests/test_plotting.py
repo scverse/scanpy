@@ -1177,7 +1177,6 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
             partial(
                 sc.pl.embedding,
                 basis="X_densmap",
-                frameon=False,
             ),
         ),
     ],
