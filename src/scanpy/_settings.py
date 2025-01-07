@@ -82,9 +82,7 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
         possible_types_str = types.__name__
     else:
         type_names = [t.__name__ for t in types]
-        possible_types_str = "{} or {}".format(
-            ", ".join(type_names[:-1]), type_names[-1]
-        )
+        possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
     raise TypeError(f"{varname} must be of type {possible_types_str}")
 
 

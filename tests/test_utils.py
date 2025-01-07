@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from operator import mul, truediv
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -9,7 +10,7 @@ from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy.sparse import csr_matrix, issparse
 
-from scanpy._compat import DaskArray, pkg_version
+from scanpy._compat import DaskArray, _legacy_numpy_gen, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
@@ -25,6 +26,9 @@ from testing.scanpy._pytest.params import (
     ARRAY_TYPES_SPARSE,
     ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def test_descend_classes_and_funcs():
@@ -247,3 +251,39 @@ def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_
     x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
     result = is_constant(x, axis=axis).compute()
     np.testing.assert_array_equal(expected, result)
+
+
+@pytest.mark.parametrize("seed", [0, 1, 1256712675])
+@pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
+@pytest.mark.parametrize("func", ["choice"])
+def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
+    np.random.seed(seed)
+    state_before = np.random.get_state(legacy=False)
+
+    arrs: dict[bool, np.ndarray] = {}
+    states_after: dict[bool, dict[str, Any]] = {}
+    for direct in [True, False]:
+        if not pass_seed:
+            np.random.seed(seed)
+        arrs[direct] = _mk_random(func, direct=direct, seed=seed if pass_seed else None)
+        states_after[direct] = np.random.get_state(legacy=False)
+
+    np.testing.assert_array_equal(arrs[True], arrs[False])
+    np.testing.assert_equal(
+        *states_after.values(), err_msg="both should affect global state the same"
+    )
+    # they should affect the global state
+    with pytest.raises(AssertionError):
+        np.testing.assert_equal(states_after[True], state_before)
+
+
+def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
+    if direct and seed is not None:
+        np.random.seed(seed)
+    gen = np.random if direct else _legacy_numpy_gen(seed)
+    match func:
+        case "choice":
+            arr = np.arange(1000)
+            return gen.choice(arr, size=(100, 100))
+        case _:
+            pytest.fail(f"Unknown {func=}")

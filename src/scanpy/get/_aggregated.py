@@ -263,8 +263,7 @@ def aggregate(
     if axis is None:
         axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
-    if mask is not None:
-        mask = _check_mask(adata, mask, axis_name)
+    mask = _check_mask(adata, mask, axis_name)
     data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
         raise TypeError("Please only provide one (or none) of varm, obsm, or layer")

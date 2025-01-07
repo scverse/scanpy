@@ -124,10 +124,11 @@ class _RankGenes:
         )
 
         if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(", ".join(invalid_groups_selected))
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
             )
+            raise ValueError(msg)
 
         adata_comp = adata
         if layer is not None:
@@ -593,8 +594,7 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    if mask_var is not None:
-        mask_var = _check_mask(adata, mask_var, "var")
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None
@@ -853,7 +853,7 @@ def filter_rank_genes_groups(
 
         if not use_logfolds or not use_fraction:
             sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
-            in_group = adata.obs[groupby] == cluster
+            in_group = (adata.obs[groupby] == cluster).to_numpy()
             X_in = sub_X[in_group]
             X_out = sub_X[~in_group]
 
