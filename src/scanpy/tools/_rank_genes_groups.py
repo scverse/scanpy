@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from math import floor
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -32,6 +31,8 @@ if TYPE_CHECKING:
 # Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
+_CONST_MAX_SIZE = 10000000
+
 
 def _select_top_n(scores: NDArray, n_top: int):
     n_from = scores.shape[0]
@@ -47,9 +48,7 @@ def _ranks(
     X: np.ndarray | sparse.csr_matrix | sparse.csc_matrix,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-):
-    CONST_MAX_SIZE = 10000000
-
+) -> Generator[tuple[pd.DataFrame, int, int], None, None]:
     n_genes = X.shape[1]
 
     if issparse(X):
@@ -71,7 +70,7 @@ def _ranks(
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
     # Calculate chunk frames
-    max_chunk = floor(CONST_MAX_SIZE / n_cells)
+    max_chunk = min(_CONST_MAX_SIZE // n_cells, 1)
 
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
@@ -81,7 +80,7 @@ def _ranks(
         yield ranks, left, right
 
 
-def _tiecorrect(ranks):
+def _tiecorrect(ranks: pd.DataFrame) -> np.float64:
     size = np.float64(ranks.shape[0])
     if size < 2:
         return np.repeat(ranks.shape[1], 1.0)
