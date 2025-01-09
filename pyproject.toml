@@ -22,9 +22,9 @@ authors = [
     {name = "Andrés R. Muñoz-Rojas"},
 ]
 maintainers = [
-    {name = "Isaac Virshup", email = "ivirshup@gmail.com"},
     {name = "Philipp Angerer", email = "phil.angerer@gmail.com"},
-    {name = "Alex Wolf", email = "f.alex.wolf@gmx.de"},
+    {name = "Ilan Gold"},
+    {name = "Severin Dicks"},
 ]
 readme = "README.md"
 classifiers = [
@@ -70,12 +70,14 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+# https://docs.pypi.org/project_metadata/#project-urls
 [project.urls]
 Documentation = "https://scanpy.readthedocs.io/"
 Source = "https://github.com/scverse/scanpy"
-Home-page = "https://scanpy.org"
+Homepage = "https://scanpy.org"
 Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
-Twitter = "https://twitter.com/scverse_team"
+Bluesky = "https://bsky.app/profile/scverse.bsky.social"
+Twitter = "https://x.com/scverse_team"
 
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
