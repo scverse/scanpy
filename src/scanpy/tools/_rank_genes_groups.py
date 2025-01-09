@@ -70,7 +70,7 @@ def _ranks(
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
     # Calculate chunk frames
-    max_chunk = min(_CONST_MAX_SIZE // n_cells, 1)
+    max_chunk = max(_CONST_MAX_SIZE // n_cells, 1)
 
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
