@@ -956,7 +956,7 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
-        (All of them, even if there are `0`s/`False`s in `p`.)
+        (All of them, even if there are `0`\\ s/`False`\\ s in `p`.)
         This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
