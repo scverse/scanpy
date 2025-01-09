@@ -307,6 +307,13 @@ def test_wilcoxon_tie_correction(reference):
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
 
 
+def test_wilcoxon_huge_data(monkeypatch):
+    max_size = 300
+    adata = pbmc68k_reduced()
+    monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
+    rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
+
+
 @pytest.mark.parametrize(
     ("n_genes_add", "n_genes_out_add"),
     [pytest.param(0, 0, id="equal"), pytest.param(2, 1, id="more")],
