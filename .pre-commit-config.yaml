@@ -21,10 +21,10 @@ repos:
     hooks:
     -   id: biome-format
         additional_dependencies: ["@biomejs/biome@1.9.4"]
--   repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.5.0
+-   repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
     hooks:
-    -   id: pyproject-fmt
+    -   id: taplo-format
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

@@ -1,17 +1,12 @@
 [build-system]
 build-backend = "hatchling.build"
-requires = [ "hatch-vcs", "hatchling" ]
+requires = [ "hatchling", "hatch-vcs" ]
 
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-readme = "README.md"
+requires-python = ">=3.10"
 license = "BSD-3-clause"
-maintainers = [
-    { name = "Isaac Virshup", email = "ivirshup@gmail.com" },
-    { name = "Philipp Angerer", email = "phil.angerer@gmail.com" },
-    { name = "Alex Wolf", email = "f.alex.wolf@gmx.de" },
-]
 authors = [
     { name = "Alex Wolf" },
     { name = "Philipp Angerer" },
@@ -26,8 +21,14 @@ authors = [
     { name = "Marius Lange" },
     { name = "Andrés R. Muñoz-Rojas" },
 ]
-requires-python = ">=3.10"
+maintainers = [
+    { name = "Isaac Virshup", email = "ivirshup@gmail.com" },
+    { name = "Philipp Angerer", email = "phil.angerer@gmail.com" },
+    { name = "Alex Wolf", email = "f.alex.wolf@gmx.de" },
+]
+readme = "README.md"
 classifiers = [
+    "License :: OSI Approved :: BSD License",
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Framework :: Jupyter",
@@ -37,110 +38,118 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
-dynamic = [ "version" ]
-
 dependencies = [
     "anndata>=0.8",
-    "h5py>=3.7",
-    "joblib",
-    "legacy-api-wrap>=1.4",                     # for positional API deprecations
-    "matplotlib>=3.6",
-    "natsort",
-    "networkx>=2.7",
-    "numba>=0.57",
     "numpy>=1.24",
-    "packaging>=21.3",
-    "pandas>=1.5",
-    "patsy!=1",                                 # https://github.com/pydata/patsy/issues/215
-    "pynndescent>=0.5",
-    "scikit-learn>=1.1,<1.6",
+    "matplotlib>=3.6",
+    "pandas >=1.5",
     "scipy>=1.8",
     "seaborn>=0.13",
-    "session-info2",
-    "statsmodels>=0.13",
+    "h5py>=3.7",
     "tqdm",
-    "typing-extensions; python_version<'3.13'",
-    "umap-learn>=0.5,!=0.5",
+    "scikit-learn>=1.1,<1.6.0",
+    "statsmodels>=0.13",
+    "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
+    "networkx>=2.7",
+    "natsort",
+    "joblib",
+    "numba>=0.57",
+    "umap-learn>=0.5,!=0.5.0",
+    "pynndescent>=0.5",
+    "packaging>=21.3",
+    "session-info2",
+    "legacy-api-wrap>=1.4",                       # for positional API deprecations
+    "typing-extensions; python_version < '3.13'",
 ]
-optional-dependencies.bbknn = [ "bbknn" ] # Batch balanced KNN (batch correction)
-optional-dependencies.dask = [ "dask[array]>=2022.9.2,<2024.8" ] # Use the Dask parallelization engine
-optional-dependencies.dask-ml = [ "dask-ml", "scanpy[dask]" ] # Dask-ML for sklearn-like API
-optional-dependencies.dev = [
-    # static checking
-    "pre-commit",
-    # getting the dev version
-    "setuptools-scm",
-    "towncrier",
+dynamic = [ "version" ]
+
+[project.urls]
+Documentation = "https://scanpy.readthedocs.io/"
+Source = "https://github.com/scverse/scanpy"
+Home-page = "https://scanpy.org"
+Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
+Twitter = "https://twitter.com/scverse_team"
+
+[project.scripts]
+scanpy = "scanpy.cli:console_main"
+
+[project.optional-dependencies]
+test-min = [
+    "pytest>=8.2",
+    "pytest-nunit",
+    "pytest-mock",
+    "pytest-cov",
+    "profimp",
 ]
-optional-dependencies.doc = [
-    "ipython>=7.20",             # for nbsphinx code highlighting
-    "matplotlib!=3.6.1",
-    "myst-nb>=1",
-    "myst-parser>=2",
-    "nbsphinx>=0.9",
-    "readthedocs-sphinx-search",
-    "sam-algorithm",
-    # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml]",
-    "scanpydoc>=0.14.1",
-    "setuptools",                       # undeclared dependency of sphinxcontrib-bibtex→pybtex
-    "sphinx>=7",
-    "sphinx-autodoc-typehints>=1.25.2",
-    "sphinx-book-theme>=1.1",
-    "sphinx-copybutton",
-    "sphinx-design",
-    "sphinx-tabs",
-    "sphinxcontrib-bibtex",
-    "sphinxext-opengraph",              # for nice cards when sharing on social
-]
-optional-dependencies.harmony = [ "harmonypy" ] # Harmony dataset integration
-optional-dependencies.leiden = [ "igraph>=0.10", "leidenalg>=0.9" ] # Leiden community detection
-optional-dependencies.louvain = [ "igraph", "louvain>=0.6,!=0.6.2" ] # Louvain community detection
-optional-dependencies.magic = [ "magic-impute>=2" ] # MAGIC imputation method
-optional-dependencies.paga = [ "igraph" ]
-optional-dependencies.rapids = [ "cudf>=0.9", "cugraph>=0.9", "cuml>=0.9" ] # GPU accelerated calculation of neighbors
-optional-dependencies.scanorama = [ "scanorama" ] # Scanorama dataset integration
-optional-dependencies.scrublet = [ "scikit-image" ] # Doublet detection with automatic thresholds
-optional-dependencies.skmisc = [ "scikit-misc>=0.1.3" ] # highly_variable_genes method 'seurat_v3'
-# this test config adds optional but important dependencies
-optional-dependencies.test = [
-    "scanpy[dask]",
+test = [
+    "scanpy[test-min]",
+    # Optional but important dependencies
     "scanpy[leiden]",
-    "scanpy[scrublet]",
-    "scanpy[test-min]", # test config this one extends
     "zarr",
+    "scanpy[dask]",
+    "scanpy[scrublet]",
 ]
-# this test config mainly adds additional tested algorithms
-optional-dependencies.test-full = [
-    "scanpy[dask-ml]",
-    "scanpy[harmony]",
+test-full = [
+    "scanpy[test]",
+    # optional storage modes
+    "zappy",
+    # additional tested algorithms
     "scanpy[louvain]",
     "scanpy[magic]",
-    "scanpy[scanorama]",
     "scanpy[skmisc]",
-    "scanpy[test]",      # test config this one extends
-    "zappy",             # optional storage mode
+    "scanpy[harmony]",
+    "scanpy[scanorama]",
+    "scanpy[dask-ml]",
 ]
-optional-dependencies.test-min = [
-    "profimp",
-    "pytest>=8.2",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-nunit",
+doc = [
+    "sphinx>=7",
+    "sphinx-book-theme>=1.1.0",
+    "scanpydoc>=0.14.1",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "myst-parser>=2",
+    "myst-nb>=1",
+    "sphinx-design",
+    "sphinx-tabs",
+    "readthedocs-sphinx-search",
+    "sphinxext-opengraph",              # for nice cards when sharing on social
+    "sphinx-copybutton",
+    "nbsphinx>=0.9",
+    "ipython>=7.20",                    # for nbsphinx code highlighting
+    "matplotlib!=3.6.1",
+    "sphinxcontrib-bibtex",
+    "setuptools",                       # undeclared dependency of sphinxcontrib-bibtex→pybtex
+    # TODO: remove necessity for being able to import doc-linked classes
+    "scanpy[paga,dask-ml]",
+    "sam-algorithm",
 ]
-urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
-urls.Documentation = "https://scanpy.readthedocs.io/"
-urls.Home-page = "https://scanpy.org"
-urls.Source = "https://github.com/scverse/scanpy"
-urls.Twitter = "https://twitter.com/scverse_team"
-scripts.scanpy = "scanpy.cli:console_main"
+dev = [
+    # getting the dev version
+    "setuptools_scm",
+    # static checking
+    "pre-commit",
+    "towncrier",
+]
+# Algorithms
+paga = [ "igraph" ]
+louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ] # Louvain community detection
+leiden = [ "igraph>=0.10", "leidenalg>=0.9.0" ]  # Leiden community detection
+bbknn = [ "bbknn" ]                              # Batch balanced KNN (batch correction)
+magic = [ "magic-impute>=2.0" ]                  # MAGIC imputation method
+skmisc = [ "scikit-misc>=0.1.3" ]                # highly_variable_genes method 'seurat_v3'
+harmony = [ "harmonypy" ]                        # Harmony dataset integration
+scanorama = [ "scanorama" ]                      # Scanorama dataset integration
+scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
+# Acceleration
+rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
+dask = [ "dask[array]>=2022.09.2,<2024.8.0" ]         # Use the Dask parallelization engine
+dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/testing", "src/scanpy" ]
@@ -149,55 +158,6 @@ source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
 [tool.hatch.build.hooks.vcs]
 version-file = "src/scanpy/_version.py"
-
-[tool.ruff]
-src = [ "src" ]
-format.docstring-code-format = true
-lint.select = [
-    "E",       # Error detected by Pycodestyle
-    "F",       # Errors detected by Pyflakes
-    "FBT",     # No positional boolean parameters
-    "I",       # isort
-    "ICN",     # Follow import conventions
-    "PLR0917", # Ban APIs with too many positional parameters
-    "PT",      # Pytest style
-    "PTH",     # Pathlib instead of os.path
-    "PYI",     # Typing
-    "SIM",     # Simplify control flow
-    "TCH",     # manage type checking blocks
-    "TID251",  # Banned imports
-    "UP",      # pyupgrade
-    "W",       # Warning detected by Pycodestyle
-]
-lint.ignore = [
-    # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
-    "E262",
-    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
-    "E402",
-    # line too long -> we accept long comment lines; black gets rid of long code lines
-    "E501",
-    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
-    "E741",
-    # `Literal["..."] | str` is useful for autocompletion
-    "PYI051",
-]
-# Do not assign a lambda expression, use a def
-lint.per-file-ignores."src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
-lint.flake8-tidy-imports.banned-api."legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
-lint.flake8-tidy-imports.banned-api."numba.jit".msg = "Use `scanpy._compat.njit` instead"
-lint.flake8-tidy-imports.banned-api."numba.njit".msg = "Use `scanpy._compat.njit` instead"
-lint.flake8-tidy-imports.banned-api."numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
-lint.flake8-tidy-imports.banned-api."pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
-lint.flake8-tidy-imports.banned-api."pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
-lint.flake8-tidy-imports.banned-api."pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
-lint.flake8-type-checking.exempt-modules = [  ]
-lint.flake8-type-checking.strict = true
-lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
-lint.isort.required-imports = [ "from __future__ import annotations" ]
-
-[tool.pyproject-fmt]
-max_supported_python = "3.12"
-indent = 4
 
 [tool.pytest.ini_options]
 addopts = [
@@ -254,6 +214,59 @@ exclude_also = [
     # https://github.com/numba/numba/issues/4268
     '@(numba\.|nb\.)njit.*',
 ]
+
+[tool.ruff]
+src = [ "src" ]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "E",       # Error detected by Pycodestyle
+    "F",       # Errors detected by Pyflakes
+    "W",       # Warning detected by Pycodestyle
+    "UP",      # pyupgrade
+    "I",       # isort
+    "TCH",     # manage type checking blocks
+    "TID251",  # Banned imports
+    "ICN",     # Follow import conventions
+    "PTH",     # Pathlib instead of os.path
+    "PYI",     # Typing
+    "PLR0917", # Ban APIs with too many positional parameters
+    "FBT",     # No positional boolean parameters
+    "PT",      # Pytest style
+    "SIM",     # Simplify control flow
+]
+ignore = [
+    # line too long -> we accept long comment lines; black gets rid of long code lines
+    "E501",
+    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+    "E402",
+    # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
+    "E262",
+    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+    "E741",
+    # `Literal["..."] | str` is useful for autocompletion
+    "PYI051",
+]
+[tool.ruff.lint.per-file-ignores]
+# Do not assign a lambda expression, use a def
+"src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
+[tool.ruff.lint.isort]
+known-first-party = [ "scanpy", "testing.scanpy" ]
+required-imports = [ "from __future__ import annotations" ]
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
+"pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
+"pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
+"legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
+"numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
+"numba.jit".msg = "Use `scanpy._compat.njit` instead"
+"numba.njit".msg = "Use `scanpy._compat.njit` instead"
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = [  ]
+strict = true
 
 [tool.towncrier]
 package = "scanpy"

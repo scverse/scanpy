@@ -19,9 +19,4 @@
     "python.testing.pytestArgs": ["-vv", "--color=yes"],
     "python.testing.pytestEnabled": true,
     "python.terminal.activateEnvironment": true,
-    // mirror settings from pyproject-fmt
-    "evenBetterToml.formatter.indentString": "    ",
-    "evenBetterToml.formatter.columnWidth": 120,
-    "evenBetterToml.formatter.arrayAutoCollapse": false,
-    "evenBetterToml.formatter.compactArrays": false,
 }
