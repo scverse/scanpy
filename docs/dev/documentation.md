@@ -12,10 +12,11 @@ Sometimes these caches are not invalidated when you've updated the docs.
 If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
 Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and try building them again.
 
+(adding-to-the-docs)=
+
 ## Adding to the docs
 
 For any user-visible changes, please make sure a note has been added to the release notes using [`hatch run towncrier:create`][towncrier create].
-We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
