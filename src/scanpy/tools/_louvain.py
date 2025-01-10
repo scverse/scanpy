@@ -20,9 +20,11 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
+    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._compat import _LegacyRandom
+
+    _CSMatrix = csr_matrix | csc_matrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -55,7 +57,7 @@ def louvain(
     random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: spmatrix | None = None,
+    adjacency: _CSMatrix | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
@@ -143,9 +145,8 @@ def louvain(
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
     if (flavor != "vtraag") and (partition_type is not None):
-        raise ValueError(
-            "`partition_type` is only a valid argument " 'when `flavour` is "vtraag"'
-        )
+        msg = '`partition_type` is only a valid argument when `flavour` is "vtraag"'
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)

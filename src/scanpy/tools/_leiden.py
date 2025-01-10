@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from .._compat import _LegacyRandom
 
+    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -36,7 +38,7 @@ def leiden(
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: sparse.spmatrix | None = None,
+    adjacency: _CSMatrix | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,

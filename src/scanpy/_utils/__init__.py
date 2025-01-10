@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from typing import Any, TypeVar
 
     from anndata import AnnData
+    from igraph import Graph
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from .._compat import _LegacyRandom
@@ -285,7 +286,7 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency, directed=None):
+def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
@@ -1136,8 +1137,10 @@ class NeighborsView:
             return key in self._neighbors_dict
 
 
-def _choose_graph(adata, obsp, neighbors_key):
-    """Choose connectivities from neighbbors or another obsp column"""
+def _choose_graph(
+    adata: AnnData, obsp: str | None, neighbors_key: str | None
+) -> _CSMatrix:
+    """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
             "You can't specify both obsp, neighbors_key. Please select only one."
@@ -1145,13 +1148,13 @@ def _choose_graph(adata, obsp, neighbors_key):
 
     if obsp is not None:
         return adata.obsp[obsp]
-    else:
-        neighbors = NeighborsView(adata, neighbors_key)
-        if "connectivities" not in neighbors:
-            raise ValueError(
-                "You need to run `pp.neighbors` first to compute a neighborhood graph."
-            )
-        return neighbors["connectivities"]
+
+    neighbors = NeighborsView(adata, neighbors_key)
+    if "connectivities" not in neighbors:
+        raise ValueError(
+            "You need to run `pp.neighbors` first to compute a neighborhood graph."
+        )
+    return neighbors["connectivities"]
 
 
 def _resolve_axis(
