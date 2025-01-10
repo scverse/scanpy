@@ -100,7 +100,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         else adata_prepared.X
     )
     max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.csr_matrix | sparse.csc_matrix):
+    if isinstance(max_X, sparse.coo_matrix):
         max_X = max_X.toarray()
     elif isinstance(max_X, DaskArray):
         max_X = max_X.compute()
