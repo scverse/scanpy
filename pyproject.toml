@@ -23,7 +23,7 @@ authors = [
 ]
 maintainers = [
     { name = "Philipp Angerer", email = "phil.angerer@gmail.com" },
-    { name = "Ilan Gold" },
+    { name = "Ilan Gold", email = "ilan.gold@helmholtz-munich.de" },
     { name = "Severin Dicks" },
 ]
 readme = "README.md"
