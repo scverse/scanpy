@@ -841,7 +841,8 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.spmatrix)
+@check_nonnegative_integers.register(sparse.csr_matrix)
+@check_nonnegative_integers.register(sparse.csc_matrix)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
