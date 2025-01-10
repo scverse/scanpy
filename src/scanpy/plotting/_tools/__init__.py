@@ -44,9 +44,10 @@ if TYPE_CHECKING:
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
-    from matplotlib.figure import Figure
+    from matplotlib.figure import Figure, SubFigure
 
     from ..._utils import Empty
+    from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
 # ------------------------------------------------------------------------------
@@ -346,7 +347,7 @@ def rank_genes_groups(
     save: bool | None = None,
     ax: Axes | None = None,
     **kwds,
-):
+) -> Figure | SubFigure | None:
     """\
     Plot ranking of genes.
 
@@ -370,6 +371,9 @@ def rank_genes_groups(
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
 
+    Returns
+    -------
+    Matplotlib figure or `None` if it was shown.
 
     Examples
     --------
@@ -412,13 +416,24 @@ def rank_genes_groups(
 
     from matplotlib import gridspec
 
-    fig = plt.figure(
-        figsize=(
-            n_panels_x * rcParams["figure.figsize"][0],
-            n_panels_y * rcParams["figure.figsize"][1],
+    if ax is None or (sps := ax.get_subplotspec()) is None:
+        fig = (
+            plt.figure(
+                figsize=(
+                    n_panels_x * rcParams["figure.figsize"][0],
+                    n_panels_y * rcParams["figure.figsize"][1],
+                )
+            )
+            if ax is None
+            else ax.get_figure()
         )
-    )
-    gs = gridspec.GridSpec(nrows=n_panels_y, ncols=n_panels_x, wspace=0.22, hspace=0.3)
+        gs = gridspec.GridSpec(n_panels_y, n_panels_x, fig, wspace=0.22, hspace=0.3)
+    else:
+        fig = ax.get_figure()
+        gs = sps.subgridspec(n_panels_y, n_panels_x)
+    if fig is None:
+        msg = "passed ax has no associated figure"
+        raise RuntimeError(msg)
 
     ax0 = None
     ymin = np.inf
@@ -474,15 +489,21 @@ def rank_genes_groups(
         if count % n_panels_x == 0:
             ax.set_ylabel("score")
 
-    if sharey is True:
+    if sharey is True and ax is not None:
         ymax += 0.3 * (ymax - ymin)
         ax.set_ylim(ymin, ymax)
 
     writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
     savefig_or_show(writekey, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return fig
 
 
-def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
+def _fig_show_save_or_axes(
+    plot_obj: BasePlot, *, return_fig: bool, show: bool | None, save: bool | None
+):
     """
     Decides what to return
     """
@@ -509,7 +530,7 @@ def _rank_genes_groups_plot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     gene_symbols: str | None = None,
     **kwds,
 ):
@@ -521,10 +542,6 @@ def _rank_genes_groups_plot(
             "The arguments n_genes and var_names are mutually exclusive. Please "
             "select only one."
         )
-
-    if var_names is None and n_genes is None:
-        # set n_genes = 10 as default when none of the options is given
-        n_genes = 10
 
     if key is None:
         key = "rank_genes_groups"
@@ -542,6 +559,10 @@ def _rank_genes_groups_plot(
         else:
             var_names_list = var_names
     else:
+        # set n_genes = 10 as default when none of the options is given
+        if n_genes is None:
+            n_genes = 10
+
         # dict in which each group is the key and the n_genes are the values
         var_names = {}
         var_names_list = []
@@ -619,7 +640,7 @@ def _rank_genes_groups_plot(
             if title is not None and "colorbar_title" not in kwds:
                 _pl.legend(title=title)
 
-        return _fig_show_save_or_axes(_pl, return_fig, show, save)
+        return _fig_show_save_or_axes(_pl, return_fig=return_fig, show=show, save=save)
 
     elif plot_type == "stacked_violin":
         from .._stacked_violin import stacked_violin
@@ -632,7 +653,7 @@ def _rank_genes_groups_plot(
             gene_symbols=gene_symbols,
             **kwds,
         )
-        return _fig_show_save_or_axes(_pl, return_fig, show, save)
+        return _fig_show_save_or_axes(_pl, return_fig=return_fig, show=show, save=save)
     elif plot_type == "heatmap":
         from .._anndata import heatmap
 
@@ -846,7 +867,7 @@ def rank_genes_groups_dotplot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
@@ -985,7 +1006,7 @@ def rank_genes_groups_stacked_violin(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
@@ -1073,7 +1094,7 @@ def rank_genes_groups_matrixplot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
