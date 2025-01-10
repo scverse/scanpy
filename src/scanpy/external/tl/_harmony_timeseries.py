@@ -76,9 +76,9 @@ def harmony_timeseries(
 
     **X_harmony** - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
         force directed layout
-    **harmony_aff** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         affinity matrix
-    **harmony_aff_aug** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff_aug** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         augmented affinity matrix
     **harmony_timepoint_var** - `str` (:attr:`~anndata.AnnData.uns`)
         The name of the variable passed as `tp`

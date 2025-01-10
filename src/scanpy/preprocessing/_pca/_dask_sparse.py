@@ -15,11 +15,9 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import DTypeLike
-    from scipy import sparse
 
     from ..._compat import DaskArray
-
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from .._utils import _CSMatrix
 
 
 @dataclass
@@ -120,7 +118,7 @@ class PCASparseDaskFit(PCASparseDask):
             import dask.array as da
 
         def transform_block(
-            x_part: CSMatrix,
+            x_part: _CSMatrix,
             mean_: NDArray[np.floating],
             components_: NDArray[np.floating],
         ):
@@ -191,8 +189,8 @@ def _cov_sparse_dask(
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: CSMatrix):
-        gram_matrix: CSMatrix = x_part.T @ x_part
+    def gram_block(x_part: _CSMatrix):
+        gram_matrix: _CSMatrix = x_part.T @ x_part
         return gram_matrix.toarray()[None, ...]  # need new axis for summing
 
     gram_matrix_dask: DaskArray = da.map_blocks(

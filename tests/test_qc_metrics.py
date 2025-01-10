@@ -75,10 +75,13 @@ def test_segments_binary():
 
 
 @pytest.mark.parametrize(
-    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
-def test_top_segments(cls):
-    a = cls(np.ones((300, 100)))
+def test_top_segments(request: pytest.FixtureRequest, array_type):
+    if "dask" in array_type.__name__:
+        reason = "DaskArray not yet supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    a = array_type(np.ones((300, 100)))
     seg = top_segment_proportions(a, [50, 100])
     assert (seg[:, 0] == 0.5).all()
     assert (seg[:, 1] == 1.0).all()
@@ -100,7 +103,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         else adata_prepared.X
     )
     max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.spmatrix):
+    if isinstance(max_X, sparse.coo_matrix):
         max_X = max_X.toarray()
     elif isinstance(max_X, DaskArray):
         max_X = max_X.compute()

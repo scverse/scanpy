@@ -15,9 +15,10 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from scipy import sparse
 
     from .._compat import _LegacyRandom
+    from .._utils import _CSMatrix
+
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
@@ -36,7 +37,7 @@ def leiden(
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: sparse.spmatrix | None = None,
+    adjacency: _CSMatrix | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
