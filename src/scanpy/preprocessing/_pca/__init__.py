@@ -28,12 +28,11 @@ if TYPE_CHECKING:
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
     from scipy import sparse
-    from scipy.sparse import spmatrix
 
     from ..._compat import _LegacyRandom
     from ..._utils import Empty
 
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
     MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
@@ -65,7 +64,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
     mask_var_hvg=doc_mask_var_hvg,
 )
 def pca(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     n_comps: int | None = None,
     *,
     layer: str | None = None,
@@ -80,7 +79,7 @@ def pca(
     chunk_size: int | None = None,
     key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | np.ndarray | spmatrix | None:
+) -> AnnData | np.ndarray | _CSMatrix | None:
     """\
     Principal component analysis :cite:p:`Pedregosa2011`.
 
@@ -195,7 +194,7 @@ def pca(
     Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
     Sets the following fields:
 
-    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
     `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings.
@@ -217,8 +216,7 @@ def pca(
             "reproducible across different computational platforms. For exact "
             "reproducibility, choose `svd_solver='arpack'`."
         )
-    data_is_AnnData = isinstance(data, AnnData)
-    if data_is_AnnData:
+    if return_anndata := isinstance(data, AnnData):
         if layer is None and not chunked and is_backed_type(data.X):
             raise NotImplementedError(
                 f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
@@ -378,7 +376,7 @@ def pca(
     if X_pca.dtype.descr != np.dtype(dtype).descr:
         X_pca = X_pca.astype(dtype)
 
-    if data_is_AnnData:
+    if return_anndata:
         key_obsm, key_varm, key_uns = (
             ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
         )
