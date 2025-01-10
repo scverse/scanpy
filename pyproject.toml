@@ -94,7 +94,7 @@ test = [
     "scanpy[test-min]",
     # Optional but important dependencies
     "scanpy[leiden]",
-    "zarr",
+    "zarr<3",
     "scanpy[dask]",
     "scanpy[scrublet]",
 ]
