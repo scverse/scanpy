@@ -9,9 +9,8 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy.sparse import csc_matrix, csr_matrix
 
-    _CSMatrix = csr_matrix | csc_matrix
+    from .._utils import _CSMatrix
 
 
 def rename_groups(

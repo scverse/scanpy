@@ -27,12 +27,9 @@ if TYPE_CHECKING:
     import dask_ml.decomposition as dmld
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
-    from scipy import sparse
 
     from ..._compat import _LegacyRandom
-    from ..._utils import Empty
-
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from ..._utils import Empty, _CSMatrix
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
     MethodSklearn = type[skld.PCA | skld.TruncatedSVD]

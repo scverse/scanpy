@@ -15,11 +15,9 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import DTypeLike
-    from scipy import sparse
 
     from ..._compat import DaskArray
-
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from .._utils import _CSMatrix
 
 
 @dataclass

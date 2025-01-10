@@ -20,11 +20,9 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from anndata import AnnData
-    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._compat import _LegacyRandom
-
-    _CSMatrix = csr_matrix | csc_matrix
+    from .._utils import _CSMatrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition

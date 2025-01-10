@@ -12,9 +12,8 @@ from ..._utils import _get_legacy_random
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from .._compat import _LegacyRandom
-
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from ..._compat import _LegacyRandom
+    from ..._utils import _CSMatrix
 
 
 def sparse_multiply(

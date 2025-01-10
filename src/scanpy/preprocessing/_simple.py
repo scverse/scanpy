@@ -22,6 +22,7 @@ from .._compat import DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _CSMatrix,
     _resolve_axis,
     axis_sum,
     is_backed_type,
@@ -50,8 +51,6 @@ if TYPE_CHECKING:
     from .._compat import _LegacyRandom
     from .._utils import RNGLike, SeedLike
 
-
-_CSMatrix = csr_matrix | csc_matrix
 
 A = TypeVar("A", bound=np.ndarray | _CSMatrix | DaskArray)
 

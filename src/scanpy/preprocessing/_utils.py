@@ -9,7 +9,7 @@ from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
 from .._compat import njit
-from .._utils import axis_sum, elem_mul
+from .._utils import _CSMatrix, axis_sum, elem_mul
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -18,9 +18,6 @@ if TYPE_CHECKING:
 
     from .._compat import DaskArray, _LegacyRandom
     from .._utils import _SupportedArray
-
-
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
 @singledispatch

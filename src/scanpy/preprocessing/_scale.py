@@ -30,9 +30,8 @@ except ImportError:
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from scipy import sparse as sp
 
-    _CSMatrix = sp.csr_matrix | sp.csc_matrix
+    from .._utils import _CSMatrix
 
 
 @njit

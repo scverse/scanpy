@@ -15,11 +15,10 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from scipy import sparse
 
     from .._compat import _LegacyRandom
+    from .._utils import _CSMatrix
 
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition

@@ -24,10 +24,11 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy import sparse
+
+    from .._utils import _CSMatrix
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
 
 # Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]

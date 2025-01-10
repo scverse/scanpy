@@ -7,13 +7,13 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix, csr_matrix, issparse, spmatrix
+from scipy.sparse import csr_matrix, issparse, spmatrix
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import DaskArray, njit
-from .._utils import _doc_params, axis_nnz, axis_sum
+from .._utils import _CSMatrix, _doc_params, axis_nnz, axis_sum
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
-
-_CSMatrix = csr_matrix | csc_matrix
 
 
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):

@@ -16,9 +16,7 @@ from .._utils import _get_mean_var
 if TYPE_CHECKING:
     from typing import Literal
 
-    from scipy.sparse import csc_matrix, csr_matrix
-
-    _CSMatrix = csr_matrix | csc_matrix
+    from .._utils import _CSMatrix
 
 
 @deprecated("Use sc.pp.highly_variable_genes instead")

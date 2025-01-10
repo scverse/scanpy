@@ -23,11 +23,9 @@ if TYPE_CHECKING:
 
     from ..._compat import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
+    from .._utils import _CSMatrix
 
 __all__ = ["Scrublet"]
-
-
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
 @dataclass(kw_only=True)

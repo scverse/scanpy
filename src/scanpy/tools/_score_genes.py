@@ -8,10 +8,9 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 
-from scanpy._utils import _check_use_raw, is_backed_type
-
 from .. import logging as logg
 from .._compat import old_positionals
+from .._utils import _check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -20,15 +19,14 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
-    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._compat import _LegacyRandom
+    from .._utils import _CSMatrix
 
     try:
         _StrIdx = pd.Index[str]
     except TypeError:  # Sphinx
         _StrIdx = pd.Index
-    _CSMatrix = csr_matrix | csc_matrix
     _GetSubset = Callable[[_StrIdx], np.ndarray | _CSMatrix]
 
 

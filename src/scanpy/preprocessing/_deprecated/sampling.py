@@ -9,11 +9,9 @@ if TYPE_CHECKING:
     import numpy as np
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy.sparse import csc_matrix, csr_matrix
 
     from ..._compat import _LegacyRandom
-
-    _CSMatrix = csr_matrix | csc_matrix
+    from ..._utils import _CSMatrix
 
 
 @old_positionals("n_obs", "random_state", "copy")

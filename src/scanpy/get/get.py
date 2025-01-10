@@ -9,7 +9,8 @@ import pandas as pd
 from anndata import AnnData
 from numpy.typing import NDArray
 from packaging.version import Version
-from scipy.sparse import csc_matrix, csr_matrix
+
+from .._utils import _CSMatrix
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -20,8 +21,6 @@ if TYPE_CHECKING:
 
     from .._compat import DaskArray
 
-
-_CSMatrix = csr_matrix | csc_matrix
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers

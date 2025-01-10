@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from ..._utils import _CSMatrix
+
     _Array = NDArray | DaskArray | _CSMatrix
 
     C = TypeVar("C", bound=Callable)
