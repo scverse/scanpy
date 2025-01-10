@@ -19,7 +19,8 @@ if TYPE_CHECKING:
     from .._compat import DaskArray, _LegacyRandom
     from .._utils import _SupportedArray
 
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
 @singledispatch
