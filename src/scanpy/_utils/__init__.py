@@ -629,14 +629,14 @@ def axis_mul_or_truediv(
 @axis_mul_or_truediv.register(sparse.csr_matrix)
 @axis_mul_or_truediv.register(sparse.csc_matrix)
 def _(
-    X: sparse.csr_matrix | sparse.csc_matrix,
+    X: _CSMatrix,
     scaling_array,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: sparse.csr_matrix | sparse.csc_matrix | None = None,
-) -> sparse.csr_matrix | sparse.csc_matrix:
+    out: _CSMatrix | None = None,
+) -> _CSMatrix:
     check_op(op)
     if out is not None and X.data is not out.data:
         raise ValueError(

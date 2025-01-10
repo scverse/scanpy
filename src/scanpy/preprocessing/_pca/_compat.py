@@ -20,11 +20,11 @@ if TYPE_CHECKING:
 
     from ..._compat import _LegacyRandom
 
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 
 def _pca_compat_sparse(
-    x: CSMatrix,
+    x: _CSMatrix,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],

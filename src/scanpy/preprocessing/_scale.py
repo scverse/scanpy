@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from scipy import sparse as sp
 
-    CSMatrix = sp.csr_matrix | sp.csc_matrix
+    _CSMatrix = sp.csr_matrix | sp.csc_matrix
 
 
 @njit
@@ -66,7 +66,7 @@ def clip_array(
     return X
 
 
-def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
+def clip_set(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
     x = x.copy()
     x[x > max_value] = max_value
     if zero_center:
@@ -78,7 +78,7 @@ def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMa
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | csr_matrix | csc_matrix | np.ndarray | DaskArray,
+    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +86,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | csr_matrix | csc_matrix | np.ndarray | DaskArray | None:
+) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -233,7 +233,7 @@ def scale_array(
 @scale.register(csr_matrix)
 @scale.register(csc_matrix)
 def scale_sparse(
-    X: csr_matrix | csc_matrix,
+    X: _CSMatrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,

@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from scipy import sparse
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 # Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
@@ -45,7 +46,7 @@ def _select_top_n(scores: NDArray, n_top: int):
 
 
 def _ranks(
-    X: np.ndarray | sparse.csr_matrix | sparse.csc_matrix,
+    X: np.ndarray | _CSMatrix,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
 ) -> Generator[tuple[pd.DataFrame, int, int], None, None]:

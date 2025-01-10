@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
+_CSMatrix = csr_matrix | csc_matrix
+
 
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
     is_layer = layer is not None
@@ -102,9 +104,9 @@ def describe_obs(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, spmatrix) and not isinstance(X, csr_matrix | csc_matrix):
+        if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
             X = csr_matrix(X)  # COO not subscriptable
-        if isinstance(X, csr_matrix | csc_matrix):
+        if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     obs_metrics[f"n_{var_type}_by_{expr_type}"] = materialize_as_ndarray(
@@ -189,9 +191,9 @@ def describe_var(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, spmatrix) and not isinstance(X, csr_matrix | csc_matrix):
+        if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
             X = csr_matrix(X)  # COO not subscriptable
-        if isinstance(X, csr_matrix | csc_matrix):
+        if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
@@ -298,9 +300,9 @@ def calculate_qc_metrics(
         )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-    if isinstance(X, spmatrix) and not isinstance(X, csr_matrix | csc_matrix):
+    if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
         X = csr_matrix(X)  # COO not subscriptable
-    if isinstance(X, csr_matrix | csc_matrix):
+    if isinstance(X, _CSMatrix):
         X.eliminate_zeros()
 
     # Convert qc_vars to list if str

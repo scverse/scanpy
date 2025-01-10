@@ -28,12 +28,11 @@ if TYPE_CHECKING:
         _StrIdx = pd.Index[str]
     except TypeError:  # Sphinx
         _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | csr_matrix | csc_matrix]
+    _CSMatrix = csr_matrix | csc_matrix
+    _GetSubset = Callable[[_StrIdx], np.ndarray | _CSMatrix]
 
 
-def _sparse_nanmean(
-    X: csr_matrix | csc_matrix, axis: Literal[0, 1]
-) -> NDArray[np.float64]:
+def _sparse_nanmean(X: _CSMatrix, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """
     np.nanmean equivalent for sparse matrices
     """

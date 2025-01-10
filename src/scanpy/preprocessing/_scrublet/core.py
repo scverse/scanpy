@@ -27,6 +27,9 @@ if TYPE_CHECKING:
 __all__ = ["Scrublet"]
 
 
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
+
 @dataclass(kw_only=True)
 class Scrublet:
     """\
@@ -65,9 +68,7 @@ class Scrublet:
 
     # init fields
 
-    counts_obs: InitVar[sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer]] = (
-        field(kw_only=False)
-    )
+    counts_obs: InitVar[_CSMatrix | NDArray[np.integer]] = field(kw_only=False)
     total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
     n_neighbors: InitVar[int | None] = None
@@ -82,15 +83,11 @@ class Scrublet:
 
     _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_obs_norm: sparse.csr_matrix | sparse.csc_matrix = field(
-        init=False, repr=False
-    )
+    _counts_obs_norm: _CSMatrix = field(init=False, repr=False)
 
-    _counts_sim: sparse.csr_matrix | sparse.csc_matrix = field(init=False, repr=False)
+    _counts_sim: _CSMatrix = field(init=False, repr=False)
     _total_counts_sim: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_sim_norm: sparse.csr_matrix | sparse.csc_matrix | None = field(
-        default=None, init=False, repr=False
-    )
+    _counts_sim_norm: _CSMatrix | None = field(default=None, init=False, repr=False)
 
     # Fields set by methods
 
@@ -171,7 +168,7 @@ class Scrublet:
 
     def __post_init__(
         self,
-        counts_obs: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer],
+        counts_obs: _CSMatrix | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
         random_state: _LegacyRandom,

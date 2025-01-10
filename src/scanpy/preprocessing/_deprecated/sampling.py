@@ -13,18 +13,18 @@ if TYPE_CHECKING:
 
     from ..._compat import _LegacyRandom
 
-    CSMatrix = csr_matrix | csc_matrix
+    _CSMatrix = csr_matrix | csc_matrix
 
 
 @old_positionals("n_obs", "random_state", "copy")
 def subsample(
-    data: AnnData | np.ndarray | CSMatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
     random_state: _LegacyRandom = 0,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | CSMatrix, NDArray[np.int64]] | None:
+) -> AnnData | tuple[np.ndarray | _CSMatrix, NDArray[np.int64]] | None:
     """\
     Subsample to a fraction of the number of observations.
 
