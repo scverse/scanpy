@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import partial, singledispatch, wraps
 from numbers import Integral
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, overload
 
 import numba
 import numpy as np
@@ -12,11 +11,15 @@ from scipy import sparse
 from ..._compat import DaskArray, njit
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable
+    from typing import Literal, TypeVar
 
     from numpy.typing import NDArray
 
-C = TypeVar("C", bound=Callable)
+    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    _Array = NDArray | DaskArray | _CSMatrix
+
+    C = TypeVar("C", bound=Callable)
 
 
 def _check_axis_supported(wrapped: C) -> C:
@@ -33,11 +36,9 @@ def _check_axis_supported(wrapped: C) -> C:
 
 
 @overload
-def is_constant(a: NDArray, axis: None = None) -> bool: ...
-
-
+def is_constant(a: _Array, axis: None = None) -> bool: ...
 @overload
-def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
+def is_constant(a: _Array, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
 
 
 @_check_axis_supported

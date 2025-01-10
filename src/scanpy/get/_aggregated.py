@@ -333,9 +333,10 @@ def aggregate_df(data, by, func, *, mask=None, dof=1):
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(sparse.spmatrix)
+@_aggregate.register(sparse.csr_matrix)
+@_aggregate.register(sparse.csc_matrix)
 def aggregate_array(
-    data,
+    data: Array,
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,

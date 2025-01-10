@@ -9,7 +9,7 @@ import pandas as pd
 from anndata import AnnData
 from numpy.typing import NDArray
 from packaging.version import Version
-from scipy.sparse import spmatrix
+from scipy.sparse import csc_matrix, csr_matrix
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from scipy.sparse import csc_matrix, csr_matrix
 
     from .._compat import DaskArray
 
-    CSMatrix = csr_matrix | csc_matrix
+
+_CSMatrix = csr_matrix | csc_matrix
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -333,7 +333,7 @@ def obs_df(
         val = adata.obsm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, _CSMatrix):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -403,7 +403,7 @@ def var_df(
         val = adata.varm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, _CSMatrix):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -419,7 +419,7 @@ def _get_obs_rep(
     obsp: str | None = None,
 ) -> (
     np.ndarray
-    | spmatrix
+    | _CSMatrix
     | pd.DataFrame
     | ArrayView
     | BaseCompressedSparseDataset
@@ -494,7 +494,7 @@ M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | No
 
 
 def _check_mask(
-    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    data: AnnData | np.ndarray | _CSMatrix | DaskArray,
     mask: str | M,
     dim: Literal["obs", "var"],
     *,

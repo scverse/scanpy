@@ -49,6 +49,8 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
@@ -59,6 +61,9 @@ if TYPE_CHECKING:
 
     from .._compat import _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
+
+    _MemoryArray = NDArray | _CSMatrix
+    _SupportedArray = _MemoryArray | DaskArray
 
 
 SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
@@ -195,7 +200,7 @@ def _import_name(name: str) -> Any:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}")
     return obj
 
 
@@ -358,8 +363,7 @@ def compute_association_matrix_of_groups(
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info(
-                f"Ignoring category {cat!r} "
-                "as it’s in `settings.categories_to_ignore`."
+                f"Ignoring category {cat!r} as it’s in `settings.categories_to_ignore`."
             )
     asso_names: list[str] = []
     asso_matrix: list[list[float]] = []
@@ -564,21 +568,16 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 
 
-if TYPE_CHECKING:
-    _SparseMatrix = sparse.csr_matrix | sparse.csc_matrix
-    _MemoryArray = NDArray | _SparseMatrix
-    _SupportedArray = _MemoryArray | DaskArray
-
-
 @singledispatch
 def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
     raise NotImplementedError
 
 
 @elem_mul.register(np.ndarray)
-@elem_mul.register(sparse.spmatrix)
+@elem_mul.register(sparse.csc_matrix)
+@elem_mul.register(sparse.csr_matrix)
 def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, sparse.spmatrix):
+    if isinstance(x, _CSMatrix):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
     return x * y
@@ -770,13 +769,22 @@ def axis_sum(
 ) -> np.matrix: ...
 
 
-@singledispatch
+@overload
 def axis_sum(
     X: np.ndarray,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
-) -> np.ndarray:
+) -> np.ndarray: ...
+
+
+@singledispatch
+def axis_sum(
+    X: np.ndarray | sparse.spmatrix,
+    *,
+    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
+    dtype: DTypeLike | None = None,
+) -> np.ndarray | np.matrix:
     return np.sum(X, axis=axis, dtype=dtype)
 
 
@@ -1132,7 +1140,7 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            "You can't specify both obsp, neighbors_key. " "Please select only one."
+            "You can't specify both obsp, neighbors_key. Please select only one."
         )
 
     if obsp is not None:
@@ -1141,8 +1149,7 @@ def _choose_graph(adata, obsp, neighbors_key):
         neighbors = NeighborsView(adata, neighbors_key)
         if "connectivities" not in neighbors:
             raise ValueError(
-                "You need to run `pp.neighbors` first "
-                "to compute a neighborhood graph."
+                "You need to run `pp.neighbors` first to compute a neighborhood graph."
             )
         return neighbors["connectivities"]
 

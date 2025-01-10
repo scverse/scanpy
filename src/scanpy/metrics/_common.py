@@ -15,19 +15,24 @@ if TYPE_CHECKING:
 
 
 @singledispatch
-def _resolve_vals(val: NDArray | sparse.spmatrix) -> NDArray | sparse.csr_matrix:
-    return np.asarray(val)
+def _resolve_vals(
+    val: NDArray | sparse.spmatrix | DaskArray,
+) -> NDArray | sparse.csr_matrix | DaskArray:
+    msg = f"Unsupported type {type(val)}"
+    raise TypeError(msg)
 
 
 @_resolve_vals.register(np.ndarray)
 @_resolve_vals.register(sparse.csr_matrix)
 @_resolve_vals.register(DaskArray)
-def _(val):
+def _(
+    val: np.ndarray | sparse.csr_matrix | DaskArray,
+) -> np.ndarray | sparse.csr_matrix | DaskArray:
     return val
 
 
 @_resolve_vals.register(sparse.spmatrix)
-def _(val):
+def _(val: sparse.spmatrix) -> sparse.csr_matrix:
     return sparse.csr_matrix(val)
 
 
