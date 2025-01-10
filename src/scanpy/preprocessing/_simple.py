@@ -632,6 +632,19 @@ DT = TypeVar("DT")
 
 
 @njit
+def _create_regressor_categorical(
+    X: np.ndarray, number_categories: int, filters: np.ndarray
+) -> np.ndarray:
+    # create regressor matrix faster for categorical variables
+    regressors = np.zeros(X.shape, dtype=X.dtype)
+    for category in range(number_categories):
+        mask = category == filters
+        for ix in numba.prange(X.T.shape[0]):
+            regressors[mask, ix] = X.T[ix][mask].mean()
+    return regressors
+
+
+@njit
 def get_resid(
     data: np.ndarray,
     regressor: np.ndarray,
@@ -725,13 +738,14 @@ def regress_out(
                 "we regress on the mean for each category."
             )
         logg.debug("... regressing on per-gene means within categories")
-        regressors = np.zeros(X.shape, dtype="float32")
+        # Create numpy array's from categorical variable
+        # The dtype of the array needs to be the dtype of the categories
+        number_categories = np.int64(len(adata.obs[keys[0]].cat.categories))
+        filters = adata.obs[keys[0]].cat.codes.to_numpy()
+        number_categories = number_categories.astype(filters.dtype)
+
         X = _to_dense(X, order="F") if issparse(X) else X
-        # TODO figure out if we should use a numba kernel for this
-        for category in adata.obs[keys[0]].cat.categories:
-            mask = (category == adata.obs[keys[0]]).values
-            for ix, x in enumerate(X.T):
-                regressors[mask, ix] = x[mask].mean()
+        regressors = _create_regressor_categorical(X, number_categories, filters)
         variable_is_categorical = True
     # regress on one or several ordinal variables
     else:
