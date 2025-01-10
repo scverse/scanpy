@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse, isspmatrix_csc, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 from .. import logging as logg
 from .._compat import DaskArray, njit, old_positionals
@@ -78,7 +78,7 @@ def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMa
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | spmatrix | np.ndarray | DaskArray,
+    data: AnnData | csr_matrix | csc_matrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +86,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | DaskArray | None:
+) -> AnnData | csr_matrix | csc_matrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -184,7 +184,7 @@ def scale_array(
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
+            "... be careful when using `max_value` without `zero_center`."
         )
 
     if np.issubdtype(X.dtype, np.integer):
@@ -230,9 +230,10 @@ def scale_array(
         return X
 
 
-@scale.register(spmatrix)
+@scale.register(csr_matrix)
+@scale.register(csc_matrix)
 def scale_sparse(
-    X: spmatrix,
+    X: csr_matrix | csc_matrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -266,7 +267,7 @@ def scale_sparse(
             mask_obs=mask_obs,
         )
     else:
-        if isspmatrix_csc(X):
+        if isinstance(X, csc_matrix):
             X = X.tocsr()
         elif copy:
             X = X.copy()

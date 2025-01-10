@@ -104,7 +104,7 @@ def _highly_variable_genes_seurat_v3(
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
         if sp_sparse.issparse(data_batch):
-            if sp_sparse.isspmatrix_csr(data_batch):
+            if isinstance(data_batch, sp_sparse.csr_matrix):
                 batch_counts = data_batch
             else:
                 batch_counts = sp_sparse.csr_matrix(data_batch)
