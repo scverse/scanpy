@@ -848,9 +848,8 @@ def violin(
                 f"Expected number of y-labels to be `1`, found `{len(ylabel)}`."
             )
     elif len(ylabel) != len(keys):
-        raise ValueError(
-            f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
-        )
+        msg = f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
+        raise ValueError(msg)
 
     if groupby is not None:
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)

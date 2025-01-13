@@ -823,10 +823,11 @@ class Neighbors:
         # set iroot directly
         if "iroot" in self._adata.uns:
             if self._adata.uns["iroot"] >= self._adata.n_obs:
-                logg.warning(
+                msg = (
                     f"Root cell index {self._adata.uns['iroot']} does not "
                     f"exist for {self._adata.n_obs} samples. It’s ignored."
                 )
+                logg.warning(msg)
             else:
                 self.iroot = self._adata.uns["iroot"]
             return
@@ -888,9 +889,8 @@ class Neighbors:
             condition, only relevant for computing pseudotime.
         """
         if self._adata.shape[1] != xroot.size:
-            raise ValueError(
-                "The root vector you provided does not have the correct dimension."
-            )
+            msg = "The root vector you provided does not have the correct dimension."
+            raise ValueError(msg)
         # this is the squared distance
         dsqroot = 1e10
         iroot = 0

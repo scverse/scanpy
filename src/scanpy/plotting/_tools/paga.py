@@ -547,9 +547,8 @@ def paga(
 
     if isinstance(root, str):
         if root not in labels:
-            raise ValueError(
-                f"If `root` is a string, it needs to be one of {labels} not {root!r}."
-            )
+            msg = f"If `root` is a string, it needs to be one of {labels} not {root!r}."
+            raise ValueError(msg)
         root = list(labels).index(root)
     if isinstance(root, Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]

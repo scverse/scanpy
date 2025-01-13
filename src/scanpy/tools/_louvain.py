@@ -143,9 +143,8 @@ def louvain(
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
     if (flavor != "vtraag") and (partition_type is not None):
-        raise ValueError(
-            '`partition_type` is only a valid argument when `flavour` is "vtraag"'
-        )
+        msg = '`partition_type` is only a valid argument when `flavour` is "vtraag"'
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)

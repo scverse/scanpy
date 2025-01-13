@@ -195,7 +195,8 @@ def _import_name(name: str) -> Any:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}")
+            msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
+            raise RuntimeError(msg)
     return obj
 
 
@@ -1130,18 +1131,18 @@ class NeighborsView:
 def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
-        raise ValueError(
-            "You can't specify both obsp, neighbors_key. Please select only one."
-        )
+        msg = "You can't specify both obsp, neighbors_key. Please select only one."
+        raise ValueError(msg)
 
     if obsp is not None:
         return adata.obsp[obsp]
     else:
         neighbors = NeighborsView(adata, neighbors_key)
         if "connectivities" not in neighbors:
-            raise ValueError(
+            msg = (
                 "You need to run `pp.neighbors` first to compute a neighborhood graph."
             )
+            raise ValueError(msg)
         return neighbors["connectivities"]
 
 

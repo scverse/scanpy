@@ -128,5 +128,6 @@ def get_init_pos_from_paga(
             else:
                 init_pos[subset] = group_pos
     else:
-        raise ValueError("Plot PAGA first, so that adata.uns['paga']with key 'pos'.")
+        msg = "Plot PAGA first, so that adata.uns['paga'] with key 'pos'."
+        raise ValueError(msg)
     return init_pos

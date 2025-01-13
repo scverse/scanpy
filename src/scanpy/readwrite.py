@@ -219,10 +219,11 @@ def read_10x_h5(
         adata = _read_v3_10x_h5(filename, start=start)
         if genome:
             if genome not in adata.var["genome"].values:
-                raise ValueError(
+                msg = (
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
                     f"Available genomes are: {list(adata.var['genome'].unique())}."
                 )
+                raise ValueError(msg)
             adata = adata[:, adata.var["genome"] == genome]
         if gex_only:
             adata = adata[:, adata.var["feature_types"] == "Gene Expression"]
@@ -766,9 +767,8 @@ def _read(
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
-        raise ValueError(
-            f"Please provide one of the available extensions.\n{avail_exts}"
-        )
+        msg = f"Please provide one of the available extensions.\n{avail_exts}"
+        raise ValueError(msg)
     else:
         ext = is_valid_filename(filename, return_ext=True)
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -816,7 +816,7 @@ def _read(
     elif ext in {"txt", "tab", "data", "tsv"}:
         if ext == "data":
             logg.hint(
-                "... assuming '.data' means tab or white-space separated text file",
+                "... assuming '.data' means tab or white-space separated text file"
             )
             logg.hint("change this by passing `ext` to sc.read")
         adata = read_text(filename, delimiter, first_column_names)

@@ -854,9 +854,8 @@ class GRNsim:
                         raise ValueError(f"specify coupling value for {key} <- {g}")
                 else:
                     if np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
-                        raise ValueError(
-                            f"there should be no coupling value for {key} <- {g}"
-                        )
+                        msg = f"there should be no coupling value for {key} <- {g}"
+                        raise ValueError(msg)
             if self.verbosity > 1:
                 settings.m(0, "..." + key)
                 settings.m(0, rule)
@@ -1045,7 +1044,8 @@ def sample_coupling_matrix(
             check = True
             break
     if not check:
-        raise ValueError(f"did not find graph without cycles after{max_trial} trials")
+        msg = f"did not find graph without cycles after {max_trial} trials"
+        raise ValueError(msg)
     return Coupl, Adj, Adj_signed, n_edges
 
 
