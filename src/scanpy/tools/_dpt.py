@@ -129,7 +129,8 @@ def dpt(
     if neighbors_key is None:
         neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError("You need to run `pp.neighbors` and `tl.diffmap` first.")
+        msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
+        raise ValueError(msg)
     if "iroot" not in adata.uns and "xroot" not in adata.var:
         logg.warning(
             "No root cell found. To compute pseudotime, pass the index or "
@@ -799,9 +800,8 @@ class DPT(Neighbors):
         elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
-            raise ValueError(
-                '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
-            )
+            msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
+            raise ValueError(msg)
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
@@ -1039,9 +1039,11 @@ class DPT(Neighbors):
         Splitting index according to above description.
         """
         if a.size != b.size:
-            raise ValueError("a and b need to have the same size")
+            msg = "a and b need to have the same size"
+            raise ValueError(msg)
         if a.ndim != b.ndim != 1:
-            raise ValueError("a and b need to be one-dimensional arrays")
+            msg = "a and b need to be one-dimensional arrays"
+            raise ValueError(msg)
         import scipy as sp
 
         min_length = 5

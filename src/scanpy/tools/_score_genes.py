@@ -38,7 +38,8 @@ def _sparse_nanmean(
     np.nanmean equivalent for sparse matrices
     """
     if not issparse(X):
-        raise TypeError("X must be a sparse matrix")
+        msg = "X must be a sparse matrix"
+        raise TypeError(msg)
 
     # count the number of nan elements per row/column (dep. on axis)
     Z = X.copy()
@@ -130,9 +131,8 @@ def score_genes(
     adata = adata.copy() if copy else adata
     use_raw = _check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
-        raise NotImplementedError(
-            f"score_genes is not implemented for matrices of type {type(adata.X)}"
-        )
+        msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
+        raise NotImplementedError(msg)
 
     if random_state is not None:
         np.random.seed(random_state)
@@ -204,14 +204,16 @@ def _check_score_genes_args(
     if len(genes_to_ignore) > 0:
         logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
     if len(gene_list) == 0:
-        raise ValueError("No valid genes were passed for scoring.")
+        msg = "No valid genes were passed for scoring."
+        raise ValueError(msg)
 
     if gene_pool is None:
         gene_pool = var_names.astype("string")
     else:
         gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
     if len(gene_pool) == 0:
-        raise ValueError("No valid genes were passed for reference set.")
+        msg = "No valid genes were passed for reference set."
+        raise ValueError(msg)
 
     def get_subset(genes: pd.Index[str]):
         x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)

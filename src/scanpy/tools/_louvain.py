@@ -238,7 +238,8 @@ def louvain(
         for k, v in partition.items():
             groups[k] = v
     else:
-        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
+        msg = '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
+        raise ValueError(msg)
     if restrict_to is not None:
         if key_added == "louvain":
             key_added += "_R"

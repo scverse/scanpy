@@ -466,21 +466,24 @@ def _set_colors_for_categorical_obs(
                     if color in additional_colors:
                         color = additional_colors[color]
                     else:
-                        raise ValueError(
+                        msg = (
                             "The following color value of the given palette "
                             f"is not valid: {color}"
                         )
+                        raise ValueError(msg)
                 _color_list.append(color)
 
             palette = cycler(color=_color_list)
         if not isinstance(palette, Cycler):
-            raise ValueError(
+            msg = (
                 "Please check that the value of 'palette' is a valid "
                 "matplotlib colormap string (eg. Set2), a  list of color names "
                 "or a cycler with a 'color' key."
             )
+            raise ValueError(msg)
         if "color" not in palette.keys:
-            raise ValueError("Please set the palette key 'color'.")
+            msg = "Please set the palette key 'color'."
+            raise ValueError(msg)
 
         cc = palette()
         colors_list = [to_hex(next(cc)["color"]) for x in range(len(categories))]
@@ -556,7 +559,8 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
     if neighbors_key is None:
         neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError("`edges=True` requires `pp.neighbors` to be run before.")
+        msg = "`edges=True` requires `pp.neighbors` to be run before."
+        raise ValueError(msg)
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors["connectivities"])
     basis_key = _get_basis(adata, basis)
@@ -582,11 +586,12 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
         (p for p in ["velocity", "Delta"] if f"{p}_{basis}" in adata.obsm), None
     )
     if v_prefix is None:
-        raise ValueError(
+        msg = (
             "`arrows=True` requires "
             f"`'velocity_{basis}'` from scvelo or "
             f"`'Delta_{basis}'` from velocyto."
         )
+        raise ValueError(msg)
     if v_prefix == "velocity":
         logg.warning(
             "The module `scvelo` has improved plotting facilities. "
@@ -628,7 +633,8 @@ def scatter_group(
 
         color = rgb2hex(adata.uns[key + "_colors"][cat_code])
     if not is_color_like(color):
-        raise ValueError(f'"{color}" is not a valid matplotlib color.')
+        msg = f'"{color}" is not a valid matplotlib color.'
+        raise ValueError(msg)
     data = [Y[mask_obs, 0], Y[mask_obs, 1]]
     if projection == "3d":
         data.append(Y[mask_obs, 2])
@@ -658,7 +664,8 @@ def setup_axes(
     """Grid of axes for plotting, legends and colorbars."""
     check_projection(projection)
     if left_margin is not None:
-        raise NotImplementedError("We currently don’t support `left_margin`.")
+        msg = "We currently don’t support `left_margin`."
+        raise NotImplementedError(msg)
     if np.any(colorbars) and right_margin is None:
         right_margin = 1 - rcParams["figure.subplot.right"] + 0.21  # 0.25
     elif right_margin is None:
@@ -801,7 +808,8 @@ def scatter_base(
         elif projection == "3d":
             data = Y_sort[:, 0], Y_sort[:, 1], Y_sort[:, 2]
         else:
-            raise ValueError(f"Unknown projection {projection!r} not in '2d', '3d'")
+            msg = f"Unknown projection {projection!r} not in '2d', '3d'"
+            raise ValueError(msg)
         if not isinstance(color, str) or color != "white":
             sct = ax.scatter(
                 *data,
@@ -1148,15 +1156,15 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
 def check_projection(projection):
     """Validation for projection argument."""
     if projection not in {"2d", "3d"}:
-        raise ValueError(f"Projection must be '2d' or '3d', was '{projection}'.")
+        msg = f"Projection must be '2d' or '3d', was '{projection}'."
+        raise ValueError(msg)
     if projection == "3d":
         from packaging.version import parse
 
         mpl_version = parse(mpl.__version__)
         if mpl_version < parse("3.3.3"):
-            raise ImportError(
-                f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
-            )
+            msg = f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
+            raise ImportError(msg)
 
 
 def circles(
@@ -1300,7 +1308,8 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 
     if norm is not None:
         if (vmin is not None) or (vmax is not None) or (vcenter is not None):
-            raise ValueError("Passing both norm and vmin/vmax/vcenter is not allowed.")
+            msg = "Passing both norm and vmin/vmax/vcenter is not allowed."
+            raise ValueError(msg)
     else:
         if vcenter is not None:
             norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)

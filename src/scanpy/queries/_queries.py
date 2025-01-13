@@ -63,13 +63,13 @@ def simple_query(
     elif isinstance(attrs, Iterable):
         attrs = list(attrs)
     else:
-        raise TypeError(f"attrs must be of type list or str, was {type(attrs)}.")
+        msg = f"attrs must be of type list or str, was {type(attrs)}."
+        raise TypeError(msg)
     try:
         from pybiomart import Server
     except ImportError:
-        raise ImportError(
-            "This method requires the `pybiomart` module to be installed."
-        )
+        msg = "This method requires the `pybiomart` module to be installed."
+        raise ImportError(msg)
     server = Server(host, use_cache=use_cache)
     dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[f"{org}_gene_ensembl"]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
@@ -273,17 +273,17 @@ def enrich(
     try:
         from gprofiler import GProfiler
     except ImportError:
-        raise ImportError(
-            "This method requires the `gprofiler-official` module to be installed."
-        )
+        msg = "This method requires the `gprofiler-official` module to be installed."
+        raise ImportError(msg)
     gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
     gprofiler_kwargs = dict(gprofiler_kwargs)
     for k in ["organism"]:
         if gprofiler_kwargs.get(k) is not None:
-            raise ValueError(
+            msg = (
                 f"Argument `{k}` should be passed directly through `enrich`, "
                 "not through `gprofiler_kwargs`"
             )
+            raise ValueError(msg)
     return gprofiler.profile(container, organism=org, **gprofiler_kwargs)
 
 

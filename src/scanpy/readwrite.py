@@ -155,13 +155,14 @@ def read(
     filekey = str(filename)
     filename = settings.writedir / (filekey + "." + settings.file_format_data)
     if not filename.exists():
-        raise ValueError(
+        msg = (
             f"Reading with filekey {filekey!r} failed, "
             f"the inferred filename {filename!r} does not exist. "
             "If you intended to provide a filename, either use a filename "
             f"ending on one of the available extensions {avail_exts} "
             "or pass the parameter `ext`."
         )
+        raise ValueError(msg)
     return read_h5ad(filename, backed=backed)
 
 
@@ -243,17 +244,19 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             children = list(f.keys())
             if not genome:
                 if len(children) > 1:
-                    raise ValueError(
+                    msg = (
                         f"'{filename}' contains more than one genome. For legacy 10x h5 "
                         "files you must specify the genome if more than one is present. "
                         f"Available genomes are: {children}"
                     )
+                    raise ValueError(msg)
                 genome = children[0]
             elif genome not in children:
-                raise ValueError(
+                msg = (
                     f"Could not find genome '{genome}' in '{filename}'. "
                     f"Available genomes are: {children}"
                 )
+                raise ValueError(msg)
 
             dsets = {}
             _collect_datasets(dsets, f[genome])
@@ -284,7 +287,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             logg.info("", time=start)
             return adata
         except KeyError:
-            raise Exception("File is missing one or more required datasets.")
+            msg = "File is missing one or more required datasets."
+            raise Exception(msg)
 
 
 def _collect_datasets(dsets: dict, group: h5py.Group):
@@ -355,7 +359,8 @@ def _read_v3_10x_h5(filename, *, start=None):
                     ]
                 )
             else:
-                raise ValueError("10x h5 has no features group")
+                msg = "10x h5 has no features group"
+                raise ValueError(msg)
             adata = AnnData(
                 matrix,
                 obs=obs_dict,
@@ -364,7 +369,8 @@ def _read_v3_10x_h5(filename, *, start=None):
             logg.info("", time=start)
             return adata
         except KeyError:
-            raise Exception("File is missing one or more required datasets.")
+            msg = "File is missing one or more required datasets."
+            raise Exception(msg)
 
 
 @deprecated("Use `squidpy.read.visium` instead.")
@@ -472,7 +478,8 @@ def read_visium(
                         f"You seem to be missing an image file.\nCould not find '{f}'."
                     )
                 else:
-                    raise OSError(f"Could not find '{f}'")
+                    msg = f"Could not find '{f}'"
+                    raise OSError(msg)
 
         adata.uns["spatial"][library_id]["images"] = dict()
         for res in ["hires", "lowres"]:
@@ -481,7 +488,8 @@ def read_visium(
                     str(files[f"{res}_image"])
                 )
             except Exception:
-                raise OSError(f"Could not find '{res}_image'")
+                msg = f"Could not find '{res}_image'"
+                raise OSError(msg)
 
         # read json scalefactors
         adata.uns["spatial"][library_id]["scalefactors"] = json.loads(
@@ -623,7 +631,8 @@ def _read_10x_mtx(
         adata.var_names = genes[0].values
         adata.var["gene_symbols"] = genes[1].values
     else:
-        raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
+        msg = "`var_names` needs to be 'gene_symbols' or 'gene_ids'"
+        raise ValueError(msg)
     if not is_legacy:
         adata.var["feature_types"] = genes[2].values
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
@@ -667,11 +676,12 @@ def write(
         if ext is None:
             ext = ext_
         elif ext != ext_:
-            raise ValueError(
+            msg = (
                 "It suffices to provide the file type by "
                 "providing a proper extension to the filename."
                 'One of "txt", "csv", "h5" or "npz".'
             )
+            raise ValueError(msg)
     else:
         key = filename
         ext = settings.file_format_data if ext is None else ext
@@ -792,7 +802,8 @@ def _read(
         return read_h5ad(path_cache)
 
     if not is_present:
-        raise FileNotFoundError(f"Did not find file {filename}.")
+        msg = f"Did not find file {filename}."
+        raise FileNotFoundError(msg)
     logg.debug(f"reading {filename}")
     if not cache and not suppress_cache_warning:
         logg.hint(
@@ -802,7 +813,8 @@ def _read(
     # do the actual reading
     if ext == "xlsx" or ext == "xls":
         if sheet is None:
-            raise ValueError("Provide `sheet` parameter when reading '.xlsx' files.")
+            msg = "Provide `sheet` parameter when reading '.xlsx' files."
+            raise ValueError(msg)
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
@@ -825,7 +837,8 @@ def _read(
     elif ext == "loom":
         adata = read_loom(filename=filename, **kwargs)
     else:
-        raise ValueError(f"Unknown extension {ext}.")
+        msg = f"Unknown extension {ext}."
+        raise ValueError(msg)
     if cache:
         logg.info(
             f"... writing an {settings.file_format_data} "
@@ -1090,11 +1103,10 @@ def is_valid_filename(filename: Path, *, return_ext: bool = False):
         return "mtx.gz" if return_ext else True
     elif not return_ext:
         return False
-    raise ValueError(
-        f"""\
+    msg = f"""\
 {filename!r} does not end on a valid extension.
 Please, provide one of the available extensions.
 {avail_exts}
 Text files with .gz and .bz2 extensions are also supported.\
 """
-    )
+    raise ValueError(msg)

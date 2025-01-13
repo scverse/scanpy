@@ -425,10 +425,11 @@ class Neighbors:
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
-                    raise ValueError(
+                    msg = (
                         f"Cannot instantiate using `n_dcs`={n_dcs}. "
                         "Compute diffmap/spectrum with more components first."
                     )
+                    raise ValueError(msg)
                 self._eigen_values = self._eigen_values[:n_dcs]
                 self._eigen_basis = self._eigen_basis[:, :n_dcs]
             self.n_dcs = len(self._eigen_values)
@@ -789,7 +790,8 @@ class Neighbors:
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
-            raise ValueError("Run `.compute_transitions` first.")
+            msg = "Run `.compute_transitions` first."
+            raise ValueError(msg)
         matrix = self._transitions_sym
         # compute the spectrum
         if n_comps == 0:

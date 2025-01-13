@@ -163,7 +163,8 @@ def scatter(
     if basis is not None:
         return _scatter_obs(**args)
     if x is None or y is None:
-        raise ValueError("Either provide a `basis` or `x` and `y`.")
+        msg = "Either provide a `basis` or `x` and `y`."
+        raise ValueError(msg)
     if _check_if_annotations(adata, "obs", x=x, y=y, colors=color, use_raw=use_raw):
         return _scatter_obs(**args)
     if _check_if_annotations(adata, "var", x=x, y=y, colors=color, use_raw=use_raw):
@@ -172,10 +173,11 @@ def scatter(
         # store .uns annotations that were added to the new adata object
         adata.uns = args_t["adata"].uns
         return axs
-    raise ValueError(
+    msg = (
         "`x`, `y`, and potential `color` inputs must all "
         "come from either `.obs` or `.var`"
     )
+    raise ValueError(msg)
 
 
 def _check_if_annotations(
@@ -259,22 +261,23 @@ def _scatter_obs(
         layers = tuple(layers)
         for layer in layers:
             if layer not in adata.layers and layer not in ["X", None]:
-                raise ValueError(
+                msg = (
                     "`layers` should have elements that are "
                     "either None or in adata.layers.keys()."
                 )
+                raise ValueError(msg)
     else:
-        raise ValueError(
+        msg = (
             "`layers` should be a string or a collection of strings "
             f"with length 3, had value '{layers}'"
         )
+        raise ValueError(msg)
     if use_raw and layers not in [("X", "X", "X"), (None, None, None)]:
         ValueError("`use_raw` must be `False` if layers are used.")
 
     if legend_loc not in (valid_legend_locs := get_literal_vals(_utils._LegendLoc)):
-        raise ValueError(
-            f"Invalid `legend_loc`, need to be one of: {valid_legend_locs}."
-        )
+        msg = f"Invalid `legend_loc`, need to be one of: {valid_legend_locs}."
+        raise ValueError(msg)
     if components is None:
         components = "1,2" if "2d" in projection else "1,2,3"
     if isinstance(components, str):
@@ -294,9 +297,8 @@ def _scatter_obs(
             if basis == "diffmap":
                 components -= 1
         except KeyError:
-            raise KeyError(
-                f"compute coordinates using visualization tool {basis} first"
-            )
+            msg = f"compute coordinates using visualization tool {basis} first"
+            raise KeyError(msg)
     elif x is not None and y is not None:
         if use_raw:
             if x in adata.obs.columns:
@@ -313,7 +315,8 @@ def _scatter_obs(
 
         Y = np.c_[x_arr, y_arr]
     else:
-        raise ValueError("Either provide a `basis` or `x` and `y`.")
+        msg = "Either provide a `basis` or `x` and `y`."
+        raise ValueError(msg)
 
     if size is None:
         n = Y.shape[0]
@@ -375,10 +378,11 @@ def _scatter_obs(
             c = key
             colorbar = False
         else:
-            raise ValueError(
+            msg = (
                 f"key {key!r} is invalid! pass valid observation annotation, "
                 f"one of {adata.obs_keys()} or a gene name {adata.var_names}"
             )
+            raise ValueError(msg)
         if colorbar is None:
             colorbar = not categorical
         colorbars.append(colorbar)
@@ -451,10 +455,11 @@ def _scatter_obs(
             groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
-                    raise ValueError(
+                    msg = (
                         f"{name!r} is invalid! specify valid name, "
                         f"one of {adata.obs[key].cat.categories}"
                     )
+                    raise ValueError(msg)
                 else:
                     iname = np.flatnonzero(
                         adata.obs[key].cat.categories.values == name
@@ -844,9 +849,8 @@ def violin(
         ylabel = [ylabel] * (1 if groupby is None else len(keys))
     if groupby is None:
         if len(ylabel) != 1:
-            raise ValueError(
-                f"Expected number of y-labels to be `1`, found `{len(ylabel)}`."
-            )
+            msg = f"Expected number of y-labels to be `1`, found `{len(ylabel)}`."
+            raise ValueError(msg)
     elif len(ylabel) != len(keys):
         msg = f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
         raise ValueError(msg)
@@ -855,10 +859,11 @@ def violin(
         obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
         if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
-                raise ValueError(
+                msg = (
                     f"The column `adata.obs[{groupby!r}]` needs to be categorical, "
                     f"but is of dtype {adata.obs[groupby].dtype}."
                 )
+                raise ValueError(msg)
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
             kwds["hue"] = groupby
             kwds["palette"] = dict(
@@ -1020,7 +1025,8 @@ def clustermap(
     import seaborn as sns  # Slow import, only import if called
 
     if not isinstance(obs_keys, str | NoneType):
-        raise ValueError("Currently, only a single key is supported.")
+        msg = "Currently, only a single key is supported."
+        raise ValueError(msg)
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
     X = adata.raw.X if use_raw else adata.X
@@ -1553,11 +1559,12 @@ def tracksplot(
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != "category":
-        raise ValueError(
+        msg = (
             "groupby has to be a valid categorical observation. "
             f"Given value: {groupby}, valid categorical observations: "
             f"{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']}"
         )
+        raise ValueError(msg)
 
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1889,7 +1896,8 @@ def correlation_matrix(
         dendrogram = ax is None
     if dendrogram:
         if ax is not None:
-            raise ValueError("Can only plot dendrogram when not plotting to an axis")
+            msg = "Can only plot dendrogram when not plotting to an axis"
+            raise ValueError(msg)
         assert (len(index)) == corr_matrix.shape[0]
         corr_matrix = corr_matrix[index, :]
         corr_matrix = corr_matrix[:, index]
@@ -2057,10 +2065,11 @@ def _prepare_dataframe(
                     f"Given {group}, is not in observations: {adata.obs_keys()}" + msg
                 )
             if group in adata.obs.columns and group == adata.obs.index.name:
-                raise ValueError(
+                msg = (
                     f"Given group {group} is both and index and a column level, "
                     "which is ambiguous."
                 )
+                raise ValueError(msg)
             if group == adata.obs.index.name:
                 groupby_index = group
     if groupby_index is not None:
@@ -2282,12 +2291,13 @@ def _reorder_categories_after_dendrogram(
 
     dendro_info = adata.uns[dendrogram_key]
     if groupby != dendro_info["groupby"]:
-        raise ValueError(
+        msg = (
             "Incompatible observations. The precomputed dendrogram contains "
             f"information for the observation: '{groupby}' while the plot is "
             f"made for the observation: '{dendro_info['groupby']}. "
             "Please run `sc.tl.dendrogram` using the right observation.'"
         )
+        raise ValueError(msg)
 
     if categories is None:
         categories = adata.obs[dendro_info["groupby"]].cat.categories
@@ -2297,7 +2307,7 @@ def _reorder_categories_after_dendrogram(
     categories_ordered = dendro_info["categories_ordered"]
 
     if len(categories) != len(categories_idx_ordered):
-        raise ValueError(
+        msg = (
             "Incompatible observations. Dendrogram data has "
             f"{len(categories_idx_ordered)} categories but current groupby "
             f"observation {groupby!r} contains {len(categories)} categories. "
@@ -2305,6 +2315,7 @@ def _reorder_categories_after_dendrogram(
             "initial computation of `sc.tl.dendrogram`. "
             "Please run `sc.tl.dendrogram` again.'"
         )
+        raise ValueError(msg)
 
     # reorder var_groups (if any)
     if var_group_positions is None or var_group_labels is None:
@@ -2384,10 +2395,11 @@ def _get_dendrogram_key(
         dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if "dendrogram_info" not in adata.uns[dendrogram_key]:
-        raise ValueError(
+        msg = (
             f"The given dendrogram key ({dendrogram_key!r}) does not contain "
             "valid dendrogram information."
         )
+        raise ValueError(msg)
 
     return dendrogram_key
 

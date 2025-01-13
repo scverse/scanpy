@@ -629,7 +629,8 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
         pass
 
     else:
-        raise ValueError(f"Unknown flavor {flavor}")
+        msg = f"Unknown flavor {flavor}"
+        raise ValueError(msg)
 
     n_genes = adata.shape[1]
 

@@ -32,9 +32,8 @@ def _choose_representation(
         if adata.n_vars > settings.N_PCS:
             if "X_pca" in adata.obsm:
                 if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
-                    raise ValueError(
-                        "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
-                    )
+                    msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+                    raise ValueError(msg)
                 X = adata.obsm["X_pca"][:, :n_pcs]
                 logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
             else:
@@ -52,21 +51,23 @@ def _choose_representation(
     else:
         if use_rep in adata.obsm and n_pcs is not None:
             if n_pcs > adata.obsm[use_rep].shape[1]:
-                raise ValueError(
+                msg = (
                     f"{use_rep} does not have enough Dimensions. Provide a "
                     "Representation with equal or more dimensions than"
                     "`n_pcs` or lower `n_pcs` "
                 )
+                raise ValueError(msg)
             X = adata.obsm[use_rep][:, :n_pcs]
         elif use_rep in adata.obsm and n_pcs is None:
             X = adata.obsm[use_rep]
         elif use_rep == "X":
             X = adata.X
         else:
-            raise ValueError(
+            msg = (
                 f"Did not find {use_rep} in `.obsm.keys()`. "
                 "You need to compute it first."
             )
+            raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
     return X
 

@@ -123,11 +123,12 @@ def ingest(
     # anndata version check
     anndata_version = pkg_version("anndata")
     if anndata_version < ANNDATA_MIN_VERSION:
-        raise ValueError(
+        msg = (
             f"ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} "
             f"(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, "
             "`AnnData.concatenate` did not concatenate `.obsm`."
         )
+        raise ValueError(msg)
 
     start = logg.info("running ingest")
     obs = [obs] if isinstance(obs, str) else obs
@@ -187,12 +188,13 @@ class _DimDict(MutableMapping):
 
     def __setitem__(self, key, value):
         if value.shape[self._axis] != self._dim:
-            raise ValueError(
+            msg = (
                 f"Value passed for key '{key}' is of incorrect shape. "
                 f"Value has shape {value.shape[self._axis]} "
                 f"for dimension {self._axis} while "
                 f"it should have {self._dim}."
             )
+            raise ValueError(msg)
         self._data[key] = value
 
     def __getitem__(self, key):
@@ -340,10 +342,11 @@ class Ingest:
         if neighbors_key in adata.uns:
             self._init_neighbors(adata, neighbors_key)
         else:
-            raise ValueError(
+            msg = (
                 f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
                 "Please run pp.neighbors."
             )
+            raise ValueError(msg)
 
         if "X_umap" in adata.obsm:
             self._init_umap(adata)
@@ -393,10 +396,11 @@ class Ingest:
         new_var_names = adata_new.var_names.str.upper()
 
         if not ref_var_names.equals(new_var_names):
-            raise ValueError(
+            msg = (
                 "Variables in the new adata are different "
                 "from variables in the reference adata"
             )
+            raise ValueError(msg)
 
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         self._obsm = _DimDict(adata_new.n_obs, axis=0)
@@ -440,9 +444,8 @@ class Ingest:
         elif method == "pca":
             self._obsm["X_pca"] = self._pca()
         else:
-            raise NotImplementedError(
-                "Ingest supports only umap and pca embeddings for now."
-            )
+            msg = "Ingest supports only umap and pca embeddings for now."
+            raise NotImplementedError(msg)
 
     def _knn_classify(self, labels):
         # ensure it's categorical
@@ -461,7 +464,8 @@ class Ingest:
         if method == "knn":
             self._obs[labels] = self._knn_classify(labels)
         else:
-            raise NotImplementedError("Ingest supports knn labeling for now.")
+            msg = "Ingest supports knn labeling for now."
+            raise NotImplementedError(msg)
 
     @old_positionals("inplace")
     def to_adata(self, *, inplace: bool = False) -> AnnData | None:

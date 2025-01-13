@@ -427,7 +427,8 @@ class GRNsim:
         self.verbosity = verbosity
         # checks
         if initType not in ["branch", "random"]:
-            raise RuntimeError("initType must be either: branch, random")
+            msg = "initType must be either: branch, random"
+            raise RuntimeError(msg)
         if model not in self.availModels:
             message = "model not among predefined models \n"  # noqa: F841  # TODO FIX
         # read from file
@@ -435,7 +436,8 @@ class GRNsim:
 
         model = Path(sim_models.__file__).parent / f"{model}.txt"
         if not model.is_file():
-            raise RuntimeError(f"Model file {model} does not exist")
+            msg = f"Model file {model} does not exist"
+            raise RuntimeError(msg)
         self.model = model
         # set the coupling matrix, and with that the adjacency matrix
         self.set_coupl(Coupl=Coupl)
@@ -459,7 +461,8 @@ class GRNsim:
             elif self.modelType == "var":
                 Xdiff = self.Xdiff_var(X[t - 1])
             else:
-                raise ValueError(f"Unknown modelType {self.modelType!r}")
+                msg = f"Unknown modelType {self.modelType!r}"
+                raise ValueError(msg)
             X[t] = X[t - 1] + Xdiff
             # add dynamic noise
             X[t] += noiseDyn * np.random.randn(self.dim)
@@ -851,7 +854,8 @@ class GRNsim:
             for g in range(self.dim):
                 if g in pasIndices:
                     if np.abs(self.Coupl[self.varNames[key], g]) < 1e-10:
-                        raise ValueError(f"specify coupling value for {key} <- {g}")
+                        msg = f"specify coupling value for {key} <- {g}"
+                        raise ValueError(msg)
                 else:
                     if np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
                         msg = f"there should be no coupling value for {key} <- {g}"
