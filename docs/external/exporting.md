@@ -1,6 +1,7 @@
 ## Exporting
 
 ```{eval-rst}
+.. module:: scanpy.external.exporting
 .. currentmodule:: scanpy.external
 ```
 

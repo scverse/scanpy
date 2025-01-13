@@ -1,11 +1,11 @@
 (News)=
-
 ## News
 
-```{eval-rst}
-.. role:: small
+<!-- marker: after prelude -->
 
-```
+### `rapids-singlecell` brings scanpy to the GPU! {small}`2024-03-18`
+
+{doc}`rapids-singlecell <rapids_singlecell:index>` by Severin Dicks provides a scanpy-like API with accelerated operations implemented on GPU.
 
 ### Scanpy hits 100 contributors! {small}`2022-03-31`
 
@@ -30,9 +30,11 @@ Two large toolkits extending our ecosystem to new modalities have had their manu
 * [Muon](https://muon.readthedocs.io/), a framework for multimodal has been published in [Genome Biology](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-021-02577-8).
 * [Squidpy](https://squidpy.readthedocs.io/) a toolkit for working with spatial single cell data has been published in [Nature Methods](https://www.nature.com/articles/s41592-021-01358-2).
 
+<!-- marker: before old news -->
+
 ### scVelo on the cover of Nature Biotechnology {small}`2020-12-01`
 
-Scanpy's counterpart for RNA velocity, [scVelo](http://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
+Scanpy's counterpart for RNA velocity, [scVelo](https://scvelo.org/), made it on the cover of [Nature Biotechnology](https://www.nature.com/nbt/volumes/38/issues/12) \[[tweet](https://twitter.com/NatureBiotech/status/1334647540030070792)\].
 
 ### Scanpy selected among 20 papers for 20 years of Genome Biology {small}`2020-08-01`
 
@@ -59,7 +61,7 @@ Bioconda, Seurat, Bioconductor, and others.
 
 ### Science “Breakthrough of the Year 2018” {small}`2018-12-01`
 
-The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA [^cite_plass18] among 5 papers.
+The Science “Breakthrough of the Year 2018”, [Development cell by cell](https://vis.sciencemag.org/breakthrough2018/finalists/#cell-development), mentions the first application of PAGA {cite:p}`Plass2018` among 5 papers.
 
 [32 projects]: https://chanzuckerberg.com/eoss/proposals/
 [essential open source software for science]: https://chanzuckerberg.com/newsroom/chan-zuckerberg-initiative-awards-5-million-for-open-source-software-projects-essential-to-science/

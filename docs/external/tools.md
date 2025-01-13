@@ -1,6 +1,7 @@
 ## Tools: TL
 
 ```{eval-rst}
+.. module:: scanpy.external.tl
 .. currentmodule:: scanpy.external
 ```
 

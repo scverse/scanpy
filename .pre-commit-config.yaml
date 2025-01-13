@@ -1,20 +1,37 @@
 repos:
--   repo: https://github.com/psf/black
-    rev: 23.7.0
-    hooks:
-    -   id: black
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.280
+    rev: v0.8.6
     hooks:
     -   id: ruff
         args: ["--fix"]
+    -   id: ruff-format
+    # The following can be removed once PLR0917 is out of preview
+    -   name: ruff preview rules
+        id: ruff
+        args: ["--preview", "--select=PLR0917"]
+-   repo: https://github.com/flying-sheep/bibfmt
+    rev: v4.3.0
+    hooks:
+    -   id: bibfmt
+        args:
+        - --sort-by-bibkey
+        - --drop=abstract
+-   repo: https://github.com/biomejs/pre-commit
+    rev: v0.6.1
+    hooks:
+    -   id: biome-format
+        additional_dependencies: ["@biomejs/biome@1.9.4"]
+-   repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+    -   id: taplo-format
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
     -   id: trailing-whitespace
-        exclude: scanpy/tests/_data
+        exclude: tests/_data
     -   id: end-of-file-fixer
-        exclude: scanpy/tests/_data
+        exclude: tests/_data
     -   id: check-added-large-files
     -   id: check-case-conflict
     -   id: check-toml
@@ -22,7 +39,4 @@ repos:
     -   id: check-merge-conflict
     -   id: detect-private-key
     -   id: no-commit-to-branch
-        args: ["--branch=master", "--branch=main"]
-
-ci:
-    autofix_prs: false
+        args: ["--branch=main"]

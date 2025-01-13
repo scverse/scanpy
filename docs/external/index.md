@@ -2,7 +2,7 @@
 
 
 ```{eval-rst}
-.. currentmodule:: scanpy.external
+.. module:: scanpy.external
 ```
 
 ```{warning}

@@ -13,8 +13,8 @@
    .. autosummary::
       :toctree: .
    {% for item in attributes %}
-      {% if has_attr(fullname, item) %}
-      ~{{ fullname }}.{{ item }}
+      {% if has_member(fullname, item) %}
+      ~{{ name }}.{{ item }}
       {% endif %}
    {%- endfor %}
    {% endif %}
@@ -28,7 +28,7 @@
       :toctree: .
    {% for item in methods %}
       {%- if item != '__init__' %}
-      ~{{ fullname }}.{{ item }}
+      ~{{ name }}.{{ item }}
       {%- endif -%}
    {%- endfor %}
    {% endif %}

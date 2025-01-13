@@ -1,6 +1,7 @@
 ## Preprocessing: PP
 
 ```{eval-rst}
+.. module:: scanpy.external.pp
 .. currentmodule:: scanpy.external
 ```
 
@@ -17,15 +18,12 @@
 
 ```
 
-### Sample demultiplexing, Doublet detection
+### Sample demultiplexing
 
 ```{eval-rst}
 .. autosummary::
    :toctree: ../generated/
 
-   pp.scrublet
-   pp.scrublet_simulate_doublets
-   pl.scrublet_score_distribution
    pp.hashsolo
 ```
 

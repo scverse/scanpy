@@ -1,13 +1,20 @@
+from __future__ import annotations
+
+from inspect import get_annotations
+from typing import TYPE_CHECKING
+
 from jinja2.defaults import DEFAULT_NAMESPACE
 from jinja2.utils import import_string
-from sphinx.application import Sphinx
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 
-def has_attr(obj_path: str, attr: str) -> bool:
+def has_member(obj_path: str, attr: str) -> bool:
     # https://jinja.palletsprojects.com/en/3.0.x/api/#custom-tests
     obj = import_string(obj_path)
-    return hasattr(obj, attr)
+    return hasattr(obj, attr) or attr in get_annotations(obj)
 
 
 def setup(app: Sphinx):
-    DEFAULT_NAMESPACE["has_attr"] = has_attr
+    DEFAULT_NAMESPACE["has_member"] = has_member
