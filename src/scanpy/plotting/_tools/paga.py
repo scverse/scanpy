@@ -1166,7 +1166,7 @@ def paga_path(
             if node not in groups_names_set:
                 msg = (
                     f"Each node/group needs to be in {groups_names.tolist()} "
-                    f"(`groups_key`={groups_key!r}) not {node!r}."
+                    f"({groups_key=!r}) not {node!r}."
                 )
                 raise ValueError(msg)
             nodes_ints.append(groups_names.get_loc(node))

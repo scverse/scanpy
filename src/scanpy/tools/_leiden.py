@@ -121,7 +121,7 @@ def leiden(
     """
     if flavor not in {"igraph", "leidenalg"}:
         msg = (
-            f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
+            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
         )
         raise ValueError(msg)
     _utils.ensure_igraph()

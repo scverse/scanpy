@@ -41,6 +41,7 @@ from ._settings import settings
 from ._utils import _empty
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from typing import BinaryIO, Literal
 
     from ._utils import Empty
@@ -221,7 +222,7 @@ def read_10x_h5(
         if genome:
             if genome not in adata.var["genome"].values:
                 msg = (
-                    f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
+                    f"Could not find data corresponding to genome {genome!r} in {filename}. "
                     f"Available genomes are: {list(adata.var['genome'].unique())}."
                 )
                 raise ValueError(msg)
@@ -231,29 +232,32 @@ def read_10x_h5(
         if adata.is_view:
             adata = adata.copy()
     else:
-        adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+        adata = _read_legacy_10x_h5(Path(filename), genome=genome, start=start)
     return adata
 
 
-def _read_legacy_10x_h5(filename, *, genome=None, start=None):
+def _read_legacy_10x_h5(
+    path: Path, *, genome: str | None = None, start: datetime | None = None
+):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
-    with h5py.File(str(filename), "r") as f:
+    with h5py.File(str(path), "r") as f:
         try:
             children = list(f.keys())
             if not genome:
                 if len(children) > 1:
                     msg = (
-                        f"'{filename}' contains more than one genome. For legacy 10x h5 "
-                        "files you must specify the genome if more than one is present. "
+                        f"{path} contains more than one genome. "
+                        "For legacy 10x h5 files you must specify the genome "
+                        "if more than one is present. "
                         f"Available genomes are: {children}"
                     )
                     raise ValueError(msg)
                 genome = children[0]
             elif genome not in children:
                 msg = (
-                    f"Could not find genome '{genome}' in '{filename}'. "
+                    f"Could not find genome {genome!r} in {path}. "
                     f"Available genomes are: {children}"
                 )
                 raise ValueError(msg)
@@ -475,10 +479,10 @@ def read_visium(
             if not f.exists():
                 if any(x in str(f) for x in ["hires_image", "lowres_image"]):
                     logg.warning(
-                        f"You seem to be missing an image file.\nCould not find '{f}'."
+                        f"You seem to be missing an image file.\nCould not find {f}."
                     )
                 else:
-                    msg = f"Could not find '{f}'"
+                    msg = f"Could not find {f}"
                     raise OSError(msg)
 
         adata.uns["spatial"][library_id]["images"] = dict()

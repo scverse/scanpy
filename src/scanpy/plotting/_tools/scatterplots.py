@@ -159,8 +159,8 @@ def embedding(
         use_raw = layer is None and adata.raw is not None
     if use_raw and layer is not None:
         msg = (
-            "Cannot use both a layer and the raw representation. Was passed:"
-            f"use_raw={use_raw}, layer={layer}."
+            "Cannot use both a layer and the raw representation. "
+            f"Was passed: {use_raw=!r}, {layer=!r}."
         )
         raise ValueError(msg)
     if use_raw and adata.raw is None:
@@ -1167,7 +1167,7 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
     elif f"X_{basis}" in adata.obsm:
         return adata.obsm[f"X_{basis}"]
     else:
-        msg = f"Could not find '{basis}' or 'X_{basis}' in .obsm"
+        msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
         raise KeyError(msg)
 
 

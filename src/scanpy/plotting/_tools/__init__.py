@@ -400,7 +400,7 @@ def rank_genes_groups(
     if n_genes < 1:
         msg = (
             "Specifying a negative number for n_genes has not been implemented for "
-            f"this plot. Received n_genes={n_genes}."
+            f"this plot. Received {n_genes=!r}."
         )
         raise NotImplementedError(msg)
 
@@ -1535,7 +1535,7 @@ def embedding_density(
 
     if f"X_{basis}" not in adata.obsm_keys():
         msg = (
-            f"Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. "
+            f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
         )
         raise ValueError(msg)

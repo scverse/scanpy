@@ -239,7 +239,7 @@ def pca(
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
         n_comps = min_dim - 1 if min_dim <= settings.N_PCS else settings.N_PCS
 
-    logg.info(f"    with n_comps={n_comps}")
+    logg.info(f"    with {n_comps=}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
     if is_backed_type(X) and layer is not None:

@@ -170,7 +170,7 @@ def _check_indices(
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
-                msg = f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                msg = f"The key {key!r} is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
                 raise KeyError(msg)
         elif key in alt_names.index:
             val = alt_names[key]
@@ -178,7 +178,7 @@ def _check_indices(
                 # while var_names must be unique, adata.var[gene_symbols] does not
                 # It's still ambiguous to refer to a duplicated entry though.
                 assert alias_index is not None
-                msg = f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
+                msg = f"Found duplicate entries for {key!r} in {alt_repr}.{alt_search_repr}."
                 raise KeyError(msg)
             index_keys.append(val)
             index_aliases.append(key)
@@ -186,7 +186,7 @@ def _check_indices(
             not_found.append(key)
     if len(not_found) > 0:
         msg = (
-            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+            f"Could not find keys {not_found!r} in columns of `adata.{dim}` or in"
             f" {alt_repr}.{alt_search_repr}."
         )
         raise KeyError(msg)

@@ -899,17 +899,11 @@ class BasePlot:
                 _categories = _categories[:3] + ["etc."]
             return ", ".join(_categories)
 
-        key = _get_dendrogram_key(self.adata, dendrogram_key, self.groupby)
-
-        dendro_info = self.adata.uns[key]
-        if self.groupby != dendro_info["groupby"]:
-            msg = (
-                "Incompatible observations. The precomputed dendrogram contains "
-                f"information for the observation: '{self.groupby}' while the plot is "
-                f"made for the observation: '{dendro_info['groupby']}. "
-                "Please run `sc.tl.dendrogram` using the right observation.'"
+        dendro_info = self.adata.uns[
+            _get_dendrogram_key(
+                self.adata, dendrogram_key, self.groupby, validate_groupby=True
             )
-            raise ValueError(msg)
+        ]
 
         # order of groupby categories
         categories_idx_ordered = dendro_info["categories_idx_ordered"]

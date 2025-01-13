@@ -398,7 +398,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
             else:
                 logg.warning(
                     f"The following color value found in adata.uns['{key}_colors'] "
-                    f"is not valid: '{color}'. Default colors will be used instead."
+                    f"is not valid: {color!r}. Default colors will be used instead."
                 )
                 _set_default_colors_for_categorical_obs(adata, key)
                 _palette = None
@@ -633,7 +633,7 @@ def scatter_group(
 
         color = rgb2hex(adata.uns[key + "_colors"][cat_code])
     if not is_color_like(color):
-        msg = f'"{color}" is not a valid matplotlib color.'
+        msg = f"{color!r} is not a valid matplotlib color."
         raise ValueError(msg)
     data = [Y[mask_obs, 0], Y[mask_obs, 1]]
     if projection == "3d":

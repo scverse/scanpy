@@ -1076,7 +1076,7 @@ class NeighborsView:
             self._dists_key = "distances"
         else:
             if key not in adata.uns:
-                msg = f'No "{key}" in .uns'
+                msg = f"No {key!r} in .uns"
                 raise KeyError(msg)
             self._neighbors_dict = adata.uns[key]
             self._conns_key = self._neighbors_dict["connectivities_key"]
@@ -1110,12 +1110,12 @@ class NeighborsView:
     def __getitem__(self, key: str):
         if key == "distances":
             if "distances" not in self:
-                msg = f'No "{self._dists_key}" in .obsp'
+                msg = f"No {self._dists_key!r} in .obsp"
                 raise KeyError(msg)
             return self._distances
         elif key == "connectivities":
             if "connectivities" not in self:
-                msg = f'No "{self._conns_key}" in .obsp'
+                msg = f"No {self._conns_key!r} in .obsp"
                 raise KeyError(msg)
             return self._connectivities
         elif key == "connectivities_key":

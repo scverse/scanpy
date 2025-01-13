@@ -189,7 +189,7 @@ class _DimDict(MutableMapping):
     def __setitem__(self, key, value):
         if value.shape[self._axis] != self._dim:
             msg = (
-                f"Value passed for key '{key}' is of incorrect shape. "
+                f"Value passed for key {key!r} is of incorrect shape. "
                 f"Value has shape {value.shape[self._axis]} "
                 f"for dimension {self._axis} while "
                 f"it should have {self._dim}."

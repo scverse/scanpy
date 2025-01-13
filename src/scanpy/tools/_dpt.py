@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
-    start = logg.info(f"computing Diffusion Maps using n_comps={n_comps}(=n_dcs)")
+    start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, random_state=random_state)
@@ -153,7 +153,7 @@ def dpt(
         allow_kendall_tau_shift=allow_kendall_tau_shift,
         neighbors_key=neighbors_key,
     )
-    start = logg.info(f"computing Diffusion Pseudotime using n_dcs={n_dcs}")
+    start = logg.info(f"computing Diffusion Pseudotime using {n_dcs=}")
     if n_branchings > 1:
         logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:

@@ -72,7 +72,7 @@ def _highly_variable_genes_seurat_v3(
 
     if check_values and not check_nonnegative_integers(data):
         warnings.warn(
-            f"`flavor='{flavor}'` expects raw count data, but non-integers were found.",
+            f"`{flavor=!r}` expects raw count data, but non-integers were found.",
             UserWarning,
         )
 

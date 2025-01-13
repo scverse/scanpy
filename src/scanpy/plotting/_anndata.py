@@ -2284,20 +2284,12 @@ def _reorder_categories_after_dendrogram(
     'var_group_labels', and 'var_group_positions'
     """
 
-    dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
-
     if isinstance(groupby, str):
         groupby = [groupby]
 
-    dendro_info = adata.uns[dendrogram_key]
-    if groupby != dendro_info["groupby"]:
-        msg = (
-            "Incompatible observations. The precomputed dendrogram contains "
-            f"information for the observation: '{groupby}' while the plot is "
-            f"made for the observation: '{dendro_info['groupby']}. "
-            "Please run `sc.tl.dendrogram` using the right observation.'"
-        )
-        raise ValueError(msg)
+    dendro_info = adata.uns[
+        _get_dendrogram_key(adata, dendrogram_key, groupby, validate_groupby=True)
+    ]
 
     if categories is None:
         categories = adata.obs[dendro_info["groupby"]].cat.categories
@@ -2371,7 +2363,11 @@ def _format_first_three_categories(categories):
 
 
 def _get_dendrogram_key(
-    adata: AnnData, dendrogram_key: str | None, groupby: str | Sequence[str]
+    adata: AnnData,
+    dendrogram_key: str | None,
+    groupby: str | Sequence[str],
+    *,
+    validate_groupby: bool = False,
 ) -> str:
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
@@ -2400,6 +2396,17 @@ def _get_dendrogram_key(
             "valid dendrogram information."
         )
         raise ValueError(msg)
+
+    if validate_groupby:
+        existing_groupby = adata.uns[dendrogram_key]["groupby"]
+        if groupby != existing_groupby:
+            msg = (
+                "Incompatible observations. The precomputed dendrogram contains "
+                f"information for the observation: {groupby!r} while the plot is "
+                f"made for the observation: {existing_groupby!r}. "
+                "Please run `sc.tl.dendrogram` using the right observation.'"
+            )
+            raise ValueError(msg)
 
     return dendrogram_key
 
