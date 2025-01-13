@@ -104,17 +104,17 @@ def wishbone(
     try:
         from wishbone.core import wishbone as c_wishbone
     except ImportError:
-        raise ImportError(
-            "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
-        )
+        msg = "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
+        raise ImportError(msg)
 
     # Start cell index
     s = np.where(adata.obs_names == start_cell)[0]
     if len(s) == 0:
-        raise RuntimeError(
+        msg = (
             f"Start cell {start_cell} not found in data. "
             "Please rerun with correct start cell."
         )
+        raise RuntimeError(msg)
     if isinstance(num_waypoints, Collection):
         diff = np.setdiff1d(num_waypoints, adata.obs.index)
         if diff.size > 0:
@@ -124,10 +124,11 @@ def wishbone(
             )
             num_waypoints = diff.tolist()
     elif num_waypoints > adata.shape[0]:
-        raise RuntimeError(
+        msg = (
             "num_waypoints parameter is higher than the number of cells in the "
             "dataset. Please select a smaller number"
         )
+        raise RuntimeError(msg)
     s = s[0]
 
     # Run the algorithm

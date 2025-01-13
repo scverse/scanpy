@@ -108,7 +108,8 @@ def trimap(
     try:
         from trimap import TRIMAP
     except ImportError:
-        raise ImportError("\nplease install trimap: \n\n\tsudo pip install trimap")
+        msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
+        raise ImportError(msg)
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata
@@ -121,10 +122,11 @@ def trimap(
     else:
         X = adata.X
         if scp.issparse(X):
-            raise ValueError(
+            msg = (
                 "trimap currently does not support sparse matrices. Please"
                 "use a dense matrix or apply pca first."
             )
+            raise ValueError(msg)
         logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
     X_trimap = TRIMAP(
         n_dims=n_components,

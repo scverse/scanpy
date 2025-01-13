@@ -32,10 +32,11 @@ if TYPE_CHECKING:
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
     is_layer = layer is not None
     if use_raw and is_layer:
-        raise ValueError(
+        msg = (
             "Cannot use expression from both layer and raw. You provided:"
-            f"'use_raw={use_raw}' and 'layer={layer}'"
+            f"{use_raw=!r} and {layer=!r}"
         )
+        raise ValueError(msg)
     if is_layer:
         return adata.layers[layer]
     elif use_raw:
@@ -384,7 +385,8 @@ def top_proportions_sparse_csr(data, indptr, n):
 def check_ns(func):
     def check_ns_inner(mtx: np.ndarray | spmatrix | DaskArray, ns: Collection[int]):
         if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
-            raise IndexError("Positions outside range of features.")
+            msg = "Positions outside range of features."
+            raise IndexError(msg)
         return func(mtx, ns)
 
     return check_ns_inner

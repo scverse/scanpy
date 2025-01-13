@@ -91,7 +91,8 @@ def harmony_integrate(
     try:
         import harmonypy
     except ImportError:
-        raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
+        msg = "\nplease install harmonypy:\n\n\tpip install harmonypy"
+        raise ImportError(msg)
 
     X = adata.obsm[basis].astype(np.float64)
 

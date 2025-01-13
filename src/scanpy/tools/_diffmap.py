@@ -77,11 +77,11 @@ def diffmap(
         neighbors_key = "neighbors"
 
     if neighbors_key not in adata.uns:
-        raise ValueError(
-            "You need to run `pp.neighbors` first to compute a neighborhood graph."
-        )
+        msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
+        raise ValueError(msg)
     if n_comps <= 2:
-        raise ValueError("Provide any value greater than 2 for `n_comps`. ")
+        msg = "Provide any value greater than 2 for `n_comps`. "
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     _diffmap(
         adata, n_comps=n_comps, neighbors_key=neighbors_key, random_state=random_state
