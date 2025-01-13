@@ -221,7 +221,7 @@ def read_10x_h5(
             if genome not in adata.var["genome"].values:
                 raise ValueError(
                     f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
-                    f'Available genomes are: {list(adata.var["genome"].unique())}.'
+                    f"Available genomes are: {list(adata.var['genome'].unique())}."
                 )
             adata = adata[:, adata.var["genome"] == genome]
         if gex_only:
@@ -468,8 +468,7 @@ def read_visium(
             if not f.exists():
                 if any(x in str(f) for x in ["hires_image", "lowres_image"]):
                     logg.warning(
-                        f"You seem to be missing an image file.\n"
-                        f"Could not find '{f}'."
+                        f"You seem to be missing an image file.\nCould not find '{f}'."
                     )
                 else:
                     raise OSError(f"Could not find '{f}'")
@@ -768,7 +767,7 @@ def _read(
 ):
     if ext is not None and ext not in avail_exts:
         raise ValueError(
-            "Please provide one of the available extensions.\n" f"{avail_exts}"
+            f"Please provide one of the available extensions.\n{avail_exts}"
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
@@ -817,7 +816,7 @@ def _read(
     elif ext in {"txt", "tab", "data", "tsv"}:
         if ext == "data":
             logg.hint(
-                "... assuming '.data' means tab or white-space " "separated text file",
+                "... assuming '.data' means tab or white-space separated text file",
             )
             logg.hint("change this by passing `ext` to sc.read")
         adata = read_text(filename, delimiter, first_column_names)

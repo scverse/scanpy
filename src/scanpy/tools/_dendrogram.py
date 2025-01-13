@@ -188,7 +188,7 @@ def dendrogram(
 
     if inplace:
         if key_added is None:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+            key_added = f"dendrogram_{'_'.join(groupby)}"
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:

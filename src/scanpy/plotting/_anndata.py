@@ -849,8 +849,7 @@ def violin(
             )
     elif len(ylabel) != len(keys):
         raise ValueError(
-            f"Expected number of y-labels to be `{len(keys)}`, "
-            f"found `{len(ylabel)}`."
+            f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
         )
 
     if groupby is not None:
@@ -1558,7 +1557,7 @@ def tracksplot(
         raise ValueError(
             "groupby has to be a valid categorical observation. "
             f"Given value: {groupby}, valid categorical observations: "
-            f'{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == "category"]}'
+            f"{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']}"
         )
 
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
@@ -2370,7 +2369,7 @@ def _get_dendrogram_key(
         if isinstance(groupby, str):
             dendrogram_key = f"dendrogram_{groupby}"
         elif isinstance(groupby, Sequence):
-            dendrogram_key = f'dendrogram_{"_".join(groupby)}'
+            dendrogram_key = f"dendrogram_{'_'.join(groupby)}"
         else:
             msg = f"groupby has wrong type: {type(groupby).__name__}."
             raise AssertionError(msg)

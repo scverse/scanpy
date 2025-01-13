@@ -144,7 +144,7 @@ def louvain(
     start = logg.info("running Louvain clustering")
     if (flavor != "vtraag") and (partition_type is not None):
         raise ValueError(
-            "`partition_type` is only a valid argument " 'when `flavour` is "vtraag"'
+            '`partition_type` is only a valid argument when `flavour` is "vtraag"'
         )
     adata = adata.copy() if copy else adata
     if adjacency is None:

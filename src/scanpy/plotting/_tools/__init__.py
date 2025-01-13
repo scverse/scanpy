@@ -694,7 +694,6 @@ def rank_genes_groups_heatmap(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
-    {show_save_ax}
 
     Examples
     --------
@@ -778,7 +777,6 @@ def rank_genes_groups_tracksplot(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
-    {show_save_ax}
 
     Examples
     --------
@@ -1313,9 +1311,7 @@ def rank_genes_groups_violin(
         _ax.set_ylabel("expression")
         _ax.set_xticklabels(new_gene_names, rotation="vertical")
         writekey = (
-            f"rank_genes_groups_"
-            f"{adata.uns[key]['params']['groupby']}_"
-            f"{group_name}"
+            f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
@@ -1542,8 +1538,7 @@ def embedding_density(
 
     if key not in adata.obs or f"{key}_params" not in adata.uns:
         raise ValueError(
-            "Please run `sc.tl.embedding_density()` first "
-            "and specify the correct key."
+            "Please run `sc.tl.embedding_density()` first and specify the correct key."
         )
 
     if "components" in kwargs:

@@ -120,7 +120,7 @@ def add_args(p):
             "default": "",
             "metavar": "f",
             "type": str,
-            "help": "Specify a parameter file " '(default: "sim/${exkey}_params.txt")',
+            "help": 'Specify a parameter file (default: "sim/${exkey}_params.txt")',
         }
     }
     p = _utils.add_args(p, dadd_args)
@@ -216,7 +216,7 @@ def sample_dynamic_data(**params):
                     break
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
-            f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.}"
+            f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.0}"
         )
 
     # more complex models
@@ -358,15 +358,13 @@ def write_data(
                     for g in range(dim):
                         if np.abs(Coupl[gp, g]) > 1e-10:
                             f.write(
-                                f"{names[gp]:10} "
-                                f"{names[g]:10} "
-                                f"{Coupl[gp, g]:10.3} \n"
+                                f"{names[gp]:10} {names[g]:10} {Coupl[gp, g]:10.3} \n"
                             )
     # write simulated data
     # the binary mode option in the following line is a fix for python 3
     # variable names
     if varNames:
-        header += f'{"it":>2} '
+        header += f"{'it':>2} "
         for v in varNames:
             header += f"{v:>7} "
     with (dir / f"sim_{id}.txt").open("ab" if append else "wb") as f:
@@ -501,7 +499,7 @@ class GRNsim:
                     )
                     if verbosity > 0:
                         Xdiff_syn_tuple_str += (
-                            f'{"a" if v else "i"}'
+                            f"{'a' if v else 'i'}"
                             f"({self.pas[child][iv]}, {threshold:.2})"
                         )
                 Xdiff_syn += Xdiff_syn_tuple
@@ -857,7 +855,7 @@ class GRNsim:
                 else:
                     if np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
                         raise ValueError(
-                            "there should be no coupling value for " f"{key} <- {g}"
+                            f"there should be no coupling value for {key} <- {g}"
                         )
             if self.verbosity > 1:
                 settings.m(0, "..." + key)
@@ -957,7 +955,7 @@ def _check_branching(
                 check = False
         if check:
             Xsamples.append(X)
-    logg.debug(f'realization {restart}: {"" if check else "no"} new branch')
+    logg.debug(f"realization {restart}: {'' if check else 'no'} new branch")
     return check, Xsamples
 
 
@@ -1047,9 +1045,7 @@ def sample_coupling_matrix(
             check = True
             break
     if not check:
-        raise ValueError(
-            "did not find graph without cycles after" f"{max_trial} trials"
-        )
+        raise ValueError(f"did not find graph without cycles after{max_trial} trials")
     return Coupl, Adj, Adj_signed, n_edges
 
 

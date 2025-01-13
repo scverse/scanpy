@@ -681,11 +681,11 @@ class DotPlot(BasePlot):
 
         """
         assert dot_size.shape == dot_color.shape, (
-            "please check that dot_size " "and dot_color dataframes have the same shape"
+            "please check that dot_size and dot_color dataframes have the same shape"
         )
 
         assert list(dot_size.index) == list(dot_color.index), (
-            "please check that dot_size " "and dot_color dataframes have the same index"
+            "please check that dot_size and dot_color dataframes have the same index"
         )
 
         assert list(dot_size.columns) == list(dot_color.columns), (

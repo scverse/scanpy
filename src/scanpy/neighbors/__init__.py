@@ -812,9 +812,7 @@ class Neighbors:
         if sort == "decrease":
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info(
-            f"    eigenvalues of transition matrix\n" f"{indent(str(evals), '    ')}"
-        )
+        logg.info(f"    eigenvalues of transition matrix\n{indent(str(evals), '    ')}")
         if self._number_connected_components > len(evals) / 2:
             logg.warning("Transition matrix has many disconnected components!")
         self._eigen_values = evals
@@ -826,7 +824,7 @@ class Neighbors:
         if "iroot" in self._adata.uns:
             if self._adata.uns["iroot"] >= self._adata.n_obs:
                 logg.warning(
-                    f'Root cell index {self._adata.uns["iroot"]} does not '
+                    f"Root cell index {self._adata.uns['iroot']} does not "
                     f"exist for {self._adata.n_obs} samples. It’s ignored."
                 )
             else:
@@ -891,7 +889,7 @@ class Neighbors:
         """
         if self._adata.shape[1] != xroot.size:
             raise ValueError(
-                "The root vector you provided does not have the " "correct dimension."
+                "The root vector you provided does not have the correct dimension."
             )
         # this is the squared distance
         dsqroot = 1e10

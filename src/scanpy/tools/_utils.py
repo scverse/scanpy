@@ -86,7 +86,7 @@ def preprocess_with_pca(adata, n_pcs: int | None = None, random_state=0):
         logg.info("    using data matrix X directly (no PCA)")
         return adata.X
     elif n_pcs is None and "X_pca" in adata.obsm_keys():
-        logg.info(f'    using \'X_pca\' with n_pcs = {adata.obsm["X_pca"].shape[1]}')
+        logg.info(f"    using 'X_pca' with n_pcs = {adata.obsm['X_pca'].shape[1]}")
         return adata.obsm["X_pca"]
     elif "X_pca" in adata.obsm_keys() and adata.obsm["X_pca"].shape[1] >= n_pcs:
         logg.info(f"    using 'X_pca' with n_pcs = {n_pcs}")
@@ -128,5 +128,5 @@ def get_init_pos_from_paga(
             else:
                 init_pos[subset] = group_pos
     else:
-        raise ValueError("Plot PAGA first, so that adata.uns['paga']" "with key 'pos'.")
+        raise ValueError("Plot PAGA first, so that adata.uns['paga']with key 'pos'.")
     return init_pos

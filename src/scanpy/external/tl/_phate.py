@@ -179,6 +179,6 @@ def phate(
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_phate', PHATE coordinates (adata.obsm)"),
+        deep=("added\n    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

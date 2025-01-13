@@ -262,7 +262,7 @@ class DPT(Neighbors):
         """
         logg.debug(
             f"    detect {self.n_branchings} "
-            f'branching{"" if self.n_branchings == 1 else "s"}',
+            f"branching{'' if self.n_branchings == 1 else 's'}",
         )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)

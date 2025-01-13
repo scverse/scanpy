@@ -286,9 +286,9 @@ def obs_df(
     if isinstance(keys, str):
         keys = [keys]
     if use_raw:
-        assert (
-            layer is None
-        ), "Cannot specify use_raw=True and a layer at the same time."
+        assert layer is None, (
+            "Cannot specify use_raw=True and a layer at the same time."
+        )
         var = adata.raw.var
     else:
         var = adata.var

@@ -38,7 +38,7 @@ def restrict_adjacency(
 ) -> tuple[spmatrix, NDArray[np.bool_]]:
     if not isinstance(restrict_categories[0], str):
         raise ValueError(
-            "You need to use strings to label categories, " "e.g. '1' instead of 1."
+            "You need to use strings to label categories, e.g. '1' instead of 1."
         )
     for c in restrict_categories:
         if c not in adata.obs[restrict_key].cat.categories:

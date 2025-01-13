@@ -184,7 +184,7 @@ def scale_array(
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
+            "... be careful when using `max_value` without `zero_center`."
         )
 
     if np.issubdtype(X.dtype, np.integer):

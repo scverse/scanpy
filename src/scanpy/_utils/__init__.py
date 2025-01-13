@@ -195,7 +195,7 @@ def _import_name(name: str) -> Any:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+            raise RuntimeError(f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}")
     return obj
 
 
@@ -358,8 +358,7 @@ def compute_association_matrix_of_groups(
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info(
-                f"Ignoring category {cat!r} "
-                "as it’s in `settings.categories_to_ignore`."
+                f"Ignoring category {cat!r} as it’s in `settings.categories_to_ignore`."
             )
     asso_names: list[str] = []
     asso_matrix: list[list[float]] = []
@@ -1132,7 +1131,7 @@ def _choose_graph(adata, obsp, neighbors_key):
     """Choose connectivities from neighbbors or another obsp column"""
     if obsp is not None and neighbors_key is not None:
         raise ValueError(
-            "You can't specify both obsp, neighbors_key. " "Please select only one."
+            "You can't specify both obsp, neighbors_key. Please select only one."
         )
 
     if obsp is not None:
@@ -1141,8 +1140,7 @@ def _choose_graph(adata, obsp, neighbors_key):
         neighbors = NeighborsView(adata, neighbors_key)
         if "connectivities" not in neighbors:
             raise ValueError(
-                "You need to run `pp.neighbors` first "
-                "to compute a neighborhood graph."
+                "You need to run `pp.neighbors` first to compute a neighborhood graph."
             )
         return neighbors["connectivities"]
 
