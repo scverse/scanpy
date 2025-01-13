@@ -142,34 +142,38 @@ def magic(
     try:
         from magic import MAGIC, __version__
     except ImportError:
-        raise ImportError(
+        msg = (
             "Please install magic package via `pip install --user "
             "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
         )
+        raise ImportError(msg)
     else:
         if Version(__version__) < Version(MIN_VERSION):
-            raise ImportError(
+            msg = (
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "
                 "Please update magic package via `pip install --user "
                 "--upgrade magic-impute`"
             )
+            raise ImportError(msg)
 
     start = logg.info("computing MAGIC")
     all_or_pca = isinstance(name_list, str | NoneType)
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
-        raise ValueError(
+        msg = (
             "Invalid string value for `name_list`: "
             "Only `'all_genes'` and `'pca_only'` are allowed."
         )
+        raise ValueError(msg)
     if copy is None:
         copy = not all_or_pca
     elif not all_or_pca and not copy:
-        raise ValueError(
+        msg = (
             "Can only perform MAGIC in-place with `name_list=='all_genes' or "
             f"`name_list=='pca_only'` (got {name_list}). Consider setting "
             "`copy=True`"
         )
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 

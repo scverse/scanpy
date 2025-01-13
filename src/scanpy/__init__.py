@@ -15,9 +15,8 @@ except (ImportError, LookupError):
     try:
         from ._version import __version__
     except ModuleNotFoundError:
-        raise RuntimeError(
-            "scanpy is not correctly installed. Please install it, e.g. with pip."
-        )
+        msg = "scanpy is not correctly installed. Please install it, e.g. with pip."
+        raise RuntimeError(msg)
 
 from ._utils import check_versions
 

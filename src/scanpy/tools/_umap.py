@@ -164,9 +164,8 @@ def umap(
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError(
-            f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
-        )
+        msg = f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
+        raise ValueError(msg)
 
     start = logg.info("computing UMAP")
 
@@ -241,10 +240,11 @@ def umap(
         warnings.warn(msg, FutureWarning)
         metric = neigh_params.get("metric", "euclidean")
         if metric != "euclidean":
-            raise ValueError(
+            msg = (
                 f"`sc.pp.neighbors` was called with `metric` {metric!r}, "
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
             )
+            raise ValueError(msg)
         from cuml import UMAP
 
         n_neighbors = neighbors["params"]["n_neighbors"]

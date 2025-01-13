@@ -124,7 +124,8 @@ def draw_graph(
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in (layouts := get_literal_vals(_Layout)):
-        raise ValueError(f"Provide a valid layout, one of {layouts}.")
+        msg = f"Provide a valid layout, one of {layouts}."
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)

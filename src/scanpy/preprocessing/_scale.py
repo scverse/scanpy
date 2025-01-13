@@ -133,13 +133,11 @@ def scale(
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
-        raise ValueError(
-            f"`layer` argument inappropriate for value of type {type(data)}"
-        )
+        msg = f"`layer` argument inappropriate for value of type {type(data)}"
+        raise ValueError(msg)
     if obsm is not None:
-        raise ValueError(
-            f"`obsm` argument inappropriate for value of type {type(data)}"
-        )
+        msg = f"`obsm` argument inappropriate for value of type {type(data)}"
+        raise ValueError(msg)
     return scale_array(
         data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
@@ -184,7 +182,7 @@ def scale_array(
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
+            "... be careful when using `max_value` without `zero_center`."
         )
 
     if np.issubdtype(X.dtype, np.integer):

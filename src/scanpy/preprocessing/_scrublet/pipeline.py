@@ -53,7 +53,8 @@ def truncated_svd(
     algorithm: Literal["arpack", "randomized"] = "arpack",
 ) -> None:
     if self._counts_sim_norm is None:
-        raise RuntimeError("_counts_sim_norm is not set")
+        msg = "_counts_sim_norm is not set"
+        raise RuntimeError(msg)
     from sklearn.decomposition import TruncatedSVD
 
     svd = TruncatedSVD(
@@ -72,7 +73,8 @@ def pca(
     svd_solver: Literal["auto", "full", "arpack", "randomized"] = "arpack",
 ) -> None:
     if self._counts_sim_norm is None:
-        raise RuntimeError("_counts_sim_norm is not set")
+        msg = "_counts_sim_norm is not set"
+        raise RuntimeError(msg)
     from sklearn.decomposition import PCA
 
     X_obs = self._counts_obs_norm.toarray()
