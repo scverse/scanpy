@@ -8,20 +8,21 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import numba
 import numpy as np
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse, isspmatrix_csr, spmatrix
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import deprecated, njit, old_positionals
+from .._compat import DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _resolve_axis,
     axis_sum,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
@@ -29,18 +30,14 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._utils import _to_dense
 
-# install dask if available
 try:
     import dask.array as da
 except ImportError:
     da = None
-
-# backwards compat
-from ._deprecated.highly_variable_genes import filter_genes_dispersion  # noqa: F401
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
@@ -50,7 +47,13 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray, _LegacyRandom
+    from .._compat import _LegacyRandom
+    from .._utils import RNGLike, SeedLike
+
+
+CSMatrix = csr_matrix | csc_matrix
+
+A = TypeVar("A", bound=np.ndarray | CSMatrix | DaskArray)
 
 
 @old_positionals(
@@ -143,10 +146,11 @@ def filter_cells(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
+        raise ValueError(msg)
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_cells")
         adata = data.copy() if copy else data
@@ -258,10 +262,11 @@ def filter_genes(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
         )
+        raise ValueError(msg)
 
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_genes")
@@ -404,13 +409,13 @@ def log1p_anndata(
 
     if chunked:
         if (layer is not None) or (obsm is not None):
-            raise NotImplementedError(
+            msg = (
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+            raise NotImplementedError(msg)
         if adata.isbacked and adata.file._filemode != "r+":
-            raise NotImplementedError(
-                "log1p is not implemented for backed AnnData with backed mode not r+"
-            )
+            msg = "log1p is not implemented for backed AnnData with backed mode not r+"
+            raise NotImplementedError(msg)
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
@@ -418,8 +423,10 @@ def log1p_anndata(
         if is_backed_type(X):
             msg = f"log1p is not implemented for matrices of type {type(X)}"
             if layer is not None:
-                raise NotImplementedError(f"{msg} from layers")
-            raise NotImplementedError(f"{msg} without `chunked=True`")
+                msg = f"{msg} from layers"
+                raise NotImplementedError(msg)
+            msg = f"{msg} without `chunked=True`"
+            raise NotImplementedError(msg)
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
@@ -592,7 +599,8 @@ def normalize_per_cell(
         elif use_rep is None:
             after = None
         else:
-            raise ValueError('use_rep should be "after", "X" or None')
+            msg = 'use_rep should be "after", "X" or None'
+            raise ValueError(msg)
         for layer in layers:
             _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
@@ -608,7 +616,8 @@ def normalize_per_cell(
     X = data.copy() if copy else data
     if counts_per_cell is None:
         if not copy:
-            raise ValueError("Can only be run with copy=True")
+            msg = "Can only be run with copy=True"
+            raise ValueError(msg)
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
@@ -716,11 +725,12 @@ def regress_out(
         adata.obs[keys[0]].dtype, CategoricalDtype
     ):
         if len(keys) > 1:
-            raise ValueError(
+            msg = (
                 "If providing categorical variable, "
                 "only a single one is allowed. For this one "
                 "we regress on the mean for each category."
             )
+            raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
         X = _to_dense(X, order="F") if issparse(X) else X
@@ -825,17 +835,55 @@ def _regress_out_chunk(
     return np.vstack(responses_chunk_list)
 
 
-@old_positionals("n_obs", "random_state", "copy")
-def subsample(
-    data: AnnData | np.ndarray | spmatrix,
+@overload
+def sample(
+    data: AnnData,
     fraction: float | None = None,
     *,
-    n_obs: int | None = None,
-    random_state: _LegacyRandom = 0,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = 0,
+    copy: Literal[False] = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> None: ...
+@overload
+def sample(
+    data: AnnData,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: Literal[True],
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> AnnData: ...
+@overload
+def sample(
+    data: A,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | spmatrix, NDArray[np.int64]] | None:
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> tuple[A, NDArray[np.int64]]: ...
+def sample(
+    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    fraction: float | None = None,
+    *,
+    n: int | None = None,
+    rng: RNGLike | SeedLike | None = None,
+    copy: bool = False,
+    replace: bool = False,
+    axis: Literal["obs", 0, "var", 1] = "obs",
+    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
-    Subsample to a fraction of the number of observations.
+    Sample observations or variables with or without replacement.
 
     Parameters
     ----------
@@ -843,49 +891,89 @@ def subsample(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     fraction
-        Subsample to this `fraction` of the number of observations.
-    n_obs
-        Subsample to this number of observations.
+        Sample to this `fraction` of the number of observations or variables.
+        (All of them, even if there are `0`\\ s/`False`\\ s in `p`.)
+        This can be larger than 1.0, if `replace=True`.
+        See `axis` and `replace`.
+    n
+        Sample to this number of observations or variables. See `axis`.
     random_state
         Random seed to change subsampling.
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
+    replace
+        If True, samples are drawn with replacement.
+    axis
+        Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
+    p
+        Drawing probabilities (floats) or mask (bools).
+        Either an `axis`-sized array, or the name of a column.
+        If `p` is an array of probabilities, it must sum to 1.
 
     Returns
     -------
-    Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
-    subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
-    returns a subsampled copy of it (`copy == True`).
+    If `isinstance(data, AnnData)` and `copy=False`,
+    this function returns `None`. Otherwise:
+
+    `data[indices, :]` | `data[:, indices]` (depending on `axis`)
+        If `data` is array-like or `copy=True`, returns the subset.
+    `indices` : numpy.ndarray
+        If `data` is array-like, also returns the indices into the original.
     """
-    np.random.seed(random_state)
-    old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
-    if n_obs is not None:
-        new_n_obs = n_obs
-    elif fraction is not None:
-        if fraction > 1 or fraction < 0:
-            raise ValueError(f"`fraction` needs to be within [0, 1], not {fraction}")
-        new_n_obs = int(fraction * old_n_obs)
-        logg.debug(f"... subsampled to {new_n_obs} data points")
-    else:
-        raise ValueError("Either pass `n_obs` or `fraction`.")
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
-    if isinstance(data, AnnData):
-        if data.isbacked:
-            if copy:
-                return data[obs_indices].to_memory()
-            else:
-                raise NotImplementedError(
-                    "Inplace subsampling is not implemented for backed objects."
-                )
+    # parameter validation
+    if not copy and isinstance(data, AnnData) and data.isbacked:
+        msg = "Inplace sampling (`copy=False`) is not implemented for backed objects."
+        raise NotImplementedError(msg)
+    axis, axis_name = _resolve_axis(axis)
+    p = _check_mask(data, p, dim=axis_name, allow_probabilities=True)
+    if p is not None and p.dtype == bool:
+        p = p.astype(np.float64) / p.sum()
+    old_n = data.shape[axis]
+    match (fraction, n):
+        case (None, None):
+            msg = "Either `fraction` or `n` must be set."
+            raise TypeError(msg)
+        case (None, _):
+            pass
+        case (_, None):
+            if fraction < 0:
+                msg = f"`{fraction=}` needs to be nonnegative."
+                raise ValueError(msg)
+            if not replace and fraction > 1:
+                msg = f"If `replace=False`, `{fraction=}` needs to be within [0, 1]."
+                raise ValueError(msg)
+            n = int(fraction * old_n)
+            logg.debug(f"... sampled to {n} {axis_name}")
+        case _:
+            msg = "Providing both `fraction` and `n` is not allowed."
+            raise TypeError(msg)
+    del fraction
+
+    # actually do subsampling
+    rng = np.random.default_rng(rng)
+    indices = rng.choice(old_n, size=n, replace=replace, p=p)
+
+    # overload 1: inplace AnnData subset
+    if not copy and isinstance(data, AnnData):
+        if axis_name == "obs":
+            data._inplace_subset_obs(indices)
         else:
-            if copy:
-                return data[obs_indices].copy()
-            else:
-                data._inplace_subset_obs(obs_indices)
-    else:
-        X = data
-        return X[obs_indices], obs_indices
+            data._inplace_subset_var(indices)
+        return None
+
+    subset = data[indices] if axis_name == "obs" else data[:, indices]
+
+    # overload 2: copy AnnData subset
+    if copy and isinstance(data, AnnData):
+        assert isinstance(subset, AnnData)
+        return subset.to_memory() if data.isbacked else subset.copy()
+
+    # overload 3: return array and indices
+    assert isinstance(subset, np.ndarray | CSMatrix | DaskArray), type(subset)
+    if copy:
+        subset = subset.copy()
+    return subset, indices
 
 
 @renamed_arg("target_counts", "counts_per_cell")
@@ -936,9 +1024,8 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError(
-            "Must specify exactly one of `total_counts` or `counts_per_cell`."
-        )
+        msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
+        raise ValueError(msg)
     if copy:
         adata = adata.copy()
     if total_counts_call:
@@ -958,11 +1045,12 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
     # np.random.choice needs int arguments in numba code:
     counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
     if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
-        raise ValueError(
+        msg = (
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
             " by `np.asarray(counts_per_cell)`."
         )
+        raise ValueError(msg)
     if issparse(X):
         original_type = type(X)
         if not isspmatrix_csr(X):

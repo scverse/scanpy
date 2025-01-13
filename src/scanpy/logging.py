@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import logging
 import sys
-import warnings
 from datetime import datetime, timedelta, timezone
 from functools import partial, update_wrapper
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import anndata.logging
 
+from ._compat import deprecated
+
 if TYPE_CHECKING:
     from typing import IO
+
+    from session_info2 import SessionInfo
 
     from ._settings import ScanpyConfig
 
@@ -127,33 +130,11 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-_DEPENDENCIES_NUMERICS = [
-    "anndata",  # anndata actually shouldn't, but as long as it's in development
-    "umap",
-    "numpy",
-    "scipy",
-    "pandas",
-    ("sklearn", "scikit-learn"),
-    "statsmodels",
-    "igraph",
-    "louvain",
-    "leidenalg",
-    "pynndescent",
-]
-
-
-def _versions_dependencies(dependencies):
-    # this is not the same as the requirements!
-    for mod in dependencies:
-        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
-        try:
-            imp = __import__(mod_name)
-            yield dist_name, imp.__version__
-        except (ImportError, AttributeError):
-            pass
-
-
-def print_header(*, file=None):
+@overload
+def print_header(*, file: None = None) -> SessionInfo: ...
+@overload
+def print_header(*, file: IO[str]) -> None: ...
+def print_header(*, file: IO[str] | None = None):
     """\
     Versions that might influence the numerical results.
     Matplotlib and Seaborn are excluded from this.
@@ -163,50 +144,27 @@ def print_header(*, file=None):
     file
         Optional path for dependency output.
     """
+    from session_info2 import session_info
 
-    modules = ["scanpy"] + _DEPENDENCIES_NUMERICS
-    print(
-        " ".join(f"{mod}=={ver}" for mod, ver in _versions_dependencies(modules)),
-        file=file or sys.stdout,
-    )
-
-
-def print_versions(*, file: IO[str] | None = None):
-    """\
-    Print versions of imported packages, OS, and jupyter environment.
-
-    For more options (including rich output) use `session_info.show` directly.
-
-    Parameters
-    ----------
-    file
-        Optional path for output.
-    """
-    import session_info
+    sinfo = session_info(os=True, cpu=True, gpu=True, dependencies=True)
 
     if file is not None:
-        from contextlib import redirect_stdout
+        print(sinfo, file=file)
+        return
 
-        warnings.warn(
-            "Passing argument 'file' to print_versions is deprecated, and will be "
-            "removed in a future version.",
-            FutureWarning,
-        )
-        with redirect_stdout(file):
-            print_versions()
-    else:
-        session_info.show(
-            dependencies=True,
-            html=False,
-            excludes=[
-                "builtins",
-                "stdlib_list",
-                "importlib_metadata",
-                # Special module present if test coverage being calculated
-                # https://gitlab.com/joelostblom/session_info/-/issues/10
-                "$coverage",
-            ],
-        )
+    return sinfo
+
+
+@deprecated("Use `print_header` instead")
+def print_versions() -> SessionInfo:
+    """\
+    Alias for `print_header`.
+
+    .. deprecated:: 1.11.0
+
+       Use :func:`print_header` instead.
+    """
+    return print_header()
 
 
 def print_version_and_date(*, file=None):
@@ -223,7 +181,7 @@ def print_version_and_date(*, file=None):
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 
@@ -235,7 +193,7 @@ def _copy_docs_and_signature(fn):
 def error(
     msg: str,
     *,
-    time: datetime = None,
+    time: datetime | None = None,
     deep: str | None = None,
     extra: dict | None = None,
 ) -> datetime:

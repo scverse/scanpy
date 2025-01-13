@@ -59,7 +59,8 @@ def recipe_weinreb17(
     from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
 
     if issparse(adata.X):
-        raise ValueError("`recipe_weinreb16 does not support sparse matrices.")
+        msg = "`recipe_weinreb16 does not support sparse matrices."
+        raise ValueError(msg)
     if copy:
         adata = adata.copy()
     if log:

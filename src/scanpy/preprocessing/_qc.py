@@ -32,10 +32,11 @@ if TYPE_CHECKING:
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
     is_layer = layer is not None
     if use_raw and is_layer:
-        raise ValueError(
+        msg = (
             "Cannot use expression from both layer and raw. You provided:"
-            f"'use_raw={use_raw}' and 'layer={layer}'"
+            f"{use_raw=!r} and {layer=!r}"
         )
+        raise ValueError(msg)
     if is_layer:
         return adata.layers[layer]
     elif use_raw:
@@ -194,26 +195,21 @@ def describe_var(
         if issparse(X):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
-    var_metrics["n_cells_by_{expr_type}"], var_metrics["mean_{expr_type}"] = (
+    var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
         materialize_as_ndarray((axis_nnz(X, axis=0), _get_mean_var(X, axis=0)[0]))
     )
     if log1p:
-        var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-            var_metrics["mean_{expr_type}"]
+        var_metrics[f"log1p_mean_{expr_type}"] = np.log1p(
+            var_metrics[f"mean_{expr_type}"]
         )
-    var_metrics["pct_dropout_by_{expr_type}"] = (
-        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
+    var_metrics[f"pct_dropout_by_{expr_type}"] = (
+        1 - var_metrics[f"n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
-    var_metrics["total_{expr_type}"] = np.ravel(axis_sum(X, axis=0))
+    var_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=0))
     if log1p:
-        var_metrics["log1p_total_{expr_type}"] = np.log1p(
-            var_metrics["total_{expr_type}"]
+        var_metrics[f"log1p_total_{expr_type}"] = np.log1p(
+            var_metrics[f"total_{expr_type}"]
         )
-    # Relabel
-    new_colnames = []
-    for col in var_metrics.columns:
-        new_colnames.append(col.format(**locals()))
-    var_metrics.columns = new_colnames
     if inplace:
         adata.var[var_metrics.columns] = var_metrics
         return None
@@ -389,7 +385,8 @@ def top_proportions_sparse_csr(data, indptr, n):
 def check_ns(func):
     def check_ns_inner(mtx: np.ndarray | spmatrix | DaskArray, ns: Collection[int]):
         if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
-            raise IndexError("Positions outside range of features.")
+            msg = "Positions outside range of features."
+            raise IndexError(msg)
         return func(mtx, ns)
 
     return check_ns_inner

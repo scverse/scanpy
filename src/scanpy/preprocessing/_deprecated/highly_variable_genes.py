@@ -214,7 +214,8 @@ def filter_genes_dispersion(
             / disp_mad_bin[df["mean_bin"].values].values
         )
     else:
-        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+        msg = '`flavor` needs to be "seurat" or "cell_ranger"'
+        raise ValueError(msg)
     dispersion_norm = df["dispersion_norm"].values.astype("float32")
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
@@ -268,7 +269,8 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 def _filter_genes(X, e_cutoff, v_cutoff, meth):
     """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
     if issparse(X):
-        raise ValueError("Not defined for sparse input. See `filter_genes_dispersion`.")
+        msg = "Not defined for sparse input. See `filter_genes_dispersion`."
+        raise ValueError(msg)
     mean_filter = np.mean(X, axis=0) > e_cutoff
     var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + 0.0001) > v_cutoff
     gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]

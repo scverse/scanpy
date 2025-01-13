@@ -239,10 +239,11 @@ def _compute_pos(
         nx_g_tree = nx.Graph(adj_tree)
         pos = _utils.hierarchy_pos(nx_g_tree, root)
         if len(pos) < adjacency_solid.shape[0]:
-            raise ValueError(
+            msg = (
                 "This is a forest and not a single tree. "
                 "Try another `layout`, e.g., {'fr'}."
             )
+            raise ValueError(msg)
     else:
         # igraph layouts
         random.seed(random_state.bytes(8))
@@ -547,10 +548,8 @@ def paga(
 
     if isinstance(root, str):
         if root not in labels:
-            raise ValueError(
-                "If `root` is a string, "
-                f"it needs to be one of {labels} not {root!r}."
-            )
+            msg = f"If `root` is a string, it needs to be one of {labels} not {root!r}."
+            raise ValueError(msg)
         root = list(labels).index(root)
     if isinstance(root, Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]
@@ -702,11 +701,11 @@ def _paga_graph(
         and isinstance(node_labels, str)
         and node_labels != adata.uns["paga"]["groups"]
     ):
-        raise ValueError(
-            "Provide a list of group labels for the PAGA groups {}, not {}.".format(
-                adata.uns["paga"]["groups"], node_labels
-            )
+        msg = (
+            "Provide a list of group labels for the PAGA groups "
+            f"{adata.uns['paga']['groups']}, not {node_labels}."
         )
+        raise ValueError(msg)
     groups_key = adata.uns["paga"]["groups"]
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
@@ -731,10 +730,11 @@ def _paga_graph(
     else:
         pos = Path(pos)
         if pos.suffix != ".gdf":
-            raise ValueError(
+            msg = (
                 "Currently only supporting reading positions from .gdf files. "
                 "Consider generating them using, for instance, Gephi."
             )
+            raise ValueError(msg)
         s = ""  # read the node definition from the file
         with pos.open() as f:
             f.readline()
@@ -762,7 +762,8 @@ def _paga_graph(
         elif colors == "degree_solid":
             colors = [d for _, d in nx_g_solid.degree(weight="weight")]
         else:
-            raise ValueError('`degree` either "degree_dashed" or "degree_solid".')
+            msg = '`degree` either "degree_dashed" or "degree_solid".'
+            raise ValueError(msg)
         colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
 
     # plot gene expression
@@ -811,10 +812,11 @@ def _paga_graph(
         colors = asso_colors
 
     if len(colors) != len(node_labels):
-        raise ValueError(
+        msg = (
             f"Expected `colors` to be of length `{len(node_labels)}`, "
             f"found `{len(colors)}`."
         )
+        raise ValueError(msg)
 
     # count number of connected components
     n_components, labels = scipy.sparse.csgraph.connected_components(adjacency_solid)
@@ -839,7 +841,8 @@ def _paga_graph(
         )
         nx_g_solid = nx.Graph(adjacency_solid)
         if dashed_edges is not None:
-            raise ValueError("`single_component` only if `dashed_edges` is `None`.")
+            msg = "`single_component` only if `dashed_edges` is `None`."
+            raise ValueError(msg)
 
     # edge widths
     base_edge_width = edge_width_scale * 5 * rcParams["lines.linewidth"]
@@ -958,10 +961,11 @@ def _paga_graph(
     else:
         for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
             if not isinstance(colors[ix], Mapping):
-                raise ValueError(
+                msg = (
                     f"{colors[ix]} is neither a dict of valid "
                     "matplotlib colors nor a valid matplotlib color."
                 )
+                raise ValueError(msg)
             color_single = colors[ix].keys()
             fracs = [colors[ix][c] for c in color_single]
             total = sum(fracs)
@@ -971,10 +975,11 @@ def _paga_graph(
                 color_single.append("grey")
                 fracs.append(1 - sum(fracs))
             elif not np.isclose(total, 1):
-                raise ValueError(
+                msg = (
                     f"Expected fractions for node `{ix}` to be "
                     f"close to 1, found `{total}`."
                 )
+                raise ValueError(msg)
 
             cumsum = np.cumsum(fracs)
             cumsum = cumsum / cumsum[-1]
@@ -1125,18 +1130,20 @@ def paga_path(
 
     if groups_key is None:
         if "groups" not in adata.uns["paga"]:
-            raise KeyError(
+            msg = (
                 "Pass the key of the grouping with which you ran PAGA, "
                 "using the parameter `groups_key`."
             )
+            raise KeyError(msg)
         groups_key = adata.uns["paga"]["groups"]
     groups_names = adata.obs[groups_key].cat.categories
 
     if "dpt_pseudotime" not in adata.obs.columns:
-        raise ValueError(
+        msg = (
             "`pl.paga_path` requires computation of a pseudotime `tl.dpt` "
             "for ordering at single-cell resolution"
         )
+        raise ValueError(msg)
 
     if palette_groups is None:
         _utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
@@ -1157,10 +1164,11 @@ def paga_path(
         groups_names_set = set(groups_names)
         for node in nodes:
             if node not in groups_names_set:
-                raise ValueError(
+                msg = (
                     f"Each node/group needs to be in {groups_names.tolist()} "
-                    f"(`groups_key`={groups_key!r}) not {node!r}."
+                    f"({groups_key=!r}) not {node!r}."
                 )
+                raise ValueError(msg)
             nodes_ints.append(groups_names.get_loc(node))
         nodes_strs = nodes
     else:
@@ -1178,12 +1186,13 @@ def paga_path(
                 adata.obs[groups_key].values == nodes_strs[igroup]
             ]
             if len(idcs) == 0:
-                raise ValueError(
+                msg = (
                     "Did not find data points that match "
                     f"`adata.obs[{groups_key!r}].values == {str(group)!r}`. "
                     f"Check whether `adata.obs[{groups_key!r}]` "
                     "actually contains what you expect."
                 )
+                raise ValueError(msg)
             idcs_group = np.argsort(
                 adata.obs["dpt_pseudotime"].values[
                     adata.obs[groups_key].values == nodes_strs[igroup]

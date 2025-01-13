@@ -82,10 +82,9 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
         possible_types_str = types.__name__
     else:
         type_names = [t.__name__ for t in types]
-        possible_types_str = "{} or {}".format(
-            ", ".join(type_names[:-1]), type_names[-1]
-        )
-    raise TypeError(f"{varname} must be of type {possible_types_str}")
+        possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
+    msg = f"{varname} must be of type {possible_types_str}"
+    raise TypeError(msg)
 
 
 class ScanpyConfig:
@@ -184,10 +183,11 @@ class ScanpyConfig:
         elif isinstance(verbosity, str):
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
-                raise ValueError(
+                msg = (
                     f"Cannot set verbosity to {verbosity}. "
                     f"Accepted string values are: {verbosity_str_options}"
                 )
+                raise ValueError(msg)
             else:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
@@ -218,10 +218,11 @@ class ScanpyConfig:
         _type_check(file_format, "file_format_data", str)
         file_format_options = {"txt", "csv", "h5ad"}
         if file_format not in file_format_options:
-            raise ValueError(
+            msg = (
                 f"Cannot set file_format_data to {file_format}. "
                 f"Must be one of {file_format_options}"
             )
+            raise ValueError(msg)
         self._file_format_data = file_format
 
     @property
@@ -326,10 +327,11 @@ class ScanpyConfig:
     @cache_compression.setter
     def cache_compression(self, cache_compression: str | None):
         if cache_compression not in {"lzf", "gzip", None}:
-            raise ValueError(
+            msg = (
                 f"`cache_compression` ({cache_compression}) "
                 "must be in {'lzf', 'gzip', None}"
             )
+            raise ValueError(msg)
         self._cache_compression = cache_compression
 
     @property

@@ -124,15 +124,17 @@ def dendrogram(
         groupby = [groupby]
     for group in groupby:
         if group not in adata.obs_keys():
-            raise ValueError(
+            msg = (
                 "groupby has to be a valid observation. "
                 f"Given value: {group}, valid observations: {adata.obs_keys()}"
             )
+            raise ValueError(msg)
         if not isinstance(adata.obs[group].dtype, CategoricalDtype):
-            raise ValueError(
+            msg = (
                 "groupby has to be a categorical observation. "
                 f"Given value: {group}, Column type: {adata.obs[group].dtype}"
             )
+            raise ValueError(msg)
 
     if var_names is None:
         rep_df = pd.DataFrame(
@@ -188,7 +190,7 @@ def dendrogram(
 
     if inplace:
         if key_added is None:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+            key_added = f"dendrogram_{'_'.join(groupby)}"
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:

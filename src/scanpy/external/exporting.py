@@ -86,7 +86,8 @@ def spring_project(
         neighbors_key = "neighbors"
 
     if neighbors_key not in adata.uns:
-        raise ValueError("Run `sc.pp.neighbors` first.")
+        msg = "Run `sc.pp.neighbors` first."
+        raise ValueError(msg)
 
     # check that requested 2-D embedding has been generated
     if embedding_method not in adata.obsm_keys():
@@ -101,9 +102,8 @@ def spring_project(
                     + adata.uns[embedding_method]["params"]["layout"]
                 )
             else:
-                raise ValueError(
-                    f"Run the specified embedding method `{embedding_method}` first."
-                )
+                msg = f"Run the specified embedding method `{embedding_method}` first."
+                raise ValueError(msg)
 
     coords = adata.obsm[embedding_method]
 
@@ -345,8 +345,8 @@ def _write_color_tracks(ctracks, fname):
 
 
 def _frac_to_hex(frac):
-    rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
-    return "#{:02x}{:02x}{:02x}".format(*rgb)
+    r, g, b = tuple(np.array(np.array(plt.cm.jet(frac)[:3]) * 255, dtype=int))
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 def _get_color_stats_genes(color_stats, E, gene_list):

@@ -142,6 +142,8 @@ intersphinx_mapping = dict(
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
+    session_info2=("https://session-info2.readthedocs.io/en/stable/", None),
+    squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
 )
 

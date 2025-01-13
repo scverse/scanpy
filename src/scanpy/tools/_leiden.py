@@ -120,19 +120,18 @@ def leiden(
         and `n_iterations`.
     """
     if flavor not in {"igraph", "leidenalg"}:
-        raise ValueError(
-            f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
+        msg = (
+            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
         )
+        raise ValueError(msg)
     _utils.ensure_igraph()
     if flavor == "igraph":
         if directed:
-            raise ValueError(
-                "Cannot use igraph’s leiden implementation with a directed graph."
-            )
+            msg = "Cannot use igraph’s leiden implementation with a directed graph."
+            raise ValueError(msg)
         if partition_type is not None:
-            raise ValueError(
-                "Do not pass in partition_type argument when using igraph."
-            )
+            msg = "Do not pass in partition_type argument when using igraph."
+            raise ValueError(msg)
     else:
         try:
             import leidenalg
@@ -140,9 +139,8 @@ def leiden(
             msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
             _utils.warn_once(msg, FutureWarning, stacklevel=3)
         except ImportError:
-            raise ImportError(
-                "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            )
+            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+            raise ImportError(msg)
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
