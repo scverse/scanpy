@@ -352,15 +352,15 @@ def hashsolo(
     adata = adata.copy() if not inplace else adata
     data = adata.obs[cell_hashing_columns].values
     if not check_nonnegative_integers(data):
-        raise ValueError("Cell hashing counts must be non-negative")
+        msg = "Cell hashing counts must be non-negative"
+        raise ValueError(msg)
     if (number_of_noise_barcodes is not None) and (
         number_of_noise_barcodes >= len(cell_hashing_columns)
     ):
-        raise ValueError(
-            "number_of_noise_barcodes must be at least one less \
+        msg = "number_of_noise_barcodes must be at least one less \
         than the number of samples you have as determined by the number of \
         cell_hashing_columns you've given as input  "
-        )
+        raise ValueError(msg)
     num_of_cells = adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),

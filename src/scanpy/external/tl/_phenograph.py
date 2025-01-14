@@ -226,17 +226,19 @@ def phenograph(
 
         assert phenograph.__version__ >= "1.5.3"
     except (ImportError, AssertionError, AttributeError):
-        raise ImportError(
+        msg = (
             "please install the latest release of phenograph:\n\t"
             "pip install -U PhenoGraph"
         )
+        raise ImportError(msg)
 
     if isinstance(data, AnnData):
         adata = data
         try:
             data = data.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
+            msg = "Please run `sc.pp.pca` on `data` and try again!"
+            raise KeyError(msg)
     else:
         adata = None
         copy = True

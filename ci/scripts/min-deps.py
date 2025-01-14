@@ -71,7 +71,9 @@ def extract_min_deps(
 
         # If we are referring to other optional dependency lists, resolve them
         if req.name == project_name:
-            assert req.extras, f"Project included itself as dependency, without specifying extras: {req}"
+            assert req.extras, (
+                f"Project included itself as dependency, without specifying extras: {req}"
+            )
             for extra in req.extras:
                 extra_deps = pyproject["project"]["optional-dependencies"][extra]
                 dependencies += map(Requirement, extra_deps)

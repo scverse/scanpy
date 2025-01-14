@@ -425,10 +425,11 @@ class Neighbors:
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
-                    raise ValueError(
+                    msg = (
                         f"Cannot instantiate using `n_dcs`={n_dcs}. "
                         "Compute diffmap/spectrum with more components first."
                     )
+                    raise ValueError(msg)
                 self._eigen_values = self._eigen_values[:n_dcs]
                 self._eigen_basis = self._eigen_basis[:, :n_dcs]
             self.n_dcs = len(self._eigen_values)
@@ -789,7 +790,8 @@ class Neighbors:
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
-            raise ValueError("Run `.compute_transitions` first.")
+            msg = "Run `.compute_transitions` first."
+            raise ValueError(msg)
         matrix = self._transitions_sym
         # compute the spectrum
         if n_comps == 0:
@@ -812,9 +814,7 @@ class Neighbors:
         if sort == "decrease":
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info(
-            f"    eigenvalues of transition matrix\n" f"{indent(str(evals), '    ')}"
-        )
+        logg.info(f"    eigenvalues of transition matrix\n{indent(str(evals), '    ')}")
         if self._number_connected_components > len(evals) / 2:
             logg.warning("Transition matrix has many disconnected components!")
         self._eigen_values = evals
@@ -825,10 +825,11 @@ class Neighbors:
         # set iroot directly
         if "iroot" in self._adata.uns:
             if self._adata.uns["iroot"] >= self._adata.n_obs:
-                logg.warning(
-                    f'Root cell index {self._adata.uns["iroot"]} does not '
+                msg = (
+                    f"Root cell index {self._adata.uns['iroot']} does not "
                     f"exist for {self._adata.n_obs} samples. It’s ignored."
                 )
+                logg.warning(msg)
             else:
                 self.iroot = self._adata.uns["iroot"]
             return
@@ -890,9 +891,8 @@ class Neighbors:
             condition, only relevant for computing pseudotime.
         """
         if self._adata.shape[1] != xroot.size:
-            raise ValueError(
-                "The root vector you provided does not have the " "correct dimension."
-            )
+            msg = "The root vector you provided does not have the correct dimension."
+            raise ValueError(msg)
         # this is the squared distance
         dsqroot = 1e10
         iroot = 0
