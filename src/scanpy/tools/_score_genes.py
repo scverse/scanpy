@@ -79,7 +79,7 @@ def score_genes(
     """\
     Score a set of genes :cite:p:`Satija2015`.
 
-    The score is the average expression of a set of genes after subtraction by 
+    The score is the average expression of a set of genes after subtraction by
     the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
