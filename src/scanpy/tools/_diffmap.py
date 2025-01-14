@@ -23,9 +23,9 @@ def diffmap(
     """\
     Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
-    Diffusion maps :cite:p:`Coifman2005` has been proposed for visualizing single-cell
-    data by :cite:t:`Haghverdi2015`. The tool uses the adapted Gaussian kernel suggested
-    by :cite:t:`Haghverdi2016` in the implementation of :cite:t:`Wolf2018`.
+    Diffusion maps :cite:p:`Coifman2005` have been proposed for visualizing single-cell
+    data by :cite:t:`Haghverdi2015`. This tool uses the adapted Gaussian kernel suggested
+    by :cite:t:`Haghverdi2016` with the implementation of :cite:t:`Wolf2018`.
 
     The width ("sigma") of the connectivity kernel is implicitly determined by
     the number of neighbors used to compute the single-cell graph in
@@ -42,12 +42,12 @@ def diffmap(
     n_comps
         The number of dimensions of the representation.
     neighbors_key
-        If not specified, diffmap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, diffmap looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        If not specified, diffmap looks in .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'] and .obsp['distances'] for connectivities and
+        distances, respectively (default storage places for pp.neighbors).
+        If specified, diffmap looks in .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']] and
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
     random_state
         A numpy random seed
