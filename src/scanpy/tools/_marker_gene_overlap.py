@@ -88,7 +88,7 @@ def marker_gene_overlap(
     inplace: bool = False,
 ):
     """\
-    Calculate an overlap score between data-deriven marker genes and
+    Calculate an overlap score between data-derived marker genes and
     provided markers
 
     Marker gene overlap scores can be quoted as overlap counts, overlap

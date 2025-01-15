@@ -60,8 +60,8 @@ def dendrogram(
     to compute a correlation matrix.
 
     The hierarchical clustering can be visualized using
-    :func:`scanpy.pl.dendrogram` or multiple other visualizations that can
-    include a dendrogram: :func:`~scanpy.pl.matrixplot`,
+    :func:`scanpy.pl.dendrogram` or multiple other visualizations
+    that can include a dendrogram: :func:`~scanpy.pl.matrixplot`,
     :func:`~scanpy.pl.heatmap`, :func:`~scanpy.pl.dotplot`,
     and :func:`~scanpy.pl.stacked_violin`.
 
@@ -78,15 +78,15 @@ def dendrogram(
     {use_rep}
     var_names
         List of var_names to use for computing the hierarchical clustering.
-        If `var_names` is given, then `use_rep` and `n_pcs` is ignored.
+        If `var_names` is given, then `use_rep` and `n_pcs` are ignored.
     use_raw
         Only when `var_names` is not None.
         Use `raw` attribute of `adata` if present.
     cor_method
-        correlation method to use.
+        Correlation method to use.
         Options are 'pearson', 'kendall', and 'spearman'
     linkage_method
-        linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
+        Linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
     optimal_ordering
         Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
