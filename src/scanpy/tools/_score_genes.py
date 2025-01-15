@@ -79,8 +79,8 @@ def score_genes(
     """\
     Score a set of genes :cite:p:`Satija2015`.
 
-    The score is the average expression of a set of genes subtracted with the
-    average expression of a reference set of genes. The reference set is
+    The score is the average expression of a set of genes after subtraction by
+    the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
     This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
