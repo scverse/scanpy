@@ -61,9 +61,9 @@ def dendrogram(
 
     The hierarchical clustering can be visualized using
     :func:`scanpy.pl.dendrogram` or multiple other visualizations
-    including a dendrogram: :func:`~scanpy.pl.matrixplot`,
+    that can include a dendrogram: :func:`~scanpy.pl.matrixplot`,
     :func:`~scanpy.pl.heatmap`, :func:`~scanpy.pl.dotplot`,
-    or :func:`~scanpy.pl.stacked_violin`.
+    and :func:`~scanpy.pl.stacked_violin`.
 
     .. note::
         The computation of the hierarchical clustering is based on predefined
