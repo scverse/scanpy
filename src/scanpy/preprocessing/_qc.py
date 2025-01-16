@@ -7,7 +7,7 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import coo_matrix, csr_matrix, issparse
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
@@ -438,7 +438,7 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
 
 
 @top_segment_proportions.register(csr_matrix)
-@top_segment_proportions.register(coo_matrix)
+@top_segment_proportions.register(csc_matrix)
 @top_segment_proportions.register(coo_matrix)
 @check_ns
 def _(mtx: _CSMatrix | coo_matrix, ns: Collection[int]) -> DaskArray:
