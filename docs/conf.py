@@ -227,7 +227,7 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
-    ("py:class", "scanpy.tools._types.UmapMethodKwds"),
+    ("py:class", "scanpy.tools._types.DensmapMethodKwds"),
     # Will work once scipy 1.8 is released
     ("py:class", "scipy.sparse.base.spmatrix"),
     ("py:class", "scipy.sparse.csr.csr_matrix"),

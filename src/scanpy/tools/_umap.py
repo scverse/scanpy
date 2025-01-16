@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._compat import _LegacyRandom
-    from ._types import UmapMethodKwds
+    from ._types import DensmapMethodKwds
 
     _InitPos = Literal["paga", "spectral", "random"]
 
@@ -54,7 +54,7 @@ def umap(
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap", "rapids", "densmap"] = "umap",
-    method_kwds: UmapMethodKwds | None = None,
+    method_kwds: DensmapMethodKwds | None = None,
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
