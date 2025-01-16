@@ -7,7 +7,7 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, spmatrix
+from scipy.sparse import coo_matrix, csr_matrix, issparse
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
@@ -102,7 +102,7 @@ def describe_obs(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
+        if isinstance(X, coo_matrix):
             X = csr_matrix(X)  # COO not subscriptable
         if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
@@ -161,7 +161,7 @@ def describe_var(
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    X: spmatrix | np.ndarray | None = None,
+    X: _CSMatrix | coo_matrix | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """\
     Describe variables of anndata.
@@ -189,7 +189,7 @@ def describe_var(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
+        if isinstance(X, coo_matrix):
             X = csr_matrix(X)  # COO not subscriptable
         if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
@@ -298,7 +298,7 @@ def calculate_qc_metrics(
         )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-    if isinstance(X, spmatrix) and not isinstance(X, _CSMatrix):
+    if isinstance(X, coo_matrix):
         X = csr_matrix(X)  # COO not subscriptable
     if isinstance(X, _CSMatrix):
         X.eliminate_zeros()
@@ -330,7 +330,7 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: np.ndarray | spmatrix, n: int):
+def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
     """\
     Calculates cumulative proportions of top expressed genes
 
@@ -383,7 +383,9 @@ def top_proportions_sparse_csr(data, indptr, n):
 
 def check_ns(func):
     @wraps(func)
-    def check_ns_inner(mtx: np.ndarray | spmatrix | DaskArray, ns: Collection[int]):
+    def check_ns_inner(
+        mtx: np.ndarray | _CSMatrix | coo_matrix | DaskArray, ns: Collection[int]
+    ):
         if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
             raise IndexError("Positions outside range of features.")
         return func(mtx, ns)
@@ -433,9 +435,11 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
     ).compute()
 
 
-@top_segment_proportions.register(spmatrix)
+@top_segment_proportions.register(csr_matrix)
+@top_segment_proportions.register(coo_matrix)
+@top_segment_proportions.register(coo_matrix)
 @check_ns
-def _(mtx: spmatrix, ns: Collection[int]) -> DaskArray:
+def _(mtx: _CSMatrix | coo_matrix, ns: Collection[int]) -> DaskArray:
     if not isinstance(mtx, csr_matrix):
         mtx = csr_matrix(mtx)
     return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
