@@ -65,15 +65,14 @@ def _highly_variable_genes_seurat_v3(
     try:
         from skmisc.loess import loess
     except ImportError:
-        raise ImportError(
-            "Please install skmisc package via `pip install --user scikit-misc"
-        )
+        msg = "Please install skmisc package via `pip install --user scikit-misc"
+        raise ImportError(msg)
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
 
     if check_values and not check_nonnegative_integers(data):
         warnings.warn(
-            f"`flavor='{flavor}'` expects raw count data, but non-integers were found.",
+            f"`{flavor=!r}` expects raw count data, but non-integers were found.",
             UserWarning,
         )
 
@@ -159,7 +158,8 @@ def _highly_variable_genes_seurat_v3(
         sort_cols = ["highly_variable_nbatches", "highly_variable_rank"]
         sort_ascending = [False, True]
     else:
-        raise ValueError(f"Did not recognize flavor {flavor}")
+        msg = f"Did not recognize flavor {flavor}"
+        raise ValueError(msg)
     sorted_index = (
         df[sort_cols]
         .sort_values(sort_cols, ascending=sort_ascending, na_position="last")
@@ -332,7 +332,8 @@ def _get_mean_bins(
     elif flavor == "cell_ranger":
         bins = np.r_[-np.inf, np.percentile(means, np.arange(10, 105, 5)), np.inf]
     else:
-        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+        msg = '`flavor` needs to be "seurat" or "cell_ranger"'
+        raise ValueError(msg)
 
     return pd.cut(means, bins=bins)
 
@@ -347,7 +348,8 @@ def _get_disp_stats(
     elif flavor == "cell_ranger":
         disp_bin_stats = disp_grouped.agg(avg="median", dev=_mad)
     else:
-        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+        msg = '`flavor` needs to be "seurat" or "cell_ranger"'
+        raise ValueError(msg)
     return disp_bin_stats.loc[df["mean_bin"]].set_index(df.index)
 
 
@@ -647,10 +649,11 @@ def highly_variable_genes(
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
-        raise ValueError(
+        msg = (
             "`pp.highly_variable_genes` expects an `AnnData` argument, "
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
+        raise ValueError(msg)
 
     if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:

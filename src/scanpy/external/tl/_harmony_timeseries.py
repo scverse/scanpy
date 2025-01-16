@@ -140,13 +140,15 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError:
-        raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
+        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
+        raise ImportError(msg)
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
     if adata.obs[tp].dtype.name != "category":
-        raise ValueError(f"{tp!r} column does not contain Categorical data")
+        msg = f"{tp!r} column does not contain Categorical data"
+        raise ValueError(msg)
     timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 

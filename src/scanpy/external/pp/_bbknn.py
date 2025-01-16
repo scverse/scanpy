@@ -133,7 +133,8 @@ def bbknn(
     try:
         from bbknn import bbknn
     except ImportError:
-        raise ImportError("Please install bbknn: `pip install bbknn`.")
+        msg = "Please install bbknn: `pip install bbknn`."
+        raise ImportError(msg)
     return bbknn(
         adata=adata,
         batch_key=batch_key,

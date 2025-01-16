@@ -28,9 +28,11 @@ def _check_axis_supported(wrapped: C) -> C:
     def func(a, axis=None):
         if axis is not None:
             if not isinstance(axis, Integral):
-                raise TypeError("axis must be integer or None.")
+                msg = "axis must be integer or None."
+                raise TypeError(msg)
             if axis not in (0, 1):
-                raise NotImplementedError("We only support axis 0 and 1 at the moment")
+                msg = "We only support axis 0 and 1 at the moment"
+                raise NotImplementedError(msg)
         return wrapped(a, axis)
 
     return func

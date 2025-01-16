@@ -69,10 +69,10 @@ def louvain(
     Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
-    of :cite:t:`Traag2017`. The Louvain algorithm has been proposed for single-cell
+    of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
     analysis by :cite:t:`Levine2015`.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or
+    This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
@@ -238,7 +238,8 @@ def louvain(
         for k, v in partition.items():
             groups[k] = v
     else:
-        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
+        msg = '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
+        raise ValueError(msg)
     if restrict_to is not None:
         if key_added == "louvain":
             key_added += "_R"

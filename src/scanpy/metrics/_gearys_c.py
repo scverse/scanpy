@@ -116,7 +116,8 @@ def gearys_c(
         elif "neighbors" in adata.uns:
             g = adata.uns["neighbors"]["connectivities"]
         else:
-            raise ValueError("Must run neighbors first.")
+            msg = "Must run neighbors first."
+            raise ValueError(msg)
     else:
         raise NotImplementedError()
     if vals is None:

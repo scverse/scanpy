@@ -99,11 +99,12 @@ class RNGIgraph:
 def ensure_igraph() -> None:
     if importlib.util.find_spec("igraph"):
         return
-    raise ImportError(
+    msg = (
         "Please install the igraph package: "
         "`conda install -c conda-forge python-igraph` or "
         "`pip3 install igraph`."
     )
+    raise ImportError(msg)
 
 
 @contextmanager
@@ -126,10 +127,11 @@ def check_versions():
     if Version(anndata_version) < Version("0.6.10"):
         from .. import __version__
 
-        raise ImportError(
+        msg = (
             f"Scanpy {__version__} needs anndata version >=0.6.10, "
             f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
         )
+        raise ImportError(msg)
 
 
 def getdoc(c_or_f: Callable | type) -> str | None:
@@ -201,7 +203,8 @@ def _import_name(name: str) -> Any:
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}")
+            msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
+            raise RuntimeError(msg)
     return obj
 
 
@@ -261,9 +264,8 @@ def _check_array_function_arguments(**kwargs):
     # TODO: Figure out a better solution for documenting dispatched functions
     invalid_args = [k for k, v in kwargs.items() if v is not None]
     if len(invalid_args) > 0:
-        raise TypeError(
-            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
-        )
+        msg = f"Arguments {invalid_args} are only valid if an AnnData object is passed."
+        raise TypeError(msg)
 
 
 def _check_use_raw(
@@ -356,9 +358,8 @@ def compute_association_matrix_of_groups(
         reference labels, entries are proportional to degree of association.
     """
     if normalization not in {"prediction", "reference"}:
-        raise ValueError(
-            '`normalization` needs to be either "prediction" or "reference".'
-        )
+        msg = '`normalization` needs to be either "prediction" or "reference".'
+        raise ValueError(msg)
     sanitize_anndata(adata)
     cats = adata.obs[reference].cat.categories
     for cat in cats:
@@ -604,7 +605,8 @@ def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
 
 def check_op(op):
     if op not in {truediv, mul}:
-        raise ValueError(f"{op} not one of truediv or mul")
+        msg = f"{op} not one of truediv or mul"
+        raise ValueError(msg)
 
 
 @singledispatch
@@ -639,9 +641,8 @@ def _(
 ) -> _CSMatrix:
     check_op(op)
     if out is not None and X.data is not out.data:
-        raise ValueError(
-            "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
-        )
+        msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+        raise ValueError(msg)
     if not allow_divide_by_zero and op is truediv:
         scaling_array = scaling_array.copy() + (scaling_array == 0)
 
@@ -697,9 +698,8 @@ def _(
 ) -> DaskArray:
     check_op(op)
     if out is not None:
-        raise TypeError(
-            "`out` is not `None`. Do not do in-place modifications on dask arrays."
-        )
+        msg = "`out` is not `None`. Do not do in-place modifications on dask arrays."
+        raise TypeError(msg)
 
     import dask.array as da
 
@@ -814,9 +814,8 @@ def _(
             axis = kwargs["axis"]
             if isinstance(axis, tuple):
                 if len(axis) != 1:
-                    raise ValueError(
-                        f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
-                    )
+                    msg = f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
+                    raise ValueError(msg)
                 kwargs["axis"] = axis[0]
         # returns a np.matrix normally, which is undesireable
         return np.array(np.sum(*args, dtype=dtype, **kwargs))
@@ -969,7 +968,8 @@ def subsample(
         Xsampled = np.array(X[rows])
     else:
         if seed < 0:
-            raise ValueError(f"Invalid seed value < 0: {seed}")
+            msg = f"Invalid seed value < 0: {seed}"
+            raise ValueError(msg)
         n = int(X.shape[0] / subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
@@ -999,7 +999,8 @@ def subsample_n(
         Indices of rows that are stored in Xsampled.
     """
     if n < 0:
-        raise ValueError("n must be greater 0")
+        msg = "n must be greater 0"
+        raise ValueError(msg)
     np.random.seed(seed)
     n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
     rows = np.random.choice(X.shape[0], size=n, replace=False)
@@ -1079,13 +1080,15 @@ class NeighborsView:
 
         if key is None or key == "neighbors":
             if "neighbors" not in adata.uns:
-                raise KeyError('No "neighbors" in .uns')
+                msg = 'No "neighbors" in .uns'
+                raise KeyError(msg)
             self._neighbors_dict = adata.uns["neighbors"]
             self._conns_key = "connectivities"
             self._dists_key = "distances"
         else:
             if key not in adata.uns:
-                raise KeyError(f'No "{key}" in .uns')
+                msg = f"No {key!r} in .uns"
+                raise KeyError(msg)
             self._neighbors_dict = adata.uns[key]
             self._conns_key = self._neighbors_dict["connectivities_key"]
             self._dists_key = self._neighbors_dict["distances_key"]
@@ -1118,11 +1121,13 @@ class NeighborsView:
     def __getitem__(self, key: str):
         if key == "distances":
             if "distances" not in self:
-                raise KeyError(f'No "{self._dists_key}" in .obsp')
+                msg = f"No {self._dists_key!r} in .obsp"
+                raise KeyError(msg)
             return self._distances
         elif key == "connectivities":
             if "connectivities" not in self:
-                raise KeyError(f'No "{self._conns_key}" in .obsp')
+                msg = f"No {self._conns_key!r} in .obsp"
+                raise KeyError(msg)
             return self._connectivities
         elif key == "connectivities_key":
             return self._conns_key
@@ -1143,19 +1148,19 @@ def _choose_graph(
 ) -> _CSMatrix:
     """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
-        raise ValueError(
-            "You can't specify both obsp, neighbors_key. Please select only one."
-        )
+        msg = "You can't specify both obsp, neighbors_key. Please select only one."
+        raise ValueError(msg)
 
     if obsp is not None:
         return adata.obsp[obsp]
-
-    neighbors = NeighborsView(adata, neighbors_key)
-    if "connectivities" not in neighbors:
-        raise ValueError(
-            "You need to run `pp.neighbors` first to compute a neighborhood graph."
-        )
-    return neighbors["connectivities"]
+    else:
+        neighbors = NeighborsView(adata, neighbors_key)
+        if "connectivities" not in neighbors:
+            msg = (
+                "You need to run `pp.neighbors` first to compute a neighborhood graph."
+            )
+            raise ValueError(msg)
+        return neighbors["connectivities"]
 
 
 def _resolve_axis(
@@ -1165,7 +1170,8 @@ def _resolve_axis(
         return (0, "obs")
     if axis in {1, "var"}:
         return (1, "var")
-    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
+    msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
+    raise ValueError(msg)
 
 
 def is_backed_type(X: object) -> bool:
@@ -1174,6 +1180,5 @@ def is_backed_type(X: object) -> bool:
 
 def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
     if is_backed_type(X):
-        raise NotImplementedError(
-            f"{method_name} is not implemented for matrices of type {type(X)}"
-        )
+        msg = f"{method_name} is not implemented for matrices of type {type(X)}"
+        raise NotImplementedError(msg)

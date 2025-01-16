@@ -149,7 +149,8 @@ def embedding(
 
     # Checking the mask format and if used together with groups
     if groups is not None and mask_obs is not None:
-        raise ValueError("Groups and mask arguments are incompatible.")
+        msg = "Groups and mask arguments are incompatible."
+        raise ValueError(msg)
     mask_obs = _check_mask(adata, mask_obs, "obs")
 
     # Figure out if we're using raw
@@ -157,15 +158,17 @@ def embedding(
         # check if adata.raw is set
         use_raw = layer is None and adata.raw is not None
     if use_raw and layer is not None:
-        raise ValueError(
-            "Cannot use both a layer and the raw representation. Was passed:"
-            f"use_raw={use_raw}, layer={layer}."
+        msg = (
+            "Cannot use both a layer and the raw representation. "
+            f"Was passed: {use_raw=!r}, {layer=!r}."
         )
+        raise ValueError(msg)
     if use_raw and adata.raw is None:
-        raise ValueError(
+        msg = (
             "`use_raw` is set to True but AnnData object does not have raw. "
             "Please check."
         )
+        raise ValueError(msg)
 
     if isinstance(groups, str):
         groups = [groups]
@@ -173,7 +176,8 @@ def embedding(
     # Color map
     if color_map is not None:
         if cmap is not None:
-            raise ValueError("Cannot specify both `color_map` and `cmap`.")
+            msg = "Cannot specify both `color_map` and `cmap`."
+            raise ValueError(msg)
         else:
             cmap = color_map
     cmap = copy(colormaps.get_cmap(cmap))
@@ -245,10 +249,11 @@ def embedding(
         not isinstance(color, str) and isinstance(color, Sequence) and len(color) > 1
     ) or len(dimensions) > 1:
         if ax is not None:
-            raise ValueError(
+            msg = (
                 "Cannot specify `ax` when plotting multiple panels "
                 "(each for a given value of 'color')."
             )
+            raise ValueError(msg)
 
         # each plot needs to be its own panel
         fig, grid = _panel_grid(hspace, wspace, ncols, len(color))
@@ -810,9 +815,8 @@ def draw_graph(
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
     basis = f"draw_graph_{layout}"
     if f"X_{basis}" not in adata.obsm_keys():
-        raise ValueError(
-            f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
-        )
+        msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
+        raise ValueError(msg)
 
     return embedding(adata, basis, **kwargs)
 
@@ -883,10 +887,11 @@ def pca(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
     if "pca" not in adata.obsm and "X_pca" not in adata.obsm:
-        raise KeyError(
+        msg = (
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."
         )
+        raise KeyError(msg)
 
     label_dict = {
         f"PC{i + 1}": f"PC{i + 1} ({round(v * 100, 2)}%)"
@@ -1060,7 +1065,8 @@ def _components_to_dimensions(
     if components is None and dimensions is None:
         dimensions = [tuple(i for i in range(ndims))]
     elif components is not None and dimensions is not None:
-        raise ValueError("Cannot provide both dimensions and components")
+        msg = "Cannot provide both dimensions and components"
+        raise ValueError(msg)
 
     # TODO: Consider deprecating this
     # If components is not None, parse them and set dimensions
@@ -1099,9 +1105,8 @@ def _add_categorical_legend(
     """Add a legend to the passed Axes."""
     if na_in_legend and pd.isnull(color_source_vector).any():
         if "NA" in color_source_vector:
-            raise NotImplementedError(
-                "No fallback for null labels has been defined if NA already in categories."
-            )
+            msg = "No fallback for null labels has been defined if NA already in categories."
+            raise NotImplementedError(msg)
         color_source_vector = color_source_vector.add_categories("NA").fillna("NA")
         palette = palette.copy()
         palette["NA"] = na_color
@@ -1162,7 +1167,8 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
     elif f"X_{basis}" in adata.obsm:
         return adata.obsm[f"X_{basis}"]
     else:
-        raise KeyError(f"Could not find '{basis}' or 'X_{basis}' in .obsm")
+        msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
+        raise KeyError(msg)
 
 
 def _get_color_source_vector(
@@ -1294,10 +1300,11 @@ def _check_spot_size(spatial_data: Mapping | None, spot_size: float | None) -> f
     This is a required argument for spatial plots.
     """
     if spatial_data is None and spot_size is None:
-        raise ValueError(
+        msg = (
             "When .uns['spatial'][library_id] does not exist, spot_size must be "
             "provided directly."
         )
+        raise ValueError(msg)
     elif spot_size is None:
         return spatial_data["scalefactors"]["spot_diameter_fullres"]
     else:
@@ -1329,10 +1336,11 @@ def _check_spatial_data(
     spatial_mapping = uns.get("spatial", {})
     if library_id is _empty:
         if len(spatial_mapping) > 1:
-            raise ValueError(
+            msg = (
                 "Found multiple possible libraries in `.uns['spatial']. Please specify."
                 f" Options are:\n\t{list(spatial_mapping.keys())}"
             )
+            raise ValueError(msg)
         elif len(spatial_mapping) == 1:
             library_id = list(spatial_mapping.keys())[0]
         else:
@@ -1370,7 +1378,8 @@ def _check_crop_coord(
     if crop_coord is None:
         return None
     if len(crop_coord) != 4:
-        raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
+        msg = "Invalid crop_coord of length {len(crop_coord)}(!=4)"
+        raise ValueError(msg)
     crop_coord = tuple(c * scale_factor for c in crop_coord)
     return crop_coord
 
@@ -1389,7 +1398,8 @@ def _broadcast_args(*args):
     lens = [len(arg) for arg in args]
     longest = max(lens)
     if not (set(lens) == {1, longest} or set(lens) == {longest}):
-        raise ValueError(f"Could not broadcast together arguments with shapes: {lens}.")
+        msg = f"Could not broadcast together arguments with shapes: {lens}."
+        raise ValueError(msg)
     return list(
         [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
     )

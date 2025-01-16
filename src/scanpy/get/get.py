@@ -148,18 +148,20 @@ def _check_indices(
     # be further duplicated when selecting them.
     if not dim_df.columns.is_unique:
         dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
-        raise ValueError(
+        msg = (
             f"adata.{dim} contains duplicated columns. Please rename or remove "
             "these columns first.\n`"
             f"Duplicated columns {dup_cols}"
         )
+        raise ValueError(msg)
 
     if not alt_index.is_unique:
-        raise ValueError(
+        msg = (
             f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
             f"Please rename these {alt_dim} names first for example using "
             f"`adata.{alt_dim}_names_make_unique()`"
         )
+        raise ValueError(msg)
 
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
@@ -167,27 +169,26 @@ def _check_indices(
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
-                raise KeyError(
-                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"The key {key!r} is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
         elif key in alt_names.index:
             val = alt_names[key]
             if isinstance(val, pd.Series):
                 # while var_names must be unique, adata.var[gene_symbols] does not
                 # It's still ambiguous to refer to a duplicated entry though.
                 assert alias_index is not None
-                raise KeyError(
-                    f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"Found duplicate entries for {key!r} in {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
             index_keys.append(val)
             index_aliases.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+        msg = (
+            f"Could not find keys {not_found!r} in columns of `adata.{dim}` or in"
             f" {alt_repr}.{alt_search_repr}."
         )
+        raise KeyError(msg)
 
     return col_keys, index_keys, index_aliases
 
@@ -285,9 +286,9 @@ def obs_df(
     if isinstance(keys, str):
         keys = [keys]
     if use_raw:
-        assert (
-            layer is None
-        ), "Cannot specify use_raw=True and a layer at the same time."
+        assert layer is None, (
+            "Cannot specify use_raw=True and a layer at the same time."
+        )
         var = adata.raw.var
     else:
         var = adata.var
@@ -429,7 +430,8 @@ def _get_obs_rep(
     """
     # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
-        raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
+        msg = f"use_raw expected to be bool, was {type(use_raw)}."
+        raise TypeError(msg)
 
     is_layer = layer is not None
     is_raw = use_raw is not False
@@ -447,10 +449,11 @@ def _get_obs_rep(
         return adata.obsm[obsm]
     if is_obsp:
         return adata.obsp[obsp]
-    raise AssertionError(
+    msg = (
         "That was unexpected. Please report this bug at:\n\n\t"
         "https://github.com/scverse/scanpy/issues"
     )
+    raise AssertionError(msg)
 
 
 def _set_obs_rep(

@@ -230,7 +230,7 @@ select = [
     "W",       # Warning detected by Pycodestyle
     "UP",      # pyupgrade
     "I",       # isort
-    "TCH",     # manage type checking blocks
+    "TC",      # manage type checking blocks
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
@@ -239,6 +239,7 @@ select = [
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
     "SIM",     # Simplify control flow
+    "EM",      # Traceback-friendly error messages
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines
