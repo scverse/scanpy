@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import singledispatch
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, overload
 
 import numpy as np
 import pandas as pd
@@ -11,13 +11,24 @@ from scipy import sparse
 from .._compat import DaskArray
 
 if TYPE_CHECKING:
+    from typing import NoReturn, TypeVar
+
     from numpy.typing import NDArray
+
+    T_NonSparse = TypeVar("T_NonSparse", bound=NDArray | DaskArray)
+    V = TypeVar("V", bound=NDArray | sparse.csr_matrix)
+
+
+@overload
+def _resolve_vals(val: T_NonSparse) -> T_NonSparse: ...
+@overload
+def _resolve_vals(val: sparse.spmatrix) -> sparse.csr_matrix: ...
+@overload
+def _resolve_vals(val: pd.DataFrame | pd.Series) -> NDArray: ...
 
 
 @singledispatch
-def _resolve_vals(
-    val: NDArray | sparse.spmatrix | DaskArray,
-) -> NDArray | sparse.csr_matrix | DaskArray:
+def _resolve_vals(val: object) -> NoReturn:
     msg = f"Unsupported type {type(val)}"
     raise TypeError(msg)
 
@@ -38,16 +49,11 @@ def _(val: sparse.spmatrix) -> sparse.csr_matrix:
 
 @_resolve_vals.register(pd.DataFrame)
 @_resolve_vals.register(pd.Series)
-def _(val):
+def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
 
 
-V = TypeVar("V", np.ndarray, sparse.csr_matrix)
-
-
-def _check_vals(
-    vals: V,
-) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
+def _check_vals(vals: V) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
     """\
     Checks that values wont cause issues in computation.
 
