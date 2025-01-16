@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse, isspmatrix_csc, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 from .. import logging as logg
 from .._compat import DaskArray, njit, old_positionals
@@ -30,9 +30,8 @@ except ImportError:
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from scipy import sparse as sp
 
-    CSMatrix = sp.csr_matrix | sp.csc_matrix
+    from .._utils import _CSMatrix
 
 
 @njit
@@ -66,7 +65,7 @@ def clip_array(
     return X
 
 
-def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
+def clip_set(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
     x = x.copy()
     x[x > max_value] = max_value
     if zero_center:
@@ -78,7 +77,7 @@ def clip_set(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMa
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | spmatrix | np.ndarray | DaskArray,
+    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +85,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | spmatrix | np.ndarray | DaskArray | None:
+) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -228,9 +227,10 @@ def scale_array(
         return X
 
 
-@scale.register(spmatrix)
+@scale.register(csr_matrix)
+@scale.register(csc_matrix)
 def scale_sparse(
-    X: spmatrix,
+    X: _CSMatrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -264,7 +264,7 @@ def scale_sparse(
             mask_obs=mask_obs,
         )
     else:
-        if isspmatrix_csc(X):
+        if isinstance(X, csc_matrix):
             X = X.tocsr()
         elif copy:
             X = X.copy()

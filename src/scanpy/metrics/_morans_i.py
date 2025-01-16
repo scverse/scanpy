@@ -15,13 +15,16 @@ from ._common import _check_vals, _resolve_vals
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from numpy.typing import NDArray
+
+    from .._compat import DaskArray
 
 
 @singledispatch
 def morans_i(
     adata: AnnData,
     *,
-    vals: np.ndarray | sparse.spmatrix | None = None,
+    vals: NDArray | sparse.spmatrix | DaskArray | None = None,
     use_graph: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
@@ -226,7 +229,9 @@ def _morans_i_mtx_csr(  # noqa: PLR0917
 
 
 @morans_i.register(sparse.csr_matrix)
-def _morans_i(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
+def _morans_i(
+    g: sparse.csr_matrix, vals: NDArray | sparse.spmatrix | DaskArray
+) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float64, copy=False)

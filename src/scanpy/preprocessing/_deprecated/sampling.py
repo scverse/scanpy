@@ -9,22 +9,20 @@ if TYPE_CHECKING:
     import numpy as np
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy.sparse import csc_matrix, csr_matrix
 
     from ..._compat import _LegacyRandom
-
-    CSMatrix = csr_matrix | csc_matrix
+    from ..._utils import _CSMatrix
 
 
 @old_positionals("n_obs", "random_state", "copy")
 def subsample(
-    data: AnnData | np.ndarray | CSMatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
     random_state: _LegacyRandom = 0,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | CSMatrix, NDArray[np.int64]] | None:
+) -> AnnData | tuple[np.ndarray | _CSMatrix, NDArray[np.int64]] | None:
     """\
     Subsample to a fraction of the number of observations.
 
