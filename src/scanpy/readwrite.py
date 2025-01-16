@@ -197,6 +197,10 @@ def fastload(fname, backed):
     assert "var" in f, "'var' is missing from f"
     assert "obs" in f, "'obs' is missing from f"
 
+    if not scipy.sparse.issparse(f["X"]):
+        f.close()
+        return read_h5ad(fname, backed=backed)
+
     # get obs dataframe
     rows = f["obs"][list(f["obs"].keys())[0]].size
     # load index pointers, prepare shared arrays
