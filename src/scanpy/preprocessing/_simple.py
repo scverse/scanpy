@@ -146,10 +146,11 @@ def filter_cells(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
+        raise ValueError(msg)
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_cells")
         adata = data.copy() if copy else data
@@ -261,10 +262,11 @@ def filter_genes(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
         )
+        raise ValueError(msg)
 
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_genes")
@@ -407,13 +409,13 @@ def log1p_anndata(
 
     if chunked:
         if (layer is not None) or (obsm is not None):
-            raise NotImplementedError(
+            msg = (
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+            raise NotImplementedError(msg)
         if adata.isbacked and adata.file._filemode != "r+":
-            raise NotImplementedError(
-                "log1p is not implemented for backed AnnData with backed mode not r+"
-            )
+            msg = "log1p is not implemented for backed AnnData with backed mode not r+"
+            raise NotImplementedError(msg)
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
@@ -421,8 +423,10 @@ def log1p_anndata(
         if is_backed_type(X):
             msg = f"log1p is not implemented for matrices of type {type(X)}"
             if layer is not None:
-                raise NotImplementedError(f"{msg} from layers")
-            raise NotImplementedError(f"{msg} without `chunked=True`")
+                msg = f"{msg} from layers"
+                raise NotImplementedError(msg)
+            msg = f"{msg} without `chunked=True`"
+            raise NotImplementedError(msg)
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
@@ -595,7 +599,8 @@ def normalize_per_cell(
         elif use_rep is None:
             after = None
         else:
-            raise ValueError('use_rep should be "after", "X" or None')
+            msg = 'use_rep should be "after", "X" or None'
+            raise ValueError(msg)
         for layer in layers:
             _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
@@ -611,7 +616,8 @@ def normalize_per_cell(
     X = data.copy() if copy else data
     if counts_per_cell is None:
         if not copy:
-            raise ValueError("Can only be run with copy=True")
+            msg = "Can only be run with copy=True"
+            raise ValueError(msg)
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
@@ -719,11 +725,12 @@ def regress_out(
         adata.obs[keys[0]].dtype, CategoricalDtype
     ):
         if len(keys) > 1:
-            raise ValueError(
+            msg = (
                 "If providing categorical variable, "
                 "only a single one is allowed. For this one "
                 "we regress on the mean for each category."
             )
+            raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
         X = _to_dense(X, order="F") if issparse(X) else X
@@ -885,7 +892,7 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
-        (All of them, even if there are `0`s/`False`s in `p`.)
+        (All of them, even if there are `0`\\ s/`False`\\ s in `p`.)
         This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
@@ -1017,9 +1024,8 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError(
-            "Must specify exactly one of `total_counts` or `counts_per_cell`."
-        )
+        msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
+        raise ValueError(msg)
     if copy:
         adata = adata.copy()
     if total_counts_call:
@@ -1039,11 +1045,12 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
     # np.random.choice needs int arguments in numba code:
     counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
     if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
-        raise ValueError(
+        msg = (
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
             " by `np.asarray(counts_per_cell)`."
         )
+        raise ValueError(msg)
     if issparse(X):
         original_type = type(X)
         if not isspmatrix_csr(X):

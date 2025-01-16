@@ -88,7 +88,7 @@ def marker_gene_overlap(
     inplace: bool = False,
 ):
     """\
-    Calculate an overlap score between data-deriven marker genes and
+    Calculate an overlap score between data-derived marker genes and
     provided markers
 
     Marker gene overlap scores can be quoted as overlap counts, overlap
@@ -162,30 +162,35 @@ def marker_gene_overlap(
     """
     # Test user inputs
     if inplace:
-        raise NotImplementedError(
+        msg = (
             "Writing Pandas dataframes to h5ad is currently under development."
             "\nPlease use `inplace=False`."
         )
+        raise NotImplementedError(msg)
 
     if key not in adata.uns:
-        raise ValueError(
+        msg = (
             "Could not find marker gene data. "
             "Please run `sc.tl.rank_genes_groups()` first."
         )
+        raise ValueError(msg)
 
     avail_methods = {"overlap_count", "overlap_coef", "jaccard", "enrich"}
     if method not in avail_methods:
-        raise ValueError(f"Method must be one of {avail_methods}.")
+        msg = f"Method must be one of {avail_methods}."
+        raise ValueError(msg)
 
     if normalize == "None":
         normalize = None
 
     avail_norm = {"reference", "data", None}
     if normalize not in avail_norm:
-        raise ValueError(f"Normalize must be one of {avail_norm}.")
+        msg = f"Normalize must be one of {avail_norm}."
+        raise ValueError(msg)
 
     if normalize is not None and method != "overlap_count":
-        raise ValueError("Can only normalize with method=`overlap_count`.")
+        msg = "Can only normalize with method=`overlap_count`."
+        raise ValueError(msg)
 
     if not all(isinstance(val, AbstractSet) for val in reference_markers.values()):
         try:
@@ -193,18 +198,20 @@ def marker_gene_overlap(
                 key: set(val) for key, val in reference_markers.items()
             }
         except Exception:
-            raise ValueError(
+            msg = (
                 "Please ensure that `reference_markers` contains "
                 "sets or lists of markers as values."
             )
+            raise ValueError(msg)
 
     if adj_pval_threshold is not None:
         if "pvals_adj" not in adata.uns[key]:
-            raise ValueError(
+            msg = (
                 "Could not find adjusted p-value data. "
                 "Please run `sc.tl.rank_genes_groups()` with a "
                 "method that outputs adjusted p-values."
             )
+            raise ValueError(msg)
 
         if adj_pval_threshold < 0:
             logg.warning(

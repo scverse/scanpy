@@ -48,6 +48,7 @@ from ._settings import settings
 from ._utils import _empty
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from typing import BinaryIO, Literal
 
     from ._utils import Empty
@@ -388,14 +389,15 @@ def read(
     filekey = str(filename)
     filename = settings.writedir / (filekey + "." + settings.file_format_data)
     if not filename.exists():
-        raise ValueError(
+        msg = (
             f"Reading with filekey {filekey!r} failed, "
             f"the inferred filename {filename!r} does not exist. "
             "If you intended to provide a filename, either use a filename "
             f"ending on one of the available extensions {avail_exts} "
             "or pass the parameter `ext`."
         )
-    return fastload(filename, backed)
+        raise ValueError(msg)
+    return fastload(filename, backed=backed)
 
 
 @old_positionals("genome", "gex_only", "backup_url")
@@ -452,40 +454,46 @@ def read_10x_h5(
         adata = _read_v3_10x_h5(filename, start=start)
         if genome:
             if genome not in adata.var["genome"].values:
-                raise ValueError(
-                    f"Could not find data corresponding to genome '{genome}' in '{filename}'. "
-                    f'Available genomes are: {list(adata.var["genome"].unique())}.'
+                msg = (
+                    f"Could not find data corresponding to genome {genome!r} in {filename}. "
+                    f"Available genomes are: {list(adata.var['genome'].unique())}."
                 )
+                raise ValueError(msg)
             adata = adata[:, adata.var["genome"] == genome]
         if gex_only:
             adata = adata[:, adata.var["feature_types"] == "Gene Expression"]
         if adata.is_view:
             adata = adata.copy()
     else:
-        adata = _read_legacy_10x_h5(filename, genome=genome, start=start)
+        adata = _read_legacy_10x_h5(Path(filename), genome=genome, start=start)
     return adata
 
 
-def _read_legacy_10x_h5(filename, *, genome=None, start=None):
+def _read_legacy_10x_h5(
+    path: Path, *, genome: str | None = None, start: datetime | None = None
+):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
-    with h5py.File(str(filename), "r") as f:
+    with h5py.File(str(path), "r") as f:
         try:
             children = list(f.keys())
             if not genome:
                 if len(children) > 1:
-                    raise ValueError(
-                        f"'{filename}' contains more than one genome. For legacy 10x h5 "
-                        "files you must specify the genome if more than one is present. "
+                    msg = (
+                        f"{path} contains more than one genome. "
+                        "For legacy 10x h5 files you must specify the genome "
+                        "if more than one is present. "
                         f"Available genomes are: {children}"
                     )
+                    raise ValueError(msg)
                 genome = children[0]
             elif genome not in children:
-                raise ValueError(
-                    f"Could not find genome '{genome}' in '{filename}'. "
+                msg = (
+                    f"Could not find genome {genome!r} in {path}. "
                     f"Available genomes are: {children}"
                 )
+                raise ValueError(msg)
 
             dsets = {}
             _collect_datasets(dsets, f[genome])
@@ -516,7 +524,8 @@ def _read_legacy_10x_h5(filename, *, genome=None, start=None):
             logg.info("", time=start)
             return adata
         except KeyError:
-            raise Exception("File is missing one or more required datasets.")
+            msg = "File is missing one or more required datasets."
+            raise Exception(msg)
 
 
 def _collect_datasets(dsets: dict, group: h5py.Group):
@@ -589,7 +598,8 @@ def _read_v3_10x_h5(filename, *, start=None):
                     ]
                 )
             else:
-                raise ValueError("10x h5 has no features group")
+                msg = "10x h5 has no features group"
+                raise ValueError(msg)
             adata = AnnData(
                 matrix,
                 obs=obs_dict,
@@ -598,7 +608,8 @@ def _read_v3_10x_h5(filename, *, start=None):
             logg.info("", time=start)
             return adata
         except KeyError:
-            raise Exception("File is missing one or more required datasets.")
+            msg = "File is missing one or more required datasets."
+            raise Exception(msg)
 
 
 @deprecated("Use `squidpy.read.visium` instead.")
@@ -703,11 +714,11 @@ def read_visium(
             if not f.exists():
                 if any(x in str(f) for x in ["hires_image", "lowres_image"]):
                     logg.warning(
-                        f"You seem to be missing an image file.\n"
-                        f"Could not find '{f}'."
+                        f"You seem to be missing an image file.\nCould not find {f}."
                     )
                 else:
-                    raise OSError(f"Could not find '{f}'")
+                    msg = f"Could not find {f}"
+                    raise OSError(msg)
 
         adata.uns["spatial"][library_id]["images"] = dict()
         for res in ["hires", "lowres"]:
@@ -716,7 +727,8 @@ def read_visium(
                     str(files[f"{res}_image"])
                 )
             except Exception:
-                raise OSError(f"Could not find '{res}_image'")
+                msg = f"Could not find '{res}_image'"
+                raise OSError(msg)
 
         # read json scalefactors
         adata.uns["spatial"][library_id]["scalefactors"] = json.loads(
@@ -858,7 +870,8 @@ def _read_10x_mtx(
         adata.var_names = genes[0].values
         adata.var["gene_symbols"] = genes[1].values
     else:
-        raise ValueError("`var_names` needs to be 'gene_symbols' or 'gene_ids'")
+        msg = "`var_names` needs to be 'gene_symbols' or 'gene_ids'"
+        raise ValueError(msg)
     if not is_legacy:
         adata.var["feature_types"] = genes[2].values
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
@@ -902,11 +915,12 @@ def write(
         if ext is None:
             ext = ext_
         elif ext != ext_:
-            raise ValueError(
+            msg = (
                 "It suffices to provide the file type by "
                 "providing a proper extension to the filename."
                 'One of "txt", "csv", "h5" or "npz".'
             )
+            raise ValueError(msg)
     else:
         key = filename
         ext = settings.file_format_data if ext is None else ext
@@ -1002,9 +1016,8 @@ def _read(
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
-        raise ValueError(
-            "Please provide one of the available extensions.\n" f"{avail_exts}"
-        )
+        msg = f"Please provide one of the available extensions.\n{avail_exts}"
+        raise ValueError(msg)
     else:
         ext = is_valid_filename(filename, return_ext=True)
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -1028,7 +1041,8 @@ def _read(
         return fastload(path_cache, backed)
 
     if not is_present:
-        raise FileNotFoundError(f"Did not find file {filename}.")
+        msg = f"Did not find file {filename}."
+        raise FileNotFoundError(msg)
     logg.debug(f"reading {filename}")
     if not cache and not suppress_cache_warning:
         logg.hint(
@@ -1038,7 +1052,8 @@ def _read(
     # do the actual reading
     if ext == "xlsx" or ext == "xls":
         if sheet is None:
-            raise ValueError("Provide `sheet` parameter when reading '.xlsx' files.")
+            msg = "Provide `sheet` parameter when reading '.xlsx' files."
+            raise ValueError(msg)
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
@@ -1052,7 +1067,7 @@ def _read(
     elif ext in {"txt", "tab", "data", "tsv"}:
         if ext == "data":
             logg.hint(
-                "... assuming '.data' means tab or white-space " "separated text file",
+                "... assuming '.data' means tab or white-space separated text file"
             )
             logg.hint("change this by passing `ext` to sc.read")
         adata = read_text(filename, delimiter, first_column_names)
@@ -1061,7 +1076,8 @@ def _read(
     elif ext == "loom":
         adata = read_loom(filename=filename, **kwargs)
     else:
-        raise ValueError(f"Unknown extension {ext}.")
+        msg = f"Unknown extension {ext}."
+        raise ValueError(msg)
     if cache:
         logg.info(
             f"... writing an {settings.file_format_data} "
@@ -1326,11 +1342,10 @@ def is_valid_filename(filename: Path, *, return_ext: bool = False):
         return "mtx.gz" if return_ext else True
     elif not return_ext:
         return False
-    raise ValueError(
-        f"""\
+    msg = f"""\
 {filename!r} does not end on a valid extension.
 Please, provide one of the available extensions.
 {avail_exts}
 Text files with .gz and .bz2 extensions are also supported.\
 """
-    )
+    raise ValueError(msg)

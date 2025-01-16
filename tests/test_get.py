@@ -24,7 +24,7 @@ def transpose_adata(adata: AnnData, *, expect_duplicates: bool = False) -> AnnDa
 
 
 TRANSPOSE_PARAMS = pytest.mark.parametrize(
-    "dim,transform,func",
+    ("dim", "transform", "func"),
     [
         ("obs", lambda x, expect_duplicates=False: x, sc.get.obs_df),
         ("var", transpose_adata, sc.get.var_df),
