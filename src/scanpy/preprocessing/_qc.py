@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from functools import singledispatch
+from functools import singledispatch, wraps
 from typing import TYPE_CHECKING
 from warnings import warn
 
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_coo, isspmatrix_csr, spmatrix
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import DaskArray, njit
-from .._utils import _doc_params, axis_nnz, axis_sum
+from .._utils import _CSMatrix, _doc_params, axis_nnz, axis_sum
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -103,9 +103,9 @@ def describe_obs(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isspmatrix_coo(X):
+        if isinstance(X, coo_matrix):
             X = csr_matrix(X)  # COO not subscriptable
-        if issparse(X):
+        if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     obs_metrics[f"n_{var_type}_by_{expr_type}"] = materialize_as_ndarray(
@@ -162,7 +162,7 @@ def describe_var(
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    X: spmatrix | np.ndarray | None = None,
+    X: _CSMatrix | coo_matrix | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """\
     Describe variables of anndata.
@@ -190,9 +190,9 @@ def describe_var(
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isspmatrix_coo(X):
+        if isinstance(X, coo_matrix):
             X = csr_matrix(X)  # COO not subscriptable
-        if issparse(X):
+        if isinstance(X, _CSMatrix):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
@@ -299,9 +299,9 @@ def calculate_qc_metrics(
         )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-    if isspmatrix_coo(X):
+    if isinstance(X, coo_matrix):
         X = csr_matrix(X)  # COO not subscriptable
-    if issparse(X):
+    if isinstance(X, _CSMatrix):
         X.eliminate_zeros()
 
     # Convert qc_vars to list if str
@@ -331,7 +331,7 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: np.ndarray | spmatrix, n: int):
+def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
     """\
     Calculates cumulative proportions of top expressed genes
 
@@ -345,7 +345,7 @@ def top_proportions(mtx: np.ndarray | spmatrix, n: int):
         expressed gene.
     """
     if issparse(mtx):
-        if not isspmatrix_csr(mtx):
+        if not isinstance(mtx, csr_matrix):
             mtx = csr_matrix(mtx)
         # Allowing numba to do more
         return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
@@ -383,7 +383,10 @@ def top_proportions_sparse_csr(data, indptr, n):
 
 
 def check_ns(func):
-    def check_ns_inner(mtx: np.ndarray | spmatrix | DaskArray, ns: Collection[int]):
+    @wraps(func)
+    def check_ns_inner(
+        mtx: np.ndarray | _CSMatrix | coo_matrix | DaskArray, ns: Collection[int]
+    ):
         if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
             msg = "Positions outside range of features."
             raise IndexError(msg)
@@ -434,10 +437,12 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
     ).compute()
 
 
-@top_segment_proportions.register(spmatrix)
+@top_segment_proportions.register(csr_matrix)
+@top_segment_proportions.register(csc_matrix)
+@top_segment_proportions.register(coo_matrix)
 @check_ns
-def _(mtx: spmatrix, ns: Collection[int]) -> DaskArray:
-    if not isspmatrix_csr(mtx):
+def _(mtx: _CSMatrix | coo_matrix, ns: Collection[int]) -> DaskArray:
+    if not isinstance(mtx, csr_matrix):
         mtx = csr_matrix(mtx)
     return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
 

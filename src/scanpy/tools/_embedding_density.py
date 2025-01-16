@@ -70,7 +70,7 @@ def embedding_density(
         The annotated data matrix.
     basis
         The embedding over which the density will be calculated. This embedded
-        representation should be found in `adata.obsm['X_[basis]']``.
+        representation is found in `adata.obsm['X_[basis]']``.
     groupby
         Key for categorical observation/cell annotation for which densities
         are calculated per category.

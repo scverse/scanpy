@@ -15,13 +15,16 @@ from ._common import _check_vals, _resolve_vals
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from numpy.typing import NDArray
+
+    from .._compat import DaskArray
 
 
 @singledispatch
 def gearys_c(
     adata: AnnData,
     *,
-    vals: np.ndarray | sparse.spmatrix | None = None,
+    vals: NDArray | sparse.spmatrix | DaskArray | None = None,
     use_graph: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
@@ -290,7 +293,9 @@ def _gearys_c_mtx_csr(  # noqa: PLR0917
 
 
 @gearys_c.register(sparse.csr_matrix)
-def _gearys_c(g: sparse.csr_matrix, vals: np.ndarray | sparse.spmatrix) -> np.ndarray:
+def _gearys_c(
+    g: sparse.csr_matrix, vals: NDArray | sparse.spmatrix | DaskArray
+) -> np.ndarray:
     assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
     vals = _resolve_vals(vals)
     g_data = g.data.astype(np.float64, copy=False)

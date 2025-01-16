@@ -20,9 +20,9 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
     from .._compat import _LegacyRandom
+    from .._utils import _CSMatrix
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -55,7 +55,7 @@ def louvain(
     random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: spmatrix | None = None,
+    adjacency: _CSMatrix | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
@@ -69,10 +69,10 @@ def louvain(
     Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
-    of :cite:t:`Traag2017`. The Louvain algorithm has been proposed for single-cell
+    of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
     analysis by :cite:t:`Levine2015`.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or
+    This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
 from packaging.version import Version
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import coo_matrix, csr_matrix, issparse
 
 from scanpy._compat import DaskArray, _legacy_numpy_gen, pkg_version
 from scanpy._utils import (
@@ -151,7 +151,9 @@ def test_elem_mul(array_type):
     np.testing.assert_array_equal(res, expd)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "array_type", [*ARRAY_TYPES, pytest.param(coo_matrix, id="scipy_coo")]
+)
 def test_axis_sum(array_type):
     m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
     expd_0 = np.array([1, 1, 2])

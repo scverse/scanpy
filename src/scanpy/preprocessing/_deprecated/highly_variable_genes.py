@@ -16,7 +16,7 @@ from .._utils import _get_mean_var
 if TYPE_CHECKING:
     from typing import Literal
 
-    from scipy.sparse import spmatrix
+    from .._utils import _CSMatrix
 
 
 @deprecated("Use sc.pp.highly_variable_genes instead")
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     "copy",
 )
 def filter_genes_dispersion(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | _CSMatrix | np.ndarray,
     *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,

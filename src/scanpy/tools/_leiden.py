@@ -15,9 +15,10 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from scipy import sparse
 
     from .._compat import _LegacyRandom
+    from .._utils import _CSMatrix
+
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
@@ -36,7 +37,7 @@ def leiden(
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: sparse.spmatrix | None = None,
+    adjacency: _CSMatrix | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -52,9 +53,9 @@ def leiden(
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
-    It has been proposed for single-cell analysis by :cite:t:`Levine2015`.
+    It was proposed for single-cell analysis by :cite:t:`Levine2015`.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or
+    This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
 
     Parameters
@@ -92,9 +93,9 @@ def leiden(
         :func:`~leidenalg.find_partition`.
     neighbors_key
         Use neighbors connectivities as adjacency.
-        If not specified, leiden looks .obsp['connectivities'] for connectivities
+        If not specified, leiden looks at .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
-        If specified, leiden looks
+        If specified, leiden looks at
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both

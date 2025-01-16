@@ -53,7 +53,7 @@ def dpt(
     :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
-    data. `Diffusion Pseudotime` has been introduced by :cite:t:`Haghverdi2016` and
+    data. `Diffusion Pseudotime` was introduced by :cite:t:`Haghverdi2016` and
     implemented within Scanpy :cite:p:`Wolf2018`. Here, we use a further developed
     version, which is able to deal with disconnected graphs :cite:p:`Wolf2019` and can
     be run in a `hierarchical` mode by setting the parameter
@@ -64,9 +64,9 @@ def dpt(
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
 
-    This requires to run :func:`~scanpy.pp.neighbors`, first. In order to
-    reproduce the original implementation of DPT, use `method=='gauss'` in
-    this. Using the default `method=='umap'` only leads to minor quantitative
+    This requires running :func:`~scanpy.pp.neighbors`, first. In order to
+    reproduce the original implementation of DPT, use `method=='gauss'`.
+    Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
 
     .. versionadded:: 1.1
@@ -96,12 +96,12 @@ def dpt(
         maximum correlation in Kendall tau criterion of :cite:t:`Haghverdi2016` to
         stabilize the splitting.
     neighbors_key
-        If not specified, dpt looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        If not specified, dpt looks in .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'] and .obsp['distances'] for connectivities and
+        distances, respectively (default storage places for pp.neighbors).
+        If specified, dpt looks in .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']] and
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
     copy
         Copy instance before computation and return a copy.

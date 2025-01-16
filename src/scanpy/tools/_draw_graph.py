@@ -56,14 +56,14 @@ def draw_graph(
     Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. This requires to run :func:`~scanpy.pp.neighbors`, first.
+    better. This requires running :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2-modified|_
     :cite:p:`Chippada2018`, which can be installed via `pip install fa2-modified`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
-    It has been suggested for visualizing single-cell data by :cite:t:`Islam2011`.
+    It was suggested for visualizing single-cell data by :cite:t:`Islam2011`.
     Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
     Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
@@ -98,9 +98,9 @@ def draw_graph(
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
     neighbors_key
-        If not specified, draw_graph looks .obsp['connectivities'] for connectivities
+        If not specified, draw_graph looks at .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
-        If specified, draw_graph looks
+        If specified, draw_graph looks at
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both
