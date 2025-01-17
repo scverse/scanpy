@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from importlib.metadata import version
+
 import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -18,7 +21,7 @@ from scanpy.preprocessing._qc import (
 )
 from testing.scanpy._helpers import as_sparse_dask_array, maybe_dask_process_context
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 
 @pytest.fixture
@@ -198,8 +201,18 @@ def adata_mito():
     return adata_dense, init_var
 
 
+skip_if_adata_0_11_4 = pytest.mark.skipif(
+    Version(version("anndata")) >= Version("0.11.4.dev2"),
+    reason="Old AnnData doesn’t have sparse test helpers",
+)
+
+
 @pytest.mark.parametrize(
-    "cls", [np.asarray, sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]
+    "cls",
+    [
+        *ARRAY_TYPES_MEM,
+        pytest.param(sparse.coo_matrix, marks=[skip_if_adata_0_11_4], id="scipy_coo"),
+    ],
 )
 def test_qc_metrics_format(cls):
     adata_dense, init_var = adata_mito()
