@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -17,6 +18,10 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+
+DATA_DIR = Path(__file__).parent / "_data"
+
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -191,7 +196,7 @@ def test_connectivities_euclidean(neigh: Neighbors, method, conn, trans, trans_s
     np.testing.assert_allclose(neigh.transitions.toarray(), trans, rtol=1e-5)
 
 
-def test_gauss_noknn_connectivities_euclidean(neigh):
+def test_gauss_noknn_connectivities_euclidean(neigh: Neighbors):
     neigh.compute_neighbors(n_neighbors, method="gauss", knn=False)
     np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
@@ -226,7 +231,7 @@ def test_use_rep_argument():
 
 
 @pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
-def test_restore_n_neighbors(neigh, conv):
+def test_restore_n_neighbors(neigh: Neighbors, conv):
     neigh.compute_neighbors(n_neighbors, method="gauss")
 
     ad = AnnData(np.array(X))
@@ -236,3 +241,25 @@ def test_restore_n_neighbors(neigh, conv):
         ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
+
+
+def test_regression_shortcut():
+    adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
+
+    import pynndescent.sparse_nndescent
+    import pynndescent.utils
+
+    pynndescent.sparse_nndescent.make_heap = pynndescent.utils.make_heap
+
+    adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
+    sc.pp.neighbors(adata, use_rep="normalized_X", random_state=0, n_neighbors=20)
+
+    mats: dict[
+        Literal["distances", "connectivities"], tuple[np.ndarray, np.ndarray]
+    ] = {
+        key: tuple(ad.obsp[key].toarray() for ad in [adata, adata_ref])
+        for key in ["distances", "connectivities"]
+    }
+
+    np.testing.assert_allclose(*mats["distances"], rtol=1e-5)
+    np.testing.assert_allclose(*mats["connectivities"], rtol=1e-5)

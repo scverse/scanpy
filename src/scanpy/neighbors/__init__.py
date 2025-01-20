@@ -18,6 +18,7 @@ from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
+from ._backends.pairwise import PairwiseDistancesTransformer
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
@@ -631,8 +632,8 @@ class Neighbors:
         `transformer` is coerced from a str or instance to an instance class.
 
         If `transformer` is `None` and there are few data points,
-        `transformer` will be set to a brute force
-        :class:`~sklearn.neighbors.KNeighborsTransformer`.
+        `transformer` will be backed by
+        :class:`~from sklearn.metrics.pairwise_distances`.
 
         If `transformer` is `None` and there are many data points,
         `transformer` will be set like `umap` does (i.e. to a
@@ -642,8 +643,8 @@ class Neighbors:
         use_dense_distances = (
             kwds["metric"] == "euclidean" and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer == "sklearn" or (
-            transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
+        shortcut = transformer is None and (
+            use_dense_distances or self._adata.n_obs < 4096
         )
 
         # Coerce `method` to 'gauss' or 'umap'
@@ -667,14 +668,19 @@ class Neighbors:
             raise ValueError(msg)
 
         # Coerce `transformer` to an instance
-        if shortcut:
+        if shortcut or transformer == "sklearn":
             from sklearn.neighbors import KNeighborsTransformer
 
             assert transformer in {None, "sklearn"}
             n_neighbors = self._adata.n_obs - 1
             if knn:  # only obey n_neighbors arg if knn set
                 n_neighbors = min(n_neighbors, kwds["n_neighbors"])
-            transformer = KNeighborsTransformer(
+
+            transformer_cls = (
+                PairwiseDistancesTransformer if shortcut else KNeighborsTransformer
+            )
+
+            transformer = transformer_cls(
                 algorithm="brute",
                 n_jobs=settings.n_jobs,
                 n_neighbors=n_neighbors,
