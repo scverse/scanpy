@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from cycler import Cycler
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
-    from matplotlib.figure import Figure, SubFigure
+    from matplotlib.figure import Figure
 
     from ..._utils import Empty
     from .._baseplot_class import BasePlot
@@ -347,7 +347,7 @@ def rank_genes_groups(
     save: bool | None = None,
     ax: Axes | None = None,
     **kwds,
-) -> Figure | SubFigure | None:
+) -> list[Axes] | None:
     """\
     Plot ranking of genes.
 
@@ -373,7 +373,7 @@ def rank_genes_groups(
 
     Returns
     -------
-    Matplotlib figure or `None` if it was shown.
+    List of each group’s matplotlib axis or `None` if `show=True`.
 
     Examples
     --------
@@ -435,7 +435,7 @@ def rank_genes_groups(
         msg = "passed ax has no associated figure"
         raise RuntimeError(msg)
 
-    ax0 = None
+    axs: list[Axes] = []
     ymin = np.inf
     ymax = -np.inf
     for count, group_name in enumerate(group_names):
@@ -447,20 +447,16 @@ def rank_genes_groups(
             ymin = min(ymin, np.min(scores))
             ymax = max(ymax, np.max(scores))
 
-            if ax0 is None:
-                ax = fig.add_subplot(gs[count])
-                ax0 = ax
-            else:
-                ax = fig.add_subplot(gs[count], sharey=ax0)
+            axs.append(fig.add_subplot(gs[count], sharey=axs[0] if axs else None))
         else:
             ymin = np.min(scores)
             ymax = np.max(scores)
             ymax += 0.3 * (ymax - ymin)
 
-            ax = fig.add_subplot(gs[count])
-            ax.set_ylim(ymin, ymax)
+            axs.append(fig.add_subplot(gs[count]))
+            axs[-1].set_ylim(ymin, ymax)
 
-        ax.set_xlim(-0.9, n_genes - 0.1)
+        axs[-1].set_xlim(-0.9, n_genes - 0.1)
 
         # Mapping to gene_symbols
         if gene_symbols is not None:
@@ -471,7 +467,7 @@ def rank_genes_groups(
 
         # Making labels
         for ig, gene_name in enumerate(gene_names):
-            ax.text(
+            axs[-1].text(
                 ig,
                 scores[ig],
                 gene_name,
@@ -481,24 +477,24 @@ def rank_genes_groups(
                 fontsize=fontsize,
             )
 
-        ax.set_title(f"{group_name} vs. {reference}")
+        axs[-1].set_title(f"{group_name} vs. {reference}")
         if count >= n_panels_x * (n_panels_y - 1):
-            ax.set_xlabel("ranking")
+            axs[-1].set_xlabel("ranking")
 
         # print the 'score' label only on the first panel per row.
         if count % n_panels_x == 0:
-            ax.set_ylabel("score")
+            axs[-1].set_ylabel("score")
 
-    if sharey is True and ax is not None:
+    if sharey is True and axs:
         ymax += 0.3 * (ymax - ymin)
-        ax.set_ylim(ymin, ymax)
+        axs[0].set_ylim(ymin, ymax)
 
     writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
     savefig_or_show(writekey, show=show, save=save)
     show = settings.autoshow if show is None else show
     if show:
         return None
-    return fig
+    return axs
 
 
 def _fig_show_save_or_axes(
@@ -1334,9 +1330,7 @@ def rank_genes_groups_violin(
         _ax.set_ylabel("expression")
         _ax.set_xticklabels(new_gene_names, rotation="vertical")
         writekey = (
-            f"rank_genes_groups_"
-            f"{adata.uns[key]['params']['groupby']}_"
-            f"{group_name}"
+            f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
@@ -1563,8 +1557,7 @@ def embedding_density(
 
     if key not in adata.obs or f"{key}_params" not in adata.uns:
         raise ValueError(
-            "Please run `sc.tl.embedding_density()` first "
-            "and specify the correct key."
+            "Please run `sc.tl.embedding_density()` first and specify the correct key."
         )
 
     if "components" in kwargs:
