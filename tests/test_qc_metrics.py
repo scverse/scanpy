@@ -203,7 +203,7 @@ def adata_mito():
 
 skip_if_adata_0_11_4 = pytest.mark.skipif(
     Version(version("anndata")) >= Version("0.11.4.dev2"),
-    reason="Old AnnData doesn’t have sparse test helpers",
+    reason="Newer AnnData removes implicit support for COO matrices",
 )
 
 
