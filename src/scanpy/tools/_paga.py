@@ -107,21 +107,22 @@ def paga(
     """
     check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
-        raise ValueError(
-            "You need to run `pp.neighbors` first to compute a neighborhood graph."
-        )
+        msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
+        raise ValueError(msg)
     if groups is None:
         for k in ("leiden", "louvain"):
             if k in adata.obs.columns:
                 groups = k
                 break
     if groups is None:
-        raise ValueError(
+        msg = (
             "You need to run `tl.leiden` or `tl.louvain` to compute "
             "community labels, or specify `groups='an_existing_key'`"
         )
+        raise ValueError(msg)
     elif groups not in adata.obs.columns:
-        raise KeyError(f"`groups` key {groups!r} not found in `adata.obs`.")
+        msg = f"`groups` key {groups!r} not found in `adata.obs`."
+        raise KeyError(msg)
 
     adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
@@ -170,9 +171,8 @@ class PAGA:
         elif self._model == "v1.0":
             return self._compute_connectivities_v1_0()
         else:
-            raise ValueError(
-                f"`model` {self._model} needs to be one of {_AVAIL_MODELS}."
-            )
+            msg = f"`model` {self._model} needs to be one of {_AVAIL_MODELS}."
+            raise ValueError(msg)
 
     def _compute_connectivities_v1_2(self):
         import igraph
@@ -273,15 +273,17 @@ class PAGA:
                     "The key 'velocyto_transitions' has been changed to 'velocity_graph'."
                 )
             else:
-                raise ValueError(
+                msg = (
                     "The passed AnnData needs to have an `uns` annotation "
                     "with key 'velocity_graph' - a sparse matrix from RNA velocity."
                 )
+                raise ValueError(msg)
         if self._adata.uns[vkey].shape != (self._adata.n_obs, self._adata.n_obs):
-            raise ValueError(
+            msg = (
                 f"The passed 'velocity_graph' have shape {self._adata.uns[vkey].shape} "
                 f"but shoud have shape {(self._adata.n_obs, self._adata.n_obs)}"
             )
+            raise ValueError(msg)
         # restore this at some point
         # if 'expected_n_edges_random' not in self._adata.uns['paga']:
         #     raise ValueError(

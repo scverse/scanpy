@@ -27,13 +27,9 @@ if TYPE_CHECKING:
     import dask_ml.decomposition as dmld
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
-    from scipy import sparse
-    from scipy.sparse import spmatrix
 
     from ..._compat import _LegacyRandom
-    from ..._utils import Empty
-
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from ..._utils import Empty, _CSMatrix
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
     MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
@@ -65,7 +61,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
     mask_var_hvg=doc_mask_var_hvg,
 )
 def pca(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     n_comps: int | None = None,
     *,
     layer: str | None = None,
@@ -80,7 +76,7 @@ def pca(
     chunk_size: int | None = None,
     key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | np.ndarray | spmatrix | None:
+) -> AnnData | np.ndarray | _CSMatrix | None:
     """\
     Principal component analysis :cite:p:`Pedregosa2011`.
 
@@ -195,7 +191,7 @@ def pca(
     Otherwise, it returns `None` if `copy=False`, else an updated `AnnData` object.
     Sets the following fields:
 
-    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.spmatrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
+    `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
     `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings.
@@ -208,7 +204,8 @@ def pca(
     logg_start = logg.info("computing PCA")
     if layer is not None and chunked:
         # Current chunking implementation relies on pca being called on X
-        raise NotImplementedError("Cannot use `layer` and `chunked` at the same time.")
+        msg = "Cannot use `layer` and `chunked` at the same time."
+        raise NotImplementedError(msg)
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {"auto", "randomized"} and not chunked:
@@ -217,12 +214,10 @@ def pca(
             "reproducible across different computational platforms. For exact "
             "reproducibility, choose `svd_solver='arpack'`."
         )
-    data_is_AnnData = isinstance(data, AnnData)
-    if data_is_AnnData:
+    if return_anndata := isinstance(data, AnnData):
         if layer is None and not chunked and is_backed_type(data.X):
-            raise NotImplementedError(
-                f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
-            )
+            msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
+            raise NotImplementedError(msg)
         adata = data.copy() if copy else data
     else:
         if pkg_version("anndata") < Version("0.8.0rc1"):
@@ -239,13 +234,12 @@ def pca(
         min_dim = min(adata_comp.n_vars, adata_comp.n_obs)
         n_comps = min_dim - 1 if min_dim <= settings.N_PCS else settings.N_PCS
 
-    logg.info(f"    with n_comps={n_comps}")
+    logg.info(f"    with {n_comps=}")
 
     X = _get_obs_rep(adata_comp, layer=layer)
     if is_backed_type(X) and layer is not None:
-        raise NotImplementedError(
-            f"PCA is not implemented for matrices of type {type(X)} from layers"
-        )
+        msg = f"PCA is not implemented for matrices of type {type(X)} from layers"
+        raise NotImplementedError(msg)
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
         Version(ad.__version__) < Version("0.9")
@@ -378,7 +372,7 @@ def pca(
     if X_pca.dtype.descr != np.dtype(dtype).descr:
         X_pca = X_pca.astype(dtype)
 
-    if data_is_AnnData:
+    if return_anndata:
         key_obsm, key_varm, key_uns = (
             ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
         )

@@ -111,7 +111,8 @@ def scanorama_integrate(
     try:
         import scanorama
     except ImportError:
-        raise ImportError("\nplease install Scanorama:\n\n\tpip install scanorama")
+        msg = "\nplease install Scanorama:\n\n\tpip install scanorama"
+        raise ImportError(msg)
 
     # Get batch indices in linear time.
     curr_batch = None
@@ -123,7 +124,8 @@ def scanorama_integrate(
             curr_batch = batch_name
             if batch_name in batch_names:
                 # Contiguous batches important for preserving cell order.
-                raise ValueError("Detected non-contiguous batches.")
+                msg = "Detected non-contiguous batches."
+                raise ValueError(msg)
             batch_names.append(batch_name)  # Preserve name order.
             name2idx[batch_name] = []
         name2idx[batch_name].append(idx)

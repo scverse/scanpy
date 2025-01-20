@@ -14,7 +14,7 @@ import numba
 import numpy as np
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csc_matrix, csr_matrix, issparse, isspmatrix_csr, spmatrix
+from scipy.sparse import csc_matrix, csr_matrix, issparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
@@ -22,6 +22,7 @@ from .._compat import DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
+    _CSMatrix,
     _resolve_axis,
     axis_sum,
     is_backed_type,
@@ -51,16 +52,14 @@ if TYPE_CHECKING:
     from .._utils import RNGLike, SeedLike
 
 
-CSMatrix = csr_matrix | csc_matrix
-
-A = TypeVar("A", bound=np.ndarray | CSMatrix | DaskArray)
+A = TypeVar("A", bound=np.ndarray | _CSMatrix | DaskArray)
 
 
 @old_positionals(
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
 def filter_cells(
-    data: AnnData | spmatrix | np.ndarray | DaskArray,
+    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -146,10 +145,11 @@ def filter_cells(
         option is not None for option in [min_genes, min_counts, max_genes, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
+        raise ValueError(msg)
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_cells")
         adata = data.copy() if copy else data
@@ -208,7 +208,7 @@ def filter_cells(
     "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
 )
 def filter_genes(
-    data: AnnData | spmatrix | np.ndarray | DaskArray,
+    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,
@@ -261,10 +261,11 @@ def filter_genes(
         option is not None for option in [min_cells, min_counts, max_cells, max_counts]
     )
     if n_given_options != 1:
-        raise ValueError(
+        msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
         )
+        raise ValueError(msg)
 
     if isinstance(data, AnnData):
         raise_not_implemented_error_if_backed_type(data.X, "filter_genes")
@@ -320,7 +321,7 @@ def filter_genes(
 @renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     *,
     base: Number | None = None,
     copy: bool = False,
@@ -328,7 +329,7 @@ def log1p(
     chunk_size: int | None = None,
     layer: str | None = None,
     obsm: str | None = None,
-) -> AnnData | np.ndarray | spmatrix | None:
+) -> AnnData | np.ndarray | _CSMatrix | None:
     """\
     Logarithmize the data matrix.
 
@@ -365,8 +366,9 @@ def log1p(
     return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(spmatrix)
-def log1p_sparse(X: spmatrix, *, base: Number | None = None, copy: bool = False):
+@log1p.register(csr_matrix)
+@log1p.register(csc_matrix)
+def log1p_sparse(X: _CSMatrix, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -407,13 +409,13 @@ def log1p_anndata(
 
     if chunked:
         if (layer is not None) or (obsm is not None):
-            raise NotImplementedError(
+            msg = (
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+            raise NotImplementedError(msg)
         if adata.isbacked and adata.file._filemode != "r+":
-            raise NotImplementedError(
-                "log1p is not implemented for backed AnnData with backed mode not r+"
-            )
+            msg = "log1p is not implemented for backed AnnData with backed mode not r+"
+            raise NotImplementedError(msg)
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
@@ -421,8 +423,10 @@ def log1p_anndata(
         if is_backed_type(X):
             msg = f"log1p is not implemented for matrices of type {type(X)}"
             if layer is not None:
-                raise NotImplementedError(f"{msg} from layers")
-            raise NotImplementedError(f"{msg} without `chunked=True`")
+                msg = f"{msg} from layers"
+                raise NotImplementedError(msg)
+            msg = f"{msg} without `chunked=True`"
+            raise NotImplementedError(msg)
         X = log1p(X, copy=False, base=base)
         _set_obs_rep(adata, X, layer=layer, obsm=obsm)
 
@@ -433,12 +437,12 @@ def log1p_anndata(
 
 @old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | _CSMatrix | np.ndarray,
     *,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | spmatrix | np.ndarray | None:
+) -> AnnData | _CSMatrix | np.ndarray | None:
     """\
     Square root the data matrix.
 
@@ -488,7 +492,7 @@ def sqrt(
     "min_counts",
 )
 def normalize_per_cell(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | _CSMatrix,
     *,
     counts_per_cell_after: float | None = None,
     counts_per_cell: np.ndarray | None = None,
@@ -497,7 +501,7 @@ def normalize_per_cell(
     layers: Literal["all"] | Iterable[str] = (),
     use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> AnnData | np.ndarray | spmatrix | None:
+) -> AnnData | np.ndarray | _CSMatrix | None:
     """\
     Normalize total counts per cell.
 
@@ -595,7 +599,8 @@ def normalize_per_cell(
         elif use_rep is None:
             after = None
         else:
-            raise ValueError('use_rep should be "after", "X" or None')
+            msg = 'use_rep should be "after", "X" or None'
+            raise ValueError(msg)
         for layer in layers:
             _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
@@ -611,7 +616,8 @@ def normalize_per_cell(
     X = data.copy() if copy else data
     if counts_per_cell is None:
         if not copy:
-            raise ValueError("Can only be run with copy=True")
+            msg = "Can only be run with copy=True"
+            raise ValueError(msg)
         cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
@@ -719,11 +725,12 @@ def regress_out(
         adata.obs[keys[0]].dtype, CategoricalDtype
     ):
         if len(keys) > 1:
-            raise ValueError(
+            msg = (
                 "If providing categorical variable, "
                 "only a single one is allowed. For this one "
                 "we regress on the mean for each category."
             )
+            raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
         X = _to_dense(X, order="F") if issparse(X) else X
@@ -865,7 +872,7 @@ def sample(
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(
-    data: AnnData | np.ndarray | CSMatrix | DaskArray,
+    data: AnnData | np.ndarray | _CSMatrix | DaskArray,
     fraction: float | None = None,
     *,
     n: int | None = None,
@@ -874,7 +881,7 @@ def sample(
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
-) -> AnnData | None | tuple[np.ndarray | CSMatrix | DaskArray, NDArray[np.int64]]:
+) -> AnnData | None | tuple[np.ndarray | _CSMatrix | DaskArray, NDArray[np.int64]]:
     """\
     Sample observations or variables with or without replacement.
 
@@ -963,7 +970,7 @@ def sample(
         return subset.to_memory() if data.isbacked else subset.copy()
 
     # overload 3: return array and indices
-    assert isinstance(subset, np.ndarray | CSMatrix | DaskArray), type(subset)
+    assert isinstance(subset, np.ndarray | _CSMatrix | DaskArray), type(subset)
     if copy:
         subset = subset.copy()
     return subset, indices
@@ -1009,7 +1016,7 @@ def downsample_counts(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.spmatrix` (dtype `float`)
+    `adata.X` : :class:`~numpy.ndarray` | :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` (dtype `float`)
         Downsampled counts matrix.
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
@@ -1017,20 +1024,29 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError(
-            "Must specify exactly one of `total_counts` or `counts_per_cell`."
-        )
+        msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
+        raise ValueError(msg)
     if copy:
         adata = adata.copy()
     if total_counts_call:
-        adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
+        adata.X = _downsample_total_counts(
+            adata.X, total_counts, random_state=random_state, replace=replace
+        )
     elif counts_per_cell_call:
-        adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
+        adata.X = _downsample_per_cell(
+            adata.X, counts_per_cell, random_state=random_state, replace=replace
+        )
     if copy:
         return adata
 
 
-def _downsample_per_cell(X, counts_per_cell, random_state, replace):
+def _downsample_per_cell(
+    X: _CSMatrix,
+    counts_per_cell: int,
+    *,
+    random_state: _LegacyRandom,
+    replace: bool,
+) -> _CSMatrix:
     n_obs = X.shape[0]
     if isinstance(counts_per_cell, int):
         counts_per_cell = np.full(n_obs, counts_per_cell)
@@ -1039,14 +1055,15 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
     # np.random.choice needs int arguments in numba code:
     counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
     if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
-        raise ValueError(
+        msg = (
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
             " by `np.asarray(counts_per_cell)`."
         )
+        raise ValueError(msg)
     if issparse(X):
         original_type = type(X)
-        if not isspmatrix_csr(X):
+        if not isinstance(X, csr_matrix):
             X = csr_matrix(X)
         totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
@@ -1078,14 +1095,20 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
     return X
 
 
-def _downsample_total_counts(X, total_counts, random_state, replace):
+def _downsample_total_counts(
+    X: _CSMatrix,
+    total_counts: int,
+    *,
+    random_state: _LegacyRandom,
+    replace: bool,
+) -> _CSMatrix:
     total_counts = int(total_counts)
     total = X.sum()
     if total < total_counts:
         return X
     if issparse(X):
         original_type = type(X)
-        if not isspmatrix_csr(X):
+        if not isinstance(X, csr_matrix):
             X = csr_matrix(X)
         _downsample_array(
             X.data,

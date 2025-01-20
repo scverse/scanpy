@@ -181,7 +181,7 @@ def print_version_and_date(*, file=None):
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 

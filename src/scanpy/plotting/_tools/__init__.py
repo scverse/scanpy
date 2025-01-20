@@ -159,14 +159,14 @@ def pca_loadings(
     components = np.array(components) - 1
 
     if np.any(components < 0):
-        raise ValueError("Component indices must be greater than zero.")
+        msg = "Component indices must be greater than zero."
+        raise ValueError(msg)
 
     if n_points is None:
         n_points = min(30, adata.n_vars)
     elif adata.n_vars < n_points:
-        raise ValueError(
-            f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
-        )
+        msg = f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
+        raise ValueError(msg)
 
     ranking(
         adata,
@@ -402,10 +402,11 @@ def rank_genes_groups(
     """
     n_panels_per_row = kwds.get("n_panels_per_row", ncols)
     if n_genes < 1:
-        raise NotImplementedError(
+        msg = (
             "Specifying a negative number for n_genes has not been implemented for "
-            f"this plot. Received n_genes={n_genes}."
+            f"this plot. Received {n_genes=!r}."
         )
+        raise NotImplementedError(msg)
 
     reference = str(adata.uns[key]["params"]["reference"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
@@ -534,10 +535,11 @@ def _rank_genes_groups_plot(
     Common function to call the different rank_genes_groups_* plots
     """
     if var_names is not None and n_genes is not None:
-        raise ValueError(
+        msg = (
             "The arguments n_genes and var_names are mutually exclusive. Please "
             "select only one."
         )
+        raise ValueError(msg)
 
     if key is None:
         key = "rank_genes_groups"
@@ -711,7 +713,6 @@ def rank_genes_groups_heatmap(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
-    {show_save_ax}
 
     Examples
     --------
@@ -795,7 +796,6 @@ def rank_genes_groups_tracksplot(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
-    {show_save_ax}
 
     Examples
     --------
@@ -1542,7 +1542,8 @@ def embedding_density(
         basis = "draw_graph_fa"
 
     if key is not None and groupby is not None:
-        raise ValueError("either pass key or groupby but not both")
+        msg = "either pass key or groupby but not both"
+        raise ValueError(msg)
 
     if key is None:
         key = "umap_density"
@@ -1550,15 +1551,17 @@ def embedding_density(
         key += f"_{groupby}"
 
     if f"X_{basis}" not in adata.obsm_keys():
-        raise ValueError(
-            f"Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. "
+        msg = (
+            f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
         )
+        raise ValueError(msg)
 
     if key not in adata.obs or f"{key}_params" not in adata.uns:
-        raise ValueError(
+        msg = (
             "Please run `sc.tl.embedding_density()` first and specify the correct key."
         )
+        raise ValueError(msg)
 
     if "components" in kwargs:
         logg.warning(
@@ -1577,10 +1580,11 @@ def embedding_density(
         group = [group]
 
     if group is None and groupby is not None:
-        raise ValueError(
+        msg = (
             "Densities were calculated over an `.obs` covariate. "
             "Please specify a group from this covariate to plot."
         )
+        raise ValueError(msg)
 
     if group is not None and groupby is None:
         logg.warning(
@@ -1590,7 +1594,8 @@ def embedding_density(
         group = None
 
     if np.min(adata.obs[key]) < 0 or np.max(adata.obs[key]) > 1:
-        raise ValueError("Densities should be scaled between 0 and 1.")
+        msg = "Densities should be scaled between 0 and 1."
+        raise ValueError(msg)
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
@@ -1615,17 +1620,19 @@ def embedding_density(
     # (even if only one group is set)
     if group is not None and not isinstance(group, str) and isinstance(group, Sequence):
         if ax is not None:
-            raise ValueError("Can only specify `ax` if no `group` sequence is given.")
+            msg = "Can only specify `ax` if no `group` sequence is given."
+            raise ValueError(msg)
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
 
         axs = []
         for count, group_name in enumerate(group):
             if group_name not in adata.obs[groupby].cat.categories:
-                raise ValueError(
+                msg = (
                     "Please specify a group from the `.obs` category "
                     "over which the density was calculated. "
                     f"Invalid group name: {group_name}"
                 )
+                raise ValueError(msg)
 
             ax = plt.subplot(gs[count])
             # Define plotting data
@@ -1757,9 +1764,8 @@ def _get_values_to_plot(
         "log10_pvals_adj",
     ]
     if values_to_plot not in valid_options:
-        raise ValueError(
-            f"given value_to_plot: '{values_to_plot}' is not valid. Valid options are {valid_options}"
-        )
+        msg = f"given value_to_plot: '{values_to_plot}' is not valid. Valid options are {valid_options}"
+        raise ValueError(msg)
 
     values_df = None
     check_done = False

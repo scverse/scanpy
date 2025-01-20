@@ -153,8 +153,10 @@ def _check_import():
     try:
         import pypairs
     except ImportError:
-        raise ImportError("You need to install the package `pypairs`.")
+        msg = "You need to install the package `pypairs`."
+        raise ImportError(msg)
 
     min_version = Version("3.0.9")
     if Version(pypairs.__version__) < min_version:
-        raise ImportError(f"Please only use `pypairs` >= {min_version}")
+        msg = f"Please only use `pypairs` >= {min_version}"
+        raise ImportError(msg)

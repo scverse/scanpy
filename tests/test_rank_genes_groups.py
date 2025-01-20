@@ -59,14 +59,12 @@ def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
     return adata
 
 
-def get_true_scores() -> (
-    tuple[
-        NDArray[np.object_],
-        NDArray[np.object_],
-        NDArray[np.floating],
-        NDArray[np.floating],
-    ]
-):
+def get_true_scores() -> tuple[
+    NDArray[np.object_],
+    NDArray[np.object_],
+    NDArray[np.floating],
+    NDArray[np.floating],
+]:
     with (DATA_PATH / "objs_t_test.pkl").open("rb") as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
     with (DATA_PATH / "objs_wilcoxon.pkl").open("rb") as f:

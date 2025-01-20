@@ -12,13 +12,14 @@ from ..._utils import _get_legacy_random
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from .._compat import _LegacyRandom
+    from ..._compat import _LegacyRandom
+    from ..._utils import _CSMatrix
 
 
 def sparse_multiply(
-    E: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.float64],
+    E: _CSMatrix | NDArray[np.float64],
     a: float | NDArray[np.float64],
-) -> sparse.csr_matrix | sparse.csc_matrix:
+) -> _CSMatrix:
     """multiply each row of E by a scalar"""
 
     nrow = E.shape[0]
@@ -30,11 +31,11 @@ def sparse_multiply(
 
 
 def sparse_zscore(
-    E: sparse.csr_matrix | sparse.csc_matrix,
+    E: _CSMatrix,
     *,
     gene_mean: NDArray[np.float64] | None = None,
     gene_stdev: NDArray[np.float64] | None = None,
-) -> sparse.csr_matrix | sparse.csc_matrix:
+) -> _CSMatrix:
     """z-score normalize each column of E"""
     if gene_mean is None or gene_stdev is None:
         gene_means, gene_stdevs = _get_mean_var(E, axis=0)
@@ -43,12 +44,12 @@ def sparse_zscore(
 
 
 def subsample_counts(
-    E: sparse.csr_matrix | sparse.csc_matrix,
+    E: _CSMatrix,
     *,
     rate: float,
     original_totals,
     random_seed: _LegacyRandom = 0,
-) -> tuple[sparse.csr_matrix | sparse.csc_matrix, NDArray[np.int64]]:
+) -> tuple[_CSMatrix, NDArray[np.int64]]:
     if rate < 1:
         random_seed = _get_legacy_random(random_seed)
         E.data = random_seed.binomial(np.round(E.data).astype(int), rate)

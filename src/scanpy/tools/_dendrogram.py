@@ -60,8 +60,8 @@ def dendrogram(
     to compute a correlation matrix.
 
     The hierarchical clustering can be visualized using
-    :func:`scanpy.pl.dendrogram` or multiple other visualizations that can
-    include a dendrogram: :func:`~scanpy.pl.matrixplot`,
+    :func:`scanpy.pl.dendrogram` or multiple other visualizations
+    that can include a dendrogram: :func:`~scanpy.pl.matrixplot`,
     :func:`~scanpy.pl.heatmap`, :func:`~scanpy.pl.dotplot`,
     and :func:`~scanpy.pl.stacked_violin`.
 
@@ -78,15 +78,15 @@ def dendrogram(
     {use_rep}
     var_names
         List of var_names to use for computing the hierarchical clustering.
-        If `var_names` is given, then `use_rep` and `n_pcs` is ignored.
+        If `var_names` is given, then `use_rep` and `n_pcs` are ignored.
     use_raw
         Only when `var_names` is not None.
         Use `raw` attribute of `adata` if present.
     cor_method
-        correlation method to use.
+        Correlation method to use.
         Options are 'pearson', 'kendall', and 'spearman'
     linkage_method
-        linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
+        Linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
     optimal_ordering
         Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
@@ -124,15 +124,17 @@ def dendrogram(
         groupby = [groupby]
     for group in groupby:
         if group not in adata.obs_keys():
-            raise ValueError(
+            msg = (
                 "groupby has to be a valid observation. "
                 f"Given value: {group}, valid observations: {adata.obs_keys()}"
             )
+            raise ValueError(msg)
         if not isinstance(adata.obs[group].dtype, CategoricalDtype):
-            raise ValueError(
+            msg = (
                 "groupby has to be a categorical observation. "
                 f"Given value: {group}, Column type: {adata.obs[group].dtype}"
             )
+            raise ValueError(msg)
 
     if var_names is None:
         rep_df = pd.DataFrame(
@@ -188,7 +190,7 @@ def dendrogram(
 
     if inplace:
         if key_added is None:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+            key_added = f"dendrogram_{'_'.join(groupby)}"
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:

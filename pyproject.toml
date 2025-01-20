@@ -132,11 +132,9 @@ doc = [
     "sam-algorithm",
 ]
 dev = [
-    # getting the dev version
-    "setuptools_scm",
-    # static checking
-    "pre-commit",
-    "towncrier",
+    "hatch-vcs",  # runtime dev version generation
+    "pre-commit", # static checking
+    "towncrier",  # release note management
 ]
 # Algorithms
 paga = [ "igraph" ]
@@ -158,8 +156,6 @@ packages = [ "src/testing", "src/scanpy" ]
 [tool.hatch.version]
 source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
-[tool.hatch.build.hooks.vcs]
-version-file = "src/scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -230,7 +226,7 @@ select = [
     "W",       # Warning detected by Pycodestyle
     "UP",      # pyupgrade
     "I",       # isort
-    "TCH",     # manage type checking blocks
+    "TC",      # manage type checking blocks
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
     "PTH",     # Pathlib instead of os.path
@@ -239,6 +235,7 @@ select = [
     "FBT",     # No positional boolean parameters
     "PT",      # Pytest style
     "SIM",     # Simplify control flow
+    "EM",      # Traceback-friendly error messages
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

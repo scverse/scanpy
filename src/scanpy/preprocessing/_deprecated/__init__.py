@@ -36,7 +36,8 @@ def normalize_per_cell_weinreb16_deprecated(
     Normalized version of the original expression matrix.
     """
     if max_fraction < 0 or max_fraction > 1:
-        raise ValueError("Choose max_fraction between 0 and 1.")
+        msg = "Choose max_fraction between 0 and 1."
+        raise ValueError(msg)
 
     counts_per_cell = x.sum(1).A1 if issparse(x) else x.sum(1)
     gene_subset = np.all(x <= counts_per_cell[:, None] * max_fraction, axis=0)

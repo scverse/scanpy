@@ -211,12 +211,13 @@ def sam(
     try:
         from samalg import SAM
     except ImportError:
-        raise ImportError(
+        msg = (
             "\nplease install sam-algorithm: \n\n"
             "\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n"
             "\tcd self-assembling-manifold\n"
             "\tpip install ."
         )
+        raise ImportError(msg)
 
     logg.info("Self-assembling manifold")
 
