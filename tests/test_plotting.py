@@ -853,17 +853,17 @@ def test_rank_genes_groups(image_comparer, name, fn):
 def test_rank_genes_group_axes(image_comparer):
     fn = next(fn for name, fn in _RANK_GENES_GROUPS_PARAMS if name == "basic")
 
-    save_and_compare_images = partial(image_comparer, ROOT, tol=25)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=23)
 
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
 
     pbmc.var["symbol"] = pbmc.var.index + "__"
 
-    with plt.rc_context({"axes.grid": True, "figure.figsize": (12, 16)}):
-        fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(12, 16))
     ax.set_axis_off()
-    axes: list[Axes] = fn(pbmc, ax=ax, show=False)
+    with plt.rc_context({"axes.grid": True}):
+        axes: list[Axes] = fn(pbmc, ax=ax, show=False)
 
     assert len(axes) == 11
     fig.show()
