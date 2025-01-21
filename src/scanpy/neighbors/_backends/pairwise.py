@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import KW_ONLY, dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
 from sklearn.base import TransformerMixin
 
 from .._common import (
     _get_indices_distances_from_dense_matrix,
+    _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
 
@@ -20,6 +22,9 @@ if TYPE_CHECKING:
 
     _Metric = Literal["cityblock", "cosine", "euclidean", "l1", "l2", "manhattan"]
     _MatrixLike = NDArray | _CSMatrix
+
+
+_DEBUG = False
 
 
 @dataclass
@@ -40,4 +45,11 @@ class PairwiseDistancesTransformer(TransformerMixin):
 
         d_arr = pairwise_distances(self.x_, y, metric=self.metric, **self.metric_params)
         ind, dist = _get_indices_distances_from_dense_matrix(d_arr, self.n_neighbors)
-        return _get_sparse_matrix_from_indices_distances(ind, dist, keep_self=True)
+        rv = _get_sparse_matrix_from_indices_distances(ind, dist, keep_self=True)
+        if _DEBUG:
+            ind2, dist2 = _get_indices_distances_from_sparse_matrix(
+                rv, self.n_neighbors
+            )
+            np.testing.assert_equal(ind, ind2)
+            np.testing.assert_equal(dist, dist2)
+        return rv

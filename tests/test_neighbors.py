@@ -244,7 +244,10 @@ def test_restore_n_neighbors(neigh: Neighbors, conv):
     assert neigh_restored.n_neighbors == 1
 
 
-def test_regression_shortcut():
+def test_regression_shortcut(monkeypatch: pytest.MonkeyPatch):
+    from scanpy.neighbors._backends import pairwise
+
+    monkeypatch.setattr(pairwise, "_DEBUG", True)
     adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
 
     adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
@@ -257,7 +260,7 @@ def test_regression_shortcut():
         for key in ["distances", "connectivities"]
     }
 
-    np.testing.assert_allclose(*mats["distances"], rtol=1e-7, atol=1e-7)
+    assert_allclose(*mats["distances"], rtol=1e-7, atol=1e-7)
     assert_allclose(*mats["connectivities"], rtol=1e-7, atol=1e-7)
 
 
