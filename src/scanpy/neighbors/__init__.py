@@ -18,6 +18,7 @@ from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
+from ._backends.pairwise import PairwiseDistancesTransformer
 from ._common import (
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
@@ -92,6 +93,12 @@ def neighbors(
     connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
     :cite:t:`Haghverdi2016`.
 
+    .. note::
+
+       Since scanpy 1.10, the results changed slightly.
+       We recommend to ensure reproducibility by pinning all package versions,
+       but you can get the old results by specifying `transformer='sklearn-pairwise'`.
+
     Parameters
     ----------
     adata
@@ -122,10 +129,13 @@ def neighbors(
         See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
-        `None` (the default)
+        `None` | `'sklearn'` (the default)
             Behavior depends on data size.
             For small data, we will calculate exact kNN, otherwise we use
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
+        `'sklearn-pairwise'`
+            For compatibility with scanpy <1.10, this allows to use
+            :class:`~sklearn.metrics.pairwise_distances`.
         `'pynndescent'`
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
@@ -632,6 +642,7 @@ class Neighbors:
 
         If `transformer` is `None` and there are few data points,
         `transformer` will be set to a brute force
+        :class:`~from sklearn.metrics.pairwise_distances`.
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
 
         If `transformer` is `None` and there are many data points,
@@ -642,7 +653,7 @@ class Neighbors:
         use_dense_distances = (
             kwds["metric"] == "euclidean" and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer == "sklearn" or (
+        shortcut = transformer in {"sklearn", "sklearn-pairwise"} or (
             transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
@@ -670,11 +681,19 @@ class Neighbors:
         if shortcut:
             from sklearn.neighbors import KNeighborsTransformer
 
-            assert transformer in {None, "sklearn"}
+            assert transformer in {None, "sklearn", "sklearn-pairwise"}
             n_neighbors = self._adata.n_obs - 1
             if knn:  # only obey n_neighbors arg if knn set
                 n_neighbors = min(n_neighbors, kwds["n_neighbors"])
-            transformer = KNeighborsTransformer(
+
+            # sklearn-pairwise is opt-in, because it takes more memory
+            transformer_cls = (
+                PairwiseDistancesTransformer
+                if transformer == "sklearn-pairwise"
+                else KNeighborsTransformer
+            )
+
+            transformer = transformer_cls(
                 algorithm="brute",
                 n_jobs=settings.n_jobs,
                 n_neighbors=n_neighbors,

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from pytest_mock import MockerFixture
 
+
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
 n_neighbors = 3  # includes data points themselves
@@ -191,7 +192,7 @@ def test_connectivities_euclidean(neigh: Neighbors, method, conn, trans, trans_s
     np.testing.assert_allclose(neigh.transitions.toarray(), trans, rtol=1e-5)
 
 
-def test_gauss_noknn_connectivities_euclidean(neigh):
+def test_gauss_noknn_connectivities_euclidean(neigh: Neighbors):
     neigh.compute_neighbors(n_neighbors, method="gauss", knn=False)
     np.testing.assert_allclose(neigh.connectivities, connectivities_gauss_noknn)
     neigh.compute_transitions()
@@ -226,7 +227,7 @@ def test_use_rep_argument():
 
 
 @pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
-def test_restore_n_neighbors(neigh, conv):
+def test_restore_n_neighbors(neigh: Neighbors, conv):
     neigh.compute_neighbors(n_neighbors, method="gauss")
 
     ad = AnnData(np.array(X))
