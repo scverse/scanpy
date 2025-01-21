@@ -643,8 +643,8 @@ class Neighbors:
         use_dense_distances = (
             kwds["metric"] == "euclidean" and self._adata.n_obs < 8192
         ) or not knn
-        shortcut = transformer is None and (
-            use_dense_distances or self._adata.n_obs < 4096
+        shortcut = transformer in {"sklearn", "sklearn-pairwise"} or (
+            transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
         # Coerce `method` to 'gauss' or 'umap'
@@ -668,16 +668,19 @@ class Neighbors:
             raise ValueError(msg)
 
         # Coerce `transformer` to an instance
-        if shortcut or transformer == "sklearn":
+        if shortcut:
             from sklearn.neighbors import KNeighborsTransformer
 
-            assert transformer in {None, "sklearn"}
+            assert transformer in {None, "sklearn", "sklearn-pairwise"}
             n_neighbors = self._adata.n_obs - 1
             if knn:  # only obey n_neighbors arg if knn set
                 n_neighbors = min(n_neighbors, kwds["n_neighbors"])
 
+            # sklearn-pairwise is opt-in, because it takes more memory
             transformer_cls = (
-                PairwiseDistancesTransformer if shortcut else KNeighborsTransformer
+                PairwiseDistancesTransformer
+                if transformer == "sklearn-pairwise"
+                else KNeighborsTransformer
             )
 
             transformer = transformer_cls(
