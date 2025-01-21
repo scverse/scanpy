@@ -93,6 +93,12 @@ def neighbors(
     connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
     :cite:t:`Haghverdi2016`.
 
+    .. note::
+
+       Since scanpy 1.10, the results changed slightly.
+       We recommend to ensure reproducibility by pinning all package versions,
+       but you can get the old results by specifying `transformer='sklearn-pairwise'`.
+
     Parameters
     ----------
     adata
@@ -123,10 +129,13 @@ def neighbors(
         See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
 
-        `None` (the default)
+        `None` | `'sklearn'` (the default)
             Behavior depends on data size.
             For small data, we will calculate exact kNN, otherwise we use
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
+        `'sklearn-pairwise'`
+            For compatibility with scanpy <1.10, this allows to use
+            :class:`~sklearn.metrics.pairwise_distances`.
         `'pynndescent'`
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'rapids'`
@@ -632,8 +641,9 @@ class Neighbors:
         `transformer` is coerced from a str or instance to an instance class.
 
         If `transformer` is `None` and there are few data points,
-        `transformer` will be backed by
+        `transformer` will be set to a brute force
         :class:`~from sklearn.metrics.pairwise_distances`.
+        :class:`~sklearn.neighbors.KNeighborsTransformer`.
 
         If `transformer` is `None` and there are many data points,
         `transformer` will be set like `umap` does (i.e. to a
