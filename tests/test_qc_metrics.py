@@ -201,8 +201,8 @@ def adata_mito():
     return adata_dense, init_var
 
 
-skip_if_adata_0_11_4 = pytest.mark.skipif(
-    Version(version("anndata")) >= Version("0.11.4.dev2"),
+skip_if_adata_0_12 = pytest.mark.skipif(
+    Version(version("anndata")) >= Version("0.12.0.dev0"),
     reason="Newer AnnData removes implicit support for COO matrices",
 )
 
@@ -211,7 +211,7 @@ skip_if_adata_0_11_4 = pytest.mark.skipif(
     "cls",
     [
         *ARRAY_TYPES_MEM,
-        pytest.param(sparse.coo_matrix, marks=[skip_if_adata_0_11_4], id="scipy_coo"),
+        pytest.param(sparse.coo_matrix, marks=[skip_if_adata_0_12], id="scipy_coo"),
     ],
 )
 def test_qc_metrics_format(cls):
