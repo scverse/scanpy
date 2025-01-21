@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from scipy import sparse
 from scipy.sparse import csr_matrix, issparse
 from sklearn.neighbors import KNeighborsTransformer
 
@@ -246,11 +247,6 @@ def test_restore_n_neighbors(neigh: Neighbors, conv):
 def test_regression_shortcut():
     adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
 
-    import pynndescent.sparse_nndescent
-    import pynndescent.utils
-
-    pynndescent.sparse_nndescent.make_heap = pynndescent.utils.make_heap
-
     adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
     sc.pp.neighbors(adata, use_rep="normalized_X", random_state=0, n_neighbors=20)
 
@@ -261,5 +257,23 @@ def test_regression_shortcut():
         for key in ["distances", "connectivities"]
     }
 
-    np.testing.assert_allclose(*mats["distances"], rtol=1e-5)
-    np.testing.assert_allclose(*mats["connectivities"], rtol=1e-5)
+    np.testing.assert_allclose(*mats["distances"], rtol=1e-7, atol=1e-7)
+    assert_allclose(*mats["connectivities"], rtol=1e-7, atol=1e-7)
+
+
+def assert_allclose(
+    a: np.ndarray, b: np.ndarray, *, rtol: float = 1e-7, atol: float = 0
+) -> None:
+    diff = a - b
+    diff[np.isclose(a, b, rtol=rtol, atol=atol)] = 0
+    diff = sparse.coo_matrix(diff)
+    diff.eliminate_zeros()
+
+    msg_nnz = f"{diff.getnnz(0)=}\n{diff.getnnz(1)=}"
+    msg_elems = "\n".join(
+        f"(a-b)[{i:2}, {j:2}] = {d:.8f}" for i, j, d in zip(*diff.coords, diff.data)
+    )
+
+    np.testing.assert_allclose(
+        a, b, rtol=rtol, atol=atol, err_msg=f"{msg_nnz}\n{msg_elems}"
+    )
