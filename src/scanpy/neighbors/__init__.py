@@ -642,7 +642,6 @@ class Neighbors:
 
         If `transformer` is `None` and there are few data points,
         `transformer` will be set to a brute force
-        :class:`~from sklearn.metrics.pairwise_distances`.
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
 
         If `transformer` is `None` and there are many data points,
