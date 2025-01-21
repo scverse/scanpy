@@ -1018,11 +1018,13 @@ def pbmc_scatterplots_session() -> AnnData:
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
-    sc.pp.neighbors(pbmc, transformer="sklearn-pairwise")
+    sc.pp.neighbors(
+        pbmc, transformer="sklearn-pairwise", random_state=np.random.RandomState(1)
+    )
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
-    sc.tl.umap(pbmc, key_added="X_another_umap")
-    sc.tl.umap(pbmc, method="densmap")
+    sc.tl.umap(pbmc, key_added="X_another_umap", random_state=np.random.RandomState(1))
+    sc.tl.umap(pbmc, method="densmap", random_state=np.random.RandomState(1))
     return pbmc
 
 
