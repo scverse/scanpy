@@ -42,4 +42,10 @@ Thumbs.db
 
 # IDEs and editors
 /.idea/
-/.vscode/
+
+
+/benchmarks
+/ci
+/docs/*/generated/
+/tests/**/actual*.png
+/test-data
