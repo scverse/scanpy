@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import partial
-from importlib.metadata import version
 from itertools import chain, combinations, repeat
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -1184,7 +1183,7 @@ def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
 
 
 @pytest.mark.skipif(
-    Version(version("numba")) < Version("0.61.0"),
+    pkg_version("numba") < Version("0.61.0"),
     reason="Same random_state value produces different UMAP results between numba versions. See #2946",
 )
 @pytest.mark.parametrize(
