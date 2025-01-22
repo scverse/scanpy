@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from importlib.metadata import version
 from itertools import chain, combinations, repeat
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -1018,11 +1019,11 @@ def pbmc_scatterplots_session() -> AnnData:
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
-    sc.pp.neighbors(pbmc)
+    sc.pp.neighbors(pbmc, random_state=np.random.RandomState(1))
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
-    sc.tl.umap(pbmc, key_added="X_another_umap")
-    sc.tl.umap(pbmc, method="densmap")
+    sc.tl.umap(pbmc, key_added="X_another_umap", random_state=np.random.RandomState(1))
+    sc.tl.umap(pbmc, method="densmap", random_state=np.random.RandomState(1))
     return pbmc
 
 
@@ -1173,6 +1174,22 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
                 mask_obs="mask",
             ),
         ),
+    ],
+)
+def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    fn(pbmc_scatterplots, show=False)
+    save_and_compare_images(id)
+
+
+@pytest.mark.skipif(
+    Version(version("numba")) < Version("0.61.0"),
+    reason="Same random_state value produces different UMAP results between numba versions. See #2946",
+)
+@pytest.mark.parametrize(
+    ("id", "fn"),
+    [
         (
             "another_umap",
             partial(
@@ -1189,7 +1206,7 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
         ),
     ],
 )
-def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
+def test_umap_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     fn(pbmc_scatterplots, show=False)
