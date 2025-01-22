@@ -420,7 +420,7 @@ def read_visium(
     source_image_path
         Path to the high-resolution tissue image. Path will be included in
         `.uns["spatial"][library_id]["metadata"]["source_image_path"]`.
-        
+
 
     Returns
     -------
