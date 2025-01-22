@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
-    start = logg.info(f"computing Diffusion Maps using n_comps={n_comps}(=n_dcs)")
+    start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, random_state=random_state)
@@ -53,7 +53,7 @@ def dpt(
     :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
-    data. `Diffusion Pseudotime` has been introduced by :cite:t:`Haghverdi2016` and
+    data. `Diffusion Pseudotime` was introduced by :cite:t:`Haghverdi2016` and
     implemented within Scanpy :cite:p:`Wolf2018`. Here, we use a further developed
     version, which is able to deal with disconnected graphs :cite:p:`Wolf2019` and can
     be run in a `hierarchical` mode by setting the parameter
@@ -64,9 +64,9 @@ def dpt(
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
 
-    This requires to run :func:`~scanpy.pp.neighbors`, first. In order to
-    reproduce the original implementation of DPT, use `method=='gauss'` in
-    this. Using the default `method=='umap'` only leads to minor quantitative
+    This requires running :func:`~scanpy.pp.neighbors`, first. In order to
+    reproduce the original implementation of DPT, use `method=='gauss'`.
+    Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
 
     .. versionadded:: 1.1
@@ -96,12 +96,12 @@ def dpt(
         maximum correlation in Kendall tau criterion of :cite:t:`Haghverdi2016` to
         stabilize the splitting.
     neighbors_key
-        If not specified, dpt looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        If not specified, dpt looks in .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'] and .obsp['distances'] for connectivities and
+        distances, respectively (default storage places for pp.neighbors).
+        If specified, dpt looks in .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']] and
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
     copy
         Copy instance before computation and return a copy.
@@ -129,7 +129,8 @@ def dpt(
     if neighbors_key is None:
         neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError("You need to run `pp.neighbors` and `tl.diffmap` first.")
+        msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
+        raise ValueError(msg)
     if "iroot" not in adata.uns and "xroot" not in adata.var:
         logg.warning(
             "No root cell found. To compute pseudotime, pass the index or "
@@ -152,7 +153,7 @@ def dpt(
         allow_kendall_tau_shift=allow_kendall_tau_shift,
         neighbors_key=neighbors_key,
     )
-    start = logg.info(f"computing Diffusion Pseudotime using n_dcs={n_dcs}")
+    start = logg.info(f"computing Diffusion Pseudotime using {n_dcs=}")
     if n_branchings > 1:
         logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:
@@ -262,7 +263,7 @@ class DPT(Neighbors):
         """
         logg.debug(
             f"    detect {self.n_branchings} "
-            f'branching{"" if self.n_branchings == 1 else "s"}',
+            f"branching{'' if self.n_branchings == 1 else 's'}",
         )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
@@ -799,9 +800,8 @@ class DPT(Neighbors):
         elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
-            raise ValueError(
-                '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
-            )
+            msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
+            raise ValueError(msg)
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
@@ -1039,9 +1039,11 @@ class DPT(Neighbors):
         Splitting index according to above description.
         """
         if a.size != b.size:
-            raise ValueError("a and b need to have the same size")
+            msg = "a and b need to have the same size"
+            raise ValueError(msg)
         if a.ndim != b.ndim != 1:
-            raise ValueError("a and b need to be one-dimensional arrays")
+            msg = "a and b need to be one-dimensional arrays"
+            raise ValueError(msg)
         import scipy as sp
 
         min_length = 5

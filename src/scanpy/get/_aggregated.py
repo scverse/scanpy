@@ -256,25 +256,29 @@ def aggregate(
     Note that this filters out any combination of groups that wasn't present in the original data.
     """
     if not isinstance(adata, AnnData):
-        raise NotImplementedError(
+        msg = (
             "sc.get.aggregate is currently only implemented for AnnData input, "
             f"was passed {type(adata)}."
         )
+        raise NotImplementedError(msg)
     if axis is None:
         axis = 1 if varm else 0
     axis, axis_name = _resolve_axis(axis)
     mask = _check_mask(adata, mask, axis_name)
     data = adata.X
     if sum(p is not None for p in [varm, obsm, layer]) > 1:
-        raise TypeError("Please only provide one (or none) of varm, obsm, or layer")
+        msg = "Please only provide one (or none) of varm, obsm, or layer"
+        raise TypeError(msg)
 
     if varm is not None:
         if axis != 1:
-            raise ValueError("varm can only be used when axis is 1")
+            msg = "varm can only be used when axis is 1"
+            raise ValueError(msg)
         data = adata.varm[varm]
     elif obsm is not None:
         if axis != 0:
-            raise ValueError("obsm can only be used when axis is 0")
+            msg = "obsm can only be used when axis is 0"
+            raise ValueError(msg)
         data = adata.obsm[obsm]
     elif layer is not None:
         data = adata.layers[layer]
@@ -324,7 +328,8 @@ def _aggregate(
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
 ):
-    raise NotImplementedError(f"Data type {type(data)} not supported for aggregation")
+    msg = f"Data type {type(data)} not supported for aggregation"
+    raise NotImplementedError(msg)
 
 
 @_aggregate.register(pd.DataFrame)
@@ -333,9 +338,10 @@ def aggregate_df(data, by, func, *, mask=None, dof=1):
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(sparse.spmatrix)
+@_aggregate.register(sparse.csr_matrix)
+@_aggregate.register(sparse.csc_matrix)
 def aggregate_array(
-    data,
+    data: Array,
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
@@ -347,7 +353,8 @@ def aggregate_array(
 
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - get_literal_vals(AggType):
-        raise ValueError(f"func {unknown} is not one of {get_literal_vals(AggType)}")
+        msg = f"func {unknown} is not one of {get_literal_vals(AggType)}"
+        raise ValueError(msg)
 
     if "sum" in funcs:  # sum is calculated separately from the rest
         agg = groupby.sum()

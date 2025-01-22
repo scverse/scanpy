@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from ..._utils import Empty
+    from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
 # ------------------------------------------------------------------------------
@@ -158,14 +159,14 @@ def pca_loadings(
     components = np.array(components) - 1
 
     if np.any(components < 0):
-        raise ValueError("Component indices must be greater than zero.")
+        msg = "Component indices must be greater than zero."
+        raise ValueError(msg)
 
     if n_points is None:
         n_points = min(30, adata.n_vars)
     elif adata.n_vars < n_points:
-        raise ValueError(
-            f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
-        )
+        msg = f"Tried to plot {n_points} variables, but passed anndata only has {adata.n_vars}."
+        raise ValueError(msg)
 
     ranking(
         adata,
@@ -346,7 +347,7 @@ def rank_genes_groups(
     save: bool | None = None,
     ax: Axes | None = None,
     **kwds,
-):
+) -> list[Axes] | None:
     """\
     Plot ranking of genes.
 
@@ -370,6 +371,9 @@ def rank_genes_groups(
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
 
+    Returns
+    -------
+    List of each group’s matplotlib axis or `None` if `show=True`.
 
     Examples
     --------
@@ -398,10 +402,11 @@ def rank_genes_groups(
     """
     n_panels_per_row = kwds.get("n_panels_per_row", ncols)
     if n_genes < 1:
-        raise NotImplementedError(
+        msg = (
             "Specifying a negative number for n_genes has not been implemented for "
-            f"this plot. Received n_genes={n_genes}."
+            f"this plot. Received {n_genes=!r}."
         )
+        raise NotImplementedError(msg)
 
     reference = str(adata.uns[key]["params"]["reference"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
@@ -412,15 +417,26 @@ def rank_genes_groups(
 
     from matplotlib import gridspec
 
-    fig = plt.figure(
-        figsize=(
-            n_panels_x * rcParams["figure.figsize"][0],
-            n_panels_y * rcParams["figure.figsize"][1],
+    if ax is None or (sps := ax.get_subplotspec()) is None:
+        fig = (
+            plt.figure(
+                figsize=(
+                    n_panels_x * rcParams["figure.figsize"][0],
+                    n_panels_y * rcParams["figure.figsize"][1],
+                )
+            )
+            if ax is None
+            else ax.get_figure()
         )
-    )
-    gs = gridspec.GridSpec(nrows=n_panels_y, ncols=n_panels_x, wspace=0.22, hspace=0.3)
+        gs = gridspec.GridSpec(n_panels_y, n_panels_x, fig, wspace=0.22, hspace=0.3)
+    else:
+        fig = ax.get_figure()
+        gs = sps.subgridspec(n_panels_y, n_panels_x)
+    if fig is None:
+        msg = "passed ax has no associated figure"
+        raise RuntimeError(msg)
 
-    ax0 = None
+    axs: list[Axes] = []
     ymin = np.inf
     ymax = -np.inf
     for count, group_name in enumerate(group_names):
@@ -432,20 +448,16 @@ def rank_genes_groups(
             ymin = min(ymin, np.min(scores))
             ymax = max(ymax, np.max(scores))
 
-            if ax0 is None:
-                ax = fig.add_subplot(gs[count])
-                ax0 = ax
-            else:
-                ax = fig.add_subplot(gs[count], sharey=ax0)
+            axs.append(fig.add_subplot(gs[count], sharey=axs[0] if axs else None))
         else:
             ymin = np.min(scores)
             ymax = np.max(scores)
             ymax += 0.3 * (ymax - ymin)
 
-            ax = fig.add_subplot(gs[count])
-            ax.set_ylim(ymin, ymax)
+            axs.append(fig.add_subplot(gs[count]))
+            axs[-1].set_ylim(ymin, ymax)
 
-        ax.set_xlim(-0.9, n_genes - 0.1)
+        axs[-1].set_xlim(-0.9, n_genes - 0.1)
 
         # Mapping to gene_symbols
         if gene_symbols is not None:
@@ -456,7 +468,7 @@ def rank_genes_groups(
 
         # Making labels
         for ig, gene_name in enumerate(gene_names):
-            ax.text(
+            axs[-1].text(
                 ig,
                 scores[ig],
                 gene_name,
@@ -466,23 +478,29 @@ def rank_genes_groups(
                 fontsize=fontsize,
             )
 
-        ax.set_title(f"{group_name} vs. {reference}")
+        axs[-1].set_title(f"{group_name} vs. {reference}")
         if count >= n_panels_x * (n_panels_y - 1):
-            ax.set_xlabel("ranking")
+            axs[-1].set_xlabel("ranking")
 
         # print the 'score' label only on the first panel per row.
         if count % n_panels_x == 0:
-            ax.set_ylabel("score")
+            axs[-1].set_ylabel("score")
 
-    if sharey is True:
+    if sharey is True and axs:
         ymax += 0.3 * (ymax - ymin)
-        ax.set_ylim(ymin, ymax)
+        axs[0].set_ylim(ymin, ymax)
 
     writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
     savefig_or_show(writekey, show=show, save=save)
+    show = settings.autoshow if show is None else show
+    if show:
+        return None
+    return axs
 
 
-def _fig_show_save_or_axes(plot_obj, return_fig, show, save):
+def _fig_show_save_or_axes(
+    plot_obj: BasePlot, *, return_fig: bool, show: bool | None, save: bool | None
+):
     """
     Decides what to return
     """
@@ -509,7 +527,7 @@ def _rank_genes_groups_plot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     gene_symbols: str | None = None,
     **kwds,
 ):
@@ -517,14 +535,11 @@ def _rank_genes_groups_plot(
     Common function to call the different rank_genes_groups_* plots
     """
     if var_names is not None and n_genes is not None:
-        raise ValueError(
+        msg = (
             "The arguments n_genes and var_names are mutually exclusive. Please "
             "select only one."
         )
-
-    if var_names is None and n_genes is None:
-        # set n_genes = 10 as default when none of the options is given
-        n_genes = 10
+        raise ValueError(msg)
 
     if key is None:
         key = "rank_genes_groups"
@@ -542,6 +557,10 @@ def _rank_genes_groups_plot(
         else:
             var_names_list = var_names
     else:
+        # set n_genes = 10 as default when none of the options is given
+        if n_genes is None:
+            n_genes = 10
+
         # dict in which each group is the key and the n_genes are the values
         var_names = {}
         var_names_list = []
@@ -619,7 +638,7 @@ def _rank_genes_groups_plot(
             if title is not None and "colorbar_title" not in kwds:
                 _pl.legend(title=title)
 
-        return _fig_show_save_or_axes(_pl, return_fig, show, save)
+        return _fig_show_save_or_axes(_pl, return_fig=return_fig, show=show, save=save)
 
     elif plot_type == "stacked_violin":
         from .._stacked_violin import stacked_violin
@@ -632,7 +651,7 @@ def _rank_genes_groups_plot(
             gene_symbols=gene_symbols,
             **kwds,
         )
-        return _fig_show_save_or_axes(_pl, return_fig, show, save)
+        return _fig_show_save_or_axes(_pl, return_fig=return_fig, show=show, save=save)
     elif plot_type == "heatmap":
         from .._anndata import heatmap
 
@@ -694,7 +713,6 @@ def rank_genes_groups_heatmap(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
-    {show_save_ax}
 
     Examples
     --------
@@ -778,7 +796,6 @@ def rank_genes_groups_tracksplot(
     {show_save_ax}
     **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
-    {show_save_ax}
 
     Examples
     --------
@@ -846,7 +863,7 @@ def rank_genes_groups_dotplot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
@@ -985,7 +1002,7 @@ def rank_genes_groups_stacked_violin(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
@@ -1073,7 +1090,7 @@ def rank_genes_groups_matrixplot(
     key: str | None = None,
     show: bool | None = None,
     save: bool | None = None,
-    return_fig: bool | None = False,
+    return_fig: bool = False,
     **kwds,
 ):
     """\
@@ -1313,9 +1330,7 @@ def rank_genes_groups_violin(
         _ax.set_ylabel("expression")
         _ax.set_xticklabels(new_gene_names, rotation="vertical")
         writekey = (
-            f"rank_genes_groups_"
-            f"{adata.uns[key]['params']['groupby']}_"
-            f"{group_name}"
+            f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
         )
         savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
@@ -1527,7 +1542,8 @@ def embedding_density(
         basis = "draw_graph_fa"
 
     if key is not None and groupby is not None:
-        raise ValueError("either pass key or groupby but not both")
+        msg = "either pass key or groupby but not both"
+        raise ValueError(msg)
 
     if key is None:
         key = "umap_density"
@@ -1535,16 +1551,17 @@ def embedding_density(
         key += f"_{groupby}"
 
     if f"X_{basis}" not in adata.obsm_keys():
-        raise ValueError(
-            f"Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. "
+        msg = (
+            f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
         )
+        raise ValueError(msg)
 
     if key not in adata.obs or f"{key}_params" not in adata.uns:
-        raise ValueError(
-            "Please run `sc.tl.embedding_density()` first "
-            "and specify the correct key."
+        msg = (
+            "Please run `sc.tl.embedding_density()` first and specify the correct key."
         )
+        raise ValueError(msg)
 
     if "components" in kwargs:
         logg.warning(
@@ -1563,10 +1580,11 @@ def embedding_density(
         group = [group]
 
     if group is None and groupby is not None:
-        raise ValueError(
+        msg = (
             "Densities were calculated over an `.obs` covariate. "
             "Please specify a group from this covariate to plot."
         )
+        raise ValueError(msg)
 
     if group is not None and groupby is None:
         logg.warning(
@@ -1576,7 +1594,8 @@ def embedding_density(
         group = None
 
     if np.min(adata.obs[key]) < 0 or np.max(adata.obs[key]) > 1:
-        raise ValueError("Densities should be scaled between 0 and 1.")
+        msg = "Densities should be scaled between 0 and 1."
+        raise ValueError(msg)
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
@@ -1601,17 +1620,19 @@ def embedding_density(
     # (even if only one group is set)
     if group is not None and not isinstance(group, str) and isinstance(group, Sequence):
         if ax is not None:
-            raise ValueError("Can only specify `ax` if no `group` sequence is given.")
+            msg = "Can only specify `ax` if no `group` sequence is given."
+            raise ValueError(msg)
         fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
 
         axs = []
         for count, group_name in enumerate(group):
             if group_name not in adata.obs[groupby].cat.categories:
-                raise ValueError(
+                msg = (
                     "Please specify a group from the `.obs` category "
                     "over which the density was calculated. "
                     f"Invalid group name: {group_name}"
                 )
+                raise ValueError(msg)
 
             ax = plt.subplot(gs[count])
             # Define plotting data
@@ -1743,9 +1764,8 @@ def _get_values_to_plot(
         "log10_pvals_adj",
     ]
     if values_to_plot not in valid_options:
-        raise ValueError(
-            f"given value_to_plot: '{values_to_plot}' is not valid. Valid options are {valid_options}"
-        )
+        msg = f"given value_to_plot: '{values_to_plot}' is not valid. Valid options are {valid_options}"
+        raise ValueError(msg)
 
     values_df = None
     check_done = False

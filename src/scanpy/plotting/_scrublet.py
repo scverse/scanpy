@@ -72,9 +72,8 @@ def scrublet_score_distribution(
     """
 
     if "scrublet" not in adata.uns:
-        raise ValueError(
-            "Please run scrublet before trying to generate the scrublet plot."
-        )
+        msg = "Please run scrublet before trying to generate the scrublet plot."
+        raise ValueError(msg)
 
     # If batched_by is populated, then we know Scrublet was run over multiple batches
 

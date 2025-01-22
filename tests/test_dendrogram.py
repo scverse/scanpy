@@ -18,7 +18,7 @@ def test_dendrogram_key_added(groupby, key_added):
     adata = pbmc68k_reduced()
     sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
     if isinstance(groupby, list):
-        dendrogram_key = f'dendrogram_{"_".join(groupby)}'
+        dendrogram_key = f"dendrogram_{'_'.join(groupby)}"
     else:
         dendrogram_key = f"dendrogram_{groupby}"
 
