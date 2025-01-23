@@ -109,6 +109,10 @@ jobs:
       artifactName: debug-data
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
+  - script: |
+      echo "$(Pipeline.Workspace)/s/scanpy/tests/_images"
+      ls $(Pipeline.Workspace)/s
+
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/_images'
