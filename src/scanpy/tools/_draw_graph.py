@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from scipy.sparse import spmatrix
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     S = TypeVar("S", bound=LiteralString)
 
@@ -43,7 +43,7 @@ def draw_graph(
     *,
     init_pos: str | bool | None = None,
     root: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
     adjacency: spmatrix | None = None,
     key_added_ext: str | None = None,
@@ -56,14 +56,14 @@ def draw_graph(
     Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. This requires to run :func:`~scanpy.pp.neighbors`, first.
+    better. This requires running :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2-modified|_
     :cite:p:`Chippada2018`, which can be installed via `pip install fa2-modified`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
-    It has been suggested for visualizing single-cell data by :cite:t:`Islam2011`.
+    It was suggested for visualizing single-cell data by :cite:t:`Islam2011`.
     Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
     Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
@@ -98,9 +98,9 @@ def draw_graph(
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
     neighbors_key
-        If not specified, draw_graph looks .obsp['connectivities'] for connectivities
+        If not specified, draw_graph looks at .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
-        If specified, draw_graph looks
+        If specified, draw_graph looks at
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both
@@ -124,7 +124,8 @@ def draw_graph(
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in (layouts := get_literal_vals(_Layout)):
-        raise ValueError(f"Provide a valid layout, one of {layouts}.")
+        msg = f"Provide a valid layout, one of {layouts}."
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)

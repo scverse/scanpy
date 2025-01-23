@@ -42,13 +42,15 @@ def _pearson_residuals(X, theta, clip, check_values, *, copy: bool = False):
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
         # then only theta=0 were undefined..
-        raise ValueError("Pearson residuals require theta > 0")
+        msg = "Pearson residuals require theta > 0"
+        raise ValueError(msg)
     # prepare clipping
     if clip is None:
         n = X.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
-        raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
+        msg = "Pearson residuals require `clip>=0` or `clip=None`."
+        raise ValueError(msg)
 
     if check_values and not check_nonnegative_integers(X):
         warn(
@@ -128,7 +130,8 @@ def normalize_pearson_residuals(
 
     if copy:
         if not inplace:
-            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
+            msg = "`copy=True` cannot be used with `inplace=False`."
+            raise ValueError(msg)
         adata = adata.copy()
 
     view_to_actual(adata)

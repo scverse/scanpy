@@ -15,21 +15,19 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
-    from scipy import sparse
     from sklearn.decomposition import PCA
 
-    from .._utils import AnyRandom
-
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from ..._compat import _LegacyRandom
+    from .._utils import _CSMatrix
 
 
 def _pca_compat_sparse(
-    x: CSMatrix,
+    x: _CSMatrix,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],
     mu: NDArray[np.floating] | None = None,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
     """Sparse PCA for scikit-learn <1.4"""
     random_state = check_random_state(random_state)

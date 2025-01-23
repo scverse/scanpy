@@ -179,21 +179,23 @@ def combat(
 
     # check the input
     if key not in adata.obs_keys():
-        raise ValueError(f"Could not find the key {key!r} in adata.obs")
+        msg = f"Could not find the key {key!r} in adata.obs"
+        raise ValueError(msg)
 
     if covariates is not None:
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
-            raise ValueError(
-                f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
-            )
+            msg = f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
+            raise ValueError(msg)
 
         if key in covariates:
-            raise ValueError("Batch key and covariates cannot overlap")
+            msg = "Batch key and covariates cannot overlap"
+            raise ValueError(msg)
 
         if len(covariates) != len(set(covariates)):
-            raise ValueError("Covariates must be unique")
+            msg = "Covariates must be unique"
+            raise ValueError(msg)
 
     # only works on dense matrices so far
     X = adata.X.toarray().T if issparse(adata.X) else adata.X.T

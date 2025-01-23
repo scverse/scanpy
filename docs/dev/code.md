@@ -9,6 +9,7 @@
 5. {ref}`Make sure all tests are passing <tests>`
 6. {ref}`Build and visually check any changed documentation <building-the-docs>`
 7. {ref}`Open a PR back to the main repository <open-a-pr>`
+8. {ref}`Add a release note to your PR <adding-to-the-docs>`
 
 ## Code style
 

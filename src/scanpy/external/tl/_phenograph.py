@@ -226,17 +226,19 @@ def phenograph(
 
         assert phenograph.__version__ >= "1.5.3"
     except (ImportError, AssertionError, AttributeError):
-        raise ImportError(
+        msg = (
             "please install the latest release of phenograph:\n\t"
             "pip install -U PhenoGraph"
         )
+        raise ImportError(msg)
 
     if isinstance(data, AnnData):
         adata = data
         try:
             data = data.obsm["X_pca"]
         except KeyError:
-            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
+            msg = "Please run `sc.pp.pca` on `data` and try again!"
+            raise KeyError(msg)
     else:
         adata = None
         copy = True
@@ -244,8 +246,8 @@ def phenograph(
     comm_key = (
         f"pheno_{clustering_algo}" if clustering_algo in ["louvain", "leiden"] else ""
     )
-    ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
-    q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")
+    ig_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_ig"
+    q_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_q"
 
     communities, graph, Q = phenograph.cluster(
         data=data,

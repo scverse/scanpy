@@ -9,7 +9,7 @@ import pandas as pd
 from anndata import AnnData
 
 from .. import _utils
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
 from ..readwrite import read, read_visium
@@ -18,7 +18,7 @@ from ._utils import check_datasetdir_exists, filter_oldformatwarning
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
     VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
@@ -63,7 +63,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
 ) -> AnnData:
     """\
     Gaussian Blobs.
@@ -509,6 +509,7 @@ def _download_visium_dataset(
     return sample_dir
 
 
+@deprecated("Use `squidpy.datasets.visium` instead.")
 @doctest_internet
 @check_datasetdir_exists
 def visium_sge(
@@ -518,6 +519,9 @@ def visium_sge(
 ) -> AnnData:
     """\
     Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
+
+    .. deprecated:: 1.11.0
+       Use :func:`squidpy.datasets.visium` instead.
 
     The database_ can be browsed online to find the ``sample_id`` you want.
 

@@ -159,7 +159,8 @@ def _highly_variable_pearson_residuals(
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
         # then only theta=0 were undefined..
-        raise ValueError("Pearson residuals require theta > 0")
+        msg = "Pearson residuals require theta > 0"
+        raise ValueError(msg)
     # prepare clipping
 
     if batch_key is None:
@@ -185,7 +186,8 @@ def _highly_variable_pearson_residuals(
             n = X_batch.shape[0]
             clip = np.sqrt(n)
         if clip < 0:
-            raise ValueError("Pearson residuals require `clip>=0` or `clip=None`.")
+            msg = "Pearson residuals require `clip>=0` or `clip=None`."
+            raise ValueError(msg)
 
         if sp_sparse.issparse(X_batch):
             X_batch = X_batch.tocsc()
@@ -378,17 +380,19 @@ def highly_variable_genes(
     logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
-        raise ValueError(
+        msg = (
             "`pp.highly_variable_genes` expects an `AnnData` argument, "
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
+        raise ValueError(msg)
 
     if flavor == "pearson_residuals":
         if n_top_genes is None:
-            raise ValueError(
+            msg = (
                 "`pp.highly_variable_genes` requires the argument `n_top_genes`"
                 " for `flavor='pearson_residuals'`"
             )
+            raise ValueError(msg)
         return _highly_variable_pearson_residuals(
             adata,
             layer=layer,
@@ -402,6 +406,5 @@ def highly_variable_genes(
             inplace=inplace,
         )
     else:
-        raise ValueError(
-            "This is an experimental API and only `flavor=pearson_residuals` is available."
-        )
+        msg = "This is an experimental API and only `flavor=pearson_residuals` is available."
+        raise ValueError(msg)

@@ -9,16 +9,17 @@ from anndata import AnnData
 from scipy.sparse import issparse
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from scipy.sparse import spmatrix
+    from .._utils import _CSMatrix
 
 
+@deprecated("Use sc.pp.highly_variable_genes instead")
 @old_positionals(
     "flavor",
     "min_disp",
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     "copy",
 )
 def filter_genes_dispersion(
-    data: AnnData | spmatrix | np.ndarray,
+    data: AnnData | _CSMatrix | np.ndarray,
     *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
@@ -48,18 +49,17 @@ def filter_genes_dispersion(
     """\
     Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
-    .. warning::
-        .. deprecated:: 1.3.6
-            Use :func:`~scanpy.pp.highly_variable_genes`
-            instead. The new function is equivalent to the present
-            function, except that
+    .. deprecated:: 1.3.6
 
-            * the new function always expects logarithmized data
-            * `subset=False` in the new function, it suffices to
-              merely annotate the genes, tools like `pp.pca` will
-              detect the annotation
-            * you can now call: `sc.pl.highly_variable_genes(adata)`
-            * `copy` is replaced by `inplace`
+       Use :func:`~scanpy.pp.highly_variable_genes` instead.
+       The new function is equivalent to the present function, except that
+
+       * the new function always expects logarithmized data
+       * `subset=False` in the new function, it suffices to
+         merely annotate the genes, tools like `pp.pca` will
+         detect the annotation
+       * you can now call: `sc.pl.highly_variable_genes(adata)`
+       * `copy` is replaced by `inplace`
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
@@ -214,7 +214,8 @@ def filter_genes_dispersion(
             / disp_mad_bin[df["mean_bin"].values].values
         )
     else:
-        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
+        msg = '`flavor` needs to be "seurat" or "cell_ranger"'
+        raise ValueError(msg)
     dispersion_norm = df["dispersion_norm"].values.astype("float32")
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
@@ -268,7 +269,8 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 def _filter_genes(X, e_cutoff, v_cutoff, meth):
     """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
     if issparse(X):
-        raise ValueError("Not defined for sparse input. See `filter_genes_dispersion`.")
+        msg = "Not defined for sparse input. See `filter_genes_dispersion`."
+        raise ValueError(msg)
     mean_filter = np.mean(X, axis=0) > e_cutoff
     var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + 0.0001) > v_cutoff
     gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]

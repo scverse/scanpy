@@ -9,7 +9,7 @@ from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
-from ..._utils import get_random_state
+from ..._utils import _get_legacy_random
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
@@ -21,8 +21,9 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
+    from .._utils import _CSMatrix
 
 __all__ = ["Scrublet"]
 
@@ -65,15 +66,13 @@ class Scrublet:
 
     # init fields
 
-    counts_obs: InitVar[sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer]] = (
-        field(kw_only=False)
-    )
+    counts_obs: InitVar[_CSMatrix | NDArray[np.integer]] = field(kw_only=False)
     total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
     n_neighbors: InitVar[int | None] = None
     expected_doublet_rate: float = 0.1
     stdev_doublet_rate: float = 0.02
-    random_state: InitVar[AnyRandom] = 0
+    random_state: InitVar[_LegacyRandom] = 0
 
     # private fields
 
@@ -82,15 +81,11 @@ class Scrublet:
 
     _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_obs_norm: sparse.csr_matrix | sparse.csc_matrix = field(
-        init=False, repr=False
-    )
+    _counts_obs_norm: _CSMatrix = field(init=False, repr=False)
 
-    _counts_sim: sparse.csr_matrix | sparse.csc_matrix = field(init=False, repr=False)
+    _counts_sim: _CSMatrix = field(init=False, repr=False)
     _total_counts_sim: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_sim_norm: sparse.csr_matrix | sparse.csc_matrix | None = field(
-        default=None, init=False, repr=False
-    )
+    _counts_sim_norm: _CSMatrix | None = field(default=None, init=False, repr=False)
 
     # Fields set by methods
 
@@ -171,10 +166,10 @@ class Scrublet:
 
     def __post_init__(
         self,
-        counts_obs: sparse.csr_matrix | sparse.csc_matrix | NDArray[np.integer],
+        counts_obs: _CSMatrix | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
-        random_state: AnyRandom,
+        random_state: _LegacyRandom,
     ) -> None:
         self._counts_obs = sparse.csc_matrix(counts_obs)
         self._total_counts_obs = (
@@ -187,7 +182,7 @@ class Scrublet:
             if n_neighbors is None
             else n_neighbors
         )
-        self._random_state = get_random_state(random_state)
+        self._random_state = _get_legacy_random(random_state)
 
     def simulate_doublets(
         self,

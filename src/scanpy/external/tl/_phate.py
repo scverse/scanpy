@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
 
 
 @old_positionals(
@@ -49,7 +49,7 @@ def phate(
     mds_dist: str = "euclidean",
     mds: Literal["classic", "metric", "nonmetric"] = "metric",
     n_jobs: int | None = None,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     verbose: bool | int | None = None,
     copy: bool = False,
     **kwargs,
@@ -154,10 +154,11 @@ def phate(
     try:
         import phate
     except ImportError:
-        raise ImportError(
+        msg = (
             "You need to install the package `phate`: please run `pip install "
             "--user phate` in a terminal."
         )
+        raise ImportError(msg)
     X_phate = phate.PHATE(
         n_components=n_components,
         k=k,
@@ -179,6 +180,6 @@ def phate(
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_phate', PHATE coordinates (adata.obsm)"),
+        deep=("added\n    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

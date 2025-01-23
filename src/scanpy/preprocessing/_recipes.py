@@ -16,7 +16,7 @@ from ._normalization import normalize_total
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
 
 @old_positionals(
@@ -36,7 +36,7 @@ def recipe_weinreb17(
     cv_threshold: int = 2,
     n_pcs: int = 50,
     svd_solver="randomized",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | None:
     """\
@@ -59,7 +59,8 @@ def recipe_weinreb17(
     from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
 
     if issparse(adata.X):
-        raise ValueError("`recipe_weinreb16 does not support sparse matrices.")
+        msg = "`recipe_weinreb16 does not support sparse matrices."
+        raise ValueError(msg)
     if copy:
         adata = adata.copy()
     if log:

@@ -165,11 +165,13 @@ def normalize_total(
     """
     if copy:
         if not inplace:
-            raise ValueError("`copy=True` cannot be used with `inplace=False`.")
+            msg = "`copy=True` cannot be used with `inplace=False`."
+            raise ValueError(msg)
         adata = adata.copy()
 
     if max_fraction < 0 or max_fraction > 1:
-        raise ValueError("Choose max_fraction between 0 and 1.")
+        msg = "Choose max_fraction between 0 and 1."
+        raise ValueError(msg)
 
     # Deprecated features
     if layers is not None:
@@ -190,9 +192,8 @@ def normalize_total(
     if layers == "all":
         layers = adata.layers.keys()
     elif isinstance(layers, str):
-        raise ValueError(
-            f"`layers` needs to be a list of strings or 'all', not {layers!r}"
-        )
+        msg = f"`layers` needs to be a list of strings or 'all', not {layers!r}"
+        raise ValueError(msg)
 
     view_to_actual(adata)
 
@@ -244,7 +245,8 @@ def normalize_total(
     elif layer_norm is None:
         after = None
     else:
-        raise ValueError('layer_norm should be "after", "X" or None')
+        msg = 'layer_norm should be "after", "X" or None'
+        raise ValueError(msg)
 
     for layer_to_norm in layers if layers is not None else ():
         res = normalize_total(
