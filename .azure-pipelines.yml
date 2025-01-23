@@ -109,14 +109,10 @@ jobs:
       artifactName: debug-data
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
-  - script: |
-      echo "$(Pipeline.Workspace)/s/scanpy/tests/_images"
-      ls $(Pipeline.Workspace)/s
-
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: '$(Pipeline.Workspace)/s/tests/_images'
-      artifactName: drop
+      artifactName: '$(DEPENDENCIES_VERSION)-$(python.version)-images'
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
