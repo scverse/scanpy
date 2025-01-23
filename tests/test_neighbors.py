@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
+from scipy import sparse
 from scipy.sparse import csr_matrix, issparse
 from sklearn.neighbors import KNeighborsTransformer
 
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+DATA_DIR = Path(__file__).parent / "_data"
 
 
 # the input data
@@ -245,3 +249,41 @@ def test_restore_n_neighbors(neigh: Neighbors, conv):
         ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
+
+
+def test_regression_shortcut(monkeypatch: pytest.MonkeyPatch):
+    from scanpy.neighbors._backends import pairwise
+
+    monkeypatch.setattr(pairwise, "_DEBUG", True)
+    adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
+
+    adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
+    sc.pp.neighbors(adata, use_rep="normalized_X", random_state=0, n_neighbors=20)
+
+    mats: dict[
+        Literal["distances", "connectivities"], tuple[np.ndarray, np.ndarray]
+    ] = {
+        key: tuple(ad.obsp[key].toarray() for ad in [adata, adata_ref])
+        for key in ["distances", "connectivities"]
+    }
+
+    assert_allclose(*mats["distances"], rtol=1e-5, atol=1e-5)
+    assert_allclose(*mats["connectivities"], rtol=1e-5, atol=1e-5)
+
+
+def assert_allclose(
+    a: np.ndarray, b: np.ndarray, *, rtol: float = 1e-7, atol: float = 0
+) -> None:
+    diff = a - b
+    diff[np.isclose(a, b, rtol=rtol, atol=atol)] = 0
+    diff = sparse.coo_matrix(diff)
+    diff.eliminate_zeros()
+
+    msg_nnz = f"{diff.getnnz(0)=}\n{diff.getnnz(1)=}"
+    msg_elems = "\n".join(
+        f"(a-b)[{i:2}, {j:2}] = {d:.8f}" for i, j, d in zip(*diff.coords, diff.data)
+    )
+
+    np.testing.assert_allclose(
+        a, b, rtol=rtol, atol=atol, err_msg=f"{msg_nnz}\n{msg_elems}"
+    )
