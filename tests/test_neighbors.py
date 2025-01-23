@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 DATA_DIR = Path(__file__).parent / "_data"
+MACHINE = platform.machine()
+PATH_SHORTCUT_REF = DATA_DIR / f"neighbors_shortcut_ref_{MACHINE}.h5ad"
 
 
 # the input data
@@ -251,19 +254,16 @@ def test_restore_n_neighbors(neigh: Neighbors, conv):
     assert neigh_restored.n_neighbors == 1
 
 
+@pytest.mark.skipif(not PATH_SHORTCUT_REF.is_file(), reason="requires reference data")
 def test_regression_shortcut(monkeypatch: pytest.MonkeyPatch):
     from scanpy.neighbors._backends import pairwise
 
     monkeypatch.setattr(pairwise, "_DEBUG", True)
-    adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
+    adata_ref = sc.read_h5ad(PATH_SHORTCUT_REF)
 
-    adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
+    adata = AnnData(adata_ref.X)
     sc.pp.neighbors(
-        adata,
-        transformer="sklearn-pairwise",
-        use_rep="normalized_X",
-        random_state=0,
-        n_neighbors=20,
+        adata, transformer="sklearn-pairwise", random_state=0, n_neighbors=20
     )
 
     mats: dict[
