@@ -258,7 +258,13 @@ def test_regression_shortcut(monkeypatch: pytest.MonkeyPatch):
     adata_ref = sc.read_h5ad(DATA_DIR / "neighbors_shortcut_ref.h5ad")
 
     adata = AnnData(shape=(100, 5), obsm=adata_ref.obsm)
-    sc.pp.neighbors(adata, use_rep="normalized_X", random_state=0, n_neighbors=20)
+    sc.pp.neighbors(
+        adata,
+        transformer="sklearn-pairwise",
+        use_rep="normalized_X",
+        random_state=0,
+        n_neighbors=20,
+    )
 
     mats: dict[
         Literal["distances", "connectivities"], tuple[np.ndarray, np.ndarray]
