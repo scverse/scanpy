@@ -147,6 +147,8 @@ def test_distances_euclidean(
     [
         # knn=False trivially returns all distances
         pytest.param(None, False, id="knn=False"),
+        # knn=False with pairwise returns all distances
+        pytest.param("sklearn-pairwise", False, id="pairwise"),
         # pynndescent returns all distances when data is so small
         pytest.param("pynndescent", True, id="pynndescent"),
         # Explicit brute force also returns all distances
@@ -157,7 +159,13 @@ def test_distances_euclidean(
         ),
     ],
 )
-def test_distances_all(neigh: Neighbors, transformer, knn):
+def test_distances_all(
+    monkeypatch: pytest.MonkeyPatch, neigh: Neighbors, transformer, knn
+):
+    from scanpy.neighbors._backends import pairwise
+
+    monkeypatch.setattr(pairwise, "_DEBUG", True)
+
     neigh.compute_neighbors(
         n_neighbors, transformer=transformer, method="gauss", knn=knn
     )

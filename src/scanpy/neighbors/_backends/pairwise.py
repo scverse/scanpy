@@ -44,11 +44,16 @@ class PairwiseDistancesTransformer(TransformerMixin):
         from sklearn.metrics import pairwise_distances
 
         d_arr = pairwise_distances(self.x_, y, metric=self.metric, **self.metric_params)
-        ind, dist = _get_indices_distances_from_dense_matrix(d_arr, self.n_neighbors)
+        ind, dist = _get_indices_distances_from_dense_matrix(
+            d_arr, self.n_neighbors + 1
+        )
         rv = _get_sparse_matrix_from_indices_distances(ind, dist, keep_self=True)
         if _DEBUG:
+            if self.n_neighbors >= d_arr.shape[1] - 1:
+                np.testing.assert_equal(d_arr, rv.toarray())
+
             ind2, dist2 = _get_indices_distances_from_sparse_matrix(
-                rv, self.n_neighbors
+                rv, self.n_neighbors + 1
             )
             np.testing.assert_equal(ind, ind2)
             np.testing.assert_equal(dist, dist2)
