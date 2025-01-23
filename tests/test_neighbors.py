@@ -273,8 +273,8 @@ def test_regression_shortcut(monkeypatch: pytest.MonkeyPatch):
         for key in ["distances", "connectivities"]
     }
 
-    assert_allclose(*mats["distances"], rtol=1e-5, atol=1e-5)
-    assert_allclose(*mats["connectivities"], rtol=1e-5, atol=1e-5)
+    assert_allclose(*mats["distances"], rtol=1e-7, atol=1e-7)
+    assert_allclose(*mats["connectivities"], rtol=1e-6, atol=1e-6)
 
 
 def assert_allclose(
