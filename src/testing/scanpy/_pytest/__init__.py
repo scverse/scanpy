@@ -75,8 +75,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store_true",
         default=False,
         help=(
-            "Run tests that retrieve stuff from the internet. "
-            "This increases test time."
+            "Run tests that retrieve stuff from the internet. This increases test time."
         ),
     )
 
@@ -131,6 +130,6 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         )
 
 
-assert (
-    "scanpy" not in sys.modules
-), "scanpy is already imported, this will mess up test coverage"
+assert "scanpy" not in sys.modules, (
+    "scanpy is already imported, this will mess up test coverage"
+)

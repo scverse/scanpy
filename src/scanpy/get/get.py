@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from numpy.typing import NDArray
 from packaging.version import Version
-from scipy.sparse import spmatrix
+
+from .._utils import _CSMatrix
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -16,7 +18,9 @@ if TYPE_CHECKING:
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from numpy.typing import NDArray
+
+    from .._compat import DaskArray
+
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -144,18 +148,20 @@ def _check_indices(
     # be further duplicated when selecting them.
     if not dim_df.columns.is_unique:
         dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
-        raise ValueError(
+        msg = (
             f"adata.{dim} contains duplicated columns. Please rename or remove "
             "these columns first.\n`"
             f"Duplicated columns {dup_cols}"
         )
+        raise ValueError(msg)
 
     if not alt_index.is_unique:
-        raise ValueError(
+        msg = (
             f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
             f"Please rename these {alt_dim} names first for example using "
             f"`adata.{alt_dim}_names_make_unique()`"
         )
+        raise ValueError(msg)
 
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
@@ -163,27 +169,26 @@ def _check_indices(
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
-                raise KeyError(
-                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"The key {key!r} is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
         elif key in alt_names.index:
             val = alt_names[key]
             if isinstance(val, pd.Series):
                 # while var_names must be unique, adata.var[gene_symbols] does not
                 # It's still ambiguous to refer to a duplicated entry though.
                 assert alias_index is not None
-                raise KeyError(
-                    f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"Found duplicate entries for {key!r} in {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
             index_keys.append(val)
             index_aliases.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+        msg = (
+            f"Could not find keys {not_found!r} in columns of `adata.{dim}` or in"
             f" {alt_repr}.{alt_search_repr}."
         )
+        raise KeyError(msg)
 
     return col_keys, index_keys, index_aliases
 
@@ -281,9 +286,9 @@ def obs_df(
     if isinstance(keys, str):
         keys = [keys]
     if use_raw:
-        assert (
-            layer is None
-        ), "Cannot specify use_raw=True and a layer at the same time."
+        assert layer is None, (
+            "Cannot specify use_raw=True and a layer at the same time."
+        )
         var = adata.raw.var
     else:
         var = adata.var
@@ -328,7 +333,7 @@ def obs_df(
         val = adata.obsm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, _CSMatrix):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -398,7 +403,7 @@ def var_df(
         val = adata.varm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, _CSMatrix):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -414,7 +419,7 @@ def _get_obs_rep(
     obsp: str | None = None,
 ) -> (
     np.ndarray
-    | spmatrix
+    | _CSMatrix
     | pd.DataFrame
     | ArrayView
     | BaseCompressedSparseDataset
@@ -425,7 +430,8 @@ def _get_obs_rep(
     """
     # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
-        raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
+        msg = f"use_raw expected to be bool, was {type(use_raw)}."
+        raise TypeError(msg)
 
     is_layer = layer is not None
     is_raw = use_raw is not False
@@ -443,10 +449,11 @@ def _get_obs_rep(
         return adata.obsm[obsm]
     if is_obsp:
         return adata.obsp[obsp]
-    raise AssertionError(
+    msg = (
         "That was unexpected. Please report this bug at:\n\n\t"
         "https://github.com/scverse/scanpy/issues"
     )
+    raise AssertionError(msg)
 
 
 def _set_obs_rep(
@@ -485,11 +492,16 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
+M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
+
+
 def _check_mask(
-    data: AnnData | np.ndarray,
-    mask: NDArray[np.bool_] | str,
+    data: AnnData | np.ndarray | _CSMatrix | DaskArray,
+    mask: str | M,
     dim: Literal["obs", "var"],
-) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
+    *,
+    allow_probabilities: bool = False,
+) -> M:  # Could also be a series, but should be one or the other
     """
     Validate mask argument
     Params
@@ -497,30 +509,45 @@ def _check_mask(
     data
         Annotated data matrix or numpy array.
     mask
-        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+        Mask (or probabilities if `allow_probabilities=True`).
+        Either an appropriatley sized array, or name of a column.
     dim
         The dimension being masked.
+    allow_probabilities
+        Whether to allow probabilities as `mask`
     """
+    if mask is None:
+        return mask
+    desc = "mask/probabilities" if allow_probabilities else "mask"
+
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
-            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
             raise ValueError(msg)
 
         annot: pd.DataFrame = getattr(data, dim)
         if mask not in annot.columns:
             msg = (
                 f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the mask first to `adata.{dim}`"
-                "or consider using the mask argument with a boolean array."
+                f"Either add the {desc} first to `adata.{dim}`"
+                f"or consider using the {desc} argument with an array."
             )
             raise ValueError(msg)
         mask_array = annot[mask].to_numpy()
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            raise ValueError("The shape of the mask do not match the data.")
+            msg = f"The shape of the {desc} do not match the data."
+            raise ValueError(msg)
         mask_array = mask
 
-    if not pd.api.types.is_bool_dtype(mask_array.dtype):
-        raise ValueError("Mask array must be boolean.")
+    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
+    if not allow_probabilities and not is_bool:
+        msg = "Mask array must be boolean."
+        raise ValueError(msg)
+    elif allow_probabilities and not (
+        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
+    ):
+        msg = f"{desc} array must be boolean or floating point."
+        raise ValueError(msg)
 
     return mask_array

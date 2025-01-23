@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import partial, singledispatch, wraps
 from numbers import Integral
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, overload
 
 import numba
 import numpy as np
@@ -12,11 +11,16 @@ from scipy import sparse
 from ..._compat import DaskArray, njit
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable
+    from typing import Literal, TypeVar
 
     from numpy.typing import NDArray
 
-C = TypeVar("C", bound=Callable)
+    from ..._utils import _CSMatrix
+
+    _Array = NDArray | DaskArray | _CSMatrix
+
+    C = TypeVar("C", bound=Callable)
 
 
 def _check_axis_supported(wrapped: C) -> C:
@@ -24,20 +28,20 @@ def _check_axis_supported(wrapped: C) -> C:
     def func(a, axis=None):
         if axis is not None:
             if not isinstance(axis, Integral):
-                raise TypeError("axis must be integer or None.")
+                msg = "axis must be integer or None."
+                raise TypeError(msg)
             if axis not in (0, 1):
-                raise NotImplementedError("We only support axis 0 and 1 at the moment")
+                msg = "We only support axis 0 and 1 at the moment"
+                raise NotImplementedError(msg)
         return wrapped(a, axis)
 
     return func
 
 
 @overload
-def is_constant(a: NDArray, axis: None = None) -> bool: ...
-
-
+def is_constant(a: _Array, axis: None = None) -> bool: ...
 @overload
-def is_constant(a: NDArray, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
+def is_constant(a: _Array, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
 
 
 @_check_axis_supported

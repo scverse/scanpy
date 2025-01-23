@@ -59,14 +59,12 @@ def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
     return adata
 
 
-def get_true_scores() -> (
-    tuple[
-        NDArray[np.object_],
-        NDArray[np.object_],
-        NDArray[np.floating],
-        NDArray[np.floating],
-    ]
-):
+def get_true_scores() -> tuple[
+    NDArray[np.object_],
+    NDArray[np.object_],
+    NDArray[np.floating],
+    NDArray[np.floating],
+]:
     with (DATA_PATH / "objs_t_test.pkl").open("rb") as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
     with (DATA_PATH / "objs_wilcoxon.pkl").open("rb") as f:
@@ -305,6 +303,13 @@ def test_wilcoxon_tie_correction(reference):
     test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
+
+
+def test_wilcoxon_huge_data(monkeypatch):
+    max_size = 300
+    adata = pbmc68k_reduced()
+    monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
+    rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
 
 
 @pytest.mark.parametrize(

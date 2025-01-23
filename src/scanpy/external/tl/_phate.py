@@ -154,10 +154,11 @@ def phate(
     try:
         import phate
     except ImportError:
-        raise ImportError(
+        msg = (
             "You need to install the package `phate`: please run `pip install "
             "--user phate` in a terminal."
         )
+        raise ImportError(msg)
     X_phate = phate.PHATE(
         n_components=n_components,
         k=k,
@@ -179,6 +180,6 @@ def phate(
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_phate', PHATE coordinates (adata.obsm)"),
+        deep=("added\n    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

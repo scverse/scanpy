@@ -27,7 +27,6 @@
 
 # Python build files
 __pycache__/
-/src/scanpy/_version.py
 /ci/scanpy-min-deps.txt
 /dist/
 /*-env/
@@ -42,7 +41,6 @@ Thumbs.db
 
 # IDEs and editors
 /.idea/
-/.vscode/
 
 # asv benchmark files
 /benchmarks/.asv

@@ -9,7 +9,7 @@ from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
 from .._compat import njit
-from .._utils import axis_sum, elem_mul
+from .._utils import _CSMatrix, axis_sum, elem_mul
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -34,8 +34,11 @@ def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
 def _get_mean_var(
     X: _SupportedArray, *, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    if isinstance(X, sparse.spmatrix):
+    if isinstance(X, _CSMatrix):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
+    elif isinstance(X, sparse.spmatrix):
+        msg = f"Unsupported type {type(X)}"
+        raise TypeError(msg)
     else:
         mean = axis_mean(X, axis=axis, dtype=np.float64)
         mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
@@ -46,7 +49,9 @@ def _get_mean_var(
     return mean, var
 
 
-def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
+def sparse_mean_variance_axis(
+    mtx: _CSMatrix, axis: Literal[0, 1]
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """
     This code and internal functions are based on sklearns
     `sparsefuncs.mean_variance_axis`.
@@ -64,7 +69,8 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
         ax_minor = 0
         shape = mtx.shape[::-1]
     else:
-        raise ValueError("This function only works on sparse csr and csc matrices")
+        msg = "This function only works on sparse csr and csc matrices"
+        raise ValueError(msg)
     if axis == ax_minor:
         return sparse_mean_var_major_axis(
             mtx.data,
@@ -162,10 +168,7 @@ def sample_comb(
     return np.vstack(np.unravel_index(idx, dims)).T
 
 
-def _to_dense(
-    X: sparse.spmatrix,
-    order: Literal["C", "F"] = "C",
-) -> NDArray:
+def _to_dense(X: _CSMatrix, order: Literal["C", "F"] = "C") -> NDArray:
     """\
     Numba kernel for np.toarray() function
     """
