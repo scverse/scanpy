@@ -115,7 +115,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: '$(Pipeline.Workspace)/s/scanpy/tests/_images'
+      pathToPublish: '$(Pipeline.Workspace)/s/tests/_images'
       artifactName: drop
 
   - script: bash <(curl -s https://codecov.io/bash)
