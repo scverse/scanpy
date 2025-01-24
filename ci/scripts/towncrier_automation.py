@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+import tomllib
 from packaging.version import Version
 
 if TYPE_CHECKING:
@@ -54,9 +56,18 @@ def parse_args(argv: Sequence[str] | None = None) -> Args:
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
 
+    meta = tomllib.loads(Path("pyproject.toml").read_text())
+
     # Run towncrier
     subprocess.run(
-        ["towncrier", "build", f"--version={args.version}", "--yes"], check=True
+        [
+            "towncrier",
+            "build",
+            f"--version={args.version}",
+            f"--name={meta['project']['name']}",
+            "--yes",
+        ],
+        check=True,
     )
 
     # Check if we are on the main branch to know if we need to backport
