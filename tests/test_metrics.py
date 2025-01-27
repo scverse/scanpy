@@ -14,7 +14,6 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
@@ -117,26 +116,33 @@ def test_correctness(metric, size, expected):
     np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_graph_metrics_w_constant_values(metric, array_type, threading):
+@pytest.mark.parametrize(
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
+)
+def test_graph_metrics_w_constant_values(
+    request: pytest.FixtureRequest, metric, array_type, threading
+):
+    if "dask" in array_type.__name__:
+        reason = "DaskArray not yet supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
-    XT = array_type(pbmc.raw.X.T.copy())
+    XT = pbmc.raw.X.T.copy()
     g = pbmc.obsp["connectivities"].copy()
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
-
-    if isinstance(XT, DaskArray):
-        pytest.skip("DaskArray yet not supported")
 
     const_inds = np.random.choice(XT.shape[0], 10, replace=False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
         XT_zero_vals = XT.copy()
         XT_zero_vals[const_inds, :] = 0
+        XT_zero_vals = array_type(XT_zero_vals)
         XT_const_vals = XT.copy()
         XT_const_vals[const_inds, :] = 42
+        XT_const_vals = array_type(XT_const_vals)
 
-    results_full = metric(g, XT)
+    results_full = metric(g, array_type(XT))
     # TODO: Check for warnings
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"

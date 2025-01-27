@@ -48,6 +48,8 @@ Compute densities on embeddings.
    tl.paga
 ```
 
+(data-integration)=
+
 ### Data integration
 
 ```{eval-rst}

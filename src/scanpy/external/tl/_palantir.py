@@ -94,7 +94,7 @@ def palantir(
             Array of Diffusion components.
         - palantir_EigenValues - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.uns`, dtype `float`)
             Array of corresponding eigen values.
-        - palantir_diff_op - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+        - palantir_diff_op - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
             The diffusion operator matrix.
 
     **Multi scale space results**,
@@ -340,4 +340,5 @@ def _check_import():
     try:
         import palantir  # noqa: F401
     except ImportError:
-        raise ImportError("\nplease install palantir:\n\tpip install palantir")
+        msg = "\nplease install palantir:\n\tpip install palantir"
+        raise ImportError(msg)

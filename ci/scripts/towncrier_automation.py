@@ -92,7 +92,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             f"--base={base_branch}",
             f"--title={pr_title}",
             f"--body={pr_description}",
-            *(["--label=no milestone"] if base_branch == "main" else []),
+            *(
+                ["--label=no milestone", "--label=Development Process 🚀"]
+                if base_branch == "main"
+                else []
+            ),
             *(["--dry-run"] if args.dry_run else []),
         ],
         check=True,

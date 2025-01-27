@@ -15,16 +15,14 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
-    from scipy import sparse
     from sklearn.decomposition import PCA
 
     from ..._compat import _LegacyRandom
-
-    CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from .._utils import _CSMatrix
 
 
 def _pca_compat_sparse(
-    x: CSMatrix,
+    x: _CSMatrix,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],
