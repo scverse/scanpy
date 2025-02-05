@@ -117,6 +117,23 @@ def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
+
+@cache
+def _musmus_11m() -> AnnData:
+    # Define the path to the dataset
+    path = "/sc/arion/projects/psychAD/mikaela/scanpy/scanpy/benchmarks/data/MusMus_4M_cells_cellxgene.h5ad"
+    adata = sc.read_h5ad(path)
+    #assert isinstance(adata.X, sparse.csr_matrix)
+    # Add counts layer
+    #adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
+    return adata
+
+
+def musmus_11m() -> AnnData:
+    return _musmus_11m().copy()
+
+
 @cache
 def _large_synthetic_dataset(n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01) -> AnnData:
     """
@@ -176,6 +193,8 @@ def _get_dataset_raw(dataset: Dataset) -> tuple[AnnData, str | None]:
             adata, batch_key = lung93k(), "PatientNumber"
         case "large_synthetic":
             adata, batch_key = large_synthetic_dataset(), None
+        case "musmus_11m":
+            adata, batch_key = musmus_11m(), None
         case _:
             msg = f"Unknown dataset {dataset}"
             raise AssertionError(msg)
