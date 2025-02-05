@@ -45,7 +45,7 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
-    "timeout": 1200,  // Timeout for each benchmark in seconds
+    "timeout": 1200, // Timeout for each benchmark in seconds
     "environment_type": "conda",
 
     // timeout in seconds for installing any dependencies in environment
@@ -89,9 +89,9 @@
         "pooch": [""],
         "scikit-image": [""],
         // "scikit-misc": [""],
-       "scikit-learn": [""],
-       "pip+asv_runner": [""],
-       "dask": [""]
+        "scikit-learn": [""],
+        "pip+asv_runner": [""],
+        "dask": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included

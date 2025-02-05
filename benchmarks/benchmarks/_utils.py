@@ -117,15 +117,14 @@ def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
-
 @cache
 def _musmus_11m() -> AnnData:
     # Define the path to the dataset
     path = "/sc/arion/projects/psychAD/mikaela/scanpy/scanpy/benchmarks/data/MusMus_4M_cells_cellxgene.h5ad"
     adata = sc.read_h5ad(path)
-    #assert isinstance(adata.X, sparse.csr_matrix)
+    # assert isinstance(adata.X, sparse.csr_matrix)
     # Add counts layer
-    #adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    # adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     return adata
 
@@ -135,10 +134,12 @@ def musmus_11m() -> AnnData:
 
 
 @cache
-def _large_synthetic_dataset(n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01) -> AnnData:
+def _large_synthetic_dataset(
+    n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01
+) -> AnnData:
     """
     Generate a synthetic dataset suitable for Dask testing.
-    
+
     Parameters:
         n_obs: int
             Number of observations (rows, typically cells).
@@ -152,7 +153,9 @@ def _large_synthetic_dataset(n_obs: int = 500_000, n_vars: int = 5_000, density:
             The synthetic dataset.
     """
 
-    X = sparse.random(n_obs, n_vars, density=density, format="csr", dtype=np.float32, random_state=42)
+    X = sparse.random(
+        n_obs, n_vars, density=density, format="csr", dtype=np.float32, random_state=42
+    )
     obs = {"obs_names": [f"cell_{i}" for i in range(n_obs)]}
     var = {"var_names": [f"gene_{j}" for j in range(n_vars)]}
     adata = anndata.AnnData(X=X, obs=obs, var=var)
@@ -166,7 +169,9 @@ def _large_synthetic_dataset(n_obs: int = 500_000, n_vars: int = 5_000, density:
     return adata
 
 
-def large_synthetic_dataset(n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01) -> AnnData:
+def large_synthetic_dataset(
+    n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01
+) -> AnnData:
     return _large_synthetic_dataset(n_obs, n_vars, density).copy()
 
 
