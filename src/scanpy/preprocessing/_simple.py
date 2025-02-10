@@ -639,12 +639,15 @@ DT = TypeVar("DT")
 
 @njit
 def _create_regressor_categorical(
-    X: np.ndarray, number_categories: int, filters: np.ndarray
+    X: np.ndarray, number_categories: int, cat_array: np.ndarray
 ) -> np.ndarray:
-    # create regressor matrix faster for categorical variables
+    # create regressor matrix for categorical variables
     regressors = np.zeros(X.shape, dtype=X.dtype)
+    # iterate over categories
     for category in range(number_categories):
-        mask = category == filters
+        # iterate over genes and calculate mean expression
+        # for each gene per category
+        mask = category == cat_array
         for ix in numba.prange(X.T.shape[0]):
             regressors[mask, ix] = X.T[ix][mask].mean()
     return regressors
@@ -745,14 +748,13 @@ def regress_out(
             )
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
-        # Create numpy array's from categorical variable
-        # The dtype of the array needs to be the dtype of the categories
-        number_categories = np.int64(len(adata.obs[keys[0]].cat.categories))
-        filters = adata.obs[keys[0]].cat.codes.to_numpy()
-        number_categories = number_categories.astype(filters.dtype)
+
+        # set number of categories to the same dtype as the categories
+        cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
+        number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
 
         X = _to_dense(X, order="F") if issparse(X) else X
-        regressors = _create_regressor_categorical(X, number_categories, filters)
+        regressors = _create_regressor_categorical(X, number_categories, cat_array)
         variable_is_categorical = True
     # regress on one or several ordinal variables
     else:
