@@ -140,7 +140,7 @@ class BasePlot:
         )
 
         self._update_var_groups()
-        
+
         # exlude var_names not present in adata.var_names
         missing_var_names = set(self.var_names).difference(adata.var_names)
         if missing_var_names:
