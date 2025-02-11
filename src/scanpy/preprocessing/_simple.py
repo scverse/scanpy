@@ -754,6 +754,9 @@ def regress_out(
         number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
 
         X = _to_dense(X, order="F") if issparse(X) else X
+        if np.issubdtype(X.dtype, np.integer):
+            target_dtype = np.float32 if X.dtype.itemsize == 4 else np.float64
+            X = X.astype(target_dtype)
         regressors = _create_regressor_categorical(X, number_categories, cat_array)
         variable_is_categorical = True
     # regress on one or several ordinal variables
@@ -768,6 +771,10 @@ def regress_out(
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
     if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
+        if np.issubdtype(X.dtype, np.integer):
+            target_dtype = np.float32 if X.dtype.itemsize == 4 else np.float64
+            X = X.astype(target_dtype)
+
         X = _to_dense(X, order="C") if issparse(X) else X
         res = numpy_regress_out(X, regressors)
 

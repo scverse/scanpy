@@ -478,7 +478,7 @@ def test_regress_out_reproducible(keys, test_file):
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
     tester = np.load(DATA_PATH / test_file)
-    np.testing.assert_array_almost_equal(adata.X, tester)
+    np.testing.assert_allclose(adata.X, tester)
 
 
 def test_regress_out_constants_equivalent():
