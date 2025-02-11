@@ -649,7 +649,7 @@ def _create_regressor_categorical(
         # for each gene per category
         mask = category == cat_array
         for ix in numba.prange(X.T.shape[0]):
-            regressors[mask, ix] = X.T[ix][mask].mean()
+            regressors[mask, ix] = X.T[ix, mask].mean()
     return regressors
 
 
