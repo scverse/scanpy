@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, TypeVar, overload
 
 import numba
 import numpy as np
+import scipy as sp
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import csc_matrix, csr_matrix, issparse
@@ -53,6 +54,36 @@ if TYPE_CHECKING:
 
 
 A = TypeVar("A", bound=np.ndarray | _CSMatrix | DaskArray)
+
+
+@njit()
+def get_rows_to_keep_1(indptr, data):
+    lens = np.zeros(len(indptr) - 1, dtype=type(data[0]))
+    for i in range(len(lens)):
+        lens[i] = np.sum(data[indptr[i] : indptr[i + 1]])
+    return lens
+
+
+def get_rows_to_keep(indptr, dtype):
+    lens = indptr[1:] - indptr[:-1]
+    # lens.astype(dtype)
+    return lens
+
+
+@njit()
+def get_cols_to_keep(indices, data, colcount, nthr, Flag):
+    counts = np.zeros((nthr, colcount), dtype=type(data[0]))
+    for i in numba.prange(nthr):
+        start = i * indices.shape[0] // nthr
+        end = (i + 1) * indices.shape[0] // nthr
+        for j in range(start, end):
+            if data[j] != 0:  # and indices[j]<colcount:
+                if Flag:
+                    counts[i, indices[j]] += 1
+                else:
+                    counts[i, indices[j]] += data[j]  # 1
+    counts = np.sum(counts, axis=0, dtype=type(data[0]))
+    return counts  # , keep_cols
 
 
 @old_positionals(
@@ -173,11 +204,31 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = axis_sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
-    )
+    if isinstance(X, sp.sparse._csr.csr_matrix):
+        if min_genes is None and max_genes is None:
+            number_per_cell = get_rows_to_keep_1(X.indptr, X.data)
+        else:
+            number_per_cell = get_rows_to_keep(X.indptr, type(X.data[0]))
+
+    elif isinstance(X, sp.sparse._csc.csc_matrix):
+        nclos = X.shape[0]
+        nthr = numba.get_num_threads()
+        if min_genes is None and max_genes is None:
+            number_per_cell = get_cols_to_keep(
+                X.indices, X.data, nclos, nthr, Flag=False
+            )
+        else:
+            number_per_cell = get_cols_to_keep(
+                X.indices, X.data, nclos, nthr, Flag=True
+            )
+
+    else:
+        number_per_cell = axis_sum(
+            X if min_genes is None and max_genes is None else X > 0, axis=1
+        )
+
     if issparse(X):
-        number_per_cell = number_per_cell.A1
+        number_per_cell = number_per_cell
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
     if max_number is not None:
@@ -291,11 +342,33 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = axis_sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
-    )
+
+    if isinstance(X, sp.sparse._csr.csr_matrix):
+        ncols = X.shape[1]
+        nthr = numba.get_num_threads()
+        if min_cells is None and max_cells is None:
+            number_per_gene = get_cols_to_keep(
+                X.indices, X.data, ncols, nthr, Flag=False
+            )
+        else:
+            number_per_gene = get_cols_to_keep(
+                X.indices, X.data, ncols, nthr, Flag=True
+            )
+
+    elif isinstance(X, sp.sparse._csc.csc_matrix):
+        if min_cells is None and max_cells is None:
+            number_per_gene = get_rows_to_keep_1(X.indptr, X.data)
+        else:
+            number_per_gene = get_rows_to_keep(X.indptr, type(X.data[0]))
+    else:
+        number_per_gene = axis_sum(
+            X if min_cells is None and max_cells is None else X > 0, axis=0
+        )
     if issparse(X):
-        number_per_gene = number_per_gene.A1
+        if isinstance(X, (sp.sparse._csr.csr_matrix | sp.sparse._csc.csc_matrix)):
+            number_per_gene = number_per_gene
+        else:
+            number_per_gene = number_per_gene
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
@@ -379,7 +452,6 @@ def log1p_sparse(X: _CSMatrix, *, base: Number | None = None, copy: bool = False
 @log1p.register(np.ndarray)
 def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
-    # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
         X = X.astype(float) if not np.issubdtype(X.dtype, np.floating) else X.copy()
     elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
@@ -1129,7 +1201,7 @@ def _downsample_total_counts(
 
 
 # TODO: can/should this be parallelized?
-@numba.njit(cache=True)  # noqa: TID251
+@njit()  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
@@ -1160,3 +1232,28 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
+
+
+# --------------------------------------------------------------------------------
+# Helper Functions
+# --------------------------------------------------------------------------------
+
+
+def _pca_fallback(data, n_comps=2):
+    # mean center the data
+    data -= data.mean(axis=0)
+    # calculate the covariance matrix
+    C = np.cov(data, rowvar=False)
+    # calculate eigenvectors & eigenvalues of the covariance matrix
+    # use 'eigh' rather than 'eig' since C is symmetric,
+    # the performance gain is substantial
+    evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
+    # sort eigenvalues in decreasing order
+    idcs = np.argsort(evals)[::-1]
+    evecs = evecs[:, idcs]
+    evals = evals[idcs]
+    # select the first n eigenvectors (n is desired dimension
+    # of rescaled data array, or n_comps)
+    evecs = evecs[:, :n_comps]
+    # project data points on eigenvectors
+    return np.dot(evecs.T, data.T).T
