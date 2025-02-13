@@ -177,7 +177,7 @@ def scrublet(
         scores for observed transcriptomes and simulated doublets.
     """
 
-    if threshold is None and not find_spec("skimage"):
+    if threshold is None and not find_spec("skimage"): # pragma: no cover
         # Scrublet.call_doublets requires `skimage` with `threshold` but PCA
         # is called early, which is wasteful if there is not `skimage`
         msg = "threshold is None and thus scrublet requires skimage, but skimage is not installed."
