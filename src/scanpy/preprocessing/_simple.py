@@ -1232,28 +1232,3 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
-
-
-# --------------------------------------------------------------------------------
-# Helper Functions
-# --------------------------------------------------------------------------------
-
-
-def _pca_fallback(data, n_comps=2):
-    # mean center the data
-    data -= data.mean(axis=0)
-    # calculate the covariance matrix
-    C = np.cov(data, rowvar=False)
-    # calculate eigenvectors & eigenvalues of the covariance matrix
-    # use 'eigh' rather than 'eig' since C is symmetric,
-    # the performance gain is substantial
-    evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
-    # sort eigenvalues in decreasing order
-    idcs = np.argsort(evals)[::-1]
-    evecs = evecs[:, idcs]
-    evals = evals[idcs]
-    # select the first n eigenvectors (n is desired dimension
-    # of rescaled data array, or n_comps)
-    evecs = evecs[:, :n_comps]
-    # project data points on eigenvectors
-    return np.dot(evecs.T, data.T).T
