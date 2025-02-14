@@ -141,6 +141,18 @@ class BasePlot:
 
         self._update_var_groups()
 
+        # exlude var_names not present in adata.var_names
+        missing_var_names = set(self.var_names).difference(adata.var_names)
+        if missing_var_names:
+            logg.warning(
+                f"The following var_names are not present in adata.var_names: {missing_var_names}"
+            )
+            self.var_names = [
+                var_name
+                for var_name in self.var_names
+                if var_name not in missing_var_names
+            ]
+
         self.categories, self.obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
