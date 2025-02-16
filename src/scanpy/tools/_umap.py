@@ -333,6 +333,9 @@ def umap(
             random_state=random_state,
         )
         X_umap = umap.fit_transform(X_contiguous)
+    else:
+        message = f"umap method parameter invalid: {method} not supported."
+        raise ValueError(message)
 
     adata.obsm[key_obsm] = X_umap  # annotate samples with UMAP coordinates
     logg.info(

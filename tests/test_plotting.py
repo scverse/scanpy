@@ -28,9 +28,6 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from matplotlib.axes import Axes
-
-
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
 
@@ -845,30 +842,9 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
     with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
         fn(pbmc)
-    key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
-    save_and_compare_images(key)
-    plt.close()
-
-
-def test_rank_genes_group_axes(image_comparer):
-    fn = next(fn for name, fn in _RANK_GENES_GROUPS_PARAMS if name == "basic")
-
-    save_and_compare_images = partial(image_comparer, ROOT, tol=23)
-
-    pbmc = pbmc68k_reduced()
-    sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
-
-    pbmc.var["symbol"] = pbmc.var.index + "__"
-
-    fig, ax = plt.subplots(figsize=(12, 16))
-    ax.set_axis_off()
-    with plt.rc_context({"axes.grid": True}):
-        axes: list[Axes] = fn(pbmc, ax=ax, show=False)
-
-    assert len(axes) == 11
-    fig.show()
-    save_and_compare_images("ranked_genes")
-    plt.close()
+        key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
+        save_and_compare_images(key)
+        plt.close()
 
 
 @pytest.fixture(scope="session")
@@ -1042,11 +1018,9 @@ def pbmc_scatterplots_session() -> AnnData:
     pbmc.layers["sparse"] = pbmc.raw.X / 2
     pbmc.layers["test"] = pbmc.X.copy() + 100
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
-    sc.pp.neighbors(pbmc, random_state=np.random.RandomState(1))
+    sc.pp.neighbors(pbmc)
     sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.tl.diffmap(pbmc)
-    sc.tl.umap(pbmc, key_added="X_another_umap", random_state=np.random.RandomState(1))
-    sc.tl.umap(pbmc, method="densmap", random_state=np.random.RandomState(1))
     return pbmc
 
 
@@ -1200,36 +1174,6 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
     ],
 )
 def test_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
-
-    fn(pbmc_scatterplots, show=False)
-    save_and_compare_images(id)
-
-
-@pytest.mark.skipif(
-    pkg_version("numba") < Version("0.61.0"),
-    reason="Same random_state value produces different UMAP results between numba versions. See #2946",
-)
-@pytest.mark.parametrize(
-    ("id", "fn"),
-    [
-        (
-            "another_umap",
-            partial(
-                sc.pl.embedding,
-                basis="X_another_umap",
-            ),
-        ),
-        (
-            "densmap_nocolor",
-            partial(
-                sc.pl.embedding,
-                basis="X_densmap",
-            ),
-        ),
-    ],
-)
-def test_umap_scatterplots(image_comparer, pbmc_scatterplots, id, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     fn(pbmc_scatterplots, show=False)
@@ -1512,10 +1456,11 @@ def test_rankings(image_comparer):
 
 
 # TODO: Make more generic
-def test_scatter_rep(tmp_path):
+def test_scatter_rep(tmpdir):
     """
     Test to make sure I can predict when scatter reps should be the same
     """
+    TESTDIR = Path(tmpdir)
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1530,7 +1475,7 @@ def test_scatter_rep(tmp_path):
         columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
-        tmp_path / f"{state.gene}_{state.rep}_{state.result}.png"
+        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
+from sklearn.mixture import GaussianMixture
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -109,3 +110,55 @@ def test_densmap():
     sc.tl.umap(pbmc, method="densmap", method_kwds=dict(dens_lambda=2.3456))
     d4 = pbmc.obsm["X_densmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d4)
+
+
+def test_umap_raises_for_unsupported_method():
+    pbmc = pbmc68k_reduced()
+
+    # Checking that umap function raises a ValueError
+    # if a user passes an invalid `method` parameter.
+    with assert_raises(ValueError):
+        sc.tl.umap(pbmc, method="method_does_not_exist")
+
+
+def get_mean_ellipse_area(gm):
+    # Adapted from GMM covariances ellipse plotting tutorial.
+    # Reference: https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html
+    result = []
+    for i in range(gm.n_components):
+        covariances = gm.covariances_[i][:2, :2]
+        v, _ = np.linalg.eigh(covariances)
+        v = 2.0 * np.sqrt(2.0) * np.sqrt(v)
+        width = v[0]
+        height = v[1]
+        result.append(np.pi * width * height)
+    return np.mean(np.array(result))
+
+
+def test_densmap_differs_from_umap():
+    pbmc = pbmc68k_reduced()
+
+    # Check that the areas of ellipses that result from
+    # fitting a Gaussian mixture model to the results
+    # of UMAP and DensMAP are different,
+    # with DensMAP ellipses having a larger area on average.
+    random_state = 1234
+    sc.tl.umap(pbmc, method="densmap", random_state=random_state)
+    X_densmap = pbmc.obsm["X_densmap"].copy()
+    sc.tl.umap(pbmc, method="umap", random_state=random_state)
+    X_umap = pbmc.obsm["X_umap"].copy()
+
+    # We fit a mixture model with as many components as
+    # there are louvain clusters, in this case 11.
+    n_components = pbmc.obs["louvain"].unique().shape[0]
+    assert n_components == 11
+
+    gm_umap = GaussianMixture(n_components=n_components, random_state=random_state).fit(
+        X_umap
+    )
+    gm_densmap = GaussianMixture(
+        n_components=n_components, random_state=random_state
+    ).fit(X_densmap)
+    mean_area_umap = get_mean_ellipse_area(gm_umap)
+    mean_area_densmap = get_mean_ellipse_area(gm_densmap)
+    assert mean_area_densmap > mean_area_umap
