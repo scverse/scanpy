@@ -132,11 +132,9 @@ doc = [
     "sam-algorithm",
 ]
 dev = [
-    # getting the dev version
-    "setuptools_scm",
-    # static checking
-    "pre-commit",
-    "towncrier",
+    "hatch-vcs",  # runtime dev version generation
+    "pre-commit", # static checking
+    "towncrier",  # release note management
 ]
 # Algorithms
 paga = [ "igraph" ]
@@ -158,8 +156,6 @@ packages = [ "src/testing", "src/scanpy" ]
 [tool.hatch.version]
 source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
-[tool.hatch.build.hooks.vcs]
-version-file = "src/scanpy/_version.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -272,6 +268,7 @@ exempt-modules = [  ]
 strict = true
 
 [tool.towncrier]
+name = "scanpy"
 package = "scanpy"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
