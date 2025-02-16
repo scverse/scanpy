@@ -28,6 +28,9 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from matplotlib.axes import Axes
+
+
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
 
@@ -842,9 +845,30 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
     with plt.rc_context({"axes.grid": True, "figure.figsize": (4, 4)}):
         fn(pbmc)
-        key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
-        save_and_compare_images(key)
-        plt.close()
+    key = "ranked_genes" if name == "basic" else f"ranked_genes_{name}"
+    save_and_compare_images(key)
+    plt.close()
+
+
+def test_rank_genes_group_axes(image_comparer):
+    fn = next(fn for name, fn in _RANK_GENES_GROUPS_PARAMS if name == "basic")
+
+    save_and_compare_images = partial(image_comparer, ROOT, tol=23)
+
+    pbmc = pbmc68k_reduced()
+    sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
+
+    pbmc.var["symbol"] = pbmc.var.index + "__"
+
+    fig, ax = plt.subplots(figsize=(12, 16))
+    ax.set_axis_off()
+    with plt.rc_context({"axes.grid": True}):
+        axes: list[Axes] = fn(pbmc, ax=ax, show=False)
+
+    assert len(axes) == 11
+    fig.show()
+    save_and_compare_images("ranked_genes")
+    plt.close()
 
 
 @pytest.fixture(scope="session")
@@ -1456,11 +1480,10 @@ def test_rankings(image_comparer):
 
 
 # TODO: Make more generic
-def test_scatter_rep(tmpdir):
+def test_scatter_rep(tmp_path):
     """
     Test to make sure I can predict when scatter reps should be the same
     """
-    TESTDIR = Path(tmpdir)
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1475,7 +1498,7 @@ def test_scatter_rep(tmpdir):
         columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
-        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+        tmp_path / f"{state.gene}_{state.rep}_{state.result}.png"
         for state in states.itertuples()
     ]
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
