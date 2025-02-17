@@ -70,7 +70,7 @@ def embedding_density(
         The annotated data matrix.
     basis
         The embedding over which the density will be calculated. This embedded
-        representation should be found in `adata.obsm['X_[basis]']``.
+        representation is found in `adata.obsm['X_[basis]']``.
     groupby
         Key for categorical observation/cell annotation for which densities
         are calculated per category.
@@ -130,10 +130,11 @@ def embedding_density(
         basis = "draw_graph_fa"
 
     if f"X_{basis}" not in adata.obsm_keys():
-        raise ValueError(
+        msg = (
             "Cannot find the embedded representation "
             f"`adata.obsm['X_{basis}']`. Compute the embedding first."
         )
+        raise ValueError(msg)
 
     if components is None:
         components = "1,2"
@@ -142,17 +143,20 @@ def embedding_density(
     components = np.array(components).astype(int) - 1
 
     if len(components) != 2:
-        raise ValueError("Please specify exactly 2 components, or `None`.")
+        msg = "Please specify exactly 2 components, or `None`."
+        raise ValueError(msg)
 
     if basis == "diffmap":
         components += 1
 
     if groupby is not None:
         if groupby not in adata.obs:
-            raise ValueError(f"Could not find {groupby!r} `.obs` column.")
+            msg = f"Could not find {groupby!r} `.obs` column."
+            raise ValueError(msg)
 
         if adata.obs[groupby].dtype.name != "category":
-            raise ValueError(f"{groupby!r} column does not contain categorical data")
+            msg = f"{groupby!r} column does not contain categorical data"
+            raise ValueError(msg)
 
     # Define new covariate name
     if key_added is not None:

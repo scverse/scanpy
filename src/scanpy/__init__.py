@@ -6,20 +6,8 @@ import sys
 
 from packaging.version import Version
 
-try:  # See https://github.com/maresb/hatch-vcs-footgun-example
-    from setuptools_scm import get_version
-
-    __version__ = get_version(root="../..", relative_to=__file__)
-    del get_version
-except (ImportError, LookupError):
-    try:
-        from ._version import __version__
-    except ModuleNotFoundError:
-        raise RuntimeError(
-            "scanpy is not correctly installed. Please install it, e.g. with pip."
-        )
-
 from ._utils import check_versions
+from ._version import __version__
 
 check_versions()
 del check_versions

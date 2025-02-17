@@ -133,10 +133,8 @@ def mnn_correct(
         import mnnpy
         from mnnpy import mnn_correct
     except ImportError:
-        raise ImportError(
-            "Please install the package mnnpy "
-            "(https://github.com/chriscainx/mnnpy). "
-        )
+        msg = "Please install the package mnnpy (https://github.com/chriscainx/mnnpy). "
+        raise ImportError(msg)
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 

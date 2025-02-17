@@ -4,6 +4,7 @@ Use harmony to integrate cells from different experiments.
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TCH003
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
-    key: str,
+    key: str | Sequence[str],
     *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
@@ -42,7 +43,9 @@ def harmony_integrate(
         The annotated data matrix.
     key
         The name of the column in ``adata.obs`` that differentiates
-        among experiments/batches.
+        among experiments/batches. To integrate over two or more covariates,
+        you can pass multiple column names as a list. See ``vars_use``
+        parameter of the ``harmonypy`` package for more details.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is
         stored. Defaults to ``'X_pca'``, which is the default for
@@ -88,7 +91,8 @@ def harmony_integrate(
     try:
         import harmonypy
     except ImportError:
-        raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
+        msg = "\nplease install harmonypy:\n\n\tpip install harmonypy"
+        raise ImportError(msg)
 
     X = adata.obsm[basis].astype(np.float64)
 

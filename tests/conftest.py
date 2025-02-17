@@ -133,7 +133,8 @@ def image_comparer(check_same_image):
         plt.savefig(actual_pth, dpi=40)
         plt.close()
         if not expected_pth.is_file():
-            raise OSError(f"No expected output found at {expected_pth}.")
+            msg = f"No expected output found at {expected_pth}."
+            raise OSError(msg)
         check_same_image(expected_pth, actual_pth, tol=tol)
 
     return save_and_compare

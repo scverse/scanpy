@@ -38,7 +38,7 @@ def correlation_matrix(
     """\
     Calculate correlation matrix.
 
-    Calculate a correlation matrix for genes strored in sample annotation
+    Calculate a correlation matrix for genes stored in sample annotation
     using :func:`~scanpy.tl.rank_genes_groups`.
 
     Parameters
@@ -73,7 +73,7 @@ def correlation_matrix(
         spearman
             Spearman rank correlation
     annotation_key
-        Allows to define the name of the anndata entry where results are stored.
+        Allows defining the name of the anndata entry where results are stored.
     """
 
     # TODO: At the moment, only works for int identifiers

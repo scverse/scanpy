@@ -15,7 +15,7 @@ from ._utils import _choose_representation
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._compat import _LegacyRandom
 
 
 @old_positionals(
@@ -38,7 +38,7 @@ def tsne(
     metric: str = "euclidean",
     early_exaggeration: float = 12,
     learning_rate: float = 1000,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
     key_added: str | None = None,
@@ -47,7 +47,7 @@ def tsne(
     """\
     t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
-    t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) has been
+    t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) was
     proposed for visualizating single-cell data by :cite:t:`Amir2013`. Here, by default,
     we use the implementation of *scikit-learn* :cite:p:`Pedregosa2011`. You can achieve
     a huge speedup and better convergence if you install Multicore-tSNE_

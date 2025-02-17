@@ -76,9 +76,9 @@ def harmony_timeseries(
 
     **X_harmony** - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
         force directed layout
-    **harmony_aff** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         affinity matrix
-    **harmony_aff_aug** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff_aug** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         augmented affinity matrix
     **harmony_timepoint_var** - `str` (:attr:`~anndata.AnnData.uns`)
         The name of the variable passed as `tp`
@@ -140,13 +140,15 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError:
-        raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
+        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
+        raise ImportError(msg)
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
     if adata.obs[tp].dtype.name != "category":
-        raise ValueError(f"{tp!r} column does not contain Categorical data")
+        msg = f"{tp!r} column does not contain Categorical data"
+        raise ValueError(msg)
     timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 

@@ -750,7 +750,7 @@ def stacked_violin(
         e.g. `'red'` or `'#cc33ff'`.
     {show_save_ax}
     {vminmax}
-    kwds
+    **kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Returns

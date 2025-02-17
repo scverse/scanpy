@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from math import floor
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -25,12 +24,16 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy import sparse
+
+    from .._utils import _CSMatrix
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
+
 # Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+
+_CONST_MAX_SIZE = 10000000
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -44,12 +47,10 @@ def _select_top_n(scores: NDArray, n_top: int):
 
 
 def _ranks(
-    X: np.ndarray | sparse.csr_matrix | sparse.csc_matrix,
+    X: np.ndarray | _CSMatrix,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-):
-    CONST_MAX_SIZE = 10000000
-
+) -> Generator[tuple[pd.DataFrame, int, int], None, None]:
     n_genes = X.shape[1]
 
     if issparse(X):
@@ -71,7 +72,7 @@ def _ranks(
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
     # Calculate chunk frames
-    max_chunk = floor(CONST_MAX_SIZE / n_cells)
+    max_chunk = max(_CONST_MAX_SIZE // n_cells, 1)
 
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
@@ -81,7 +82,7 @@ def _ranks(
         yield ranks, left, right
 
 
-def _tiecorrect(ranks):
+def _tiecorrect(ranks: pd.DataFrame) -> np.float64:
     size = np.float64(ranks.shape[0])
     if size < 2:
         return np.repeat(ranks.shape[1], 1.0)
@@ -124,15 +125,17 @@ class _RankGenes:
         )
 
         if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(", ".join(invalid_groups_selected))
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
             )
+            raise ValueError(msg)
 
         adata_comp = adata
         if layer is not None:
             if use_raw:
-                raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+                msg = "Cannot specify `layer` and have `use_raw=True`."
+                raise ValueError(msg)
             X = adata_comp.layers[layer]
         else:
             if use_raw and adata.raw is not None:
@@ -253,7 +256,8 @@ class _RankGenes:
                 # hack for overestimating the variance for small groups
                 ns_rest = ns_group
             else:
-                raise ValueError("Method does not exist.")
+                msg = "Method does not exist."
+                raise ValueError(msg)
 
             # TODO: Come up with better solution. Mask unexpressed genes?
             # See https://github.com/scipy/scipy/issues/10269
@@ -369,7 +373,8 @@ class _RankGenes:
         X = self.X[self.grouping_mask.values, :]
 
         if len(self.groups_order) == 1:
-            raise ValueError("Cannot perform logistic regression on a single cluster.")
+            msg = "Cannot perform logistic regression on a single cluster."
+            raise ValueError(msg)
 
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
@@ -593,13 +598,13 @@ def rank_genes_groups(
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
     """
-    if mask_var is not None:
-        mask_var = _check_mask(adata, mask_var, "var")
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None
     elif use_raw is True and adata.raw is None:
-        raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
+        msg = "Received `use_raw=True`, but `adata.raw` is empty."
+        raise ValueError(msg)
 
     if method is None:
         method = "t-test"
@@ -609,11 +614,13 @@ def rank_genes_groups(
 
     start = logg.info("ranking genes")
     if method not in (avail_methods := get_literal_vals(_Method)):
-        raise ValueError(f"Method must be one of {avail_methods}.")
+        msg = f"Method must be one of {avail_methods}."
+        raise ValueError(msg)
 
     avail_corr = {"benjamini-hochberg", "bonferroni"}
     if corr_method not in avail_corr:
-        raise ValueError(f"Correction method must be one of {avail_corr}.")
+        msg = f"Correction method must be one of {avail_corr}."
+        raise ValueError(msg)
 
     adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
@@ -621,7 +628,8 @@ def rank_genes_groups(
     if groups == "all":
         groups_order = "all"
     elif isinstance(groups, str | int):
-        raise ValueError("Specify a sequence of groups")
+        msg = "Specify a sequence of groups"
+        raise ValueError(msg)
     else:
         groups_order = list(groups)
         if isinstance(groups_order[0], int):
@@ -630,9 +638,8 @@ def rank_genes_groups(
             groups_order += [reference]
     if reference != "rest" and reference not in adata.obs[groupby].cat.categories:
         cats = adata.obs[groupby].cat.categories.tolist()
-        raise ValueError(
-            f"reference = {reference} needs to be one of groupby = {cats}."
-        )
+        msg = f"reference = {reference} needs to be one of groupby = {cats}."
+        raise ValueError(msg)
 
     if key_added is None:
         key_added = "rank_genes_groups"
@@ -853,7 +860,7 @@ def filter_rank_genes_groups(
 
         if not use_logfolds or not use_fraction:
             sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
-            in_group = adata.obs[groupby] == cluster
+            in_group = (adata.obs[groupby] == cluster).to_numpy()
             X_in = sub_X[in_group]
             X_out = sub_X[~in_group]
 

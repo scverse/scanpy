@@ -31,7 +31,7 @@ except ImportError:
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    CSMatrix = csr_matrix | csc_matrix
+    from .._utils import _CSMatrix
 
 
 @singledispatch
@@ -43,7 +43,7 @@ def clip(
 
 @clip.register(csr_matrix)
 @clip.register(csc_matrix)
-def _(x: CSMatrix, *, max_value: float, zero_center: bool = True) -> CSMatrix:
+def _(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
     x.data = clip(x.data, max_value=max_value, zero_center=zero_center)
     return x
 
@@ -79,7 +79,7 @@ def clip_array(
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | CSMatrix | np.ndarray | DaskArray,
+    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -87,7 +87,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | CSMatrix | np.ndarray | DaskArray | None:
+) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -134,13 +134,11 @@ def scale(
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
-        raise ValueError(
-            f"`layer` argument inappropriate for value of type {type(data)}"
-        )
+        msg = f"`layer` argument inappropriate for value of type {type(data)}"
+        raise ValueError(msg)
     if obsm is not None:
-        raise ValueError(
-            f"`obsm` argument inappropriate for value of type {type(data)}"
-        )
+        msg = f"`obsm` argument inappropriate for value of type {type(data)}"
+        raise ValueError(msg)
     return scale_array(
         data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
     )
@@ -151,7 +149,7 @@ def scale(
 @scale.register(csc_matrix)
 @scale.register(csr_matrix)
 def scale_array(
-    X: np.ndarray | DaskArray | CSMatrix,
+    X: np.ndarray | DaskArray | _CSMatrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -167,8 +165,8 @@ def scale_array(
 ):
     if copy:
         X = X.copy()
+    mask_obs = _check_mask(X, mask_obs, "obs")
     if mask_obs is not None:
-        mask_obs = _check_mask(X, mask_obs, "obs")
         scale_rv = scale_array(
             X[mask_obs, :],
             zero_center=zero_center,
@@ -187,7 +185,7 @@ def scale_array(
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
-            "... be careful when using `max_value` " "without `zero_center`."
+            "... be careful when using `max_value` without `zero_center`."
         )
 
     if np.issubdtype(X.dtype, np.integer):

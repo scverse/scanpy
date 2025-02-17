@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._compat import _LegacyRandom
 
     _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
@@ -62,7 +62,7 @@ def dca(
     early_stop: int = 15,
     batch_size: int = 32,
     optimizer: str = "RMSprop",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     threads: int | None = None,
     learning_rate: float | None = None,
     verbose: bool = False,
@@ -181,7 +181,8 @@ def dca(
     try:
         from dca.api import dca
     except ImportError:
-        raise ImportError("Please install dca package (>= 0.2.1) via `pip install dca`")
+        msg = "Please install dca package (>= 0.2.1) via `pip install dca`"
+        raise ImportError(msg)
 
     return dca(
         adata,
