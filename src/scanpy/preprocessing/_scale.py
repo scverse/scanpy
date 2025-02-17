@@ -75,6 +75,7 @@ def clip_array(
 
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
+@singledispatch
 def scale(
     data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
