@@ -35,9 +35,7 @@ if TYPE_CHECKING:
 
 
 @singledispatch
-def clip(
-    x: ArrayLike, *, max_value: float, zero_center: bool = True
-) -> NDArray[np.floating]:
+def clip(x: ArrayLike, *, max_value: float, zero_center: bool = True) -> None:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -77,7 +75,6 @@ def clip_array(
 
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
-@singledispatch
 def scale(
     data: AnnData | _CSMatrix | np.ndarray | DaskArray,
     *,
@@ -149,7 +146,7 @@ def scale(
 @scale.register(csc_matrix)
 @scale.register(csr_matrix)
 def scale_array(
-    X: np.ndarray | DaskArray | _CSMatrix,
+    x: np.ndarray | DaskArray | _CSMatrix,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -159,69 +156,132 @@ def scale_array(
 ) -> (
     np.ndarray
     | DaskArray
+    | _CSMatrix
     | tuple[
-        np.ndarray | DaskArray, NDArray[np.float64] | DaskArray, NDArray[np.float64]
+        np.ndarray | DaskArray | _CSMatrix,
+        NDArray[np.float64] | DaskArray,
+        NDArray[np.float64],
     ]
 ):
     if copy:
-        X = X.copy()
-    mask_obs = _check_mask(X, mask_obs, "obs")
-    if mask_obs is not None:
-        scale_rv = scale_array(
-            X[mask_obs, :],
-            zero_center=zero_center,
-            max_value=max_value,
-            copy=False,
-            return_mean_std=return_mean_std,
-            mask_obs=None,
-        )
-
-        if return_mean_std:
-            X[mask_obs, :], mean, std = scale_rv
-            return X, mean, std
-        else:
-            X[mask_obs, :] = scale_rv
-            return X
+        x = x.copy()
 
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
 
-    if np.issubdtype(X.dtype, np.integer):
+    if np.issubdtype(x.dtype, np.integer):
         logg.info(
             "... as scaling leads to float results, integer "
             "input is cast to float, returning copy."
         )
-        X = X.astype(float)
+        x = x.astype(float)
 
-    mean, var = _get_mean_var(X)
+    mask_obs = _check_mask(x, mask_obs, "obs")
+    if mask_obs is not None:
+        return scale_array_masked(
+            x,
+            mask_obs,
+            zero_center=zero_center,
+            max_value=max_value,
+            return_mean_std=return_mean_std,
+        )
+
+    mean, var = _get_mean_var(x)
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
-        if isinstance(X, DaskArray) and issparse(X._meta):
+        if isinstance(x, csr_matrix | csc_matrix) or (
+            isinstance(x, DaskArray) and issparse(x._meta)
+        ):
             warnings.warn(
                 "zero-center being used with `DaskArray` sparse chunks. "
                 "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
                 UserWarning,
             )
-        X -= mean
+        x -= mean
 
-    X = axis_mul_or_truediv(
-        X,
+    x = axis_mul_or_truediv(
+        x,
         std,
         op=truediv,
-        out=X if isinstance(X, np.ndarray | csr_matrix | csc_matrix) else None,
+        out=x if isinstance(x, np.ndarray | csr_matrix | csc_matrix) else None,
         axis=1,
     )
 
     # do the clipping
     if max_value is not None:
-        X = clip(X, max_value=max_value, zero_center=zero_center)
+        x = clip(x, max_value=max_value, zero_center=zero_center)
     if return_mean_std:
-        return X, mean, std
+        return x, mean, std
     else:
-        return X
+        return x
+
+
+def scale_array_masked(
+    x: np.ndarray | DaskArray | _CSMatrix,
+    mask_obs: NDArray[np.bool_],
+    *,
+    zero_center: bool = True,
+    max_value: float | None = None,
+    return_mean_std: bool = False,
+) -> (
+    np.ndarray
+    | DaskArray
+    | _CSMatrix
+    | tuple[
+        np.ndarray | DaskArray | _CSMatrix,
+        NDArray[np.float64] | DaskArray,
+        NDArray[np.float64],
+    ]
+):
+    if isinstance(x, csr_matrix | csc_matrix) and not zero_center:
+        if isinstance(x, csc_matrix):
+            x = x.tocsr()
+        mean, var = _get_mean_var(x[mask_obs, :])
+        std = np.sqrt(var)
+        std[std == 0] = 1
+
+        scale_and_clip_csr(
+            x.indptr,
+            x.indices,
+            x.data,
+            std=std,
+            mask_obs=mask_obs,
+            max_value=max_value,
+        )
+    else:
+        x[mask_obs, :], mean, std = scale_array(
+            x[mask_obs, :],
+            zero_center=zero_center,
+            max_value=max_value,
+            return_mean_std=True,
+        )
+
+    if return_mean_std:
+        return x, mean, std
+    else:
+        return x
+
+
+@njit
+def scale_and_clip_csr(
+    indptr: NDArray[np.integer],
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    std: NDArray[np.floating],
+    mask_obs: NDArray[np.bool_],
+    max_value: float | None,
+) -> None:
+    for i in numba.prange(len(indptr) - 1):
+        if mask_obs[i]:
+            for j in range(indptr[i], indptr[i + 1]):
+                if max_value is not None:
+                    data[j] = min(max_value, data[j] / std[indices[j]])
+                else:
+                    data[j] /= std[indices[j]]
 
 
 @scale.register(AnnData)
