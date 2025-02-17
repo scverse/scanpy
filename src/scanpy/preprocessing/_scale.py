@@ -29,13 +29,17 @@ except ImportError:
     da = None
 
 if TYPE_CHECKING:
+    from typing import TypeVar
+
     from numpy.typing import ArrayLike, NDArray
 
     from .._utils import _CSMatrix
 
+    _A = TypeVar("_A", bound=_CSMatrix | np.ndarray | DaskArray)
+
 
 @singledispatch
-def clip(x: ArrayLike, *, max_value: float, zero_center: bool = True) -> None:
+def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -47,7 +51,7 @@ def _(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
 
 
 @clip.register(DaskArray)
-def _(x: DaskArray, *, max_value: float, zero_center: bool = True):
+def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
     return x.map_blocks(
         clip, max_value=max_value, zero_center=zero_center, dtype=x.dtype, meta=x._meta
     )
@@ -77,7 +81,7 @@ def clip_array(
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
+    data: AnnData | _A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -85,7 +89,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
+) -> AnnData | _A | None:
     """\
     Scale data to unit variance and zero mean.
 
@@ -147,7 +151,7 @@ def scale(
 @scale.register(csc_matrix)
 @scale.register(csr_matrix)
 def scale_array(
-    x: np.ndarray | DaskArray | _CSMatrix,
+    x: _A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -155,11 +159,9 @@ def scale_array(
     return_mean_std: bool = False,
     mask_obs: NDArray[np.bool_] | None = None,
 ) -> (
-    np.ndarray
-    | DaskArray
-    | _CSMatrix
+    _A
     | tuple[
-        np.ndarray | DaskArray | _CSMatrix,
+        _A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
@@ -221,18 +223,16 @@ def scale_array(
 
 
 def scale_array_masked(
-    x: np.ndarray | DaskArray | _CSMatrix,
+    x: _A,
     mask_obs: NDArray[np.bool_],
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     return_mean_std: bool = False,
 ) -> (
-    np.ndarray
-    | DaskArray
-    | _CSMatrix
+    _A
     | tuple[
-        np.ndarray | DaskArray | _CSMatrix,
+        _A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
