@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -175,6 +176,12 @@ def scrublet(
     :func:`~scanpy.pl.scrublet_score_distribution`: Plot histogram of doublet
         scores for observed transcriptomes and simulated doublets.
     """
+
+    if threshold is None and not find_spec("skimage"):  # pragma: no cover
+        # Scrublet.call_doublets requires `skimage` with `threshold=None` but PCA
+        # is called early, which is wasteful if there is not `skimage`
+        msg = "threshold is None and thus scrublet requires skimage, but skimage is not installed."
+        raise ValueError(msg)
 
     if copy:
         adata = adata.copy()
