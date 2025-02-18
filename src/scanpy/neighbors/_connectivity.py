@@ -122,7 +122,7 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         from umap.umap_ import fuzzy_simplicial_set
 
-    X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
+    X = coo_matrix((n_obs, 1))
     connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
         X,
         n_neighbors,
