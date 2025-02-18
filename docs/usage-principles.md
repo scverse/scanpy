@@ -37,7 +37,7 @@ and leave the passed `adata` unchanged, pass `copy=True` or `inplace=False`.
 
 Scanpy is based on {mod}`anndata`, which provides the {class}`~anndata.AnnData` class.
 
-```{image} http://falexwolf.de/img/scanpy/anndata.svg
+```{image} https://falexwolf.de/img/scanpy/anndata.svg
 :width: 300px
 ```
 
@@ -75,7 +75,7 @@ adata.write_csvs(filename)
 adata.write_loom(filename)
 ```
 
-[blog post]: http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/
-[matplotlib]: http://matplotlib.org/
-[out-of-memory pipelines]: http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/
-[seaborn]: http://seaborn.pydata.org/
+[blog post]: https://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/
+[matplotlib]: https://matplotlib.org/
+[out-of-memory pipelines]: https://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/
+[seaborn]: https://seaborn.pydata.org/

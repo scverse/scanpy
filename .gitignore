@@ -1,5 +1,4 @@
 # Scanpy outfiles
-/cache/
 /data/
 /write/
 
@@ -12,16 +11,13 @@
 /docs/jupyter_execute
 
 # tests
-/*coverage*
-/nunit/
-/.cache/
-/.pytest_cache/
-/scanpy/tests/test*.h5ad
-/scanpy/tests/**/*actual.png
-/scanpy/tests/**/*failed-diff.png
+/*cache/
+/test-data/
+/tests/test*.h5ad
+/tests/**/*actual.png
+/tests/**/*failed-diff.png
 
 # Environment management
-/hatch.toml
 /Pipfile
 /Pipfile.lock
 /requirements*.lock
@@ -31,10 +27,8 @@
 
 # Python build files
 __pycache__/
-/scanpy/_version.py
+/ci/scanpy-min-deps.txt
 /dist/
-/build/
-/scanpy.egg-info/
 /*-env/
 /env-*/
 /environment.yml
@@ -47,4 +41,7 @@ Thumbs.db
 
 # IDEs and editors
 /.idea/
-/.vscode/
+
+# asv benchmark files
+/benchmarks/.asv
+/benchmarks/data/

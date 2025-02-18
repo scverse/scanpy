@@ -1,0 +1,5 @@
+[formatting]
+array_auto_collapse = false
+column_width = 120
+compact_arrays = false
+indent_string = '    '

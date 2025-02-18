@@ -1,13 +1,5 @@
 # Ecosystem
 
-```{eval-rst}
-.. role:: small
-```
-
-```{eval-rst}
-.. role:: smaller
-```
-
 ```{warning}
 We are no longer accepting new tools on this page.
 Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
@@ -21,7 +13,7 @@ Interactive manifold viewers.
 - [cirrocumulus](https://cirrocumulus.readthedocs.io/) via direct reading of `.h5ad` {small}`Broad Inst.`
 - [cell browser](https://cells.ucsc.edu/) via exporing through {func}`~scanpy.external.exporting.cellbrowser` {small}`UCSC`
 - [SPRING](https://github.com/AllonKleinLab/SPRING) via exporting through {func}`~scanpy.external.exporting.spring_project` {small}`Harvard Med`
-- [vitessce](http://vitessce.io) for purely browser based viewing of zarr formatted AnnData files {smaller}`Harvard Med`
+- [vitessce](https://github.com/vitessce/vitessce#readme) for purely browser based viewing of zarr formatted AnnData files {smaller}`Harvard Med`
 
 ## Portals
 

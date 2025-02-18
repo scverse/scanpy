@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - master
     types:
       # milestone changes
       - milestoned
@@ -46,14 +45,17 @@ jobs:
     needs: check-milestone
     if: ${{ needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
     steps:
-      - uses: actions/checkout@v3
-      - name: Find out if relevant release notes are modified
-        uses: dorny/paths-filter@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - name: Find out if a relevant release fragment is added
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: | # this is intentionally a string
-            relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
-      - name: Check if relevant release notes are modified
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.*.md'
+      - name: Check if a relevant release fragment is added
         uses: flying-sheep/check@v1
         with:
           success: ${{ steps.changes.outputs.relnotes }}

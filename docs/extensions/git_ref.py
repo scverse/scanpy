@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
-
 import re
 import subprocess
-from sphinx.application import Sphinx
-from sphinx.config import Config
+from functools import lru_cache
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+    from sphinx.config import Config
 
 
 def git(*args: str) -> str:
@@ -30,7 +32,7 @@ def get() -> str | None:
         try:
             git_ref = git("rev-parse", "HEAD")
         except Exception:
-            git_ref = "master"
+            git_ref = "main"
     return git_ref
 
 
