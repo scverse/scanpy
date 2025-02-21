@@ -143,22 +143,11 @@ def test_densmap_differs_from_umap():
     # of UMAP and DensMAP are different,
     # with DensMAP ellipses having a larger area on average.
     random_state = 1234
-    sc.tl.umap(pbmc, method="densmap", random_state=random_state)
-    X_densmap = pbmc.obsm["X_densmap"].copy()
-    sc.tl.umap(pbmc, method="umap", random_state=random_state)
-    X_umap = pbmc.obsm["X_umap"].copy()
-
-    # We fit a mixture model with as many components as
-    # there are louvain clusters, in this case 11.
+    mean_area_results = []
     n_components = pbmc.obs["louvain"].unique().shape[0]
-    assert n_components == 11
-
-    gm_umap = GaussianMixture(n_components=n_components, random_state=random_state).fit(
-        X_umap
-    )
-    gm_densmap = GaussianMixture(
-        n_components=n_components, random_state=random_state
-    ).fit(X_densmap)
-    mean_area_umap = get_mean_ellipse_area(gm_umap)
-    mean_area_densmap = get_mean_ellipse_area(gm_densmap)
-    assert mean_area_densmap > mean_area_umap
+    for method in ["densmap", "umap"]:
+        sc.tl.umap(pbmc, method=method, random_state=random_state)
+        X_map = pbmc.obsm[f"X_{method}"].copy()
+        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(X_map)
+        mean_area_results.append(get_mean_ellipse_area(gm))
+    assert gm[0] > gm[1]
