@@ -108,7 +108,6 @@ else:
 
 if sys.version_info >= (3, 11):
 
-    @wraps(BaseException.add_note)
     def add_note(exc: BaseException, note: str) -> None:
         exc.add_note(note)
 else:
