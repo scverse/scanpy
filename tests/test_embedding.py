@@ -148,6 +148,8 @@ def test_densmap_differs_from_umap():
     for method in ["densmap", "umap"]:
         sc.tl.umap(pbmc, method=method, random_state=random_state)
         X_map = pbmc.obsm[f"X_{method}"].copy()
-        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(X_map)
+        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(
+            X_map
+        )
         mean_area_results.append(get_mean_ellipse_area(gm))
     assert gm[0] > gm[1]
