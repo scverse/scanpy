@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Protocol
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -8,6 +10,9 @@ from sklearn.mixture import GaussianMixture
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike, NDArray
 
 
 @pytest.mark.parametrize(
@@ -121,13 +126,23 @@ def test_umap_raises_for_unsupported_method():
         sc.tl.umap(pbmc, method="method_does_not_exist")
 
 
-def get_mean_ellipse_area(gm):
+class GaussianMixtureLike(Protocol):
+    @property
+    def n_components(self) -> int: ...
+    @property
+    def covariances_(self) -> ArrayLike: ...
+
+
+# Given a fit Gaussian mixture model with N components,
+# return the mean of ellipse areas (one ellipse per component).
+def get_mean_ellipse_area(gm: GaussianMixtureLike) -> np.floating:
     # Adapted from GMM covariances ellipse plotting tutorial.
     # Reference: https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html
     result = []
+    covariances: NDArray[np.float64] = np.asarray(gm.covariances_, dtype=np.float64)
     for i in range(gm.n_components):
-        covariances = gm.covariances_[i][:2, :2]
-        v, _ = np.linalg.eigh(covariances)
+        component_covariances = covariances[i][:2, :2]
+        v, _ = np.linalg.eigh(component_covariances)
         v = 2.0 * np.sqrt(2.0) * np.sqrt(v)
         width = v[0]
         height = v[1]
@@ -148,6 +163,8 @@ def test_densmap_differs_from_umap():
     for method in ["densmap", "umap"]:
         sc.tl.umap(pbmc, method=method, random_state=random_state)
         X_map = pbmc.obsm[f"X_{method}"].copy()
-        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(X_map)
+        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(
+            X_map
+        )
         mean_area_results.append(get_mean_ellipse_area(gm))
-    assert gm[0] > gm[1]
+    assert mean_area_results[0] > mean_area_results[1]

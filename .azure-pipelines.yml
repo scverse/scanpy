@@ -109,11 +109,6 @@ jobs:
       artifactName: debug-data
     condition: eq(variables['TEST_TYPE'], 'coverage')
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: '$(Pipeline.Workspace)/s/tests/_images'
-      artifactName: '$(DEPENDENCIES_VERSION)-$(python.version)-images'
-
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: 'Upload to codecov.io'
     condition: eq(variables['TEST_TYPE'], 'coverage')
