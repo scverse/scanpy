@@ -79,9 +79,9 @@ def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
     j = np.array([], dtype=int)
     for chunk in chunks:
         data = np.append(data, chunk[2])
-        i = np.append(i, chunk[1]-1)
-        j = np.append(j, chunk[0]-1)
-    mtx = sparse.csr_matrix((data, (i,  j)), shape=(m,n))
+        i = np.append(i, chunk[1] - 1)
+        j = np.append(j, chunk[0] - 1)
+    mtx = sparse.csr_matrix((data, (i, j)), shape=(m, n))
     return mtx
 
 
