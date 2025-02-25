@@ -17,7 +17,7 @@ from ..readwrite import _download
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
-    from typing import BinaryIO
+    from pandas._typing import ReadCsvBuffer
 
 
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -33,7 +33,7 @@ def sniff_url(accession: str):
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = f"{e.msg} ({base_url})"  # Report failed url
+        e.add_note(base_url)
         raise
 
 
@@ -58,31 +58,35 @@ def download_experiment(accession: str):
     )
 
 
-def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
+def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> sparse.csr_matrix:
     curline = stream.readline()
     while curline.startswith(b"%"):
         curline = stream.readline()
-    n, m, _ = (int(x) for x in curline[:-1].split(b" "))
+    n, m, e = map(int, curline[:-1].split(b" "))
 
+    dtype_data = np.float32
     max_int32 = np.iinfo(np.int32).max
-    coord_dtype = np.int64 if n > max_int32 or m > max_int32 else np.int32
+    dtype_coord = np.int64 if n > max_int32 or m > max_int32 else np.int32
 
-    chunks = pd.read_csv(
+    data = np.ndarray((e,), dtype=dtype_data)
+    i = np.ndarray((e,), dtype=dtype_coord)
+    j = np.ndarray((e,), dtype=dtype_coord)
+    start = 0
+    with pd.read_csv(
         stream,
         sep=r"\s+",
         header=None,
-        dtype={0: coord_dtype, 1: coord_dtype, 2: np.float32},
-        chunksize=1e7,
-    )
-    data = np.array([], dtype=np.float64)
-    i = np.array([], dtype=int)
-    j = np.array([], dtype=int)
-    for chunk in chunks:
-        data = np.append(data, chunk[2])
-        i = np.append(i, chunk[1] - 1)
-        j = np.append(j, chunk[0] - 1)
-    mtx = sparse.csr_matrix((data, (i, j)), shape=(m, n))
-    return mtx
+        dtype={0: dtype_coord, 1: dtype_coord, 2: dtype_data},
+        chunksize=int(1e7),
+    ) as reader:
+        chunk: pd.DataFrame
+        for chunk in reader:
+            l = chunk.shape[0]
+            data[start : start + l] = chunk[2]
+            i[start : start + l] = chunk[1] - 1
+            j[start : start + l] = chunk[0] - 1
+            start += l
+    return sparse.csr_matrix((data, (i, j)), shape=(m, n))
 
 
 def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
