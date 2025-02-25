@@ -25,8 +25,8 @@ overrides.matrix.deps.pre-install-commands = [
     { if = [ "min" ], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "min" ], value = "3.10" },
-    { if = [ "stable", "full", "pre" ], value = "3.12" },
+    { if = [ "min" ], value = "3.11" },
+    { if = [ "stable", "full", "pre" ], value = "3.13" },
 ]
 overrides.matrix.deps.features = [
     { if = [ "full" ], value = "test-full" },

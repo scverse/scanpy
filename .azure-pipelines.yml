@@ -3,7 +3,7 @@ trigger:
 - "*.*.x"
 
 variables:
-  python.version: '3.12'
+  python.version: '3.13'
   PYTEST_ADDOPTS: '-v --color=yes --internet-tests --nunit-xml=test-data/test-results.xml'
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
@@ -15,16 +15,16 @@ jobs:
     vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
-      Python3.10:
-        python.version: '3.10'
-      Python3.12: {}
+      Python3.11:
+        python.version: '3.11'
+      Python3.13: {}
       minimal_dependencies:
         TEST_EXTRA: 'test-min'
       anndata_dev:
         DEPENDENCIES_VERSION: "pre-release"
         TEST_TYPE: "coverage"
       minimum_versions:
-        python.version: '3.10'
+        python.version: '3.11'
         DEPENDENCIES_VERSION: "minimum-version"
         TEST_TYPE: "coverage"
 
@@ -120,8 +120,8 @@ jobs:
 
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.12'
-    displayName: 'Use Python 3.12'
+      versionSpec: '3.13'
+    displayName: 'Use Python 3.13'
 
   - script: |
       python -m pip install --upgrade pip

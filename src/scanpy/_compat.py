@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import os
 import sys
 import warnings
-from dataclasses import dataclass, field
 from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
 from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
@@ -63,25 +60,6 @@ def fullname(typ: type) -> str:
     return f"{module}.{name}"
 
 
-if sys.version_info >= (3, 11):
-    from contextlib import chdir
-else:
-    import os
-    from contextlib import AbstractContextManager
-
-    @dataclass
-    class chdir(AbstractContextManager):
-        path: Path
-        _old_cwd: list[Path] = field(default_factory=list)
-
-        def __enter__(self) -> None:
-            self._old_cwd.append(Path.cwd())
-            os.chdir(self.path)
-
-        def __exit__(self, *_excinfo) -> None:
-            os.chdir(self._old_cwd.pop())
-
-
 def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
@@ -104,18 +82,6 @@ else:
     # but this code makes it possible to run scanpy without it.
     def old_positionals(*old_positionals: str):
         return lambda func: func
-
-
-if sys.version_info >= (3, 11):
-
-    def add_note(exc: BaseException, note: str) -> None:
-        exc.add_note(note)
-else:
-
-    def add_note(exc: BaseException, note: str) -> None:
-        if not hasattr(exc, "__notes__"):
-            exc.__notes__ = []
-        exc.__notes__.append(note)
 
 
 if sys.version_info >= (3, 13):

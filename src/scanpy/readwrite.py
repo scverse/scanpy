@@ -36,7 +36,7 @@ from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
-from ._compat import add_note, deprecated, old_positionals
+from ._compat import deprecated, old_positionals
 from ._settings import settings
 from ._utils import _empty
 
@@ -1031,7 +1031,7 @@ def _download(url: str, path: Path):
             try:
                 from certifi import where
             except ImportError as e:
-                add_note(e, f"{msg} Please install `certifi` and try again.")
+                e.add_note(f"{msg} Please install `certifi` and try again.")
                 raise
             else:
                 logg.warning(f"{msg} Trying to use certifi.")

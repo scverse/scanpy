@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial, update_wrapper
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
@@ -45,7 +45,7 @@ class _RootLogger(logging.RootLogger):
     ) -> datetime:
         from ._settings import settings
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
