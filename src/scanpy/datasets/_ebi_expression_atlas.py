@@ -20,6 +20,9 @@ if TYPE_CHECKING:
     from pandas._typing import ReadCsvBuffer
 
 
+CHUNK_SIZE = int(1e7)
+
+
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
     unique_vals = dataframe.apply(lambda x: len(x.unique()))
     is_boring = (unique_vals == 1) | (unique_vals == len(dataframe))
@@ -77,7 +80,7 @@ def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> sparse.csr_matrix:
         sep=r"\s+",
         header=None,
         dtype={0: dtype_coord, 1: dtype_coord, 2: dtype_data},
-        chunksize=int(1e7),
+        chunksize=CHUNK_SIZE,
     ) as reader:
         chunk: pd.DataFrame
         for chunk in reader:
