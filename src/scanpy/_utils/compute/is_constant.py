@@ -59,11 +59,11 @@ def is_constant(
         Axis to reduce over.
 
 
-    Returns:
+    Returns
     -------
     Boolean array, True values were constant.
 
-    Example:
+    Example
     -------
     >>> a = np.array([[0, 1], [0, 0]])
     >>> a

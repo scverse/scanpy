@@ -192,8 +192,8 @@ class Scrublet:
     ) -> None:
         """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         sim_doublet_ratio
             Number of doublets to simulate relative to the number of observed
             transcriptomes. If `None`, self.sim_doublet_ratio is used.
@@ -241,8 +241,8 @@ class Scrublet:
     ) -> None:
         """Set the manifold coordinates used in k-nearest-neighbor graph construction.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         manifold_obs
             (shape: n_cells × n_features)
             The single-cell "manifold" coordinates (e.g., PCA coordinates)
@@ -274,8 +274,8 @@ class Scrublet:
 
         Requires that manifold_obs_ and manifold_sim_ have already been set.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         use_approx_neighbors
             Use approximate nearest neighbor method (annoy) for the KNN
             classifier.
@@ -406,8 +406,8 @@ class Scrublet:
     ) -> NDArray[np.bool_] | None:
         """Call trancriptomes as doublets or singlets.
 
-        Arguments:
-        ---------
+        Parameters
+        ----------
         threshold
             Doublet score threshold for calling a transcriptome
             a doublet. If `None`, this is set automatically by looking

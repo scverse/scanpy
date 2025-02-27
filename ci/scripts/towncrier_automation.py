@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3"""
 # /// script
 # dependencies = [ "towncrier", "packaging" ]
 # ///
+"""Script to automate towncrier release note PRs."""
 
 from __future__ import annotations
 
@@ -16,11 +17,14 @@ if TYPE_CHECKING:
 
 
 class Args(argparse.Namespace):
+    """Command line arguments."""
+
     version: str
     dry_run: bool
 
 
 def parse_args(argv: Sequence[str] | None = None) -> Args:
+    """Construct a CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="towncrier-automation",
         description=(
@@ -52,6 +56,7 @@ def parse_args(argv: Sequence[str] | None = None) -> Args:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Run main entry point."""
     args = parse_args(argv)
 
     # Run towncrier

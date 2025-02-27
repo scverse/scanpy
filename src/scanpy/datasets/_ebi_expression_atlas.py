@@ -127,11 +127,11 @@ def ebi_expression_atlas(
         Whether boring labels in `.obs` should be automatically removed, such as
         labels with a single or :attr:`~anndata.AnnData.n_obs` distinct values.
 
-    Returns:
+    Returns
     -------
     Annotated data matrix.
 
-    Example:
+    Example
     -------
     >>> import scanpy as sc
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS

@@ -1,4 +1,3 @@
-"""Parse a pyproject.toml file and output a list of minimum dependencies."""
 #!/usr/bin/env python3
 # /// script
 # dependencies = [
@@ -6,6 +5,7 @@
 #   "packaging",
 # ]
 # ///
+"""Parse a pyproject.toml file and output a list of minimum dependencies."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 def min_dep(req: Requirement) -> Requirement:
     """Given a requirement, return the minimum version specifier.
 
-    Example:
+    Example
     -------
     >>> min_dep(Requirement("numpy>=1.0"))
     <Requirement('numpy==1.0.*')>

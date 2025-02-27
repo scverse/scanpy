@@ -130,13 +130,13 @@ def normalize_total(
     copy
         Whether to modify copied input object. Not compatible with inplace=False.
 
-    Returns:
+    Returns
     -------
     Returns dictionary with normalized copies of `adata.X` and `adata.layers`
     or updates `adata` with normalized version of the original
     `adata.X` and `adata.layers`, depending on `inplace`.
 
-    Example:
+    Example
     -------
     >>> import sys
     >>> from anndata import AnnData

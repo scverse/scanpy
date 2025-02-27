@@ -267,6 +267,8 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = [ "scanpy", "testing.scanpy" ]
 required-imports = [ "from __future__ import annotations" ]
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"

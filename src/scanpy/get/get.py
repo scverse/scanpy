@@ -60,7 +60,7 @@ def rank_genes_groups_df(
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
 
-    Example:
+    Example
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
