@@ -54,10 +54,10 @@ dependencies = [
     "seaborn>=0.13",
     "h5py>=3.8",
     "tqdm",
-    "scikit-learn>=1.2,<1.6",
+    "scikit-learn>=1.1,<1.6",
     "statsmodels>=0.13",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
-    "networkx>=2.7",
+    "networkx>=2.8",
     "natsort",
     "joblib",
     "numba>=0.58",
@@ -146,7 +146,7 @@ magic = [ "magic-impute>=2.0" ]                  # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.1.3" ]                # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                        # Harmony dataset integration
 scanorama = [ "scanorama" ]                      # Scanorama dataset integration
-scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
+scrublet = [ "scikit-image>=0.20" ]              # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2023.5.1,<2024.8.0" ]          # Use the Dask parallelization engine
