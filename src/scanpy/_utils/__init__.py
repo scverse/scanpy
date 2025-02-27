@@ -249,7 +249,6 @@ def _doc_params(**kwds):
     """
 
     def dec(obj):
-        obj.__orig_doc__ = obj.__doc__
         obj.__doc__ = dedent(obj.__doc__).format_map(kwds)
         return obj
 
