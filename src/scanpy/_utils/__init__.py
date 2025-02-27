@@ -17,6 +17,7 @@ from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
+from textwrap import indent
 from types import MethodType, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -245,10 +246,28 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def _doc_params(**kwds: str):
+_leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)
+
+
+def _doc_params(**replacements: str):
     def dec(obj: _ForT) -> _ForT:
         assert obj.__doc__
-        obj.__doc__ = obj.__doc__.format_map(kwds)
+        assert "\t" not in obj.__doc__
+
+        # The first line of the docstring is unindented,
+        # so find indent size starting after it.
+        start_line_2 = obj.__doc__.find("\n") + 1
+        assert start_line_2 > 0, f"{obj.__name__} has single-line docstring."
+        n_spaces = min(
+            len(m.group(1))
+            for m in _leading_whitespace_re.finditer(obj.__doc__[start_line_2:])
+        )
+
+        # The placeholder is already indented, so only indent subsequent lines
+        indented_replacements = {
+            k: indent(v, " " * n_spaces)[n_spaces:] for k, v in replacements.items()
+        }
+        obj.__doc__ = obj.__doc__.format_map(indented_replacements)
         return obj
 
     return dec
