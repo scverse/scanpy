@@ -1,3 +1,5 @@
+"""Functions and classes for computing nearest neighbors."""
+
 from __future__ import annotations
 
 import contextlib
@@ -57,7 +59,7 @@ class KwdsForTransformer(TypedDict):
     random_state: _LegacyRandom
 
 
-class NeighborsParams(TypedDict):
+class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
@@ -83,8 +85,7 @@ def neighbors(
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Computes the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
+    """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
@@ -172,16 +173,19 @@ def neighbors(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> # Basic usage
-    >>> sc.pp.neighbors(adata, 20, metric='cosine')
+    >>> sc.pp.neighbors(adata, 20, metric="cosine")
     >>> # Provide your own transformer for more control and flexibility
     >>> from sklearn.neighbors import KNeighborsTransformer
-    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
+    >>> transformer = KNeighborsTransformer(
+    ...     n_neighbors=10, metric="manhattan", algorithm="kd_tree"
+    ... )
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
 
-    See also
+    See Also
     --------
     :doc:`/how-to/knn-transformers`
+
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
@@ -245,7 +249,7 @@ def neighbors(
     return adata if copy else None
 
 
-class FlatTree(NamedTuple):
+class FlatTree(NamedTuple):  # noqa: D101
     hyperplanes: None
     offsets: None
     children: None
@@ -294,7 +298,7 @@ def _make_forest_dict(forest):
 class OnFlySymMatrix:
     """Emulate a matrix where elements are calculated on the fly."""
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
@@ -311,7 +315,7 @@ class OnFlySymMatrix:
         self.rows = {} if rows is None else rows
         self.restrict_array = restrict_array  # restrict the array to a subset
 
-    def __getitem__(self, index):
+    def __getitem__(self, index):  # noqa: D105
         if isinstance(index, int | np.integer):
             if self.restrict_array is None:
                 glob_index = index
@@ -349,8 +353,7 @@ class OnFlySymMatrix:
 
 
 class Neighbors:
-    """\
-    Data represented as graph of nearest neighbors.
+    """Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a graph of nearest neighbor relations (edges)
     among data points (nodes).
@@ -363,10 +366,11 @@ class Neighbors:
         Number of diffusion components to use.
     neighbors_key
         Where to look in `.uns` and `.obsp` for neighbors data
+
     """
 
     @old_positionals("n_dcs", "neighbors_key")
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         adata: AnnData,
         *,
@@ -443,6 +447,7 @@ class Neighbors:
 
     @property
     def rp_forest(self) -> RPForestDict | None:
+        """PyNNDescent index."""
         return self._rp_forest
 
     @property
@@ -469,6 +474,7 @@ class Neighbors:
         Notes
         -----
         This has not been tested, in contrast to `transitions_sym`.
+
         """
         Zinv = self.Z.power(-1) if issparse(self.Z) else np.diag(1.0 / np.diag(self.Z))
         return self.Z @ self.transitions_sym @ Zinv
@@ -524,8 +530,7 @@ class Neighbors:
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: _LegacyRandom = 0,
     ) -> None:
-        """\
-        Compute distances and connectivities of neighbors.
+        """Compute distances and connectivities of neighbors.
 
         Parameters
         ----------
@@ -543,6 +548,7 @@ class Neighbors:
         -------
         Writes sparse graph attributes `.distances` and,
         if `method` is not `None`, `.connectivities`.
+
         """
         from ..tools._utils import _choose_representation
 
@@ -715,8 +721,7 @@ class Neighbors:
 
     @old_positionals("density_normalize")
     def compute_transitions(self, *, density_normalize: bool = True):
-        """\
-        Compute transition matrix.
+        """Compute transition matrix.
 
         Parameters
         ----------
@@ -727,6 +732,7 @@ class Neighbors:
         Returns
         -------
         Makes attributes `.transitions_sym` and `.transitions` available.
+
         """
         start = logg.info("computing transitions")
         W = self._connectivities
@@ -760,8 +766,7 @@ class Neighbors:
         sort: Literal["decrease", "increase"] = "decrease",
         random_state: _LegacyRandom = 0,
     ):
-        """\
-        Compute eigen decomposition of transition matrix.
+        """Compute eigen decomposition of transition matrix.
 
         Parameters
         ----------
@@ -787,6 +792,7 @@ class Neighbors:
             projection on the diffusion components.  these are simply the
             components of the right eigenvectors and can directly be used for
             plotting.
+
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
@@ -889,6 +895,7 @@ class Neighbors:
         xroot
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
+
         """
         if self._adata.shape[1] != xroot.size:
             msg = "The root vector you provided does not have the correct dimension."

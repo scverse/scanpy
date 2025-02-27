@@ -1,4 +1,4 @@
-"""Utility functions and classes
+"""Utility functions and classes.
 
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
@@ -17,7 +17,6 @@ from contextlib import contextmanager, suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
-from textwrap import dedent
 from types import MethodType, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -84,8 +83,8 @@ _empty = Empty.token
 
 
 class RNGIgraph:
-    """
-    Random number generator for ipgraph so global seed is not changed.
+    """Random number generator for ipgraph so global seed is not changed.
+
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
 
@@ -243,21 +242,8 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def _doc_params(**kwds):
-    """\
-    Docstrings should start with ``\\`` in the first line for proper formatting.
-    """
-
-    def dec(obj):
-        obj.__orig_doc__ = obj.__doc__
-        obj.__doc__ = dedent(obj.__doc__).format_map(kwds)
-        return obj
-
-    return dec
-
-
 def _check_array_function_arguments(**kwargs):
-    """Checks for invalid arguments when an array is passed.
+    """Check for invalid arguments when an array is passed.
 
     Helper for functions that work on either AnnData objects or array-likes.
     """
@@ -271,8 +257,7 @@ def _check_array_function_arguments(**kwargs):
 def _check_use_raw(
     adata: AnnData, use_raw: None | bool, *, layer: str | None = None
 ) -> bool:
-    """
-    Normalize checking `use_raw`.
+    """Normalize checking `use_raw`.
 
     My intentention here is to also provide a single place to throw a deprecation warning from in future.
     """
@@ -356,6 +341,7 @@ def compute_association_matrix_of_groups(
     asso_matrix
         Matrix where rows correspond to the predicted labels and columns to the
         reference labels, entries are proportional to degree of association.
+
     """
     if normalization not in {"prediction", "reference"}:
         msg = '`normalization` needs to be either "prediction" or "reference".'
@@ -417,7 +403,7 @@ def get_associated_colors_of_groups(
 
 
 def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
-    """Which predicted label explains which reference label?
+    """Identify which predicted label explains which reference label.
 
     A predicted label explains the reference label which maximizes the minimum
     of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
@@ -432,6 +418,7 @@ def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
     If ``return_overlaps`` is ``True``, this will in addition return the overlap
     of the reference group with the predicted group; normalized with respect to
     the reference group size and the predicted group size, respectively.
+
     """
     ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
     ref_dict = dict(zip(ref_unique, ref_counts))
@@ -495,7 +482,8 @@ def moving_average(a: np.ndarray, n: int):
     Returns
     -------
     An array view storing the moving average.
-    """
+
+    """  # noqa: D401
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1 :] / n
@@ -518,13 +506,12 @@ def update_params(
     *,
     check: bool = False,
 ) -> dict[str, Any]:
-    """\
-    Update old_params with new_params.
+    """Update `old_params` with `new_params`.
 
-    If check==False, this merely adds and overwrites the content of old_params.
+    If check==False, this merely adds and overwrites the content of `old_params`.
 
     If check==True, this only allows updating of parameters that are already
-    present in old_params.
+    present in `old_params`.
 
     Parameters
     ----------
@@ -535,6 +522,7 @@ def update_params(
     Returns
     -------
     updated_params
+
     """
     updated_params = dict(old_params)
     if new_params:  # allow for new_params to be None
@@ -835,7 +823,7 @@ def _(
 
 @singledispatch
 def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
-    """Checks values of X to ensure it is count data"""
+    """Check values of X to ensure it is count data."""
     raise NotImplementedError
 
 
@@ -911,13 +899,14 @@ def select_groups(
 
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
-    """Get full tracebacks when warning is raised by setting
+    """Get full tracebacks when warning is raised by setting.
 
     warnings.showwarning = warn_with_traceback
 
-    See also
+    See Also
     --------
     https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
+
     """
     import traceback
 
@@ -939,8 +928,7 @@ def subsample(
     subsample: int = 1,
     seed: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """\
-    Subsample a fraction of 1/subsample samples from the rows of X.
+    """Subsample a fraction of 1/subsample samples from the rows of X.
 
     Parameters
     ----------
@@ -957,6 +945,7 @@ def subsample(
         Subsampled X.
     rows
         Indices of rows that are stored in Xsampled.
+
     """
     if subsample == 1 and seed == 0:
         return X, np.arange(X.shape[0], dtype=int)
@@ -997,6 +986,7 @@ def subsample_n(
         Subsampled X.
     rows
         Indices of rows that are stored in Xsampled.
+
     """
     if n < 0:
         msg = "n must be greater 0"
@@ -1017,7 +1007,7 @@ def check_presence_download(filename: Path, backup_url):
 
 
 def lazy_import(full_name):
-    """Imports a module in a way that it’s only executed on member access"""
+    """Import a module in a way that it’s only executed on member access."""
     try:
         return sys.modules[full_name]
     except KeyError:
@@ -1051,7 +1041,6 @@ class NeighborsView:
 
     Parameters
     ----------
-
     adata
         AnnData object.
     key
@@ -1072,6 +1061,7 @@ class NeighborsView:
         adata.uns[key]['params']
         adata.uns[key]['connectivities_key'] in adata.obsp
         'params' in adata.uns[key]
+
     """
 
     def __init__(self, adata: AnnData, key=None):

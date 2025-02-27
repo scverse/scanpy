@@ -108,8 +108,7 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
 ) -> anndata.AnnData:
-    """\
-    Load a dataset from the EBI Single Cell Expression Atlas.
+    """Load a dataset from the EBI Single Cell Expression Atlas.
 
     The atlas_ can be browsed online to find the ``accession`` you want.
     Downloaded datasets are saved in the directory specified by
@@ -128,16 +127,17 @@ def ebi_expression_atlas(
         Whether boring labels in `.obs` should be automatically removed, such as
         labels with a single or :attr:`~anndata.AnnData.n_obs` distinct values.
 
-    Returns
+    Returns:
     -------
     Annotated data matrix.
 
-    Example
+    Example:
     -------
     >>> import scanpy as sc
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+
     """
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / f"{accession}.h5ad"

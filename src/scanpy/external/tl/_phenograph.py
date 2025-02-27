@@ -1,6 +1,4 @@
-"""\
-Perform clustering using PhenoGraph
-"""
+"""Perform clustering using PhenoGraph."""
 
 from __future__ import annotations
 
@@ -70,8 +68,7 @@ def phenograph(
     copy: bool = False,
     **kargs: Any,
 ) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
-    """\
-    PhenoGraph clustering :cite:p:`Levine2015`.
+    """PhenoGraph clustering :cite:p:`Levine2015`.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
     data. It works by creating a graph ("network") representing phenotypic similarities
@@ -201,23 +198,33 @@ def phenograph(
     Plot phenograph clusters on tSNE:
 
     >>> sc.pl.tsne(
-    ...     adata, color = ["pheno_louvain", "pheno_leiden"], s = 100,
-    ...     palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10
+    ...     adata,
+    ...     color=["pheno_louvain", "pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
 
     Cluster and cluster centroids for input Numpy ndarray
 
     >>> df = np.random.rand(1000, 40)
     >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
+    >>> dframe.index, dframe.columns = (
+    ...     map(str, dframe.index),
+    ...     map(str, dframe.columns),
+    ... )
     >>> adata = AnnData(dframe)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
-    ...     adata, color=['pheno_leiden'], s=100,
-    ...     palette=sc.pl.palettes.vega_20_scanpy, legend_fontsize=10
+    ...     adata,
+    ...     color=["pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
+
     """
     start = logg.info("PhenoGraph clustering")
 

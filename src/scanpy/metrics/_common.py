@@ -54,8 +54,7 @@ def _(val: pd.DataFrame | pd.Series) -> NDArray:
 
 
 def _check_vals(vals: V) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
-    """\
-    Checks that values wont cause issues in computation.
+    """Check that values wont cause issues in computation.
 
     Returns new set of vals, and indexer to put values back into result.
 

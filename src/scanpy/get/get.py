@@ -1,4 +1,4 @@
-"""This module contains helper functions for accessing data."""
+"""Helper functions for accessing data."""
 
 from __future__ import annotations
 
@@ -38,9 +38,7 @@ def rank_genes_groups_df(
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
 ) -> pd.DataFrame:
-    """\
-    :func:`scanpy.tl.rank_genes_groups` results in the form of a
-    :class:`~pandas.DataFrame`.
+    """Get :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`~pandas.DataFrame`.
 
     Params
     ------
@@ -62,12 +60,13 @@ def rank_genes_groups_df(
         Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
 
-    Example
+    Example:
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
+
     """
     if isinstance(group, str):
         group = [group]
@@ -124,7 +123,7 @@ def _check_indices(
     alias_index: pd.Index | None = None,
     use_raw: bool = False,
 ) -> tuple[list[str], list[str], list[str]]:
-    """Common logic for checking indices for obs_df and var_df."""
+    """Check indices for `obs_df` and `var_df`."""
     alt_repr = "adata.raw" if use_raw else "adata"
 
     alt_dim = ("obs", "var")[dim == "obs"]
@@ -233,8 +232,7 @@ def obs_df(
     gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
-    """\
-    Return values for observations in adata.
+    """Return values for observations in adata.
 
     Params
     ------
@@ -263,9 +261,7 @@ def obs_df(
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
-    ...     pbmc,
-    ...     keys=["CD8B", "n_genes"],
-    ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
+    ...     pbmc, keys=["CD8B", "n_genes"], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
     >>> plotdf.columns
     Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
@@ -275,13 +271,11 @@ def obs_df(
     Calculating mean expression for marker genes by cluster:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
-    >>> genedf = sc.get.obs_df(
-    ...     pbmc,
-    ...     keys=["louvain", *marker_genes]
-    ... )
+    >>> marker_genes = ["CD79A", "MS4A1", "CD8A", "CD8B", "LYZ"]
+    >>> genedf = sc.get.obs_df(pbmc, keys=["louvain", *marker_genes])
     >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
+
     """
     if isinstance(keys, str):
         keys = [keys]
@@ -348,8 +342,7 @@ def var_df(
     *,
     layer: str | None = None,
 ) -> pd.DataFrame:
-    """\
-    Return values for observations in adata.
+    """Return values for observations in adata.
 
     Params
     ------
@@ -366,6 +359,7 @@ def var_df(
     -------
     A dataframe with `adata.var_names` as index, and values specified by `keys`
     and `varm_keys`.
+
     """
     # Argument handling
     if isinstance(keys, str):
@@ -425,9 +419,7 @@ def _get_obs_rep(
     | BaseCompressedSparseDataset
     | None
 ):
-    """
-    Choose array aligned with obs annotation.
-    """
+    """Choose array aligned with obs annotation."""
     # https://github.com/scverse/scanpy/issues/1546
     if not isinstance(use_raw, bool):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."
@@ -465,9 +457,7 @@ def _set_obs_rep(
     obsm: str | None = None,
     obsp: str | None = None,
 ):
-    """
-    Set value for observation rep.
-    """
+    """Set value for observation rep."""
     is_layer = layer is not None
     is_raw = use_raw is not False
     is_obsm = obsm is not None
@@ -502,8 +492,8 @@ def _check_mask(
     *,
     allow_probabilities: bool = False,
 ) -> M:  # Could also be a series, but should be one or the other
-    """
-    Validate mask argument
+    """Validate mask argument.
+
     Params
     ------
     data

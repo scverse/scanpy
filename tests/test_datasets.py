@@ -1,6 +1,4 @@
-"""
-Tests to make sure the example datasets load.
-"""
+"""Tests to make sure the example datasets load."""
 
 from __future__ import annotations
 
@@ -138,7 +136,6 @@ def test_visium_datasets_dir_change(tmp_path: Path):
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
-
     # Test that downloading tissue image works
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)

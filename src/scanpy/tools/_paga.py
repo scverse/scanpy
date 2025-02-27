@@ -29,8 +29,7 @@ def paga(
     neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Mapping out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
+    """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
@@ -104,6 +103,7 @@ def paga(
     pl.paga
     pl.paga_path
     pl.paga_compare
+
     """
     check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
@@ -398,6 +398,7 @@ def paga_degrees(adata: AnnData) -> list[int]:
     Returns
     -------
     List of degrees for each node.
+
     """
     import networkx as nx
 
@@ -417,6 +418,7 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
     Returns
     -------
     Entropies of median expressions for each node.
+
     """
     from scipy.stats import entropy
 
@@ -479,6 +481,7 @@ def paga_compare_paths(
         Fraction of consistent paths
     n_paths
         Number of paths
+
     """
     import networkx as nx
 

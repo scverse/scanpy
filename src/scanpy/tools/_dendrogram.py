@@ -1,6 +1,4 @@
-"""
-Computes a dendrogram based on a given categorical observation.
-"""
+"""Computes a dendrogram based on a given categorical observation."""
 
 from __future__ import annotations
 
@@ -48,8 +46,7 @@ def dendrogram(
     key_added: str | None = None,
     inplace: bool = True,
 ) -> dict[str, Any] | None:
-    """\
-    Computes a hierarchical clustering for the given `groupby` categories.
+    """Compute a hierarchical clustering for the given `groupby` categories.
 
     By default, the PCA representation is used unless `.X`
     has less than 50 variables.
@@ -111,13 +108,13 @@ def dendrogram(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')  # doctest: +SKIP
+    >>> sc.tl.dendrogram(adata, groupby="bulk_labels")
+    >>> sc.pl.dendrogram(adata, groupby="bulk_labels")  # doctest: +SKIP
     <Axes: >
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-    """
+    >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+    >>> sc.pl.dotplot(adata, markers, groupby="bulk_labels", dendrogram=True)
 
+    """
     raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if isinstance(groupby, str):
         # if not a list, turn into a list

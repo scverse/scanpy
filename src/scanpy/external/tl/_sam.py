@@ -1,6 +1,4 @@
-"""\
-Run the Self-Assembling Manifold algorithm
-"""
+"""Run the Self-Assembling Manifold algorithm."""
 
 from __future__ import annotations
 
@@ -48,8 +46,7 @@ def sam(
     inplace: bool = True,
     verbose: bool = True,
 ) -> SAM | tuple[SAM, AnnData]:
-    """\
-    Self-Assembling Manifolds single-cell RNA sequencing analysis tool :cite:p:`Tarashansky2019`.
+    """Self-Assembling Manifolds single-cell RNA sequencing analysis tool :cite:p:`Tarashansky2019`.
 
     SAM iteratively rescales the input gene expression matrix to emphasize
     genes that are spatially variable along the intrinsic manifold of the data.
@@ -61,7 +58,6 @@ def sam(
 
     Parameters
     ----------
-
     k
         The number of nearest neighbors to identify for each cell.
 
@@ -167,7 +163,7 @@ def sam(
     Assuming we are given an AnnData object called `adata`, we can run the SAM
     algorithm as follows:
 
-    >>> sam_obj = sce.tl.sam(adata,inplace=True)
+    >>> sam_obj = sce.tl.sam(adata, inplace=True)
 
     The input AnnData object should contain unstandardized, non-negative
     expression values. Preferably, the data should be log-normalized and no
@@ -182,7 +178,7 @@ def sam(
 
     To visualize the output, we can use:
 
-    >>> sce.pl.sam(adata,projection='X_umap')
+    >>> sce.pl.sam(adata, projection="X_umap")
 
     `sce.pl.sam` accepts all keyword arguments used in the
     `matplotlib.pyplot.scatter` function.
@@ -200,14 +196,13 @@ def sam(
     In a Jupyter notebook, execute the following to launch the interface:
 
     >>> from samalg.gui import SAMGUI
-    >>> sam_gui = SAMGUI(sam_obj) # sam_obj is your SAM object
+    >>> sam_gui = SAMGUI(sam_obj)  # sam_obj is your SAM object
     >>> sam_gui.SamPlot
 
     This can also be enabled in Jupyer Lab by following the instructions in the
     self-assembling-manifold README.
 
     """
-
     try:
         from samalg import SAM
     except ImportError:

@@ -1,3 +1,4 @@
+"""Parse a pyproject.toml file and output a list of minimum dependencies."""
 #!/usr/bin/env python3
 # /// script
 # dependencies = [
@@ -31,14 +32,13 @@ if TYPE_CHECKING:
 
 
 def min_dep(req: Requirement) -> Requirement:
-    """
-    Given a requirement, return the minimum version specifier.
+    """Given a requirement, return the minimum version specifier.
 
-    Example
+    Example:
     -------
-
     >>> min_dep(Requirement("numpy>=1.0"))
     <Requirement('numpy==1.0.*')>
+
     """
     req_name = req.name
     if req.extras:
@@ -63,6 +63,7 @@ def min_dep(req: Requirement) -> Requirement:
 def extract_min_deps(
     dependencies: Iterable[Requirement], *, pyproject
 ) -> Generator[Requirement, None, None]:
+    """Extract minimum dependencies from a list of requirements."""
     dependencies = deque(dependencies)  # We'll be mutating this
     project_name = pyproject["project"]["name"]
 
@@ -82,8 +83,8 @@ def extract_min_deps(
 
 
 class Args(argparse.Namespace):
-    """\
-    Parse a pyproject.toml file and output a list of minimum dependencies.
+    """Parse a pyproject.toml file and output a list of minimum dependencies.
+
     Output is optimized for `[uv] pip install` (see `-o`/`--output` for details).
     """
 
@@ -94,10 +95,12 @@ class Args(argparse.Namespace):
 
     @classmethod
     def parse(cls, argv: Sequence[str] | None = None) -> Self:
+        """Parse CLI arguments."""
         return cls.parser().parse_args(argv, cls())
 
     @classmethod
     def parser(cls) -> argparse.ArgumentParser:
+        """Construct a CLI argument parser."""
         parser = argparse.ArgumentParser(
             prog="min-deps",
             description=cls.__doc__,
@@ -139,10 +142,12 @@ class Args(argparse.Namespace):
 
     @cached_property
     def pyproject(self) -> dict[str, Any]:
+        """Return the parsed `pyproject.toml`."""
         return tomllib.loads(self._path.read_text())
 
     @cached_property
     def extras(self) -> AbstractSet[str]:
+        """Return the extras to install."""
         if self._extras:
             if self._all_extras:
                 sys.exit("Cannot specify both --extras and --all-extras")
@@ -153,6 +158,7 @@ class Args(argparse.Namespace):
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Run main entry point."""
     args = Args.parse(argv)
 
     project_name = args.pyproject["project"]["name"]

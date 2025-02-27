@@ -1,4 +1,4 @@
-"""Like fixtures, but more flexible"""
+"""Like fixtures, but more flexible."""
 
 from __future__ import annotations
 

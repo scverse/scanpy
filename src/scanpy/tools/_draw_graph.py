@@ -52,8 +52,7 @@ def draw_graph(
     copy: bool = False,
     **kwds,
 ) -> AnnData | None:
-    """\
-    Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
+    """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires running :func:`~scanpy.pp.neighbors`, first.
@@ -121,6 +120,7 @@ def draw_graph(
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
         `draw_graph` parameters.
+
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in (layouts := get_literal_vals(_Layout)):

@@ -1,6 +1,4 @@
-"""\
-Embed high-dimensional data using TriMap
-"""
+"""Embed high-dimensional data using TriMap."""
 
 from __future__ import annotations
 
@@ -45,8 +43,7 @@ def trimap(
     verbose: bool | int | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    TriMap: Large-scale Dimensionality Reduction Using Triplets :cite:p:`Amid2019`.
+    """TriMap: Large-scale Dimensionality Reduction Using Triplets :cite:p:`Amid2019`.
 
     TriMap is a dimensionality reduction method that uses triplet constraints
     to form a low-dimensional embedding of a set of points. The triplet
@@ -102,9 +99,9 @@ def trimap(
     >>> import scanpy.external as sce
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> pbmc = sce.tl.trimap(pbmc, copy=True)
-    >>> sce.pl.trimap(pbmc, color=['bulk_labels'], s=10)
-    """
+    >>> sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
 
+    """
     try:
         from trimap import TRIMAP
     except ImportError:

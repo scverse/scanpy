@@ -1,6 +1,4 @@
-"""\
-Shared docstrings for plotting function parameters.
-"""
+"""Shared docstrings for plotting function parameters."""
 
 from __future__ import annotations
 

@@ -45,6 +45,7 @@ class PCASparseDask:
         >>> assert isinstance(pca_fit, PCASparseDaskFit)
         >>> pca_fit.transform(x)
         dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
+
         """
         if x._meta.format != "csr":
             msg = (
@@ -151,12 +152,10 @@ def _cov_sparse_dask(
     tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
     | tuple[NDArray[np.floating], NDArray[np.floating]]
 ):
-    """\
-    Computes the covariance matrix and row/col means of matrix `x`.
+    r"""Compute the covariance matrix and row/col means of matrix `x`.
 
     Parameters
     ----------
-
     x
         A sparse matrix
     return_gram
@@ -169,13 +168,13 @@ def _cov_sparse_dask(
 
     Returns
     -------
-
     :math:`\\cov(X, X)`
         The covariance matrix of `x` in the form :math:`\\cov(X, X) = \\E(XX) - \\E(X)\\E(X)`.
     :math:`\\gram(X, X)`
         When return_gram is `True`, the gram matrix of `x` in the form :math:`\\frac{1}{n} X.T \\dot X`.
     :math:`\\mean(X)`
         The row means of `x`.
+
     """
     if TYPE_CHECKING:
         import dask.array.core as da
