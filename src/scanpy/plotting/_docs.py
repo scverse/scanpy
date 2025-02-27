@@ -131,8 +131,7 @@ vcenter
 
     Example
     -------
-
-    >>> sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
+    >>> sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')
 """
 
 doc_vboundnorm = """\

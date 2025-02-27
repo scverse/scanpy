@@ -54,7 +54,6 @@ _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
-    from types import FunctionType
     from typing import Any, TypeVar
 
     from anndata import AnnData
@@ -67,7 +66,7 @@ if TYPE_CHECKING:
     _MemoryArray = NDArray | _CSMatrix
     _SupportedArray = _MemoryArray | DaskArray
 
-    _ForT = TypeVar("_ForT", bound=FunctionType | type)
+    _ForT = TypeVar("_ForT", bound=Callable | type)
 
 
 SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
