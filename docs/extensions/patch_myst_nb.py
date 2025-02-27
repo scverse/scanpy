@@ -22,9 +22,11 @@ def get_cell_level_config(
     cell_metadata: dict[str, object],
     line: int | None = None,
 ):
+    """Correct version of ``MditRenderMixin.get_cell_level_config``."""
     rv = get_orig(self, field, cell_metadata, line)
     return copy(rv)
 
 
 def setup(app: Sphinx):
+    """App setup hook."""
     MditRenderMixin.get_cell_level_config = get_cell_level_config

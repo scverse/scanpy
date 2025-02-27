@@ -48,7 +48,7 @@ def _manage_log_handlers() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, None]:
-    """Allow use of scanpy’s logger with caplog"""
+    """Allow use of scanpy’s logger with caplog."""
     import scanpy as sc
 
     sc.settings._root_logger.addHandler(caplog.handler)
@@ -61,7 +61,7 @@ def imported_modules():
     return IMPORTED
 
 
-class CompareResult(TypedDict):
+class CompareResult(TypedDict):  # noqa: D101
     rms: float
     expected: str
     actual: str

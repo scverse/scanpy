@@ -41,6 +41,7 @@ def highly_variable_genes(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
@@ -112,8 +113,7 @@ def filter_genes_dispersion(
     show: bool | None = None,
     save: bool | str | None = None,
 ) -> None:
-    """\
-    Plot dispersions versus means for genes.
+    """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
@@ -129,6 +129,7 @@ def filter_genes_dispersion(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     """
     highly_variable_genes(
         result, log=log, show=show, save=save, highly_variable_genes=False

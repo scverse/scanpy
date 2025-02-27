@@ -1,6 +1,4 @@
-"""
-Metrics which don't quite deserve their own file.
-"""
+"""Metrics which don't quite deserve their own file."""
 
 from __future__ import annotations
 
@@ -22,8 +20,7 @@ def confusion_matrix(
     *,
     normalize: bool = True,
 ) -> pd.DataFrame:
-    """\
-    Given an original and new set of labels, create a labelled confusion matrix.
+    """Given an original and new set of labels, create a labelled confusion matrix.
 
     Parameters `orig` and `new` can either be entries in data or categorical arrays
     of the same size.

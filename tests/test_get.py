@@ -34,10 +34,11 @@ TRANSPOSE_PARAMS = pytest.mark.parametrize(
 
 
 @pytest.fixture
-def adata():
-    """
-    adata.X is np.ones((2, 2))
-    adata.layers['double'] is sparse np.ones((2,2)) * 2 to also test sparse matrices
+def adata() -> AnnData:
+    """Create a tiny AnnData.
+
+    `adata.X` is `np.ones((2, 2))`.
+    `adata.layers['double']` is sparse `np.ones((2,2)) * 2` to also test sparse matrices.
     """
     return anndata_v0_8_constructor_compat(
         X=np.ones((2, 2), dtype=int),
@@ -56,7 +57,7 @@ def adata():
 ########################
 
 
-def test_obs_df(adata):
+def test_obs_df(adata: AnnData):
     adata.obsm["eye"] = np.eye(2, dtype=int)
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 
@@ -153,9 +154,7 @@ def test_obs_df(adata):
 
 
 def test_repeated_gene_symbols():
-    """
-    Gene symbols column allows repeats, but we can't unambiguously get data for these values.
-    """
+    """Gene symbols column allows repeats, but we can't unambiguously get data for these values."""
     gene_symbols = [f"symbol_{i}" for i in ["a", "b", "b", "c"]]
     var_names = pd.Index([f"id_{i}" for i in ["a", "b.1", "b.2", "c"]])
     adata = sc.AnnData(
@@ -178,7 +177,7 @@ def test_repeated_gene_symbols():
 
 @filter_oldformatwarning
 def test_backed_vs_memory():
-    """compares backed vs. memory"""
+    """Compares backed vs. memory."""
     from pathlib import Path
 
     # get location test h5ad file in datasets
@@ -204,7 +203,7 @@ def test_backed_vs_memory():
 
 
 def test_column_content():
-    """uses a larger dataset to test column order and content"""
+    """Uses a larger dataset to test column order and content."""
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
@@ -224,7 +223,7 @@ def test_column_content():
         np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
 
 
-def test_var_df(adata):
+def test_var_df(adata: AnnData):
     adata.varm["eye"] = np.eye(2, dtype=int)
     adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
 

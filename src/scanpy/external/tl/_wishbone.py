@@ -27,9 +27,7 @@ def wishbone(
     components: Iterable[int] = (1, 2, 3),
     num_waypoints: int | Collection = 250,
 ):
-    """\
-    Wishbone identifies bifurcating developmental trajectories from single-cell data
-    :cite:p:`Setty2016`.
+    """Identify bifurcating developmental trajectories from single-cell data :cite:p:`Setty2016`.
 
     Wishbone is an algorithm for positioning single cells along bifurcating
     developmental trajectories with high resolution. Wishbone uses multi-dimensional
@@ -100,6 +98,7 @@ def wishbone(
     For further demonstration of Wishbone methods and visualization please follow the
     notebooks in the package `Wishbone_for_single_cell_RNAseq.ipynb
     <https://github.com/dpeerlab/wishbone/tree/master/notebooks>`_.\
+
     """
     try:
         from wishbone.core import wishbone as c_wishbone

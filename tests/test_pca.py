@@ -71,7 +71,7 @@ A_svd = np.array(
 if pkg_version("anndata") < Version("0.9"):
 
     def to_memory(self: AnnData, *, copy: bool = False) -> AnnData:
-        """Compatibility version of AnnData.to_memory() that works with old AnnData versions"""
+        """Compatibility version of AnnData.to_memory() that works with old AnnData versions."""
         adata = self
         if adata.isbacked:
             adata = adata.to_memory()
@@ -296,9 +296,9 @@ def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type
 
 
 def test_pca_shapes():
-    """
-    Tests that n_comps behaves correctly
-    See https://github.com/scverse/scanpy/issues/1051
+    """Tests that n_comps behaves correctly.
+
+    See <https://github.com/scverse/scanpy/issues/1051>
     """
     adata = AnnData(np.random.randn(30, 20))
     sc.pp.pca(adata)
@@ -323,9 +323,9 @@ def test_pca_shapes():
     ],
 )
 def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
-    """
-    Tests that implicitly centered pca on sparse arrays returns equivalent results to
-    explicit centering on dense arrays.
+    """Tests implicitly centered pca on sparse arrays.
+
+    Checks if it returns equivalent results to explicit centering on dense arrays.
     """
     pbmc = pbmc3k_normalized()[:200].copy()
 
@@ -371,11 +371,10 @@ def test_pca_reproducible(array_type):
 
 
 def test_pca_chunked():
-    """
-    See https://github.com/scverse/scanpy/issues/1590
-    But this is also a more general test
-    """
+    """Tests that chunked PCA is equivalent to default PCA.
 
+    See also <https://github.com/scverse/scanpy/issues/1590>
+    """
     # Subsetting for speed of test
     pbmc_full = pbmc3k_normalized()
     pbmc = pbmc_full[::6].copy()
@@ -398,10 +397,7 @@ def test_pca_chunked():
 
 
 def test_pca_n_pcs():
-    """
-    Tests that the n_pcs parameter also works for
-    representations not called "X_pca"
-    """
+    """Tests that the n_pcs parameter also works for representations not called "X_pca"."""
     pbmc = pbmc3k_normalized()
     sc.pp.pca(pbmc, dtype=np.float64)
     pbmc.obsm["X_pca_test"] = pbmc.obsm["X_pca"]
@@ -444,8 +440,7 @@ def test_mask_length_error():
 
 
 def test_mask_var_argument_equivalence(float_dtype, array_type):
-    """Test if pca result is equal when given mask as boolarray vs string"""
-
+    """Test if pca result is equal when given mask as boolarray vs string."""
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
     mask_var = np.random.choice([True, False], adata_base.shape[1])
 
@@ -508,9 +503,10 @@ def test_mask_order_warning(request: pytest.FixtureRequest):
 
 
 def test_mask_defaults(array_type, float_dtype):
-    """
-    Test if pca result is equal without highly variable and with-but mask is None
-    and if pca takes highly variable as mask as default
+    """Test if PCA behavior in relation to highly variable genes.
+
+    1. That it’s equal withwithout and with – but mask is None
+    2. If pca takes highly variable as mask as default
     """
     A = array_type(A_list).astype("float64")
     adata = AnnData(A)
@@ -532,9 +528,7 @@ def test_mask_defaults(array_type, float_dtype):
 
 
 def test_pca_layer():
-    """
-    Tests that layers works the same way as .X
-    """
+    """Tests that layers works the same way as `X`."""
     X_adata = pbmc3k_normalized()
 
     layer_adata = X_adata.copy()

@@ -52,9 +52,9 @@ def _get_mean_var(
 def sparse_mean_variance_axis(
     mtx: _CSMatrix, axis: Literal[0, 1]
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    """
-    This code and internal functions are based on sklearns
-    `sparsefuncs.mean_variance_axis`.
+    """Compute mean and variance along one axis of a sparse matrix.
+
+    This code and internal functions are based on sklearns `sparsefuncs.mean_variance_axis`.
 
     Modifications:
     * allow deciding on the output type, which can increase accuracy when calculating the mean and variance of 32bit floats.
@@ -94,8 +94,7 @@ def sparse_mean_variance_axis(
 def sparse_mean_var_minor_axis(
     data, indices, indptr, *, major_len, minor_len, n_threads
 ):
-    """
-    Computes mean and variance for a sparse matrix for the minor axis.
+    """Compute mean and variance for a sparse matrix for the minor axis.
 
     Given arrays for a csr matrix, returns the means and variances for each
     column back.
@@ -125,8 +124,7 @@ def sparse_mean_var_minor_axis(
 
 @njit
 def sparse_mean_var_major_axis(data, indptr, *, major_len, minor_len, n_threads):
-    """
-    Computes mean and variance for a sparse array for the major axis.
+    """Compute mean and variance for a sparse array for the major axis.
 
     Given arrays for a csr matrix, returns the means and variances for each
     row back.
@@ -169,9 +167,7 @@ def sample_comb(
 
 
 def _to_dense(X: _CSMatrix, order: Literal["C", "F"] = "C") -> NDArray:
-    """\
-    Numba kernel for np.toarray() function
-    """
+    """Numba kernel for np.toarray() function."""
     out = np.zeros(X.shape, dtype=X.dtype, order=order)
     if X.format == "csr":
         _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)

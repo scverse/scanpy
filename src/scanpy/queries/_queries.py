@@ -45,8 +45,7 @@ def simple_query(
     host: str = "www.ensembl.org",
     use_cache: bool = False,
 ) -> pd.DataFrame:
-    """\
-    A simple interface to biomart.
+    """Interface with biomart.
 
     Params
     ------
@@ -85,8 +84,7 @@ def biomart_annotations(
     host: str = "www.ensembl.org",
     use_cache: bool = False,
 ) -> pd.DataFrame:
-    """\
-    Retrieve gene annotations from ensembl biomart.
+    """Retrieve gene annotations from ensembl biomart.
 
     Parameters
     ----------
@@ -110,6 +108,7 @@ def biomart_annotations(
     ...     ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
     ... ).set_index("ensembl_gene_id")
     >>> adata.var[annot.columns] = annot
+
     """
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)
 
@@ -125,8 +124,7 @@ def gene_coordinates(
     host: str = "www.ensembl.org",
     use_cache: bool = False,
 ) -> pd.DataFrame:
-    """\
-    Retrieve gene coordinates for specific organism through BioMart.
+    """Retrieve gene coordinates for specific organism through BioMart.
 
     Parameters
     ----------
@@ -149,6 +147,7 @@ def gene_coordinates(
     --------
     >>> import scanpy as sc
     >>> sc.queries.gene_coordinates("hsapiens", "MT-TF")
+
     """
     res = simple_query(
         org=org,
@@ -170,8 +169,7 @@ def mitochondrial_genes(
     use_cache: bool = False,
     chromosome: str = "MT",
 ) -> pd.DataFrame:
-    """\
-    Mitochondrial gene symbols for specific organism through BioMart.
+    """Mitochondrial gene symbols for specific organism through BioMart.
 
     Parameters
     ----------
@@ -193,8 +191,13 @@ def mitochondrial_genes(
     --------
     >>> import scanpy as sc
     >>> mito_gene_names = sc.queries.mitochondrial_genes("hsapiens")
-    >>> mito_ensembl_ids = sc.queries.mitochondrial_genes("hsapiens", attrname="ensembl_gene_id")
-    >>> mito_gene_names_fly = sc.queries.mitochondrial_genes("dmelanogaster", chromosome="mitochondrion_genome")
+    >>> mito_ensembl_ids = sc.queries.mitochondrial_genes(
+    ...     "hsapiens", attrname="ensembl_gene_id"
+    ... )
+    >>> mito_gene_names_fly = sc.queries.mitochondrial_genes(
+    ...     "dmelanogaster", chromosome="mitochondrion_genome"
+    ... )
+
     """
     return simple_query(
         org,
@@ -214,8 +217,7 @@ def enrich(
     org: str = "hsapiens",
     gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
-    """\
-    Get enrichment for DE results.
+    """Get enrichment for DE results.
 
     This is a thin convenience wrapper around the very useful gprofiler_.
 
@@ -261,14 +263,17 @@ def enrich(
     Using `sc.queries.enrich` on a list of genes:
 
     >>> import scanpy as sc
-    >>> sc.queries.enrich(['KLF4', 'PAX5', 'SOX2', 'NANOG'], org="hsapiens")
-    >>> sc.queries.enrich({{'set1':['KLF4', 'PAX5'], 'set2':['SOX2', 'NANOG']}}, org="hsapiens")
+    >>> sc.queries.enrich(["KLF4", "PAX5", "SOX2", "NANOG"], org="hsapiens")
+    >>> sc.queries.enrich(
+    ...     {{"set1": ["KLF4", "PAX5"], "set2": ["SOX2", "NANOG"]}}, org="hsapiens"
+    ... )
 
     Using `sc.queries.enrich` on an :class:`anndata.AnnData` object:
 
     >>> pbmcs = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(pbmcs, "bulk_labels")
     >>> sc.queries.enrich(pbmcs, "CD34+")
+
     """
     try:
         from gprofiler import GProfiler

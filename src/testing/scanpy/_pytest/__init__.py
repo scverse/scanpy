@@ -1,4 +1,4 @@
-"""A private pytest plugin"""
+"""A private pytest plugin."""
 
 from __future__ import annotations
 
