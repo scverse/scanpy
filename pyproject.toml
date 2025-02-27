@@ -47,12 +47,12 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    "numpy>=1.24",
+    "numpy>=1.25",
     "matplotlib>=3.6",
-    "pandas >=1.5",
-    "scipy>=1.8",
+    "pandas >=2.0",
+    "scipy>=1.11",
     "seaborn>=0.13",
-    "h5py>=3.7",
+    "h5py>=3.8",
     "tqdm",
     "scikit-learn>=1.1,<1.6.0",
     "statsmodels>=0.13",
@@ -60,7 +60,7 @@ dependencies = [
     "networkx>=2.7",
     "natsort",
     "joblib",
-    "numba>=0.57",
+    "numba>=0.58",
     "umap-learn>=0.5,!=0.5.0",
     "pynndescent>=0.5",
     "packaging>=21.3",
@@ -149,7 +149,7 @@ scanorama = [ "scanorama" ]                      # Scanorama dataset integration
 scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2022.09.2,<2024.8.0" ]         # Use the Dask parallelization engine
+dask = [ "dask[array]>=2023.5.1,<2024.8.0" ]          # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
