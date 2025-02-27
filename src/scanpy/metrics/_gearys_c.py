@@ -31,9 +31,9 @@ def gearys_c(
     obsp: str | None = None,
     use_raw: bool = False,
 ) -> np.ndarray | float:
-    r"""
-    Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
-    by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
+    r"""Calculate `Geary's C <https://en.wikipedia.org/wiki/Geary's_C>`_.
+
+    Specifically as used by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
 
     Geary's C is a measure of autocorrelation for some measure on a graph. This
     can be to whether measures are correlated between neighboring cells. Lower
@@ -91,7 +91,6 @@ def gearys_c(
 
     Examples
     --------
-
     Calculate Geary’s C for each components of a dimensionality reduction:
 
     .. code:: python
@@ -108,6 +107,7 @@ def gearys_c(
 
         alt = sc.metrics.gearys_c(pbmc.obsp["connectivities"], pbmc.obsm["X_pca"].T)
         np.testing.assert_array_equal(pc_c, alt)
+
     """
     if use_graph is None:
         # Fix for anndata<0.7

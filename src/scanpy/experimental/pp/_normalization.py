@@ -95,8 +95,7 @@ def normalize_pearson_residuals(
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
-    """\
-    Applies analytic Pearson residual normalization, based on :cite:t:`Lause2021`.
+    """Apply analytic Pearson residual normalization, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`
@@ -126,8 +125,8 @@ def normalize_pearson_residuals(
          The used value of the clipping parameter.
     `.uns['pearson_residuals_normalization']['computed_on']`
          The name of the layer on which the residuals were computed.
-    """
 
+    """
     if copy:
         if not inplace:
             msg = "`copy=True` cannot be used with `inplace=False`."
@@ -179,8 +178,7 @@ def normalize_pearson_residuals_pca(
     check_values: bool = True,
     inplace: bool = True,
 ) -> AnnData | None:
-    """\
-    Applies analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
+    """Apply analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
 
     The residuals are based on a negative binomial offset model with overdispersion
     `theta` shared across genes. By default, residuals are clipped to `sqrt(n_obs)`,
@@ -221,8 +219,8 @@ def normalize_pearson_residuals_pca(
         Ratio of explained variance.
     `.uns['pca']['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
-    """
 
+    """
     # Unify new mask argument and deprecated use_highly_varible argument
     _, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
     del use_highly_variable

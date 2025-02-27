@@ -174,9 +174,7 @@ def spatial_kwargs(request):
 
 
 def test_manual_equivalency(equivalent_spatial_plotters, tmp_path, spatial_kwargs):
-    """
-    Tests that manually passing values to sc.pl.spatial is similar to automatic extraction.
-    """
+    """Tests that manually passing values to sc.pl.spatial is similar to automatic extraction."""
     orig, removed = equivalent_spatial_plotters
 
     orig_pth = tmp_path / "orig.png"
@@ -240,9 +238,7 @@ def test_white_background_vs_no_img(adata, tmp_path, spatial_kwargs):
 
 
 def test_spatial_na_color(adata, tmp_path):
-    """
-    Check that na_color defaults to transparent when an image is present, light gray when not.
-    """
+    """Check that na_color defaults to transparent when an image is present, light gray when not."""
     white_background = np.ones_like(
         adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
     )

@@ -1,6 +1,4 @@
-"""\
-Embed high-dimensional data using PHATE
-"""
+"""Embed high-dimensional data using PHATE."""
 
 from __future__ import annotations
 
@@ -54,8 +52,7 @@ def phate(
     copy: bool = False,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    PHATE :cite:p:`Moon2019`.
+    """PHATE :cite:p:`Moon2019`.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for
@@ -142,9 +139,10 @@ def phate(
     (2000, 100)
     >>> adata = AnnData(tree_data)
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
-    >>> adata.obsm['X_phate'].shape
+    >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(adata)
+
     """
     start = logg.info("computing PHATE")
     adata = adata.copy() if copy else adata

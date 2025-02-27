@@ -610,8 +610,9 @@ def test_cutoff_info():
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(flavor, array_type, batch_key):
-    """Tests that, with `n_top_genes=n`
-    - `inplace` and `subset` interact correctly
+    """Tests `n_top_genes=n`.
+
+    - if `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
     - for both with and without batch_key

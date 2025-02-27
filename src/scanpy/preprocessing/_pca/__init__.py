@@ -77,8 +77,7 @@ def pca(
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | np.ndarray | _CSMatrix | None:
-    """\
-    Principal component analysis :cite:p:`Pedregosa2011`.
+    r"""Principal component analysis :cite:p:`Pedregosa2011`.
 
     Computes PCA coordinates, loadings and variance decomposition.
     Uses the implementation of *scikit-learn* :cite:p:`Pedregosa2011`.
@@ -171,13 +170,13 @@ def pca(
         Required if `chunked=True` was passed.
     key_added
         If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_pca']`, the loadings as
-        :attr:`~anndata.AnnData.varm`\\ `['PCs']`, and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['pca']`.
+        :attr:`~anndata.AnnData.obsm`\ `['X_pca']`, the loadings as
+        :attr:`~anndata.AnnData.varm`\ `['PCs']`, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['pca']`.
         If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]``, the loadings as
-        :attr:`~anndata.AnnData.varm`\\ ``[key_added]``, and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]``, the loadings as
+        :attr:`~anndata.AnnData.varm`\ ``[key_added]``, and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
@@ -200,6 +199,7 @@ def pca(
     `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Explained variance, equivalent to the eigenvalues of the
         covariance matrix.
+
     """
     logg_start = logg.info("computing PCA")
     if layer is not None and chunked:
@@ -424,8 +424,7 @@ def _handle_mask_var(
     mask_var: NDArray[np.bool_] | str | Empty | None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
-    """\
-    Unify new mask argument and deprecated use_highly_varible argument.
+    """Unify new mask argument and deprecated use_highly_varible argument.
 
     Returns both the normalized mask parameter and the validated mask array.
     """

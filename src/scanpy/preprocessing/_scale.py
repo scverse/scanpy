@@ -86,8 +86,7 @@ def scale(
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
 ) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
-    """\
-    Scale data to unit variance and zero mean.
+    """Scale data to unit variance and zero mean.
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
@@ -129,6 +128,7 @@ def scale(
         Standard deviations per gene before scaling.
     `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
         Variances per gene before scaling.
+
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:

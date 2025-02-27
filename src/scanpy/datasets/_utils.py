@@ -27,9 +27,7 @@ def check_datasetdir_exists(f: Callable[P, R]) -> Callable[P, R]:
 
 
 def filter_oldformatwarning(f: Callable[P, R]) -> Callable[P, R]:
-    """
-    Filters anndata.OldFormatWarning from being thrown by the wrapped function.
-    """
+    """Filter anndata.OldFormatWarning from being thrown by the wrapped function."""
 
     @wraps(f)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:

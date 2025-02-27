@@ -31,8 +31,7 @@ def morans_i(
     obsp: str | None = None,
     use_raw: bool = False,
 ) -> np.ndarray | float:
-    r"""
-    Calculate Moran’s I Global Autocorrelation Statistic.
+    r"""Calculate Moran’s I Global Autocorrelation Statistic.
 
     Moran’s I is a global autocorrelation statistic for some measure on a graph. It is commonly used in
     spatial data analysis to assess autocorrelation on a 2D grid. It is closely related to Geary's C,
@@ -90,7 +89,6 @@ def morans_i(
 
     Examples
     --------
-
     Calculate Moran’s I for each components of a dimensionality reduction:
 
     .. code:: python
@@ -107,6 +105,7 @@ def morans_i(
 
         alt = sc.metrics.morans_i(pbmc.obsp["connectivities"], pbmc.obsm["X_pca"].T)
         np.testing.assert_array_equal(pc_c, alt)
+
     """
     if use_graph is None:
         # Fix for anndata<0.7

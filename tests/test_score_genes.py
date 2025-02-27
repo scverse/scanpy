@@ -24,9 +24,7 @@ DATA_PATH = HERE / "_data"
 
 
 def _create_random_gene_names(n_genes, name_length) -> NDArray[np.str_]:
-    """
-    creates a bunch of random gene names (just CAPS letters)
-    """
+    """Create a bunch of random gene names (just CAPS letters)."""
     return np.array(
         [
             "".join(map(chr, np.random.randint(65, 90, name_length)))
@@ -36,9 +34,7 @@ def _create_random_gene_names(n_genes, name_length) -> NDArray[np.str_]:
 
 
 def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
-    """
-    creates a sparse matrix, with certain amounts of NaN and Zeros
-    """
+    """Create a sparse matrix with certain amounts of NaN and Zeros."""
     A = np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
     maskzero = np.random.rand(rows, cols) < percent_zero
     masknan = np.random.rand(rows, cols) < percent_nan
@@ -51,9 +47,7 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
 
 
 def _create_adata(n_obs, n_var, p_zero, p_nan):
-    """
-    creates an AnnData with random data, sparseness and some NaN values
-    """
+    """Create an AnnData with random data, sparseness and some NaN values."""
     X = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
     adata = AnnData(X)
     gene_names = _create_random_gene_names(n_var, name_length=6)
@@ -62,12 +56,11 @@ def _create_adata(n_obs, n_var, p_zero, p_nan):
 
 
 def test_score_with_reference():
-    """
-    Checks if score_genes output agrees with pre-computed reference values.
-    The reference values had been generated using the same code
-    and stored as a pickle object in ./data
-    """
+    """Checks if score_genes output agrees with pre-computed reference values.
 
+    The reference values had been generated using the same code
+    and stored as a pickle object in `./data`.
+    """
     adata = paul15()
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
@@ -80,10 +73,7 @@ def test_score_with_reference():
 
 
 def test_add_score():
-    """
-    check the dtype of the scores
-    check that non-existing genes get ignored
-    """
+    """Check the dtype of the scores and that non-existing genes get ignored."""
     # TODO: write a test that costs less resources and is more meaningful
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
@@ -101,9 +91,7 @@ def test_add_score():
 
 
 def test_sparse_nanmean():
-    """
-    check that _sparse_nanmean() is equivalent to np.nanmean()
-    """
+    """Check that _sparse_nanmean() is equivalent to np.nanmean()."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
     R, C = 60, 50
@@ -135,9 +123,7 @@ def test_sparse_nanmean():
 
 
 def test_sparse_nanmean_on_dense_matrix():
-    """
-    TypeError must be thrown when calling _sparse_nanmean with a dense matrix
-    """
+    """TypeError must be thrown when calling _sparse_nanmean with a dense matrix."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
     with pytest.raises(TypeError):
@@ -145,9 +131,7 @@ def test_sparse_nanmean_on_dense_matrix():
 
 
 def test_score_genes_sparse_vs_dense():
-    """
-    score_genes() should give the same result for dense and sparse matrices
-    """
+    """score_genes() should give the same result for dense and sparse matrices."""
     adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
 
     adata_dense = adata_sparse.copy()
@@ -164,12 +148,12 @@ def test_score_genes_sparse_vs_dense():
 
 
 def test_score_genes_deplete():
-    """
-    deplete some cells from a set of genes.
-    their score should be <0 since the sum of markers is 0 and
-    the sum of random genes is >=0
+    """Deplete some cells from a set of genes.
 
-    check that for both sparse and dense matrices
+    Their score should be <0 since the sum of markers is 0 and
+    the sum of random genes is >=0.
+
+    Check that for both sparse and dense matrices.
     """
     adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
 
@@ -191,14 +175,12 @@ def test_score_genes_deplete():
 
 
 def test_npnanmean_vs_sparsemean(monkeypatch):
-    """
-    another check that _sparsemean behaves like np.nanmean!
+    """Another check that _sparsemean behaves like np.nanmean.
 
     monkeypatch the _score_genes._sparse_nanmean function to np.nanmean
     and check that the result is the same as the non-patched (i.e. sparse_nanmean)
     function
     """
-
     adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
     gene_set = adata.var_names[:10]
 

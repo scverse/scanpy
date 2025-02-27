@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 @cache
 def _pbmc68k_reduced() -> AnnData:
-    """A small datasets with a dense `.X`"""
+    """A small datasets with a dense `.X`."""  # noqa: D401
     adata = sc.datasets.pbmc68k_reduced()
     assert isinstance(adata.X, np.ndarray)
     assert not np.isfortran(adata.X)
@@ -179,11 +179,10 @@ def get_count_dataset(
 def param_skipper(
     param_names: Sequence[str], params: tuple[Sequence[object], ...]
 ) -> ParamSkipper:
-    """Creates a decorator that will skip all combinations that contain any of the given parameters.
+    """Create a decorator that will skip all combinations that contain any of the given parameters.
 
     Examples
     --------
-
     >>> param_names = ["letters", "numbers"]
     >>> params = [["a", "b"], [3, 4, 5]]
     >>> skip_when = param_skipper(param_names, params)
@@ -194,6 +193,7 @@ def param_skipper(
     >>> run_as_asv_benchmark(func)
     b 4
     b 5
+
     """
 
     def skip(**skipped: AbstractSet) -> Callable[[C], C]:

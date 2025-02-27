@@ -38,8 +38,7 @@ def mnn_correct(
     list[pd.DataFrame],
     list[tuple[float | None, int]] | None,
 ]:
-    """\
-    Correct batch effects by matching mutual nearest neighbors :cite:p:`Haghverdi2018` :cite:p:`Kang2018`.
+    """Correct batch effects by matching mutual nearest neighbors :cite:p:`Haghverdi2018` :cite:p:`Kang2018`.
 
     This uses the implementation of mnnpy_ :cite:p:`Kang2018`.
 
@@ -125,6 +124,7 @@ def mnn_correct(
         A list containing MNN pairing information as DataFrames in each iteration step.
     angle_list
         A list containing angles of each batch.
+
     """
     if len(datas) < 2:
         return datas, [], []

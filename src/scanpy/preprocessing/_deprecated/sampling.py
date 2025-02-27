@@ -23,8 +23,7 @@ def subsample(
     random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray | _CSMatrix, NDArray[np.int64]] | None:
-    """\
-    Subsample to a fraction of the number of observations.
+    """Subsample to a fraction of the number of observations.
 
     .. deprecated:: 1.11.0
 
@@ -50,8 +49,8 @@ def subsample(
     Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
     subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
-    """
 
+    """
     rng = _legacy_numpy_gen(random_state)
     return sample(
         data=data, fraction=fraction, n=n_obs, rng=rng, copy=copy, replace=False, axis=0

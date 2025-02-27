@@ -1,3 +1,5 @@
+"""Get data from AnnData."""
+
 from __future__ import annotations
 
 from ._aggregated import aggregate

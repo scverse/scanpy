@@ -46,8 +46,7 @@ def filter_genes_dispersion(
     subset: bool = True,
     copy: bool = False,
 ) -> AnnData | np.recarray | None:
-    """\
-    Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
+    """Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
     .. deprecated:: 1.3.6
 
@@ -123,6 +122,7 @@ def filter_genes_dispersion(
 
     If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+
     """
     if n_top_genes is not None and not all(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
