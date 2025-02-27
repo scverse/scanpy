@@ -6,7 +6,7 @@ This is kept seperate from the helpers file because it relies on pytest.
 from __future__ import annotations
 
 import warnings
-from os import chdir
+from contextlib import chdir
 from typing import TYPE_CHECKING
 
 import numpy as np

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import os
 from collections import defaultdict
 from inspect import Parameter, signature
 from pathlib import Path
@@ -52,16 +51,6 @@ api_functions = [
     for name in sorted(mod.__all__)
     if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
 ]
-
-
-@pytest.fixture
-def in_project_dir():
-    wd_orig = Path.cwd()
-    os.chdir(proj_dir)
-    try:
-        yield proj_dir
-    finally:
-        os.chdir(wd_orig)
 
 
 @pytest.mark.xfail(reason="TODO: unclear if we want this to totally match, let’s see")
