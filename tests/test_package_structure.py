@@ -82,7 +82,7 @@ def is_deprecated(f: FunctionType) -> bool:
     }
 
 
-class ExpectedSig(TypedDict):
+class ExpectedSig(TypedDict):  # noqa: D101
     first_name: str
     copy_default: Any
     return_ann: str | None
@@ -149,7 +149,7 @@ def test_sig_conventions(f, qualname):
 
 
 def getsourcefile(obj):
-    """inspect.getsourcefile, but supports singledispatch"""
+    """inspect.getsourcefile, but supports singledispatch."""
     from inspect import getsourcefile
 
     if wrapped := getattr(obj, "__wrapped__", None):
@@ -159,7 +159,7 @@ def getsourcefile(obj):
 
 
 def getsourcelines(obj):
-    """inspect.getsourcelines, but supports singledispatch"""
+    """inspect.getsourcelines, but supports singledispatch."""
     from inspect import getsourcelines
 
     if wrapped := getattr(obj, "__wrapped__", None):

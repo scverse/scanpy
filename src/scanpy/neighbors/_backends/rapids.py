@@ -92,7 +92,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         return self.nn.kneighbors_graph(X_contiguous, mode="distance")
 
     def _more_tags(self) -> dict[str, Any]:
-        """See :label:`sklearn:estimator_tags`"""
+        """See :label:`sklearn:estimator_tags`."""
         return {
             "requires_y": False,
             "preserves_dtype": [np.float32],

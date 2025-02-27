@@ -34,8 +34,7 @@ def bbknn(
     local_connectivity: int = 1,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Batch balanced kNN :cite:p:`Polanski2019`.
+    """Batch balanced kNN :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell's top neighbours in
     each batch separately instead of the entire cell pool with no accounting for batch.
@@ -129,6 +128,7 @@ def bbknn(
     Returns
     -------
     The `adata` with the batch-corrected graph.
+
     """
     try:
         from bbknn import bbknn

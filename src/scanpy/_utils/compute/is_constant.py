@@ -49,8 +49,7 @@ def is_constant(a: _Array, axis: Literal[0, 1]) -> NDArray[np.bool_]: ...
 def is_constant(
     a: NDArray, axis: Literal[0, 1] | None = None
 ) -> bool | NDArray[np.bool_]:
-    """
-    Check whether values in array are constant.
+    """Check whether values in array are constant.
 
     Params
     ------
@@ -66,7 +65,6 @@ def is_constant(
 
     Example
     -------
-
     >>> a = np.array([[0, 1], [0, 0]])
     >>> a
     array([[0, 1],
@@ -77,6 +75,7 @@ def is_constant(
     array([ True, False])
     >>> is_constant(a, axis=1)
     array([False,  True])
+
     """
     raise NotImplementedError()
 

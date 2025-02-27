@@ -61,8 +61,7 @@ def scrublet(
     copy: bool = False,
     random_state: _LegacyRandom = 0,
 ) -> AnnData | None:
-    """\
-    Predict doublets using Scrublet :cite:p:`Wolock2019`.
+    """Predict doublets using Scrublet :cite:p:`Wolock2019`.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
     transcriptomes and simulated doublets. Works best if the input is a raw
@@ -169,14 +168,14 @@ def scrublet(
     ``.uns['scrublet']['parameters']``
         Dictionary of Scrublet parameters
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
     :func:`~scanpy.pl.scrublet_score_distribution`: Plot histogram of doublet
         scores for observed transcriptomes and simulated doublets.
-    """
 
+    """
     if threshold is None and not find_spec("skimage"):  # pragma: no cover
         # Scrublet.call_doublets requires `skimage` with `threshold=None` but PCA
         # is called early, which is wasteful if there is not `skimage`
@@ -319,8 +318,7 @@ def _scrublet_call_doublets(
     random_state: _LegacyRandom = 0,
     verbose: bool = True,
 ) -> AnnData:
-    """\
-    Core function for predicting doublets using Scrublet :cite:p:`Wolock2019`.
+    """Core function for predicting doublets using Scrublet :cite:p:`Wolock2019`.
 
     Predict cell doublets using a nearest-neighbor classifier of observed
     transcriptomes and simulated doublets.
@@ -399,8 +397,8 @@ def _scrublet_call_doublets(
 
     ``.uns['scrublet']['parameters']``
         Dictionary of Scrublet parameters
-    """
 
+    """
     # Estimate n_neighbors if not provided, and create scrublet object.
 
     if n_neighbors is None:
@@ -512,8 +510,7 @@ def scrublet_simulate_doublets(
     synthetic_doublet_umi_subsampling: float = 1.0,
     random_seed: _LegacyRandom = 0,
 ) -> AnnData:
-    """\
-    Simulate doublets by adding the counts of random observed transcriptome pairs.
+    """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
     Parameters
     ----------
@@ -545,14 +542,14 @@ def scrublet_simulate_doublets(
         ``.uns['scrublet']['parameters']``
             Dictionary of Scrublet parameters
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pp.scrublet`: Main way of running Scrublet, runs
         preprocessing, doublet simulation (this function) and calling.
     :func:`~scanpy.pl.scrublet_score_distribution`: Plot histogram of doublet
         scores for observed transcriptomes and simulated doublets.
-    """
 
+    """
     X = _get_obs_rep(adata, layer=layer)
     scrub = Scrublet(X, random_state=random_seed)
 

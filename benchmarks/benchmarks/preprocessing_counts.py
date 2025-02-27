@@ -1,6 +1,6 @@
-"""
-This module will benchmark preprocessing operations in Scanpy that run on counts
-API documentation: https://scanpy.readthedocs.io/en/stable/api/preprocessing.html
+"""Benchmark preprocessing operations in Scanpy that run on counts.
+
+API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.html>.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ batch_key: str | None
 
 
 def setup(dataset: Dataset, layer: KeyCount, *_):
-    """Setup global variables before each benchmark."""
+    """Set up global variables before each benchmark."""
     global adata, batch_key
     adata, batch_key = get_count_dataset(dataset, layer=layer)
     assert "log1p" not in adata.uns

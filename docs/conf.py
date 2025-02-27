@@ -1,3 +1,5 @@
+"""Configuration for Scanpy’s Sphinx documentation."""
+
 from __future__ import annotations
 
 import sys
@@ -33,7 +35,7 @@ suppress_warnings = [
 project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
-copyright = f"{datetime.now():%Y}, the Scanpy development team"
+copyright = f"{datetime.now():%Y}, scverse"
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that

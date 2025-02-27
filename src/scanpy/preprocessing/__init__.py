@@ -1,3 +1,5 @@
+"""Preprocessing functions."""
+
 from __future__ import annotations
 
 from ..neighbors import neighbors

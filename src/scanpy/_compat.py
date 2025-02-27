@@ -100,8 +100,7 @@ def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 def njit(
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
-    """\
-    Jit-compile a function using numba.
+    """Jit-compile a function using numba.
 
     On call, this function dispatches to a parallel or sequential numba function,
     depending on if it has been called from a thread pool.
@@ -159,8 +158,7 @@ def _is_in_unsafe_thread_pool() -> bool:
 
 @cache
 def _numba_threading_layer() -> Layer:
-    """\
-    Get numba’s threading layer.
+    """Get numba’s threading layer.
 
     This function implements the algorithm as described in
     <https://numba.readthedocs.io/en/stable/user/threading-layer.html>
@@ -195,7 +193,6 @@ def _legacy_numpy_gen(
     random_state: _LegacyRandom | None = None,
 ) -> np.random.Generator:
     """Return a random generator that behaves like the legacy one."""
-
     if random_state is not None:
         if isinstance(random_state, np.random.RandomState):
             np.random.set_state(random_state.get_state(legacy=False))

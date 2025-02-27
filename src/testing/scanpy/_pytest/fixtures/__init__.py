@@ -1,4 +1,4 @@
-"""This file contains some common fixtures for use in tests.
+"""Some common fixtures for use in tests.
 
 This is kept seperate from the helpers file because it relies on pytest.
 """

@@ -213,7 +213,7 @@ def test_emptycat():
 
 
 def test_log1p_save_restore(tmp_path):
-    """tests the sequence log1p→save→load→rank_genes_groups"""
+    """Tests the sequence log1p→save→load→rank_genes_groups."""
     from anndata import read_h5ad
 
     pbmc = pbmc68k_reduced()
@@ -317,12 +317,11 @@ def test_wilcoxon_huge_data(monkeypatch):
     [pytest.param(0, 0, id="equal"), pytest.param(2, 1, id="more")],
 )
 def test_mask_n_genes(n_genes_add, n_genes_out_add):
-    """\
-    Check that no. genes in output is
+    """Check if no. genes in output is correct.
+
     1. =n_genes when n_genes<sum(mask)
     2. =sum(mask) when n_genes>sum(mask)
     """
-
     pbmc = pbmc68k_reduced()
     mask_var = np.zeros(pbmc.shape[1]).astype(bool)
     mask_var[:6].fill(True)  # noqa: FBT003
@@ -342,11 +341,7 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
 
 
 def test_mask_not_equal():
-    """\
-    Check that mask is applied successfully to data set \
-    where test statistics are already available (test stats overwritten).
-    """
-
+    """Check that mask is applied successfully to data set where test statistics are already available (test stats overwritten)."""
     pbmc = pbmc68k_reduced()
     mask_var = np.random.choice([True, False], pbmc.shape[1])
     n_genes = sum(mask_var)

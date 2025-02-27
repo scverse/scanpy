@@ -104,7 +104,7 @@ def _prepare_pbmc_testdata(
     *,
     small: bool,
 ) -> AnnData:
-    """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
+    """Prepare 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
     Params
     ------

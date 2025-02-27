@@ -128,7 +128,7 @@ def neigh() -> Neighbors:
 def test_distances_euclidean(
     mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
 ):
-    """umap and gauss behave the same for distances.
+    """Umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
     """

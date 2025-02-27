@@ -1,3 +1,5 @@
+"""Extension to warn about numpydoc-style parameter types in docstrings."""
+
 from __future__ import annotations
 
 import warnings
@@ -13,6 +15,7 @@ param_warnings = {}
 
 
 def scanpy_log_param_types(self, fields, field_role="param", type_role="type"):
+    """Wrap ``NumpyDocstring._format_docutils_params``."""
     for _name, _type, _desc in fields:
         if not _type or not self._obj.__module__.startswith("scanpy"):
             continue
@@ -23,6 +26,7 @@ def scanpy_log_param_types(self, fields, field_role="param", type_role="type"):
 
 
 def show_param_warnings(app, exception):
+    """Warn about numpydoc-style parameter types in docstring."""
     import inspect
 
     for (fname, fun), params in param_warnings.items():
@@ -42,5 +46,6 @@ def show_param_warnings(app, exception):
 
 
 def setup(app: Sphinx):
+    """App setup hook."""
     NumpyDocstring._format_docutils_params = scanpy_log_param_types
     app.connect("build-finished", show_param_warnings)

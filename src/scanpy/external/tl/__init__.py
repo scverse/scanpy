@@ -1,3 +1,5 @@
+"""External analysis tools."""
+
 from __future__ import annotations
 
 from ._harmony_timeseries import harmony_timeseries
