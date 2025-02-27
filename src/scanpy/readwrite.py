@@ -395,7 +395,7 @@ def read_visium(
 
     See :func:`~scanpy.pl.spatial` for a compatible plotting function.
 
-    .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+    .. _Space Ranger output docs: <https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview>
 
     Parameters
     ----------

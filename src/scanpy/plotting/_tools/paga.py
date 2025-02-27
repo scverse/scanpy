@@ -455,7 +455,7 @@ def paga(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
         A matplotlib axes object.
 
@@ -1115,7 +1115,7 @@ def paga_path(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
          A matplotlib axes object.
 

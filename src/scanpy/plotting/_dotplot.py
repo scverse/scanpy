@@ -442,10 +442,10 @@ class DotPlot(BasePlot):
         show_colorbar
             Set to `False` to hide the colorbar legend
         size_title
-            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            Title for the dot size legend. Use ``\n`` to add line breaks. Appears on top
             of dot sizes
         colorbar_title
-            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            Title for the color bar. Use ``\n`` to add line breaks. Appears on top of the
             color bar
         width
             Width of the legends area. The unit is the same as in matplotlib (inches).
@@ -907,7 +907,7 @@ def dotplot(
     {common_plot_args}
     {groupby_plots_args}
     size_title
-        Title for the size legend. New line character (\\n) can be used.
+        Title for the size legend. New line character (\n) can be used.
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is

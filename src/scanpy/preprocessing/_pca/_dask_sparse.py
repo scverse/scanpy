@@ -168,11 +168,11 @@ def _cov_sparse_dask(
 
     Returns
     -------
-    :math:`\\cov(X, X)`
-        The covariance matrix of `x` in the form :math:`\\cov(X, X) = \\E(XX) - \\E(X)\\E(X)`.
-    :math:`\\gram(X, X)`
-        When return_gram is `True`, the gram matrix of `x` in the form :math:`\\frac{1}{n} X.T \\dot X`.
-    :math:`\\mean(X)`
+    :math:`\cov(X, X)`
+        The covariance matrix of `x` in the form :math:`\cov(X, X) = \E(XX) - \E(X)\E(X)`.
+    :math:`\gram(X, X)`
+        When return_gram is `True`, the gram matrix of `x` in the form :math:`\frac{1}{n} X.T \dot X`.
+    :math:`\mean(X)`
         The row means of `x`.
 
     """

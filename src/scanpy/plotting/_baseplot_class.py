@@ -451,7 +451,7 @@ class BasePlot:
             Set to 'False' to hide the default plot of the legend. This sets the
             legend width to zero which will result in a wider main plot.
         title
-            Legend title. Appears on top of the color bar. Use '\\n' to add line breaks.
+            Legend title. Appears on top of the color bar. Use ``\n`` to add line breaks.
         width
             Width of the legend. The unit is the same as in matplotlib (inches)
 

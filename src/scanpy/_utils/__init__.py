@@ -53,6 +53,7 @@ _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
+    from types import FunctionType
     from typing import Any, TypeVar
 
     from anndata import AnnData
@@ -64,6 +65,8 @@ if TYPE_CHECKING:
 
     _MemoryArray = NDArray | _CSMatrix
     _SupportedArray = _MemoryArray | DaskArray
+
+    _ForT = TypeVar("_ForT", bound=FunctionType | type)
 
 
 SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
@@ -242,8 +245,9 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def _doc_params(**kwds):
-    def dec(obj):
+def _doc_params(**kwds: str):
+    def dec(obj: _ForT) -> _ForT:
+        assert obj.__doc__
         obj.__doc__ = obj.__doc__.format_map(kwds)
         return obj
 
