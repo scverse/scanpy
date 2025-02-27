@@ -188,7 +188,8 @@ DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 def test_doc_shape(ds_name):
     dataset_fn: Callable[[], AnnData] = getattr(sc.datasets, ds_name)
     assert dataset_fn.__doc__, "No docstring"
-    docstring = dedent(dataset_fn.__doc__)
+    start_line_2 = dataset_fn.__doc__.find("\n") + 1
+    docstring = dedent(dataset_fn.__doc__[start_line_2:])
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
