@@ -34,8 +34,7 @@ class QuietMarkDecorator(pytest.MarkDecorator):
 
 
 class needs(QuietMarkDecorator, Enum):
-    """
-    Pytest skip marker evaluated at module import.
+    """Pytest skip marker evaluated at module import.
 
     This allows us to see the amount of skipped tests at the start of a test run.
     :func:`pytest.importorskip` skips tests after they started running.
@@ -46,7 +45,7 @@ class needs(QuietMarkDecorator, Enum):
     def _generate_next_value_(
         name: str, start: int, count: int, last_values: list[str]
     ) -> str:
-        """Distribution name for matching modules"""
+        """Distribution name for matching modules."""
         return name.replace("_", "-")
 
     mod: str

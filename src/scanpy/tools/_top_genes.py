@@ -1,8 +1,6 @@
 # Author: T. Callies
 #
-"""\
-This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
-"""
+"""All non-visualization tools for advanced gene ranking and exploration of genes."""
 
 from __future__ import annotations
 
@@ -35,8 +33,7 @@ def correlation_matrix(
     method: Literal["pearson", "kendall", "spearman"] = "pearson",
     annotation_key: str | None = None,
 ) -> None:
-    """\
-    Calculate correlation matrix.
+    """Calculate correlation matrix.
 
     Calculate a correlation matrix for genes stored in sample annotation
     using :func:`~scanpy.tl.rank_genes_groups`.
@@ -74,8 +71,8 @@ def correlation_matrix(
             Spearman rank correlation
     annotation_key
         Allows defining the name of the anndata entry where results are stored.
-    """
 
+    """
     # TODO: At the moment, only works for int identifiers
 
     # If no genes are passed, selects ranked genes from sample annotation.
@@ -134,8 +131,7 @@ def ROC_AUC_analysis(
     group: str | None = None,
     n_genes: int = 100,
 ):
-    """\
-    Calculate correlation matrix.
+    """Calculate correlation matrix.
 
     Calculate a correlation matrix for genes strored in sample annotation
 
@@ -152,6 +148,7 @@ def ROC_AUC_analysis(
     n_genes
         For how many genes to calculate ROC and AUC. If no parameter is passed,
         calculation is done for all stored top ranked genes.
+
     """
     if group is None:
         pass

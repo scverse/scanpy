@@ -65,8 +65,7 @@ def louvain(
     obsp: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
+    """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
@@ -139,6 +138,7 @@ def louvain(
     `adata.uns['louvain' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")

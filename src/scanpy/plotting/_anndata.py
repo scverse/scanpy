@@ -119,8 +119,7 @@ def scatter(
     save: str | bool | None = None,
     ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
-    """\
-    Scatter plot along observations or variables axes.
+    """Scatter plot along observations or variables axes.
 
     Color the plot using annotations of observations (`.obs`), variables
     (`.var`) or expression of genes (`.var_names`).
@@ -151,6 +150,7 @@ def scatter(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
     """
     # color can be a obs column name or a matplotlib color specification (or a collection thereof)
     if color is not None:
@@ -189,7 +189,8 @@ def _check_if_annotations(
     colors: Collection[str | ColorLike] | None = None,
     use_raw: bool | None = None,
 ) -> bool:
-    """Checks if `x`, `y`, and `colors` are annotations of `adata`.
+    """Check if `x`, `y`, and `colors` are annotations of `adata`.
+
     In the case of `colors`, valid matplotlib colors are also accepted.
 
     If `axis_name` is `obs`, checks in `adata.obs.columns` and `adata.var_names`,
@@ -587,8 +588,7 @@ def ranking(
     include_lowest: bool = False,
     show: bool | None = None,
 ) -> gridspec.GridSpec | None:
-    """\
-    Plot rankings.
+    """Plot rankings.
 
     See, for example, how this is used in pl.pca_loadings.
 
@@ -604,6 +604,7 @@ def ranking(
     Returns
     -------
     Returns matplotlib gridspec with access to the axes.
+
     """
     if isinstance(keys, str) and indices is not None:
         scores = getattr(adata, attr)[keys][:, indices]
@@ -733,8 +734,7 @@ def violin(
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
-    """\
-    Violin plot.
+    """Violin plot.
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
@@ -831,9 +831,10 @@ def violin(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pl.stacked_violin
+
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -984,8 +985,7 @@ def clustermap(
     save: bool | str | None = None,
     **kwds,
 ) -> ClusterGrid | None:
-    """\
-    Hierarchically-clustered heatmap.
+    """Hierarchically-clustered heatmap.
 
     Wraps :func:`seaborn.clustermap` for :class:`~anndata.AnnData`.
 
@@ -1021,6 +1021,7 @@ def clustermap(
         :context: close-figs
 
         sc.pl.clustermap(adata, obs_keys='cell_type')
+
     """
     import seaborn as sns  # Slow import, only import if called
 
@@ -1102,8 +1103,7 @@ def heatmap(
     norm: Normalize | None = None,
     **kwds,
 ) -> dict[str, Axes] | None:
-    """\
-    Heatmap of the expression values of genes.
+    """Heatmap of the expression values of genes.
 
     If `groupby` is given, the heatmap is ordered by the respective group. For
     example, a list of marker genes can be plotted, ordered by clustering. If
@@ -1132,7 +1132,7 @@ def heatmap(
     Dict of :class:`~matplotlib.axes.Axes`
 
     Examples
-    -------
+    --------
     .. plot::
         :context: close-figs
 
@@ -1143,10 +1143,11 @@ def heatmap(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pl.rank_genes_groups_heatmap
     tl.rank_genes_groups
+
     """
     var_names, var_group_labels, var_group_positions = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
@@ -1511,7 +1512,8 @@ def tracksplot(
     figsize: tuple[float, float] | None = None,
     **kwds,
 ) -> dict[str, Axes] | None:
-    """\
+    """Compact plot of expression of a list of genes.
+
     In this type of plot each var_name is plotted as a filled line plot where the
     y values correspond to the var_name values and x is each of the cells. Best results
     are obtained when using raw counts that are not log.
@@ -1532,7 +1534,6 @@ def tracksplot(
 
     Examples
     --------
-
     Using var_names as list:
 
     .. plot::
@@ -1553,11 +1554,11 @@ def tracksplot(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pl.rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-    """
 
+    """
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != "category":
         msg = (
             "groupby has to be a valid categorical observation. "
@@ -1767,8 +1768,7 @@ def dendrogram(
     save: str | bool | None = None,
     ax: Axes | None = None,
 ) -> Axes:
-    """\
-    Plots a dendrogram of the categories defined in `groupby`.
+    """Plot a dendrogram of the categories defined in `groupby`.
 
     See :func:`~scanpy.tl.dendrogram`.
 
@@ -1849,8 +1849,7 @@ def correlation_matrix(
     norm: Normalize | None = None,
     **kwds,
 ) -> list[Axes] | None:
-    """\
-    Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
+    """Plot the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
     ----------
@@ -1883,10 +1882,10 @@ def correlation_matrix(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
-    """
+    >>> sc.tl.dendrogram(adata, "bulk_labels")
+    >>> sc.pl.correlation_matrix(adata, "bulk_labels")
 
+    """
     dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
 
     index = adata.uns[dendrogram_key]["categories_idx_ordered"]
@@ -2012,9 +2011,7 @@ def _prepare_dataframe(
     layer: str | None = None,
     gene_symbols: str | None = None,
 ) -> tuple[Sequence[str], pd.DataFrame]:
-    """
-    Given the anndata object, prepares a data frame in which the row index are the categories
-    defined by group by and the columns correspond to var_names.
+    """Prepare a data frame of categories (`groupby`) × `var_names`.
 
     Parameters
     ----------
@@ -2042,8 +2039,8 @@ def _prepare_dataframe(
     Returns
     -------
     Tuple of `pandas.DataFrame` and list of categories.
-    """
 
+    """
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw, layer=layer)
     if isinstance(var_names, str):
@@ -2133,8 +2130,8 @@ def _plot_gene_groups_brackets(
     rotation: float | None = None,
     orientation: Literal["top", "right"] = "top",
 ):
-    """\
-    Draws brackets that represent groups of genes on the give axis.
+    """Draw brackets that represent groups of genes on the give axis.
+
     For best results, this axis is located on top of an image whose
     x axis contains gene names.
 
@@ -2166,9 +2163,11 @@ def _plot_gene_groups_brackets(
         rotated, otherwise, they are rotated 90 degrees
     orientation
         location of the brackets. Either `top` or `right`
+
     Returns
     -------
     None
+
     """
     import matplotlib.patches as patches
     from matplotlib.path import Path
@@ -2266,9 +2265,7 @@ def _reorder_categories_after_dendrogram(
     var_group_positions: Sequence[tuple[int, int]] | None,
     categories: Sequence[str],
 ):
-    """\
-    Function used by plotting functions that need to reorder the the groupby
-    observations based on the dendrogram results.
+    """Reorder the the groupby observations based on the dendrogram results.
 
     The function checks if a dendrogram has already been precomputed.
     If not, `sc.tl.dendrogram` is run with default parameters.
@@ -2282,8 +2279,8 @@ def _reorder_categories_after_dendrogram(
     dictionary with keys:
     'categories_idx_ordered', 'var_group_names_idx_ordered',
     'var_group_labels', and 'var_group_positions'
-    """
 
+    """
     if isinstance(groupby, str):
         groupby = [groupby]
 
@@ -2421,18 +2418,16 @@ def _plot_dendrogram(
     remove_labels: bool = True,
     ticks: Collection[float] | None = None,
 ):
-    """\
-    Plots a dendrogram on the given ax using the precomputed dendrogram
-    information stored in `.uns[dendrogram_key]`
-    """
+    """Plot a dendrogram on the given ax.
 
+    Uses the precomputed dendrogram information stored in `.uns[dendrogram_key]`.
+    """
     dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
 
     def translate_pos(pos_list, new_ticks, old_ticks):
-        """\
-        transforms the dendrogram coordinates to a given new position.
-        The xlabel_pos and orig_ticks should be of the same
-        length.
+        """Transform the dendrogram coordinates to a given new position.
+
+        The xlabel_pos and orig_ticks should be of the same length.
 
         This is mostly done for the heatmap case, where the position of the
         dendrogram leaves needs to be adjusted depending on the category size.
@@ -2456,10 +2451,11 @@ def _plot_dendrogram(
         --------
         >>> translate_pos(
         ...     [5, 15, 20, 21],
-        ...     [0,  1,  2, 3 ],
+        ...     [0, 1, 2, 3],
         ...     [5, 15, 25, 35],
         ... )
         [0, 1, 1.5, 1.6]
+
         """
         # of given coordinates.
 
@@ -2544,9 +2540,10 @@ def _plot_categories_as_colorblocks(
     orientation: Literal["top", "bottom", "left", "right"] = "left",
     cmap_name: str = "tab20",
 ):
-    """\
-    Plots categories as colored blocks. If orientation is 'left', the categories
-    are plotted vertically, otherwise they are plotted horizontally.
+    """Plot categories as colored blocks.
+
+    If orientation is 'left', the categories are plotted vertically,
+    otherwise they are plotted horizontally.
 
     Parameters
     ----------
@@ -2561,8 +2558,8 @@ def _plot_categories_as_colorblocks(
     Returns
     -------
     ticks position, labels, colormap
-    """
 
+    """
     groupby = obs_tidy.index.name
     from matplotlib.colors import BoundaryNorm, ListedColormap
 
@@ -2641,9 +2638,9 @@ def _plot_categories_as_colorblocks(
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
-    """
-    Plots a vertical color bar based on mappable.
-    The height of the colorbar is min(figure-height, max_cmap_height)
+    """Plot a vertical color bar based on mappable.
+
+    The height of the colorbar is min(figure-height, max_cmap_height).
 
     Parameters
     ----------
@@ -2659,6 +2656,7 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     Returns
     -------
     color bar ax
+
     """
     width, height = fig.get_size_inches()
     if height > max_cbar_height:
@@ -2678,9 +2676,7 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
 
 
 def _check_var_names_type(var_names, var_group_labels, var_group_positions):
-    """
-    checks if var_names is a dict. Is this is the cases, then set the
-    correct values for var_group_labels and var_group_positions
+    """If var_names is a dict, set the `var_group_labels` and `var_group_positions`.
 
     Returns
     -------

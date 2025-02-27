@@ -48,8 +48,7 @@ def leiden(
     flavor: Literal["leidenalg", "igraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Traag2019`.
+    """Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
@@ -119,6 +118,7 @@ def leiden(
     `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
     if flavor not in {"igraph", "leidenalg"}:
         msg = (

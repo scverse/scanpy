@@ -44,8 +44,7 @@ def tsne(
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
+    r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
     t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) was
     proposed for visualizating single-cell data by :cite:t:`Amir2013`. Here, by default,
@@ -91,11 +90,11 @@ def tsne(
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
     key_added
         If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_tsne']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['tsne']`.
+        :attr:`~anndata.AnnData.obsm`\ `['X_tsne']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['tsne']`.
         If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     copy
         Return a copy instead of writing to `adata`.
 

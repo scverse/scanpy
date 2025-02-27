@@ -873,7 +873,7 @@ def test_rank_genes_group_axes(image_comparer):
 
 @pytest.fixture(scope="session")
 def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
-    """Create two anndata objects which are equivalent except for var_names
+    """Create two anndata objects which are equivalent except for var_names.
 
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
     ids as var_names, the second has symbols.
@@ -965,10 +965,7 @@ def test_plot_rank_genes_groups_gene_symbols(
     ],
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
-    """\
-    Checks that passing a negative value for n_genes works, and that passing
-    var_names as a dict works.
-    """
+    """Checks that once can pass a negative value for n_genes and var_names as a dict."""
     N = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
@@ -1382,8 +1379,7 @@ def test_scatter_specify_layer_and_raw():
     "color", ["n_genes", "bulk_labels", ["n_genes", "bulk_labels"]]
 )
 def test_scatter_no_basis_per_obs(image_comparer, color):
-    """Test scatterplot of per-obs points with no basis"""
-
+    """Test scatterplot of per-obs points with no basis."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1401,8 +1397,7 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
 
 
 def test_scatter_no_basis_per_var(image_comparer):
-    """Test scatterplot of per-var points with no basis"""
-
+    """Test scatterplot of per-var points with no basis."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1445,7 +1440,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw
     ],
 )
 def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
-    """Test that `scatter()` raises `ValueError` where appropriate
+    """Test that `scatter()` raises `ValueError` where appropriate.
 
     If `sc.pl.scatter()` receives variable labels that either cannot be
     found or are incompatible with one another, the function should
@@ -1481,9 +1476,7 @@ def test_rankings(image_comparer):
 
 # TODO: Make more generic
 def test_scatter_rep(tmp_path):
-    """
-    Test to make sure I can predict when scatter reps should be the same
-    """
+    """Test to make sure I can predict when scatter reps should be the same."""
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1728,7 +1721,7 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
 
 
 def test_umap_mask_equal(tmp_path, check_same_image):
-    """Check that all desired cells are coloured and masked cells gray"""
+    """Check that all desired cells are coloured and masked cells gray."""
     pbmc = pbmc3k_processed()
     mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
@@ -1755,7 +1748,7 @@ def test_umap_mask_mult_plots():
 
 
 def test_string_mask(tmp_path, check_same_image):
-    """Check that the same mask given as string or bool array provides the same result"""
+    """Check that the same mask given as string or bool array provides the same result."""
     pbmc = pbmc3k_processed()
     pbmc.obs["mask"] = mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 

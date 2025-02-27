@@ -1,5 +1,5 @@
-"""
-Functions returning copies of datasets as cheaply as possible,
+"""Functions returning copies of datasets as cheaply as possible.
+
 i.e. without having to hit the disk or (in case of ``_pbmc3k_normalized``) recomputing normalization.
 """
 

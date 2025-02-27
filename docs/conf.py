@@ -1,3 +1,5 @@
+"""Configuration for Scanpy’s Sphinx documentation."""
+
 from __future__ import annotations
 
 import sys
