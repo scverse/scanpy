@@ -242,6 +242,14 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
+def _doc_params(**kwds):
+    def dec(obj):
+        obj.__doc__ = obj.__doc__.format_map(kwds)
+        return obj
+
+    return dec
+
+
 def _check_array_function_arguments(**kwargs):
     """Check for invalid arguments when an array is passed.
 
