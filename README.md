@@ -25,8 +25,8 @@ If you'd like to contribute by opening an issue or creating a pull request, plea
 
 [//]: # (numfocus-fiscal-sponsor-attribution)
 
-scanpy is part of the scverse project ([website](https://scverse.org), [governance](https://scverse.org/about/roles)) and is fiscally sponsored by [NumFOCUS](https://numfocus.org/).
-If you like scverse and want to support our mission, please consider making a [donation](https://numfocus.org/donate-to-scverse) to support our efforts.
+scanpy is part of the scverse® project ([website](https://scverse.org), [governance](https://scverse.org/about/roles)) and is fiscally sponsored by [NumFOCUS](https://numfocus.org/).
+If you like scverse® and want to support our mission, please consider making a [donation](https://numfocus.org/donate-to-scverse) to support our efforts.
 
 <div align="center">
 <a href="https://numfocus.org/project/scverse">
