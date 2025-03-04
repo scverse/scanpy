@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = [
-#   "tomli; python_version < '3.11'",
-#   "packaging",
-# ]
+# requires-python = ">=3.11"
+# dependencies = [ "packaging" ]
 # ///
 """Parse a pyproject.toml file and output a list of minimum dependencies."""
 
@@ -11,16 +9,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
 from collections import deque
 from contextlib import ExitStack
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 from packaging.requirements import Requirement
 from packaging.version import Version
@@ -48,7 +42,8 @@ def min_dep(req: Requirement) -> Requirement:
         spec for spec in req.specifier if spec.operator in {"==", "~=", ">=", ">"}
     ]
     if not filter_specs:
-        return Requirement(req_name)
+        # TODO: handle markers
+        return Requirement(f"{req_name}{req.specifier}")
 
     min_version = Version("0.0.0.a1")
     for spec in filter_specs:
