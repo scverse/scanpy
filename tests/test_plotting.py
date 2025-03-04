@@ -1746,12 +1746,16 @@ def test_umap_mask_mult_plots():
     assert isinstance(axes, list)
     assert len(axes) == len(color)
 
+
 def test_umap_mask_no_modification():
     """Check that mask_obs argument doesn't affect the data being plotted"""
     pbmc = pbmc3k_processed()
     data_copy = pbmc.obs["louvain"].copy()
-    sc.pl.umap(pbmc, mask_obs=(pbmc.obs['louvain'] == 'B cells'), color='louvain', show=False)
+    sc.pl.umap(
+        pbmc, mask_obs=(pbmc.obs["louvain"] == "B cells"), color="louvain", show=False
+    )
     pd.testing.assert_series_equal(pbmc.obs["louvain"], data_copy)
+
 
 def test_string_mask(tmp_path, check_same_image):
     """Check that the same mask given as string or bool array provides the same result."""
