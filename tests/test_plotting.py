@@ -1748,7 +1748,7 @@ def test_umap_mask_mult_plots():
 
 
 def test_umap_mask_no_modification():
-    """Check that mask_obs argument doesn't affect the data being plotted"""
+    """Check that mask_obs argument doesn't affect the data being plotted."""
     pbmc = pbmc3k_processed()
     data_copy = pbmc.obs["louvain"].copy()
     sc.pl.umap(
