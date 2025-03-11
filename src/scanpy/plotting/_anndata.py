@@ -48,7 +48,7 @@ from ._utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Literal
+    from typing import Literal, Self
 
     from anndata import AnnData
     from cycler import Cycler
@@ -74,6 +74,26 @@ if TYPE_CHECKING:
 class VarGroups(NamedTuple):
     labels: Sequence[str]
     positions: Sequence[tuple[int, int]]
+
+    @classmethod
+    def validate(
+        cls, labels: Sequence[str] | None, positions: Sequence[tuple[int, int]] | None
+    ) -> Self | None:
+        if labels is None and positions is None:
+            return None
+        if labels is None or positions is None:
+            msg = (
+                "If var_group_labels or var_group_positions are given, "
+                "both have to be given."
+            )
+            raise ValueError(msg)
+        if len(labels) != len(positions):
+            msg = (
+                "var_group_labels and var_group_positions must have the same length. "
+                f"Got {len(labels)=} and {len(positions)=}."
+            )
+            raise ValueError(msg)
+        return None if len(labels) == 0 else cls(labels, positions)
 
 
 @old_positionals(
@@ -1276,20 +1296,16 @@ def heatmap(
             width, height = figsize
             heatmap_width = width - (dendro_width + groupby_width)
 
-        if var_groups is not None and len(var_groups.positions) > 0:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            height_ratios = [0.15, height]
-        else:
-            height_ratios = [0, height]
-
-        width_ratios = [
+        # add some space in case 'brackets' want to be plotted on top of the image
+        height_ratios = (0 if var_groups is None else 0.15, height)
+        width_ratios = (
             groupby_width,
             heatmap_width,
             dendro_width,
             colorbar_width,
-        ]
-        fig = plt.figure(figsize=(width, height))
+        )
 
+        fig = plt.figure(figsize=(width, height))
         axs = gridspec.GridSpec(
             nrows=2,
             ncols=4,
@@ -1351,7 +1367,7 @@ def heatmap(
             )
 
         # plot group legends on top of heatmap_ax (if given)
-        if var_groups is not None and len(var_groups.positions) > 0:
+        if var_groups is not None:
             gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
             _plot_gene_groups_brackets(
                 gene_groups_ax,
@@ -1381,13 +1397,9 @@ def heatmap(
             width, height = figsize
             heatmap_height = height - (dendro_height + groupby_height)
 
-        height_ratios = [dendro_height, heatmap_height, groupby_height]
-
-        if var_groups is not None and len(var_groups.positions) > 0:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            width_ratios = [width, 0.14, colorbar_width]
-        else:
-            width_ratios = [width, 0, colorbar_width]
+        height_ratios = (dendro_height, heatmap_height, groupby_height)
+        # add some space in case 'brackets' want to be plotted on top of the image
+        width_ratios = (width, 0 if var_groups is None else 0.14, colorbar_width)
 
         fig = plt.figure(figsize=(width, height))
         axs = gridspec.GridSpec(
@@ -1453,7 +1465,7 @@ def heatmap(
             )
 
         # plot group legends next to the heatmap_ax (if given)
-        if var_groups is not None and len(var_groups.positions) > 0:
+        if var_groups is not None:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
             for idx, (label, pos) in enumerate(
@@ -1474,7 +1486,7 @@ def heatmap(
         return_ax_dict["groupby_ax"] = groupby_ax
     if dendrogram:
         return_ax_dict["dendrogram_ax"] = dendro_ax
-    if var_groups is not None and len(var_groups.positions) > 0:
+    if var_groups is not None:
         return_ax_dict["gene_groups_ax"] = gene_groups_ax
 
     _utils.savefig_or_show("heatmap", show=show, save=save)
@@ -1734,7 +1746,7 @@ def tracksplot(
             ticks=ticks,
         )
 
-    if var_groups is not None and len(var_groups.positions) > 0:
+    if var_groups is not None:
         gene_groups_ax = fig.add_subplot(axs[1:-1, 1])
         arr = []
         for idx, pos in enumerate(var_groups.positions):
@@ -1748,7 +1760,7 @@ def tracksplot(
     return_ax_dict = {"track_axes": axs_list, "groupby_ax": groupby_ax}
     if dendrogram:
         return_ax_dict["dendrogram_ax"] = dendro_ax
-    if var_groups is not None and len(var_groups.positions) > 0:
+    if var_groups is not None:
         return_ax_dict["gene_groups_ax"] = gene_groups_ax
 
     _utils.savefig_or_show("tracksplot", show=show, save=save)
@@ -2716,15 +2728,4 @@ def _check_var_names_type(
     elif isinstance(var_names, str):
         var_names = [var_names]
 
-    if var_group_labels is not None or var_group_positions is not None:
-        if var_group_labels is None or var_group_positions is None:
-            msg = (
-                "If var_group_labels or var_group_positions are given, "
-                "both have to be given."
-            )
-            raise ValueError(msg)
-        var_groups = VarGroups(var_group_labels, var_group_positions)
-    else:
-        var_groups = None
-
-    return var_names, var_groups
+    return var_names, VarGroups.validate(var_group_labels, var_group_positions)

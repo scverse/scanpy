@@ -135,20 +135,12 @@ class BasePlot:
         **kwds,
     ):
         self.var_names, self.var_groups = _var_groups(var_names, ref=adata.var_names)
-        match (var_group_labels, var_group_positions, self.var_groups):
-            case (None, None, _):
-                pass  # inferred from `var_names`
-            case (None, _, _) | (_, None, _):
-                msg = "both or none of var_group_labels and var_group_positions must be set"
-                raise TypeError(msg)
-            case (_, _, None):
-                if len(var_group_labels) != len(var_group_positions):
-                    msg = "var_group_labels and var_group_positions must have the same length"
-                    raise ValueError(msg)
-                self.var_groups = VarGroups(var_group_labels, var_group_positions)
-            case (_, _, _):
-                msg = "var_group_labels and var_group_positions cannot be set if var_names is a dict"
-                raise TypeError(msg)
+        if self.var_groups is None:
+            self.var_groups = VarGroups.validate(var_group_labels, var_group_positions)
+        elif var_group_labels is not None or var_group_positions is not None:
+            msg = "var_group_labels and var_group_positions cannot be set if var_names is a dict"
+            raise TypeError(msg)
+        del var_group_labels, var_group_positions
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
 
@@ -1045,6 +1037,8 @@ def _var_groups(
     if not isinstance(var_names, Mapping):
         var_names = [var_names] if isinstance(var_names, str) else var_names
         return var_names, None
+    if len(var_names) == 0:
+        return [], None
 
     var_group_labels: list[str] = []
     var_names_seq: list[str] = []
