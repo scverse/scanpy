@@ -423,7 +423,7 @@ class ScanpyConfig:
         format: _Format = "pdf",
         facecolor: str | None = None,
         transparent: bool = False,
-        ipython_format: str = "png2x",
+        ipython_format: str | Iterable[str] = "retina",
     ) -> None:
         """Set resolution/size, styling and format of figures.
 
@@ -456,15 +456,19 @@ class ScanpyConfig:
             `rcParams['savefig.transparent']`.
         ipython_format
             Only concerns the notebook/IPython environment; see
-            :func:`~IPython.display.set_matplotlib_formats` for details.
+            `matplotlib_inline.backend_inline.set_matplotlib_formats
+            <https://github.com/ipython/matplotlib-inline/blob/b93777db35267acefe6e37d14214360362d2e8b2/matplotlib_inline/backend_inline.py#L280-L281>`_
+            for details.
 
         """
         if self._is_run_from_ipython():
-            import IPython
+            # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
+            from matplotlib_inline.backend_inline import set_matplotlib_formats
 
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
-            IPython.display.set_matplotlib_formats(*ipython_format)
+
+            set_matplotlib_formats(*ipython_format)
 
         from matplotlib import rcParams
 
