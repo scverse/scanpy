@@ -1171,11 +1171,9 @@ def heatmap(
     )
 
     # check if var_group_labels are a subset of categories:
-    if var_groups is not None:
-        if set(var_groups.labels).issubset(categories):
-            var_groups_subset_of_groupby = True
-        else:
-            var_groups_subset_of_groupby = False
+    var_groups_subset_of_groupby = var_groups is not None and set(
+        var_groups.labels
+    ).issubset(categories)
 
     if standard_scale == "obs":
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -1225,8 +1223,7 @@ def heatmap(
             categories=categories,
         )
 
-        var_group_labels = dendro_data["var_group_labels"]
-        var_group_positions = dendro_data["var_group_positions"]
+        var_groups = dendro_data["var_groups"]
 
         # reorder obs_tidy
         if dendro_data["var_names_idx_ordered"] is not None:
@@ -1279,7 +1276,7 @@ def heatmap(
             width, height = figsize
             heatmap_width = width - (dendro_width + groupby_width)
 
-        if var_group_positions is not None and len(var_group_positions) > 0:
+        if var_groups is not None and len(var_groups.positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
             height_ratios = [0.15, height]
         else:
@@ -1354,12 +1351,12 @@ def heatmap(
             )
 
         # plot group legends on top of heatmap_ax (if given)
-        if var_group_positions is not None and len(var_group_positions) > 0:
+        if var_groups is not None and len(var_groups.positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
             _plot_gene_groups_brackets(
                 gene_groups_ax,
-                group_positions=var_group_positions,
-                group_labels=var_group_labels,
+                group_positions=var_groups.positions,
+                group_labels=var_groups.labels,
                 rotation=var_group_rotation,
                 left_adjustment=-0.3,
                 right_adjustment=0.3,
@@ -1386,7 +1383,7 @@ def heatmap(
 
         height_ratios = [dendro_height, heatmap_height, groupby_height]
 
-        if var_group_positions is not None and len(var_group_positions) > 0:
+        if var_groups is not None and len(var_groups.positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
             width_ratios = [width, 0.14, colorbar_width]
         else:
@@ -1456,11 +1453,11 @@ def heatmap(
             )
 
         # plot group legends next to the heatmap_ax (if given)
-        if var_group_positions is not None and len(var_group_positions) > 0:
+        if var_groups is not None and len(var_groups.positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
             for idx, (label, pos) in enumerate(
-                zip(var_group_labels, var_group_positions)
+                zip(var_groups.labels, var_groups.positions)
             ):
                 label_code = label2code[label] if var_groups_subset_of_groupby else idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
@@ -1477,7 +1474,7 @@ def heatmap(
         return_ax_dict["groupby_ax"] = groupby_ax
     if dendrogram:
         return_ax_dict["dendrogram_ax"] = dendro_ax
-    if var_group_positions is not None and len(var_group_positions) > 0:
+    if var_groups is not None and len(var_groups.positions) > 0:
         return_ax_dict["gene_groups_ax"] = gene_groups_ax
 
     _utils.savefig_or_show("heatmap", show=show, save=save)

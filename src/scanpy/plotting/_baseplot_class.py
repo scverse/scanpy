@@ -13,7 +13,12 @@ from matplotlib import pyplot as plt
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
-from ._anndata import VarGroups, _plot_dendrogram, _prepare_dataframe
+from ._anndata import (
+    VarGroups,
+    _plot_dendrogram,
+    _prepare_dataframe,
+    _reorder_categories_after_dendrogram,
+)
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
@@ -888,12 +893,10 @@ class BasePlot:
         Returns
         -------
         `None`, internally updates
-        'categories_idx_ordered', 'var_group_names_idx_ordered',
-        'var_group_labels' and 'var_group_positions'
+        `categories_idx_ordered`, `var_group_names_idx_ordered`,
+        `var_group_labels`, `var_group_positions`, and `var_groups`
 
         """
-        from ._anndata import _reorder_categories_after_dendrogram
-
         rv = _reorder_categories_after_dendrogram(
             self.adata,
             self.groupby,
