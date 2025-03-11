@@ -2148,6 +2148,7 @@ def _plot_var_groups_brackets(
     right_adjustment: float = 0.3,
     rotation: float | None = None,
     orientation: Literal["top", "right"] = "top",
+    wide: bool = False,
 ) -> None:
     """Draw brackets that represent groups of genes on the give axis.
 
@@ -2187,7 +2188,6 @@ def _plot_var_groups_brackets(
     from matplotlib.path import Path
 
     # get the 'brackets' coordinates as lists of start and end positions
-
     left = [x[0] + left_adjustment for x in var_groups.positions]
     right = [x[1] + right_adjustment for x in var_groups.positions]
 
@@ -2209,25 +2209,22 @@ def _plot_var_groups_brackets(
             codes.append(Path.LINETO)
             codes.append(Path.LINETO)
 
-            try:
-                group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-                var_groups_ax.text(
-                    group_x_center,
-                    1.1,
-                    var_groups.labels[idx],
-                    ha="center",
-                    va="bottom",
-                    rotation=rotation,
-                )
-            except Exception:  # TODO catch the correct exception
-                pass
+            group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
+            var_groups_ax.text(
+                group_x_center,
+                1.1,
+                var_groups.labels[idx],
+                ha="center",
+                va="bottom",
+                rotation=rotation,
+            )
     else:
         top = left
         bottom = right
         for idx in range(len(top)):
             verts.append((0, top[idx]))  # upper-left
-            verts.append((0.15, top[idx]))  # upper-right
-            verts.append((0.15, bottom[idx]))  # lower-right
+            verts.append((0.4 if wide else 0.15, top[idx]))  # upper-right
+            verts.append((0.4 if wide else 0.15, bottom[idx]))  # lower-right
             verts.append((0, bottom[idx]))  # lower-left
 
             codes.append(Path.MOVETO)
@@ -2235,27 +2232,23 @@ def _plot_var_groups_brackets(
             codes.append(Path.LINETO)
             codes.append(Path.LINETO)
 
-            try:
-                diff = bottom[idx] - top[idx]
-                group_y_center = top[idx] + float(diff) / 2
-                # cut label to fit available space
-                label = (
-                    var_groups.labels[idx][: int(diff * 2)] + "."
-                    if diff * 2 < len(var_groups.labels[idx])
-                    else var_groups.labels[idx]
-                )
-                var_groups_ax.text(
-                    0.6,
-                    group_y_center,
-                    label,
-                    ha="right",
-                    va="center",
-                    rotation=270,
-                    fontsize="small",
-                )
-            except Exception as e:
-                print(f"problems {e}")
-                pass
+            diff = bottom[idx] - top[idx]
+            group_y_center = top[idx] + float(diff) / 2
+            # cut label to fit available space
+            label = (
+                var_groups.labels[idx][: int(diff * 2)] + "."
+                if diff * 2 < len(var_groups.labels[idx])
+                else var_groups.labels[idx]
+            )
+            var_groups_ax.text(
+                1.1 if wide else 0.6,
+                group_y_center,
+                label,
+                ha="right",
+                va="center",
+                rotation=270,
+                fontsize="small",
+            )
 
     path = Path(verts, codes)
 

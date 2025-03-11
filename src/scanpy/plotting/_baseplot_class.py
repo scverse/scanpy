@@ -790,6 +790,7 @@ class BasePlot:
                 left_adjustment=0.2,
                 right_adjustment=0.7,
                 orientation=var_group_orientation,
+                wide=True,
             )
             return_ax_dict["gene_group_ax"] = gene_groups_ax
 
