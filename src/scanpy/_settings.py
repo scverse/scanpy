@@ -423,7 +423,7 @@ class ScanpyConfig:
         format: _Format = "pdf",
         facecolor: str | None = None,
         transparent: bool = False,
-        ipython_format: str | Iterable[str] = "png2x",
+        ipython_format: str | Iterable[str] = "retina",
     ) -> None:
         """Set resolution/size, styling and format of figures.
 
