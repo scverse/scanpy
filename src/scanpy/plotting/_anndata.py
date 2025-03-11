@@ -73,7 +73,14 @@ if TYPE_CHECKING:
 
 class VarGroups(NamedTuple):
     labels: Sequence[str]
+    """Var labels."""
     positions: Sequence[tuple[int, int]]
+    """Var positions.
+
+    Each item in the list should contain the start and end position that the bracket should cover.
+    Eg. `[(0, 4), (5, 8)]` means that there are two brackets,
+    one for the var_names (eg genes) in positions 0-4 and other for positions 5-8
+    """
 
     @classmethod
     def validate(
@@ -1369,10 +1376,9 @@ def heatmap(
         # plot group legends on top of heatmap_ax (if given)
         if var_groups is not None:
             gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
-            _plot_gene_groups_brackets(
+            _plot_var_groups_brackets(
                 gene_groups_ax,
-                group_positions=var_groups.positions,
-                group_labels=var_groups.labels,
+                var_groups=var_groups,
                 rotation=var_group_rotation,
                 left_adjustment=-0.3,
                 right_adjustment=0.3,
@@ -2134,38 +2140,32 @@ def _prepare_dataframe(
     return categories, obs_tidy
 
 
-def _plot_gene_groups_brackets(
-    gene_groups_ax: Axes,
+def _plot_var_groups_brackets(
+    var_groups_ax: Axes,
     *,
-    group_positions: Iterable[tuple[int, int]],
-    group_labels: Sequence[str],
+    var_groups: VarGroups,
     left_adjustment: float = -0.3,
     right_adjustment: float = 0.3,
     rotation: float | None = None,
     orientation: Literal["top", "right"] = "top",
-):
+) -> None:
     """Draw brackets that represent groups of genes on the give axis.
 
     For best results, this axis is located on top of an image whose
     x axis contains gene names.
 
-    The gene_groups_ax should share the x axis with the main ax.
+    The `var_groups_ax` should share the x axis with the main ax.
 
-    Eg: gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
+    E.g: `var_groups_ax=fig.add_subplot(axs[0, 0], sharex=dot_ax)`
 
     This function is used by dotplot, heatmap etc.
 
     Parameters
     ----------
-    gene_groups_ax
+    var_groups_ax
         In this axis the gene marks are drawn
-    group_positions
-        Each item in the list, should contain the start and end position that the
-        bracket should cover.
-        Eg. [(0, 4), (5, 8)] means that there are two brackets, one for the var_names (eg genes)
-        in positions 0-4 and other for positions 5-8
-    group_labels
-        List of group labels
+    var_groups
+        Group labels and positions
     left_adjustment
         adjustment to plot the bracket start slightly before or after the first gene position.
         If the value is negative the start is moved before.
@@ -2188,16 +2188,16 @@ def _plot_gene_groups_brackets(
 
     # get the 'brackets' coordinates as lists of start and end positions
 
-    left = [x[0] + left_adjustment for x in group_positions]
-    right = [x[1] + right_adjustment for x in group_positions]
+    left = [x[0] + left_adjustment for x in var_groups.positions]
+    right = [x[1] + right_adjustment for x in var_groups.positions]
 
     # verts and codes are used by PathPatch to make the brackets
     verts = []
     codes = []
     if orientation == "top":
         # rotate labels if any of them is longer than 4 characters
-        if rotation is None and group_labels:
-            rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
+        if rotation is None:
+            rotation = 90 if max([len(x) for x in var_groups.labels]) > 4 else 0
         for idx in range(len(left)):
             verts.append((left[idx], 0))  # lower-left
             verts.append((left[idx], 0.6))  # upper-left
@@ -2211,10 +2211,10 @@ def _plot_gene_groups_brackets(
 
             try:
                 group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-                gene_groups_ax.text(
+                var_groups_ax.text(
                     group_x_center,
                     1.1,
-                    group_labels[idx],
+                    var_groups.labels[idx],
                     ha="center",
                     va="bottom",
                     rotation=rotation,
@@ -2238,13 +2238,16 @@ def _plot_gene_groups_brackets(
             try:
                 diff = bottom[idx] - top[idx]
                 group_y_center = top[idx] + float(diff) / 2
-                if diff * 2 < len(group_labels[idx]):
-                    # cut label to fit available space
-                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
-                gene_groups_ax.text(
+                # cut label to fit available space
+                label = (
+                    var_groups.labels[idx][: int(diff * 2)] + "."
+                    if diff * 2 < len(var_groups.labels[idx])
+                    else var_groups.labels[idx]
+                )
+                var_groups_ax.text(
                     0.6,
                     group_y_center,
-                    group_labels[idx],
+                    label,
                     ha="right",
                     va="center",
                     rotation=270,
@@ -2258,15 +2261,13 @@ def _plot_gene_groups_brackets(
 
     patch = patches.PathPatch(path, facecolor="none", lw=1.5)
 
-    gene_groups_ax.add_patch(patch)
-    gene_groups_ax.grid(visible=False)
-    gene_groups_ax.axis("off")
+    var_groups_ax.add_patch(patch)
+    var_groups_ax.grid(visible=False)
+    var_groups_ax.axis("off")
     # remove y ticks
-    gene_groups_ax.tick_params(axis="y", left=False, labelleft=False)
+    var_groups_ax.tick_params(axis="y", left=False, labelleft=False)
     # remove x ticks and labels
-    gene_groups_ax.tick_params(
-        axis="x", bottom=False, labelbottom=False, labeltop=False
-    )
+    var_groups_ax.tick_params(axis="x", bottom=False, labelbottom=False, labeltop=False)
 
 
 class _ReorderCats(TypedDict):
@@ -2291,16 +2292,7 @@ def _reorder_categories_after_dendrogram(
     The function checks if a dendrogram has already been precomputed.
     If not, `sc.tl.dendrogram` is run with default parameters.
 
-    The results found in `.uns[dendrogram_key]` are used to reorder
-    `var_group_labels` and `var_group_positions`.
-
-
-    Returns
-    -------
-    dictionary with keys:
-    'categories_idx_ordered', 'var_group_names_idx_ordered',
-    'var_group_labels', and 'var_group_positions'
-
+    The results found in `.uns[dendrogram_key]` are used to reorder `var_groups`.
     """
     if isinstance(groupby, str):
         groupby = [groupby]

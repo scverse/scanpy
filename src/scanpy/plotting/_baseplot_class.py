@@ -16,13 +16,14 @@ from .._utils import _empty
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,
+    _plot_var_groups_brackets,
     _prepare_dataframe,
     _reorder_categories_after_dendrogram,
 )
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
     from typing import Literal, Self
 
     import pandas as pd
@@ -782,10 +783,9 @@ class BasePlot:
 
         # plot group legends on top or left of main_ax (if given)
         if self.var_groups:
-            self._plot_var_groups_brackets(
+            _plot_var_groups_brackets(
                 gene_groups_ax,
-                group_positions=self.var_groups.positions,
-                group_labels=self.var_groups.labels,
+                var_groups=self.var_groups,
                 rotation=self.var_group_rotation,
                 left_adjustment=0.2,
                 right_adjustment=0.7,
@@ -903,128 +903,6 @@ class BasePlot:
         self.var_names_idx_order = rv["var_names_idx_ordered"]
         self.var_names_ordered = rv["var_names_ordered"]
         self.var_groups = rv["var_groups"]
-
-    @staticmethod
-    def _plot_var_groups_brackets(
-        gene_groups_ax: Axes,
-        *,
-        group_positions: Iterable[tuple[int, int]],
-        group_labels: Sequence[str],
-        left_adjustment: float = -0.3,
-        right_adjustment: float = 0.3,
-        rotation: float | None = None,
-        orientation: Literal["top", "right"] = "top",
-    ) -> None:
-        """Draw brackets that represent groups of genes on the give axis.
-
-        For best results, this axis is located on top of an image whose
-        x axis contains gene names.
-
-        The gene_groups_ax should share the x axis with the main ax.
-
-        Eg: gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
-
-        Parameters
-        ----------
-        gene_groups_ax
-            In this axis the gene marks are drawn
-        group_positions
-            Each item in the list, should contain the start and end position that the
-            bracket should cover.
-            Eg. [(0, 4), (5, 8)] means that there are two brackets, one for the var_names (eg genes)
-            in positions 0-4 and other for positions 5-8
-        group_labels
-            List of group labels
-        left_adjustment
-            adjustment to plot the bracket start slightly before or after the first gene position.
-            If the value is negative the start is moved before.
-        right_adjustment
-            adjustment to plot the bracket end slightly before or after the last gene position
-            If the value is negative the start is moved before.
-        rotation
-            rotation degrees for the labels. If not given, small labels (<4 characters) are not
-            rotated, otherwise, they are rotated 90 degrees
-        orientation
-            location of the brackets. Either `top` or `right`
-
-        """
-        import matplotlib.patches as patches
-        from matplotlib.path import Path
-
-        # get the 'brackets' coordinates as lists of start and end positions
-
-        left = [x[0] + left_adjustment for x in group_positions]
-        right = [x[1] + right_adjustment for x in group_positions]
-
-        # verts and codes are used by PathPatch to make the brackets
-        verts = []
-        codes = []
-        if orientation == "top":
-            # rotate labels if any of them is longer than 4 characters
-            if rotation is None and group_labels:
-                rotation = 90 if max([len(x) for x in group_labels]) > 4 else 0
-            for idx, (left_coor, right_coor) in enumerate(zip(left, right)):
-                verts.append((left_coor, 0))  # lower-left
-                verts.append((left_coor, 0.6))  # upper-left
-                verts.append((right_coor, 0.6))  # upper-right
-                verts.append((right_coor, 0))  # lower-right
-
-                codes.append(Path.MOVETO)
-                codes.append(Path.LINETO)
-                codes.append(Path.LINETO)
-                codes.append(Path.LINETO)
-
-                group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-                gene_groups_ax.text(
-                    group_x_center,
-                    1.1,
-                    group_labels[idx],
-                    ha="center",
-                    va="bottom",
-                    rotation=rotation,
-                )
-        else:
-            top = left
-            bottom = right
-            for idx, (top_coor, bottom_coor) in enumerate(zip(top, bottom)):
-                verts.append((0, top_coor))  # upper-left
-                verts.append((0.4, top_coor))  # upper-right
-                verts.append((0.4, bottom_coor))  # lower-right
-                verts.append((0, bottom_coor))  # lower-left
-
-                codes.append(Path.MOVETO)
-                codes.append(Path.LINETO)
-                codes.append(Path.LINETO)
-                codes.append(Path.LINETO)
-
-                diff = bottom[idx] - top[idx]
-                group_y_center = top[idx] + float(diff) / 2
-                if diff * 2 < len(group_labels[idx]):
-                    # cut label to fit available space
-                    group_labels[idx] = group_labels[idx][: int(diff * 2)] + "."
-                gene_groups_ax.text(
-                    1.1,
-                    group_y_center,
-                    group_labels[idx],
-                    ha="right",
-                    va="center",
-                    rotation=270,
-                    fontsize="small",
-                )
-
-        path = Path(verts, codes)
-
-        patch = patches.PathPatch(path, facecolor="none", lw=1.5)
-
-        gene_groups_ax.add_patch(patch)
-        gene_groups_ax.grid(visible=False)
-        gene_groups_ax.axis("off")
-        # remove y ticks
-        gene_groups_ax.tick_params(axis="y", left=False, labelleft=False)
-        # remove x ticks and labels
-        gene_groups_ax.tick_params(
-            axis="x", bottom=False, labelbottom=False, labeltop=False
-        )
 
 
 def _var_groups(
