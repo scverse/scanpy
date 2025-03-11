@@ -644,6 +644,7 @@ def write(
     adata: AnnData,
     *,
     ext: Literal["h5", "csv", "txt", "npz"] | None = None,
+    convert_strings_to_categoricals: bool = True,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
 ):
@@ -661,6 +662,9 @@ def write(
     ext
         File extension from wich to infer file format. If `None`, defaults to
         `sc.settings.file_format_data`.
+    convert_strings_to_categoricals
+        If anndata supports it, setting this to `False` will avoid
+        converting string columns to categorical arrays when writing.
     compression
         See https://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts
@@ -687,8 +691,26 @@ def write(
     if ext == "csv":
         adata.write_csvs(filename)
     else:
-        adata.write(
-            filename, compression=compression, compression_opts=compression_opts
+        if Version(anndata.__version__) >= Version("0.11.0rc2"):
+            from anndata.io import write_h5ad
+
+            extra_kw = dict(
+                convert_strings_to_categoricals=convert_strings_to_categoricals
+            )
+        else:
+            if not convert_strings_to_categoricals:
+                msg = "convert_strings_to_categoricals=False is not supported in anndata<0.11"
+                raise RuntimeError(msg)
+
+            from anndata import write_h5ad
+
+            extra_kw = {}
+        write_h5ad(
+            filename,
+            adata,
+            **extra_kw,
+            compression=compression,
+            compression_opts=compression_opts,
         )
 
 
