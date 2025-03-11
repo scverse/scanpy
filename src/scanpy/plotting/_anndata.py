@@ -6,7 +6,7 @@ from collections import OrderedDict
 from collections.abc import Collection, Mapping, Sequence
 from itertools import product
 from types import NoneType
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, NamedTuple, TypedDict, cast
 
 import matplotlib as mpl
 import numpy as np
@@ -69,6 +69,11 @@ if TYPE_CHECKING:
     # TODO: is that all?
     _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
     _VarNames = str | Sequence[str]
+
+
+class VarGroups(NamedTuple):
+    labels: Sequence[str]
+    positions: Sequence[tuple[int, int]]
 
 
 @old_positionals(
@@ -1149,9 +1154,10 @@ def heatmap(
     tl.rank_genes_groups
 
     """
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+    var_names, var_groups = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
     )
+    del var_group_labels, var_group_positions
 
     categories, obs_tidy = _prepare_dataframe(
         adata,
@@ -1165,8 +1171,8 @@ def heatmap(
     )
 
     # check if var_group_labels are a subset of categories:
-    if var_group_labels is not None:
-        if set(var_group_labels).issubset(categories):
+    if var_groups is not None:
+        if set(var_groups.labels).issubset(categories):
             var_groups_subset_of_groupby = True
         else:
             var_groups_subset_of_groupby = False
@@ -1215,8 +1221,7 @@ def heatmap(
             groupby,
             dendrogram_key=_dk(dendrogram),
             var_names=var_names,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
+            var_groups=var_groups,
             categories=categories,
         )
 
@@ -1498,7 +1503,7 @@ def heatmap(
 def tracksplot(
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
-    groupby: str | Sequence[str],
+    groupby: str,
     *,
     use_raw: bool | None = None,
     log: bool = False,
@@ -1567,9 +1572,10 @@ def tracksplot(
         )
         raise ValueError(msg)
 
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+    var_names, var_groups = _check_var_names_type(
         var_names, var_group_labels, var_group_positions
     )
+    del var_group_labels, var_group_positions
 
     categories, obs_tidy = _prepare_dataframe(
         adata,
@@ -1583,7 +1589,7 @@ def tracksplot(
     )
 
     # get categories colors:
-    if groupby + "_colors" not in adata.uns:
+    if f"{groupby}_colors" not in adata.uns:
         from ._utils import _set_default_colors_for_categorical_obs
 
         _set_default_colors_for_categorical_obs(adata, groupby)
@@ -1597,8 +1603,7 @@ def tracksplot(
             groupby,
             dendrogram_key=_dk(dendrogram),
             var_names=var_names,
-            var_group_labels=var_group_labels,
-            var_group_positions=var_group_positions,
+            var_groups=var_groups,
             categories=categories,
         )
         # reorder obs_tidy
@@ -1732,10 +1737,10 @@ def tracksplot(
             ticks=ticks,
         )
 
-    if var_group_positions is not None and len(var_group_positions) > 0:
+    if var_groups is not None and len(var_groups.positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[1:-1, 1])
         arr = []
-        for idx, pos in enumerate(var_group_positions):
+        for idx, pos in enumerate(var_groups.positions):
             arr += [idx] * (pos[1] + 1 - pos[0])
 
         gene_groups_ax.imshow(
@@ -1746,7 +1751,7 @@ def tracksplot(
     return_ax_dict = {"track_axes": axs_list, "groupby_ax": groupby_ax}
     if dendrogram:
         return_ax_dict["dendrogram_ax"] = dendro_ax
-    if var_group_positions is not None and len(var_group_positions) > 0:
+    if var_groups is not None and len(var_groups.positions) > 0:
         return_ax_dict["gene_groups_ax"] = gene_groups_ax
 
     _utils.savefig_or_show("tracksplot", show=show, save=save)
@@ -2255,16 +2260,23 @@ def _plot_gene_groups_brackets(
     )
 
 
+class _ReorderCats(TypedDict):
+    categories_idx_ordered: Sequence[int]
+    categories_ordered: Sequence[str]
+    var_names_idx_ordered: Sequence[int] | None
+    var_names_ordered: Sequence[str] | None
+    var_groups: VarGroups | None
+
+
 def _reorder_categories_after_dendrogram(
     adata: AnnData,
     groupby: str | Sequence[str],
     *,
     dendrogram_key: str | None,
     var_names: Sequence[str],
-    var_group_labels: Sequence[str] | None,
-    var_group_positions: Sequence[tuple[int, int]] | None,
+    var_groups: VarGroups | None,
     categories: Sequence[str],
-):
+) -> _ReorderCats:
     """Reorder the the groupby observations based on the dendrogram results.
 
     The function checks if a dendrogram has already been precomputed.
@@ -2307,33 +2319,30 @@ def _reorder_categories_after_dendrogram(
         raise ValueError(msg)
 
     # reorder var_groups (if any)
-    if var_group_positions is None or var_group_labels is None:
-        assert var_group_positions is None
-        assert var_group_labels is None
+    if var_groups is None:
         var_names_idx_ordered = None
-    elif set(var_group_labels) == set(categories):
+    elif set(var_groups.labels) == set(categories):
         positions_ordered = []
         labels_ordered = []
         position_start = 0
         var_names_idx_ordered = []
         for cat_name in categories_ordered:
-            idx = var_group_labels.index(cat_name)
-            position = var_group_positions[idx]
+            idx = var_groups.labels.index(cat_name)
+            position = var_groups.positions[idx]
             _var_names = var_names[position[0] : position[1] + 1]
             var_names_idx_ordered.extend(range(position[0], position[1] + 1))
             positions_ordered.append(
                 (position_start, position_start + len(_var_names) - 1)
             )
             position_start += len(_var_names)
-            labels_ordered.append(var_group_labels[idx])
-        var_group_labels = labels_ordered
-        var_group_positions = positions_ordered
+            labels_ordered.append(var_groups.labels[idx])
+        var_groups = VarGroups(labels_ordered, positions_ordered)
     else:
         logg.warning(
             "Groups are not reordered because the `groupby` categories "
             "and the `var_group_labels` are different.\n"
             f"categories: {_format_first_three_categories(categories)}\n"
-            f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+            f"var_group_labels: {_format_first_three_categories(var_groups.labels)}"
         )
         var_names_idx_ordered = list(range(len(var_names)))
 
@@ -2342,17 +2351,17 @@ def _reorder_categories_after_dendrogram(
     else:
         var_names_ordered = None
 
-    return dict(
+    return _ReorderCats(
         categories_idx_ordered=categories_idx_ordered,
         categories_ordered=dendro_info["categories_ordered"],
         var_names_idx_ordered=var_names_idx_ordered,
         var_names_ordered=var_names_ordered,
-        var_group_labels=var_group_labels,
-        var_group_positions=var_group_positions,
+        var_groups=var_groups,
     )
 
 
 def _format_first_three_categories(categories):
+    """Clean up warning message."""
     categories = list(categories)
     if len(categories) > 3:
         categories = categories[:3] + ["etc."]
@@ -2675,12 +2684,16 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     return heatmap_cbar_ax
 
 
-def _check_var_names_type(var_names, var_group_labels, var_group_positions):
+def _check_var_names_type(
+    var_names: _VarNames | Mapping[str, _VarNames],
+    var_group_labels: Sequence[str] | None = None,
+    var_group_positions: Sequence[tuple[int, int]] | None = None,
+) -> tuple[list[str], VarGroups | None]:
     """If var_names is a dict, set the `var_group_labels` and `var_group_positions`.
 
     Returns
     -------
-    var_names, var_group_labels, var_group_positions
+    var_names, var_groups
 
     """
     if isinstance(var_names, Mapping):
@@ -2690,7 +2703,7 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
                 "value of `var_group_labels` and `var_group_positions`."
             )
         var_group_labels = []
-        _var_names = []
+        _var_names: list[str] = []
         var_group_positions = []
         start = 0
         for label, vars_list in var_names.items():
@@ -2706,4 +2719,15 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
     elif isinstance(var_names, str):
         var_names = [var_names]
 
-    return var_names, var_group_labels, var_group_positions
+    if var_group_labels is not None or var_group_positions is not None:
+        if var_group_labels is None or var_group_positions is None:
+            msg = (
+                "If var_group_labels or var_group_positions are given, "
+                "both have to be given."
+            )
+            raise ValueError(msg)
+        var_groups = VarGroups(var_group_labels, var_group_positions)
+    else:
+        var_groups = None
+
+    return var_names, var_groups

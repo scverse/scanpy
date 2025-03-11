@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
-from ._anndata import _get_dendrogram_key, _plot_dendrogram, _prepare_dataframe
+from ._anndata import VarGroups, _plot_dendrogram, _prepare_dataframe
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
@@ -36,11 +36,6 @@ class VBoundNorm(NamedTuple):
     vmax: float | None
     vcenter: float | None
     norm: Normalize | None
-
-
-class VarGroups(NamedTuple):
-    labels: Sequence[str]
-    positions: Sequence[tuple[int, int]]
 
 
 doc_common_groupby_plot_args = """\
@@ -123,8 +118,8 @@ class BasePlot:
         title: str | None = None,
         figsize: tuple[float, float] | None = None,
         gene_symbols: str | None = None,
-        var_group_positions: Sequence[tuple[int, int]] | None = None,
         var_group_labels: Sequence[str] | None = None,
+        var_group_positions: Sequence[tuple[int, int]] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
         ax: _AxesSubplot | None = None,
@@ -897,74 +892,22 @@ class BasePlot:
         'var_group_labels' and 'var_group_positions'
 
         """
+        from ._anndata import _reorder_categories_after_dendrogram
 
-        def _format_first_three_categories(_categories):
-            """Clean up warning message."""
-            _categories = list(_categories)
-            if len(_categories) > 3:
-                _categories = _categories[:3] + ["etc."]
-            return ", ".join(_categories)
+        rv = _reorder_categories_after_dendrogram(
+            self.adata,
+            self.groupby,
+            dendrogram_key=dendrogram_key,
+            var_names=self.var_names,
+            var_groups=self.var_groups,
+            categories=self.categories,
+        )
 
-        dendro_info = self.adata.uns[
-            _get_dendrogram_key(
-                self.adata, dendrogram_key, self.groupby, validate_groupby=True
-            )
-        ]
-
-        # order of groupby categories
-        categories_idx_ordered = dendro_info["categories_idx_ordered"]
-        categories_ordered = dendro_info["categories_ordered"]
-
-        if len(self.categories) != len(categories_idx_ordered):
-            msg = (
-                "Incompatible observations. Dendrogram data has "
-                f"{len(categories_idx_ordered)} categories but current groupby "
-                f"observation {self.groupby!r} contains {len(self.categories)} categories. "
-                "Most likely the underlying groupby observation changed after the "
-                "initial computation of `sc.tl.dendrogram`. "
-                "Please run `sc.tl.dendrogram` again.'"
-            )
-            raise ValueError(msg)
-
-        # reorder var_groups (if any)
-        if self.var_names is not None:
-            var_names_idx_ordered = list(range(len(self.var_names)))
-
-        if self.var_groups:
-            if set(self.var_groups.labels) == set(self.categories):
-                positions_ordered = []
-                labels_ordered = []
-                position_start = 0
-                var_names_idx_ordered = []
-                for cat_name in categories_ordered:
-                    idx = self.var_groups.labels.index(cat_name)
-                    position = self.var_groups.positions[idx]
-                    _var_names = self.var_names[position[0] : position[1] + 1]
-                    var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                    positions_ordered.append(
-                        (position_start, position_start + len(_var_names) - 1)
-                    )
-                    position_start += len(_var_names)
-                    labels_ordered.append(self.var_groups.labels[idx])
-                self.var_groups = VarGroups(labels_ordered, positions_ordered)
-            else:
-                logg.warning(
-                    "Groups are not reordered because the `groupby` categories "
-                    "and the `var_group_labels` are different.\n"
-                    f"categories: {_format_first_three_categories(self.categories)}\n"
-                    "var_group_labels: "
-                    f"{_format_first_three_categories(self.var_groups.labels)}"
-                )
-
-        if var_names_idx_ordered is not None:
-            var_names_ordered = [self.var_names[x] for x in var_names_idx_ordered]
-        else:
-            var_names_ordered = None
-
-        self.categories_idx_ordered = categories_idx_ordered
-        self.categories_order = dendro_info["categories_ordered"]
-        self.var_names_idx_order = var_names_idx_ordered
-        self.var_names_ordered = var_names_ordered
+        self.categories_idx_ordered = rv["categories_idx_ordered"]
+        self.categories_order = rv["categories_ordered"]
+        self.var_names_idx_order = rv["var_names_idx_ordered"]
+        self.var_names_ordered = rv["var_names_ordered"]
+        self.var_groups = rv["var_groups"]
 
     @staticmethod
     def _plot_var_groups_brackets(
