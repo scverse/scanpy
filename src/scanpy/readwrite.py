@@ -647,7 +647,7 @@ def write(
     convert_strings_to_categoricals: bool = True,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
-):
+) -> None:
     """Write :class:`~anndata.AnnData` objects to file.
 
     Parameters
