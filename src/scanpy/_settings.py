@@ -7,7 +7,7 @@ from enum import IntEnum
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 from . import logging
 from ._compat import old_positionals
@@ -15,7 +15,7 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Any, Literal, TextIO
+    from typing import Any, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
+
+AnnDataFileFormat = Literal["h5ad", "zarr", "csv"]
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",
@@ -96,7 +98,7 @@ class ScanpyConfig:
         *,
         verbosity: Verbosity | int | str = Verbosity.warning,
         plot_suffix: str = "",
-        file_format_data: str = "h5ad",
+        file_format_data: AnnDataFileFormat = "h5ad",
         file_format_figs: str = "pdf",
         autosave: bool = False,
         autoshow: bool = True,
@@ -105,14 +107,14 @@ class ScanpyConfig:
         datasetdir: Path | str = "./data/",
         figdir: Path | str = "./figures/",
         cache_compression: str | None = "lzf",
-        max_memory=15,
-        n_jobs=1,
+        max_memory: int = 15,
+        n_jobs: int = 1,
         logfile: Path | str | None = None,
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
-        n_pcs=50,
+        n_pcs: int = 50,
     ):
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
@@ -198,31 +200,29 @@ class ScanpyConfig:
         self._plot_suffix = plot_suffix
 
     @property
-    def file_format_data(self) -> str:
+    def file_format_data(self) -> AnnDataFileFormat:
         """File format for saving AnnData objects.
 
-        Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5ad'
-        (hdf5) for lossless saving.
+        For lossless saving, use `'h5ad'` (hdf5) or `'zarr'`.
         """
         return self._file_format_data
 
     @file_format_data.setter
-    def file_format_data(self, file_format: str):
+    def file_format_data(self, file_format: AnnDataFileFormat):
         _type_check(file_format, "file_format_data", str)
-        file_format_options = {"txt", "csv", "h5ad"}
-        if file_format not in file_format_options:
+        if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
             msg = (
                 f"Cannot set file_format_data to {file_format}. "
                 f"Must be one of {file_format_options}"
             )
             raise ValueError(msg)
-        self._file_format_data = file_format
+        self._file_format_data: AnnDataFileFormat = file_format
 
     @property
     def file_format_figs(self) -> str:
         """File format for saving figures.
 
-        For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
+        For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
         `matplotlib.pyplot.savefig`).
         """
         return self._file_format_figs
