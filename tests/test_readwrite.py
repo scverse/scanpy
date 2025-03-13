@@ -4,8 +4,10 @@ from contextlib import nullcontext
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
+import h5py
 import numpy as np
 import pytest
+import zarr
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 
@@ -81,3 +83,25 @@ def test_write(
     if ext != "csv":  # no reader for this
         adata_read = sc.read(path)
         assert_equal(adata_read, adata)
+
+
+@pytest.mark.parametrize("fmt", ["h5ad", "zarr"])
+@pytest.mark.parametrize("s2c", [True, False], ids=["s2c", "no_s2c"])
+def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> None:
+    adata = AnnData(np.array([[1, 2], [3, 4]]), obs=dict(a=["a", "b"]))
+
+    sc.write("test", adata.copy(), convert_strings_to_categoricals=s2c, ext=fmt)
+    p = sc.settings.writedir / f"test.{fmt}"
+
+    if fmt == "h5ad":
+        with h5py.File(p, "r") as f:
+            et = f["obs"]["a"].attrs["encoding-type"]
+    elif fmt == "zarr":
+        et = zarr.open_group(p, "r")["obs"]["a"].attrs["encoding-type"]
+    else:
+        pytest.fail("add branch for new fmt")
+    assert et == ("categorical" if s2c else "string-array")
+
+    adata_read = sc.read(p)
+    assert_equal(adata_read, adata)
+    assert adata_read.obs["a"].dtype == "object"
