@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         | Literal["raw", "rgba"]
     )
 
-AnnDataFileFormat = Literal["h5ad", "zarr", "csv"]
+AnnDataFileFormat = Literal["h5ad", "zarr"]
 
 _VERBOSITY_TO_LOGLEVEL = {
     "error": "ERROR",
