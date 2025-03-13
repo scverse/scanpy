@@ -16,7 +16,7 @@
         "editor.defaultFormatter": "biomejs.biome",
     },
     "python.analysis.typeCheckingMode": "basic",
-    "python.testing.pytestArgs": ["-vv", "--color=yes"],
+    "python.testing.pytestArgs": ["-vv", "--color=yes", "--internet-tests"],
     "python.testing.pytestEnabled": true,
     "python.terminal.activateEnvironment": true,
 }
