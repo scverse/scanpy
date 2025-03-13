@@ -1475,7 +1475,7 @@ def heatmap(
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
             for idx, (label, pos) in enumerate(
-                zip(var_groups.labels, var_groups.positions)
+                zip(*var_groups)
             ):
                 label_code = label2code[label] if var_groups_subset_of_groupby else idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
