@@ -35,8 +35,6 @@ else:
         read_text,
         read_zarr,
     )
-from typing import Literal
-
 from anndata import AnnData
 from matplotlib.image import imread
 
@@ -47,7 +45,7 @@ from ._utils import _empty
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from typing import BinaryIO
+    from typing import BinaryIO, Literal
 
     from ._utils import Empty
 
@@ -680,7 +678,7 @@ def write(
     """
     filename = Path(filename)  # allow passing strings
     valid_exts = cast(
-        set[Literal["csv"] | AnnDataFileFormat], {"csv", *get_args(AnnDataFileFormat)}
+        "set[Literal['csv'] | AnnDataFileFormat]", {"csv", *get_args(AnnDataFileFormat)}
     )
     if filename.suffix and (ext_from_name := filename.suffix[1:]) in valid_exts:
         if ext is None:
