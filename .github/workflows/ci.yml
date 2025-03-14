@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "*.*.x"
+  pull_request:
+
+env:
+  PYTEST_ADDOPTS: "-v --color=yes --internet-tests --nunit-xml=test-data/test-results.xml"
+  FORCE_COLOR: "1"
+  MPLBACKEND: agg
+
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.11'
+          - python-version: '3.13'
+          - python-version: '3.13'
+            dependencies-version: min-optional
+          - python-version: '3.13'
+            dependencies-version: pre-release
+            test-type: coverage
+          - python-version: '3.11'
+            dependencies-version: minimum
+            test-type: coverage
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Cache pytest data
+        uses: actions/cache@v3
+        with:
+          path: .pytest_cache/d
+          key: pytest
+
+      - name: Install dependencies
+        if: matrix.dependencies-version == null
+        run: uv pip install --system --compile "scanpy[dev,test-full] @ ." -c ci/constraints.txt
+      - name: Install dependencies
+        if: matrix.dependencies-version == 'min-optional'
+        run: uv pip install --system --compile "scanpy[dev,test-min] @ ." -c ci/constraints.txt
+      - name: Install minimum dependency versions
+        if: matrix.dependencies-version == 'minimum'
+        run: |
+          uv pip install --system --compile tomli packaging
+          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test-full)
+          uv pip install --system --compile $deps "scanpy @ ."
+      - name: Install release candidate dependencies
+        if: matrix.dependencies-version == 'pre-release'
+        run: >
+          uv pip install -v --system --compile --pre
+            "scanpy[dev,test-full] @ ."
+            "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
+            -c ci/constraints.txt
+
+      - name: Run pytest
+        if: matrix.test-type == 'standard'
+        run: pytest
+      - name: Run pytest (coverage)
+        if: matrix.test-type == 'coverage'
+        run: coverage run -m pytest --cov --cov-report=xml
+
+      - name: Upload coverage data
+        uses: codecov/codecov-action@v4
+        if: matrix.test-type == 'coverage'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: test-data/coverage.xml
+
+      - name: Upload test results
+        # yaml strings can’t start with “!”, so using explicit substitution
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: test-data/test-results.xml
+
+      - name: Publish debug artifacts
+        if: matrix.test-type == 'coverage'
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-data
+          path: .pytest_cache/d/debug
+
+  check-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*

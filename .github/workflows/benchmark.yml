@@ -6,12 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_COLOR: "1"
+
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
 jobs:
   benchmark:
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -e {0} # -e to fail on error
 
     strategy:
       fail-fast: false
