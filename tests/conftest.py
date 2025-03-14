@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 from textwrap import dedent
@@ -16,8 +17,10 @@ if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
 
     from testing.scanpy._pytest.fixtures import *  # noqa: F403
 
+
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
+IMG_DIR = Path(__file__).parent / "_images"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -70,7 +73,7 @@ class CompareResult(TypedDict):  # noqa: D101
 
 
 @pytest.fixture
-def check_same_image(add_nunit_attachment):
+def check_same_image(cache: pytest.Cache):
     from urllib.parse import quote
 
     from matplotlib.testing.compare import compare_images
@@ -84,19 +87,19 @@ def check_same_image(add_nunit_attachment):
     ) -> None:
         __tracebackhide__ = True
 
-        def fmt_descr(descr):
-            return f"{descr} ({basename})" if basename else descr
-
         result = cast(
-            CompareResult | None,
+            "CompareResult | None",
             compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:
             return
 
-        add_nunit_attachment(result["expected"], fmt_descr("Expected"))
-        add_nunit_attachment(result["actual"], fmt_descr("Result"))
-        add_nunit_attachment(result["diff"], fmt_descr("Difference"))
+        d = cache.mkdir("debug")
+        for image in ("expected", "actual", "diff"):
+            src = Path(result[image])
+            dst = d / src.relative_to(IMG_DIR)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
 
         result_urls = {
             k: f"file://{quote(v)}" if isinstance(v, str) else v
