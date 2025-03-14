@@ -172,7 +172,7 @@ def _numba_threading_layer() -> Layer:
         return numba.config.THREADING_LAYER
 
     # given by layer type (safe, …)
-    for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
+    for layer in cast("list[Layer]", numba.config.THREADING_LAYER_PRIORITY):
         if layer not in available:
             continue
         if layer != "workqueue":

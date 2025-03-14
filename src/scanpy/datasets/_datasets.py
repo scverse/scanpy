@@ -273,7 +273,7 @@ def paul15() -> AnnData:
     adata.obs_names = cell_names
     # names reflecting the cell type identifications from the paper
     cell_type = 6 * ["Ery"]
-    cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()
+    cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()  # noqa: SIM905
     adata.obs["paul15_clusters"] = [f"{i}{cell_type[i - 1]}" for i in clusters]
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
