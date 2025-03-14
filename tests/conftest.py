@@ -82,6 +82,7 @@ def check_same_image(cache: pytest.Cache):
         *,
         tol: int,
         root: Path,
+        save: bool = True,
     ) -> None:
         __tracebackhide__ = True
 
@@ -92,12 +93,13 @@ def check_same_image(cache: pytest.Cache):
         if result is None:
             return
 
-        d = cache.mkdir("debug")
-        for image in ("expected", "actual", "diff"):
-            src = Path(result[image])
-            dst = d / src.relative_to(root)
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+        if save:
+            d = cache.mkdir("debug")
+            for image in ("expected", "actual", "diff"):
+                src = Path(result[image])
+                dst = d / src.relative_to(root)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
 
         result_urls = {
             k: f"file://{quote(v)}" if isinstance(v, str) else v

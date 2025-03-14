@@ -1133,13 +1133,13 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
             "pca_sparse_layer",
             partial(sc.pl.pca, color=["CD3D", "CD79A"], layer="sparse", cmap="viridis"),
         ),
-        pytest.param(
-            "tsne",
-            partial(sc.pl.tsne, color=["CD3D", "louvain"]),
-            marks=pytest.mark.xfail(
-                reason="slight differences even after setting random_state."
-            ),
-        ),
+        # pytest.param(
+        #     "tsne",
+        #     partial(sc.pl.tsne, color=["CD3D", "louvain"]),
+        #     marks=pytest.mark.xfail(
+        #         reason="slight differences even after setting random_state."
+        #     ),
+        # ),
         ("umap_nocolor", sc.pl.umap),
         (
             "umap",
@@ -1331,6 +1331,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
             tmp_path / "umap_norm_fig0.png",
             tol=1,
             root=tmp_path,
+            save=False,
         )
 
 
