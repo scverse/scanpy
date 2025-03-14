@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
-from numpy.typing import NDArray
 
 from scanpy._utils._doctests import doctest_needs
 
@@ -14,7 +13,7 @@ from .._utils import _get_mean_var
 if TYPE_CHECKING:
     from typing import Literal
 
-    from numpy.typing import DTypeLike
+    from numpy.typing import DTypeLike, NDArray
 
     from ..._compat import DaskArray
     from .._utils import _CSMatrix
@@ -61,7 +60,7 @@ class PCASparseDask:
             )
             raise ValueError(msg)
         self.__class__ = PCASparseDaskFit
-        self = cast(PCASparseDaskFit, self)
+        self = cast("PCASparseDaskFit", self)
 
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
@@ -202,7 +201,7 @@ def _cov_sparse_dask(
     ).sum(axis=0)
     mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
-        tuple[NDArray, NDArray[np.float64]],
+        "tuple[NDArray, NDArray[np.float64]]",
         dask.compute(gram_matrix_dask, mean_x_dask),
     )
     gram_matrix = gram_matrix.astype(dtype)
