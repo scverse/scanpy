@@ -74,7 +74,7 @@ jobs:
         run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
 
       - name: Run pytest
-        if: matrix.test-type == 'standard'
+        if: matrix.test-type == null
         run: pytest
       - name: Run pytest (coverage)
         if: matrix.test-type == 'coverage'
