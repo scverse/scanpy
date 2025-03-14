@@ -71,8 +71,7 @@ def dca(
     return_info: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Deep count autoencoder :cite:p:`Eraslan2019`.
+    """Deep count autoencoder :cite:p:`Eraslan2019`.
 
     Fits a count autoencoder to the raw count data given in the anndata object
     in order to denoise the data and to capture hidden representation of
@@ -176,8 +175,8 @@ def dca(
     If `return_model` is given, trained model is returned.
     When both `copy` and `return_model` are true,
     a tuple of anndata and model is returned in that order.
-    """
 
+    """
     try:
         from dca.api import dca
     except ImportError:

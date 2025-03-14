@@ -16,8 +16,7 @@ D = TypeVar("D", NDArray[np.float32], csr_matrix)
 
 
 def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
-    """
-    Derive gaussian connectivities between data points from their distances.
+    """Derive gaussian connectivities between data points from their distances.
 
     Parameters
     ----------
@@ -27,6 +26,7 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
         The number of nearest neighbors to consider.
     knn
         Specify if the distances have been restricted to k nearest neighbors.
+
     """
     # init distances
     if isinstance(distances, csr_matrix):
@@ -107,8 +107,7 @@ def umap(
     set_op_mix_ratio: float = 1.0,
     local_connectivity: float = 1.0,
 ) -> csr_matrix:
-    """\
-    This is from umap.fuzzy_simplicial_set :cite:p:`McInnes2018`.
+    """Wrap for `umap.fuzzy_simplicial_set` :cite:p:`McInnes2018`.
 
     Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
@@ -122,7 +121,7 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         from umap.umap_ import fuzzy_simplicial_set
 
-    X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
+    X = coo_matrix((n_obs, 1))
     connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
         X,
         n_neighbors,

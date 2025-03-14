@@ -1,3 +1,5 @@
+"""Metrics."""
+
 from __future__ import annotations
 
 from ._gearys_c import gearys_c

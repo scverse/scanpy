@@ -32,8 +32,7 @@ def highest_expr_genes(
     ax: Axes | None = None,
     **kwds,
 ):
-    """\
-    Fraction of counts assigned to each gene over all cells.
+    """Fraction of counts assigned to each gene over all cells.
 
     Computes, for each gene, the fraction of counts assigned to that gene within
     a cell. The `n_top` genes with the highest mean fraction over all cells are
@@ -70,6 +69,7 @@ def highest_expr_genes(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`.
+
     """
     import seaborn as sns  # Slow import, only import if called
     from scipy.sparse import issparse

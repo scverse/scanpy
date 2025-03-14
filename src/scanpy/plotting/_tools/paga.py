@@ -91,8 +91,7 @@ def paga_compare(
     pos=None,
     **paga_graph_params,
 ):
-    """\
-    Scatter and PAGA graph side-by-side.
+    """Scatter and PAGA graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
     :func:`~scanpy.pl.paga` for all related parameters.
@@ -114,6 +113,7 @@ def paga_compare(
     Returns
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
+
     """
     axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
@@ -344,8 +344,7 @@ def paga(
     save: bool | str | None = None,
     ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
-    """\
-    Plot the PAGA graph through thresholding low-connectivity edges.
+    r"""Plot the PAGA graph through thresholding low-connectivity edges.
 
     Compute a coarse-grained layout of the data. Reuse this by passing
     `init_pos='paga'` to :func:`~scanpy.tl.umap` or
@@ -456,7 +455,7 @@ def paga(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
         A matplotlib axes object.
 
@@ -491,13 +490,13 @@ def paga(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.paga
     pl.paga_compare
     pl.paga_path
-    """
 
+    """
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning("`groups` is deprecated in `pl.paga`: use `labels` instead")
@@ -1068,8 +1067,7 @@ def paga_path(
     save: bool | str | None = None,
     ax: Axes | None = None,
 ) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
-    """\
-    Gene expression and annotation changes along paths in the abstracted graph.
+    r"""Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
@@ -1117,7 +1115,7 @@ def paga_path(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
          A matplotlib axes object.
 
@@ -1125,6 +1123,7 @@ def paga_path(
     -------
     A :class:`~matplotlib.axes.Axes` object, if `ax` is `None`, else `None`.
     If `return_data`, return the timeseries data in addition to an axes.
+
     """
     ax_was_none = ax is None
 
@@ -1370,7 +1369,7 @@ def paga_adjacency(
     show: bool | None = None,
     save: bool | str | None = None,
 ) -> None:
-    """Connectivity of paga groups."""
+    """Plot connectivity of paga groups."""
     connectivity = adata.uns[adjacency].toarray()
     connectivity_select = adata.uns[adjacency_tree]
     if as_heatmap:

@@ -48,10 +48,7 @@ def _calculate_res_sparse(
     n_cells: int,
 ) -> NDArray[np.float64]:
     def get_value(cell: int, sparse_idx: int, stop_idx: int) -> np.float64:
-        """
-        This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
-        returning the value at the specified cell location if it exists, or zero otherwise.
-        """
+        """Return the value at the specified cell location if it exists, or zero otherwise."""
         if sparse_idx < stop_idx and index[sparse_idx] == cell:
             return data[sparse_idx]
         else:
@@ -325,8 +322,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
+    """Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
 
     In :cite:t:`Lause2021`, Pearson residuals of a negative binomial offset model are computed
     (with overdispersion `theta` shared across genes). By default, overdispersion
@@ -375,8 +371,8 @@ def highly_variable_genes(
     Notes
     -----
     Experimental version of `sc.pp.highly_variable_genes()`
-    """
 
+    """
     logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):

@@ -48,9 +48,7 @@ def dpt(
     neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Infer progression of cells through geodesic distance along the graph
-    :cite:p:`Haghverdi2016,Wolf2019`.
+    """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` was introduced by :cite:t:`Haghverdi2016` and
@@ -62,7 +60,7 @@ def dpt(
     to detect branchings via :func:`~scanpy.tl.paga`. For pseudotime, you need
     to annotate your data with a root cell. For instance::
 
-        adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
+        adata.uns["iroot"] = np.flatnonzero(adata.obs["cell_types"] == "Stem")[0]
 
     This requires running :func:`~scanpy.pp.neighbors`, first. In order to
     reproduce the original implementation of DPT, use `method=='gauss'`.
@@ -122,6 +120,7 @@ def dpt(
     Notes
     -----
     The tool is similar to the R package `destiny` of :cite:t:`Angerer2015`.
+
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata
@@ -201,9 +200,7 @@ def dpt(
 
 
 class DPT(Neighbors):
-    """\
-    Hierarchical Diffusion Pseudotime.
-    """
+    """Hierarchical Diffusion Pseudotime."""
 
     def __init__(
         self,
@@ -228,8 +225,7 @@ class DPT(Neighbors):
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
-        """\
-        Detect branchings and partition the data into corresponding segments.
+        """Detect branchings and partition the data into corresponding segments.
 
         Detect all branchings up to `n_branchings`.
 
@@ -251,8 +247,7 @@ class DPT(Neighbors):
         self.order_pseudotime()
 
     def detect_branchings(self):
-        """\
-        Detect all branchings up to `n_branchings`.
+        """Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
@@ -382,9 +377,7 @@ class DPT(Neighbors):
         # self.segs_adjacency.eliminate_zeros()
 
     def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
-        """\
-        Out of a list of line segments, choose segment that has the most
-        distant second data point.
+        """Out of a list of line segments, choose segment that has the most distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
         Compute all the distances.
@@ -395,6 +388,7 @@ class DPT(Neighbors):
             Index identifying the position within the list of line segments.
         tips3
             Positions of tips within chosen segment.
+
         """
         scores_tips = np.zeros((len(segs), 4))
         allindices = np.arange(self._adata.shape[0], dtype=int)
@@ -497,8 +491,7 @@ class DPT(Neighbors):
         self.segs_names = segs_names
 
     def order_pseudotime(self):
-        """\
-        Define indices that reflect segment and pseudotime order.
+        """Define indices that reflect segment and pseudotime order.
 
         Writes
         ------
@@ -547,8 +540,7 @@ class DPT(Neighbors):
         iseg: int,
         tips3: np.ndarray,
     ):
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Updates all list parameters inplace.
 
@@ -565,6 +557,7 @@ class DPT(Neighbors):
             Position of segment under study in segs.
         tips3
             The three tip points. They form a 'triangle' that contains the data.
+
         """
         seg = segs[iseg]
         # restrict distance matrix to points in segment
@@ -764,8 +757,7 @@ class DPT(Neighbors):
         list[list[int]],
         int,
     ]:
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
         tips. Points that do not belong to the same segment in all three
@@ -792,6 +784,7 @@ class DPT(Neighbors):
             ?
         trunk
             ?
+
         """
         if self.flavor == "haghverdi16":
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
@@ -957,8 +950,7 @@ class DPT(Neighbors):
     def __detect_branching_haghverdi16(
         self, Dseg: np.ndarray, tips: np.ndarray
     ) -> np.ndarray:
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -975,6 +967,7 @@ class DPT(Neighbors):
         Returns
         -------
         Segments obtained from "splitting away the first tip cell".
+
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
@@ -1037,6 +1030,7 @@ class DPT(Neighbors):
         Returns
         -------
         Splitting index according to above description.
+
         """
         if a.size != b.size:
             msg = "a and b need to have the same size"
@@ -1096,6 +1090,7 @@ class DPT(Neighbors):
             Difference between concordant and non-concordant pairs.
         tau_old
             Kendall rank correlation of the old sequence.
+
         """
         return 2.0 / (len_old + 1) * (float(diff_pos) / len_old - tau_old)
 
@@ -1112,6 +1107,7 @@ class DPT(Neighbors):
             Difference between concordant and non-concordant pairs.
         tau_old
             Kendall rank correlation of the old sequence.
+
         """
         return 2.0 / (len_old - 2) * (-float(diff_neg) / (len_old - 1) + tau_old)
 
@@ -1133,6 +1129,7 @@ class DPT(Neighbors):
             Difference between concordant pairs for both subsequences.
         diff_neg
             Difference between non-concordant pairs for both subsequences.
+
         """
         # compute ordering relation of the single points a[i] and b[i]
         # with all previous points of the sequences a and b, respectively

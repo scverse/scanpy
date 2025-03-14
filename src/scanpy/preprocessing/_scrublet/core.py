@@ -30,8 +30,7 @@ __all__ = ["Scrublet"]
 
 @dataclass(kw_only=True)
 class Scrublet:
-    """\
-    Initialize Scrublet object with counts matrix and doublet prediction parameters
+    """Initialize Scrublet object with counts matrix and doublet prediction parameters.
 
     Parameters
     ----------
@@ -62,6 +61,7 @@ class Scrublet:
     random_state
         Random state for doublet simulation, approximate
         nearest neighbor search, and PCA/TruncatedSVD.
+
     """
 
     # init fields
@@ -192,8 +192,8 @@ class Scrublet:
     ) -> None:
         """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         sim_doublet_ratio
             Number of doublets to simulate relative to the number of observed
             transcriptomes. If `None`, self.sim_doublet_ratio is used.
@@ -208,8 +208,8 @@ class Scrublet:
         Sets
         ----
         doublet_parents_
-        """
 
+        """
         if sim_doublet_ratio is None:
             sim_doublet_ratio = self.sim_doublet_ratio
         else:
@@ -239,11 +239,10 @@ class Scrublet:
     def set_manifold(
         self, manifold_obs: NDArray[np.float64], manifold_sim: NDArray[np.float64]
     ) -> None:
-        """\
-        Set the manifold coordinates used in k-nearest-neighbor graph construction
+        """Set the manifold coordinates used in k-nearest-neighbor graph construction.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         manifold_obs
             (shape: n_cells × n_features)
             The single-cell "manifold" coordinates (e.g., PCA coordinates)
@@ -259,8 +258,8 @@ class Scrublet:
         Sets
         ----
         manifold_obs_, manifold_sim_,
-        """
 
+        """
         self.manifold_obs_ = manifold_obs
         self.manifold_sim_ = manifold_sim
 
@@ -271,13 +270,12 @@ class Scrublet:
         distance_metric: _Metric | _MetricFn = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
-        """\
-        Calculate doublet scores for observed transcriptomes and simulated doublets
+        """Calculate doublet scores for observed transcriptomes and simulated doublets.
 
         Requires that manifold_obs_ and manifold_sim_ have already been set.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         use_approx_neighbors
             Use approximate nearest neighbor method (annoy) for the KNN
             classifier.
@@ -299,8 +297,8 @@ class Scrublet:
         doublet_scores_obs_, doublet_scores_sim_,
         doublet_errors_obs_, doublet_errors_sim_,
         doublet_neighbor_parents_
-        """
 
+        """
         self._nearest_neighbor_classifier(
             k=self._n_neighbors,
             exp_doub_rate=self.expected_doublet_rate,
@@ -406,11 +404,10 @@ class Scrublet:
     def call_doublets(
         self, *, threshold: float | None = None, verbose: bool = True
     ) -> NDArray[np.bool_] | None:
-        """\
-        Call trancriptomes as doublets or singlets
+        """Call trancriptomes as doublets or singlets.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         threshold
             Doublet score threshold for calling a transcriptome
             a doublet. If `None`, this is set automatically by looking
@@ -427,8 +424,8 @@ class Scrublet:
         predicted_doublets_, z_scores_, threshold_,
         detected_doublet_rate_, detectable_doublet_fraction,
         overall_doublet_rate_
-        """
 
+        """
         if threshold is None:
             # automatic threshold detection
             # http://scikit-image.org/docs/dev/api/skimage.filters.html

@@ -9,8 +9,7 @@ pytestmark = [needs.harmonypy]
 
 
 def test_harmony_integrate():
-    """
-    Test that Harmony integrate works.
+    """Test that Harmony integrate works.
 
     This is a very simple test that just checks to see if the Harmony
     integrate wrapper succesfully added a new field to ``adata.obsm``

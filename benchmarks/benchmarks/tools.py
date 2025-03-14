@@ -1,6 +1,6 @@
-"""
-This module will benchmark tool operations in Scanpy
-API documentation: https://scanpy.readthedocs.io/en/stable/api/tools.html
+"""Benchmark tool operations in Scanpy.
+
+API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
 """
 
 from __future__ import annotations

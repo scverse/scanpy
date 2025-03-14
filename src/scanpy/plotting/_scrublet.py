@@ -33,8 +33,7 @@ def scrublet_score_distribution(
     show: bool = True,
     save: str | bool | None = None,
 ) -> Figure | Sequence[tuple[Axes, Axes]] | tuple[Axes, Axes] | None:
-    """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
+    """Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
     The histogram for simulated doublets is useful for determining the correct doublet
     score threshold.
@@ -63,14 +62,14 @@ def scrublet_score_distribution(
     If ``return_fig`` is True, a :class:`~matplotlib.figure.Figure`.
     If ``show==False`` a list of :class:`~matplotlib.axes.Axes`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pp.scrublet`: Main way of running Scrublet, runs
         preprocessing, doublet simulation and calling.
     :func:`~scanpy.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
-    """
 
+    """
     if "scrublet" not in adata.uns:
         msg = "Please run scrublet before trying to generate the scrublet plot."
         raise ValueError(msg)

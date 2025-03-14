@@ -63,9 +63,7 @@ class Verbosity(IntEnum):
     def override(
         self, verbosity: Verbosity | str | int
     ) -> Generator[Verbosity, None, None]:
-        """\
-        Temporarily override verbosity
-        """
+        """Temporarily override verbosity."""
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
@@ -88,9 +86,7 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
 
 
 class ScanpyConfig:
-    """\
-    Config manager for scanpy.
-    """
+    """Config manager for scanpy."""
 
     N_PCS: int
     """Default number of principal components to use."""
@@ -158,8 +154,7 @@ class ScanpyConfig:
 
     @property
     def verbosity(self) -> Verbosity:
-        """
-        Verbosity level (default `warning`)
+        """Verbosity level (default `warning`).
 
         Level 0: only show 'error' messages.
         Level 1: also show 'warning' messages.
@@ -239,8 +234,7 @@ class ScanpyConfig:
 
     @property
     def autosave(self) -> bool:
-        """\
-        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
+        """Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
@@ -253,8 +247,7 @@ class ScanpyConfig:
 
     @property
     def autoshow(self) -> bool:
-        """\
-        Automatically show figures if `autosave == False` (default `True`).
+        """Automatically show figures if `autosave == False` (default `True`).
 
         There is no need to call the matplotlib pl.show() in this case.
         """
@@ -267,9 +260,7 @@ class ScanpyConfig:
 
     @property
     def writedir(self) -> Path:
-        """\
-        Directory where the function scanpy.write writes to by default.
-        """
+        """Directory where the function scanpy.write writes to by default."""
         return self._writedir
 
     @writedir.setter
@@ -279,9 +270,7 @@ class ScanpyConfig:
 
     @property
     def cachedir(self) -> Path:
-        """\
-        Directory for cache files (default `'./cache/'`).
-        """
+        """Directory for cache files (default `'./cache/'`)."""
         return self._cachedir
 
     @cachedir.setter
@@ -291,9 +280,7 @@ class ScanpyConfig:
 
     @property
     def datasetdir(self) -> Path:
-        """\
-        Directory for example :mod:`~scanpy.datasets` (default `'./data/'`).
-        """
+        """Directory for example :mod:`~scanpy.datasets` (default `'./data/'`)."""
         return self._datasetdir
 
     @datasetdir.setter
@@ -303,9 +290,7 @@ class ScanpyConfig:
 
     @property
     def figdir(self) -> Path:
-        """\
-        Directory for saving figures (default `'./figures/'`).
-        """
+        """Directory for saving figures (default `'./figures/'`)."""
         return self._figdir
 
     @figdir.setter
@@ -315,8 +300,7 @@ class ScanpyConfig:
 
     @property
     def cache_compression(self) -> str | None:
-        """\
-        Compression for `sc.read(..., cache=True)` (default `'lzf'`).
+        """Compression for `sc.read(..., cache=True)` (default `'lzf'`).
 
         May be `'lzf'`, `'gzip'`, or `None`.
         """
@@ -334,8 +318,7 @@ class ScanpyConfig:
 
     @property
     def max_memory(self) -> int | float:
-        """\
-        Maximum memory usage in Gigabyte.
+        """Maximum memory usage in Gigabyte.
 
         Is currently not well respected…
         """
@@ -348,8 +331,7 @@ class ScanpyConfig:
 
     @property
     def n_jobs(self) -> int:
-        """\
-        Default number of jobs/ CPUs to use for parallel computing.
+        """Default number of jobs/ CPUs to use for parallel computing.
 
         Set to `-1` in order to use all available cores.
         Not all algorithms support special behavior for numbers < `-1`,
@@ -364,9 +346,7 @@ class ScanpyConfig:
 
     @property
     def logpath(self) -> Path | None:
-        """\
-        The file path `logfile` was set to.
-        """
+        """The file path `logfile` was set to."""
         return self._logpath
 
     @logpath.setter
@@ -378,8 +358,7 @@ class ScanpyConfig:
 
     @property
     def logfile(self) -> TextIO:
-        """\
-        The open file to write logs to.
+        """The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
@@ -402,9 +381,7 @@ class ScanpyConfig:
 
     @property
     def categories_to_ignore(self) -> list[str]:
-        """\
-        Categories that are omitted in plotting etc.
-        """
+        """Categories that are omitted in plotting etc."""
         return self._categories_to_ignore
 
     @categories_to_ignore.setter
@@ -446,10 +423,9 @@ class ScanpyConfig:
         format: _Format = "pdf",
         facecolor: str | None = None,
         transparent: bool = False,
-        ipython_format: str = "png2x",
+        ipython_format: str | Iterable[str] = "retina",
     ) -> None:
-        """\
-        Set resolution/size, styling and format of figures.
+        """Set resolution/size, styling and format of figures.
 
         Parameters
         ----------
@@ -480,14 +456,19 @@ class ScanpyConfig:
             `rcParams['savefig.transparent']`.
         ipython_format
             Only concerns the notebook/IPython environment; see
-            :func:`~IPython.display.set_matplotlib_formats` for details.
+            `matplotlib_inline.backend_inline.set_matplotlib_formats
+            <https://github.com/ipython/matplotlib-inline/blob/b93777db35267acefe6e37d14214360362d2e8b2/matplotlib_inline/backend_inline.py#L280-L281>`_
+            for details.
+
         """
         if self._is_run_from_ipython():
-            import IPython
+            # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
+            from matplotlib_inline.backend_inline import set_matplotlib_formats
 
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
-            IPython.display.set_matplotlib_formats(*ipython_format)
+
+            set_matplotlib_formats(*ipython_format)
 
         from matplotlib import rcParams
 
@@ -512,7 +493,7 @@ class ScanpyConfig:
 
     @staticmethod
     def _is_run_from_ipython():
-        """Determines whether we're currently in IPython."""
+        """Determine whether we're currently in IPython."""
         import builtins
 
         return getattr(builtins, "__IPYTHON__", False)

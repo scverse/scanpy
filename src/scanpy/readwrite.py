@@ -1,4 +1,4 @@
-"""Reading and Writing"""
+"""Reading and Writing."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
-from ._compat import add_note, deprecated, old_positionals
+from ._compat import deprecated, old_positionals
 from ._settings import settings
 from ._utils import _empty
 
@@ -94,8 +94,7 @@ def read(
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     **kwargs,
 ) -> AnnData:
-    """\
-    Read file and return :class:`~anndata.AnnData` object.
+    """Read file and return :class:`~anndata.AnnData` object.
 
     To speed up reading, consider passing ``cache=True``, which creates an hdf5
     cache file.
@@ -137,6 +136,7 @@ def read(
     Returns
     -------
     An :class:`~anndata.AnnData` object
+
     """
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
@@ -175,8 +175,7 @@ def read_10x_h5(
     gex_only: bool = True,
     backup_url: str | None = None,
 ) -> AnnData:
-    """\
-    Read 10x-Genomics-formatted hdf5 file.
+    r"""Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------
@@ -202,14 +201,15 @@ def read_10x_h5(
         Cell names
     :attr:`~anndata.AnnData.var_names`
         Gene names for a feature barcode matrix, probe names for a probe bc matrix
-    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+    :attr:`~anndata.AnnData.var`\ `['gene_ids']`
         Gene IDs
-    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+    :attr:`~anndata.AnnData.var`\ `['feature_types']`
         Feature types
-    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+    :attr:`~anndata.AnnData.obs`\ `[filtered_barcodes]`
         filtered barcodes if present in the matrix
     :attr:`~anndata.AnnData.var`
         Any additional metadata present in /matrix/features is read in.
+
     """
     start = logg.info(f"reading {filename}")
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
@@ -239,9 +239,7 @@ def read_10x_h5(
 def _read_legacy_10x_h5(
     path: Path, *, genome: str | None = None, start: datetime | None = None
 ):
-    """
-    Read hdf5 file from Cell Ranger v2 or earlier versions.
-    """
+    """Read hdf5 file from Cell Ranger v2 or earlier versions."""
     with h5py.File(str(path), "r") as f:
         try:
             children = list(f.keys())
@@ -304,9 +302,7 @@ def _collect_datasets(dsets: dict, group: h5py.Group):
 
 
 def _read_v3_10x_h5(filename, *, start=None):
-    """
-    Read hdf5 file from Cell Ranger v3 or later versions.
-    """
+    """Read hdf5 file from Cell Ranger v3 or later versions."""
     with h5py.File(str(filename), "r") as f:
         try:
             dsets = {}
@@ -387,8 +383,7 @@ def read_visium(
     load_images: bool | None = True,
     source_image_path: Path | str | None = None,
 ) -> AnnData:
-    """\
-    Read 10x-Genomics-formatted visum dataset.
+    r"""Read 10x-Genomics-formatted visum dataset.
 
     .. deprecated:: 1.11.0
        Use :func:`squidpy.read.visium` instead.
@@ -400,7 +395,7 @@ def read_visium(
 
     See :func:`~scanpy.pl.spatial` for a compatible plotting function.
 
-    .. _Space Ranger output docs: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview
+    .. _Space Ranger output docs: <https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/output/overview>
 
     Parameters
     ----------
@@ -428,24 +423,25 @@ def read_visium(
         Cell names
     :attr:`~anndata.AnnData.var_names`
         Gene names for a feature barcode matrix, probe names for a probe bc matrix
-    :attr:`~anndata.AnnData.var`\\ `['gene_ids']`
+    :attr:`~anndata.AnnData.var`\ `['gene_ids']`
         Gene IDs
-    :attr:`~anndata.AnnData.var`\\ `['feature_types']`
+    :attr:`~anndata.AnnData.var`\ `['feature_types']`
         Feature types
-    :attr:`~anndata.AnnData.obs`\\ `[filtered_barcodes]`
+    :attr:`~anndata.AnnData.obs`\ `[filtered_barcodes]`
         filtered barcodes if present in the matrix
     :attr:`~anndata.AnnData.var`
         Any additional metadata present in /matrix/features is read in.
-    :attr:`~anndata.AnnData.uns`\\ `['spatial']`
+    :attr:`~anndata.AnnData.uns`\ `['spatial']`
         Dict of spaceranger output files with 'library_id' as key
-    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['images']`
+    :attr:`~anndata.AnnData.uns`\ `['spatial'][library_id]['images']`
         Dict of images (`'hires'` and `'lowres'`)
-    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['scalefactors']`
+    :attr:`~anndata.AnnData.uns`\ `['spatial'][library_id]['scalefactors']`
         Scale factors for the spots
-    :attr:`~anndata.AnnData.uns`\\ `['spatial'][library_id]['metadata']`
+    :attr:`~anndata.AnnData.uns`\ `['spatial'][library_id]['metadata']`
         Files metadata: 'chemistry_description', 'software_version', 'source_image_path'
-    :attr:`~anndata.AnnData.obsm`\\ `['spatial']`
+    :attr:`~anndata.AnnData.obsm`\ `['spatial']`
         Spatial spot coordinates, usable as `basis` by :func:`~scanpy.pl.embedding`.
+
     """
     path = Path(path)
     adata = read_10x_h5(path / count_file, genome=genome)
@@ -552,8 +548,7 @@ def read_10x_mtx(
     gex_only: bool = True,
     prefix: str | None = None,
 ) -> AnnData:
-    """\
-    Read 10x-Genomics-formatted mtx directory.
+    """Read 10x-Genomics-formatted mtx directory.
 
     Parameters
     ----------
@@ -582,6 +577,7 @@ def read_10x_mtx(
     Returns
     -------
     An :class:`~anndata.AnnData` object
+
     """
     path = Path(path)
     prefix = "" if prefix is None else prefix
@@ -611,9 +607,7 @@ def _read_10x_mtx(
     prefix: str = "",
     is_legacy: bool,
 ) -> AnnData:
-    """
-    Read mex from output from Cell Ranger v2- or v3+
-    """
+    """Read mex from output from Cell Ranger v2- or v3+."""
     suffix = "" if is_legacy else ".gz"
     adata = read(
         path / f"{prefix}matrix.mtx{suffix}",
@@ -653,8 +647,7 @@ def write(
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
 ):
-    """\
-    Write :class:`~anndata.AnnData` objects to file.
+    """Write :class:`~anndata.AnnData` objects to file.
 
     Parameters
     ----------
@@ -672,6 +665,7 @@ def write(
         See https://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts
         See https://docs.h5py.org/en/latest/high/dataset.html.
+
     """
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
@@ -707,8 +701,7 @@ def write(
 def read_params(
     filename: Path | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
-    """\
-    Read parameter dictionary from text file.
+    """Read parameter dictionary from text file.
 
     Assumes that parameters are specified in the format::
 
@@ -727,6 +720,7 @@ def read_params(
     Returns
     -------
     Dictionary that stores parameters.
+
     """
     filename = Path(filename)  # allow passing str objects
     from collections import OrderedDict
@@ -743,8 +737,7 @@ def read_params(
 
 
 def write_params(path: Path | str, *args, **maps):
-    """\
-    Write parameters to file, so that it's readable by read_params.
+    """Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
     """
@@ -873,8 +866,7 @@ def _slugify(path: str | PurePath) -> str:
 
 
 def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
-    """\
-    Read a SOFT format data file.
+    """Read a SOFT format data file.
 
     The SOFT format is documented here
     https://www.ncbi.nlm.nih.gov/geo/info/soft.html.
@@ -883,6 +875,7 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
     -----
     The function is based on a script by Kerby Shedden.
     https://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
+
     """
     import gzip
 
@@ -938,9 +931,10 @@ def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
 def is_float(string: str) -> float:
     """Check whether string is float.
 
-    See also
+    See Also
     --------
     https://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
+
     """
     try:
         float(string)
@@ -1031,7 +1025,7 @@ def _download(url: str, path: Path):
             try:
                 from certifi import where
             except ImportError as e:
-                add_note(e, f"{msg} Please install `certifi` and try again.")
+                e.add_note(f"{msg} Please install `certifi` and try again.")
                 raise
             else:
                 logg.warning(f"{msg} Trying to use certifi.")

@@ -1,6 +1,4 @@
-"""
-Tests to make sure the example datasets load.
-"""
+"""Tests to make sure the example datasets load."""
 
 from __future__ import annotations
 
@@ -138,7 +136,6 @@ def test_visium_datasets_dir_change(tmp_path: Path):
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
-
     # Test that downloading tissue image works
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)
@@ -191,7 +188,8 @@ DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 def test_doc_shape(ds_name):
     dataset_fn: Callable[[], AnnData] = getattr(sc.datasets, ds_name)
     assert dataset_fn.__doc__, "No docstring"
-    docstring = dedent(dataset_fn.__doc__)
+    start_line_2 = dataset_fn.__doc__.find("\n") + 1
+    docstring = dedent(dataset_fn.__doc__[start_line_2:])
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",

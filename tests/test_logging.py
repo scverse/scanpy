@@ -135,8 +135,7 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     ],
 )
 def test_call_outputs(func):
-    """
-    Tests that these functions print to stdout and don't error.
+    """Tests that these functions print to stdout and don't error.
 
     Checks that https://github.com/scverse/scanpy/issues/1437 is fixed.
     """

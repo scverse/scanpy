@@ -63,7 +63,7 @@ ColorLike = str | tuple[float, ...]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
-    """Intersection between Axes and SubplotBase: Has methods of both"""
+    """Intersection between Axes and SubplotBase: Has methods of both."""
 
 
 # -------------------------------------------------------------------------------
@@ -143,8 +143,7 @@ def timeseries_subplot(
     ax: Axes | None = None,
     marker: str | Sequence[str] = ".",
 ):
-    """\
-    Plot X.
+    """Plot X.
 
     Parameters
     ----------
@@ -153,8 +152,8 @@ def timeseries_subplot(
         X with one column, color categorical.
         X with one column, color continuous.
         X with n columns, color is of length n.
-    """
 
+    """
     if color is not None:
         use_color_map = isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
@@ -208,8 +207,7 @@ def timeseries_subplot(
 def timeseries_as_heatmap(
     X: np.ndarray, *, var_names: Collection[str] = (), highlights_x=(), color_map=None
 ):
-    """\
-    Plot timeseries as heatmap.
+    """Plot timeseries as heatmap.
 
     Parameters
     ----------
@@ -217,6 +215,7 @@ def timeseries_as_heatmap(
         Data array.
     var_names
         Array of strings naming variables stored in columns of X.
+
     """
     if len(var_names) == 0:
         var_names = np.arange(X.shape[1])
@@ -378,14 +377,11 @@ def default_palette(
 
 
 def _validate_palette(adata: AnnData, key: str) -> None:
-    """
-    checks if the list of colors in adata.uns[f'{key}_colors'] is valid
-    and updates the color list in adata.uns[f'{key}_colors'] if needed.
+    """Validate and update the list of colors in `adata.uns[f'{key}_colors']`.
 
     Not only valid matplotlib colors are checked but also if the color name
     is a valid R color name, in which case it will be translated to a valid name
     """
-
     _palette = []
     color_key = f"{key}_colors"
 
@@ -413,8 +409,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
 def _set_colors_for_categorical_obs(
     adata, value_to_plot, palette: str | Sequence[str] | Cycler
 ):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
+    """Set `adata.uns[f'{value_to_plot}_colors']` according to the given palette.
 
     Parameters
     ----------
@@ -430,6 +425,7 @@ def _set_colors_for_categorical_obs(
     Returns
     -------
     None
+
     """
     from matplotlib.colors import to_hex
 
@@ -492,8 +488,7 @@ def _set_colors_for_categorical_obs(
 
 
 def _set_default_colors_for_categorical_obs(adata, value_to_plot):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] using default color palettes
+    """Set `adata.uns[f'{value_to_plot}_colors']` using default color palettes.
 
     Parameters
     ----------
@@ -505,6 +500,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     Returns
     -------
     None
+
     """
     if adata.obs[value_to_plot].dtype == bool:
         categories = (
@@ -768,6 +764,7 @@ def scatter_base(
     -------
     Depending on whether supplying a single array or a list of arrays,
     return a single axis or a list of axes.
+
     """
     if isinstance(highlights, Mapping):
         highlights_indices = sorted(highlights)
@@ -897,6 +894,7 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
         Axis to plot on.
     Y
         Data array, data to be plotted needs to be in the first two columns.
+
     """
     if "s" not in kwargs:
         kwargs["s"] = 2 if Y.shape[0] > 500 else 10
@@ -908,8 +906,7 @@ def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
 
 
 def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None):
-    """
-    Plot arrows of transitions in data matrix.
+    """Plot arrows of transitions in data matrix.
 
     Parameters
     ----------
@@ -919,6 +916,7 @@ def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=N
         Data array, any representation wished (X, psi, phi, etc).
     indices
         Indices storing the transitions.
+
     """
     step = 1
     width = axis_to_data(ax, 0.001)
@@ -1003,6 +1001,7 @@ def hierarchy_pos(
             value: number of nodes in this level
     width: horizontal space allocated for drawing
     height: vertical space allocated for drawing
+
     """
 
     def make_levels(
@@ -1011,7 +1010,7 @@ def hierarchy_pos(
         current_level: int = 0,
         parent: int | None = None,
     ) -> dict[int, _Level]:
-        """Compute the number of nodes for each level"""
+        """Compute the number of nodes for each level."""
         if current_level not in levels:
             levels[current_level] = _Level(total=0, current=0)
         levels[current_level]["total"] += 1
@@ -1072,11 +1071,7 @@ def hierarchy_sc(G, root, node_sets):
 
 
 def zoom(ax, xy="x", factor=1):
-    """Zoom into axis.
-
-    Parameters
-    ----------
-    """
+    """Zoom into axis."""
     limits = ax.get_xlim() if xy == "x" else ax.get_ylim()
     new_limits = 0.5 * (limits[0] + limits[1]) + 1.0 / factor * np.array(
         (-0.5, 0.5)
@@ -1088,7 +1083,7 @@ def zoom(ax, xy="x", factor=1):
 
 
 def get_ax_size(ax: Axes, fig: Figure):
-    """Get axis size
+    """Get axis size.
 
     Parameters
     ----------
@@ -1096,6 +1091,7 @@ def get_ax_size(ax: Axes, fig: Figure):
         Axis object from matplotlib.
     fig
         Figure.
+
     """
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     width, height = bbox.width, bbox.height
@@ -1104,8 +1100,7 @@ def get_ax_size(ax: Axes, fig: Figure):
 
 
 def axis_to_data(ax: Axes, width: float):
-    """For a width in axis coordinates, return the corresponding in data
-    coordinates.
+    """For a width in axis coordinates, return the corresponding in data coordinates.
 
     Parameters
     ----------
@@ -1113,6 +1108,7 @@ def axis_to_data(ax: Axes, width: float):
         Axis object from matplotlib.
     width
         Width in xaxis coordinates.
+
     """
     xlim = ax.get_xlim()
     widthx = width * (xlim[1] - xlim[0])
@@ -1132,6 +1128,7 @@ def axis_to_data_points(ax: Axes, points_axis: np.ndarray):
         Axis object from matplotlib.
     points_axis
         Points in axis coordinates.
+
     """
     axis_to_data = ax.transAxes + ax.transData.inverted()
     return axis_to_data.transform(points_axis)
@@ -1148,13 +1145,14 @@ def data_to_axis_points(ax: Axes, points_data: np.ndarray):
         Axis object from matplotlib.
     points_data
         Points in data coordinates.
+
     """
     data_to_axis = axis_to_data.inverted()
     return data_to_axis(points_data)
 
 
 def check_projection(projection):
-    """Validation for projection argument."""
+    """Validate projection argument."""
     if projection not in {"2d", "3d"}:
         msg = f"Projection must be '2d' or '3d', was '{projection}'."
         raise ValueError(msg)
@@ -1170,10 +1168,12 @@ def check_projection(projection):
 def circles(
     x, y, *, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
 ):
-    """
-    Taken from here: https://gist.github.com/syrte/592a062c562cd2a98a83
-    Make a scatter plot of circles.
+    """Make a scatter plot of circles.
+
     Similar to pl.scatter, but the size of circles are in data scale.
+
+    Taken from here: <https://gist.github.com/syrte/592a062c562cd2a98a83>
+
     Parameters
     ----------
     x, y : scalar or array_like, shape (n, )
@@ -1195,9 +1195,11 @@ def circles(
     kwargs : `~matplotlib.collections.Collection` properties
         Eg. alpha, edgecolor(ec), facecolor(fc), linewidth(lw), linestyle(ls),
         norm, cmap, transform, etc.
+
     Returns
     -------
     paths : `~matplotlib.collections.PathCollection`
+
     Examples
     --------
     a = np.arange(11)
@@ -1207,8 +1209,8 @@ def circles(
     --------
     This code is under [The BSD 3-Clause License]
     (https://opensource.org/license/bsd-3-clause/)
-    """
 
+    """
     # You can set `facecolor` with an array for each patch,
     # while you can only set `facecolors` with a value for all.
     if scale_factor != 1.0:
@@ -1257,31 +1259,31 @@ def make_grid_spec(
 
 
 def fix_kwds(kwds_dict, **kwargs):
-    """
-    Given a dictionary of plot parameters (kwds_dict) and a dict of kwds,
-    merge the parameters into a single consolidated dictionary to avoid
-    argument duplication errors.
+    """Merge the parameters into a single consolidated dictionary.
 
-    If kwds_dict an kwargs have the same key, only the value in kwds_dict is kept.
+    Given a dictionary of plot parameters (`kwds_dict`) and a dict of `kwds`,
+    this function prevents argument duplication errors.
+
+    If `kwds_dict` an kwargs have the same key, only the value in `kwds_dict` is kept.
 
     Parameters
     ----------
-    kwds_dict kwds_dictionary
+    kwds_dict
+        kwds dictionary
     kwargs
 
     Returns
     -------
-    kwds_dict merged with kwargs
+    `kwds_dict` merged with `kwargs`
 
     Examples
     --------
-
     >>> def _example(**kwds):
     ...     return fix_kwds(kwds, key1="value1", key2="value2")
     >>> _example(key1="value10", key3="value3")
     {'key1': 'value10', 'key2': 'value2', 'key3': 'value3'}
-    """
 
+    """
     kwargs.update(kwds_dict)
 
     return kwargs
@@ -1354,5 +1356,5 @@ def _deprecated_scale(
 
 
 def _dk(dendrogram: bool | str | None) -> str | None:
-    """Helper to convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
+    """Convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
     return None if isinstance(dendrogram, bool) else dendrogram

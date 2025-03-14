@@ -1,3 +1,5 @@
+"""Plotting functions for external tools."""
+
 from __future__ import annotations
 
 import contextlib
@@ -45,8 +47,7 @@ __all__ = [
     show_save_ax=doc_show_save_ax,
 )
 def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
-    """\
-    Scatter plot in PHATE basis.
+    """Scatter plot in PHATE basis.
 
     Parameters
     ----------
@@ -74,15 +75,16 @@ def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     >>> data.shape
     (2000, 100)
     >>> adata = AnnData(data)
-    >>> adata.obs['branches'] = branches
+    >>> adata.obs["branches"] = branches
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
-    >>> adata.obsm['X_phate'].shape
+    >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(
     ...     adata,
-    ...     color='branches',
-    ...     color_map='tab20',
+    ...     color="branches",
+    ...     color_map="tab20",
     ... )
+
     """
     return embedding(adata, "phate", **kwargs)
 
@@ -95,8 +97,7 @@ def phate(adata: AnnData, **kwargs) -> list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
-    """\
-    Scatter plot in TriMap basis.
+    """Scatter plot in TriMap basis.
 
     Parameters
     ----------
@@ -108,6 +109,7 @@ def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
     """
     return embedding(adata, "trimap", **kwargs)
 
@@ -122,8 +124,7 @@ def trimap(adata: AnnData, **kwargs) -> Axes | list[Axes] | None:
 def harmony_timeseries(
     adata: AnnData, *, show: bool = True, return_fig: bool = False, **kwargs
 ) -> Axes | list[Axes] | None:
-    """\
-    Scatter plot in Harmony force-directed layout basis.
+    """Scatter plot in Harmony force-directed layout basis.
 
     Parameters
     ----------
@@ -136,8 +137,8 @@ def harmony_timeseries(
     -------
     If `return_fig` is True, a :class:`~matplotlib.figure.Figure`.
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-    """
 
+    """
     tp_name = adata.uns["harmony_timepoint_var"]
     tps = adata.obs[tp_name].unique()
 
@@ -175,8 +176,7 @@ def sam(
     s: float = 10.0,
     **kwargs: Any,
 ) -> Axes:
-    """\
-    Scatter plot using the SAM projection or another input projection.
+    """Scatter plot using the SAM projection or another input projection.
 
     Parameters
     ----------
@@ -192,8 +192,8 @@ def sam(
         figure window.
     kwargs
         all keyword arguments in matplotlib.pyplot.scatter are eligible.
-    """
 
+    """
     if isinstance(projection, str):
         try:
             dt = adata.obsm[projection]
@@ -283,9 +283,9 @@ def wishbone_marker_trajectory(
     save: str | bool | None = None,
     ax: Axes | None = None,
 ):
-    """\
-    Plot marker trends along trajectory, and return trajectory branches for further
-    analysis and visualization (heatmap, etc..)
+    """Plot marker trends along trajectory, and return trajectory branches.
+
+    Intended for further analysis and visualization (heatmap, etc.).
 
     Parameters
     ----------
@@ -318,8 +318,8 @@ def wishbone_marker_trajectory(
         Computed values for the first branch
     `branch2_wishbone` : :class:`pandas.DataFrame` (`adata.uns`)
         Computed values for the second branch.
-    """
 
+    """
     wb = _anndata_to_wishbone(adata)
 
     if figsize is None:

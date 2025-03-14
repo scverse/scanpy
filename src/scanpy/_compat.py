@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import os
 import sys
 import warnings
-from dataclasses import dataclass, field
 from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
 from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
@@ -63,25 +60,6 @@ def fullname(typ: type) -> str:
     return f"{module}.{name}"
 
 
-if sys.version_info >= (3, 11):
-    from contextlib import chdir
-else:
-    import os
-    from contextlib import AbstractContextManager
-
-    @dataclass
-    class chdir(AbstractContextManager):
-        path: Path
-        _old_cwd: list[Path] = field(default_factory=list)
-
-        def __enter__(self) -> None:
-            self._old_cwd.append(Path.cwd())
-            os.chdir(self.path)
-
-        def __exit__(self, *_excinfo) -> None:
-            os.chdir(self._old_cwd.pop())
-
-
 def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
@@ -106,19 +84,6 @@ else:
         return lambda func: func
 
 
-if sys.version_info >= (3, 11):
-
-    @wraps(BaseException.add_note)
-    def add_note(exc: BaseException, note: str) -> None:
-        exc.add_note(note)
-else:
-
-    def add_note(exc: BaseException, note: str) -> None:
-        if not hasattr(exc, "__notes__"):
-            exc.__notes__ = []
-        exc.__notes__.append(note)
-
-
 if sys.version_info >= (3, 13):
     from warnings import deprecated as _deprecated
 else:
@@ -135,8 +100,7 @@ def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 def njit(
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
-    """\
-    Jit-compile a function using numba.
+    """Jit-compile a function using numba.
 
     On call, this function dispatches to a parallel or sequential numba function,
     depending on if it has been called from a thread pool.
@@ -194,8 +158,7 @@ def _is_in_unsafe_thread_pool() -> bool:
 
 @cache
 def _numba_threading_layer() -> Layer:
-    """\
-    Get numba’s threading layer.
+    """Get numba’s threading layer.
 
     This function implements the algorithm as described in
     <https://numba.readthedocs.io/en/stable/user/threading-layer.html>
@@ -230,7 +193,6 @@ def _legacy_numpy_gen(
     random_state: _LegacyRandom | None = None,
 ) -> np.random.Generator:
     """Return a random generator that behaves like the legacy one."""
-
     if random_state is not None:
         if isinstance(random_state, np.random.RandomState):
             np.random.set_state(random_state.get_state(legacy=False))

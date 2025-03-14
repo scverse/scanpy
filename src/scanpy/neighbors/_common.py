@@ -36,8 +36,7 @@ def _get_sparse_matrix_from_indices_distances(
     *,
     keep_self: bool,
 ) -> csr_matrix:
-    """\
-    Create a sparse matrix from a pair of indices and distances.
+    """Create a sparse matrix from a pair of indices and distances.
 
     If keep_self=False, it verifies that the first column is the cell itself,
     then removes it from the explicitly stored zeroes.
@@ -73,8 +72,7 @@ def _get_indices_distances_from_dense_matrix(
 def _get_indices_distances_from_sparse_matrix(
     D: csr_matrix, n_neighbors: int
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
-    """\
-    Get indices and distances from a sparse matrix.
+    """Get indices and distances from a sparse matrix.
 
     Makes sure that for both of the returned matrices:
     1. the first column corresponds to the cell itself as nearest neighbor.
