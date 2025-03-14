@@ -88,7 +88,7 @@ def check_same_image(add_nunit_attachment):
             return f"{descr} ({basename})" if basename else descr
 
         result = cast(
-            CompareResult | None,
+            "CompareResult | None",
             compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:
