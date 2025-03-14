@@ -8,11 +8,10 @@ variables:
   TEST_EXTRA: 'test-full'
   DEPENDENCIES_VERSION: "latest"  # |"pre-release" | "minimum-version"
   TEST_TYPE: "standard" # | "coverage"
+  IMAGE_NAME: "ubuntu-latest"
 
 jobs:
 - job: PyTest
-  pool:
-    vmImage: 'ubuntu-22.04'
   strategy:
     matrix:
       Python3.11:
@@ -27,8 +26,10 @@ jobs:
         python.version: '3.11'
         DEPENDENCIES_VERSION: "minimum-version"
         TEST_TYPE: "coverage"
-
-
+      windows:
+        IMAGE_NAME: 'windows-latest'
+  pool:
+    vmImage: $(IMAGE_NAME)
   steps:
   - task: UsePythonVersion@0
     inputs:
@@ -38,7 +39,14 @@ jobs:
   - script: |
       python -m pip install --upgrade uv
       echo "##vso[task.setvariable variable=uv_cache_dir]`uv cache dir`"
+      echo $(uv_cache_dir)
     displayName: 'Install tools'
+    condition: eq(variables['IMAGE_NAME'], 'ubuntu-latest')
+
+  - script: |
+      python -m pip install --upgrade uv
+    displayName: 'Install tools'
+    condition: eq(variables['IMAGE_NAME'], 'windows-latest')
 
   - task: Cache@2
     inputs:
@@ -61,8 +69,15 @@ jobs:
       export MPLBACKEND="agg"
       echo $MPLBACKEND
     displayName: 'Set env'
+    condition: eq(variables['IMAGE_NAME'], 'ubuntu-latest')
 
-  - script: uv pip install --system --compile 'scanpy[dev,$(TEST_EXTRA)] @ .'
+  - script: |
+      set MPLBACKEND=agg
+      echo $MPLBACKEND
+    displayName: 'Set env'
+    condition: eq(variables['IMAGE_NAME'], 'windows-latest')
+
+  - script: uv pip install --system --compile "scanpy[dev,$(TEST_EXTRA)] @ .
     displayName: 'Install dependencies'
     condition: eq(variables['DEPENDENCIES_VERSION'], 'latest')
 
@@ -115,7 +130,7 @@ jobs:
 
 - job: CheckBuild
   pool:
-    vmImage: 'ubuntu-22.04'
+    vmImage: '$(IMAGE_NAME)'
   steps:
 
   - task: UsePythonVersion@0
