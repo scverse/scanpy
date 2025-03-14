@@ -122,5 +122,7 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
