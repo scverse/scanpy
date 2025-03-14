@@ -8,7 +8,7 @@ on:
   pull_request:
 
 env:
-  PYTEST_ADDOPTS: "-v --color=yes --internet-tests --nunit-xml=test-data/test-results.xml"
+  PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --nunit-xml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
 
@@ -33,6 +33,11 @@ jobs:
           - python-version: '3.11'
             dependencies-version: minimum
             test-type: coverage
+
+    env:  # for use codecov’s env_vars tagging
+      PYTHON: ${{ matrix.python-version }}
+      DEPS: ${{ matrix.dependencies-version || 'default' }}
+      TESTS: ${{ matrix.test-type || 'default' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +90,7 @@ jobs:
         if: matrix.test-type == 'coverage'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: "PYTHON,DEPS,TESTS"
           fail_ci_if_error: true
           file: test-data/coverage.xml
 
@@ -94,6 +100,8 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: "PYTHON,DEPS,TESTS"
+          fail_ci_if_error: true
           file: test-data/test-results.xml
 
       - name: Publish debug artifacts

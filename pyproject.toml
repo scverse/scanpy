@@ -88,6 +88,8 @@ test-min = [
     "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
+    "pytest-xdist[psutil]",
+    "pytest-randomly",
     "profimp",
 ]
 test = [
