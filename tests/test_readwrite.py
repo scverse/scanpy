@@ -13,6 +13,7 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy.readwrite import _slugify
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,7 +35,7 @@ def test_slugify(path):
     assert _slugify(path) == "C-foo-bar"
 
 
-@pytest.mark.parametrize("ext", ["h5ad", "zarr", "csv"])
+@pytest.mark.parametrize("ext", ["h5ad", pytest.param("zarr", marks=needs.zarr), "csv"])
 @pytest.mark.parametrize("style", ["path", "ext", "default"])
 def test_write(
     monkeypatch: pytest.MonkeyPatch,
@@ -89,7 +90,7 @@ def test_write(
     Version(anndata.__version__) < Version("0.11.0rc2"),
     reason="Older AnnData has no convert_strings_to_categoricals",
 )
-@pytest.mark.parametrize("fmt", ["h5ad", "zarr"])
+@pytest.mark.parametrize("fmt", ["h5ad", pytest.param("zarr", marks=needs.zarr)])
 @pytest.mark.parametrize("s2c", [True, False], ids=["s2c", "no_s2c"])
 def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> None:
     adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]), obs=dict(a=["a", "b", "a"]))
