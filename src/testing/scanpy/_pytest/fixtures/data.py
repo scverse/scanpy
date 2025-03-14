@@ -66,16 +66,20 @@ def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnD
     return pbmc3ks_parametrized_session[True].copy
 
 
+def random_csr(*shape) -> sparse.csr_matrix:
+    return sparse.random(*shape, format="csr")
+
+
 @pytest.fixture(
     scope="session",
-    params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
+    params=[np.random.randn, random_csr],
     ids=["sparse", "dense"],
 )
 # worker_id for xdist since we don't want to override open files
 def backed_adata(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
-    worker_id: str = "serial",
+    worker_id: str,
 ) -> AnnData:
     tmp_path = tmp_path_factory.mktemp("backed_adata")
     rand_func = request.param
@@ -94,6 +98,7 @@ def backed_adata(
         if isinstance(adata.X, SparseDataset)
         else adata.file["X"]
     )
+    assert not tmp_path
     return adata
 
 
