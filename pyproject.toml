@@ -85,9 +85,11 @@ scanpy = "scanpy.cli:console_main"
 [project.optional-dependencies]
 test-min = [
     "pytest>=8.2",
-    "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
+    "pytest-xdist[psutil]",
+    "pytest-randomly",
+    "pytest-rerunfailures",
     "profimp",
 ]
 test = [
@@ -169,7 +171,7 @@ addopts = [
 testpaths = [ "./tests", "./ci", "scanpy" ]
 norecursedirs = [ "tests/_images" ]
 xfail_strict = true
-nunit_attach_on = "fail"
+junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
@@ -202,6 +204,8 @@ filterwarnings = [
 data_file = "test-data/coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
+concurrency = [ "multiprocessing" ]
+parallel = "true"
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
