@@ -156,8 +156,8 @@ def test_heatmap(image_comparer):
     # small
     a = AnnData(
         np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
-        obs={"foo": "a b c".split()},
-        var=pd.DataFrame({"genes": "g1 g2 g3".split()}).set_index("genes"),
+        obs={"foo": ["a", "b", "c"]},
+        var=pd.DataFrame({"genes": ["g1", "g2", "g3"]}).set_index("genes"),
     )
     a.obs["foo"] = a.obs["foo"].astype("category")
     sc.pl.heatmap(
