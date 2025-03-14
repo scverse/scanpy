@@ -98,7 +98,6 @@ def backed_adata(
         if isinstance(adata.X, SparseDataset)
         else adata.file["X"]
     )
-    assert not tmp_path
     return adata
 
 
