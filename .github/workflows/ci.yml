@@ -102,7 +102,7 @@ jobs:
 
       - name: Publish debug artifacts
         if: matrix.test-type == 'coverage'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-data
           path: .pytest_cache/d/debug
