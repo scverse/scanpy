@@ -67,7 +67,7 @@ jobs:
         if: matrix.dependencies-version == 'minimum'
         run: |
           uv pip install --system --compile tomli packaging
-          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test-full)
+          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
           uv pip install --system --compile $deps "scanpy @ ."
       - name: Install release candidate dependencies
         if: matrix.dependencies-version == 'pre-release'
