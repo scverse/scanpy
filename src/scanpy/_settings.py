@@ -201,9 +201,7 @@ class ScanpyConfig:
 
     @property
     def file_format_data(self) -> AnnDataFileFormat:
-        """File format for saving AnnData objects.
-
-        """
+        """File format for saving AnnData objects."""
         return self._file_format_data
 
     @file_format_data.setter
