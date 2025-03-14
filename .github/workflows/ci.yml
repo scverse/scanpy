@@ -108,7 +108,7 @@ jobs:
         if: matrix.test-type == 'coverage'
         uses: actions/upload-artifact@v4
         with:
-          name: debug-data
+          name: debug-data-${{ matrix.python-version }}-${{ matrix.dependencies-version || 'default' }}-${{ matrix.test-type || 'default' }}
           path: .pytest_cache/d/debug
 
   check-build:

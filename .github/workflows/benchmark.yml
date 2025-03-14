@@ -32,7 +32,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          filter: blob:none
 
       - name: Fetch main branch for `asv run`’s hash
         run: git fetch origin main:main
