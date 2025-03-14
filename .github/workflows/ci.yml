@@ -59,10 +59,10 @@ jobs:
 
       - name: Install dependencies
         if: matrix.dependencies-version == null
-        run: uv pip install --system --compile "scanpy[dev,test-full] @ ." -c ci/constraints.txt
+        run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
       - name: Install dependencies
         if: matrix.dependencies-version == 'min-optional'
-        run: uv pip install --system --compile "scanpy[dev,test-min] @ ." -c ci/constraints.txt
+        run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
       - name: Install minimum dependency versions
         if: matrix.dependencies-version == 'minimum'
         run: |
@@ -75,7 +75,6 @@ jobs:
           uv pip install -v --system --compile --pre
             "scanpy[dev,test-full] @ ."
             "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
-            -c ci/constraints.txt
 
       - name: Run pytest
         if: matrix.test-type == 'standard'
