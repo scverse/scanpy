@@ -994,12 +994,12 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     wrapped(positive_n_pth, n_genes=N)
     wrapped(top_genes_pth, var_names=top_genes)
 
-    check_same_image(positive_n_pth, top_genes_pth, tol=1)
+    check_same_image(positive_n_pth, top_genes_pth, tol=1, root=tmp_path)
 
     wrapped(negative_n_pth, n_genes=-N)
     wrapped(bottom_genes_pth, var_names=bottom_genes)
 
-    check_same_image(negative_n_pth, bottom_genes_pth, tol=1)
+    check_same_image(negative_n_pth, bottom_genes_pth, tol=1, root=tmp_path)
 
     # Shouldn't be able to pass these together
     with pytest.raises(

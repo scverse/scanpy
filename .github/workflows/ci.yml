@@ -65,16 +65,16 @@ jobs:
       - name: Install dependencies
         if: matrix.dependencies-version == null
         run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
-      - name: Install dependencies
+      - name: Install dependencies (no optional features)
         if: matrix.dependencies-version == 'min-optional'
         run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
-      - name: Install minimum dependency versions
+      - name: Install dependencies (minimum versions)
         if: matrix.dependencies-version == 'minimum'
         run: |
           uv pip install --system --compile tomli packaging
           deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
           uv pip install --system --compile $deps "scanpy @ ."
-      - name: Install release candidate dependencies
+      - name: Install dependencies (pre-release versions)
         if: matrix.dependencies-version == 'pre-release'
         run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
 
