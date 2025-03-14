@@ -130,6 +130,7 @@ intersphinx_mapping = dict(
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
     leidenalg=("https://leidenalg.readthedocs.io/en/latest/", None),
