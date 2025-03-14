@@ -203,7 +203,6 @@ class ScanpyConfig:
     def file_format_data(self) -> AnnDataFileFormat:
         """File format for saving AnnData objects.
 
-        For lossless saving, use `'h5ad'` (hdf5) or `'zarr'`.
         """
         return self._file_format_data
 
