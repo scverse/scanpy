@@ -230,6 +230,7 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
+    ("py:class", "scanpy.tools._types.DensmapMethodKwds"),
 ]
 
 # Options for plot examples
