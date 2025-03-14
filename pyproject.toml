@@ -89,6 +89,7 @@ test-min = [
     "pytest-cov",
     "pytest-xdist[psutil]",
     "pytest-randomly",
+    "pytest-rerunfailures",
     "profimp",
 ]
 test = [

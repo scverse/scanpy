@@ -56,10 +56,10 @@ jobs:
           enable-cache: true
           cache-dependency-glob: pyproject.toml
 
-      - name: Cache pytest data
-        uses: actions/cache@v3
+      - name: Cache downloaded data
+        uses: actions/cache@v4
         with:
-          path: .pytest_cache/d
+          path: .pytest_cache/d/scanpy-data
           key: pytest
 
       - name: Install dependencies
