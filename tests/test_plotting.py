@@ -937,7 +937,7 @@ def test_plot_rank_genes_groups_gene_symbols(
     plt.savefig(pth_1_b)
     pass
 
-    check_same_image(pth_1_a, pth_1_b, tol=1)
+    check_same_image(pth_1_a, pth_1_b, tol=1, root=tmp_path)
 
     pth_2_a = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_a.png"
     pth_2_b = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_b.png"
@@ -950,7 +950,7 @@ def test_plot_rank_genes_groups_gene_symbols(
     plt.savefig(pth_2_b)
     plt.close()
 
-    check_same_image(pth_2_a, pth_2_b, tol=1)
+    check_same_image(pth_2_a, pth_2_b, tol=1, root=tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -1219,7 +1219,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     save_and_compare_images("embedding_groups_size")
 
 
-def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
+def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1319,12 +1319,18 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
     plt.close()
 
     check_same_image(
-        tmp_path / "umap_norm_fig1.png", tmp_path / "umap_norm_fig2.png", tol=1
+        tmp_path / "umap_norm_fig1.png",
+        tmp_path / "umap_norm_fig2.png",
+        tol=1,
+        root=tmp_path,
     )
 
     with pytest.raises(AssertionError):
         check_same_image(
-            tmp_path / "umap_norm_fig1.png", tmp_path / "umap_norm_fig0.png", tol=1
+            tmp_path / "umap_norm_fig1.png",
+            tmp_path / "umap_norm_fig0.png",
+            tol=1,
+            root=tmp_path,
         )
 
 
@@ -1424,7 +1430,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw
     plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
     plt.close()
 
-    check_same_image(path1, path2, tol=15)
+    check_same_image(path1, path2, tol=15, root=tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -1689,7 +1695,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     plt.savefig(pth_b)
     plt.close()
 
-    check_same_image(pth_a, pth_b, tol=1)
+    check_same_image(pth_a, pth_b, tol=1, root=tmp_path)
 
 
 @needs.skmisc
@@ -1734,7 +1740,7 @@ def test_umap_mask_equal(tmp_path, check_same_image):
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
-    check_same_image(p1, p2, tol=1)
+    check_same_image(p1, p2, tol=1, root=tmp_path)
 
 
 def test_umap_mask_mult_plots():
@@ -1760,7 +1766,7 @@ def test_string_mask(tmp_path, check_same_image):
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
-    check_same_image(p1, p2, tol=1)
+    check_same_image(p1, p2, tol=1, root=tmp_path)
 
 
 def test_violin_scale_warning(monkeypatch):

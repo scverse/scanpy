@@ -17,10 +17,8 @@ if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
 
     from testing.scanpy._pytest.fixtures import *  # noqa: F403
 
-
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
-IMG_DIR = Path(__file__).parent / "_images"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -83,7 +81,7 @@ def check_same_image(cache: pytest.Cache):
         actual: Path | os.PathLike,
         *,
         tol: int,
-        basename: str = "",
+        root: Path,
     ) -> None:
         __tracebackhide__ = True
 
@@ -97,7 +95,7 @@ def check_same_image(cache: pytest.Cache):
         d = cache.mkdir("debug")
         for image in ("expected", "actual", "diff"):
             src = Path(result[image])
-            dst = d / src.relative_to(IMG_DIR)
+            dst = d / src.relative_to(root)
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
 
@@ -124,10 +122,10 @@ def check_same_image(cache: pytest.Cache):
 def image_comparer(check_same_image):
     from matplotlib import pyplot as plt
 
-    def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
+    def save_and_compare(root: Path, path_str: Path | os.PathLike, *, tol: int):
         __tracebackhide__ = True
 
-        base_pth = Path(*path_parts)
+        base_pth = root / path_str
 
         if not base_pth.is_dir():
             base_pth.mkdir()
@@ -138,7 +136,7 @@ def image_comparer(check_same_image):
         if not expected_pth.is_file():
             msg = f"No expected output found at {expected_pth}."
             raise OSError(msg)
-        check_same_image(expected_pth, actual_pth, tol=tol)
+        check_same_image(expected_pth, actual_pth, tol=tol, root=root)
 
     return save_and_compare
 
