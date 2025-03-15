@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast, get_args, overload
+from warnings import warn
 
 import anndata.utils
 import h5py
@@ -21,6 +22,7 @@ if Version(anndata.__version__) >= Version("0.11.0rc2"):
         read_loom,
         read_mtx,
         read_text,
+        read_zarr,
     )
 else:
     from anndata import (
@@ -31,13 +33,14 @@ else:
         read_loom,
         read_mtx,
         read_text,
+        read_zarr,
     )
 from anndata import AnnData
 from matplotlib.image import imread
 
 from . import logging as logg
 from ._compat import deprecated, old_positionals
-from ._settings import settings
+from ._settings import AnnDataFileFormat, settings
 from ._utils import _empty
 
 if TYPE_CHECKING:
@@ -59,6 +62,7 @@ avail_exts = {
     "xlsx",
     "h5",
     "h5ad",
+    "zarr",
     "mtx",
     "mtx.gz",
     "soft.gz",
@@ -66,6 +70,7 @@ avail_exts = {
 } | text_exts
 """Available file formats for reading data. """
 
+assert set(get_args(AnnDataFileFormat)) <= avail_exts
 
 # --------------------------------------------------------------------------------
 # Reading and Writing data files and AnnData objects
@@ -643,10 +648,11 @@ def write(
     filename: Path | str,
     adata: AnnData,
     *,
-    ext: Literal["h5", "csv", "txt", "npz"] | None = None,
+    ext: AnnDataFileFormat | Literal["csv"] | None = None,
+    convert_strings_to_categoricals: bool = True,
     compression: Literal["gzip", "lzf"] | None = "gzip",
     compression_opts: int | None = None,
-):
+) -> None:
     """Write :class:`~anndata.AnnData` objects to file.
 
     Parameters
@@ -659,8 +665,11 @@ def write(
     adata
         Annotated data matrix.
     ext
-        File extension from wich to infer file format. If `None`, defaults to
-        `sc.settings.file_format_data`.
+        File extension from which to infer file format.
+        If `None`, defaults to `sc.settings.file_format_data`.
+    convert_strings_to_categoricals
+        If anndata supports it, setting this to `False` will avoid
+        converting string columns to categorical arrays when writing.
     compression
         See https://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts
@@ -668,27 +677,61 @@ def write(
 
     """
     filename = Path(filename)  # allow passing strings
-    if is_valid_filename(filename):
-        filename = filename
-        ext_ = is_valid_filename(filename, return_ext=True)
+    valid_exts = cast(
+        "set[Literal['csv'] | AnnDataFileFormat]", {"csv", *get_args(AnnDataFileFormat)}
+    )
+    if filename.suffix and (ext_from_name := filename.suffix[1:]) in valid_exts:
         if ext is None:
-            ext = ext_
-        elif ext != ext_:
+            ext = ext_from_name
+        elif ext != ext_from_name:
             msg = (
                 "It suffices to provide the file type by "
                 "providing a proper extension to the filename."
-                'One of "txt", "csv", "h5" or "npz".'
+                f"One of {valid_exts}."
             )
             raise ValueError(msg)
     else:
         key = filename
         ext = settings.file_format_data if ext is None else ext
         filename = _get_filename_from_key(key, ext)
+
     if ext == "csv":
+        msg = (
+            "'csv' is not a good choice for anything, especially storing AnnData, "
+            "and will be removed from this function. Use 'h5ad' or 'zarr' instead."
+        )
+        warn(msg, FutureWarning, stacklevel=2)
         adata.write_csvs(filename)
+        return
+    elif ext not in {"h5ad", "h5", "zarr"}:
+        msg = f"Unknown file format: {ext} (not in {valid_exts})"
+        raise ValueError(msg)
+
+    if Version(anndata.__version__) >= Version("0.11.0rc2"):
+        from anndata.io import write_h5ad, write_zarr
+
+        extra_kw = dict(convert_strings_to_categoricals=convert_strings_to_categoricals)
     else:
-        adata.write(
-            filename, compression=compression, compression_opts=compression_opts
+        if not convert_strings_to_categoricals:
+            msg = (
+                "convert_strings_to_categoricals=False is not supported in anndata<0.11"
+            )
+            raise RuntimeError(msg)
+
+        from anndata._io import _write_h5ad as write_h5ad
+        from anndata._io import write_zarr
+
+        extra_kw = {}
+
+    if ext == "zarr":
+        write_zarr(filename, adata, **extra_kw)
+    else:
+        write_h5ad(
+            filename,
+            adata,
+            **extra_kw,
+            compression=compression,
+            compression_opts=compression_opts,
         )
 
 
@@ -788,6 +831,11 @@ def _read(
         else:
             logg.debug(f"reading sheet {sheet} from file {filename}")
             return read_hdf(filename, sheet)
+    if ext == "zarr":
+        if sheet is not None:
+            msg = "Cannot read a specific sheet from a zarr file."
+            raise TypeError(msg)
+        return read_zarr(filename)
     # read other file types
     path_cache: Path = settings.cachedir / _slugify(filename).replace(
         f".{ext}", ".h5ad"
@@ -1079,7 +1127,15 @@ def _check_datafile_present_and_download(path, backup_url=None):
     return True
 
 
-def is_valid_filename(filename: Path, *, return_ext: bool = False):
+@overload
+def is_valid_filename(
+    filename: Path, *, return_ext: Literal[False] = False
+) -> bool: ...
+@overload
+def is_valid_filename(filename: Path, *, return_ext: Literal[True]) -> str: ...
+
+
+def is_valid_filename(filename: Path, *, return_ext: bool = False) -> str | bool:
     """Check whether the argument is a filename."""
     ext = filename.suffixes
 

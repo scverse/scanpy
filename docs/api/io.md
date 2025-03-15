@@ -1,12 +1,25 @@
-## Reading
+(reading)=
+(reading-and-writing)=
+
+## Reading and Writing
 
 ```{eval-rst}
 .. currentmodule:: scanpy
 ```
 
+Write {class}`~anndata.AnnData` objects using its {ref}`anndata:/api.md#writing` methods
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: ../generated/
+
+   write
+```
+
 ```{note}
 For reading annotation use {ref}`pandas.read_… <pandas:io>`
-and add it to your {class}`anndata.AnnData` object. The following read functions are
+and add it to your {class}`~anndata.AnnData` object. The following read functions are
 intended for the numeric data in the data matrix `X`.
 ```
 

@@ -70,7 +70,8 @@ adata.obs['time'] = anno['time']                # numerical annotation of type f
 To write, use:
 
 ```
-adata.write(filename)
+adata.write_h5ad(filename)
+adata.write_zarr(filename)
 adata.write_csvs(filename)
 adata.write_loom(filename)
 ```
