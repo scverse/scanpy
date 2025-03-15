@@ -718,7 +718,8 @@ def write(
             )
             raise RuntimeError(msg)
 
-        from anndata import write_h5ad, write_zarr
+        from anndata._io import _write_h5ad as write_h5ad
+        from anndata._io import write_zarr
 
         extra_kw = {}
 
