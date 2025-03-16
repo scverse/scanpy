@@ -45,7 +45,8 @@ from ._utils import _empty
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from typing import BinaryIO, Literal
+    from os import PathLike
+    from typing import IO, Literal
 
     from ._utils import Empty
 
@@ -87,7 +88,7 @@ assert set(get_args(AnnDataFileFormat)) <= avail_exts
     "cache_compression",
 )
 def read(
-    filename: Path | str,
+    filename: PathLike | str,
     backed: Literal["r", "r+"] | None = None,
     *,
     sheet: str | None = None,
@@ -174,7 +175,7 @@ def read(
 
 @old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
-    filename: Path | str,
+    filename: PathLike | str,
     *,
     genome: str | None = None,
     gex_only: bool = True,
@@ -306,7 +307,7 @@ def _collect_datasets(dsets: dict, group: h5py.Group):
             _collect_datasets(dsets, v)
 
 
-def _read_v3_10x_h5(filename, *, start=None):
+def _read_v3_10x_h5(filename: Path, *, start=None):
     """Read hdf5 file from Cell Ranger v3 or later versions."""
     with h5py.File(str(filename), "r") as f:
         try:
@@ -380,13 +381,13 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 @deprecated("Use `squidpy.read.visium` instead.")
 def read_visium(
-    path: Path | str,
+    path: PathLike | str,
     genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
-    source_image_path: Path | str | None = None,
+    source_image_path: PathLike | str | None = None,
 ) -> AnnData:
     r"""Read 10x-Genomics-formatted visum dataset.
 
@@ -544,7 +545,7 @@ def read_visium(
 
 @old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
-    path: Path | str,
+    path: PathLike | str,
     *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
@@ -645,7 +646,7 @@ def _read_10x_mtx(
 
 @old_positionals("ext", "compression", "compression_opts")
 def write(
-    filename: Path | str,
+    filename: PathLike | str,
     adata: AnnData,
     *,
     ext: AnnDataFileFormat | Literal["csv"] | None = None,
@@ -718,8 +719,11 @@ def write(
             )
             raise RuntimeError(msg)
 
-        from anndata._io import _write_h5ad as write_h5ad
-        from anndata._io import write_zarr
+        def write_h5ad(fn: PathLike | str, ad: AnnData, **kw) -> None:
+            ad.write_h5ad(fn, **kw)
+
+        def write_zarr(fn: PathLike | str, ad: AnnData, **kw) -> None:
+            ad.write_zarr(fn, **kw)
 
         extra_kw = {}
 
@@ -742,7 +746,7 @@ def write(
 
 @old_positionals("as_header")
 def read_params(
-    filename: Path | str, *, as_header: bool = False
+    filename: PathLike | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
     """Read parameter dictionary from text file.
 
@@ -779,7 +783,7 @@ def read_params(
     return params
 
 
-def write_params(path: Path | str, *args, **maps):
+def write_params(path: PathLike | str, *args, **maps):
     """Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
@@ -913,7 +917,7 @@ def _slugify(path: str | PurePath) -> str:
     return filename
 
 
-def _read_softgz(filename: str | bytes | Path | BinaryIO) -> AnnData:
+def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:
     """Read a SOFT format data file.
 
     The SOFT format is documented here
