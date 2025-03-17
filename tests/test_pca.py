@@ -432,7 +432,7 @@ def test_mask_highly_var_error(array_type):
 def test_mask_length_error():
     """Check error for n_obs / mask length mismatch."""
     adata = AnnData(A_list)
-    mask_var = np.random.choice([True, False], adata.shape[1] + 1)
+    mask_var = _helpers.random_mask(adata.shape[1] + 1)
     with pytest.raises(
         ValueError, match=r"The shape of the mask do not match the data\."
     ):
@@ -442,7 +442,7 @@ def test_mask_length_error():
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask_var = np.random.choice([True, False], adata_base.shape[1])
+    mask_var = _helpers.random_mask(adata_base.shape[1])
 
     adata = adata_base.copy()
     sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)
@@ -471,7 +471,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
             " case here, which surprisingly considerably changes the results of PCA."
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
-    mask_var = np.random.choice([True, False], adata.shape[1])
+    mask_var = _helpers.random_mask(adata.shape[1])
 
     adata_masked = adata[:, mask_var].copy()
     sc.pp.pca(adata, mask_var=mask_var)
@@ -514,7 +514,7 @@ def test_mask_defaults(array_type, float_dtype):
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
     rng = np.random.default_rng(8)
-    mask = rng.choice([True, False], adata.shape[1])
+    mask = _helpers.random_mask(adata.shape[1], rng=rng)
     adata.var["highly_variable"] = mask
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None
