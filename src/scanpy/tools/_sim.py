@@ -620,8 +620,7 @@ class GRNsim:
         elif self.model in ["6", "7", "8", "9", "10"]:
             self.Adj_signed = np.zeros((self.dim, self.dim))
             n_sinknodes = 2
-            #             sinknodes = np.random.choice(np.arange(0,self.dim),
-            #                                              size=n_sinknodes,replace=False)
+            #             sinknodes = np.random.choice(self.dim, n_sinknodes, replace=False)
             sinknodes = np.array([0, 1])
             # assume sinknodes have feeback
             self.Adj_signed[sinknodes, sinknodes] = np.ones(n_sinknodes)

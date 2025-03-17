@@ -17,6 +17,8 @@ import scanpy as sc
 if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
+    from numpy.typing import NDArray
+
     from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
@@ -177,3 +179,14 @@ def maybe_dask_process_context():
         yield
     finally:
         dask.config.set(scheduler=prev_scheduler)
+
+
+def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
+    assert n >= 4, "n must be at least 6"  # could be 4 if below code was smarter.
+    rng = np.random.default_rng(rng)
+    mask = rng.choice([True, False], n)
+    if (~mask).sum() < 2:
+        mask[rng.choice(n, 2)] = False
+    elif mask.sum() < 2:
+        mask[rng.choice(n, 2)] = True
+    return mask

@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "[0-9]+.[0-9]+.x"
+  pull_request:
+
+env:
+  PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
+  FORCE_COLOR: "1"
+  MPLBACKEND: agg
+
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.10'
+          - python-version: '3.12'
+          - python-version: '3.12'
+            dependencies-version: min-optional
+          - python-version: '3.12'
+            dependencies-version: pre-release
+            test-type: coverage
+          - python-version: '3.10'
+            dependencies-version: minimum
+            test-type: coverage
+
+    env:  # for use codecov’s env_vars tagging
+      PYTHON: ${{ matrix.python-version }}
+      DEPS: ${{ matrix.dependencies-version || 'default' }}
+      TESTS: ${{ matrix.test-type || 'default' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Cache downloaded data
+        uses: actions/cache@v4
+        with:
+          path: .pytest_cache/d/scanpy-data
+          key: pytest
+
+      - name: Install dependencies
+        if: matrix.dependencies-version == null
+        run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
+      - name: Install dependencies (no optional features)
+        if: matrix.dependencies-version == 'min-optional'
+        run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
+      - name: Install dependencies (minimum versions)
+        if: matrix.dependencies-version == 'minimum'
+        run: |
+          uv pip install --system --compile tomli packaging
+          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
+          uv pip install --system --compile $deps "scanpy @ ."
+      - name: Install dependencies (pre-release versions)
+        if: matrix.dependencies-version == 'pre-release'
+        run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
+
+      - name: Run pytest
+        if: matrix.test-type == null
+        run: pytest
+      - name: Run pytest (coverage)
+        if: matrix.test-type == 'coverage'
+        run: coverage run -m pytest --cov --cov-report=xml
+
+      - name: Upload coverage data
+        uses: codecov/codecov-action@v4
+        if: matrix.test-type == 'coverage'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: "PYTHON,DEPS,TESTS"
+          fail_ci_if_error: true
+          file: test-data/coverage.xml
+
+      - name: Upload test results
+        # yaml strings can’t start with “!”, so using explicit substitution
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: "PYTHON,DEPS,TESTS"
+          fail_ci_if_error: true
+          file: test-data/test-results.xml
+
+      - name: Publish debug artifacts
+        if: matrix.test-type == 'coverage'
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-data-${{ matrix.python-version }}-${{ matrix.dependencies-version || 'default' }}-${{ matrix.test-type || 'default' }}
+          path: .pytest_cache/d/debug
+
+  check-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*
