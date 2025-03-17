@@ -88,7 +88,7 @@ assert set(get_args(AnnDataFileFormat)) <= avail_exts
     "cache_compression",
 )
 def read(
-    filename: PathLike | str,
+    filename: PathLike[str] | str,
     backed: Literal["r", "r+"] | None = None,
     *,
     sheet: str | None = None,
@@ -175,7 +175,7 @@ def read(
 
 @old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
-    filename: PathLike | str,
+    filename: PathLike[str] | str,
     *,
     genome: str | None = None,
     gex_only: bool = True,
@@ -381,13 +381,13 @@ def _read_v3_10x_h5(filename: Path, *, start=None):
 
 @deprecated("Use `squidpy.read.visium` instead.")
 def read_visium(
-    path: PathLike | str,
+    path: PathLike[str] | str,
     genome: str | None = None,
     *,
     count_file: str = "filtered_feature_bc_matrix.h5",
     library_id: str | None = None,
     load_images: bool | None = True,
-    source_image_path: PathLike | str | None = None,
+    source_image_path: PathLike[str] | str | None = None,
 ) -> AnnData:
     r"""Read 10x-Genomics-formatted visum dataset.
 
@@ -545,7 +545,7 @@ def read_visium(
 
 @old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
-    path: PathLike | str,
+    path: PathLike[str] | str,
     *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
@@ -646,7 +646,7 @@ def _read_10x_mtx(
 
 @old_positionals("ext", "compression", "compression_opts")
 def write(
-    filename: PathLike | str,
+    filename: PathLike[str] | str,
     adata: AnnData,
     *,
     ext: AnnDataFileFormat | Literal["csv"] | None = None,
@@ -719,11 +719,11 @@ def write(
             )
             raise RuntimeError(msg)
 
-        def write_h5ad(fn: PathLike | str, ad: AnnData, **kw) -> None:
-            ad.write_h5ad(fn, **kw)
+        def write_h5ad(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
+            adata.write_h5ad(filename, **kw)
 
-        def write_zarr(fn: PathLike | str, ad: AnnData, **kw) -> None:
-            ad.write_zarr(fn, **kw)
+        def write_zarr(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
+            adata.write_zarr(filename, **kw)
 
         extra_kw = {}
 
@@ -746,7 +746,7 @@ def write(
 
 @old_positionals("as_header")
 def read_params(
-    filename: PathLike | str, *, as_header: bool = False
+    filename: PathLike[str] | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
     """Read parameter dictionary from text file.
 
@@ -783,7 +783,7 @@ def read_params(
     return params
 
 
-def write_params(path: PathLike | str, *args, **maps):
+def write_params(path: PathLike[str] | str, *args, **maps):
     """Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
