@@ -19,6 +19,7 @@ from scanpy._utils import elem_mul, select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
+from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
@@ -343,7 +344,7 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
 def test_mask_not_equal():
     """Check that mask is applied successfully to data set where test statistics are already available (test stats overwritten)."""
     pbmc = pbmc68k_reduced()
-    mask_var = np.random.choice([True, False], pbmc.shape[1])
+    mask_var = random_mask(pbmc.shape[1])
     n_genes = sum(mask_var)
 
     run = partial(
