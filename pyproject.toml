@@ -67,7 +67,7 @@ dependencies = [
     "session-info2",
     "legacy-api-wrap>=1.4",                       # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
-    "anndata-plot @ git+https://github.com/scverse/anndata-plot.git@add_phils_wrapper",
+    "anndata-plot @ git+https://github.com/scverse/anndata-plot.git",
 ]
 dynamic = [ "version" ]
 
