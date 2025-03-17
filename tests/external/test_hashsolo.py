@@ -24,7 +24,7 @@ def test_cell_demultiplexing():
         col_pos = (idx % 10) - 1
         x[idx, col_pos] = signal_count
 
-    test_data = AnnData(np.random.randint(0, 100, size=x.shape), obs=x)
+    test_data = AnnData(np.random.randint(0, 100, size=x.shape), obs=pd.DataFrame(x))
     sce.pp.hashsolo(test_data, test_data.obs.columns)
 
     doublets = ["Doublet"] * 10
