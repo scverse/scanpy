@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - "*.*.x"
+    branches-ignore:
+      - "*auto-backport-*"
   pull_request:
 
 env:
