@@ -37,7 +37,6 @@ from ._docs import (
     doc_vboundnorm,
 )
 from ._utils import (
-    ColorLike,
     _deprecated_scale,
     _dk,
     check_colornorm,
@@ -60,6 +59,7 @@ if TYPE_CHECKING:
 
     from .._utils import Empty
     from ._utils import (
+        ColorLike,
         DensityNorm,
         _FontSize,
         _FontWeight,
@@ -187,7 +187,7 @@ def scatter(
     # color can be a obs column name or a matplotlib color specification (or a collection thereof)
     if color is not None:
         color = cast(
-            Collection[str | ColorLike],
+            "Collection[str | ColorLike]",
             [color] if isinstance(color, str) or is_color_like(color) else color,
         )
     args = locals()

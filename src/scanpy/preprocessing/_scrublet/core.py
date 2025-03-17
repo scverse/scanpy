@@ -220,8 +220,8 @@ class Scrublet:
 
         pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
 
-        E1 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 0], :])
-        E2 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 1], :])
+        E1 = cast("sparse.csc_matrix", self._counts_obs[pair_ix[:, 0], :])
+        E2 = cast("sparse.csc_matrix", self._counts_obs[pair_ix[:, 1], :])
         tots1 = self._total_counts_obs[pair_ix[:, 0]]
         tots2 = self._total_counts_obs[pair_ix[:, 1]]
         if synthetic_doublet_umi_subsampling < 1:
@@ -432,7 +432,7 @@ class Scrublet:
             from skimage.filters import threshold_minimum
 
             try:
-                threshold = cast(float, threshold_minimum(self.doublet_scores_sim_))
+                threshold = cast("float", threshold_minimum(self.doublet_scores_sim_))
                 if verbose:
                     logg.info(
                         f"Automatically set threshold at doublet score = {threshold:.2f}"

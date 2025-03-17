@@ -18,6 +18,10 @@ on:
       # code change (e.g. this workflow)
       - synchronize
 
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
 jobs:
   # This job verifies that the milestone is present or not necessary
   # and determines if “check-relnotes” needs to be run.
