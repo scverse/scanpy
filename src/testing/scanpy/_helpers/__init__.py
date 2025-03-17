@@ -17,6 +17,8 @@ import scanpy as sc
 if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
+    from numpy.typing import NDArray
+
     from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
@@ -177,3 +179,13 @@ def maybe_dask_process_context():
         yield
     finally:
         dask.config.set(scheduler=prev_scheduler)
+
+
+def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
+    rng = np.random.default_rng(rng)
+    mask = rng.choice([True, False], n)
+    if mask.all():
+        mask[rng.choice(n)] = False
+    elif not mask.any():
+        mask[rng.choice(n)] = True
+    return mask
