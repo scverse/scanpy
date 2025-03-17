@@ -67,6 +67,7 @@ dependencies = [
     "session-info2",
     "legacy-api-wrap>=1.4",                       # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
+    "anndata-plot @ git+https://github.com/scverse/anndata-plot.git@add_phils_wrapper",
 ]
 dynamic = [ "version" ]
 
@@ -139,6 +140,8 @@ dev = [
     "pre-commit", # static checking
     "towncrier",  # release note management
 ]
+
+
 # Algorithms
 paga = [ "igraph" ]
 louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ] # Louvain community detection
@@ -160,6 +163,8 @@ packages = [ "src/testing", "src/scanpy" ]
 source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
 
+[tool.hatch.metadata]
+allow-direct-references = true
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
