@@ -56,7 +56,7 @@ dependencies = [
     "tqdm",
     "scikit-learn>=1.1,<1.6",
     "statsmodels>=0.13",
-    "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
+    "patsy!=1.0.0",                                                                     # https://github.com/pydata/patsy/issues/215
     "networkx>=2.8",
     "natsort",
     "joblib",
@@ -65,7 +65,7 @@ dependencies = [
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info2",
-    "legacy-api-wrap>=1.4",                       # for positional API deprecations
+    "legacy-api-wrap>=1.4",                                                             # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
     "anndata-plot @ git+https://github.com/scverse/anndata-plot.git@add_phils_wrapper",
 ]

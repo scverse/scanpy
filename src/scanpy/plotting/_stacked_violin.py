@@ -4,7 +4,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 import holoviews as hv
-import anndata_plot as adp
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -209,7 +208,6 @@ class StackedViolin(BasePlot):
         norm: Normalize | None = None,
         **kwds,
     ):
-        
         BasePlot.__init__(
             self,
             adata,
@@ -354,8 +352,6 @@ class StackedViolin(BasePlot):
         ...     .style(row_palette='Blues', linewidth=0).show()
 
         """
-
-        
         super().style(cmap=cmap)
 
         if row_palette is not _empty:
@@ -857,9 +853,7 @@ def stacked_violin(
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)
-    
-    
-    
+
     hv.extension("matplotlib")
 
     adata = sc.datasets.pbmc3k()
@@ -871,7 +865,7 @@ def stacked_violin(
     return hv.Scatter(adata, "obsm.X_umap.0", ["obsm.X_umap.1", "obs.leiden"]).opts(
         color="obs.leiden", cmap="Category20"
     )
-    
+
     if return_fig:
         return vp
     vp.make_figure()
