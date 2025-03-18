@@ -182,11 +182,16 @@ def maybe_dask_process_context():
 
 
 def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
-    assert n >= 6, "n must be at least 6"  # could be 4 if below code was smarter.
+    """Generate a random mask.
+
+    Makes sure that at least 2 mask entries are True and at least 2 are False.
+    This avoids off-by-1 errors even in e.g. neighbors (which already cuts 1 off).
+    """
+    assert n >= 4, "n must be at least 4"
     rng = np.random.default_rng(rng)
     mask = rng.choice([True, False], n)
-    if (~mask).sum() < 2:
-        mask[rng.choice(n, 2)] = False
-    elif mask.sum() < 2:
-        mask[rng.choice(n, 2)] = True
+    if (n_false := (~mask).sum()) < 2:
+        mask[rng.choice(np.flatnonzero(mask), 2 - n_false, replace=False)] = False
+    if (n_true := mask.sum()) < 2:
+        mask[rng.choice(np.flatnonzero(~mask), 2 - n_true, replace=False)] = True
     return mask
