@@ -151,11 +151,11 @@ def test_write_zarr(adata: AnnData, adata_dist: AnnData):
         chunks = (chunks[0][0],) + chunks[1]
 
     # write metadata using regular anndata
-    adata.write_zarr(temp_store, chunks)
+    adata.write_zarr(temp_store, chunks=chunks)
     if adata_dist.uns["dist-mode"] == "dask":
         adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
     elif adata_dist.uns["dist-mode"] == "direct":
-        adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks)
+        adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks=chunks)
     else:
         pytest.fail("add branch for new dist-mode")
 
