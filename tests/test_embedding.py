@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Protocol
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
+from sklearn.mixture import GaussianMixture
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike, NDArray
 
 
 @pytest.mark.parametrize(
@@ -88,3 +94,77 @@ def test_diffmap():
     sc.tl.diffmap(pbmc, random_state=1234)
     d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+def test_densmap():
+    pbmc = pbmc68k_reduced()
+
+    # Checking that the results are reproducible
+    sc.tl.umap(pbmc, method="densmap")
+    d1 = pbmc.obsm["X_densmap"].copy()
+    sc.tl.umap(pbmc, method="densmap")
+    d2 = pbmc.obsm["X_densmap"].copy()
+    assert_array_equal(d1, d2)
+
+    # Checking if specifying random_state  works, arrays shouldn't be equal
+    sc.tl.umap(pbmc, method="densmap", random_state=1234)
+    d3 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+    # Checking if specifying dens_lambda  works, arrays shouldn't be equal
+    sc.tl.umap(pbmc, method="densmap", method_kwds=dict(dens_lambda=2.3456))
+    d4 = pbmc.obsm["X_densmap"].copy()
+    assert_raises(AssertionError, assert_array_equal, d1, d4)
+
+
+def test_umap_raises_for_unsupported_method():
+    pbmc = pbmc68k_reduced()
+
+    # Checking that umap function raises a ValueError
+    # if a user passes an invalid `method` parameter.
+    with assert_raises(ValueError):
+        sc.tl.umap(pbmc, method="method_does_not_exist")
+
+
+class GaussianMixtureLike(Protocol):
+    @property
+    def n_components(self) -> int: ...
+    @property
+    def covariances_(self) -> ArrayLike: ...
+
+
+# Given a fit Gaussian mixture model with N components,
+# return the mean of ellipse areas (one ellipse per component).
+def get_mean_ellipse_area(gm: GaussianMixtureLike) -> np.floating:
+    # Adapted from GMM covariances ellipse plotting tutorial.
+    # Reference: https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html
+    result = []
+    covariances: NDArray[np.float64] = np.asarray(gm.covariances_, dtype=np.float64)
+    for i in range(gm.n_components):
+        component_covariances = covariances[i][:2, :2]
+        v, _ = np.linalg.eigh(component_covariances)
+        v = 2.0 * np.sqrt(2.0) * np.sqrt(v)
+        width = v[0]
+        height = v[1]
+        result.append(np.pi * width * height)
+    return np.mean(np.array(result))
+
+
+def test_densmap_differs_from_umap():
+    pbmc = pbmc68k_reduced()
+
+    # Check that the areas of ellipses that result from
+    # fitting a Gaussian mixture model to the results
+    # of UMAP and DensMAP are different,
+    # with DensMAP ellipses having a larger area on average.
+    random_state = 1234
+    mean_area_results = []
+    n_components = pbmc.obs["louvain"].unique().shape[0]
+    for method in ["densmap", "umap"]:
+        sc.tl.umap(pbmc, method=method, random_state=random_state)
+        X_map = pbmc.obsm[f"X_{method}"].copy()
+        gm = GaussianMixture(n_components=n_components, random_state=random_state).fit(
+            X_map
+        )
+        mean_area_results.append(get_mean_ellipse_area(gm))
+    assert mean_area_results[0] > mean_area_results[1]
