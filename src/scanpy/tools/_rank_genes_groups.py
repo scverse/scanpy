@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, vstack
+from scipy.stats import bws_test 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 from .. import _utils
 from .. import logging as logg
@@ -31,7 +34,7 @@ if TYPE_CHECKING:
 
 
 # Used with get_literal_vals
-_Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+_Method = Literal["logreg", "t-test", "wilcoxon", "bws", "t-test_overestim_var"]
 
 _CONST_MAX_SIZE = 10000000
 
@@ -109,6 +112,7 @@ class _RankGenes:
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
+        self.n_cpu = 1
         self.mask_var = mask_var
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
             self.expm1_func = lambda x: np.expm1(x * np.log(base))
@@ -150,7 +154,6 @@ class _RankGenes:
         if self.mask_var is not None:
             self.X = X[:, self.mask_var]
             self.var_names = adata_comp.var_names[self.mask_var]
-
         else:
             self.X = X
             self.var_names = adata_comp.var_names
@@ -161,9 +164,11 @@ class _RankGenes:
 
         self.means = None
         self.vars = None
+        self.medians = None
 
         self.means_rest = None
         self.vars_rest = None
+        self.medians_rest = None
 
         self.comp_pts = comp_pts
         self.pts = None
@@ -179,14 +184,16 @@ class _RankGenes:
         """Set self.{means,vars,pts}{,_rest} depending on X."""
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
-
+        
         self.means = np.zeros((n_groups, n_genes))
         self.vars = np.zeros((n_groups, n_genes))
+        self.medians = np.zeros((n_groups, n_genes))
         self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
         if self.ireference is None:
             self.means_rest = np.zeros((n_groups, n_genes))
             self.vars_rest = np.zeros((n_groups, n_genes))
+            self.medians_rest = np.zeros((n_groups, n_genes))
             self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
         else:
             mask_rest = self.groups_masks_obs[self.ireference]
@@ -194,6 +201,7 @@ class _RankGenes:
             self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
                 X_rest
             )
+            self.medians[self.ireference] = np.median(X_rest.toarray(), axis=0) if issparse(X_rest) else np.median(X_rest, axis=0)
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
@@ -212,6 +220,7 @@ class _RankGenes:
                 continue
 
             self.means[group_index], self.vars[group_index] = _get_mean_var(X_mask)
+            self.medians[group_index] = np.median(X_mask.toarray(), axis=0) if issparse(X_mask) else np.median(X_mask, axis=0)
 
             if self.ireference is None:
                 mask_rest = ~mask_obs
@@ -220,6 +229,7 @@ class _RankGenes:
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
                 ) = _get_mean_var(X_rest)
+                self.medians_rest[group_index] = np.median(X_rest.toarray(), axis=0) if issparse(X_rest) else np.median(X_rest, axis=0)
                 # this can be costly for sparse data
                 if self.comp_pts:
                     self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]
@@ -361,6 +371,106 @@ class _RankGenes:
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[group_index, :]))
 
                 yield group_index, scores[group_index], pvals
+  
+def bws(
+    self, *, n_cpu: int
+) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    self._basic_stats()
+
+    n_genes = self.X.shape[1]
+
+    def _compute_bws_stat(group_data, reference_data):
+        """Helper function to compute BWS test statistic and p-value."""
+        try:
+            result = bws_test(group_data, reference_data)
+            stat = result.statistic
+            pval = result.pvalue
+        except ValueError:  # Handle cases where the test fails (e.g., insufficient data)
+            stat, pval = np.nan, np.nan
+        return stat, pval
+
+    def _process_gene(i, mask_obs, mask_obs_rest):
+        """Process a single gene for BWS test."""
+        group_data = self.X[mask_obs, i].toarray().flatten() if issparse(self.X) else self.X[mask_obs, i]
+        reference_data = self.X[mask_obs_rest, i].toarray().flatten() if issparse(self.X) else self.X[mask_obs_rest, i]
+
+        # Drop zero counts to get over the dataset size bottleneck
+        group_data = group_data[group_data != 0]
+        reference_data = reference_data[reference_data != 0]
+
+        return _compute_bws_stat(group_data, reference_data)
+
+    # First loop: Loop over all genes
+    if self.ireference is not None:
+        # Initialize space for BWS test statistics and p-values
+        scores = np.zeros(n_genes)
+        pvals = np.zeros(n_genes)
+
+        for group_index, mask_obs in enumerate(self.groups_masks_obs):
+            if group_index == self.ireference:
+                continue
+
+            mask_obs_rest = self.groups_masks_obs[self.ireference]
+
+            n_active = np.count_nonzero(mask_obs)
+            m_active = np.count_nonzero(mask_obs_rest)
+
+            # Adjusted cut-off for BWS test
+            if n_active <= 25 or m_active <= 25:
+                logg.hint(
+                    "Few observations in a group (<=25). "
+                    """The BWS test is robust to low sample size as it 
+                    compares the integrals between the distributions of each
+                    input group and adds extra weights to heavy tails of data, 
+                    but results may still be less reliable with low sample sizes."""
+                )
+
+            # Parallelize the computation across genes
+            with ThreadPoolExecutor(max_workers=n_cpu) as executor:
+                futures = {
+                    executor.submit(_process_gene, i, mask_obs, mask_obs_rest): i
+                    for i in range(n_genes)
+                }
+
+                for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing group {group_index}"):
+                    i = futures[future]
+                    stat, pval = future.result()
+                    scores[i] = stat
+                    pvals[i] = pval
+
+            # Handle NaN values
+            scores[np.isnan(scores)] = 0
+            pvals[np.isnan(pvals)] = 1
+
+            yield group_index, scores, pvals
+    # If no reference group exists, ranking needs only to be done once (full mask)
+    else:
+        n_groups = self.groups_masks_obs.shape[0]
+        scores = np.zeros((n_groups, n_genes))
+        pvals = np.zeros((n_groups, n_genes))
+
+        # Parallelize the computation across genes
+        with ThreadPoolExecutor(max_workers=n_cpu) as executor:
+            futures = {
+                executor.submit(_process_gene, i, mask_obs, ~mask_obs): (group_index, i)
+                for group_index, mask_obs in enumerate(self.groups_masks_obs)
+                for i in range(n_genes)
+            }
+
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing all groups"):
+                group_index, i = futures[future]
+                stat, pval = future.result()
+                scores[group_index, i] = stat
+                pvals[group_index, i] = pval
+
+        for group_index, mask_obs in enumerate(self.groups_masks_obs):
+            n_active = np.count_nonzero(mask_obs)
+
+            # Handle NaN values
+            scores[group_index, :][np.isnan(scores[group_index, :])] = 0
+            pvals[group_index, :][np.isnan(pvals[group_index, :])] = 1
+
+            yield group_index, scores[group_index], pvals[group_index, :]
 
     def logreg(
         self, **kwds
@@ -403,12 +513,17 @@ class _RankGenes:
         n_genes_user: int | None = None,
         rankby_abs: bool = False,
         tie_correct: bool = False,
+        n_cpu: int | None = None,
         **kwds,
     ) -> None:
+        if n_cpu is not None:
+            self.n_cpu = n_cpu
         if method in {"t-test", "t-test_overestim_var"}:
             generate_test_results = self.t_test(method)
         elif method == "wilcoxon":
             generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+        elif method == "bws":
+            generate_test_results = self.bws(n_cpu=self.n_cpu)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
@@ -449,21 +564,41 @@ class _RankGenes:
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
                 self.stats[group_name, "pvals_adj"] = pvals_adj[global_indices]
 
+
             if self.means is not None:
-                mean_group = self.means[group_index]
-                if self.ireference is None:
-                    mean_rest = self.means_rest[group_index]
+                # Use medians for fold change calculation if method is wilcoxon or bws
+                if method in {"wilcoxon", "bws"}:
+                    median_group = self.medians[group_index]
+                    if self.ireference is None:
+                        median_rest = self.medians_rest[group_index]
+                    else:
+                        median_rest = self.medians[self.ireference]
+                    
+                    # Drop zero counts only for the bws method to remain consistent with rank_genes_groups() bottleneck fix
+                    if method == "bws":
+                        median_group = median_group[median_group != 0]
+                        median_rest = median_rest[median_rest != 0]                
+                        
+                    foldchanges = (self.expm1_func(median_group) + 1e-9) / (
+                        self.expm1_func(median_rest) + 1e-9
+                    )  # add small value to remove 0's
                 else:
-                    mean_rest = self.means[self.ireference]
-                foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
-                    self.expm1_func(mean_rest) + 1e-9
-                )  # add small value to remove 0's
+                    # Use means for other methods
+                    mean_group = self.means[group_index]
+                    if self.ireference is None:
+                        mean_rest = self.means_rest[group_index]
+                    else:
+                        mean_rest = self.means[self.ireference]
+                    foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
+                        self.expm1_func(mean_rest) + 1e-9
+                    )  # add small value to remove 0's
+    
                 self.stats[group_name, "logfoldchanges"] = np.log2(
                     foldchanges[global_indices]
                 )
-
+    
         if n_genes_user is None:
-            self.stats.index = self.var_names
+            self.stats.index = self.var_names                
 
 
 @old_positionals(
@@ -490,6 +625,7 @@ def rank_genes_groups(
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
     n_genes: int | None = None,
+    n_cpu: int | None = None,
     rankby_abs: bool = False,
     pts: bool = False,
     key_added: str | None = None,
@@ -500,7 +636,8 @@ def rank_genes_groups(
     layer: str | None = None,
     **kwds,
 ) -> AnnData | None:
-    """Rank genes for characterizing groups.
+    """\
+    Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -527,20 +664,22 @@ def rank_genes_groups(
     n_genes
         The number of genes that appear in the returned tables.
         Defaults to all genes.
+    n_cpu
+        The number of CPUs to use for the bws method to increase computation time.
     method
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
+        `'bws'` uses Baumgartner-Weiss-Schindler test,
         `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
     corr_method
         p-value correction method.
-        Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
+        Used only for `'t-test'`, `'t-test_overestim_var'`, `'wilcoxon'`, and `'bws'`.
     tie_correct
         Use tie correction for `'wilcoxon'` scores.
-        Used only for `'wilcoxon'`.
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
@@ -593,10 +732,9 @@ def rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
-
     """
     mask_var = _check_mask(adata, mask_var, "var")
 
@@ -680,14 +818,19 @@ def rank_genes_groups(
     logg.debug(f"consider {groupby!r} groups:")
     logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks_obs, axis=1)}")
 
+    if n_cpu is None:
+        n_cpu = 1
+
     test_obj.compute_statistics(
         method,
         corr_method=corr_method,
         n_genes_user=n_genes_user,
         rankby_abs=rankby_abs,
         tie_correct=tie_correct,
+        n_cpu=n_cpu,
         **kwds,
     )
+
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
@@ -725,7 +868,7 @@ def rank_genes_groups(
                 "    'logfoldchanges', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals_adj', sorted np.recarray to be indexed by group ids"
-                if method in {"t-test", "t-test_overestim_var", "wilcoxon"}
+                if method in {"t-test", "t-test_overestim_var", "wilcoxon", "bws"}
                 else ""
             )
         ),
@@ -760,11 +903,9 @@ def filter_rank_genes_groups(
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:
-    """Filter out genes based on two criteria.
-
-    1. log fold change and
-    2. fraction of genes expressing the
-       gene within and outside the `groupby` categories.
+    """\
+    Filters out genes based on log fold change and fraction of genes expressing the
+    gene within and outside the `groupby` categories.
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
@@ -796,13 +937,12 @@ def filter_rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
+    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
     >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
     >>> # visualize results
-    >>> sc.pl.rank_genes_groups(adata, key="rank_genes_groups_filtered")
+    >>> sc.pl.rank_genes_groups(adata, key='rank_genes_groups_filtered')
     >>> # visualize results using dotplot
-    >>> sc.pl.rank_genes_groups_dotplot(adata, key="rank_genes_groups_filtered")
-
+    >>> sc.pl.rank_genes_groups_dotplot(adata, key='rank_genes_groups_filtered')
     """
     if key is None:
         key = "rank_genes_groups"
