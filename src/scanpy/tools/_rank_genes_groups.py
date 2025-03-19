@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, vstack
-from scipy.stats import bws_test 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from scipy.stats import bws_test
 from tqdm import tqdm
 
 from .. import _utils
@@ -184,7 +184,7 @@ class _RankGenes:
         """Set self.{means,vars,pts}{,_rest} depending on X."""
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
-        
+
         self.means = np.zeros((n_groups, n_genes))
         self.vars = np.zeros((n_groups, n_genes))
         self.medians = np.zeros((n_groups, n_genes))
@@ -201,7 +201,11 @@ class _RankGenes:
             self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
                 X_rest
             )
-            self.medians[self.ireference] = np.median(X_rest.toarray(), axis=0) if issparse(X_rest) else np.median(X_rest, axis=0)
+            self.medians[self.ireference] = (
+                np.median(X_rest.toarray(), axis=0)
+                if issparse(X_rest)
+                else np.median(X_rest, axis=0)
+            )
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
@@ -220,7 +224,11 @@ class _RankGenes:
                 continue
 
             self.means[group_index], self.vars[group_index] = _get_mean_var(X_mask)
-            self.medians[group_index] = np.median(X_mask.toarray(), axis=0) if issparse(X_mask) else np.median(X_mask, axis=0)
+            self.medians[group_index] = (
+                np.median(X_mask.toarray(), axis=0)
+                if issparse(X_mask)
+                else np.median(X_mask, axis=0)
+            )
 
             if self.ireference is None:
                 mask_rest = ~mask_obs
@@ -229,7 +237,11 @@ class _RankGenes:
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
                 ) = _get_mean_var(X_rest)
-                self.medians_rest[group_index] = np.median(X_rest.toarray(), axis=0) if issparse(X_rest) else np.median(X_rest, axis=0)
+                self.medians_rest[group_index] = (
+                    np.median(X_rest.toarray(), axis=0)
+                    if issparse(X_rest)
+                    else np.median(X_rest, axis=0)
+                )
                 # this can be costly for sparse data
                 if self.comp_pts:
                     self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]
@@ -371,7 +383,8 @@ class _RankGenes:
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[group_index, :]))
 
                 yield group_index, scores[group_index], pvals
-  
+
+
 def bws(
     self, *, n_cpu: int
 ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
@@ -385,14 +398,24 @@ def bws(
             result = bws_test(group_data, reference_data)
             stat = result.statistic
             pval = result.pvalue
-        except ValueError:  # Handle cases where the test fails (e.g., insufficient data)
+        except (
+            ValueError
+        ):  # Handle cases where the test fails (e.g., insufficient data)
             stat, pval = np.nan, np.nan
         return stat, pval
 
     def _process_gene(i, mask_obs, mask_obs_rest):
         """Process a single gene for BWS test."""
-        group_data = self.X[mask_obs, i].toarray().flatten() if issparse(self.X) else self.X[mask_obs, i]
-        reference_data = self.X[mask_obs_rest, i].toarray().flatten() if issparse(self.X) else self.X[mask_obs_rest, i]
+        group_data = (
+            self.X[mask_obs, i].toarray().flatten()
+            if issparse(self.X)
+            else self.X[mask_obs, i]
+        )
+        reference_data = (
+            self.X[mask_obs_rest, i].toarray().flatten()
+            if issparse(self.X)
+            else self.X[mask_obs_rest, i]
+        )
 
         # Drop zero counts to get over the dataset size bottleneck
         group_data = group_data[group_data != 0]
@@ -419,9 +442,9 @@ def bws(
             if n_active <= 25 or m_active <= 25:
                 logg.hint(
                     "Few observations in a group (<=25). "
-                    """The BWS test is robust to low sample size as it 
+                    """The BWS test is robust to low sample size as it
                     compares the integrals between the distributions of each
-                    input group and adds extra weights to heavy tails of data, 
+                    input group and adds extra weights to heavy tails of data,
                     but results may still be less reliable with low sample sizes."""
                 )
 
@@ -432,7 +455,11 @@ def bws(
                     for i in range(n_genes)
                 }
 
-                for future in tqdm(as_completed(futures), total=len(futures), desc=f"Processing group {group_index}"):
+                for future in tqdm(
+                    as_completed(futures),
+                    total=len(futures),
+                    desc=f"Processing group {group_index}",
+                ):
                     i = futures[future]
                     stat, pval = future.result()
                     scores[i] = stat
@@ -457,7 +484,9 @@ def bws(
                 for i in range(n_genes)
             }
 
-            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing all groups"):
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="Processing all groups"
+            ):
                 group_index, i = futures[future]
                 stat, pval = future.result()
                 scores[group_index, i] = stat
@@ -564,7 +593,6 @@ def bws(
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
                 self.stats[group_name, "pvals_adj"] = pvals_adj[global_indices]
 
-
             if self.means is not None:
                 # Use medians for fold change calculation if method is wilcoxon or bws
                 if method in {"wilcoxon", "bws"}:
@@ -573,12 +601,12 @@ def bws(
                         median_rest = self.medians_rest[group_index]
                     else:
                         median_rest = self.medians[self.ireference]
-                    
+
                     # Drop zero counts only for the bws method to remain consistent with rank_genes_groups() bottleneck fix
                     if method == "bws":
                         median_group = median_group[median_group != 0]
-                        median_rest = median_rest[median_rest != 0]                
-                        
+                        median_rest = median_rest[median_rest != 0]
+
                     foldchanges = (self.expm1_func(median_group) + 1e-9) / (
                         self.expm1_func(median_rest) + 1e-9
                     )  # add small value to remove 0's
@@ -592,13 +620,13 @@ def bws(
                     foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
                         self.expm1_func(mean_rest) + 1e-9
                     )  # add small value to remove 0's
-    
+
                 self.stats[group_name, "logfoldchanges"] = np.log2(
                     foldchanges[global_indices]
                 )
-    
+
         if n_genes_user is None:
-            self.stats.index = self.var_names                
+            self.stats.index = self.var_names
 
 
 @old_positionals(
@@ -830,7 +858,6 @@ def rank_genes_groups(
         n_cpu=n_cpu,
         **kwds,
     )
-
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
