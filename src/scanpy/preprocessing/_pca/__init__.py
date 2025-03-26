@@ -325,8 +325,8 @@ def pca(
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            elif issparse(X._meta):
-                from ._dask_sparse import PCASparseDask
+            elif issparse(X._meta) or svd_solver == "covariance_eigh":
+                from ._dask import PCAEighDask
 
                 if random_state != 0:
                     msg = f"Ignoring {random_state=} when using a sparse dask array"
@@ -334,7 +334,7 @@ def pca(
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
                     warnings.warn(msg)
-                pca_ = PCASparseDask(n_components=n_comps)
+                pca_ = PCAEighDask(n_components=n_comps)
             else:
                 from dask_ml.decomposition import PCA
 

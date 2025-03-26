@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
+import scipy.sparse as sp
 
 from scanpy._utils._doctests import doctest_needs
 
@@ -20,14 +21,14 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class PCASparseDask:
+class PCAEighDask:
     n_components: int | None = None
 
     @doctest_needs("dask")
-    def fit(self, x: DaskArray) -> PCASparseDaskFit:
+    def fit(self, x: DaskArray) -> PCAEighDaskFit:
         """Fit the model on `x`.
 
-        This method transforms `self` into a `PCASparseDaskFit` object and returns it.
+        This method transforms `self` into a `PCAEighDaskFit` object and returns it.
 
         Examples
         --------
@@ -40,13 +41,13 @@ class PCASparseDask:
         ... )
         >>> x
         dask.array<csr_matrix, shape=(100, 200), dtype=float32, chunksize=(10, 200), chunktype=scipy.csr_matrix>
-        >>> pca_fit = PCASparseDask().fit(x)
-        >>> assert isinstance(pca_fit, PCASparseDaskFit)
+        >>> pca_fit = PCAEighDask().fit(x)
+        >>> assert isinstance(pca_fit, PCAEighDaskFit)
         >>> pca_fit.transform(x)
         dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
 
         """
-        if x._meta.format != "csr":
+        if sp.issparse(x._meta) and x._meta.format != "csr":
             msg = (
                 "Only dask arrays with CSR-meta format are supported. "
                 f"Got {x._meta.format} as meta."
@@ -59,8 +60,8 @@ class PCASparseDask:
                 "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
             )
             raise ValueError(msg)
-        self.__class__ = PCASparseDaskFit
-        self = cast("PCASparseDaskFit", self)
+        self.__class__ = PCAEighDaskFit
+        self = cast("PCAEighDaskFit", self)
 
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
@@ -99,7 +100,7 @@ class PCASparseDask:
 
 
 @dataclass
-class PCASparseDaskFit(PCASparseDask):
+class PCAEighDaskFit(PCAEighDask):
     n_components_: int = field(init=False)
     n_samples_: int = field(init=False)
     n_features_in_: int = field(init=False)
@@ -118,7 +119,7 @@ class PCASparseDaskFit(PCASparseDask):
             import dask.array as da
 
         def transform_block(
-            x_part: _CSMatrix,
+            x_part: _CSMatrix | NDArray,
             mean_: NDArray[np.floating],
             components_: NDArray[np.floating],
         ):
@@ -187,9 +188,11 @@ def _cov_sparse_dask(
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: _CSMatrix):
+    def gram_block(x_part: _CSMatrix | NDArray):
         gram_matrix: _CSMatrix = x_part.T @ x_part
-        return gram_matrix.toarray()[None, ...]  # need new axis for summing
+        if sp.issparse(gram_matrix):
+            gram_matrix = gram_matrix.toarray()
+        return gram_matrix[None, ...]  # need new axis for summing
 
     gram_matrix_dask: DaskArray = da.map_blocks(
         gram_block,

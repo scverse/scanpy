@@ -19,7 +19,7 @@ import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
 from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
-from scanpy.preprocessing._pca._dask_sparse import _cov_sparse_dask
+from scanpy.preprocessing._pca._dask import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest.marks import needs
@@ -149,7 +149,7 @@ def gen_pca_params(
     svd_solvers: set[SVDSolver]
     match array_type, zero_center:
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
-            svd_solvers = {"auto", "full", "tsqr", "randomized"}
+            svd_solvers = {"auto", "full", "tsqr", "randomized", "covariance_eigh"}
         case (dc, False) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
             svd_solvers = {"tsqr", "randomized"}
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
@@ -562,8 +562,12 @@ needs_anndata_dask = pytest.mark.skipif(
 @needs_anndata_dask
 @pytest.mark.parametrize(
     "other_array_type",
-    [lambda x: x.toarray(), DASK_CONVERTERS[_helpers.as_sparse_dask_array]],
-    ids=["dense-mem", "sparse-dask"],
+    [
+        lambda x: x.toarray(),
+        DASK_CONVERTERS[_helpers.as_sparse_dask_array],
+        DASK_CONVERTERS[_helpers.as_dense_dask_array],
+    ],
+    ids=["dense-mem", "sparse-dask", "dense-dask"],
 )
 def test_covariance_eigh_impls(other_array_type):
     warnings.filterwarnings("error")
