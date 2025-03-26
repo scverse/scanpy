@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
-import scipy.sparse as sp
 
 from scanpy._utils._doctests import doctest_needs
 
@@ -46,7 +45,7 @@ class PCAEighDask:
         dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
 
         """
-        if sp.issparse(x._meta) and x._meta.format != "csr":
+        if isinstance(x._meta, _CSMatrix) and x._meta.format != "csr":
             msg = (
                 "Only dask arrays with CSR-meta format are supported. "
                 f"Got {x._meta.format} as meta."
