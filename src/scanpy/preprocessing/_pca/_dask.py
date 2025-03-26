@@ -9,7 +9,7 @@ import scipy.sparse as sp
 
 from scanpy._utils._doctests import doctest_needs
 
-from .._utils import _get_mean_var
+from .._utils import _CSMatrix, _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from ..._compat import DaskArray
-    from .._utils import _CSMatrix
 
 
 @dataclass
@@ -189,8 +188,8 @@ def _cov_sparse_dask(
         dtype = np.dtype(dtype)
 
     def gram_block(x_part: _CSMatrix | NDArray):
-        gram_matrix: _CSMatrix = x_part.T @ x_part
-        if sp.issparse(gram_matrix):
+        gram_matrix = x_part.T @ x_part
+        if isinstance(gram_matrix, _CSMatrix):
             gram_matrix = gram_matrix.toarray()
         return gram_matrix[None, ...]  # need new axis for summing
 
