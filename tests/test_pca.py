@@ -591,14 +591,20 @@ def test_covariance_eigh_impls(other_array_type):
     ("msg_re", "op"),
     [
         (
-            r"Only dask arrays with CSR-meta",
+            r"Only sparse dask arrays with CSR-meta",
             lambda a: a.map_blocks(
                 sparse.csc_matrix, meta=sparse.csc_matrix(np.array([]))
             ),
         ),
         (r"Only dask arrays with chunking", lambda a: a.rechunk((a.shape[0], 100))),
+        (
+            r"Only dask arrays with chunking",
+            lambda a: a.map_blocks(np.array, meta=np.array([])).rechunk(
+                (a.shape[0], 100)
+            ),
+        ),
     ],
-    ids=["as-csc", "bad-chunking"],
+    ids=["as-csc", "bad-chunking", "bad-chunking-dense"],
 )
 def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArray]):
     adata_sparse = pbmc3k_normalized()

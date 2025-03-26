@@ -47,7 +47,7 @@ class PCAEighDask:
         """
         if isinstance(x._meta, _CSMatrix) and x._meta.format != "csr":
             msg = (
-                "Only dask arrays with CSR-meta format are supported. "
+                "Only sparse dask arrays with CSR-meta format are supported. "
                 f"Got {x._meta.format} as meta."
             )
             raise ValueError(msg)

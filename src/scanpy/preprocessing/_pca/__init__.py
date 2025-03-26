@@ -123,7 +123,7 @@ def pca(
             Not available with *dask* arrays.
         `'covariance_eigh'`
             Classic eigendecomposition of the covariance matrix, suited for tall-and-skinny matrices.
-            With dask, array must be CSR and chunked as (N, adata.shape[1]).
+            With dask, array must be CSR or dense and chunked as (N, adata.shape[1]).
         `'randomized'`
             for the randomized algorithm due to Halko (2009). For *dask* arrays,
             this will use :func:`~dask.array.linalg.svd_compressed`.
