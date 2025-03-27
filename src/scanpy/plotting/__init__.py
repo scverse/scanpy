@@ -13,6 +13,7 @@ from ._anndata import (
     tracksplot,
     violin,
 )
+from ._cluster_tree import cluster_decision_tree
 from ._dotplot import DotPlot, dotplot
 from ._matrixplot import MatrixPlot, matrixplot
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
@@ -105,4 +106,5 @@ __all__ = [
     "timeseries",
     "timeseries_as_heatmap",
     "timeseries_subplot",
+    "cluster_decision_tree",
 ]

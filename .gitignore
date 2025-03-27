@@ -45,3 +45,5 @@ Thumbs.db
 # asv benchmark files
 /benchmarks/.asv
 /benchmarks/data/
+myenv/
+test.py
