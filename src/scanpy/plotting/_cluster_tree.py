@@ -11,6 +11,7 @@ from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
 
 if TYPE_CHECKING:
+    import networkx as nx
     import pandas as pd
     from pandas import DataFrame
 
@@ -211,6 +212,8 @@ def build_cluster_graph(
     ------
         ValueError: If no columns in the DataFrame match the given prefix.
     """
+    import networkx as nx
+
     # Validate input data
     matching_columns = [col for col in data.columns if col.startswith(prefix)]
     if not matching_columns:
@@ -276,6 +279,8 @@ def compute_cluster_layout(
     -------
         Dictionary mapping nodes to their (x, y) positions.
     """
+    import networkx as nx
+
     # Step 1: Calculate initial node positions
     if use_reingold_tilford:
         try:
@@ -703,6 +708,7 @@ def draw_cluster_tree(
         title_fontsize (float, optional):
             Font size for the plot title. Defaults to 16.
     """
+    import networkx as nx
     import seaborn as sns
 
     # Step 1: Compute cluster sizes
