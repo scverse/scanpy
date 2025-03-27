@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+import numba as nb
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import njit, old_positionals 
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -45,12 +46,58 @@ def _select_top_n(scores: NDArray, n_top: int):
 
     return global_indices
 
+@njit
+def rankdata(data: np.ndarray) -> np.ndarray:
+    """
+    parallelized version of scipy.stats.rankdata
+    """
+    ranked = np.empty(data.shape, dtype=np.float64)
+    for j in nb.prange(data.shape[1]):
+        arr = np.ravel(data[:, j])
+        sorter = np.argsort(arr)
+
+        arr = arr[sorter]
+        obs = np.concatenate((np.array([True]), arr[1:] != arr[:-1]))
+
+        dense = np.empty(obs.size, dtype=np.int64)
+        dense[sorter] = obs.cumsum()
+
+        # cumulative counts of each unique value
+        count = np.concatenate((np.nonzero(obs)[0], np.array([len(obs)])))
+        ranked[:, j] = 0.5 * (count[dense] + count[dense - 1] + 1)
+
+    return ranked
+
+@njit
+def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
+    """
+    parallelized version of scipy.stats.tiecorrect
+    """
+    tc = np.ones(rankvals.shape[1], dtype=np.float64)
+    for j in nb.prange(rankvals.shape[1]):
+        arr = np.sort(np.ravel(rankvals[:,j]))
+        idx = np.nonzero(
+            np.concatenate(
+                (
+                    np.array([True]),
+                    arr[1:] != arr[:-1], 
+                    np.array([True])
+                )
+            )
+        )[0]
+        cnt = np.diff(idx).astype(np.float64)
+
+        size = np.float64(arr.size)
+        if size >= 2:
+            tc[j] = 1.0 - (cnt**3 - cnt).sum() / (size**3 - size)
+
+    return tc
 
 def _ranks(
     X: np.ndarray | _CSMatrix,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-) -> Generator[tuple[pd.DataFrame, int, int], None, None]:
+) -> Generator[tuple[np.ndarray, int, int], None, None]:
     n_genes = X.shape[1]
 
     if issparse(X):
@@ -77,24 +124,8 @@ def _ranks(
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
 
-        df = pd.DataFrame(data=get_chunk(X, left, right))
-        ranks = df.rank()
+        ranks = rankdata(get_chunk(X, left, right))
         yield ranks, left, right
-
-
-def _tiecorrect(ranks: pd.DataFrame) -> np.float64:
-    size = np.float64(ranks.shape[0])
-    if size < 2:
-        return np.repeat(ranks.shape[1], 1.0)
-
-    arr = np.sort(ranks, axis=0)
-    tf = np.insert(arr[1:] != arr[:-1], (0, arr.shape[0] - 1), True, axis=0)
-    idx = np.where(tf, np.arange(tf.shape[0])[:, None], 0)
-    idx = np.sort(idx, axis=0)
-    cnt = np.diff(idx, axis=0).astype(np.float64)
-
-    return 1.0 - (cnt**3 - cnt).sum(axis=0) / (size**3 - size)
-
 
 class _RankGenes:
     def __init__(
@@ -311,7 +342,7 @@ class _RankGenes:
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask_obs, mask_obs_rest):
-                    scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
+                    scores[left:right] = ranks[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
@@ -339,7 +370,7 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
-                    scores[group_index, left:right] = ranks.iloc[mask_obs, :].sum(
+                    scores[group_index, left:right] = ranks[mask_obs, :].sum(
                         axis=0
                     )
                     if tie_correct:
