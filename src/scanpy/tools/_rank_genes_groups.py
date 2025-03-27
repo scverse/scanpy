@@ -11,7 +11,7 @@ from scipy.sparse import issparse, vstack
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import njit, old_positionals 
+from .._compat import njit, old_positionals
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -46,10 +46,11 @@ def _select_top_n(scores: NDArray, n_top: int):
 
     return global_indices
 
+
 @njit
 def rankdata(data: np.ndarray) -> np.ndarray:
     """
-    parallelized version of scipy.stats.rankdata
+    Parallelized version of scipy.stats.rankdata
     """
     ranked = np.empty(data.shape, dtype=np.float64)
     for j in nb.prange(data.shape[1]):
@@ -68,22 +69,17 @@ def rankdata(data: np.ndarray) -> np.ndarray:
 
     return ranked
 
+
 @njit
 def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
     """
-    parallelized version of scipy.stats.tiecorrect
+    Parallelized version of scipy.stats.tiecorrect
     """
     tc = np.ones(rankvals.shape[1], dtype=np.float64)
     for j in nb.prange(rankvals.shape[1]):
-        arr = np.sort(np.ravel(rankvals[:,j]))
+        arr = np.sort(np.ravel(rankvals[:, j]))
         idx = np.nonzero(
-            np.concatenate(
-                (
-                    np.array([True]),
-                    arr[1:] != arr[:-1], 
-                    np.array([True])
-                )
-            )
+            np.concatenate((np.array([True]), arr[1:] != arr[:-1], np.array([True])))
         )[0]
         cnt = np.diff(idx).astype(np.float64)
 
@@ -92,6 +88,7 @@ def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
             tc[j] = 1.0 - (cnt**3 - cnt).sum() / (size**3 - size)
 
     return tc
+
 
 def _ranks(
     X: np.ndarray | _CSMatrix,
@@ -126,6 +123,7 @@ def _ranks(
 
         ranks = rankdata(get_chunk(X, left, right))
         yield ranks, left, right
+
 
 class _RankGenes:
     def __init__(
@@ -370,9 +368,7 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
-                    scores[group_index, left:right] = ranks[mask_obs, :].sum(
-                        axis=0
-                    )
+                    scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
                     if tie_correct:
                         T[group_index, left:right] = _tiecorrect(ranks)
 
