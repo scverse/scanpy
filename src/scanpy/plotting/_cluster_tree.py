@@ -7,7 +7,6 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
 
@@ -704,6 +703,8 @@ def draw_cluster_tree(
         title_fontsize (float, optional):
             Font size for the plot title. Defaults to 16.
     """
+    import seaborn as sns
+
     # Step 1: Compute cluster sizes
     cluster_sizes = {}
     for res in resolutions:

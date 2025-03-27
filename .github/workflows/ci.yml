@@ -45,11 +45,6 @@ jobs:
           fetch-depth: 0
           filter: blob:none
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libigraph-dev
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -69,19 +64,19 @@ jobs:
 
       - name: Install dependencies
         if: matrix.dependencies-version == null
-        run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
+        run: uv pip install --system --compile "scanpy[dev,test-full,leiden] @ ."
       - name: Install dependencies (no optional features)
         if: matrix.dependencies-version == 'min-optional'
-        run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
+        run: uv pip install --system --compile "scanpy[dev,test-min,leiden] @ ."
       - name: Install dependencies (minimum versions)
         if: matrix.dependencies-version == 'minimum'
         run: |
           uv pip install --system --compile tomli packaging
-          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
+          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test leiden)
           uv pip install --system --compile $deps "scanpy @ ."
       - name: Install dependencies (pre-release versions)
         if: matrix.dependencies-version == 'pre-release'
-        run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
+        run: uv pip install -v --system --compile --pre "scanpy[dev,test-full,leiden] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
 
       - name: Run pytest
         if: matrix.test-type == null
