@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-import numba as nb
+import numba
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, vstack
@@ -49,11 +49,9 @@ def _select_top_n(scores: NDArray, n_top: int):
 
 @njit
 def rankdata(data: np.ndarray) -> np.ndarray:
-    """
-    Parallelized version of scipy.stats.rankdata
-    """
+    """Parallelized version of scipy.stats.rankdata."""
     ranked = np.empty(data.shape, dtype=np.float64)
-    for j in nb.prange(data.shape[1]):
+    for j in numba.prange(data.shape[1]):
         arr = np.ravel(data[:, j])
         sorter = np.argsort(arr)
 
@@ -64,7 +62,7 @@ def rankdata(data: np.ndarray) -> np.ndarray:
         dense[sorter] = obs.cumsum()
 
         # cumulative counts of each unique value
-        count = np.concatenate((np.nonzero(obs)[0], np.array([len(obs)])))
+        count = np.concatenate((np.flatnonzero(obs), np.array([len(obs)])))
         ranked[:, j] = 0.5 * (count[dense] + count[dense - 1] + 1)
 
     return ranked
@@ -72,15 +70,13 @@ def rankdata(data: np.ndarray) -> np.ndarray:
 
 @njit
 def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
-    """
-    Parallelized version of scipy.stats.tiecorrect
-    """
+    """Parallelized version of scipy.stats.tiecorrect."""
     tc = np.ones(rankvals.shape[1], dtype=np.float64)
-    for j in nb.prange(rankvals.shape[1]):
+    for j in numba.prange(rankvals.shape[1]):
         arr = np.sort(np.ravel(rankvals[:, j]))
-        idx = np.nonzero(
+        idx = np.flatnonzero(
             np.concatenate((np.array([True]), arr[1:] != arr[:-1], np.array([True])))
-        )[0]
+        )
         cnt = np.diff(idx).astype(np.float64)
 
         size = np.float64(arr.size)
