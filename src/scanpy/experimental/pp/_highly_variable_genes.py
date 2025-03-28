@@ -5,7 +5,7 @@ from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
 
-import numba as nb
+import numba
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp_sparse
@@ -62,7 +62,7 @@ def _calculate_res_sparse(
         return res
 
     residuals = np.zeros(n_genes, dtype=np.float64)
-    for gene in nb.prange(n_genes):
+    for gene in numba.prange(n_genes):
         start_idx = indptr[gene]
         stop_idx = indptr[gene + 1]
 
@@ -113,7 +113,7 @@ def _calculate_res_dense(
 
     residuals = np.zeros(n_genes, dtype=np.float64)
 
-    for gene in nb.prange(n_genes):
+    for gene in numba.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
             sum_clipped_res += clac_clipped_res_dense(gene, cell)
