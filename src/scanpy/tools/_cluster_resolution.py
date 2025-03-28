@@ -214,7 +214,13 @@ def cluster_resolution_finder(
     >>> sc.tl.cluster_resolution_finder(adata, resolutions=[0.0, 0.5])
     >>> sc.pl.cluster_decision_tree(adata, resolutions=[0.0, 0.5])
     """
+    import io
+
     from . import leiden
+
+    # Suppress prints if pytest is running
+    if "pytest" in sys.modules:
+        sys.stdout = io.StringIO()
 
     # Validate inputs
     if not resolutions:
@@ -246,7 +252,9 @@ def cluster_resolution_finder(
                 n_iterations=n_iterations,
                 key_added=res_key,
             )
-            if "pytest" not in sys.modules:  # Suppress output during testing
+            if "pytest" not in sys.modules and not hasattr(
+                sys, "_called_from_test"
+            ):  # Suppress print in tests
                 print(f"Completed Leiden clustering for resolution {resolution}")
         except Exception as e:
             msg = f"Leiden clustering failed at resolution {resolution}: {e}"
