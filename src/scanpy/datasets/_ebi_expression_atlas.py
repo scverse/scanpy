@@ -11,6 +11,7 @@ import pandas as pd
 from scipy import sparse
 
 from .. import logging as logg
+from .._compat import add_note
 from .._settings import settings
 from .._utils._doctests import doctest_internet
 from ..readwrite import _download
@@ -36,7 +37,7 @@ def sniff_url(accession: str):
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.add_note(base_url)
+        add_note(e, base_url)
         raise
 
 
