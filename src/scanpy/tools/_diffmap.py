@@ -20,8 +20,7 @@ def diffmap(
     random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
+    """Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
 
     Diffusion maps :cite:p:`Coifman2005` have been proposed for visualizing single-cell
     data by :cite:t:`Haghverdi2015`. This tool uses the adapted Gaussian kernel suggested
@@ -72,6 +71,7 @@ def diffmap(
     which is non-informative in diffusion maps.
     Therefore, the first diffusion component is at index 1,
     e.g. `adata.obsm["X_diffmap"][:,1]`
+
     """
     if neighbors_key is None:
         neighbors_key = "neighbors"

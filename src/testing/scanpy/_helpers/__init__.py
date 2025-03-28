@@ -1,6 +1,4 @@
-"""
-This file contains helper functions for the scanpy test suite.
-"""
+"""Helper functions for the scanpy test suite."""
 
 from __future__ import annotations
 
@@ -19,6 +17,8 @@ import scanpy as sc
 if TYPE_CHECKING:
     from collections.abc import MutableSequence
 
+    from numpy.typing import NDArray
+
     from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 def anndata_v0_8_constructor_compat(X, *args, **kwargs):
-    """Constructor for anndata that uses dtype of X for test compatibility with older versions of AnnData.
+    """Construct AnnData that uses dtype of X for test compatibility with older AnnData versions.
 
     Once the minimum version of AnnData is 0.9, this function can be replaced with the default constructor.
     """
@@ -78,7 +78,7 @@ def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
 
 
 def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
-    """Checks that the results of a computation add values/ mutate the anndata object in a consistent way."""
+    """Check that the results of a computation add values/ mutate the anndata object in a consistent way."""
     # Gen data
     empty_X = np.zeros(shape=X.shape, dtype=X.dtype)
     adata = sc.AnnData(
@@ -113,12 +113,11 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
 
 
 def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
-    """
-    Runs `function` on `adata` with provided arguments `kwargs` twice:
-    once with `check_values=True` and once with `check_values=False`.
+    """Run `function` on `adata` with provided arguments `kwargs` twice.
+
+    Once with `check_values=True` and once with `check_values=False`.
     Checks that the `expected_warning` is only raised whtn `check_values=True`.
     """
-
     # expecting 0 no-int warnings
     with warnings.catch_warnings(record=True) as record:
         function(adata.copy(), **kwargs, check_values=False)
@@ -163,10 +162,10 @@ class MultiContext(AbstractContextManager):
 
 @contextmanager
 def maybe_dask_process_context():
-    """
+    """Switch to a single-threaded scheduler for tests that use numba.
+
     Running numba with dask's threaded scheduler causes crashes,
-    so we need to switch to single-threaded (or processes, which is slower)
-    scheduler for tests that use numba.
+    so we need to switch to single-threaded (or processes, which is slower).
     """
     if not find_spec("dask"):
         yield
@@ -180,3 +179,19 @@ def maybe_dask_process_context():
         yield
     finally:
         dask.config.set(scheduler=prev_scheduler)
+
+
+def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
+    """Generate a random mask.
+
+    Makes sure that at least 2 mask entries are True and at least 2 are False.
+    This avoids off-by-1 errors even in e.g. neighbors (which already cuts 1 off).
+    """
+    assert n >= 4, "n must be at least 4"
+    rng = np.random.default_rng(rng)
+    mask = rng.choice([True, False], n)
+    if (n_false := (~mask).sum()) < 2:
+        mask[rng.choice(np.flatnonzero(mask), 2 - n_false, replace=False)] = False
+    if (n_true := mask.sum()) < 2:
+        mask[rng.choice(np.flatnonzero(~mask), 2 - n_true, replace=False)] = True
+    return mask

@@ -1,4 +1,4 @@
-"""Simple Preprocessing Functions
+"""Simple Preprocessing Functions.
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
@@ -68,8 +68,7 @@ def filter_cells(
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
-    """\
-    Filter cell outliers based on counts and numbers of genes expressed.
+    """Filter cell outliers based on counts and numbers of genes expressed.
 
     For instance, only keep cells with at least `min_counts` counts or
     `min_genes` genes expressed. This is to filter measurement outliers,
@@ -124,20 +123,21 @@ def filter_cells(
     >>> sc.pp.filter_cells(adata, min_genes=0)
     >>> adata.n_obs
     640
-    >>> int(adata.obs['n_genes'].min())
+    >>> int(adata.obs["n_genes"].min())
     1
     >>> # filter manually
-    >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
+    >>> adata_copy = adata[adata.obs["n_genes"] >= 3]
     >>> adata_copy.n_obs
     554
-    >>> int(adata_copy.obs['n_genes'].min())
+    >>> int(adata_copy.obs["n_genes"].min())
     3
     >>> # actually do some filtering
     >>> sc.pp.filter_cells(adata, min_genes=3)
     >>> adata.n_obs
     554
-    >>> int(adata.obs['n_genes'].min())
+    >>> int(adata.obs["n_genes"].min())
     3
+
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
@@ -217,8 +217,7 @@ def filter_genes(
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | tuple[np.ndarray, np.ndarray] | None:
-    """\
-    Filter genes based on number of cells or counts.
+    """Filter genes based on number of cells or counts.
 
     Keep genes that have at least `min_counts` counts or are expressed in at
     least `min_cells` cells or have at most `max_counts` counts or are expressed
@@ -254,6 +253,7 @@ def filter_genes(
     number_per_gene
         Depending on what was thresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
+
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
@@ -330,10 +330,9 @@ def log1p(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | np.ndarray | _CSMatrix | None:
-    """\
-    Logarithmize the data matrix.
+    r"""Logarithmize the data matrix.
 
-    Computes :math:`X = \\log(X + 1)`,
+    Computes :math:`X = \log(X + 1)`,
     where :math:`log` denotes the natural logarithm unless a different base is given.
 
     Parameters
@@ -359,6 +358,7 @@ def log1p(
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
+
     """
     _check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
@@ -443,10 +443,9 @@ def sqrt(
     chunked: bool = False,
     chunk_size: int | None = None,
 ) -> AnnData | _CSMatrix | np.ndarray | None:
-    """\
-    Square root the data matrix.
+    r"""Take square root of the data matrix.
 
-    Computes :math:`X = \\sqrt(X)`.
+    Computes :math:`X = \sqrt(X)`.
 
     Parameters
     ----------
@@ -465,6 +464,7 @@ def sqrt(
     Returns
     -------
     Returns or updates `data`, depending on `copy`.
+
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -502,8 +502,7 @@ def normalize_per_cell(
     use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
 ) -> AnnData | np.ndarray | _CSMatrix | None:
-    """\
-    Normalize total counts per cell.
+    """Normalize total counts per cell.
 
     .. deprecated:: 1.3.7
 
@@ -564,8 +563,9 @@ def normalize_per_cell(
     >>> print(adata.X.sum(axis=1))
     [3. 3. 3.]
     >>> sc.pp.normalize_per_cell(
-    ...     adata, counts_per_cell_after=1,
-    ...     key_n_counts='n_counts2',
+    ...     adata,
+    ...     counts_per_cell_after=1,
+    ...     key_n_counts="n_counts2",
     ... )
     >>> print(adata.obs)
        n_counts  n_counts2
@@ -574,6 +574,7 @@ def normalize_per_cell(
     2      11.0        3.0
     >>> print(adata.X.sum(axis=1))
     [1. 1. 1.]
+
     """
     if isinstance(data, AnnData):
         start = logg.info("normalizing by total count per cell")
@@ -652,8 +653,8 @@ def numpy_regress_out(
     data: np.ndarray,
     regressor: np.ndarray,
 ) -> np.ndarray:
-    """\
-    Numba kernel for regress out unwanted sorces of variantion.
+    """Numba kernel for regress out unwanted sorces of variantion.
+
     Finding coefficient using Linear regression (Linear Least Squares).
     """
     inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
@@ -671,8 +672,7 @@ def regress_out(
     n_jobs: int | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Regress out (mostly) unwanted sources of variation.
+    """Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
     function in R :cite:p:`Satija2015`. Note that this function tends to overcorrect
@@ -698,6 +698,7 @@ def regress_out(
 
     `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Corrected count data matrix.
+
     """
     from joblib import Parallel, delayed
 
@@ -882,8 +883,7 @@ def sample(
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | _CSMatrix | DaskArray, NDArray[np.int64]]:
-    """\
-    Sample observations or variables with or without replacement.
+    r"""Sample observations or variables with or without replacement.
 
     Parameters
     ----------
@@ -892,12 +892,12 @@ def sample(
         Rows correspond to cells and columns to genes.
     fraction
         Sample to this `fraction` of the number of observations or variables.
-        (All of them, even if there are `0`\\ s/`False`\\ s in `p`.)
+        (All of them, even if there are `0`\ s/`False`\ s in `p`.)
         This can be larger than 1.0, if `replace=True`.
         See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
-    random_state
+    rng
         Random seed to change subsampling.
     copy
         If an :class:`~anndata.AnnData` is passed,
@@ -905,7 +905,7 @@ def sample(
     replace
         If True, samples are drawn with replacement.
     axis
-        Sample `obs`\\ ervations (axis 0) or `var`\\ iables (axis 1).
+        Sample `obs`\ ervations (axis 0) or `var`\ iables (axis 1).
     p
         Drawing probabilities (floats) or mask (bools).
         Either an `axis`-sized array, or the name of a column.
@@ -920,6 +920,7 @@ def sample(
         If `data` is array-like or `copy=True`, returns the subset.
     `indices` : numpy.ndarray
         If `data` is array-like, also returns the indices into the original.
+
     """
     # parameter validation
     if not copy and isinstance(data, AnnData) and data.isbacked:
@@ -986,8 +987,7 @@ def downsample_counts(
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Downsample counts from count matrix.
+    """Downsample counts from count matrix.
 
     If `counts_per_cell` is specified, each cell will downsampled.
     If `total_counts` is specified, expression matrix will be downsampled to
@@ -1018,6 +1018,7 @@ def downsample_counts(
 
     `adata.X` : :class:`~numpy.ndarray` | :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` (dtype `float`)
         Downsampled counts matrix.
+
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
@@ -1138,8 +1139,7 @@ def _downsample_array(
     replace: bool = True,
     inplace: bool = False,
 ):
-    """\
-    Evenly reduce counts in cell to target amount.
+    """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
 

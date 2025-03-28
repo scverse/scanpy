@@ -1,6 +1,4 @@
-"""\
-Calculate density of cells in embeddings
-"""
+"""Calculate density of cells in embeddings."""
 
 from __future__ import annotations
 
@@ -19,9 +17,7 @@ if TYPE_CHECKING:
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
-    """\
-    Calculates the density of points in 2 dimensions.
-    """
+    """Calculate the density of points in 2 dimensions."""
     from scipy.stats import gaussian_kde
 
     # Calculate the point density
@@ -46,8 +42,7 @@ def embedding_density(
     key_added: str | None = None,
     components: str | Sequence[str] | None = None,
 ) -> None:
-    """\
-    Calculate the density of cells in an embedding (per condition).
+    """Calculate the density of cells in an embedding (per condition).
 
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
@@ -113,9 +108,10 @@ def embedding_density(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pl.embedding_density
+
     """
     # to ensure that newly created covariates are categorical
     # to test for category numbers

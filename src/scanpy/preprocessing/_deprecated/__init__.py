@@ -13,8 +13,7 @@ def normalize_per_cell_weinreb16_deprecated(
     max_fraction: float = 1,
     mult_with_mean: bool = False,
 ) -> np.ndarray:
-    """\
-    Normalize each cell :cite:p:`Weinreb2017`.
+    """Normalize each cell :cite:p:`Weinreb2017`.
 
     This is a deprecated version. See `normalize_per_cell` instead.
 
@@ -34,6 +33,7 @@ def normalize_per_cell_weinreb16_deprecated(
     Returns
     -------
     Normalized version of the original expression matrix.
+
     """
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
@@ -59,8 +59,7 @@ def normalize_per_cell_weinreb16_deprecated(
 
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:
-    """\
-    Z-score standardize each variable/gene in X :cite:p:`Weinreb2017`.
+    """Z-score standardize each variable/gene in X :cite:p:`Weinreb2017`.
 
     Use `scale` instead.
 
@@ -72,6 +71,7 @@ def zscore_deprecated(X: np.ndarray) -> np.ndarray:
     Returns
     -------
     Z-score standardized version of the data matrix.
+
     """
     means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
     stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))

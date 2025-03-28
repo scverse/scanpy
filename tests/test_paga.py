@@ -100,7 +100,7 @@ def test_paga_compare(image_comparer):
 
 
 def test_paga_positions_reproducible():
-    """Check exact reproducibility and effect of random_state on paga positions"""
+    """Check exact reproducibility and effect of random_state on paga positions."""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")

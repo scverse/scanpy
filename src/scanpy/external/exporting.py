@@ -1,6 +1,4 @@
-"""\
-Exporting to formats for other software.
-"""
+"""Exporting to formats for other software."""
 
 from __future__ import annotations
 
@@ -47,8 +45,7 @@ def spring_project(
     neighbors_key: str | None = None,
     overwrite: bool = False,
 ) -> None:
-    """\
-    Exports to a SPRING project directory :cite:p:`Weinreb2017`.
+    """Export to a SPRING project directory :cite:p:`Weinreb2017`.
 
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
@@ -79,8 +76,8 @@ def spring_project(
     Examples
     --------
     See this `tutorial <https://github.com/scverse/scanpy_usage/tree/master/171111_SPRING_export>`__.
-    """
 
+    """
     # need to get nearest neighbors first
     if neighbors_key is None:
         neighbors_key = "neighbors"
@@ -273,8 +270,7 @@ def _get_edges(adata, neighbors_key=None):
 
 
 def write_hdf5_genes(E, gene_list, filename):
-    '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_genes.hdf5"'''
-
+    """SPRING standard: filename = main_spring_dir + "counts_norm_sparse_genes.hdf5"."""
     E = E.tocsc()
 
     hf = h5py.File(filename, "w")
@@ -295,8 +291,7 @@ def write_hdf5_genes(E, gene_list, filename):
 
 
 def write_hdf5_cells(E, filename):
-    '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5"'''
-
+    """SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5"."""
     E = E.tocsr()
 
     hf = h5py.File(filename, "w")
@@ -514,11 +509,10 @@ def cellbrowser(
     port: int | None = None,
     do_debug: bool = False,
 ):
-    """\
-    Export adata to a UCSC Cell Browser project directory. If `html_dir` is
-    set, subsequently build the html files from the project directory into
-    `html_dir`. If `port` is set, start an HTTP server in the background and
-    serve `html_dir` on `port`.
+    """Export adata to a UCSC Cell Browser project directory.
+
+    If `html_dir` is set, subsequently build the html files from the project directory into `html_dir`.
+    If `port` is set, start an HTTP server in the background and serve `html_dir` on `port`.
 
     By default, export all gene expression data from `adata.raw`, the
     annotations `louvain`, `percent_mito`, `n_genes` and `n_counts` and the top
@@ -587,8 +581,8 @@ def cellbrowser(
     --------
     See this
     `tutorial <https://github.com/scverse/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
-    """
 
+    """
     try:
         import cellbrowser.cellbrowser as cb
     except ImportError:

@@ -1,3 +1,5 @@
+"""Configuration for Scanpy’s Sphinx documentation."""
+
 from __future__ import annotations
 
 import sys
@@ -33,7 +35,7 @@ suppress_warnings = [
 project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
-copyright = f"{datetime.now():%Y}, the Scanpy development team"
+copyright = f"{datetime.now():%Y}, scverse"
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
@@ -128,6 +130,7 @@ intersphinx_mapping = dict(
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
     leidenalg=("https://leidenalg.readthedocs.io/en/latest/", None),
@@ -201,6 +204,7 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
+    "pathlib._local.Path": "pathlib.Path",
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",

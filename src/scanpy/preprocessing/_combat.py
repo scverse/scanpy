@@ -20,11 +20,10 @@ if TYPE_CHECKING:
 def _design_matrix(
     model: pd.DataFrame, batch_key: str, batch_levels: Collection[str]
 ) -> pd.DataFrame:
-    """\
-    Computes a simple design matrix.
+    """Compute a simple design matrix.
 
     Parameters
-    --------
+    ----------
     model
         Contains the batch annotation
     batch_key
@@ -33,8 +32,9 @@ def _design_matrix(
         Levels of the batch annotation
 
     Returns
-    --------
+    -------
     The design matrix for the regression problem
+
     """
     import patsy
 
@@ -72,13 +72,12 @@ def _design_matrix(
 def _standardize_data(
     model: pd.DataFrame, data: pd.DataFrame, batch_key: str
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
-    """\
-    Standardizes the data per gene.
+    """Standardize the data per gene.
 
     The aim here is to make mean and variance be comparable across batches.
 
     Parameters
-    --------
+    ----------
     model
         Contains the batch annotation
     data
@@ -87,7 +86,7 @@ def _standardize_data(
         Name of the batch column in the model matrix
 
     Returns
-    --------
+    -------
     s_data
         Standardized Data
     design
@@ -96,8 +95,8 @@ def _standardize_data(
         Pooled variance per gene
     stand_mean
         Gene-wise mean
-    """
 
+    """
     # compute the design matrix
     batch_items = model.groupby(batch_key, observed=True).groups.items()
     batch_levels, batch_info = zip(*batch_items)
@@ -143,8 +142,7 @@ def combat(
     covariates: Collection[str] | None = None,
     inplace: bool = True,
 ) -> np.ndarray | None:
-    """\
-    ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
+    """ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
 
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes.
@@ -175,8 +173,8 @@ def combat(
 
     `adata.X` : :class:`numpy.ndarray` (dtype `float`)
         Corrected data matrix.
-    """
 
+    """
     # check the input
     if key not in adata.obs_keys():
         msg = f"Could not find the key {key!r} in adata.obs"
@@ -296,8 +294,7 @@ def _it_sol(
     b: float,
     conv: float = 0.0001,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """\
-    Iteratively compute the conditional posterior means for gamma and delta.
+    """Iteratively compute the conditional posterior means for gamma and delta.
 
     gamma is an estimator for the additive batch effect, deltat is an estimator
     for the multiplicative batch effect. We use an EB framework to estimate these
@@ -305,7 +302,7 @@ def _it_sol(
     We therefore iteratively evalutate these two expressions until convergence is reached.
 
     Parameters
-    --------
+    ----------
     s_data
         Contains the standardized Data
     g_hat
@@ -317,14 +314,14 @@ def _it_sol(
     conv: float, optional (default: `0.0001`)
         convergence criterium
 
-    Returns:
-    --------
+    Returns
+    -------
     gamma
         estimated value for gamma
     delta
         estimated value for delta
-    """
 
+    """  # noqa: D401
     n = (1 - np.isnan(s_data)).sum(axis=1)
     g_old = g_hat.copy()
     d_old = d_hat.copy()

@@ -1,6 +1,4 @@
-"""
-Use harmony to integrate cells from different experiments.
-"""
+"""Use harmony to integrate cells from different experiments."""
 
 from __future__ import annotations
 
@@ -26,8 +24,7 @@ def harmony_integrate(
     adjusted_basis: str = "X_pca_harmony",
     **kwargs,
 ):
-    """\
-    Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
+    """Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
 
     Harmony :cite:p:`Korsunsky2019` is an algorithm for integrating single-cell
     data from multiple experiments. This function uses the python
@@ -79,14 +76,15 @@ def harmony_integrate(
     be a column in ``adata.obs`` giving the experiment each cell came
     from.
 
-    >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
+    >>> adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
 
     Finally, run harmony. Afterwards, there will be a new table in
     ``adata.obsm`` containing the adjusted PC's.
 
-    >>> sce.pp.harmony_integrate(adata, 'batch')
-    >>> 'X_pca_harmony' in adata.obsm
+    >>> sce.pp.harmony_integrate(adata, "batch")
+    >>> "X_pca_harmony" in adata.obsm
     True
+
     """
     try:
         import harmonypy

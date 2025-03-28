@@ -1,3 +1,5 @@
+"""Experimental preprocessing functions."""
+
 from __future__ import annotations
 
 from scanpy.experimental.pp._highly_variable_genes import highly_variable_genes

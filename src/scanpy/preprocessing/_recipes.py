@@ -1,4 +1,4 @@
-"""Preprocessing recipes from the literature"""
+"""Preprocessing recipes from the literature."""
 
 from __future__ import annotations
 
@@ -39,8 +39,7 @@ def recipe_weinreb17(
     random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of :cite:p:`Weinreb2017`.
+    """Normalize and filter as of :cite:p:`Weinreb2017`.
 
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
@@ -53,6 +52,7 @@ def recipe_weinreb17(
         Logarithmize data?
     copy
         Return a copy if true.
+
     """
     from scipy.sparse import issparse
 
@@ -85,8 +85,7 @@ def recipe_weinreb17(
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of Seurat :cite:p:`Satija2015`.
+    """Normalize and filter as of Seurat :cite:p:`Satija2015`.
 
     This uses a particular preprocessing.
 
@@ -103,6 +102,7 @@ def recipe_seurat(
         Show a plot of the gene dispersion vs. mean relation.
     copy
         Return a copy if true.
+
     """
     if copy:
         adata = adata.copy()
@@ -134,8 +134,7 @@ def recipe_zheng17(
     plot: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of :cite:t:`Zheng2017`.
+    """Normalize and filter as of :cite:t:`Zheng2017`.
 
     Reproduces the preprocessing of :cite:t:`Zheng2017` – the Cell Ranger R Kit of 10x
     Genomics.
@@ -176,6 +175,7 @@ def recipe_zheng17(
     Returns
     -------
     Returns or updates `adata` depending on `copy`.
+
     """
     start = logg.info("running recipe zheng17")
     if copy:

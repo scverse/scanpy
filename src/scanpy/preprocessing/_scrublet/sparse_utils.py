@@ -20,8 +20,7 @@ def sparse_multiply(
     E: _CSMatrix | NDArray[np.float64],
     a: float | NDArray[np.float64],
 ) -> _CSMatrix:
-    """multiply each row of E by a scalar"""
-
+    """Multiply each row of E by a scalar."""
     nrow = E.shape[0]
     w = sparse.dia_matrix((a, 0), shape=(nrow, nrow), dtype=a.dtype)
     r = w @ E
@@ -36,7 +35,7 @@ def sparse_zscore(
     gene_mean: NDArray[np.float64] | None = None,
     gene_stdev: NDArray[np.float64] | None = None,
 ) -> _CSMatrix:
-    """z-score normalize each column of E"""
+    """z-score normalize each column of E."""
     if gene_mean is None or gene_stdev is None:
         gene_means, gene_stdevs = _get_mean_var(E, axis=0)
         gene_stdevs = np.sqrt(gene_stdevs)

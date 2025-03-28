@@ -65,8 +65,7 @@ def blobs(
     n_observations: int = 640,
     random_state: _LegacyRandom = 0,
 ) -> AnnData:
-    """\
-    Gaussian Blobs.
+    """Gaussian Blobs.
 
     Parameters
     ----------
@@ -93,6 +92,7 @@ def blobs(
     >>> sc.datasets.blobs()
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'blobs'
+
     """
     import sklearn.datasets
 
@@ -109,8 +109,7 @@ def blobs(
 @doctest_internet
 @check_datasetdir_exists
 def burczynski06() -> AnnData:
-    """\
-    Bulk data with conditions ulcerative colitis (UC) and Crohn’s disease (CD) :cite:p:`Burczynski2006`.
+    """Bulk data with conditions ulcerative colitis (UC) and Crohn’s disease (CD) :cite:p:`Burczynski2006`.
 
     The study assesses transcriptional profiles in peripheral blood mononuclear
     cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
@@ -126,6 +125,7 @@ def burczynski06() -> AnnData:
     >>> sc.datasets.burczynski06()
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
+
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
     url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
@@ -133,12 +133,11 @@ def burczynski06() -> AnnData:
 
 
 def krumsiek11() -> AnnData:
-    """\
-    Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
+    r"""Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
     The literature-curated boolean network from :cite:t:`Krumsiek2011` was used to
     simulate the data. It describes development to four cell fates annotated in
-    :attr:`~anndata.AnnData.obs`\\ `["cell_type"]`:
+    :attr:`~anndata.AnnData.obs`\ `["cell_type"]`:
     “monocyte” (`Mo`), “erythrocyte” (`Ery`), “megakaryocyte” (`Mk`) and “neutrophil” (`Neu`).
 
     See also the discussion of this data in :cite:t:`Wolf2019`.
@@ -158,7 +157,8 @@ def krumsiek11() -> AnnData:
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
-    """
+
+    """  # noqa: D401
     with settings.verbosity.override("error"):  # suppress output...
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
     adata.uns["iroot"] = 0
@@ -178,13 +178,12 @@ def krumsiek11() -> AnnData:
 @doctest_needs("openpyxl")
 @check_datasetdir_exists
 def moignard15() -> AnnData:
-    """\
-    Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
+    r"""Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
 
     The data was obtained using qRT–PCR.
     :attr:`~anndata.AnnData.X` contains the normalized dCt values from supp. table 7 of the publication.
 
-    :attr:`~anndata.AnnData.obs`\\ `["exp_groups"]` contains the stages derived by
+    :attr:`~anndata.AnnData.obs`\ `["exp_groups"]` contains the stages derived by
     flow sorting and GFP marker status:
     “primitive streak” (`PS`), “neural plate” (`NP`), “head fold (`HF`),
     “four somite” blood/GFP⁺ (4SG), and “four somite” endothelial/GFP¯ (`4SFG`).
@@ -200,6 +199,7 @@ def moignard15() -> AnnData:
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
+
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
     backup_url = "https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
@@ -233,8 +233,7 @@ def moignard15() -> AnnData:
 @doctest_internet
 @check_datasetdir_exists
 def paul15() -> AnnData:
-    """\
-    Development of Myeloid Progenitors :cite:p:`Paul2015`.
+    """Development of Myeloid Progenitors :cite:p:`Paul2015`.
 
     Non-logarithmized raw data.
 
@@ -253,6 +252,7 @@ def paul15() -> AnnData:
     AnnData object with n_obs × n_vars = 2730 × 3451
         obs: 'paul15_clusters'
         uns: 'iroot'
+
     """
     import h5py
 
@@ -273,7 +273,7 @@ def paul15() -> AnnData:
     adata.obs_names = cell_names
     # names reflecting the cell type identifications from the paper
     cell_type = 6 * ["Ery"]
-    cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()
+    cell_type += "MEP Mk GMP GMP DC Baso Baso Mo Mo Neu Neu Eos Lymph".split()  # noqa: SIM905
     adata.obs["paul15_clusters"] = [f"{i}{cell_type[i - 1]}" for i in clusters]
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
@@ -292,8 +292,7 @@ def paul15() -> AnnData:
 
 
 def toggleswitch() -> AnnData:
-    """\
-    Simulated toggleswitch.
+    """Simulated toggleswitch.
 
     Data obtained simulating a simple toggleswitch :cite:p:`Gardner2000`
 
@@ -311,7 +310,8 @@ def toggleswitch() -> AnnData:
         utils.warn_names_duplicates("obs")
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
-    """
+
+    """  # noqa: D401
     filename = HERE / "toggleswitch.txt"
     adata = read(filename, first_column_names=True)
     adata.uns["iroot"] = 0
@@ -320,13 +320,12 @@ def toggleswitch() -> AnnData:
 
 @filter_oldformatwarning
 def pbmc68k_reduced() -> AnnData:
-    """\
-    Subsampled and processed 68k PBMCs.
+    r"""Subsampled and processed 68k PBMCs.
 
     `PBMC 68k dataset`_ from 10x Genomics.
 
     The original PBMC 68k dataset was preprocessed with steps including
-    :func:`~scanpy.pp.normalize_total`\\ [#norm]_ and :func:`~scanpy.pp.scale`.
+    :func:`~scanpy.pp.normalize_total`\ [#norm]_ and :func:`~scanpy.pp.scale`.
     It was saved keeping only 724 cells and 221 highly variable genes.
 
     The saved file contains the annotation of cell types (key: `'bulk_labels'`),
@@ -351,8 +350,8 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'distances', 'connectivities'
-    """
 
+    """
     filename = HERE / "10x_pbmc68k_reduced.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
@@ -363,8 +362,7 @@ def pbmc68k_reduced() -> AnnData:
 @filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
-    """\
-    3k PBMCs from 10x Genomics.
+    r"""3k PBMCs from 10x Genomics.
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
     from 10x Genomics (file_ from this webpage_).
@@ -377,7 +375,7 @@ def pbmc3k() -> AnnData:
 
     .. note::
        This downloads 5.9 MB of data upon the first call of the function and stores it in
-       :attr:`~scanpy._settings.ScanpyConfig.datasetdir`\\ `/pbmc3k_raw.h5ad`.
+       :attr:`~scanpy._settings.ScanpyConfig.datasetdir`\ `/pbmc3k_raw.h5ad`.
 
     The following code was run to produce the file.
 
@@ -405,6 +403,7 @@ def pbmc3k() -> AnnData:
     >>> sc.datasets.pbmc3k()
     AnnData object with n_obs × n_vars = 2700 × 32738
         var: 'gene_ids'
+
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
@@ -415,8 +414,7 @@ def pbmc3k() -> AnnData:
 @filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
-    """\
-    Processed 3k PBMCs from 10x Genomics.
+    """Processed 3k PBMCs from 10x Genomics.
 
     Processed using the basic tutorial :doc:`/tutorials/basics/clustering-2017`.
 
@@ -444,7 +442,8 @@ def pbmc3k_processed() -> AnnData:
         obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
         varm: 'PCs'
         obsp: 'distances', 'connectivities'
-    """
+
+    """  # noqa: D401
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
@@ -459,8 +458,7 @@ def _download_visium_dataset(
     base_dir: Path | None = None,
     download_image: bool = False,
 ) -> Path:
-    """\
-    Download Visium spatial data from 10x Genomics’ database.
+    """Download Visium spatial data from 10x Genomics’ database.
 
     Params
     ------
@@ -517,8 +515,7 @@ def visium_sge(
     *,
     include_hires_tiff: bool = False,
 ) -> AnnData:
-    """\
-    Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
+    """Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
 
     .. deprecated:: 1.11.0
        Use :func:`squidpy.datasets.visium` instead.
@@ -541,15 +538,15 @@ def visium_sge(
 
     Examples
     --------
-
     >>> import scanpy as sc
-    >>> sc.datasets.visium_sge(sample_id='V1_Breast_Cancer_Block_A_Section_1')
+    >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
         uns: 'spatial'
         obsm: 'spatial'
-    """
+
+    """  # noqa: D401
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
     sample_dir = _download_visium_dataset(
         sample_id, spaceranger_version, download_image=include_hires_tiff

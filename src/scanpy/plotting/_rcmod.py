@@ -14,7 +14,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
 
     Call this through `settings.set_figure_params`.
     """
-
     # figure
     rcParams["figure.figsize"] = (4, 4)
     rcParams["figure.subplot.left"] = 0.18

@@ -66,8 +66,7 @@ def describe_obs(
     X=None,
     parallel=None,
 ) -> pd.DataFrame | None:
-    """\
-    Describe observations of anndata.
+    """Describe observations of anndata.
 
     Calculates a number of qc metrics for observations in AnnData object. See
     section `Returns` for a description of those metrics.
@@ -94,6 +93,7 @@ def describe_obs(
     the AnnData's `.obs` dataframe.
 
     {doc_obs_qc_returns}
+
     """
     if parallel is not None:
         warn(
@@ -164,8 +164,7 @@ def describe_var(
     log1p: bool = True,
     X: _CSMatrix | coo_matrix | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
-    """\
-    Describe variables of anndata.
+    """Describe variables of anndata.
 
     Calculates a number of qc metrics for variables in AnnData object. See
     section `Returns` for a description of those metrics.
@@ -186,6 +185,7 @@ def describe_var(
     AnnData's `.var` dataframe.
 
     {doc_var_qc_returns}
+
     """
     # Handle whether X is passed
     if X is None:
@@ -237,8 +237,7 @@ def calculate_qc_metrics(
     log1p: bool = True,
     parallel: bool | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame] | None:
-    """\
-    Calculate quality control metrics.
+    """Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
@@ -291,6 +290,7 @@ def calculate_qc_metrics(
         :context: close-figs
 
         sns.histplot(pbmc.obs["pct_counts_mito"])
+
     """
     if parallel is not None:
         warn(
@@ -332,8 +332,7 @@ def calculate_qc_metrics(
 
 
 def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
-    """\
-    Calculates cumulative proportions of top expressed genes
+    """Calculate cumulative proportions of top expressed genes.
 
     Parameters
     ----------
@@ -343,6 +342,7 @@ def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
         Rank to calculate proportions up to. Value is treated as 1-indexed,
         `n=50` will calculate cumulative proportions up to the 50th most
         expressed gene.
+
     """
     if issparse(mtx):
         if not isinstance(mtx, csr_matrix):
@@ -398,8 +398,7 @@ def check_ns(func):
 @singledispatch
 @check_ns
 def top_segment_proportions(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
-    """
-    Calculates total percentage of counts in top ns genes.
+    """Calculate total percentage of counts in top ns genes.
 
     Parameters
     ----------
@@ -409,6 +408,7 @@ def top_segment_proportions(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
         Positions to calculate cumulative proportion at. Values are considered
         1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
         the 50th most expressed gene.
+
     """
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)

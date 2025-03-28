@@ -72,39 +72,6 @@ def _choose_representation(
     return X
 
 
-def preprocess_with_pca(adata, n_pcs: int | None = None, random_state=0):
-    """
-    Parameters
-    ----------
-    n_pcs
-        If `n_pcs=0`, do not preprocess with PCA.
-        If `None` and there is a PCA version of the data, use this.
-        If an integer, compute the PCA.
-    """
-    from ..preprocessing import pca
-
-    if n_pcs == 0:
-        logg.info("    using data matrix X directly (no PCA)")
-        return adata.X
-    elif n_pcs is None and "X_pca" in adata.obsm_keys():
-        logg.info(f"    using 'X_pca' with n_pcs = {adata.obsm['X_pca'].shape[1]}")
-        return adata.obsm["X_pca"]
-    elif "X_pca" in adata.obsm_keys() and adata.obsm["X_pca"].shape[1] >= n_pcs:
-        logg.info(f"    using 'X_pca' with n_pcs = {n_pcs}")
-        return adata.obsm["X_pca"][:, :n_pcs]
-    else:
-        n_pcs = settings.N_PCS if n_pcs is None else n_pcs
-        if adata.X.shape[1] > n_pcs:
-            logg.info(f"    computing 'X_pca' with n_pcs = {n_pcs}")
-            logg.hint("avoid this by setting n_pcs = 0")
-            X = pca(adata.X, n_comps=n_pcs, random_state=random_state)
-            adata.obsm["X_pca"] = X
-            return X
-        else:
-            logg.info("    using data matrix X directly (no PCA)")
-            return adata.X
-
-
 def get_init_pos_from_paga(
     adata: AnnData,
     adjacency: spmatrix | None = None,

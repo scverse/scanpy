@@ -57,8 +57,7 @@ def umap(
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
+    r"""Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
@@ -135,15 +134,15 @@ def umap(
                 Use :func:`rapids_singlecell.tl.umap` instead.
     key_added
         If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_umap']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['umap']`.
+        :attr:`~anndata.AnnData.obsm`\ `['X_umap']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['umap']`.
         If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     neighbors_key
         Umap looks in
-        :attr:`~anndata.AnnData.uns`\\ ``[neighbors_key]`` for neighbors settings and
-        :attr:`~anndata.AnnData.obsp`\\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+        :attr:`~anndata.AnnData.uns`\ ``[neighbors_key]`` for neighbors settings and
+        :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
     copy
         Return a copy instead of writing to adata.
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -35,10 +35,10 @@ if TYPE_CHECKING:
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class DotPlot(BasePlot):
-    """\
-    Allows the visualization of two values that are encoded as
-    dot size and color. The size usually represents the fraction
-    of cells (obs) that have a non-zero value for genes (var).
+    """Allows the visualization of two values that are encoded as dot size and color.
+
+    The size usually represents the fraction of cells (obs)
+    that have a non-zero value for genes (var).
 
     For each var_name and each `groupby` category a dot is plotted.
     Each dot represents two values: mean expression within each category
@@ -73,7 +73,7 @@ class DotPlot(BasePlot):
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
@@ -81,16 +81,15 @@ class DotPlot(BasePlot):
 
     Examples
     --------
-
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+    >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+    >>> sc.pl.DotPlot(adata, markers, groupby="bulk_labels").show()
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+    >>> markers = {{"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}}
+    >>> sc.pl.DotPlot(adata, markers, groupby="bulk_labels").show()
 
     """
 
@@ -316,8 +315,7 @@ class DotPlot(BasePlot):
         x_padding: float | Empty = _empty,
         y_padding: float | Empty = _empty,
     ) -> Self:
-        r"""\
-        Modifies plot visual parameters
+        r"""Modify plot visual parameters.
 
         Parameters
         ----------
@@ -370,8 +368,7 @@ class DotPlot(BasePlot):
         :class:`~scanpy.pl.DotPlot`
 
         Examples
-        -------
-
+        --------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
@@ -386,6 +383,7 @@ class DotPlot(BasePlot):
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels') \
         ...     .style(dot_edge_color='black', dot_edge_lw=1, grid=True) \
         ...     .show()
+
         """
         super().style(cmap=cmap)
 
@@ -432,8 +430,7 @@ class DotPlot(BasePlot):
         colorbar_title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
     ) -> Self:
-        """\
-        Configures dot size and the colorbar legends
+        r"""Configure dot size and the colorbar legends.
 
         Parameters
         ----------
@@ -445,10 +442,10 @@ class DotPlot(BasePlot):
         show_colorbar
             Set to `False` to hide the colorbar legend
         size_title
-            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            Title for the dot size legend. Use ``\n`` to add line breaks. Appears on top
             of dot sizes
         colorbar_title
-            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            Title for the color bar. Use ``\n`` to add line breaks. Appears on top of the
             color bar
         width
             Width of the legends area. The unit is the same as in matplotlib (inches).
@@ -459,16 +456,15 @@ class DotPlot(BasePlot):
 
         Examples
         --------
-
         Set color bar title:
 
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
-        """
+        >>> markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
+        >>> dp = sc.pl.DotPlot(adata, markers, groupby="bulk_labels")
+        >>> dp.legend(colorbar_title="log(UMI counts + 1)").show()
 
+        """
         if not show:
             # turn of legends by setting width to 0
             self.legends_width = 0
@@ -643,10 +639,10 @@ class DotPlot(BasePlot):
         norm: Normalize | None,
         **kwds,
     ):
-        """\
-        Makes a *dot plot* given two data frames, one containing
-        the doc size and other containing the dot color. The indices and
-        columns of the data frame are used to label the output image
+        """Make a *dot plot* given two data frames.
+
+        One containing the dot size and other containing the dot color.
+        The indices and columns of the data frame are used to label the output image.
 
         The dots are plotted using :func:`matplotlib.pyplot.scatter`. Thus, additional
         arguments can be passed.
@@ -716,7 +712,7 @@ class DotPlot(BasePlot):
         x = x.flatten() + 0.5
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
-        cmap = plt.get_cmap(cmap)
+        cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
         else:
@@ -886,8 +882,7 @@ def dotplot(
     smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
     **kwds,
 ) -> DotPlot | dict | None:
-    """\
-    Makes a *dot plot* of the expression values of `var_names`.
+    r"""Make a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted.
     Each dot represents two values: mean expression within each category
@@ -912,7 +907,7 @@ def dotplot(
     {common_plot_args}
     {groupby_plots_args}
     size_title
-        Title for the size legend. New line character (\\n) can be used.
+        Title for the size legend. New line character (\n) can be used.
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -940,7 +935,7 @@ def dotplot(
     If `return_fig` is `True`, returns a :class:`~scanpy.pl.DotPlot` object,
     else if `show` is false, return axes dict
 
-    See also
+    See Also
     --------
     :class:`~scanpy.pl.DotPlot`: The DotPlot class can be used to to control
         several visual parameters not available in this function.
@@ -949,7 +944,6 @@ def dotplot(
 
     Examples
     --------
-
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category 'bulk_labels'.
 
@@ -985,7 +979,6 @@ def dotplot(
         print(axes_dict)
 
     """
-
     # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
     cmap = kwds.pop("color_map", cmap)

@@ -1,4 +1,4 @@
-"""A private pytest plugin"""
+"""A private pytest plugin."""
 
 from __future__ import annotations
 
@@ -85,13 +85,16 @@ def pytest_collection_modifyitems(
 ) -> None:
     import pytest
 
-    run_internet = config.getoption("--internet-tests")
-    skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
+    skipif_not_run_internet = pytest.mark.skipif(
+        not config.getoption("--internet-tests"),
+        reason="need --internet-tests option to run",
+    )
     for item in items:
         # All tests marked with `pytest.mark.internet` get skipped unless
         # `--run-internet` passed
-        if not run_internet and ("internet" in item.keywords):
-            item.add_marker(skip_internet)
+        if "internet" in item.keywords:
+            item.add_marker(skipif_not_run_internet)
+            item.add_marker(pytest.mark.flaky(reruns=5, reruns_delay=2))
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
@@ -109,10 +112,10 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
         and (skip_reason := needs[needs_mod].skip_reason)
     ) or (skip_reason := getattr(func, "_doctest_skip_reason", None)):
         pytest.skip(reason=skip_reason)
-    if getattr(func, "_doctest_internet", False) and not request.config.getoption(
-        "--internet-tests"
-    ):
-        pytest.skip(reason="need --internet-tests option to run")
+    if getattr(func, "_doctest_internet", False):
+        if not request.config.getoption("--internet-tests"):
+            pytest.skip(reason="need --internet-tests option to run")
+        request.applymarker(pytest.mark.flaky(reruns=5, reruns_delay=2))
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
