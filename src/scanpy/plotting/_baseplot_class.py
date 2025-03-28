@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from warnings import warn
 
 import numpy as np
-from matplotlib import gridspec
+from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
@@ -568,7 +568,7 @@ class BasePlot:
         `None`, updates color_legend_ax
 
         """
-        cmap = plt.get_cmap(self.cmap)
+        cmap = colormaps.get_cmap(self.cmap)
 
         import matplotlib.colorbar
         from matplotlib.cm import ScalarMappable

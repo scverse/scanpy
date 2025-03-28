@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -712,7 +712,7 @@ class DotPlot(BasePlot):
         x = x.flatten() + 0.5
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
-        cmap = plt.get_cmap(cmap)
+        cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
         else:

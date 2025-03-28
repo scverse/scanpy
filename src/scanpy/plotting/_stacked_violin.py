@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 from packaging.version import Version
 
@@ -405,7 +405,7 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = plt.get_cmap(self.kwds.pop("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.pop("cmap", self.cmap))
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,

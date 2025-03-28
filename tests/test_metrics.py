@@ -17,11 +17,6 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
-mark_flaky = pytest.mark.xfail(
-    strict=False,
-    reason="This used to work reliably, but doesn’t anymore",
-)
-
 
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
 def metric(request: pytest.FixtureRequest):
@@ -31,7 +26,6 @@ def metric(request: pytest.FixtureRequest):
 @pytest.fixture(
     scope="session",
     params=[
-        # pytest.param(eq, marks=[mark_flaky]),
         pytest.param(eq),
         pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
     ],

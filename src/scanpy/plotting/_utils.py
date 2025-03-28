@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict, overload
 import matplotlib as mpl
 import numpy as np
 from cycler import Cycler, cycler
-from matplotlib import axes, gridspec, rcParams, ticker
+from matplotlib import axes, colormaps, gridspec, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
@@ -436,9 +436,9 @@ def _set_colors_for_categorical_obs(
     else:
         categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
-    if isinstance(palette, str) and palette in plt.colormaps():
+    if isinstance(palette, str) and palette in colormaps:
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
-        cmap = plt.get_cmap(palette)
+        cmap = colormaps.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
     elif isinstance(palette, Mapping):
         colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
