@@ -897,7 +897,7 @@ def sample(
         See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
-    random_state
+    rng
         Random seed to change subsampling.
     copy
         If an :class:`~anndata.AnnData` is passed,
