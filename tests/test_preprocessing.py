@@ -147,9 +147,7 @@ def test_normalize_per_cell():
 
 
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
-    """
-    Generate a random probability distribution of `n` values between 0 and 1.
-    """
+    """Generate a random probability distribution of `n` values between 0 and 1."""
     probs = np.random.randint(0, 10000, n).astype(np.float64)
     probs[probs < np.quantile(probs, frac_zero)] = 0
     probs /= probs.sum()
@@ -358,18 +356,14 @@ def zero_center(request):
 
 
 def test_scale_rep(count_matrix_format, zero_center):
-    """
-    Test that it doesn't matter where the array being scaled is in the anndata object.
-    """
+    """Test that it doesn't matter where the array being scaled is in the anndata object."""
     X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
     check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
     check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
 def test_scale_array(count_matrix_format, zero_center):
-    """
-    Test that running sc.pp.scale on an anndata object and an array returns the same results.
-    """
+    """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
     X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
     adata = anndata_v0_8_constructor_compat(X=X.copy())
 

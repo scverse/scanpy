@@ -70,8 +70,7 @@ def normalize_total(
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
-    """\
-    Normalize counts per cell.
+    """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
     so that every cell has the same total count after normalization.
@@ -128,23 +127,28 @@ def normalize_total(
     `adata.X` and `adata.layers`, depending on `inplace`.
 
     Example
-    --------
+    -------
     >>> import sys
     >>> from anndata import AnnData
     >>> import scanpy as sc
-    >>> sc.settings.verbosity = 'info'
+    >>> sc.settings.verbosity = "info"
     >>> sc.settings.logfile = sys.stdout  # for doctests
     >>> np.set_printoptions(precision=2)
-    >>> adata = AnnData(np.array([
-    ...     [3, 3, 3, 6, 6],
-    ...     [1, 1, 1, 2, 2],
-    ...     [1, 22, 1, 2, 2],
-    ... ], dtype='float32'))
+    >>> adata = AnnData(
+    ...     np.array(
+    ...         [
+    ...             [3, 3, 3, 6, 6],
+    ...             [1, 1, 1, 2, 2],
+    ...             [1, 22, 1, 2, 2],
+    ...         ],
+    ...         dtype="float32",
+    ...     )
+    ... )
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)['X']
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)["X"]
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -152,9 +156,12 @@ def normalize_total(
            [0.14, 0.14, 0.14, 0.29, 0.29],
            [0.04, 0.79, 0.04, 0.07, 0.07]], dtype=float32)
     >>> X_norm = sc.pp.normalize_total(
-    ...     adata, target_sum=1, exclude_highly_expressed=True,
-    ...     max_fraction=0.2, inplace=False
-    ... )['X']
+    ...     adata,
+    ...     target_sum=1,
+    ...     exclude_highly_expressed=True,
+    ...     max_fraction=0.2,
+    ...     inplace=False,
+    ... )["X"]
     normalizing counts per cell. The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
         finished (0:00:00)
@@ -162,6 +169,7 @@ def normalize_total(
     array([[ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
+
     """
     if copy:
         if not inplace:

@@ -46,8 +46,7 @@ def ingest(
     inplace: bool = True,
     **kwargs,
 ):
-    """\
-    Map labels and embeddings from reference data to new data.
+    """Map labels and embeddings from reference data to new data.
 
     :doc:`/tutorials/basics/integrating-data-using-ingest`
 
@@ -118,7 +117,8 @@ def ingest(
     >>> import scanpy as sc
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
-    >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
+    >>> sc.tl.ingest(adata, adata_ref, obs="cell_type")
+
     """
     # anndata version check
     anndata_version = pkg_version("anndata")
@@ -214,8 +214,7 @@ class _DimDict(MutableMapping):
 
 
 class Ingest:
-    """\
-    Class to map labels and embeddings from existing data to new data.
+    """Class to map labels and embeddings from existing data to new data.
 
     You need to run :func:`~scanpy.pp.neighbors` on `adata` before
     initializing Ingest with it.
@@ -225,6 +224,7 @@ class Ingest:
     adata : :class:`~anndata.AnnData`
         The annotated data matrix of shape `n_obs` × `n_vars`
         with embeddings and labels.
+
     """
 
     def _init_umap(self, adata):
@@ -379,8 +379,7 @@ class Ingest:
         return adata.X
 
     def fit(self, adata_new):
-        """\
-        Map `adata_new` to the same representation as `adata`.
+        """Map `adata_new` to the same representation as `adata`.
 
         This function identifies the representation which was used to
         calculate neighbors in 'adata' and maps `adata_new` to
@@ -409,8 +408,7 @@ class Ingest:
         self._obsm["rep"] = self._same_rep()
 
     def neighbors(self, k=None, queue_size=5, epsilon=0.1, random_state=0):
-        """\
-        Calculate neighbors of `adata_new` observations in `adata`.
+        """Calculate neighbors of `adata_new` observations in `adata`.
 
         This function calculates `k` neighbors in `adata` for
         each observation of `adata_new`.
@@ -432,8 +430,7 @@ class Ingest:
         return self._umap.transform(self._obsm["rep"])
 
     def map_embedding(self, method):
-        """\
-        Map embeddings of `adata` to `adata_new`.
+        """Map embeddings of `adata` to `adata_new`.
 
         This function infers embeddings, specified by `method`,
         for `adata_new` from existing embeddings in `adata`.
@@ -454,8 +451,7 @@ class Ingest:
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
-        """\
-        Map labels of `adata` to `adata_new`.
+        """Map labels of `adata` to `adata_new`.
 
         This function infers `labels` for `adata_new.obs`
         from existing labels in `adata.obs`.
@@ -469,8 +465,7 @@ class Ingest:
 
     @old_positionals("inplace")
     def to_adata(self, *, inplace: bool = False) -> AnnData | None:
-        """\
-        Returns `adata_new` with mapped embeddings and labels.
+        """Return `adata_new` with mapped embeddings and labels.
 
         If `inplace=False` returns a copy of `adata_new`
         with mapped embeddings and labels in `obsm` and `obs` correspondingly.
@@ -490,8 +485,7 @@ class Ingest:
     def to_adata_joint(
         self, batch_key="batch", batch_categories=None, index_unique="-"
     ):
-        """\
-        Returns concatenated object.
+        """Return concatenated object.
 
         This function returns the new :class:`~anndata.AnnData` object
         with concatenated existing embeddings and labels of 'adata'

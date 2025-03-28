@@ -6,17 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_COLOR: "1"
+
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
 jobs:
   benchmark:
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -e {0} # -e to fail on error
 
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.12"]
+        python: ["3.13"]
         os: [ubuntu-latest]
 
     env:
@@ -28,7 +32,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          filter: blob:none
 
       - name: Fetch main branch for `asv run`’s hash
         run: git fetch origin main:main

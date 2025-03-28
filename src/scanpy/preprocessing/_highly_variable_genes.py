@@ -38,8 +38,7 @@ def _highly_variable_genes_seurat_v3(
     subset: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    See `highly_variable_genes`.
+    """See `highly_variable_genes`.
 
     For further implementation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
@@ -60,8 +59,8 @@ def _highly_variable_genes_seurat_v3(
         Rank of the gene according to normalized variance, median rank in the case of multiple batches.
     highly_variable_nbatches : :class:`int`
         If batch_key is given, this denotes in how many batches genes are detected as HVG.
-    """
 
+    """
     try:
         from skmisc.loess import loess
     except ImportError:
@@ -273,13 +272,13 @@ def _highly_variable_genes_single_batch(
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
 ) -> pd.DataFrame:
-    """\
-    See `highly_variable_genes`.
+    """See `highly_variable_genes`.
 
     Returns
     -------
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
+
     """
     X = _get_obs_rep(adata, layer=layer)
 
@@ -533,8 +532,7 @@ def highly_variable_genes(
     batch_key: str | None = None,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
+    """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
@@ -644,8 +642,8 @@ def highly_variable_genes(
     Notes
     -----
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
-    """
 
+    """
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
@@ -658,7 +656,7 @@ def highly_variable_genes(
     if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
-            n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
+            n_top_genes = cast("int", sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
             flavor=flavor,

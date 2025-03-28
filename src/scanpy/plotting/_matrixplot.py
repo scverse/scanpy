@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import rcParams
+from matplotlib import colormaps, rcParams
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -34,8 +33,7 @@ if TYPE_CHECKING:
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class MatrixPlot(BasePlot):
-    """\
-    Allows the visualization of values using a color map.
+    """Allows the visualization of values using a color map.
 
     Parameters
     ----------
@@ -60,7 +58,7 @@ class MatrixPlot(BasePlot):
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pl.matrixplot`: Simpler way to call MatrixPlot but with less options.
     :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified
@@ -68,7 +66,6 @@ class MatrixPlot(BasePlot):
 
     Examples
     --------
-
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
 
@@ -88,6 +85,7 @@ class MatrixPlot(BasePlot):
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+
     """
 
     DEFAULT_SAVE_PREFIX = "matrixplot_"
@@ -203,27 +201,26 @@ class MatrixPlot(BasePlot):
         edge_color: ColorLike | None | Empty = _empty,
         edge_lw: float | None | Empty = _empty,
     ) -> Self:
-        """\
-        Modifies plot visual parameters.
+        r"""Modify plot visual parameters.
 
         Parameters
         ----------
         cmap
             Matplotlib color map, specified by name or directly.
-            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["image.cmap"]``
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["image.cmap"]``
         edge_color
             Edge color between the squares of matrix plot.
-            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["patch.edgecolor"]``
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["patch.edgecolor"]``
         edge_lw
             Edge line width.
-            If ``None``, use :obj:`matplotlib.rcParams`\\ ``["lines.linewidth"]``
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["lines.linewidth"]``
 
         Returns
         -------
         :class:`~scanpy.pl.MatrixPlot`
 
         Examples
-        -------
+        --------
 
         .. plot::
             :context: close-figs
@@ -269,7 +266,7 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
             del self.kwds["cmap"]
         normalize = check_colornorm(
@@ -369,8 +366,7 @@ def matrixplot(
     norm: Normalize | None = None,
     **kwds,
 ) -> MatrixPlot | dict[str, Axes] | None:
-    """\
-    Creates a heatmap of the mean expression values per group of each var_names.
+    """Create a heatmap of the mean expression values per group of each var_names.
 
     This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
     class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
@@ -390,7 +386,7 @@ def matrixplot(
     If `return_fig` is `True`, returns a :class:`~scanpy.pl.MatrixPlot` object,
     else if `show` is false, return axes dict
 
-    See also
+    See Also
     --------
     :class:`~scanpy.pl.MatrixPlot`: The MatrixPlot class can be used to to control
         several visual parameters not available in this function.
@@ -430,8 +426,8 @@ def matrixplot(
         :context: close-figs
 
         axes_dict = mp.get_axes()
-    """
 
+    """
     mp = MatrixPlot(
         adata,
         var_names,

@@ -1,12 +1,13 @@
 # Author: Alex Wolf (https://falexwolf.de)
-"""Simulate Data
+"""Simulate Data.
 
 Simulate stochastic dynamic systems to model gene expression dynamics and
 cause-effect data.
 
-TODO
+Todo:
 ----
 Beta Version. The code will be reorganized soon.
+
 """
 
 from __future__ import annotations
@@ -57,8 +58,7 @@ def sim(
     seed: int | None = None,
     writedir: Path | str | None = None,
 ) -> AnnData:
-    """\
-    Simulate dynamic gene expression data :cite:p:`Wittmann2009` :cite:p:`Wolf2018`.
+    """Simulate dynamic gene expression data :cite:p:`Wittmann2009` :cite:p:`Wolf2018`.
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by
@@ -94,6 +94,7 @@ def sim(
     Examples
     --------
     See this `use case <https://github.com/scverse/scanpy_usage/tree/master/170430_krumsiek11>`__
+
     """
     params = locals()
     if params_file:
@@ -109,8 +110,7 @@ def sim(
 
 
 def add_args(p):
-    """
-    Update parser with tool specific arguments.
+    """Update parser with tool specific arguments.
 
     This overwrites was is done in utils.uns_args.
     """
@@ -128,9 +128,6 @@ def add_args(p):
 
 
 def sample_dynamic_data(**params):
-    """
-    Helper function.
-    """
     model_key = Path(params["model"]).with_suffix("").name
     writedir = params.get("writedir")
     if writedir is None:
@@ -377,8 +374,7 @@ def write_data(
 
 
 class GRNsim:
-    """
-    Simlulation of stochastic dynamic systems.
+    """Simlulation of stochastic dynamic systems.
 
     Main application: simulation of gene expression dynamics.
 
@@ -409,7 +405,8 @@ class GRNsim:
         Coupl=None,
         params=MappingProxyType({}),
     ):
-        """
+        """Initialize.
+
         Params
         ------
         model
@@ -469,8 +466,9 @@ class GRNsim:
         return X
 
     def Xdiff_hill(self, Xt):
-        """Build Xdiff from coefficients of boolean network,
-        that is, using self.boolCoeff. The employed functions
+        """Build Xdiff from coefficients of boolean network.
+
+        That is, using self.boolCoeff. The employed functions
         are Hill type activation and deactivation functions.
 
         See Wittmann et al., BMC Syst. Biol. 3, 98 (2009),
@@ -519,7 +517,6 @@ class GRNsim:
         return Xdiff
 
     def Xdiff_var(self, Xt, verbosity=0):
-        """"""
         # subtract the current state
         Xdiff = -Xt
         # add the information from the past
@@ -542,7 +539,7 @@ class GRNsim:
         return threshold_pow / (x_pow + threshold_pow)
 
     def nhill_a(self, x, threshold=0.1, power=2, ichild=2):
-        """Normalized activating hill function."""
+        """Normalized activating hill function."""  # noqa: D401
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return x_pow / (x_pow + threshold_pow) * (1 + threshold_pow)
@@ -551,7 +548,7 @@ class GRNsim:
         """Normalized inhibiting hill function.
 
         Is equivalent to 1-nhill_a(self,x,power,threshold).
-        """
+        """  # noqa: D401
         x_pow = np.power(x, power)
         threshold_pow = np.power(threshold, power)
         return threshold_pow / (x_pow + threshold_pow) * (1 - x_pow)
@@ -602,9 +599,7 @@ class GRNsim:
         self.build_boolCoeff()
 
     def set_coupl(self, Coupl=None):
-        """Construct the coupling matrix (and adjacancy matrix) from predefined models
-        or via sampling.
-        """
+        """Construct the coupling matrix (and adjacancy matrix) from predefined models or via sampling."""
         self.varNames = {str(i): i for i in range(self.dim)}
         if self.model not in self.availModels and Coupl is None:
             self.read_model()
@@ -625,8 +620,7 @@ class GRNsim:
         elif self.model in ["6", "7", "8", "9", "10"]:
             self.Adj_signed = np.zeros((self.dim, self.dim))
             n_sinknodes = 2
-            #             sinknodes = np.random.choice(np.arange(0,self.dim),
-            #                                              size=n_sinknodes,replace=False)
+            #             sinknodes = np.random.choice(self.dim, n_sinknodes, replace=False)
             sinknodes = np.array([0, 1])
             # assume sinknodes have feeback
             self.Adj_signed[sinknodes, sinknodes] = np.ones(n_sinknodes)
@@ -684,7 +678,7 @@ class GRNsim:
         # settings.m(0,self.Adj)
 
     def set_coupl_old(self):
-        """Using the adjacency matrix, sample a coupling matrix."""
+        """Sample a coupling matrix using the adjacency matrix."""
         if self.model == "krumsiek11" or self.model == "var":
             # we already built the coupling matrix in set_coupl20()
             return
@@ -716,9 +710,9 @@ class GRNsim:
             settings.m(0, self.Coupl)
 
     def coupl_model1(self):
-        """In model 1, we want enforce the following signs
-        on the couplings. Model 2 has the same couplings
-        but arbitrary signs.
+        """Enforce the following signs on the couplings.
+
+        (Model 2 has the same couplings but arbitrary signs.)
         """
         self.Coupl[0, 0] = np.abs(self.Coupl[0, 0])
         self.Coupl[0, 1] = -np.abs(self.Coupl[0, 1])
@@ -750,9 +744,7 @@ class GRNsim:
         self.Coupl = self.Adj_signed
 
     def sim_model_back_help(self, Xt, Xt1):
-        """Yields zero when solved for X_t
-        given X_{t+1}.
-        """
+        """Yield zero when solved for X_t given X_{t+1}."""
         return -Xt1 + Xt + self.Xdiff(Xt)
 
     def sim_model_backwards(self, tmax, X0):
@@ -920,8 +912,7 @@ class GRNsim:
 def _check_branching(
     X: np.ndarray, Xsamples: np.ndarray, restart: int, threshold: float = 0.25
 ) -> tuple[bool, list[np.ndarray]]:
-    """\
-    Check whether time series branches.
+    """Check whether time series branches.
 
     Parameters
     ----------
@@ -940,6 +931,7 @@ def _check_branching(
         true if branching realization
     Xsamples
         updated list
+
     """
     check = True
     Xsamples = list(Xsamples)
@@ -963,8 +955,7 @@ def _check_branching(
 
 
 def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
-    """\
-    Checks that there are no cycles in graph described by adjacancy matrix.
+    """Check that there are no cycles in graph described by adjacancy matrix.
 
     Parameters
     ----------
@@ -974,6 +965,7 @@ def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
     Returns
     -------
     True if there is no cycle, False otherwise.
+
     """
     dim = Adj.shape[0]
     for g in range(dim):
@@ -999,8 +991,7 @@ def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
 def sample_coupling_matrix(
     dim: int = 3, connectivity: float = 0.5
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
-    """\
-    Sample coupling matrix.
+    """Sample coupling matrix.
 
     Checks that returned graphs contain no self-cycles.
 
@@ -1023,6 +1014,7 @@ def sample_coupling_matrix(
         signed adjacancy matrix
     n_edges
         Number of edges
+
     """
     max_trial = 10
     check = False
@@ -1054,9 +1046,7 @@ def sample_coupling_matrix(
 
 
 class StaticCauseEffect:
-    """
-    Simulates static data to investigate structure learning.
-    """
+    """Simulates static data to investigate structure learning."""
 
     availModels = dict(
         line="y = αx \n",
@@ -1080,8 +1070,7 @@ class StaticCauseEffect:
         )
 
     def sim_givenAdj(self, Adj: np.ndarray, model="line"):
-        """\
-        Simulate data given only an adjacancy matrix and a model.
+        """Simulate data given only an adjacancy matrix and a model.
 
         The model is a bivariate funtional dependence. The adjacancy matrix
         needs to be acyclic.
@@ -1094,6 +1083,7 @@ class StaticCauseEffect:
         Returns
         -------
         Data array of shape (n_samples,dim).
+
         """
         # nice examples
         examples = [  # noqa: F841 TODO We are really unsure whether this is needed.

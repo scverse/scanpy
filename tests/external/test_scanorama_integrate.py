@@ -9,8 +9,7 @@ pytestmark = [needs.scanorama]
 
 
 def test_scanorama_integrate():
-    """
-    Test that Scanorama integration works.
+    """Test that Scanorama integration works.
 
     This is a very simple test that just checks to see if the Scanorama
     integrate wrapper succesfully added a new field to ``adata.obsm``

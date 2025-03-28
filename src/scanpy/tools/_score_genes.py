@@ -31,9 +31,7 @@ if TYPE_CHECKING:
 
 
 def _sparse_nanmean(X: _CSMatrix, axis: Literal[0, 1]) -> NDArray[np.float64]:
-    """
-    np.nanmean equivalent for sparse matrices
-    """
+    """np.nanmean equivalent for sparse matrices."""
     if not issparse(X):
         msg = "X must be a sparse matrix"
         raise TypeError(msg)
@@ -73,8 +71,7 @@ def score_genes(
     use_raw: bool | None = None,
     layer: str | None = None,
 ) -> AnnData | None:
-    """\
-    Score a set of genes :cite:p:`Satija2015`.
+    """Score a set of genes :cite:p:`Satija2015`.
 
     The score is the average expression of a set of genes after subtraction by
     the average expression of a reference set of genes. The reference set is
@@ -123,6 +120,7 @@ def score_genes(
     Examples
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
+
     """
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
@@ -273,8 +271,7 @@ def score_genes_cell_cycle(
     copy: bool = False,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Score cell cycle genes :cite:p:`Satija2015`.
+    """Score cell cycle genes :cite:p:`Satija2015`.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
@@ -305,13 +302,14 @@ def score_genes_cell_cycle(
     `adata.obs['phase']` : :class:`pandas.Series` (dtype `object`)
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
-    See also
+    See Also
     --------
     score_genes
 
     Examples
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
+
     """
     logg.info("calculating cell cycle phase")
 

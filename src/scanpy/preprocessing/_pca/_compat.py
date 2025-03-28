@@ -29,7 +29,7 @@ def _pca_compat_sparse(
     mu: NDArray[np.floating] | None = None,
     random_state: _LegacyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
-    """Sparse PCA for scikit-learn <1.4"""
+    """Sparse PCA for scikit-learn <1.4."""
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(x.shape))

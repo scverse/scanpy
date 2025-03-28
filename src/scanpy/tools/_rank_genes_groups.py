@@ -500,8 +500,7 @@ def rank_genes_groups(
     layer: str | None = None,
     **kwds,
 ) -> AnnData | None:
-    """\
-    Rank genes for characterizing groups.
+    """Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -514,7 +513,7 @@ def rank_genes_groups(
     mask_var
         Select subset of genes to use in statistical tests.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
     layer
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
@@ -594,9 +593,10 @@ def rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
+    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
+
     """
     mask_var = _check_mask(adata, mask_var, "var")
 
@@ -760,9 +760,11 @@ def filter_rank_genes_groups(
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:
-    """\
-    Filters out genes based on log fold change and fraction of genes expressing the
-    gene within and outside the `groupby` categories.
+    """Filter out genes based on two criteria.
+
+    1. log fold change and
+    2. fraction of genes expressing the
+       gene within and outside the `groupby` categories.
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
@@ -794,12 +796,13 @@ def filter_rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
+    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
     >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
     >>> # visualize results
-    >>> sc.pl.rank_genes_groups(adata, key='rank_genes_groups_filtered')
+    >>> sc.pl.rank_genes_groups(adata, key="rank_genes_groups_filtered")
     >>> # visualize results using dotplot
-    >>> sc.pl.rank_genes_groups_dotplot(adata, key='rank_genes_groups_filtered')
+    >>> sc.pl.rank_genes_groups_dotplot(adata, key="rank_genes_groups_filtered")
+
     """
     if key is None:
         key = "rank_genes_groups"

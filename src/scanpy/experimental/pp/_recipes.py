@@ -43,8 +43,7 @@ def recipe_pearson_residuals(
     check_values: bool = True,
     inplace: bool = True,
 ) -> tuple[AnnData, pd.DataFrame] | None:
-    """\
-    Full pipeline for HVG selection and normalization by analytic Pearson residuals :cite:p:`Lause2021`.
+    """Full pipeline for HVG selection and normalization by analytic Pearson residuals :cite:p:`Lause2021`.
 
     Applies gene selection based on Pearson residuals. On the resulting subset,
     Pearson residual normalization and PCA are performed.
@@ -106,8 +105,8 @@ def recipe_pearson_residuals(
          Ratio of explained variance.
     `.uns['pca']['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
-    """
 
+    """
     hvg_args = dict(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,

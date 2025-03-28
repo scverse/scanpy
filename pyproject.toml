@@ -5,7 +5,7 @@ requires = [ "hatchling", "hatch-vcs" ]
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "BSD-3-clause"
 authors = [
     { name = "Alex Wolf" },
@@ -39,29 +39,29 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "anndata>=0.8",
-    "numpy>=1.24",
-    "matplotlib>=3.6",
-    "pandas >=1.5",
-    "scipy>=1.8",
+    "anndata>=0.9",
+    "numpy>=1.25",
+    "matplotlib>=3.7",
+    "pandas >=2.0",
+    "scipy>=1.11",
     "seaborn>=0.13",
-    "h5py>=3.7",
+    "h5py>=3.8",
     "tqdm",
-    "scikit-learn>=1.1,<1.6.0",
+    "scikit-learn>=1.1,<1.6",
     "statsmodels>=0.13",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
-    "networkx>=2.7",
+    "networkx>=2.8",
     "natsort",
     "joblib",
-    "numba>=0.57",
-    "umap-learn>=0.5,!=0.5.0",
+    "numba>=0.58",
+    "umap-learn>=0.5,!=0.5",
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info2",
@@ -85,9 +85,11 @@ scanpy = "scanpy.cli:console_main"
 [project.optional-dependencies]
 test-min = [
     "pytest>=8.2",
-    "pytest-nunit",
     "pytest-mock",
     "pytest-cov",
+    "pytest-xdist[psutil]",
+    "pytest-randomly",
+    "pytest-rerunfailures",
     "profimp",
 ]
 test = [
@@ -111,7 +113,8 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=7",
+    # https://github.com/sphinx-doc/sphinx/issues/13366
+    "sphinx>=7,<8.2.0",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.14.1",
     "sphinx-autodoc-typehints>=1.25.2",
@@ -145,10 +148,10 @@ magic = [ "magic-impute>=2.0" ]                  # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.1.3" ]                # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                        # Harmony dataset integration
 scanorama = [ "scanorama" ]                      # Scanorama dataset integration
-scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
+scrublet = [ "scikit-image>=0.20" ]              # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2022.09.2,<2024.8.0" ]         # Use the Dask parallelization engine
+dask = [ "dask[array]>=2023.5.1,<2024.8.0" ]          # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
@@ -168,7 +171,7 @@ addopts = [
 testpaths = [ "./tests", "./ci", "scanpy" ]
 norecursedirs = [ "tests/_images" ]
 xfail_strict = true
-nunit_attach_on = "fail"
+junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
@@ -201,6 +204,8 @@ filterwarnings = [
 data_file = "test-data/coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
+concurrency = [ "multiprocessing" ]
+parallel = "true"
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
@@ -226,6 +231,7 @@ select = [
     "W",       # Warning detected by Pycodestyle
     "UP",      # pyupgrade
     "I",       # isort
+    "D",       # pydocstyle
     "TC",      # manage type checking blocks
     "TID251",  # Banned imports
     "ICN",     # Follow import conventions
@@ -248,13 +254,25 @@ ignore = [
     "E741",
     # `Literal["..."] | str` is useful for autocompletion
     "PYI051",
+    # We ban blank lines before docstrings instead of the opposite
+    "D203",
+    # We want multiline summaries to start on the first line, not the second
+    "D213",
+    # TODO: replace our current param docs reuse with this and remove it here:
+    "D417",
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
+# No need for docstrings for all benchmarks
+"benchmarks/**/*.py" = [ "D102", "D103" ]
+# No need for docstrings for all test modules and test functions
+"tests/**/*.py" = [ "D100", "D101", "D103" ]
 [tool.ruff.lint.isort]
 known-first-party = [ "scanpy", "testing.scanpy" ]
 required-imports = [ "from __future__ import annotations" ]
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
@@ -268,6 +286,7 @@ exempt-modules = [  ]
 strict = true
 
 [tool.towncrier]
+name = "scanpy"
 package = "scanpy"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"

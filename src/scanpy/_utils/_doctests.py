@@ -31,6 +31,5 @@ def doctest_skip(reason: str) -> Callable[[F], F]:
 
 def doctest_internet(func: F) -> F:
     """Mark function so doctest gets the internet mark."""
-
     func._doctest_internet = True
     return func

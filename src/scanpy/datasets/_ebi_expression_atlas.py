@@ -67,13 +67,21 @@ def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
     max_int32 = np.iinfo(np.int32).max
     coord_dtype = np.int64 if n > max_int32 or m > max_int32 else np.int32
 
-    data = pd.read_csv(
+    chunks = pd.read_csv(
         stream,
         sep=r"\s+",
         header=None,
         dtype={0: coord_dtype, 1: coord_dtype, 2: np.float32},
+        chunksize=1e7,
     )
-    mtx = sparse.csr_matrix((data[2], (data[1] - 1, data[0] - 1)), shape=(m, n))
+    data = np.array([], dtype=np.float64)
+    i = np.array([], dtype=int)
+    j = np.array([], dtype=int)
+    for chunk in chunks:
+        data = np.append(data, chunk[2])
+        i = np.append(i, chunk[1] - 1)
+        j = np.append(j, chunk[0] - 1)
+    mtx = sparse.csr_matrix((data, (i, j)), shape=(m, n))
     return mtx
 
 
@@ -100,8 +108,7 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
 ) -> anndata.AnnData:
-    """\
-    Load a dataset from the EBI Single Cell Expression Atlas.
+    """Load a dataset from the EBI Single Cell Expression Atlas.
 
     The atlas_ can be browsed online to find the ``accession`` you want.
     Downloaded datasets are saved in the directory specified by
@@ -130,6 +137,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+
     """
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / f"{accession}.h5ad"
