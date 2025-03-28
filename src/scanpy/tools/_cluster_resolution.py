@@ -5,19 +5,21 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Literal
+
     from anndata import AnnData
 
 
 def find_cluster_specific_genes(
     adata: AnnData,
-    resolutions: list[float],
+    resolutions: Sequence[float],
     *,
     prefix: str = "leiden_res_",
-    method: str = "wilcoxon",
+    method: Literal["wilcoxon"] = "wilcoxon",
     n_top_genes: int = 3,
     min_cells: int = 2,
-    deg_mode: str = "within_parent",
-    copy: bool = False,
+    deg_mode: Literal["within_parent", "per_resolution"] = "within_parent",
 ) -> dict[tuple[str, str], list[str]]:
     """
     Find differentially expressed genes for clusters in two modes.
@@ -33,7 +35,6 @@ def find_cluster_specific_genes(
         n_top_genes: Number of top genes per child node (default: 3).
         min_cells: Minimum cells required in a subcluster (default: 2).
         deg_mode: "within_parent" or "per_resolution" (default: "within_parent").
-        copy: If True, work on a copy of adata (default: True).
 
     Returns
     -------
@@ -49,10 +50,6 @@ def find_cluster_specific_genes(
     if deg_mode not in ["within_parent", "per_resolution"]:
         msg = "deg_mode must be 'within_parent' or 'per_resolution'"
         raise ValueError(msg)
-
-    # Handle AnnData copy
-    adata = adata.copy() if copy else adata
-    print(f"Working on {'a copy of' if copy else 'the original'} AnnData object.")
 
     # Validate resolutions and clustering columns
     for res in resolutions:
@@ -154,39 +151,67 @@ def cluster_resolution_finder(
     resolutions: list[float],
     *,
     prefix: str = "leiden_res_",
-    method: str = "wilcoxon",
+    method: Literal["wilcoxon"] = "wilcoxon",
     n_top_genes: int = 3,
     min_cells: int = 2,
-    deg_mode: str = "within_parent",
-    flavor: str = "igraph",
+    deg_mode: Literal["within_parent", "per_resolution"] = "within_parent",
+    flavor: Literal["igraph"] = "igraph",
     n_iterations: int = 2,
-    copy: bool = True,
-) -> tuple[dict[tuple[str, str], list[str]], pd.DataFrame]:
+) -> None:
     """
-    Find clusters across multiple resolutions using Leiden clustering, identify cluster-specific genes, and prepare data for clusterDecisionTree visualization.
+    Find clusters across multiple resolutions and identify cluster-specific genes.
 
-    Args:
-        adata: AnnData object for clustering and DEG analysis.
-        resolutions: List of resolution values (e.g., [0.0, 0.2, 0.5]).
-        prefix: Prefix for clustering columns in adata.obs (default: "leiden_res_").
-        method: Method for DEG analysis (default: "wilcoxon").
-        n_top_genes: Number of top genes per child node (default: 3).
-        min_cells: Minimum cells required in a subcluster (default: 2).
-        deg_mode: "within_parent" or "per_resolution" (default: "within_parent").
-        flavor: Flavor of Leiden clustering (default: "igraph").
-        n_iterations: Number of iterations for Leiden clustering (default: 2).
-        copy: If True, work on a copy of adata (default: True).
+    This function performs Leiden clustering at specified resolutions, identifies
+    differentially expressed genes (DEGs) for clusters, and stores the results in `adata`.
+
+    Params
+    ------
+    adata
+        The annotated data matrix.
+    resolutions
+        List of resolution values for Leiden clustering (e.g., [0.0, 0.2, 0.5]).
+    prefix
+        Prefix for clustering keys in `adata.obs` (e.g., "leiden_res_").
+    method
+        Method for differential expression analysis: only "wilcoxon" is supported.
+    n_top_genes
+        Number of top genes to identify per child cluster.
+    min_cells
+        Minimum number of cells required in a subcluster to include it.
+    deg_mode
+        Mode for DEG analysis: "within_parent" (compare child to parent cluster) or
+        "per_resolution" (compare within each resolution).
+    flavor
+        Flavor of Leiden clustering: only "igraph" is supported.
+    n_iterations
+        Number of iterations for Leiden clustering.
 
     Returns
     -------
-        Tuple of:
-        - Dict mapping (parent_node, child_node) to top marker genes.
-        - DataFrame with clustering results for each resolution.
+    None
 
-    Raises
-    ------
-        ValueError: If input parameters or adata structure are invalid.
-        RuntimeError: If clustering or DEG analysis fails critically.
+    The following annotations are added to `adata`:
+
+    leiden_res_{resolution}
+        Cluster assignments for each resolution in `adata.obs`.
+    cluster_resolution_top_genes
+        Dictionary mapping (parent_node, child_node) pairs to lists of top marker genes,
+        stored in `adata.uns`.
+
+    Notes
+    -----
+    This function requires the `igraph` library for Leiden clustering, which is included in the
+    `leiden` extra. Install it with: ``pip install scanpy[leiden]``.
+
+    Requires `sc.pp.neighbors` to be run on `adata` beforehand.
+
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.pp.neighbors(adata)
+    >>> sc.tl.cluster_resolution_finder(adata, resolutions=[0.0, 0.5])
+    >>> sc.pl.cluster_decision_tree(adata, resolutions=[0.0, 0.5])
     """
     from . import leiden
 
@@ -203,10 +228,6 @@ def cluster_resolution_finder(
     if flavor != "igraph":
         msg = "Only flavor='igraph' is supported"
         raise ValueError(msg)
-
-    # Handle AnnData copy
-    adata = adata.copy() if copy else adata
-    # print(f"Working on {'a copy of' if copy else 'the original'} AnnData object.")
 
     # Check if neighbors are computed (required for Leiden)
     if "neighbors" not in adata.uns:
@@ -238,7 +259,6 @@ def cluster_resolution_finder(
         n_top_genes=n_top_genes,
         min_cells=min_cells,
         deg_mode=deg_mode,
-        copy=False,  # Already copied if needed
     )
 
     # Create DataFrame for clusterDecisionTree
@@ -253,4 +273,6 @@ def cluster_resolution_finder(
         msg = f"Failed to create cluster_data DataFrame: {e}"
         raise RuntimeError(msg)
 
-    return top_genes_dict, cluster_data
+    # Store the results in adata.uns
+    adata.uns["cluster_resolution_top_genes"] = top_genes_dict
+    adata.uns["cluster_resolution_cluster_data"] = cluster_data

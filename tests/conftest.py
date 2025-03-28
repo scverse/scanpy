@@ -151,7 +151,7 @@ def plt():
 
 
 @pytest.fixture
-def adata():
+def adata_for_test():
     """Fixture to provide a preprocessed AnnData object for testing."""
     import scanpy as sc
 

@@ -11,8 +11,11 @@ from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     import networkx as nx
     import pandas as pd
+    from anndata import AnnData
     from pandas import DataFrame
 
 
@@ -997,12 +1000,12 @@ def draw_cluster_tree(
 
 def cluster_decision_tree(
     # Core Inputs
-    data: pd.DataFrame,
+    adata: AnnData,
     prefix: str = "leiden_res_",
     resolutions: list[float] = [0.0, 0.2, 0.5, 1.0, 1.5, 2.0],
     *,
     # Layout Options
-    orientation: str = "vertical",
+    orientation: Literal["vertical", "horizontal"] = "vertical",
     node_spacing: float = 5.0,
     level_spacing: float = 1.5,
     barycenter_sweeps: int = 2,
@@ -1018,7 +1021,7 @@ def cluster_decision_tree(
     node_colormap: list[str] | None = None,
     node_label_fontsize: float = 12,
     # Edge Appearance
-    edge_color: str = "parent",
+    edge_color: Literal["parent", "samples"] | str = "parent",
     edge_curvature: float = 0.01,
     edge_threshold: float = 0.05,
     show_weight: bool = True,
@@ -1026,7 +1029,6 @@ def cluster_decision_tree(
     edge_label_position: float = 0.5,
     edge_label_fontsize: float = 8,
     # Gene Label Options
-    top_genes_dict: dict[tuple[str, str], list[str]] | None = None,
     show_gene_labels: bool = False,
     n_top_genes: int = 2,
     gene_label_offset: float = 0.3,
@@ -1040,142 +1042,109 @@ def cluster_decision_tree(
     title_fontsize: float = 16,
 ) -> nx.DiGraph:
     """
-    Create a hierarchical clustering visualization with barycenter-based node reordering.
+    Plot a hierarchical clustering decision tree based on multiple resolutions.
 
-    This function builds a directed graph representing hierarchical clustering across multiple
-    resolutions, computes node positions to minimize edge crossings, and visualizes the result
-    with nodes, edges, and optional gene labels. Nodes represent clusters at different resolutions,
-    edges represent transitions between clusters, and edge weights indicate the proportion of cells
-    transitioning from a parent cluster to a child cluster.
+    This function performs Leiden clustering at different resolutions (if not already computed),
+    constructs a decision tree representing the hierarchical relationships between clusters,
+    and visualizes it as a directed graph. Nodes represent clusters at different resolutions,
+    edges represent transitions between clusters, and edge weights indicate the proportion of
+    cells transitioning from a parent cluster to a child cluster.
 
-    Args:
-        data (pd.DataFrame):
-            DataFrame containing clustering results, with columns named as '{prefix}{resolution}'
-            (e.g., 'leiden_res_0.0', 'leiden_res_0.5') indicating cluster assignments for each cell.
-        prefix (str, optional):
-            Prefix for column names in the DataFrame (e.g., "leiden_res_"). Used to identify clustering
-            columns and label resolution levels in the plot. Defaults to "leiden_res_".
-
-        resolutions (Optional[List[float]], optional):
-            List of resolution values to include in the visualization (e.g., [0.0, 0.5, 1.0]). Determines
-            the levels of the tree, with each resolution corresponding to a level from top to bottom.
-            If None, resolutions are inferred from the DataFrame columns matching the prefix. Defaults to None.
-        min_cells (int, optional):
-            Minimum number of cells required in a child cluster to include it in the graph. Clusters with
-            fewer cells are excluded, reducing clutter. Defaults to 5.
-
-        orientation (str, optional):
-            Orientation of the tree. Options are:
-            - "vertical": Levels are stacked vertically (default).
-            - "horizontal": Levels are stacked horizontally.
-            Defaults to "vertical".
-        node_spacing (float, optional):
-            Horizontal spacing between nodes at the same level (in data coordinates). Controls the spread
-            of nodes within each resolution level. Defaults to 10.0.
-        level_spacing (float, optional):
-            Vertical spacing between resolution levels (in data coordinates). Controls the distance between
-            levels in the tree. Defaults to 1.5.
-        barycenter_sweeps (int, optional):
-            Number of barycenter-based reordering sweeps to minimize edge crossings. More sweeps may improve
-            the layout but increase computation time. Defaults to 2.
-        use_reingold_tilford (bool, optional):
-            Whether to use the Reingold-Tilford layout algorithm for tree positioning (requires igraph).
-            If True, overrides the barycenter-based layout. Defaults to False.
-
-        output_path (Optional[str], optional):
-            Path to save the figure (e.g., 'cluster_tree.png'). Supports formats like PNG, PDF, SVG.
-            If None, the figure is not saved. Defaults to None.
-        draw (bool, optional):
-            Whether to display the plot using plt.show(). If False, the plot is created but not displayed.
-            Defaults to True.
-        figsize (Tuple[float, float], optional):
-            Figure size as (width, height) in inches. Controls the overall size of the plot.
-            Defaults to (10, 8).
-        dpi (float, optional):
-            Resolution for saving the figure (dots per inch). Higher values result in higher-quality output.
-            Defaults to 300.
-
-        node_size (float, optional):
-            Base size for nodes in points^2 (area of the node). Node sizes are scaled within each level
-            based on cluster sizes, using this value as the maximum size. Defaults to 500.
-        node_color (str, optional):
-            Color specification for nodes. If "prefix", nodes are colored by resolution level using a
-            distinct color palette for each level. Alternatively, a single color can be specified
-            (e.g., "red", "#FF0000"). Defaults to "prefix".
-        node_colormap (Optional[List[str]], optional):
-            Custom colormap for nodes, as a list of colors or colormaps (one per resolution level).
-            Each entry can be a color (e.g., "red", "#FF0000") or a colormap name (e.g., "viridis").
-            If None, the default "Set3" palette is used for "prefix" coloring. Defaults to None.
-        node_label_fontsize (float, optional):
-            Font size for node labels (e.g., cluster numbers like "0", "1"). Defaults to 12.
-
-        edge_color (str, optional):
-            Color specification for edges. Options are:
-            - "parent": Edges inherit the color of the parent node.
-            - "samples": Edges are colored by weight using the "viridis" colormap.
-            - A single color (e.g., "blue", "#0000FF").
-            Defaults to "parent".
-        edge_curvature (float, optional):
-            Curvature of edges, controlling the intensity of the S-shape. Smaller values result in subtler
-            curves, while larger values create more pronounced S-shapes. Defaults to 0.1.
-        edge_threshold (float, optional):
-            Minimum weight (proportion of cells) required to draw an edge. Edges with weights below this
-            threshold are not drawn, reducing clutter. Defaults to 0.5.
-        show_weight (bool, optional):
-            Whether to show edge weights as labels on the edges. If True, weights above `edge_label_threshold`
-            are displayed. Defaults to True.
-        edge_label_threshold (float, optional):
-            Minimum weight required to label an edge with its weight. Only edges with weights above this
-            threshold will have labels (if `show_weight` is True). Defaults to 0.7.
-        edge_label_position_ratio (float, optional):
-            Position of the edge weight label along the edge, as a ratio from 0.0 (near the parent node) to
-            1.0 (near the child node). A value of 0.5 places the label at the midpoint. A small buffer is
-            applied to avoid overlap with nodes. Defaults to 0.5.
-        edge_label_fontsize (float, optional):
-            Font size for edge weight labels (e.g., "0.86"). Defaults to 8.
-
-        top_genes_dict (Optional[Dict[Tuple[str, str], List[str]]], optional):
-            Dictionary mapping (parent, child) node pairs to lists of differentially expressed genes (DEGs).
-            Keys are tuples of node names (e.g., ("res_0.0_C0", "res_0.5_C1")), and values are lists of gene
-            names (e.g., ["GeneA", "GeneB"]). If provided and `show_gene_labels` is True, DEGs are displayed
-            below child nodes. Defaults to None.
-        show_gene_labels (bool, optional):
-            Whether to show gene labels (DEGs) below child nodes. Requires `top_genes_dict` to be provided.
-            Defaults to False.
-        n_top_genes (int, optional):
-            Number of top genes to display for each (parent, child) pair. Genes are taken from `top_genes_dict`
-            in the order provided. Defaults to 2.
-        gene_label_offset (float, optional):
-            Vertical offset (in data coordinates) for gene labels below nodes. Controls the distance between
-            the node and its gene label. Defaults to 1.5.
-        gene_label_fontsize (float, optional):
-            Font size for gene labels (e.g., gene names like "GeneA"). Defaults to 10.
-        gene_label_threshold (float, optional):
-            Minimum weight (proportion of cells) required to display a gene label for a (parent, child) pair.
-            Gene labels are only shown for edges with weights above this threshold. Defaults to 0.05.
-
-        label_buffer (float, optional):
-            Horizontal buffer space (in data coordinates) between the level labels (e.g., "leiden_res_0.0")
-            and the leftmost node at the bottom level. Controls the spacing of level labels on the left side
-            of the plot. Defaults to 0.5.
-        level_label_fontsize (float, optional):
-            Font size for level labels (e.g., "leiden_res_0.0"). Defaults to 12.
-
-        title (str, optional):
-            Title of the plot, displayed at the top. Defaults to "Hierarchical Leiden Clustering".
-        title_fontsize (float, optional):
-            Font size for the plot title. Defaults to 16.
+    Params
+    ------
+    adata
+        The annotated data matrix containing clustering results in `adata.uns["cluster_resolution_cluster_data"]`
+        and top genes in `adata.uns["cluster_resolution_top_genes"]`. Typically populated by
+        `sc.tl.cluster_resolution_finder`.
+    prefix
+        Prefix for clustering keys in `adata.obs` (e.g., "leiden_res_").
+    resolutions
+        List of resolution values for Leiden clustering.
+    orientation
+        Orientation of the tree: "vertical" or "horizontal".
+    node_spacing
+        Horizontal spacing between nodes at the same level (in data coordinates).
+    level_spacing
+        Vertical spacing between resolution levels (in data coordinates).
+    barycenter_sweeps
+        Number of barycenter-based reordering sweeps to minimize edge crossings.
+    use_reingold_tilford
+        Whether to use the Reingold-Tilford layout algorithm (requires `igraph`).
+    output_path
+        Path to save the figure (e.g., "cluster_tree.png"). Supports PNG, PDF, SVG.
+    draw
+        Whether to display the plot using `plt.show()`.
+    figsize
+        Figure size as (width, height) in inches.
+    dpi
+        Resolution for saving the figure (dots per inch).
+    node_size
+        Base size for nodes in points^2 (area of the node).
+    node_color
+        Color specification for nodes: "prefix" (color by resolution level) or a single color.
+    node_colormap
+        Custom colormap for nodes, as a list of colors (one per resolution level).
+    node_label_fontsize
+        Font size for node labels (e.g., cluster numbers).
+    edge_color
+        Color specification for edges: "parent" (inherit parent node color), "samples" (by weight), or a single color.
+    edge_curvature
+        Curvature of edges (intensity of the S-shape).
+    edge_threshold
+        Minimum weight (proportion of cells) required to draw an edge.
+    show_weight
+        Whether to show edge weights as labels on the edges.
+    edge_label_threshold
+        Minimum weight required to label an edge with its weight.
+    edge_label_position
+        Position of the edge weight label along the edge (0.0 to 1.0).
+    edge_label_fontsize
+        Font size for edge weight labels.
+    show_gene_labels
+        Whether to show gene labels below child nodes.
+    n_top_genes
+        Number of top genes to display for each (parent, child) pair.
+    gene_label_offset
+        Vertical offset for gene labels below nodes (in data coordinates).
+    gene_label_fontsize
+        Font size for gene labels.
+    gene_label_threshold
+        Minimum weight required to display a gene label for a (parent, child) pair.
+    level_label_offset
+        Horizontal buffer space between level labels and the leftmost node.
+    level_label_fontsize
+        Font size for level labels (e.g., "leiden_res_0.0").
+    title
+        Title of the plot.
+    title_fontsize
+        Font size for the plot title.
 
     Returns
     -------
-        nx.DiGraph:
-            The directed graph representing the hierarchical clustering, with nodes and edges annotated
-            with resolution levels and weights.
+    G
+        The directed graph representing the hierarchical clustering, with nodes and edges
+        annotated with resolution levels and weights.
 
-    Raises
-    ------
-        ValueError:
-            If input parameters are invalid (e.g., negative figsize or dpi, invalid orientation).
+    Notes
+    -----
+    This function requires the `igraph` library for Leiden clustering, which is included in the
+    `leiden` extra. Install it with: ``pip install scanpy[leiden]``.
+
+    If clustering results are not already present in `adata.obs`, the function will run
+    `sc.tl.leiden` for the specified resolutions, which requires `sc.pp.neighbors` to be
+    run first.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pp.neighbors(adata)
+        sc.tl.leiden(adata, resolution=0.0, key_added="leiden_res_0.0")
+        sc.tl.leiden(adata, resolution=0.5, key_added="leiden_res_0.5")
+        sc.pl.cluster_decision_tree(adata, resolutions=[0.0, 0.5])
     """
     # Validate input parameters
     if (
@@ -1194,6 +1163,28 @@ def cluster_decision_tree(
     if edge_threshold < 0 or edge_label_threshold < 0:
         msg = "edge_threshold and edge_label_threshold must be non-negative."
         raise ValueError(msg)
+
+    # Retrieve clustering data from adata.uns
+    if "cluster_resolution_cluster_data" not in adata.uns:
+        msg = "adata.uns['cluster_resolution_cluster_data'] not found. Run sc.tl.cluster_resolution_finder first."
+        raise ValueError(msg)
+    data = adata.uns["cluster_resolution_cluster_data"]
+
+    # Validate that data has the required columns
+    cluster_columns = [f"{prefix}{res}" for res in resolutions]
+    missing_columns = [col for col in cluster_columns if col not in data.columns]
+    if missing_columns:
+        msg = f"Clustering results for resolutions {missing_columns} not found in adata.uns['cluster_resolution_cluster_data']."
+        raise ValueError(msg)
+
+    # Retrieve top genes from adata.uns
+    if show_gene_labels:
+        if "cluster_resolution_top_genes" not in adata.uns:
+            msg = "adata.uns['cluster_resolution_top_genes'] not found. Run sc.tl.cluster_resolution_finder first or disable show_gene_labels."
+            raise ValueError(msg)
+        top_genes_dict = adata.uns["cluster_resolution_top_genes"]
+    else:
+        top_genes_dict = None
 
     # Build the graph
     G = build_cluster_graph(data, prefix, edge_threshold)
