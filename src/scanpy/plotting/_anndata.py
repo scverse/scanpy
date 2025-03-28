@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict, cast
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
-from matplotlib import gridspec, patheffects, rcParams
+from matplotlib import colormaps, gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from packaging.version import Version
@@ -2565,7 +2565,7 @@ def _plot_categories_as_colorblocks(
     from matplotlib.colors import BoundaryNorm, ListedColormap
 
     if colors is None:
-        groupby_cmap = plt.get_cmap(cmap_name)
+        groupby_cmap = colormaps.get_cmap(cmap_name)
     else:
         groupby_cmap = ListedColormap(colors, groupby + "_cmap")
     norm = BoundaryNorm(np.arange(groupby_cmap.N + 1) - 0.5, groupby_cmap.N)

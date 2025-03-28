@@ -7,7 +7,7 @@
 .. currentmodule:: scanpy
 ```
 
-Write {class}`~anndata.AnnData` objects using its {ref}`anndata:/api.md#writing` methods
+Write {class}`~anndata.AnnData` objects using its {doc}`writing <anndata:api>` methods
 
 ```{eval-rst}
 .. autosummary::
