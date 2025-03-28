@@ -14,6 +14,7 @@ import pytest
 from anndata.tests.helpers import assert_adata_equal
 
 import scanpy as sc
+from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -191,11 +192,12 @@ def test_doc_shape(ds_name):
     assert dataset_fn.__doc__, "No docstring"
     start_line_2 = dataset_fn.__doc__.find("\n") + 1
     docstring = dedent(dataset_fn.__doc__[start_line_2:])
+    cached_fn = getattr(data, ds_name, dataset_fn)
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
             r"(Observation|Variable) names are not unique",
             category=UserWarning,
         )
-        dataset = dataset_fn()
+        dataset = cached_fn()
     assert repr(dataset) in docstring
