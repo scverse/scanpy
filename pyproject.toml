@@ -176,7 +176,6 @@ markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
     "anndata_dask_support: tests that require dask support in anndata",
-    "mpl_image_compare: mark a test as an image comparison test using pytest-mpl",
 ]
 filterwarnings = [
     # legacy-api-wrap: internal use of positional API
