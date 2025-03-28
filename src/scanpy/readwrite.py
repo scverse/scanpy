@@ -1021,6 +1021,9 @@ def _download(url: str, path: Path):
         try:
             open_url = urlopen(req)
         except URLError:
+            if not url.startswith("https://"):
+                raise  # No need to try using certifi
+
             msg = "Failed to open the url with default certificates."
             try:
                 from certifi import where

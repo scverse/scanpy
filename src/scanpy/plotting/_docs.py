@@ -45,7 +45,7 @@ doc_cm_palette = """\
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
-    or `mpl.cm.cividis`), see :func:`~matplotlib.pyplot.get_cmap`.
+    or `mpl.cm.cividis`), see :meth:`~matplotlib.cm.ColormapRegistry.get_cmap`.
     If `None`, the value of `mpl.rcParams["image.cmap"]` is used.
     The default `color_map` can be set using :func:`~scanpy.set_figure_params`.
 palette
