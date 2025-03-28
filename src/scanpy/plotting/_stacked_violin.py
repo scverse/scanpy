@@ -3,11 +3,17 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+import anndata_plot as adp
+import holoviews as hv
+
+_ = adp  # so linters don't complain
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 from packaging.version import Version
+
+import scanpy as sc
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -22,6 +28,9 @@ from ._utils import (
     make_grid_spec,
     savefig_or_show,
 )
+
+hv.extension("bokeh")
+
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -847,6 +856,19 @@ def stacked_violin(
         yticklabels=yticklabels,
         linewidth=kwds.get("linewidth", _empty),
     ).legend(title=colorbar_title)
+
+    hv.extension("matplotlib")
+
+    adata = sc.datasets.pbmc3k()
+    sc.pp.neighbors(adata)
+    sc.tl.umap(adata)
+    sc.tl.leiden(adata)
+    print(adata)
+
+    return hv.Scatter(adata, "obsm.X_umap.0", ["obsm.X_umap.1", "obs.leiden"]).opts(
+        color="obs.leiden", cmap="Category20"
+    )
+
     if return_fig:
         return vp
     vp.make_figure()
