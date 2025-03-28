@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
