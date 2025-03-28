@@ -48,7 +48,7 @@ def _select_top_n(scores: NDArray, n_top: int):
 
 
 @njit
-def rankdata(data: np.ndarray) -> np.ndarray:
+def rankdata(data: NDArray[np.number]) -> NDArray[np.float64]:
     """Parallelized version of scipy.stats.rankdata."""
     ranked = np.empty(data.shape, dtype=np.float64)
     for j in numba.prange(data.shape[1]):
@@ -69,7 +69,7 @@ def rankdata(data: np.ndarray) -> np.ndarray:
 
 
 @njit
-def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
+def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
     """Parallelized version of scipy.stats.tiecorrect."""
     tc = np.ones(rankvals.shape[1], dtype=np.float64)
     for j in numba.prange(rankvals.shape[1]):
@@ -87,10 +87,10 @@ def _tiecorrect(rankvals: np.ndarray) -> np.ndarray:
 
 
 def _ranks(
-    X: np.ndarray | _CSMatrix,
+    X: NDArray[np.number] | _CSMatrix,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-) -> Generator[tuple[np.ndarray, int, int], None, None]:
+) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = X.shape[1]
 
     if issparse(X):
