@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -245,7 +246,8 @@ def cluster_resolution_finder(
                 n_iterations=n_iterations,
                 key_added=res_key,
             )
-            print(f"Completed Leiden clustering for resolution {resolution}")
+            if "pytest" not in sys.modules:  # Suppress output during testing
+                print(f"Completed Leiden clustering for resolution {resolution}")
         except Exception as e:
             msg = f"Leiden clustering failed at resolution {resolution}: {e}"
             raise RuntimeError(msg)
