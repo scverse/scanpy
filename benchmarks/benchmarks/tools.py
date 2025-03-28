@@ -50,8 +50,8 @@ def peakmem_leiden():
 
 
 def time_rank_genes_groups() -> None:
-    sc.tl.rank_genes_groups(adata, "bulk_labels")
+    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
 
 
 def peakmem_rank_genes_groups() -> None:
-    sc.tl.rank_genes_groups(adata, "bulk_labels")
+    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
