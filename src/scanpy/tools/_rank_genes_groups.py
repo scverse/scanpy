@@ -513,7 +513,7 @@ def rank_genes_groups(
     mask_var
         Select subset of genes to use in statistical tests.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
     layer
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
