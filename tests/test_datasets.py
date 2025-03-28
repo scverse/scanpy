@@ -32,7 +32,6 @@ def _tmp_dataset_dir(tmp_path: Path) -> None:
     sc.settings.datasetdir = tmp_path / "scanpy_data"
 
 
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 @pytest.mark.internet
 def test_burczynski06():
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
