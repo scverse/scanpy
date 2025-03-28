@@ -1,6 +1,6 @@
-"""
-This module will benchmark tool operations in Scanpy
-API documentation: https://scanpy.readthedocs.io/en/stable/api/tools.html
+"""Benchmark tool operations in Scanpy.
+
+API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
 """
 
 from __future__ import annotations
@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING
 
 import scanpy as sc
 
-from .utils import pbmc68k_reduced
+from ._utils import pbmc68k_reduced
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
+# setup variables
 
 adata: AnnData
 

@@ -1,0 +1,39 @@
+[envs.default]
+installer = "uv"
+features = [ "dev" ]
+
+[envs.docs]
+features = [ "doc" ]
+scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
+scripts.clean = "git clean -fdX -- {args:docs}"
+
+[envs.towncrier]
+scripts.create = "towncrier create {args}"
+scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
+scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
+
+[envs.hatch-test]
+default-args = [  ]
+features = [ "dev", "test", "dask-ml" ]
+extra-dependencies = [ "ipykernel" ]
+overrides.matrix.deps.env-vars = [
+    { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
+    { if = [ "min" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
+]
+overrides.matrix.deps.pre-install-commands = [
+    { if = [ "min" ], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
+]
+overrides.matrix.deps.python = [
+    { if = [ "min" ], value = "3.11" },
+    { if = [ "stable", "full", "pre" ], value = "3.13" },
+]
+overrides.matrix.deps.features = [
+    { if = [ "full" ], value = "test-full" },
+]
+overrides.matrix.deps.extra-dependencies = [
+    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
+]
+
+[[envs.hatch-test.matrix]]
+deps = [ "stable", "full", "pre", "min" ]

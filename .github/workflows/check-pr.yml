@@ -18,6 +18,10 @@ on:
       # code change (e.g. this workflow)
       - synchronize
 
+defaults:
+  run:
+    shell: bash -e {0} # -e to fail on error
+
 jobs:
   # This job verifies that the milestone is present or not necessary
   # and determines if “check-relnotes” needs to be run.
@@ -49,13 +53,13 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
-      - name: Find out if relevant release notes are modified
-        uses: dorny/paths-filter@v2
+      - name: Find out if a relevant release fragment is added
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: | # this is intentionally a string
-            relnotes: 'docs/release-notes/${{ github.event.pull_request.milestone.title }}.md'
-      - name: Check if relevant release notes are modified
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.*.md'
+      - name: Check if a relevant release fragment is added
         uses: flying-sheep/check@v1
         with:
           success: ${{ steps.changes.outputs.relnotes }}

@@ -13,12 +13,11 @@
 # tests
 /*cache/
 /test-data/
-/scanpy/tests/test*.h5ad
-/scanpy/tests/**/*actual.png
-/scanpy/tests/**/*failed-diff.png
+/tests/test*.h5ad
+/tests/**/*actual.png
+/tests/**/*failed-diff.png
 
 # Environment management
-/hatch.toml
 /Pipfile
 /Pipfile.lock
 /requirements*.lock
@@ -28,7 +27,7 @@
 
 # Python build files
 __pycache__/
-/scanpy/_version.py
+/ci/scanpy-min-deps.txt
 /dist/
 /*-env/
 /env-*/
@@ -42,7 +41,6 @@ Thumbs.db
 
 # IDEs and editors
 /.idea/
-/.vscode/
 
 # asv benchmark files
 /benchmarks/.asv
