@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -88,3 +90,28 @@ def test_diffmap():
     sc.tl.diffmap(pbmc, random_state=1234)
     d3 = pbmc.obsm["X_diffmap"].copy()
     assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+@pytest.mark.parametrize(
+    ("random_state", "expect_warning"),
+    [
+        pytest.param(42, True, id="random_state_int"),
+        pytest.param(np.random.RandomState(42), True, id="random_state_RandomState"),
+        pytest.param(None, True, id="random_state_None"),
+    ],
+)
+def test_umap_parallel_randomstate(random_state, expect_warning):
+    pbmc = pbmc68k_reduced()[:100, :].copy()
+
+    if expect_warning:
+        with pytest.warns(
+            UserWarning, match="Parallel execution was expected to be disabled"
+        ):
+            sc.tl.umap(pbmc, parallel=True, random_state=random_state)
+    else:
+        # This is case is currently not in use because of lmcinnes/umap#1155
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            sc.tl.umap(pbmc, parallel=True, random_state=random_state)
+
+        assert len(record) == 0
