@@ -17,7 +17,7 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v1.9.4
+    rev: v2.0.0-beta.1
     hooks:
     -   id: biome-format
 -   repo: https://github.com/ComPWA/taplo-pre-commit
