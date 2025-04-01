@@ -9,15 +9,16 @@ import numba
 import numpy as np
 from scipy import sparse
 
-from .._compat import fullname, njit
+from .._compat import njit
 from ..get import _get_obs_rep
-from ._common import _check_vals, _resolve_vals
+from ._common import _get_graph, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
     from .._compat import DaskArray
+    from ._common import _Vals
 
 
 @singledispatch
@@ -107,37 +108,37 @@ def morans_i(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
-    if use_graph is None:
-        # Fix for anndata<0.7
-        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-            g = adata.obsp["connectivities"]
-        elif "neighbors" in adata.uns:
-            g = adata.uns["neighbors"]["connectivities"]
-        else:
-            msg = "Must run neighbors first."
-            raise ValueError(msg)
-    else:
-        raise NotImplementedError()
+    g = _get_graph(adata, use_graph=use_graph)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
     return morans_i(g, vals)
+
+
+@morans_i.register(sparse.csr_matrix)
+def _morans_i(g: sparse.csr_matrix, vals: _Vals) -> NDArray:
+    return _MoransI(g, vals)()
+
+
+class _MoransI(_SparseMetric):
+    name = "Moran’s I"
+
+    def mtx(self, new_vals: NDArray | sparse.csr_matrix) -> NDArray:
+        g_parts = (self.g.data, self.g.indices, self.g.indptr)
+        if isinstance(new_vals, np.ndarray):
+            return _morans_i_mtx(*g_parts, new_vals)
+        v_parts = (new_vals.data, new_vals.indices, new_vals.indptr)
+        return _morans_i_mtx_csr(*g_parts, *v_parts, new_vals.shape)
+
+    def vec(self) -> np.float64:
+        W = self.g.data.sum()
+        g_parts = (self.g.data, self.g.indices, self.g.indptr)
+        return _morans_i_vec_W(*g_parts, self._vals, W)
 
 
 ###############################################################################
 # Calculation
 ###############################################################################
 # This is done in a very similar way to gearys_c. See notes there for details.
-
-
-@njit
-def _morans_i_vec(
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x: np.ndarray,
-) -> float:
-    W = g_data.sum()
-    return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
@@ -147,7 +148,7 @@ def _morans_i_vec_W(
     g_indptr: np.ndarray,
     x: np.ndarray,
     W: np.float64,
-) -> float:
+) -> np.float64:
     z = x - x.mean()
     z2ss = (z * z).sum()
     n = len(x)
@@ -171,7 +172,7 @@ def _morans_i_vec_W_sparse(  # noqa: PLR0917
     x_indices: np.ndarray,
     n: int,
     W: np.float64,
-) -> float:
+) -> np.float64:
     x = np.zeros(n, dtype=x_data.dtype)
     x[x_indices] = x_data
     return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
@@ -220,48 +221,3 @@ def _morans_i_mtx_csr(  # noqa: PLR0917
             W,
         )
     return out
-
-
-###############################################################################
-# Interface (taken from gearys C)
-###############################################################################
-
-
-@morans_i.register(sparse.csr_matrix)
-def _morans_i(
-    g: sparse.csr_matrix, vals: NDArray | sparse.spmatrix | DaskArray
-) -> np.ndarray:
-    assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
-    vals = _resolve_vals(vals)
-    g_data = g.data.astype(np.float64, copy=False)
-    if isinstance(vals, sparse.csr_matrix):
-        assert g.shape[0] == vals.shape[1]
-        new_vals, idxer, full_result = _check_vals(vals)
-        result = _morans_i_mtx_csr(
-            g_data,
-            g.indices,
-            g.indptr,
-            new_vals.data.astype(np.float64, copy=False),
-            new_vals.indices,
-            new_vals.indptr,
-            new_vals.shape,
-        )
-        full_result[idxer] = result
-        return full_result
-    elif isinstance(vals, np.ndarray) and vals.ndim == 1:
-        assert g.shape[0] == vals.shape[0]
-        return _morans_i_vec(g_data, g.indices, g.indptr, vals)
-    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
-        assert g.shape[0] == vals.shape[1]
-        new_vals, idxer, full_result = _check_vals(vals)
-        result = _morans_i_mtx(
-            g_data, g.indices, g.indptr, new_vals.astype(np.float64, copy=False)
-        )
-        full_result[idxer] = result
-        return full_result
-    else:
-        msg = (
-            "Moran’s I metric not implemented for vals of type "
-            f"{fullname(type(vals))} and ndim {vals.ndim}."
-        )
-        raise NotImplementedError(msg)
