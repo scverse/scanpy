@@ -5,12 +5,10 @@ from functools import partial
 from string import ascii_letters
 from typing import TYPE_CHECKING
 
-import numba
 import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -65,10 +63,7 @@ def test_consistency(metric) -> None:
     all_genes = metric(pbmc, layer="raw")
     first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
-    if Version(numba.__version__) < Version("0.57"):
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
-    else:
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
