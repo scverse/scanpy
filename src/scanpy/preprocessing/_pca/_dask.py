@@ -33,16 +33,16 @@ class PCAEighDask:
         >>> import dask.array as da
         >>> import scipy.sparse as sp
         >>> x = (
-        ...     da.array(sp.random(100, 200, density=0.3, dtype="float32").toarray())
+        ...     da.array(sp.random(100, 200, density=0.3, dtype="float64").toarray())
         ...     .rechunk((10, -1))
         ...     .map_blocks(sp.csr_matrix)
         ... )
         >>> x
-        dask.array<csr_matrix, shape=(100, 200), dtype=float32, chunksize=(10, 200), chunktype=scipy.csr_matrix>
+        dask.array<csr_matrix, shape=(100, 200), dtype=float64, chunksize=(10, 200), chunktype=scipy.csr_matrix>
         >>> pca_fit = PCAEighDask().fit(x)
         >>> assert isinstance(pca_fit, PCAEighDaskFit)
         >>> pca_fit.transform(x)
-        dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
+        dask.array<transform_block, shape=(100, 100), dtype=float64, chunksize=(10, 100), chunktype=numpy.ndarray>
 
         """
         if isinstance(x._meta, _CSMatrix) and x._meta.format != "csr":
@@ -131,8 +131,8 @@ class PCAEighDaskFit(PCAEighDask):
             mean_=self.mean_,
             components_=self.components_,
             chunks=(x.chunks[0], self.n_components_),
-            meta=np.zeros([0], dtype=x.dtype),
-            dtype=x.dtype,
+            meta=np.zeros([]),
+            dtype=np.result_type(x.dtype, self.components_.dtype, self.mean_.dtype),
         )
 
 
