@@ -33,12 +33,12 @@ class PCAEighDask:
         >>> import dask.array as da
         >>> import scipy.sparse as sp
         >>> x = (
-        ...     da.array(sp.random(100, 200, density=0.3, dtype="float64").toarray())
+        ...     da.array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
         ...     .rechunk((10, -1))
         ...     .map_blocks(sp.csr_matrix)
         ... )
         >>> x
-        dask.array<csr_matrix, shape=(100, 200), dtype=float64, chunksize=(10, 200), chunktype=scipy.csr_matrix>
+        dask.array<csr_matrix, shape=(100, 200), dtype=int64, chunksize=(10, 200), chunktype=scipy.csr_matrix>
         >>> pca_fit = PCAEighDask().fit(x)
         >>> assert isinstance(pca_fit, PCAEighDaskFit)
         >>> pca_fit.transform(x)
