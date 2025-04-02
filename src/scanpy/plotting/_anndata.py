@@ -17,6 +17,7 @@ from matplotlib.colors import is_color_like
 from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from scipy.sparse import issparse
+import holoviews as hv
 
 from .. import get
 from .. import logging as logg
@@ -759,9 +760,11 @@ def violin(
     xlabel: str = "",
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,
+    ncols: int = 1,
     show: bool | None = None,
     save: bool | str | None = None,
     ax: Axes | None = None,
+    interactive: bool = False,
     # deprecatd
     scale: DensityNorm | Empty = _empty,
     **kwds,
@@ -868,7 +871,10 @@ def violin(
     pl.stacked_violin
 
     """
-    import seaborn as sns  # Slow import, only import if called
+    if not interactive:
+        import seaborn as sns  # Slow import, only import if called
+    else:
+        import anndata_plot as adp
 
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
@@ -913,10 +919,45 @@ def violin(
         x = groupby
         ys = keys
 
+    if ax is None:
+        axs, _, _, _ = setup_axes(
+            ax,
+            panels=["x"] if groupby is None else keys,
+            show_ticks=True,
+            right_margin=0.3,
+        )
+    else:
+        axs = [ax]
+
+    if interactive:
+        if len(ys) > 1:
+            plots = []
+            print(ys)
+            for y in ys:
+                plots.append(adp.pl.violin(
+                    data=obs_df,
+                    var_names=y,
+                    groupby=groupby,
+                    **kwds,
+                ))
+        else:
+            return adp.pl.violin(
+                data=obs_df,
+                var_names=ys[0],
+                groupby=groupby,
+                **kwds,
+            )
+            
+        if ncols > 1:
+            grid = hv.Layout(plots).cols(ncols)
+            return grid
+
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
         # keys if groupby is None.
         y = ys[0]
+
+
 
         g: sns.axisgrid.FacetGrid = sns.catplot(
             y=y,
@@ -954,15 +995,6 @@ def violin(
         kwds.setdefault("cut", 0)
         kwds.setdefault("inner")
 
-        if ax is None:
-            axs, _, _, _ = setup_axes(
-                ax,
-                panels=["x"] if groupby is None else keys,
-                show_ticks=True,
-                right_margin=0.3,
-            )
-        else:
-            axs = [ax]
         for ax, y, ylab in zip(axs, ys, ylabel):
             ax = sns.violinplot(
                 x=x,
