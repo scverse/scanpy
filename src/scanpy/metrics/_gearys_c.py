@@ -24,8 +24,9 @@ if TYPE_CHECKING:
 @singledispatch
 def gearys_c(
     adata: AnnData,
-    *,
+    /,
     vals: NDArray | sparse.spmatrix | DaskArray | None = None,
+    *,
     use_graph: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
@@ -51,7 +52,8 @@ def gearys_c(
 
     Params
     ------
-    adata
+    ``adata` or ``graph``
+        AnnData object containing a graph (see ``use_graph``) or the graph itself.
     vals
         Values to calculate Geary's C for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
@@ -70,25 +72,12 @@ def gearys_c(
     use_raw
         Whether to use `adata.raw.X` for `vals`.
 
-
-    This function can also be called on the graph and values directly. In this case
-    the signature looks like:
-
-    Params
-    ------
-    g
-        The graph
-    vals
-        The values
-
-
     See the examples for more info.
 
     Returns
     -------
     If vals is two dimensional, returns a 1 dimensional ndarray array. Returns
     a scalar if `vals` is 1d.
-
 
     Examples
     --------
@@ -100,7 +89,6 @@ def gearys_c(
 
         pbmc = sc.datasets.pbmc68k_processed()
         pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
-
 
     It's equivalent to call the function directly on the underlying arrays:
 
@@ -117,23 +105,23 @@ def gearys_c(
 
 
 @gearys_c.register(sparse.csr_matrix)
-def _gearys_c(g: sparse.csr_matrix, vals: _Vals) -> NDArray:
-    return _GearysC(g, vals)()
+def _gearys_c(graph: sparse.csr_matrix, /, vals: _Vals) -> NDArray:
+    return _GearysC(graph, vals)()
 
 
 class _GearysC(_SparseMetric):
     name = "Geary’s C"
 
-    def mtx(self, new_vals: NDArray | sparse.csr_matrix) -> NDArray:
-        g_parts = (self.g.data, self.g.indices, self.g.indptr)
-        if isinstance(new_vals, np.ndarray):
-            return _gearys_c_mtx(*g_parts, new_vals)
-        v_parts = (new_vals.data, new_vals.indices, new_vals.indptr)
-        return _gearys_c_mtx_csr(*g_parts, *v_parts, new_vals.shape)
+    def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
+        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
+        if isinstance(vals_het, np.ndarray):
+            return _gearys_c_mtx(*g_parts, vals_het)
+        v_parts = (vals_het.data, vals_het.indices, vals_het.indptr)
+        return _gearys_c_mtx_csr(*g_parts, *v_parts, vals_het.shape)
 
     def vec(self) -> np.float64:
-        W = self.g.data.sum()
-        g_parts = (self.g.data, self.g.indices, self.g.indptr)
+        W = self.graph.data.sum()
+        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
         return _gearys_c_vec_W(*g_parts, self._vals, W)
 
 

@@ -29,7 +29,7 @@ __all__ = ["_get_graph", "_SparseMetric"]
 
 @dataclass
 class _SparseMetric(ABC):
-    g: sparse.csr_matrix
+    graph: sparse.csr_matrix
     vals: InitVar[_Vals]
     _vals: NDArray | sparse.csr_matrix | DaskArray = field(init=False)
 
@@ -37,28 +37,30 @@ class _SparseMetric(ABC):
 
     def __post_init__(self, vals: _Vals) -> None:
         assert isinstance(type(self).name, str)
-        assert self.g.shape[0] == self.g.shape[1], (
+        assert self.graph.shape[0] == self.graph.shape[1], (
             "`g` should be a square adjacency matrix"
         )
-        self.g = self.g.astype(np.float64, copy=False)
+        self.graph = self.graph.astype(np.float64, copy=False)
         self._vals = _resolve_vals(vals)
 
     @abstractmethod
-    def mtx(self, new_vals: NDArray | sparse.csr_matrix) -> NDArray: ...
+    def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
+        """Calculate metric when ``.vals`` is a 2D matrix (on an easier to handle version of ``.vals``)."""
 
     @abstractmethod
-    def vec(self) -> np.float64: ...
+    def vec(self) -> np.float64:
+        """Calculate metric when ``.vals`` is a 1D vector."""
 
     def __call__(self) -> np.ndarray:
         match self._vals, self._vals.ndim:
             case sparse.csr_matrix() | np.ndarray(), 2:
-                assert self.g.shape[0] == self._vals.shape[1]
-                new_vals, idxer, full_result = _check_vals(self._vals)
-                result = self.mtx(new_vals.astype(np.float64, copy=False))
+                assert self.graph.shape[0] == self._vals.shape[1]
+                vals_het, idxer, full_result = _vals_heterogeneous(self._vals)
+                result = self.mtx(vals_het.astype(np.float64, copy=False))
                 full_result[idxer] = result
                 return full_result
             case np.ndarray(), 1:
-                assert self.g.shape[0] == self._vals.shape[0]
+                assert self.graph.shape[0] == self._vals.shape[0]
                 return self.vec()
             case _, _:
                 msg = (
@@ -115,7 +117,9 @@ def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
 
 
-def _check_vals(vals: V) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
+def _vals_heterogeneous(
+    vals: V,
+) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
     """Check that values wont cause issues in computation.
 
     Returns new set of vals, and indexer to put values back into result.
