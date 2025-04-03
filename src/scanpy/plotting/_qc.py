@@ -10,8 +10,8 @@ from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ..preprocessing._normalization import normalize_total
-from . import _utils
 from ._docs import doc_show_save_ax
+from ._utils import savefig_or_show
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -105,7 +105,7 @@ def highest_expr_genes(
     if log:
         ax.set_xscale("log")
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show("highest_expr_genes", show=show, save=save)
+    savefig_or_show("highest_expr_genes", show=show, save=save)
     if show:
         return None
     return ax

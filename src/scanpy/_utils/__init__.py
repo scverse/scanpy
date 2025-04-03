@@ -38,7 +38,7 @@ from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import CSBase, DaskArray
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
@@ -49,7 +49,6 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -63,7 +62,7 @@ if TYPE_CHECKING:
     from .._compat import _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
-    _MemoryArray = NDArray | _CSMatrix
+    _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
 
     _ForT = TypeVar("_ForT", bound=Callable | type)
@@ -303,7 +302,7 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
@@ -597,7 +596,7 @@ def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
 @elem_mul.register(sparse.csc_matrix)
 @elem_mul.register(sparse.csr_matrix)
 def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, _CSMatrix):
+    if isinstance(x, CSBase):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
     return x * y
@@ -649,14 +648,14 @@ def axis_mul_or_truediv(
 @axis_mul_or_truediv.register(sparse.csr_matrix)
 @axis_mul_or_truediv.register(sparse.csc_matrix)
 def _(
-    X: _CSMatrix,
+    X: CSBase,
     scaling_array,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: _CSMatrix | None = None,
-) -> _CSMatrix:
+    out: CSBase | None = None,
+) -> CSBase:
     check_op(op)
     if out is not None and X.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
@@ -1165,7 +1164,7 @@ class NeighborsView:
 
 def _choose_graph(
     adata: AnnData, obsp: str | None, neighbors_key: str | None
-) -> _CSMatrix:
+) -> CSBase:
     """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         msg = "You can't specify both obsp, neighbors_key. Please select only one."

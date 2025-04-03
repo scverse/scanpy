@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
 
-    from ..._compat import _LegacyRandom
-    from ..._utils import Empty, _CSMatrix
+    from ..._compat import CSBase, _LegacyRandom
+    from ..._utils import Empty
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
     MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
@@ -61,7 +61,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
     mask_var_hvg=doc_mask_var_hvg,
 )
 def pca(
-    data: AnnData | np.ndarray | _CSMatrix,
+    data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
     layer: str | None = None,
@@ -76,7 +76,7 @@ def pca(
     chunk_size: int | None = None,
     key_added: str | None = None,
     copy: bool = False,
-) -> AnnData | np.ndarray | _CSMatrix | None:
+) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
 
     Computes PCA coordinates, loadings and variance decomposition.

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
 from packaging.version import Version
+from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,6 +20,9 @@ R = TypeVar("R")
 
 _LegacyRandom = int | np.random.RandomState | None
 
+CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+CSBase = CSMatrix
+
 
 if TYPE_CHECKING:
     # type checkers are confused and can only see …core.Array
@@ -26,17 +30,15 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-
-    class DaskArray:
-        pass
+    DaskArray = type("Array", (), {})
+    DaskArray.__module__ = "dask.array"
 
 
 if find_spec("zappy") or TYPE_CHECKING:
     from zappy.base import ZappyArray
 else:
-
-    class ZappyArray:
-        pass
+    ZappyArray = type("ZappyArray", (), {})
+    ZappyArray.__module__ = "zappy.base"
 
 
 __all__ = [

@@ -8,8 +8,8 @@ import numpy as np
 from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._compat import njit
-from .._utils import _CSMatrix, axis_sum, elem_mul
+from .._compat import CSBase, njit
+from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -34,7 +34,7 @@ def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
 def _get_mean_var(
     X: _SupportedArray, *, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    if isinstance(X, _CSMatrix):
+    if isinstance(X, CSBase):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
     elif isinstance(X, sparse.spmatrix):
         msg = f"Unsupported type {type(X)}"
@@ -50,7 +50,7 @@ def _get_mean_var(
 
 
 def sparse_mean_variance_axis(
-    mtx: _CSMatrix, axis: Literal[0, 1]
+    mtx: CSBase, axis: Literal[0, 1]
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Compute mean and variance along one axis of a sparse matrix.
 
@@ -166,7 +166,7 @@ def sample_comb(
     return np.vstack(np.unravel_index(idx, dims)).T
 
 
-def _to_dense(X: _CSMatrix, order: Literal["C", "F"] = "C") -> NDArray:
+def _to_dense(X: CSBase, order: Literal["C", "F"] = "C") -> NDArray:
     """Numba kernel for np.toarray() function."""
     out = np.zeros(X.shape, dtype=X.dtype, order=order)
     if X.format == "csr":

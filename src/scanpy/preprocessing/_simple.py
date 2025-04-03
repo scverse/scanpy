@@ -18,11 +18,10 @@ from scipy.sparse import csc_matrix, csr_matrix, issparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import DaskArray, deprecated, njit, old_positionals
+from .._compat import CSBase, DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
-    _CSMatrix,
     _resolve_axis,
     axis_sum,
     is_backed_type,
@@ -52,14 +51,14 @@ if TYPE_CHECKING:
     from .._utils import RNGLike, SeedLike
 
 
-A = TypeVar("A", bound=np.ndarray | _CSMatrix | DaskArray)
+A = TypeVar("A", bound=np.ndarray | CSBase | DaskArray)
 
 
 @old_positionals(
     "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
 )
 def filter_cells(
-    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
+    data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_genes: int | None = None,
@@ -208,7 +207,7 @@ def filter_cells(
     "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
 )
 def filter_genes(
-    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
+    data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
     min_counts: int | None = None,
     min_cells: int | None = None,
@@ -321,7 +320,7 @@ def filter_genes(
 @renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
-    data: AnnData | np.ndarray | _CSMatrix,
+    data: AnnData | np.ndarray | CSBase,
     *,
     base: Number | None = None,
     copy: bool = False,
@@ -329,7 +328,7 @@ def log1p(
     chunk_size: int | None = None,
     layer: str | None = None,
     obsm: str | None = None,
-) -> AnnData | np.ndarray | _CSMatrix | None:
+) -> AnnData | np.ndarray | CSBase | None:
     r"""Logarithmize the data matrix.
 
     Computes :math:`X = \log(X + 1)`,
@@ -368,7 +367,7 @@ def log1p(
 
 @log1p.register(csr_matrix)
 @log1p.register(csc_matrix)
-def log1p_sparse(X: _CSMatrix, *, base: Number | None = None, copy: bool = False):
+def log1p_sparse(X: CSBase, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
@@ -437,12 +436,12 @@ def log1p_anndata(
 
 @old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
-    data: AnnData | _CSMatrix | np.ndarray,
+    data: AnnData | CSBase | np.ndarray,
     *,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
-) -> AnnData | _CSMatrix | np.ndarray | None:
+) -> AnnData | CSBase | np.ndarray | None:
     r"""Take square root of the data matrix.
 
     Computes :math:`X = \sqrt(X)`.
@@ -492,7 +491,7 @@ def sqrt(
     "min_counts",
 )
 def normalize_per_cell(
-    data: AnnData | np.ndarray | _CSMatrix,
+    data: AnnData | np.ndarray | CSBase,
     *,
     counts_per_cell_after: float | None = None,
     counts_per_cell: np.ndarray | None = None,
@@ -501,7 +500,7 @@ def normalize_per_cell(
     layers: Literal["all"] | Iterable[str] = (),
     use_rep: Literal["after", "X"] | None = None,
     min_counts: int = 1,
-) -> AnnData | np.ndarray | _CSMatrix | None:
+) -> AnnData | np.ndarray | CSBase | None:
     """Normalize total counts per cell.
 
     .. deprecated:: 1.3.7
@@ -873,7 +872,7 @@ def sample(
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(
-    data: AnnData | np.ndarray | _CSMatrix | DaskArray,
+    data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
     *,
     n: int | None = None,
@@ -882,7 +881,7 @@ def sample(
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
-) -> AnnData | None | tuple[np.ndarray | _CSMatrix | DaskArray, NDArray[np.int64]]:
+) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 
     Parameters
@@ -971,7 +970,7 @@ def sample(
         return subset.to_memory() if data.isbacked else subset.copy()
 
     # overload 3: return array and indices
-    assert isinstance(subset, np.ndarray | _CSMatrix | DaskArray), type(subset)
+    assert isinstance(subset, np.ndarray | CSBase | DaskArray), type(subset)
     if copy:
         subset = subset.copy()
     return subset, indices
@@ -1042,12 +1041,12 @@ def downsample_counts(
 
 
 def _downsample_per_cell(
-    X: _CSMatrix,
+    X: CSBase,
     counts_per_cell: int,
     *,
     random_state: _LegacyRandom,
     replace: bool,
-) -> _CSMatrix:
+) -> CSBase:
     n_obs = X.shape[0]
     if isinstance(counts_per_cell, int):
         counts_per_cell = np.full(n_obs, counts_per_cell)
@@ -1097,12 +1096,12 @@ def _downsample_per_cell(
 
 
 def _downsample_total_counts(
-    X: _CSMatrix,
+    X: CSBase,
     total_counts: int,
     *,
     random_state: _LegacyRandom,
     replace: bool,
-) -> _CSMatrix:
+) -> CSBase:
     total_counts = int(total_counts)
     total = X.sum()
     if total < total_counts:

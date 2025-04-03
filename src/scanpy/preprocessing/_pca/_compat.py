@@ -17,12 +17,11 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
 
-    from ..._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from ..._compat import CSBase, _LegacyRandom
 
 
 def _pca_compat_sparse(
-    x: _CSMatrix,
+    x: CSBase,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],

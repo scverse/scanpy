@@ -10,7 +10,7 @@ from anndata import AnnData
 from numpy.typing import NDArray
 from packaging.version import Version
 
-from .._utils import _CSMatrix
+from .._compat import CSBase
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -327,7 +327,7 @@ def obs_df(
         val = adata.obsm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, _CSMatrix):
+        elif isinstance(val, CSBase):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -397,7 +397,7 @@ def var_df(
         val = adata.varm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, _CSMatrix):
+        elif isinstance(val, CSBase):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -412,12 +412,7 @@ def _get_obs_rep(
     obsm: str | None = None,
     obsp: str | None = None,
 ) -> (
-    np.ndarray
-    | _CSMatrix
-    | pd.DataFrame
-    | ArrayView
-    | BaseCompressedSparseDataset
-    | None
+    np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
 ):
     """Choose array aligned with obs annotation."""
     # https://github.com/scverse/scanpy/issues/1546
@@ -486,7 +481,7 @@ M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | No
 
 
 def _check_mask(
-    data: AnnData | np.ndarray | _CSMatrix | DaskArray,
+    data: AnnData | np.ndarray | CSBase | DaskArray,
     mask: str | M,
     dim: Literal["obs", "var"],
     *,

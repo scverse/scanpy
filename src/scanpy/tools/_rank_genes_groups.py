@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._utils import _CSMatrix
+    from .._compat import CSBase
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
@@ -87,7 +87,7 @@ def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
 
 
 def _ranks(
-    X: NDArray[np.number] | _CSMatrix,
+    X: NDArray[np.number] | CSBase,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
 ) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:

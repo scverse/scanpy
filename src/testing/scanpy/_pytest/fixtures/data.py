@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import DTypeLike
 
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from scanpy._compat import CSBase
 
 
 @pytest.fixture(
@@ -95,7 +95,7 @@ def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
 
 def _prepare_pbmc_testdata(
     adata: AnnData,
-    sparsity_func: Callable[[np.ndarray | _CSMatrix], np.ndarray | _CSMatrix],
+    sparsity_func: Callable[[np.ndarray | CSBase], np.ndarray | CSBase],
     dtype: DTypeLike,
     *,
     small: bool,

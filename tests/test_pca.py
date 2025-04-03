@@ -16,7 +16,7 @@ from scipy import sparse
 from scipy.sparse import issparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
+from scanpy._compat import CSBase, DaskArray, pkg_version
 from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
@@ -133,7 +133,7 @@ SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
 
 def gen_pca_params(
     *,
-    array_type: ArrayType,
+    array_type: type[ArrayType],
     svd_solver_type: Literal[None, "valid", "invalid"],
     zero_center: bool,
 ) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:
@@ -154,9 +154,9 @@ def gen_pca_params(
             svd_solvers = {"tsqr", "randomized"}
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
             svd_solvers = {"covariance_eigh"}
-        case ((sparse.csr_matrix | sparse.csc_matrix), True):
+        case (dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
-        case ((sparse.csr_matrix | sparse.csc_matrix), False):
+        case (dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
             svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL

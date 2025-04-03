@@ -20,17 +20,16 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
 
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from .._compat import CSBase, _LegacyRandom
 
     try:
         _StrIdx = pd.Index[str]
     except TypeError:  # Sphinx
         _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | _CSMatrix]
+    _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _sparse_nanmean(X: _CSMatrix, axis: Literal[0, 1]) -> NDArray[np.float64]:
+def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not issparse(X):
         msg = "X must be a sparse matrix"

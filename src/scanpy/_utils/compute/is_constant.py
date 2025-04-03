@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ..._utils import _CSMatrix
+    from ..._compat import CSBase
 
-    _Array = NDArray | DaskArray | _CSMatrix
+    _Array = NDArray | DaskArray | CSBase
 
     C = TypeVar("C", bound=Callable)
 
