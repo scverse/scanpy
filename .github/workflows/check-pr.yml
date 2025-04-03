@@ -33,10 +33,14 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const milestone = github.context.payload.pull_request.milestone;
-            const labels = github.context.payload.pull_request.labels.map(label => label.name);
-            if (!milestone && !labels.includes('no milestone')) {
-              core.setFailed('Check failed: No milestone set and "no milestone" label is not present');
+            if (github.context.payload.pull_request) {
+              const milestone = github.context.payload.pull_request.milestone;
+              const labels = github.context.payload.pull_request.labels.map(label => label.name);
+              if (!milestone && !labels.includes('no milestone')) {
+                core.setFailed('Check failed: No milestone set and "no milestone" label is not present');
+              }
+            } else {
+              core.setFailed('Check failed: Pull request context is not available');
             }
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: kaisugi/action-regex-match@v1.0.0
