@@ -45,11 +45,11 @@ class _SparseMetric(ABC):
 
     @abstractmethod
     def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
-        """Calculate metric when ``.vals`` is a 2D matrix (on an easier to handle version of ``.vals``)."""
+        """Calculate metric when ``._vals`` is a 2D matrix (on an easier to handle version of ``._vals``)."""
 
     @abstractmethod
     def vec(self) -> np.float64:
-        """Calculate metric when ``.vals`` is a 1D vector."""
+        """Calculate metric when ``._vals`` is a 1D vector."""
 
     def __call__(self) -> np.ndarray:
         match self._vals, self._vals.ndim:
