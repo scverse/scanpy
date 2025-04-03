@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 @singledispatch
 def morans_i(
-    adata: AnnData,
+    adata_or_graph: AnnData | sparse.csr_matrix,
     /,
     vals: NDArray | sparse.spmatrix | DaskArray | None = None,
     *,
@@ -50,8 +50,9 @@ def morans_i(
 
     Params
     ------
-    ``adata` or ``graph``
+    adata_or_graph
         AnnData object containing a graph (see ``use_graph``) or the graph itself.
+        See the examples for more info.
     vals
         Values to calculate Moran's I for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
@@ -69,8 +70,6 @@ def morans_i(
         Key for `adata.obsp` to choose `vals`.
     use_raw
         Whether to use `adata.raw.X` for `vals`.
-
-    See the examples for more info.
 
     Returns
     -------
@@ -96,6 +95,7 @@ def morans_i(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
+    adata = cast("AnnData", adata_or_graph)
     g = _get_graph(adata, use_graph=use_graph)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
