@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Literal
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, vstack
+from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import njit, old_positionals
+from .._compat import CSBase, njit, old_positionals
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -25,8 +25,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
-
-    from .._utils import _CSMatrix
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
@@ -87,14 +85,14 @@ def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
 
 
 def _ranks(
-    X: NDArray[np.number] | _CSMatrix,
+    X: NDArray[np.number] | CSBase,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
 ) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = X.shape[1]
 
-    if issparse(X):
-        merge = lambda tpl: vstack(tpl).toarray()
+    if isinstance(X, CSBase):
+        merge = lambda tpl: sparse.vstack(tpl).toarray()
         adapt = lambda X: X.toarray()
     else:
         merge = np.vstack
@@ -169,7 +167,7 @@ class _RankGenes:
         raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
-        if issparse(X):
+        if isinstance(X, CSBase):
             X.eliminate_zeros()
 
         if self.mask_var is not None:
@@ -222,7 +220,7 @@ class _RankGenes:
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
-        if issparse(self.X):
+        if isinstance(self.X, CSBase):
             get_nonzeros = lambda X: X.getnnz(axis=0)
         else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
@@ -756,8 +754,10 @@ def rank_genes_groups(
     return adata if copy else None
 
 
-def _calc_frac(X):
-    n_nonzero = X.getnnz(axis=0) if issparse(X) else np.count_nonzero(X, axis=0)
+def _calc_frac(X: NDArray[np.number] | CSBase) -> NDArray[np.float64]:
+    n_nonzero = (
+        X.getnnz(axis=0) if isinstance(X, CSBase) else np.count_nonzero(X, axis=0)
+    )
     return n_nonzero / X.shape[0]
 
 

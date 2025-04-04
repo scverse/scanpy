@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals
 from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -46,13 +45,9 @@ def _normalize_data(X, counts, after=None, *, copy: bool = False):
             counts_greater_than_zero = counts[counts > 0]
             after = np.median(counts_greater_than_zero, axis=0)
     counts = counts / after
+    out = X if isinstance(X, np.ndarray | CSBase) else None
     return axis_mul_or_truediv(
-        X,
-        counts,
-        op=truediv,
-        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
-        allow_divide_by_zero=False,
-        axis=0,
+        X, counts, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
 
 

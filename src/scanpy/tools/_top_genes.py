@@ -7,11 +7,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
-from scipy.sparse import issparse
 from sklearn import metrics
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import select_groups
 
 if TYPE_CHECKING:
@@ -92,7 +91,7 @@ def correlation_matrix(
     # This line just makes group_mask access easier. Nothing else but 'all' will stand here.
     groups = "all"
     if data == "Complete" or groupby is None:
-        if issparse(adata_relevant.X):
+        if isinstance(adata_relevant.X, CSBase):
             Data_array = adata_relevant.X.todense()
         else:
             Data_array = adata_relevant.X
@@ -100,12 +99,12 @@ def correlation_matrix(
         # get group_mask
         groups_order, groups_masks = select_groups(adata, groups, groupby)
         if data == "Group":
-            if issparse(adata_relevant.X):
+            if isinstance(adata_relevant.X, CSBase):
                 Data_array = adata_relevant.X[groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[groups_masks[group], :]
         elif data == "Rest":
-            if issparse(adata_relevant.X):
+            if isinstance(adata_relevant.X, CSBase):
                 Data_array = adata_relevant.X[~groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[~groups_masks[group], :]
@@ -178,7 +177,7 @@ def ROC_AUC_analysis(
     y_true = mask
     for i, j in enumerate(name_list):
         vec = adata[:, [j]].X
-        y_score = vec.todense() if issparse(vec) else vec
+        y_score = vec.todense() if isinstance(vec, CSBase) else vec
 
         (
             fpr[name_list[i]],

@@ -9,6 +9,8 @@ from anndata import AnnData, utils
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
+from scanpy._compat import CSBase
+
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
 
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
+    Array = np.ndarray | CSBase
 
 # Used with get_literal_vals
 AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
@@ -149,7 +151,7 @@ class Aggregate:
         for group in np.unique(self.groupby.codes):
             group_mask = self.groupby.codes == group
             group_data = self.data[group_mask]
-            if sparse.issparse(group_data):
+            if isinstance(group_data, CSBase):
                 if group_data.format != "csc":
                     group_data = group_data.tocsc()
                 medians.append(csc_median_axis_0(group_data))
@@ -339,8 +341,7 @@ def aggregate_df(data, by, func, *, mask=None, dof=1):
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(sparse.csr_matrix)
-@_aggregate.register(sparse.csc_matrix)
+@_aggregate.register(CSBase)
 def aggregate_array(
     data: Array,
     by: pd.Categorical,

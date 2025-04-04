@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from packaging.version import Version
-from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import old_positionals, pkg_version
+from .._compat import CSBase, old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
@@ -242,7 +241,7 @@ class Ingest:
         self._umap._validate_parameters()
 
         self._umap.embedding_ = adata.obsm["X_umap"]
-        self._umap._sparse_data = issparse(self._rep)
+        self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
 
@@ -360,7 +359,7 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         X = self._adata_new.X
-        X = X.toarray() if issparse(X) else X.copy()
+        X = X.toarray() if isinstance(X, CSBase) else X.copy()
         if self._pca_use_hvg:
             X = X[:, self._adata_ref.var["highly_variable"]]
         if self._pca_centered:

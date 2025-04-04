@@ -37,13 +37,13 @@ if TYPE_CHECKING:
 
     from numpy.typing import DTypeLike
 
-    _CSMatrix = sparse.csr_matrix | sparse.csc_matrix
+    from scanpy._compat import CSBase, CSRBase
 
 
 @pytest.fixture(
     scope="session",
     params=list(
-        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])
+        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])  # noqa: TID251
     ),
     ids=lambda x: f"{x[0].__name__}-{x[1]}",
 )
@@ -67,15 +67,13 @@ def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnD
     return pbmc3ks_parametrized_session[True].copy
 
 
-def random_csr(m: int, n: int) -> sparse.csr_matrix:
+def random_csr(m: int, n: int) -> CSRBase:
     return sparse.random(m, n, format="csr")
 
 
 @pytest.fixture(params=[np.random.randn, random_csr], ids=["sparse", "dense"])
 def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
-    rand_func = cast(
-        "Callable[[int, int], np.ndarray | sparse.csr_matrix]", request.param
-    )
+    rand_func = cast("Callable[[int, int], np.ndarray | CSRBase]", request.param)
     X = rand_func(200, 10).astype(np.float32)
     cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
     adata = AnnData(X, obs={"cat": cat})
@@ -95,7 +93,7 @@ def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
 
 def _prepare_pbmc_testdata(
     adata: AnnData,
-    sparsity_func: Callable[[np.ndarray | _CSMatrix], np.ndarray | _CSMatrix],
+    sparsity_func: Callable[[np.ndarray | CSBase], np.ndarray | CSBase],
     dtype: DTypeLike,
     *,
     small: bool,
