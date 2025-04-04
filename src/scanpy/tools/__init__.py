@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._cluster_resolution import cluster_resolution_finder
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
 from ._dpt import dpt
@@ -58,4 +59,5 @@ __all__ = [
     "sim",
     "tsne",
     "umap",
+    "cluster_resolution_finder",
 ]
