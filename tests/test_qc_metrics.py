@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from importlib.metadata import version
-
 import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -201,19 +198,7 @@ def adata_mito():
     return adata_dense, init_var
 
 
-skip_if_adata_0_12 = pytest.mark.skipif(
-    Version(version("anndata")) >= Version("0.12.0.dev0"),
-    reason="Newer AnnData removes implicit support for COO matrices",
-)
-
-
-@pytest.mark.parametrize(
-    "cls",
-    [
-        *ARRAY_TYPES_MEM,
-        pytest.param(sparse.coo_matrix, marks=[skip_if_adata_0_12], id="scipy_coo"),
-    ],
-)
+@pytest.mark.parametrize("cls", ARRAY_TYPES_MEM)
 def test_qc_metrics_format(cls):
     adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], inplace=True)

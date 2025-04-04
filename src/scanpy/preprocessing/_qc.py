@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
+from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
@@ -25,24 +26,10 @@ from ._docs import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Any
 
     from anndata import AnnData
-
-
-def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
-    is_layer = layer is not None
-    if use_raw and is_layer:
-        msg = (
-            "Cannot use expression from both layer and raw. You provided:"
-            f"{use_raw=!r} and {layer=!r}"
-        )
-        raise ValueError(msg)
-    if is_layer:
-        return adata.layers[layer]
-    elif use_raw:
-        return adata.raw.X
-    else:
-        return adata.X
+    from numpy._typing._array_like import NDArray
 
 
 @_doc_params(
@@ -102,9 +89,7 @@ def describe_obs(
         )
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, sparse.coo_matrix):
-            X = sparse.csr_matrix(X)  # COO not subscriptable  # noqa: TID251
+        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
         if isinstance(X, CSBase):
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -189,9 +174,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, sparse.coo_matrix):
-            X = sparse.csr_matrix(X)  # COO not subscriptable  # noqa: TID251
+        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
         if isinstance(X, CSBase):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
@@ -298,9 +281,7 @@ def calculate_qc_metrics(
             FutureWarning,
         )
     # Pass X so I only have to do it once
-    X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-    if isinstance(X, sparse.coo_matrix):
-        X = sparse.csr_matrix(X)  # COO not subscriptable  # noqa: TID251
+    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
     if isinstance(X, CSBase):
         X.eliminate_zeros()
 
@@ -353,7 +334,7 @@ def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
         return top_proportions_dense(mtx, n)
 
 
-def top_proportions_dense(mtx, n):
+def top_proportions_dense(mtx: np.ndarray, n: int) -> NDArray[np.float64]:
     sums = mtx.sum(axis=1)
     partitioned = np.apply_along_axis(np.argpartition, 1, -mtx, n - 1)
     partitioned = partitioned[:, :n]
@@ -366,7 +347,9 @@ def top_proportions_dense(mtx, n):
     return values
 
 
-def top_proportions_sparse_csr(data, indptr, n):
+def top_proportions_sparse_csr(
+    data: NDArray[np.number[Any]], indptr: NDArray[np.integer[Any]], n: int
+) -> NDArray[np.float64]:
     values = np.zeros((indptr.size - 1, n), dtype=np.float64)
     for i in numba.prange(indptr.size - 1):
         start, end = indptr[i], indptr[i + 1]
