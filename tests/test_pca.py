@@ -13,7 +13,6 @@ from anndata.tests import helpers
 from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 from scipy import sparse
-from scipy.sparse import issparse
 
 import scanpy as sc
 from scanpy._compat import CSBase, DaskArray, pkg_version
@@ -154,9 +153,9 @@ def gen_pca_params(
             svd_solvers = {"tsqr", "randomized"}
         case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
             svd_solvers = {"covariance_eigh"}
-        case (dc, True) if issubclass(dc, CSBase):
+        case (type() as dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
-        case (dc, False) if issubclass(dc, CSBase):
+        case (type() as dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
             svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
@@ -177,7 +176,8 @@ def gen_pca_params(
     for svd_solver in sorted(svd_solvers):
         # explicit check for special case
         if (
-            array_type in {sparse.csr_matrix, sparse.csc_matrix}
+            isinstance(array_type, type)
+            and issubclass(array_type, CSBase)
             and zero_center
             and svd_solver == "lobpcg"
         ):
@@ -256,7 +256,7 @@ def test_pca_transform_randomized(array_type):
     A_pca_abs = np.abs(A_pca)
 
     warnings.filterwarnings("error")
-    if isinstance(adata.X, DaskArray) and issparse(adata.X._meta):
+    if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         patterns = (
             r"Ignoring random_state=14 when using a sparse dask array",
             r"Ignoring svd_solver='randomized' when using a sparse dask array",
@@ -264,7 +264,7 @@ def test_pca_transform_randomized(array_type):
         ctx = _helpers.MultiContext(
             *(pytest.warns(UserWarning, match=pattern) for pattern in patterns)
         )
-    elif sparse.issparse(adata.X):
+    elif isinstance(adata.X, CSBase):
         ctx = pytest.warns(UserWarning, match=r"Ignoring.*'randomized")
     else:
         ctx = nullcontext()
@@ -285,7 +285,7 @@ def test_pca_transform_randomized(array_type):
 def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     A_svd_abs = np.abs(A_svd)
-    if isinstance(adata.X, DaskArray) and issparse(adata.X._meta):
+    if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         reason = "TruncatedSVD is not supported for sparse Dask yet"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -353,7 +353,7 @@ def test_pca_reproducible(array_type):
 
     with (
         pytest.warns(UserWarning, match=r"Ignoring random_state.*sparse dask array")
-        if isinstance(pbmc.X, DaskArray) and issparse(pbmc.X._meta)
+        if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
         else nullcontext()
     ):
         a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
@@ -365,7 +365,7 @@ def test_pca_reproducible(array_type):
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
-    if not (isinstance(pbmc.X, DaskArray) and issparse(pbmc.X._meta)):
+    if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
         a, c = map(to_memory, [a, c])
         assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
@@ -453,8 +453,10 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
 
     adata, adata_w_mask = map(to_memory, [adata, adata_w_mask])
     assert np.allclose(
-        adata.X.toarray() if issparse(adata.X) else adata.X,
-        adata_w_mask.X.toarray() if issparse(adata_w_mask.X) else adata_w_mask.X,
+        adata.X.toarray() if isinstance(adata.X, CSBase) else adata.X,
+        adata_w_mask.X.toarray()
+        if isinstance(adata_w_mask.X, CSBase)
+        else adata_w_mask.X,
     )
 
 
@@ -593,7 +595,8 @@ def test_covariance_eigh_impls(other_array_type):
         (
             r"Only sparse dask arrays with CSR-meta",
             lambda a: a.map_blocks(
-                sparse.csc_matrix, meta=sparse.csc_matrix(np.array([]))
+                sparse.csc_matrix,  # noqa: TID251
+                meta=sparse.csc_matrix(np.array([])),  # noqa: TID251
             ),
         ),
         (r"Only dask arrays with chunking", lambda a: a.rechunk((a.shape[0], 100))),

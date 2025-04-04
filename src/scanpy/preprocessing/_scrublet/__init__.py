@@ -418,8 +418,8 @@ def _scrublet_call_doublets(
     # Ensure normalised matrix sparseness as Scrublet does
     # https://github.com/swolock/scrublet/blob/67f8ecbad14e8e1aa9c89b43dac6638cebe38640/src/scrublet/scrublet.py#L100
 
-    scrub._counts_obs_norm = sparse.csc_matrix(adata_obs.X)
-    scrub._counts_sim_norm = sparse.csc_matrix(adata_sim.X)
+    scrub._counts_obs_norm = sparse.csc_matrix(adata_obs.X)  # noqa: TID251
+    scrub._counts_sim_norm = sparse.csc_matrix(adata_sim.X)  # noqa: TID251
 
     scrub.doublet_parents_ = adata_sim.obsm["doublet_parents"]
 

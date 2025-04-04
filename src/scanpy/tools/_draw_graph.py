@@ -16,9 +16,8 @@ if TYPE_CHECKING:
     from typing import LiteralString, TypeVar
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
-    from .._compat import _LegacyRandom
+    from .._compat import SpBase, _LegacyRandom
 
     S = TypeVar("S", bound=LiteralString)
 
@@ -45,7 +44,7 @@ def draw_graph(
     root: int | None = None,
     random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
-    adjacency: spmatrix | None = None,
+    adjacency: SpBase | None = None,
     key_added_ext: str | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
@@ -174,7 +173,7 @@ def draw_graph(
 
 
 def fa2_positions(
-    adjacency: spmatrix | np.ndarray, init_coords: np.ndarray, **kwds
+    adjacency: SpBase | np.ndarray, init_coords: np.ndarray, **kwds
 ) -> list[tuple[float, float]]:
     from fa2_modified import ForceAtlas2
 

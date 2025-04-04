@@ -13,14 +13,13 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import CSBase, old_positionals
 from ..._settings import settings
 from .. import _utils
 from .._utils import matrix
@@ -31,9 +30,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
-    from scipy.sparse import spmatrix
 
-    from ..._compat import _LegacyRandom
+    from ..._compat import SpBase, _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
@@ -208,7 +206,7 @@ def paga_compare(
 
 
 def _compute_pos(
-    adjacency_solid: spmatrix | np.ndarray,
+    adjacency_solid: SpBase | np.ndarray,
     *,
     layout: _Layout | None = None,
     random_state: _LegacyRandom = 0,
@@ -1201,7 +1199,7 @@ def paga_path(
             values = (
                 adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
             )[idcs]
-            x += (values.toarray() if issparse(values) else values).tolist()
+            x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))

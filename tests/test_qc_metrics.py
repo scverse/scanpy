@@ -28,7 +28,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 def adata() -> AnnData:
     a = np.random.binomial(100, 0.005, (1000, 1000))
     adata = AnnData(
-        sparse.csr_matrix(a),
+        sparse.csr_matrix(a),  # noqa: TID251
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
@@ -53,7 +53,7 @@ def adata_prepared(request: pytest.FixtureRequest, adata: AnnData) -> AnnData:
 
 @pytest.mark.parametrize(
     "a",
-    [np.ones((100, 100)), sparse.csr_matrix(np.ones((100, 100)))],
+    [np.ones((100, 100)), sparse.csr_matrix(np.ones((100, 100)))],  # noqa: TID251
     ids=["dense", "sparse"],
 )
 def test_proportions(a):

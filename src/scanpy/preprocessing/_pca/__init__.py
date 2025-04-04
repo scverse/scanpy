@@ -8,11 +8,10 @@ import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
-from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from ... import logging as logg
-from ..._compat import DaskArray, pkg_version
+from ..._compat import CSBase, DaskArray, pkg_version
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ...get import _check_mask, _get_obs_rep
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
 
-    from ..._compat import CSBase, _LegacyRandom
+    from ..._compat import _LegacyRandom
     from ..._utils import Empty
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -286,14 +285,14 @@ def pca(
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if issparse(chunk) else chunk
+            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             pca_.partial_fit(chunk)
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if issparse(chunk) else chunk
+            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     elif zero_center:
-        if issparse(X) and (
+        if isinstance(X, CSBase) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
         ):
             if svd_solver not in (
@@ -319,13 +318,15 @@ def pca(
             if not isinstance(X, DaskArray):
                 from sklearn.decomposition import PCA
 
-                svd_solver = _handle_sklearn_args(svd_solver, PCA, sparse=issparse(X))
+                svd_solver = _handle_sklearn_args(
+                    svd_solver, PCA, sparse=isinstance(X, CSBase)
+                )
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            elif issparse(X._meta) or svd_solver == "covariance_eigh":
+            elif isinstance(X._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
                 if random_state != 0:
@@ -347,7 +348,7 @@ def pca(
             X_pca = pca_.fit_transform(X)
     else:
         if isinstance(X, DaskArray):
-            if issparse(X._meta):
+            if isinstance(X._meta, CSBase):
                 msg = "Dask sparse arrays do not support zero-centering (yet)"
                 raise TypeError(msg)
             from dask_ml.decomposition import TruncatedSVD

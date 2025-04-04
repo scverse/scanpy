@@ -24,7 +24,7 @@ def sparse_multiply(
     w = sparse.dia_matrix((a, 0), shape=(nrow, nrow), dtype=a.dtype)
     r = w @ E
     if isinstance(r, np.ndarray):
-        return sparse.csc_matrix(r)
+        return sparse.csc_matrix(r)  # noqa: TID251
     return r
 
 

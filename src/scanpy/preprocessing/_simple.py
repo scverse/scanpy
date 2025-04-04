@@ -14,11 +14,11 @@ import numba
 import numpy as np
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import csc_matrix, csr_matrix, issparse
+from scipy import sparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, deprecated, njit, old_positionals
+from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -175,7 +175,7 @@ def filter_cells(
     number_per_cell = axis_sum(
         X if min_genes is None and max_genes is None else X > 0, axis=1
     )
-    if issparse(X):
+    if isinstance(number_per_cell, np.matrix):
         number_per_cell = number_per_cell.A1
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
@@ -293,7 +293,7 @@ def filter_genes(
     number_per_gene = axis_sum(
         X if min_cells is None and max_cells is None else X > 0, axis=0
     )
-    if issparse(X):
+    if isinstance(number_per_gene, np.matrix):
         number_per_gene = number_per_gene.A1
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
@@ -365,8 +365,7 @@ def log1p(
     return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(csr_matrix)
-@log1p.register(csc_matrix)
+@log1p.register(CSBase)
 def log1p_sparse(X: CSBase, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
@@ -474,10 +473,7 @@ def sqrt(
             adata.X = sqrt(data.X)
         return adata if copy else None
     X = data  # proceed with data matrix
-    if not issparse(X):
-        return np.sqrt(X)
-    else:
-        return X.sqrt()
+    return X.sqrt() if isinstance(X, CSBase) else np.sqrt(X)
 
 
 @deprecated("Use sc.pp.normalize_total instead")
@@ -544,7 +540,7 @@ def normalize_per_cell(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Normalized count data matrix.
 
     Examples
@@ -627,7 +623,7 @@ def normalize_per_cell(
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
-        if not issparse(X):
+        if not isinstance(X, CSBase):
             X /= counts_per_cell[:, np.newaxis]
         else:
             sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
@@ -695,7 +691,7 @@ def regress_out(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Corrected count data matrix.
 
     """
@@ -714,7 +710,7 @@ def regress_out(
     X = _get_obs_rep(adata, layer=layer)
     raise_not_implemented_error_if_backed_type(X, "regress_out")
 
-    if issparse(X):
+    if isinstance(X, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -733,7 +729,7 @@ def regress_out(
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
-        X = _to_dense(X, order="F") if issparse(X) else X
+        X = _to_dense(X, order="F") if isinstance(X, CSBase) else X
         # TODO figure out if we should use a numba kernel for this
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
@@ -752,7 +748,7 @@ def regress_out(
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
     if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
-        X = _to_dense(X, order="C") if issparse(X) else X
+        X = _to_dense(X, order="C") if isinstance(X, CSBase) else X
         res = numpy_regress_out(X, regressors)
 
     # for a categorical variable or if the above checks failed,
@@ -762,7 +758,7 @@ def regress_out(
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
         n_chunks = int(np.ceil(X.shape[1] / len_chunk))
-        X = _to_dense(X, order="F") if issparse(X) else X
+        X = _to_dense(X, order="F") if isinstance(X, CSBase) else X
         chunk_list = np.array_split(X, n_chunks, axis=1)
         regressors_chunk = (
             np.array_split(regressors, n_chunks, axis=1)
@@ -1061,10 +1057,10 @@ def _downsample_per_cell(
             " by `np.asarray(counts_per_cell)`."
         )
         raise ValueError(msg)
-    if issparse(X):
+    if isinstance(X, CSBase):
         original_type = type(X)
-        if not isinstance(X, csr_matrix):
-            X = csr_matrix(X)
+        if not isinstance(X, CSRBase):
+            X = sparse.csr_matrix(X)  # noqa: TID251
         totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
@@ -1078,7 +1074,7 @@ def _downsample_per_cell(
                 inplace=True,
             )
         X.eliminate_zeros()
-        if original_type is not csr_matrix:  # Put it back
+        if not issubclass(original_type, CSRBase):  # Put it back
             X = original_type(X)
     else:
         totals = np.ravel(axis_sum(X, axis=1))
@@ -1106,10 +1102,10 @@ def _downsample_total_counts(
     total = X.sum()
     if total < total_counts:
         return X
-    if issparse(X):
+    if isinstance(X, CSBase):
         original_type = type(X)
-        if not isinstance(X, csr_matrix):
-            X = csr_matrix(X)
+        if not isinstance(X, CSRBase):
+            X = sparse.csr_matrix(X)  # noqa: TID251
         _downsample_array(
             X.data,
             total_counts,
@@ -1118,7 +1114,7 @@ def _downsample_total_counts(
             inplace=True,
         )
         X.eliminate_zeros()
-        if original_type is not csr_matrix:
+        if not issubclass(original_type, CSRBase):
             X = original_type(X)
     else:
         v = X.reshape(np.multiply(*X.shape))

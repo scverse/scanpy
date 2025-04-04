@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._compat import CSBase, _LegacyRandom
+    from ..._compat import CSBase, CSCBase, _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
@@ -78,7 +78,7 @@ class Scrublet:
     _n_neighbors: int = field(init=False, repr=False)
     _random_state: RandomState = field(init=False, repr=False)
 
-    _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
+    _counts_obs: CSCBase = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
     _counts_obs_norm: CSBase = field(init=False, repr=False)
 
@@ -170,7 +170,7 @@ class Scrublet:
         n_neighbors: int | None,
         random_state: _LegacyRandom,
     ) -> None:
-        self._counts_obs = sparse.csc_matrix(counts_obs)
+        self._counts_obs = sparse.csc_matrix(counts_obs)  # noqa: TID251
         self._total_counts_obs = (
             np.asarray(self._counts_obs.sum(1)).squeeze()
             if total_counts_obs is None
@@ -219,8 +219,8 @@ class Scrublet:
 
         pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
 
-        E1 = cast("sparse.csc_matrix", self._counts_obs[pair_ix[:, 0], :])
-        E2 = cast("sparse.csc_matrix", self._counts_obs[pair_ix[:, 1], :])
+        E1 = cast("CSCBase", self._counts_obs[pair_ix[:, 0], :])
+        E2 = cast("CSCBase", self._counts_obs[pair_ix[:, 1], :])
         tots1 = self._total_counts_obs[pair_ix[:, 0]]
         tots2 = self._total_counts_obs[pair_ix[:, 1]]
         if synthetic_doublet_umi_subsampling < 1:

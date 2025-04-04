@@ -215,9 +215,7 @@ def _get_array_values(
         mutable_idxer[axis] = idx
         matrix = X[tuple(mutable_idxer)]
 
-    from scipy.sparse import issparse
-
-    if issparse(matrix):
+    if isinstance(matrix, CSBase):
         matrix = matrix.toarray()
 
     return matrix

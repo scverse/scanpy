@@ -20,8 +20,13 @@ R = TypeVar("R")
 
 _LegacyRandom = int | np.random.RandomState | None
 
-CSMatrix = sparse.csr_matrix | sparse.csc_matrix
-CSBase = CSMatrix
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
+"""Only use if you want to specially handle matrices as opposed to arrays"""
+
+CSRBase = sparse.csr_matrix  # noqa: TID251
+CSCBase = sparse.csc_matrix  # noqa: TID251
+SpBase = sparse.spmatrix  # noqa: TID251
+CSBase = _CSMatrix
 
 
 if TYPE_CHECKING:

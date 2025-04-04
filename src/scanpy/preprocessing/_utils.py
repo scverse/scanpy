@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
-from scipy import sparse
 from sklearn.random_projection import sample_without_replacement
 
-from .._compat import CSBase, njit
+from .._compat import CSBase, CSCBase, CSRBase, SpBase, njit
 from .._utils import axis_sum, elem_mul
 
 if TYPE_CHECKING:
@@ -36,7 +35,7 @@ def _get_mean_var(
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     if isinstance(X, CSBase):
         mean, var = sparse_mean_variance_axis(X, axis=axis)
-    elif isinstance(X, sparse.spmatrix):
+    elif isinstance(X, SpBase):
         msg = f"Unsupported type {type(X)}"
         raise TypeError(msg)
     else:
@@ -62,10 +61,10 @@ def sparse_mean_variance_axis(
     * Uses numba not cython
     """
     assert axis in (0, 1)
-    if isinstance(mtx, sparse.csr_matrix):
+    if isinstance(mtx, CSRBase):
         ax_minor = 1
         shape = mtx.shape
-    elif isinstance(mtx, sparse.csc_matrix):
+    elif isinstance(mtx, CSCBase):
         ax_minor = 0
         shape = mtx.shape[::-1]
     else:
