@@ -196,15 +196,14 @@ def _cov_sparse_dask(
         x,
         new_axis=(1,),
         chunks=((1,) * x.blocks.size, (x.shape[1],), (x.shape[1],)),
-        meta=np.array([], dtype=x.dtype),
-        dtype=x.dtype,
+        meta=np.array([], dtype=dtype),
+        dtype=dtype,
     ).sum(axis=0)
     mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
         "tuple[NDArray, NDArray[np.float64]]",
         dask.compute(gram_matrix_dask, mean_x_dask),
     )
-    gram_matrix = gram_matrix.astype(dtype)
     gram_matrix /= x.shape[0]
 
     cov_result = gram_matrix.copy() if return_gram else gram_matrix
