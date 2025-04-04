@@ -7,9 +7,8 @@ from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
-from scipy import sparse
 
-from .._compat import njit
+from .._compat import CSRBase, njit
 from ..get import _get_obs_rep
 from ._common import _get_graph, _SparseMetric
 
@@ -17,15 +16,14 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray
     from ._common import _Vals
 
 
 @singledispatch
 def morans_i(
-    adata_or_graph: AnnData | sparse.csr_matrix,
+    adata_or_graph: AnnData | CSRBase,
     /,
-    vals: NDArray | sparse.spmatrix | DaskArray | None = None,
+    vals: _Vals | None = None,
     *,
     use_graph: str | None = None,
     layer: str | None = None,
@@ -102,15 +100,15 @@ def morans_i(
     return morans_i(g, vals)
 
 
-@morans_i.register(sparse.csr_matrix)
-def _morans_i(graph: sparse.csr_matrix, /, vals: _Vals) -> NDArray:
+@morans_i.register(CSRBase)
+def _morans_i(graph: CSRBase, /, vals: _Vals) -> NDArray:
     return _MoransI(graph, vals)()
 
 
 class _MoransI(_SparseMetric):
     name = "Moran’s I"
 
-    def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
+    def mtx(self, vals_het: NDArray | CSRBase, /) -> NDArray:
         g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
         if isinstance(vals_het, np.ndarray):
             return _morans_i_mtx(*g_parts, vals_het)

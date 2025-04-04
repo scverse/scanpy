@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from .._compat import old_positionals
-from . import _utils
+from ._utils import savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -131,7 +131,7 @@ def scrublet_score_distribution(
 
     fig.tight_layout()
 
-    _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
+    savefig_or_show("scrublet_score_distribution", show=show, save=save)
     if return_fig:
         return fig
     elif not show:

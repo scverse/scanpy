@@ -10,9 +10,9 @@ import pandas as pd
 import pytest
 from anndata import AnnData
 from pandas.testing import assert_frame_equal, assert_index_equal
-from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 from scanpy.preprocessing._utils import _get_mean_var
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
@@ -120,7 +120,7 @@ def test_keep_layer(base, flavor):
     sc.pp.filter_genes(adata, min_counts=1)
 
     sc.pp.log1p(adata, base=base)
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     X_orig = adata.X.copy()
 
     if flavor == "seurat":
