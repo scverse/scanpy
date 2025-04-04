@@ -31,6 +31,8 @@ from ._umap import umap
 if TYPE_CHECKING:
     from typing import Any
 
+    from ._types import DensmapMethodKwds  # noqa: F401
+
 
 def __getattr__(name: str) -> Any:
     if name == "pca":
