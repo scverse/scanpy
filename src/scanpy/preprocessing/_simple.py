@@ -18,7 +18,15 @@ from scipy import sparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
+from .._compat import (
+    CSBase,
+    CSRBase,
+    DaskArray,
+    _register_union,
+    deprecated,
+    njit,
+    old_positionals,
+)
 from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
@@ -365,7 +373,7 @@ def log1p(
     return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(CSBase)
+@_register_union(log1p, CSBase)
 def log1p_sparse(X: CSBase, *, base: Number | None = None, copy: bool = False):
     X = check_array(
         X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy

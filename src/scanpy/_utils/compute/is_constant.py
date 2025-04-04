@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, overload
 import numba
 import numpy as np
 
-from ..._compat import CSCBase, CSRBase, DaskArray, njit
+from ..._compat import CSCBase, CSRBase, DaskArray, _register_union, njit
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -95,7 +95,7 @@ def _is_constant_rows(a: NDArray) -> NDArray[np.bool_]:
     return (a == b).all(axis=1)
 
 
-@is_constant.register(CSRBase)
+@_register_union(is_constant, CSRBase)
 def _(a: CSRBase, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
@@ -128,7 +128,7 @@ def _is_constant_csr_rows(
     return result
 
 
-@is_constant.register(CSCBase)
+@_register_union(is_constant, CSCBase)
 def _(a: CSCBase, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):

@@ -38,7 +38,7 @@ from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSMatrix
+from .._compat import CSBase, DaskArray, _CSMatrix, _register_union
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
@@ -593,7 +593,7 @@ def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
 
 
 @elem_mul.register(np.ndarray)
-@elem_mul.register(CSBase)
+@_register_union(elem_mul, CSBase)
 def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
     if isinstance(x, CSBase):
         # returns coo_matrix, so cast back to input type
@@ -644,7 +644,7 @@ def axis_mul_or_truediv(
     return np.true_divide(X, scaling_array, out=out)
 
 
-@axis_mul_or_truediv.register(CSBase)
+@_register_union(axis_mul_or_truediv, CSBase)
 def _(
     X: CSBase,
     scaling_array,
@@ -760,7 +760,7 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
-@axis_nnz.register(CSBase)
+@_register_union(axis_nnz, CSBase)
 def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
     return X.getnnz(axis=axis)
 
@@ -855,7 +855,7 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(CSBase)
+@_register_union(check_nonnegative_integers, CSBase)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 

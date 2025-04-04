@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from .._compat import CSRBase, DaskArray, SpBase, fullname
+from .._compat import CSRBase, DaskArray, SpBase, _register_union, fullname
 
 if TYPE_CHECKING:
     from typing import NoReturn, TypeVar
@@ -98,7 +98,7 @@ def _resolve_vals(val: object) -> NoReturn:
 
 
 @_resolve_vals.register(np.ndarray)
-@_resolve_vals.register(CSRBase)
+@_register_union(_resolve_vals, CSRBase)
 @_resolve_vals.register(DaskArray)
 def _(
     val: np.ndarray | CSRBase | DaskArray,
@@ -106,7 +106,7 @@ def _(
     return val
 
 
-@_resolve_vals.register(SpBase)
+@_register_union(_resolve_vals, SpBase)
 def _(val: SpBase) -> CSRBase:
     return sparse.csr_matrix(val)  # noqa: TID251
 

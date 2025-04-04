@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
+from types import UnionType
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
@@ -15,6 +16,7 @@ from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from functools import _SingleDispatchCallable
     from importlib.metadata import PackageMetadata
 
 
@@ -266,3 +268,17 @@ class _FakeRandomGen(np.random.Generator):
 
 
 _FakeRandomGen._delegate()
+
+
+def _register_union(
+    sdc: _SingleDispatchCallable, typ: type | UnionType
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    if sys.version_info >= (3, 11) or not isinstance(typ, UnionType):
+        return sdc.register(typ)
+
+    def decorator(f: Callable[P, R]) -> Callable[P, R]:
+        for subtype in typ.__args__:
+            sdc.register(subtype)(f)
+        return f
+
+    return decorator

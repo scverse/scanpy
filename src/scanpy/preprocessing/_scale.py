@@ -10,7 +10,7 @@ import numpy as np
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, DaskArray, _register_union, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -219,7 +219,7 @@ def scale_array(
         return X
 
 
-@scale.register(CSBase)
+@_register_union(scale, CSBase)
 def scale_sparse(
     X: CSBase,
     *,

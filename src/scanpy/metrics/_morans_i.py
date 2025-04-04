@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 
-from .._compat import CSRBase, njit
+from .._compat import CSRBase, _register_union, njit
 from ..get import _get_obs_rep
 from ._common import _get_graph, _SparseMetric
 
@@ -100,7 +100,7 @@ def morans_i(
     return morans_i(g, vals)
 
 
-@morans_i.register(CSRBase)
+@_register_union(morans_i, CSRBase)
 def _morans_i(graph: CSRBase, /, vals: _Vals) -> NDArray:
     return _MoransI(graph, vals)()
 

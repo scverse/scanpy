@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 
-from .._compat import CSRBase, njit
+from .._compat import CSRBase, _register_union, njit
 from ..get import _get_obs_rep
 from ._common import _get_graph, _SparseMetric
 
@@ -102,7 +102,7 @@ def gearys_c(
     return gearys_c(g, vals)
 
 
-@gearys_c.register(CSRBase)
+@_register_union(gearys_c, CSRBase)
 def _gearys_c(graph: CSRBase, /, vals: _Vals) -> NDArray:
     return _GearysC(graph, vals)()
 

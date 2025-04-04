@@ -9,8 +9,7 @@ from anndata import AnnData, utils
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase
-
+from .._compat import CSBase, _register_union
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
 
@@ -341,7 +340,7 @@ def aggregate_df(data, by, func, *, mask=None, dof=1):
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(CSBase)
+@_register_union(_aggregate, CSBase)
 def aggregate_array(
     data: Array,
     by: pd.Categorical,
