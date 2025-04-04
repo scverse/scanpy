@@ -7,13 +7,16 @@ from dataclasses import dataclass, field
 from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
+from types import UnionType
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
 from packaging.version import Version
+from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from functools import _SingleDispatchCallable
     from importlib.metadata import PackageMetadata
 
 
@@ -22,6 +25,14 @@ R = TypeVar("R")
 
 _LegacyRandom = int | np.random.RandomState | None
 
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
+"""Only use if you want to specially handle matrices as opposed to arrays"""
+
+CSRBase = sparse.csr_matrix  # noqa: TID251
+CSCBase = sparse.csc_matrix  # noqa: TID251
+SpBase = sparse.spmatrix  # noqa: TID251
+CSBase = _CSMatrix
+
 
 if TYPE_CHECKING:
     # type checkers are confused and can only see …core.Array
@@ -29,17 +40,15 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-
-    class DaskArray:
-        pass
+    DaskArray = type("Array", (), {})
+    DaskArray.__module__ = "dask.array"
 
 
 if find_spec("zappy") or TYPE_CHECKING:
     from zappy.base import ZappyArray
 else:
-
-    class ZappyArray:
-        pass
+    ZappyArray = type("ZappyArray", (), {})
+    ZappyArray.__module__ = "zappy.base"
 
 
 __all__ = [
@@ -259,3 +268,17 @@ class _FakeRandomGen(np.random.Generator):
 
 
 _FakeRandomGen._delegate()
+
+
+def _register_union(
+    sdc: _SingleDispatchCallable, typ: type | UnionType
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    if sys.version_info >= (3, 11) or not isinstance(typ, UnionType):
+        return sdc.register(typ)
+
+    def decorator(f: Callable[P, R]) -> Callable[P, R]:
+        for subtype in typ.__args__:
+            sdc.register(subtype)(f)
+        return f
+
+    return decorator

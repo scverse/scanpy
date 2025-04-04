@@ -38,7 +38,7 @@ from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import CSBase, DaskArray, _CSMatrix, _register_union
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
@@ -49,7 +49,6 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -60,10 +59,10 @@ if TYPE_CHECKING:
     from igraph import Graph
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-    from .._compat import _LegacyRandom
+    from .._compat import CSRBase, _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
-    _MemoryArray = NDArray | _CSMatrix
+    _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
 
     _ForT = TypeVar("_ForT", bound=Callable | type)
@@ -303,7 +302,7 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
@@ -594,10 +593,9 @@ def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
 
 
 @elem_mul.register(np.ndarray)
-@elem_mul.register(sparse.csc_matrix)
-@elem_mul.register(sparse.csr_matrix)
+@_register_union(elem_mul, CSBase)
 def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, _CSMatrix):
+    if isinstance(x, CSBase):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
     return x * y
@@ -646,17 +644,16 @@ def axis_mul_or_truediv(
     return np.true_divide(X, scaling_array, out=out)
 
 
-@axis_mul_or_truediv.register(sparse.csr_matrix)
-@axis_mul_or_truediv.register(sparse.csc_matrix)
+@_register_union(axis_mul_or_truediv, CSBase)
 def _(
-    X: _CSMatrix,
+    X: CSBase,
     scaling_array,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: _CSMatrix | None = None,
-) -> _CSMatrix:
+    out: CSBase | None = None,
+) -> CSBase:
     check_op(op)
     if out is not None and X.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
@@ -682,7 +679,7 @@ def _(
         if out is not None:
             X.data = new_data_op(X)
             return X
-        return sparse.csr_matrix(
+        return sparse.csr_matrix(  # noqa: TID251
             (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
         )
     transposed = X.T
@@ -763,8 +760,8 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
-@axis_nnz.register(sparse.spmatrix)
-def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
+@_register_union(axis_nnz, CSBase)
+def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
     return X.getnnz(axis=axis)
 
 
@@ -781,7 +778,7 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
 
 @overload
 def axis_sum(
-    X: sparse.spmatrix,
+    X: _CSMatrix,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -790,7 +787,7 @@ def axis_sum(
 
 @overload
 def axis_sum(
-    X: np.ndarray,
+    X: np.ndarray,  # TODO: or sparray
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -799,7 +796,7 @@ def axis_sum(
 
 @singledispatch
 def axis_sum(
-    X: np.ndarray | sparse.spmatrix,
+    X: np.ndarray | CSBase,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -825,8 +822,8 @@ def _(
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
         # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, sparse.spmatrix | np.matrix) or isinstance(
-            args[0], sparse.spmatrix | np.matrix
+        if isinstance(X._meta, _CSMatrix | np.matrix) or isinstance(
+            args[0], _CSMatrix | np.matrix
         ):
             kwargs.pop("keepdims", None)
             axis = kwargs["axis"]
@@ -858,8 +855,7 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.csr_matrix)
-@check_nonnegative_integers.register(sparse.csc_matrix)
+@_register_union(check_nonnegative_integers, CSBase)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
@@ -1128,9 +1124,7 @@ class NeighborsView:
         )
 
     @overload
-    def __getitem__(
-        self, key: Literal["distances", "connectivities"]
-    ) -> sparse.csr_matrix: ...
+    def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...
     @overload
     def __getitem__(self, key: Literal["params"]) -> NeighborsParams: ...
     @overload
@@ -1165,7 +1159,7 @@ class NeighborsView:
 
 def _choose_graph(
     adata: AnnData, obsp: str | None, neighbors_key: str | None
-) -> _CSMatrix:
+) -> CSBase:
     """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         msg = "You can't specify both obsp, neighbors_key. Please select only one."

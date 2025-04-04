@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from .._compat import DaskArray, fullname
+from .._compat import CSRBase, DaskArray, SpBase, _register_union, fullname
 
 if TYPE_CHECKING:
     from typing import NoReturn, TypeVar
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     T_NonSparse = TypeVar("T_NonSparse", bound=NDArray | DaskArray)
-    V = TypeVar("V", bound=NDArray | sparse.csr_matrix)
+    V = TypeVar("V", bound=NDArray | CSRBase)
 
-    _Vals = NDArray | sparse.spmatrix | DaskArray | pd.DataFrame | pd.Series
+    _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
 
 
 __all__ = ["_get_graph", "_SparseMetric"]
@@ -29,9 +29,9 @@ __all__ = ["_get_graph", "_SparseMetric"]
 
 @dataclass
 class _SparseMetric(ABC):
-    graph: sparse.csr_matrix
+    graph: CSRBase
     vals: InitVar[_Vals]
-    _vals: NDArray | sparse.csr_matrix | DaskArray = field(init=False)
+    _vals: NDArray | CSRBase | DaskArray = field(init=False)
 
     name: ClassVar[str]
 
@@ -44,7 +44,7 @@ class _SparseMetric(ABC):
         self._vals = _resolve_vals(vals)
 
     @abstractmethod
-    def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
+    def mtx(self, vals_het: NDArray | CSRBase, /) -> NDArray:
         """Calculate metric when ``._vals`` is a 2D matrix (on an easier to handle version of ``._vals``)."""
 
     @abstractmethod
@@ -53,7 +53,7 @@ class _SparseMetric(ABC):
 
     def __call__(self) -> np.ndarray:
         match self._vals, self._vals.ndim:
-            case sparse.csr_matrix() | np.ndarray(), 2:
+            case _, 2 if isinstance(self._vals, CSRBase | np.ndarray):
                 assert self.graph.shape[0] == self._vals.shape[1]
                 vals_het, idxer, full_result = _vals_heterogeneous(self._vals)
                 result = self.mtx(vals_het.astype(np.float64, copy=False))
@@ -70,7 +70,7 @@ class _SparseMetric(ABC):
                 raise NotImplementedError(msg)
 
 
-def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> sparse.csr_matrix:
+def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> CSRBase:
     if use_graph is not None:
         raise NotImplementedError()
     # Fix for anndata<0.7
@@ -86,7 +86,7 @@ def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> sparse.csr_ma
 @overload
 def _resolve_vals(val: T_NonSparse) -> T_NonSparse: ...
 @overload
-def _resolve_vals(val: sparse.spmatrix) -> sparse.csr_matrix: ...
+def _resolve_vals(val: SpBase) -> CSRBase: ...
 @overload
 def _resolve_vals(val: pd.DataFrame | pd.Series) -> NDArray: ...
 
@@ -98,17 +98,17 @@ def _resolve_vals(val: object) -> NoReturn:
 
 
 @_resolve_vals.register(np.ndarray)
-@_resolve_vals.register(sparse.csr_matrix)
+@_register_union(_resolve_vals, CSRBase)
 @_resolve_vals.register(DaskArray)
 def _(
-    val: np.ndarray | sparse.csr_matrix | DaskArray,
-) -> np.ndarray | sparse.csr_matrix | DaskArray:
+    val: np.ndarray | CSRBase | DaskArray,
+) -> np.ndarray | CSRBase | DaskArray:
     return val
 
 
-@_resolve_vals.register(sparse.spmatrix)
-def _(val: sparse.spmatrix) -> sparse.csr_matrix:
-    return sparse.csr_matrix(val)
+@_register_union(_resolve_vals, SpBase)
+def _(val: SpBase) -> CSRBase:
+    return sparse.csr_matrix(val)  # noqa: TID251
 
 
 @_resolve_vals.register(pd.DataFrame)

@@ -48,7 +48,7 @@ def adata() -> AnnData:
         var=pd.DataFrame(
             {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
         ),
-        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
+        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},  # noqa: TID251
     )
 
 
@@ -59,7 +59,7 @@ def adata() -> AnnData:
 
 def test_obs_df(adata: AnnData):
     adata.obsm["eye"] = np.eye(2, dtype=int)
-    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
+    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     # make raw with different genes than adata
     adata.raw = anndata_v0_8_constructor_compat(
@@ -225,7 +225,7 @@ def test_column_content():
 
 def test_var_df(adata: AnnData):
     adata.varm["eye"] = np.eye(2, dtype=int)
-    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
+    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     pd.testing.assert_frame_equal(
         sc.get.var_df(

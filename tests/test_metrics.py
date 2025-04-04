@@ -86,15 +86,15 @@ def test_correctness(metric, size, expected):
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
+    graph = sparse.csr_matrix(graph)  # noqa: TID251
 
     np.testing.assert_equal(metric(graph, connected), expected)
     np.testing.assert_equal(
         metric(graph, connected),
-        metric(graph, sparse.csr_matrix(connected)),
+        metric(graph, sparse.csr_matrix(connected)),  # noqa: TID251
     )
     # Checking that obsp works
-    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
+    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})  # noqa: TID251
     np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 

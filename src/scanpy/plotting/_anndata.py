@@ -16,11 +16,10 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
-from scipy.sparse import issparse
 
 from .. import get
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import (
     _check_use_raw,
@@ -1063,7 +1062,7 @@ def clustermap(
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
     X = adata.raw.X if use_raw else adata.X
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.toarray()
     df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:

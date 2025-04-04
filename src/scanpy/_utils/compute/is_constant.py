@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING, overload
 
 import numba
 import numpy as np
-from scipy import sparse
 
-from ..._compat import DaskArray, njit
+from ..._compat import CSCBase, CSRBase, DaskArray, _register_union, njit
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -16,9 +15,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ..._utils import _CSMatrix
+    from ..._compat import CSBase
 
-    _Array = NDArray | DaskArray | _CSMatrix
+    _Array = NDArray | DaskArray | CSBase
 
     C = TypeVar("C", bound=Callable)
 
@@ -96,10 +95,8 @@ def _is_constant_rows(a: NDArray) -> NDArray[np.bool_]:
     return (a == b).all(axis=1)
 
 
-@is_constant.register(sparse.csr_matrix)
-def _(
-    a: sparse.csr_matrix, axis: Literal[0, 1] | None = None
-) -> bool | NDArray[np.bool_]:
+@_register_union(is_constant, CSRBase)
+def _(a: CSRBase, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
@@ -131,10 +128,8 @@ def _is_constant_csr_rows(
     return result
 
 
-@is_constant.register(sparse.csc_matrix)
-def _(
-    a: sparse.csc_matrix, axis: Literal[0, 1] | None = None
-) -> bool | NDArray[np.bool_]:
+@_register_union(is_constant, CSCBase)
+def _(a: CSCBase, axis: Literal[0, 1] | None = None) -> bool | NDArray[np.bool_]:
     if axis is None:
         if len(a.data) == np.multiply(*a.shape):
             return is_constant(a.data)
