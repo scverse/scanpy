@@ -118,6 +118,64 @@ def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
+@cache
+def _musmus_11m() -> AnnData:
+    # Define the path to the dataset
+    path = "/sc/arion/projects/psychAD/mikaela/scanpy/scanpy/benchmarks/data/MusMus_4M_cells_cellxgene.h5ad"
+    adata = sc.read_h5ad(path)
+    # assert isinstance(adata.X, sparse.csr_matrix)
+    # Add counts layer
+    # adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
+    sc.pp.log1p(adata)
+    return adata
+
+
+def musmus_11m() -> AnnData:
+    return _musmus_11m().copy()
+
+
+@cache
+def _large_synthetic_dataset(
+    n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01
+) -> AnnData:
+    """
+    Generate a synthetic dataset suitable for Dask testing.
+
+    Parameters:
+        n_obs: int
+            Number of observations (rows, typically cells).
+        n_vars: int
+            Number of variables (columns, typically genes).
+        density: float
+            Fraction of non-zero entries in the sparse matrix.
+
+    Returns:
+        AnnData
+            The synthetic dataset.
+    """
+
+    X = sparse.random(
+        n_obs, n_vars, density=density, format="csr", dtype=np.float32, random_state=42
+    )
+    obs = {"obs_names": [f"cell_{i}" for i in range(n_obs)]}
+    var = {"var_names": [f"gene_{j}" for j in range(n_vars)]}
+    adata = anndata.AnnData(X=X, obs=obs, var=var)
+    adata.layers["counts"] = X.copy()
+    sc.pp.log1p(adata)
+    adata.var["mt"] = adata.var_names.str.startswith("MT-")
+    sc.pp.calculate_qc_metrics(
+        adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+    )
+
+    return adata
+
+
+def large_synthetic_dataset(
+    n_obs: int = 500_000, n_vars: int = 5_000, density: float = 0.01
+) -> AnnData:
+    return _large_synthetic_dataset(n_obs, n_vars, density).copy()
+
+
 def to_off_axis(x: np.ndarray | sparse.csr_matrix) -> np.ndarray | sparse.csc_matrix:
     if isinstance(x, sparse.csr_matrix):
         return x.tocsc()
@@ -139,6 +197,10 @@ def _get_dataset_raw(dataset: Dataset) -> tuple[AnnData, str | None]:
             adata, batch_key = bmmc(400), "sample"
         case "lung93k":
             adata, batch_key = lung93k(), "PatientNumber"
+        case "large_synthetic":
+            adata, batch_key = large_synthetic_dataset(), None
+        case "musmus_11m":
+            adata, batch_key = musmus_11m(), None
         case _:
             msg = f"Unknown dataset {dataset}"
             raise AssertionError(msg)

@@ -2,6 +2,8 @@
     // The version of the config file format.  Do not change, unless
     // you know what you are doing.
     "version": 1,
+    "timeout": 1200,
+    "install_timeout": 1200,
 
     // The name of the project being benchmarked
     "project": "scanpy",
@@ -43,11 +45,12 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
+    "timeout": 1200, // Timeout for each benchmark in seconds
     "environment_type": "conda",
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
-    //"install_timeout": 600,
+    "install_timeout": 1200,
 
     // the base URL to show a commit for the project.
     "show_commit_url": "https://github.com/scverse/scanpy/commit/",
@@ -86,6 +89,9 @@
         "pooch": [""],
         "scikit-image": [""],
         // "scikit-misc": [""],
+        "scikit-learn": [""],
+        "pip+asv_runner": [""],
+        "dask": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
