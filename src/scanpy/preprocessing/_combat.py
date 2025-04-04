@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from numpy import linalg as la
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -196,7 +195,7 @@ def combat(
             raise ValueError(msg)
 
     # only works on dense matrices so far
-    X = adata.X.toarray().T if issparse(adata.X) else adata.X.T
+    X = adata.X.toarray().T if isinstance(adata.X, CSBase) else adata.X.T
     data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
 
     sanitize_anndata(adata)

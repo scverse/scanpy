@@ -8,7 +8,7 @@ from matplotlib import rcParams
 
 from .._compat import deprecated, old_positionals
 from .._settings import settings
-from . import _utils
+from ._utils import savefig_or_show
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
@@ -97,7 +97,7 @@ def highly_variable_genes(
         )
 
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
+    savefig_or_show("filter_genes_dispersion", show=show, save=save)
     if show:
         return None
     return plt.gca()

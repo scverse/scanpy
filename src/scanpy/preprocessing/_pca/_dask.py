@@ -8,7 +8,8 @@ import scipy.linalg
 
 from scanpy._utils._doctests import doctest_needs
 
-from .._utils import _CSMatrix, _get_mean_var
+from ..._compat import CSBase
+from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -45,7 +46,7 @@ class PCAEighDask:
         dask.array<transform_block, shape=(100, 100), dtype=float64, chunksize=(10, 100), chunktype=numpy.ndarray>
 
         """
-        if isinstance(x._meta, _CSMatrix) and x._meta.format != "csr":
+        if isinstance(x._meta, CSBase) and x._meta.format != "csr":
             msg = (
                 "Only sparse dask arrays with CSR-meta format are supported. "
                 f"Got {x._meta.format} as meta."
@@ -117,7 +118,7 @@ class PCAEighDaskFit(PCAEighDask):
             import dask.array as da
 
         def transform_block(
-            x_part: _CSMatrix | NDArray,
+            x_part: CSBase | NDArray,
             mean_: NDArray[np.floating],
             components_: NDArray[np.floating],
         ):
@@ -185,9 +186,9 @@ def _cov_sparse_dask(
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: _CSMatrix | NDArray):
+    def gram_block(x_part: CSBase | NDArray):
         gram_matrix = x_part.T @ x_part
-        if isinstance(gram_matrix, _CSMatrix):
+        if isinstance(gram_matrix, CSBase):
             gram_matrix = gram_matrix.toarray()
         return gram_matrix[None, ...]  # need new axis for summing
 

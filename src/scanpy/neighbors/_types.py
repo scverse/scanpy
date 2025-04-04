@@ -8,7 +8,7 @@ import numpy as np
 if TYPE_CHECKING:
     from typing import Any, Self
 
-    from scipy.sparse import csr_matrix
+    from .._compat import CSRBase
 
 
 # These two are used with get_literal_vals elsewhere
@@ -49,10 +49,10 @@ class KnnTransformerLike(Protocol):
     """See :class:`~sklearn.neighbors.KNeighborsTransformer`."""
 
     def fit(self, X, y: None = None): ...
-    def transform(self, X) -> csr_matrix: ...
+    def transform(self, X) -> CSRBase: ...
 
     # from TransformerMixin
-    def fit_transform(self, X, y: None = None) -> csr_matrix: ...
+    def fit_transform(self, X, y: None = None) -> CSRBase: ...
 
     # from BaseEstimator
     def get_params(self, *, deep: bool = True) -> dict[str, Any]: ...

@@ -11,7 +11,8 @@ from .._utils import _choose_graph
 
 if TYPE_CHECKING:
     from anndata import AnnData
-    from scipy.sparse import csr_matrix, spmatrix
+
+    from .._compat import CSRBase, SpBase
 
 
 def _choose_representation(
@@ -20,7 +21,7 @@ def _choose_representation(
     use_rep: str | None = None,
     n_pcs: int | None = None,
     silent: bool = False,
-) -> np.ndarray | csr_matrix:  # TODO: what else?
+) -> np.ndarray | CSRBase:  # TODO: what else?
     from ..preprocessing import pca
 
     verbosity = settings.verbosity
@@ -74,7 +75,7 @@ def _choose_representation(
 
 def get_init_pos_from_paga(
     adata: AnnData,
-    adjacency: spmatrix | None = None,
+    adjacency: SpBase | None = None,
     random_state=0,
     neighbors_key: str | None = None,
     obsp: str | None = None,

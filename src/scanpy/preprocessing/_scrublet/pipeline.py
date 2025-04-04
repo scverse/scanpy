@@ -18,9 +18,9 @@ if TYPE_CHECKING:
 
 def mean_center(self: Scrublet) -> None:
     gene_means = self._counts_obs_norm.mean(0)
-    self._counts_obs_norm = sparse.csc_matrix(self._counts_obs_norm - gene_means)
+    self._counts_obs_norm = sparse.csc_matrix(self._counts_obs_norm - gene_means)  # noqa: TID251
     if self._counts_sim_norm is not None:
-        self._counts_sim_norm = sparse.csc_matrix(self._counts_sim_norm - gene_means)
+        self._counts_sim_norm = sparse.csc_matrix(self._counts_sim_norm - gene_means)  # noqa: TID251
 
 
 def normalize_variance(self: Scrublet) -> None:

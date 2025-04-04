@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
 from packaging.version import Version
-from scipy.sparse import coo_matrix, csr_matrix, issparse
+from scipy import sparse
 
-from scanpy._compat import DaskArray, _legacy_numpy_gen, pkg_version
+from scanpy._compat import CSBase, DaskArray, _legacy_numpy_gen, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
@@ -56,7 +56,7 @@ def test_axis_mul_or_truediv_badop():
 
 
 def test_axis_mul_or_truediv_bad_out():
-    dividend = csr_matrix(np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
+    dividend = sparse.csr_matrix(np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]]))  # noqa: TID251
     divisor = np.array([0.1, 0.2])
     with pytest.raises(ValueError, match="`out` argument provided but not equal to X"):
         axis_mul_or_truediv(dividend, divisor, op=truediv, out=dividend.copy(), axis=0)
@@ -70,7 +70,7 @@ def test_scale_row(array_type, op):
     if op is mul:
         divisor = 1 / divisor
     expd = np.array([[0, 10.0, 10.0], [5.0, 0, 5.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=0, out=out))
     np.testing.assert_array_equal(res, expd)
 
@@ -83,7 +83,7 @@ def test_scale_column(array_type, op):
     if op is mul:
         divisor = 1 / divisor
     expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
 
@@ -136,7 +136,7 @@ def test_scale_rechunk(array_type, axis, op):
         expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0], [30.0, 0, 8.0]])
     else:
         expd = np.array([[0, 10.0, 20.0], [15.0, 0, 20.0], [6.0, 0, 8.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     with pytest.warns(UserWarning, match="Rechunking scaling_array*"):
         res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=axis, out=out))
     np.testing.assert_array_equal(res, expd)
@@ -152,7 +152,7 @@ def test_elem_mul(array_type):
 
 
 @pytest.mark.parametrize(
-    "array_type", [*ARRAY_TYPES, pytest.param(coo_matrix, id="scipy_coo")]
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_axis_sum(array_type):
     m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
@@ -231,12 +231,14 @@ def test_is_constant(array_type):
         pytest.param(1, [False, False, True, True, False, True], id="1"),
     ],
 )
-@pytest.mark.parametrize("block_type", [np.array, csr_matrix])
+@pytest.mark.parametrize("block_type", [np.array, sparse.csr_matrix])  # noqa: TID251
 def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_type):
     import dask.array as da
 
-    if block_type is csr_matrix and (
-        axis is None or pkg_version("dask") < Version("2023.2.0")
+    if (
+        isinstance(block_type, type)
+        and issubclass(block_type, CSBase)
+        and (axis is None or pkg_version("dask") < Version("2023.2.0"))
     ):
         reason = "Dask has weak support for scipy sparse matrices"
         # This test is flaky for old dask versions, but when `axis=None` it reliably fails
