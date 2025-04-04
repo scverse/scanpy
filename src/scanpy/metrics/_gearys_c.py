@@ -3,28 +3,30 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
 from scipy import sparse
 
-from .._compat import fullname, njit
+from .._compat import njit
 from ..get import _get_obs_rep
-from ._common import _check_vals, _resolve_vals
+from ._common import _get_graph, _SparseMetric
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
     from .._compat import DaskArray
+    from ._common import _Vals
 
 
 @singledispatch
 def gearys_c(
-    adata: AnnData,
-    *,
+    adata_or_graph: AnnData | sparse.csr_matrix,
+    /,
     vals: NDArray | sparse.spmatrix | DaskArray | None = None,
+    *,
     use_graph: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
@@ -50,7 +52,9 @@ def gearys_c(
 
     Params
     ------
-    adata
+    adata_or_graph
+        AnnData object containing a graph (see ``use_graph``) or the graph itself.
+        See the examples for more info.
     vals
         Values to calculate Geary's C for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
@@ -69,25 +73,10 @@ def gearys_c(
     use_raw
         Whether to use `adata.raw.X` for `vals`.
 
-
-    This function can also be called on the graph and values directly. In this case
-    the signature looks like:
-
-    Params
-    ------
-    g
-        The graph
-    vals
-        The values
-
-
-    See the examples for more info.
-
     Returns
     -------
     If vals is two dimensional, returns a 1 dimensional ndarray array. Returns
     a scalar if `vals` is 1d.
-
 
     Examples
     --------
@@ -100,7 +89,6 @@ def gearys_c(
         pbmc = sc.datasets.pbmc68k_processed()
         pc_c = sc.metrics.gearys_c(pbmc, obsm="X_pca")
 
-
     It's equivalent to call the function directly on the underlying arrays:
 
     .. code:: python
@@ -109,20 +97,32 @@ def gearys_c(
         np.testing.assert_array_equal(pc_c, alt)
 
     """
-    if use_graph is None:
-        # Fix for anndata<0.7
-        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-            g = adata.obsp["connectivities"]
-        elif "neighbors" in adata.uns:
-            g = adata.uns["neighbors"]["connectivities"]
-        else:
-            msg = "Must run neighbors first."
-            raise ValueError(msg)
-    else:
-        raise NotImplementedError()
+    adata = cast("AnnData", adata_or_graph)
+    g = _get_graph(adata, use_graph=use_graph)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
     return gearys_c(g, vals)
+
+
+@gearys_c.register(sparse.csr_matrix)
+def _gearys_c(graph: sparse.csr_matrix, /, vals: _Vals) -> NDArray:
+    return _GearysC(graph, vals)()
+
+
+class _GearysC(_SparseMetric):
+    name = "Geary’s C"
+
+    def mtx(self, vals_het: NDArray | sparse.csr_matrix, /) -> NDArray:
+        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
+        if isinstance(vals_het, np.ndarray):
+            return _gearys_c_mtx(*g_parts, vals_het)
+        v_parts = (vals_het.data, vals_het.indices, vals_het.indptr)
+        return _gearys_c_mtx_csr(*g_parts, *v_parts, vals_het.shape)
+
+    def vec(self) -> np.float64:
+        W = self.graph.data.sum()
+        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
+        return _gearys_c_vec_W(*g_parts, self._vals, W)
 
 
 ###############################################################################
@@ -140,16 +140,6 @@ def gearys_c(
 #   tests to fail.
 
 
-def _gearys_c_vec(
-    data: np.ndarray,
-    indices: np.ndarray,
-    indptr: np.ndarray,
-    x: np.ndarray,
-) -> float:
-    W = data.sum()
-    return _gearys_c_vec_W(data, indices, indptr, x, W)
-
-
 @njit
 def _gearys_c_vec_W(
     data: np.ndarray,
@@ -157,7 +147,7 @@ def _gearys_c_vec_W(
     indptr: np.ndarray,
     x: np.ndarray,
     W: np.float64,
-):
+) -> np.float64:
     n = len(indptr) - 1
     x = x.astype(np.float64)
     x_bar = x.mean()
@@ -192,7 +182,7 @@ def _gearys_c_inner_sparse_x_densevec(
     g_indptr: np.ndarray,
     x: np.ndarray,
     W: np.float64,
-) -> float:
+) -> np.float64:
     x_bar = x.mean()
     total = 0.0
     n = len(x)
@@ -215,7 +205,7 @@ def _gearys_c_inner_sparse_x_sparsevec(  # noqa: PLR0917
     x_indices: np.ndarray,
     n: int,
     W: np.float64,
-) -> float:
+) -> np.float64:
     x = np.zeros(n, dtype=np.float64)
     x[x_indices] = x_data
     x_bar = np.sum(x_data) / n
@@ -285,46 +275,3 @@ def _gearys_c_mtx_csr(  # noqa: PLR0917
             W,
         )
     return out
-
-
-###############################################################################
-# Interface
-###############################################################################
-
-
-@gearys_c.register(sparse.csr_matrix)
-def _gearys_c(
-    g: sparse.csr_matrix, vals: NDArray | sparse.spmatrix | DaskArray
-) -> np.ndarray:
-    assert g.shape[0] == g.shape[1], "`g` should be a square adjacency matrix"
-    vals = _resolve_vals(vals)
-    g_data = g.data.astype(np.float64, copy=False)
-    if isinstance(vals, sparse.csr_matrix):
-        assert g.shape[0] == vals.shape[1]
-        new_vals, idxer, full_result = _check_vals(vals)
-        result = _gearys_c_mtx_csr(
-            g_data,
-            g.indices,
-            g.indptr,
-            new_vals.data.astype(np.float64, copy=False),
-            new_vals.indices,
-            new_vals.indptr,
-            new_vals.shape,
-        )
-        full_result[idxer] = result
-        return full_result
-    elif isinstance(vals, np.ndarray) and vals.ndim == 1:
-        assert g.shape[0] == vals.shape[0]
-        return _gearys_c_vec(g_data, g.indices, g.indptr, vals)
-    elif isinstance(vals, np.ndarray) and vals.ndim == 2:
-        assert g.shape[0] == vals.shape[1]
-        new_vals, idxer, full_result = _check_vals(vals)
-        result = _gearys_c_mtx(g_data, g.indices, g.indptr, new_vals)
-        full_result[idxer] = result
-        return full_result
-    else:
-        msg = (
-            "Geary’s C metric not implemented for vals of type "
-            f"{fullname(type(vals))} and ndim {vals.ndim}."
-        )
-        raise NotImplementedError(msg)
