@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._compat import DaskArray
     from ._common import _Vals
 
 
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
-    vals: NDArray | CSRBase | DaskArray | None = None,
+    vals: _Vals | None = None,
     *,
     use_graph: str | None = None,
     layer: str | None = None,
