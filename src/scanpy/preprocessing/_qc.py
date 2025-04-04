@@ -12,7 +12,7 @@ from scipy import sparse
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .._compat import CSBase, CSRBase, DaskArray, SpBase, njit
+from .._compat import CSBase, CSRBase, DaskArray, njit
 from .._utils import _doc_params, axis_nnz, axis_sum
 from ._docs import (
     doc_adata_basic,
@@ -344,7 +344,7 @@ def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
         expressed gene.
 
     """
-    if isinstance(mtx, SpBase):
+    if isinstance(mtx, CSBase):
         if not isinstance(mtx, CSRBase):
             mtx = sparse.csr_matrix(mtx)  # noqa: TID251
         # Allowing numba to do more
