@@ -344,7 +344,7 @@ def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
         expressed gene.
 
     """
-    if isinstance(mtx, CSBase):
+    if isinstance(mtx, CSBase | sparse.coo_matrix):
         if not isinstance(mtx, CSRBase):
             mtx = sparse.csr_matrix(mtx)  # noqa: TID251
         # Allowing numba to do more
