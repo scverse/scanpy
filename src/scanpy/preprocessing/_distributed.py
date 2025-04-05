@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, overload
 
 import numpy as np
 
-from scanpy._compat import DaskArray
+from .._compat import DaskArray
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from scanpy._compat import ZappyArray
+    from .._compat import ZappyArray
 
 
 @overload

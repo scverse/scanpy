@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import paul15
@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
+
+    from scanpy._compat import CSRBase
 
 
 HERE = Path(__file__).parent
@@ -42,7 +44,7 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
         A[maskzero] = 0
     if np.any(masknan):
         A[masknan] = np.nan
-    S = csr_matrix(A)
+    S = sparse.csr_matrix(A)  # noqa: TID251
     return S
 
 
@@ -118,7 +120,7 @@ def test_sparse_nanmean():
     # edge case of only NaNs per row
     A = np.full((10, 1), np.nan)
 
-    meanA = np.array(_sparse_nanmean(csr_matrix(A), 0)).flatten()
+    meanA = np.array(_sparse_nanmean(sparse.csr_matrix(A), 0)).flatten()  # noqa: TID251
     np.testing.assert_allclose(np.nanmean(A, 0), meanA)
 
 
@@ -189,7 +191,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     sparse_scores = adata.obs["Test"].values.tolist()
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
-    def mock_fn(x: csr_matrix, axis: Literal[0, 1]):
+    def mock_fn(x: CSRBase, axis: Literal[0, 1]):
         return np.nanmean(x.toarray(), axis, dtype="float64")
 
     monkeypatch.setattr(sc.tl._score_genes, "_sparse_nanmean", mock_fn)

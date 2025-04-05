@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from .. import logging as logg
 from .. import preprocessing as pp
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -54,11 +54,9 @@ def recipe_weinreb17(
         Return a copy if true.
 
     """
-    from scipy.sparse import issparse
-
     from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
 
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         msg = "`recipe_weinreb16 does not support sparse matrices."
         raise ValueError(msg)
     if copy:

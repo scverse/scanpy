@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     import numpy as np
-    from scipy.sparse import spmatrix
 
+    from ..._compat import SpBase
     from ...tools._leiden import MutableVertexPartition
 
 
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 )
 @doctest_needs("phenograph")
 def phenograph(
-    data: AnnData | np.ndarray | spmatrix,
+    data: AnnData | np.ndarray | SpBase,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     *,
     k: int = 30,
@@ -67,7 +67,7 @@ def phenograph(
     seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
+) -> tuple[np.ndarray | None, SpBase, float | None] | None:
     """PhenoGraph clustering :cite:p:`Levine2015`.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell

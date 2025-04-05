@@ -271,7 +271,7 @@ def _read_legacy_10x_h5(
 
             # AnnData works with csr matrices
             # 10x stores the transposed data, so we do the transposition right away
-            from scipy.sparse import csr_matrix
+            from scipy.sparse import csr_matrix  # noqa: TID251
 
             M, N = dsets["shape"]
             data = dsets["data"]
@@ -314,7 +314,7 @@ def _read_v3_10x_h5(filename: Path, *, start=None):
             dsets = {}
             _collect_datasets(dsets, f["matrix"])
 
-            from scipy.sparse import csr_matrix
+            from scipy.sparse import csr_matrix  # noqa: TID251
 
             M, N = dsets["shape"]
             data = dsets["data"]
