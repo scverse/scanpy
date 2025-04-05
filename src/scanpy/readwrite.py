@@ -581,7 +581,7 @@ def read_10x_mtx(
         `patientA_barcodes.tsv` the prefix is `patientA_`.
         (Default: no prefix)
     compressed
-        Whether to expect Cell Ranger v3+ files (.mtx, features.tsv, barcodes.tsv) 
+        Whether to expect Cell Ranger v3+ files (.mtx, features.tsv, barcodes.tsv)
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
