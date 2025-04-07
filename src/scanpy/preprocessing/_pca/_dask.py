@@ -132,7 +132,7 @@ class PCAEighDaskFit(PCAEighDask):
             mean_=self.mean_,
             components_=self.components_,
             chunks=(x.chunks[0], self.n_components_),
-            meta=np.zeros([]),
+            meta=np.array([], dtype=np.float64),
         )
 
 
