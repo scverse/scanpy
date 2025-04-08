@@ -181,10 +181,6 @@ def scale_array(
         )
         x = x.astype(float)
 
-    # Create default mask to ones for CSR matrices if mask_obs is None
-    if isinstance(x, csr_matrix) and mask_obs is None:
-        mask_obs = np.ones(x.shape[0], dtype=bool)
-
     mask_obs = _check_mask(x, mask_obs, "obs")
     if mask_obs is not None:
         return scale_array_masked(
