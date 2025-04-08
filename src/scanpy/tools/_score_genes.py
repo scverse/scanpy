@@ -37,7 +37,7 @@ def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     Z = X.copy()
 
     # count the number of nonzero elements (include nans) per row/column (dep. on axis)
-    nonzeros_and_nones=Z.count_nonzero(axis=axis)
+    nonzeros_and_nones = Z.count_nonzero(axis=axis)
 
     # just sum the data withput nan
     Z.data[np.isnan(Z.data)] = 0
@@ -45,8 +45,10 @@ def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     s = Z.sum(axis, dtype="float64")
 
     # Z.count_nonzero(axis=axis) is now non-zero not-nan elements in X
-    #diff between nonzeros_and_nones and curr nonzero is nans
-    n_elements=(Z.shape[axis] - (nonzeros_and_nones - Z.count_nonzero(axis=axis))).reshape(s.shape, copy=False)
+    # diff between nonzeros_and_nones and curr nonzero is nans
+    n_elements = (
+        Z.shape[axis] - (nonzeros_and_nones - Z.count_nonzero(axis=axis))
+    ).reshape(s.shape, copy=False)
     m = s / n_elements
 
     return m
