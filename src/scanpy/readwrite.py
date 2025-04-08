@@ -585,7 +585,6 @@ def read_10x_mtx(
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
-        (Default: True)
 
     Returns
     -------
