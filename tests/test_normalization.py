@@ -82,16 +82,6 @@ def test_normalize_total_rep(array_type, dtype):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-def test_normalize_total_layers(array_type, dtype):
-    adata = AnnData(array_type(X_total).astype(dtype))
-    adata.layers["layer"] = adata.X.copy()
-    with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
-        sc.pp.normalize_total(adata, layers=["layer"])
-    assert np.allclose(axis_sum(adata.layers["layer"], axis=1), [3.0, 3.0, 3.0])
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     v = adata[:, :]
