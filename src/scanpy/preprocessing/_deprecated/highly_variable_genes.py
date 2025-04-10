@@ -125,7 +125,7 @@ def filter_genes_dispersion(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
         msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-        warnings.warn(msg, UserWarning)
+        warnings.warn(msg, UserWarning, stacklevel=2)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:

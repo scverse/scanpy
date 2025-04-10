@@ -228,10 +228,10 @@ def test_clustering_custom_key(
 
     # Run clustering with default key, then custom keys
     clustering(adata_neighbors, resolution=default_res)
-    for key, res in zip(custom_keys, custom_resolutions):
+    for key, res in zip(custom_keys, custom_resolutions, strict=True):
         clustering(adata_neighbors, resolution=res, key_added=key)
 
     # ensure that all clustering parameters are added to user provided keys and not overwritten
     assert adata_neighbors.uns[default_key]["params"]["resolution"] == default_res
-    for key, res in zip(custom_keys, custom_resolutions):
+    for key, res in zip(custom_keys, custom_resolutions, strict=True):
         assert adata_neighbors.uns[key]["params"]["resolution"] == res

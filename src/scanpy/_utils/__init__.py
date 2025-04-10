@@ -193,7 +193,8 @@ def _import_name(name: str) -> Any:
 
     parts = name.split(".")
     obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
+    for _i, name in enumerate(parts[1:]):
+        i = _i
         try:
             obj = import_module(f"{obj.__name__}.{name}")
         except ModuleNotFoundError:
@@ -203,9 +204,9 @@ def _import_name(name: str) -> Any:
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
-        except AttributeError:
+        except AttributeError as e:
             msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from e
     return obj
 
 
@@ -312,7 +313,7 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> G
         weights = weights.A1
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
-    g.add_edges(list(zip(sources, targets)))
+    g.add_edges(list(zip(sources, targets, strict=True)))
     with suppress(KeyError):
         g.es["weight"] = weights
     if g.vcount() != adjacency.shape[0]:
@@ -450,9 +451,9 @@ def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
 
     """
     ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
-    ref_dict = dict(zip(ref_unique, ref_counts))
+    ref_dict = dict(zip(ref_unique, ref_counts, strict=True))
     pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
-    pred_dict = dict(zip(pred_unique, pred_counts))
+    pred_dict = dict(zip(pred_unique, pred_counts, strict=True))
     associated_predictions = {}
     associated_overlaps = {}
     for ref_label in ref_unique:
@@ -736,7 +737,9 @@ def _(
                 )
             )
         ):
-            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            warnings.warn(
+                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
+            )
             scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
     else:
         scaling_array = da.from_array(
@@ -889,8 +892,8 @@ def select_groups(
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+            if name in adata.obs[key].values:
+                mask_obs = name == adata.obs[key].values
             else:
                 mask_obs = str(iname) == adata.obs[key].values
             groups_masks_obs[iname] = mask_obs

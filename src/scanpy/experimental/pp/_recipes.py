@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -17,6 +18,9 @@ from scanpy.experimental._docs import (
 from scanpy.preprocessing import pca
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any
+
     import pandas as pd
     from anndata import AnnData
 
@@ -39,7 +43,7 @@ def recipe_pearson_residuals(
     chunksize: int = 1000,
     n_comps: int | None = 50,
     random_state: float | None = 0,
-    kwargs_pca: dict = {},
+    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
     check_values: bool = True,
     inplace: bool = True,
 ) -> tuple[AnnData, pd.DataFrame] | None:

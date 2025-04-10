@@ -158,7 +158,9 @@ class BasePlot:
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
-                "Plot would be very large."
+                "Plot would be very large.",
+                UserWarning,
+                stacklevel=2,
             )
 
         if categories_order is not None and (

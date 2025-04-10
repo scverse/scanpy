@@ -151,12 +151,12 @@ def phate(
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
-    except ImportError:
+    except ImportError as e:
         msg = (
             "You need to install the package `phate`: please run `pip install "
             "--user phate` in a terminal."
         )
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     X_phate = phate.PHATE(
         n_components=n_components,
         k=k,

@@ -63,9 +63,9 @@ def _highly_variable_genes_seurat_v3(
     """
     try:
         from skmisc.loess import loess
-    except ImportError:
+    except ImportError as e:
         msg = "Please install skmisc package via `pip install --user scikit-misc"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
 
@@ -73,6 +73,7 @@ def _highly_variable_genes_seurat_v3(
         warnings.warn(
             f"`{flavor=!r}` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
 
     df["means"], df["variances"] = _get_mean_var(data)
@@ -248,7 +249,8 @@ class _Cutoffs:
         }
         if {k: v for k, v in locals().items() if k in cutoffs} != defaults:
             msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-            warnings.warn(msg, UserWarning)
+            # 3: caller -> 2: `highly_variable_genes` -> 1: here
+            warnings.warn(msg, UserWarning, stacklevel=3)
         return n_top_genes
 
     def in_bounds(
@@ -306,7 +308,9 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
+    df = pd.DataFrame(
+        dict(zip(["means", "dispersions"], (mean, dispersion), strict=True))
+    )
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
@@ -411,7 +415,8 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
     x = x[~np.isnan(x)]
     if n > x.size:
         msg = "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions."
-        warnings.warn(msg, UserWarning)
+        # 5: caller -> 4: `highly_variable_genes` -> 3: `_…_single_batch` -> 2: `_subset_genes` -> 1: here
+        warnings.warn(msg, UserWarning, stacklevel=5)
         n = x.size
     if isinstance(x, DaskArray):
         return x.topk(n)[-1]
