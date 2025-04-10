@@ -73,46 +73,36 @@ X_scaled_for_mask_clipped = [
     [np.array, sparse.csr_matrix, sparse.csc_matrix],  # noqa: TID251
     ids=lambda x: x.__name__,
 )
-@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("container", ["anndata", "array"])
+@pytest.mark.parametrize("dtype", [np.float32, np.int64])
+@pytest.mark.parametrize("zero_center", [True, False])
 @pytest.mark.parametrize(
-    ("mask_obs", "X", "X_centered", "X_scaled"),
+    ("mask_obs", "x", "x_centered", "x_scaled"),
     [
-        (None, X_original, X_centered_original, X_scaled_original),
-        (
+        pytest.param(
+            None, X_original, X_centered_original, X_scaled_original, id="no_mask"
+        ),
+        pytest.param(
             np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool),
             X_for_mask,
             X_centered_for_mask,
             X_scaled_for_mask,
+            id="mask",
         ),
     ],
 )
-def test_scale(*, typ, dtype, mask_obs, X, X_centered, X_scaled):
-    # test AnnData arguments
-    # test scaling with default zero_center == True
-    adata0 = AnnData(typ(X).astype(dtype))
-    sc.pp.scale(adata0, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(adata0.X).toarray(), X_centered)  # noqa: TID251
-    # test scaling with explicit zero_center == True
-    adata1 = AnnData(typ(X).astype(dtype))
-    sc.pp.scale(adata1, zero_center=True, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(adata1.X).toarray(), X_centered)  # noqa: TID251
-    # test scaling with explicit zero_center == False
-    adata2 = AnnData(typ(X).astype(dtype))
-    sc.pp.scale(adata2, zero_center=False, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(adata2.X).toarray(), X_scaled)  # noqa: TID251
-    # test bare count arguments, for simplicity only with explicit copy=True
-    # test scaling with default zero_center == True
-    data0 = typ(X, dtype=dtype)
-    cdata0 = sc.pp.scale(data0, copy=True, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(cdata0).toarray(), X_centered)  # noqa: TID251
-    # test scaling with explicit zero_center == True
-    data1 = typ(X, dtype=dtype)
-    cdata1 = sc.pp.scale(data1, zero_center=True, copy=True, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(cdata1).toarray(), X_centered)  # noqa: TID251
-    # test scaling with explicit zero_center == False
-    data2 = typ(X, dtype=dtype)
-    cdata2 = sc.pp.scale(data2, zero_center=False, copy=True, mask_obs=mask_obs)
-    assert np.allclose(sparse.csr_matrix(cdata2).toarray(), X_scaled)  # noqa: TID251
+def test_scale(
+    *, typ, container, zero_center, dtype, mask_obs, x, x_centered, x_scaled
+):
+    x = AnnData(typ(x, dtype=dtype)) if container == "anndata" else typ(x, dtype=dtype)
+    scaled = sc.pp.scale(
+        x, zero_center=zero_center, copy=container == "array", mask_obs=mask_obs
+    )
+    received = sparse.csr_matrix(  # noqa: TID251
+        x.X if scaled is None else scaled
+    ).toarray()
+    expected = x_centered if zero_center else x_scaled
+    assert np.allclose(received, expected)
 
 
 def test_mask_string():
