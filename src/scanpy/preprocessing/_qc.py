@@ -99,6 +99,7 @@ def describe_obs(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Handle whether X is passed
     if X is None:
@@ -296,6 +297,7 @@ def calculate_qc_metrics(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)

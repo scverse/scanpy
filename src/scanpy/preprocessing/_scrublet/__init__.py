@@ -279,7 +279,7 @@ def scrublet(
 
         adata.uns["scrublet"] = {}
         adata.uns["scrublet"]["batches"] = dict(
-            zip(batches, [scrub["uns"] for scrub in scrubbed])
+            zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
         )
 
         # Record that we've done batched analysis, so e.g. the plotting

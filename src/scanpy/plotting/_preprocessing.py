@@ -73,6 +73,7 @@ def highly_variable_genes(
             ["highly variable genes", "other genes"],
             ["black", "grey"],
             [gene_subset, ~gene_subset],
+            strict=True,
         ):
             if False:
                 means_, var_or_disps_ = np.log10(means[mask]), np.log10(d[mask])

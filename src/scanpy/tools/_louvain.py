@@ -192,7 +192,7 @@ def louvain(
             "`flavor='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf

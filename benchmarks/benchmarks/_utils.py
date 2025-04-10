@@ -202,7 +202,8 @@ def param_skipper(
         skipped_combs = [
             tuple(record.values())
             for record in (
-                dict(zip(param_names, vals)) for vals in itertools.product(*params)
+                dict(zip(param_names, vals, strict=True))
+                for vals in itertools.product(*params)
             )
             if any(v in skipped.get(n, set()) for n, v in record.items())
         ]

@@ -713,7 +713,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning)
+            warn(msg, FutureWarning, stacklevel=3)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)
@@ -869,7 +869,7 @@ class Neighbors:
             )
             ** 2
             # account for float32 precision
-            for j in range(0, self.eigen_values.size)
+            for j in range(self.eigen_values.size)
             if self.eigen_values[j] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
@@ -879,7 +879,7 @@ class Neighbors:
         # PAGA paper) don't have it, which makes sense
         row += sum(
             (self.eigen_basis[i, k] - self.eigen_basis[:, k]) ** 2
-            for k in range(0, self.eigen_values.size)
+            for k in range(self.eigen_values.size)
             if self.eigen_values[k] >= 0.9994
         )
         if mask is not None:

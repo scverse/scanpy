@@ -518,7 +518,7 @@ class DPT(Neighbors):
         changepoints = np.arange(indices.size - 1)[np.diff(segs_names) == 1] + 1
         if self.iroot is not None:
             pseudotime = self.pseudotime[indices]
-            for iseg, seg in enumerate(self.segs):
+            for seg in self.segs:
                 # only consider one segment, it's already ordered by segment
                 seg_sorted = seg[indices]
                 # consider the pseudotime on this segment and sort them
@@ -602,7 +602,7 @@ class DPT(Neighbors):
             ]
             # TODO Evaluate whether to assign the variable or not
             prev_connecting_points = segs_connects[iseg]  # noqa: F841
-            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
+            for jseg in prev_connecting_segments:
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
                     if iseg_new != trunk:
@@ -801,7 +801,7 @@ class DPT(Neighbors):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
         ssegs = []
-        for iseg, mask in enumerate(masks):
+        for mask in masks:
             mask[nonunique] = False
             ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask])
         # compute new tips within new segments
@@ -913,7 +913,7 @@ class DPT(Neighbors):
             [1, 2, 0],  #             -"-                       second tip
             [2, 0, 1],  #             -"-                       third tip
         ]
-        for i, p in enumerate(ps):
+        for p in ps:
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
 

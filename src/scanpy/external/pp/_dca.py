@@ -179,9 +179,9 @@ def dca(
     """
     try:
         from dca.api import dca
-    except ImportError:
+    except ImportError as e:
         msg = "Please install dca package (>= 0.2.1) via `pip install dca`"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     return dca(
         adata,
