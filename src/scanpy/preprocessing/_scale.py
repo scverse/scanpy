@@ -10,7 +10,7 @@ import numpy as np
 from anndata import AnnData
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -174,9 +174,15 @@ def scale_array(
             "... as scaling leads to float results, integer "
             "input is cast to float, returning copy."
         )
-        x = x.astype(float)
+        x = x.astype(np.float64)
 
-    mask_obs = _check_mask(x, mask_obs, "obs")
+    mask_obs = (
+        # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
+        # This is faster than the maskless `axis_mul_or_truediv` path.
+        np.ones(x.shape[0], dtype=np.bool_)
+        if isinstance(x, CSRBase) and mask_obs is None
+        else _check_mask(x, mask_obs, "obs")
+    )
     if mask_obs is not None:
         return scale_array_masked(
             x,
