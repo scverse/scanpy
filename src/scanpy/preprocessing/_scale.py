@@ -200,9 +200,7 @@ def scale_array(
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             warnings.warn(
-                "zero-center being used with `DaskArray` sparse chunks. "
-                "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
-                UserWarning,
+                "zero-centering a sparse array/matrix densifies it.", UserWarning
             )
         x -= mean
 
