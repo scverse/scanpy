@@ -553,6 +553,7 @@ def read_10x_mtx(
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     gex_only: bool = True,
     prefix: str | None = None,
+    compressed: bool = True,
 ) -> AnnData:
     """Read 10x-Genomics-formatted mtx directory.
 
@@ -579,6 +580,11 @@ def read_10x_mtx(
         if the files are named `patientA_matrix.mtx`, `patientA_genes.tsv` and
         `patientA_barcodes.tsv` the prefix is `patientA_`.
         (Default: no prefix)
+    compressed
+        Whether to expect Cell Ranger v3+ files (.mtx, features.tsv, barcodes.tsv)
+        to be gzipped. If True, '.gz' suffix is appended to filenames.
+        Set to False for STARsolo output.
+        Has no effect on legacy (v2-) files.
 
     Returns
     -------
@@ -596,6 +602,7 @@ def read_10x_mtx(
         cache_compression=cache_compression,
         prefix=prefix,
         is_legacy=is_legacy,
+        compressed=compressed,
     )
     if is_legacy or not gex_only:
         return adata
@@ -612,9 +619,11 @@ def _read_10x_mtx(
     cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
     prefix: str = "",
     is_legacy: bool,
+    compressed: bool = True,
 ) -> AnnData:
     """Read mex from output from Cell Ranger v2- or v3+."""
-    suffix = "" if is_legacy else ".gz"
+    # Only append .gz if not a legacy file AND compression is requested
+    suffix = "" if is_legacy else (".gz" if compressed else "")
     adata = read(
         path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
