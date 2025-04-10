@@ -158,7 +158,7 @@ def sample_dynamic_data(**params):
             # random topology / for a given edge density
             if "hill" not in model_key:
                 Coupl = np.array(grnsim.Coupl)
-                for sampleCoupl in range(10):
+                for _sampleCoupl in range(10):
                     nrOffEdges = 0
                     for gp in range(grnsim.dim):
                         for g in range(grnsim.dim):
@@ -225,7 +225,7 @@ def sample_dynamic_data(**params):
 
         grnsim = GRNsim(dim=dim, initType=initType, model=model_key, params=params)
         Xsamples = []
-        for sample in range(maxNrSamples):
+        for _sample in range(maxNrSamples):
             # choose initial conditions such that branchings result
             if initType == "branch":
                 X0mean = grnsim.branch_init_model1(tmax)
@@ -274,9 +274,7 @@ def sample_dynamic_data(**params):
                 if real >= nrRealizations:
                     break
     # load the last simulation file
-    filename = None
-    for filename in writedir.glob("sim*.txt"):
-        pass
+    filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
     adata = readwrite._read(
         filename, first_column_names=True, suppress_cache_warning=True
@@ -287,13 +285,13 @@ def sample_dynamic_data(**params):
 
 def write_data(
     X,
-    *,
     dir=Path("sim/test"),
+    *,
     append=False,
     header="",
     varNames: Mapping[str, int] = MappingProxyType({}),
-    Adj=np.array([]),
-    Coupl=np.array([]),
+    Adj: np.ndarray | None = None,
+    Coupl: np.ndarray | None = None,
     boolRules: Mapping[str, str] = MappingProxyType({}),
     model="",
     modelType="",
@@ -320,7 +318,7 @@ def write_data(
     # write files with adjacancy and coupling matrices
     if not append:
         if False:
-            if Adj.size > 0:
+            if Adj is not None:
                 # due to 'update formulation' of model, there
                 # is always a diagonal dependence
                 Adj = np.copy(Adj)
@@ -328,12 +326,12 @@ def write_data(
                     for i in range(Adj.shape[0]):
                         Adj[i, i] = 1
                 np.savetxt(dir + "/adj_" + id + ".txt", Adj, header=header, fmt="%d")
-            if Coupl.size > 0:
+            if Coupl is not None:
                 np.savetxt(
                     dir + "/coupl_" + id + ".txt", Coupl, header=header, fmt="%10.6f"
                 )
         # write model file
-        if varNames and Coupl.size > 0:
+        if varNames and Coupl is not None:
             with (dir / f"model_{id}.txt").open("w") as f:
                 f.write('# For each "variable = ", there must be a right hand side: \n')
                 f.write(
@@ -896,7 +894,7 @@ class GRNsim:
         # call helper function
         write_data(
             X,
-            dir=dir,
+            dir,
             append=append,
             header=header,
             varNames=self.varNames,
@@ -1016,9 +1014,7 @@ def sample_coupling_matrix(
         Number of edges
 
     """
-    max_trial = 10
-    check = False
-    for trial in range(max_trial):
+    for _attempt in range(max_attempt := 10):
         # random topology for a given connectivity / edge density
         Coupl = np.zeros((dim, dim))
         n_edges = 0
@@ -1037,10 +1033,9 @@ def sample_coupling_matrix(
         Adj = np.abs(Adj_signed)
         # check for cycles and whether there is at least one edge
         if check_nocycles(Adj) and n_edges > 0:
-            check = True
             break
-    if not check:
-        msg = f"did not find graph without cycles after {max_trial} trials"
+    else:
+        msg = f"did not find graph without cycles after {max_attempt} trials"
         raise ValueError(msg)
     return Coupl, Adj, Adj_signed, n_edges
 

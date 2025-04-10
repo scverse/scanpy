@@ -131,19 +131,19 @@ def tsne(
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
         warnings.warn(
-            UserWarning(
-                "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
-                "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
-                "If you'd like the old behaviour (which is deprecated), pass "
-                "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore."
-            )
+            "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
+            "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
+            "If you'd like the old behaviour (which is deprecated), pass "
+            "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore.",
+            UserWarning,
+            stacklevel=2,
         )
     if use_fast_tsne:
         warnings.warn(
-            FutureWarning(
-                "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
-                "will be dropped in a future version of scanpy."
-            )
+            "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
+            "will be dropped in a future version of scanpy.",
+            FutureWarning,
+            stacklevel=2,
         )
 
     # deal with different tSNE implementations
@@ -158,9 +158,9 @@ def tsne(
         except ImportError:
             use_fast_tsne = False
             warnings.warn(
-                UserWarning(
-                    "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
-                )
+                "Could not import 'MulticoreTSNE'. Falling back to scikit-learn.",
+                UserWarning,
+                stacklevel=2,
             )
     if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearn.manifold import TSNE

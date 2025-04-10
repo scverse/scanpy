@@ -264,7 +264,7 @@ def _get_edges(adata, neighbors_key=None):
     else:
         matrix = neighbors["connectivities"]
     matrix = matrix.tocoo()
-    edges = [(i, j) for i, j in zip(matrix.row, matrix.col)]
+    edges = [(i, j) for i, j in zip(matrix.row, matrix.col, strict=True)]
 
     return edges
 
@@ -444,7 +444,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     # make node list
     nodes = []
     for i, name, xy, color, size, cells in zip(
-        range(len(names)), names, coords, colors, sizes, cell_groups
+        range(len(names)), names, coords, colors, sizes, cell_groups, strict=True
     ):
         nodes.append(
             {
@@ -459,7 +459,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     # make link list, avoid redundant encoding (graph is undirected)
     links = []
-    for source, target, weight in zip(sources, targets, weights):
+    for source, target, weight in zip(sources, targets, weights, strict=True):
         if source < target and weight > min_edge_weight_save:
             links.append(
                 {"source": int(source), "target": int(target), "weight": float(weight)}

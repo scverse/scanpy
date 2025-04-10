@@ -150,6 +150,7 @@ def _highly_variable_pearson_residuals(
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
     # check theta
     if theta <= 0:

@@ -6,7 +6,7 @@ import os
 import sys
 from argparse import ArgumentParser, Namespace, _SubParsersAction
 from collections.abc import MutableMapping
-from functools import lru_cache, partial
+from functools import cached_property, partial
 from pathlib import Path
 from shutil import which
 from subprocess import run
@@ -81,8 +81,7 @@ class _CommandDelegator(MutableMapping):
             )
         return self.parser_map == other
 
-    @property
-    @lru_cache
+    @cached_property
     def commands(self) -> frozenset[str]:
         return frozenset(
             binary.name[len(self.command) + 1 :]
