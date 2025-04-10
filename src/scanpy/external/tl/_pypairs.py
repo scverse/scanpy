@@ -150,9 +150,9 @@ def cyclone(
 def _check_import():
     try:
         import pypairs
-    except ImportError:
+    except ImportError as e:
         msg = "You need to install the package `pypairs`."
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     min_version = Version("3.0.9")
     if Version(pypairs.__version__) < min_version:

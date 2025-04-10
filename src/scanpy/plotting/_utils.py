@@ -234,7 +234,7 @@ def timeseries_as_heatmap(
         hold = 0
         _hold = 0
         space_sum = 0
-        for ih, h in enumerate(highlights_x):
+        for h in highlights_x:
             _h = h + space_sum
             x_new[:, _hold:_h] = X[:, hold:h]
             x_new[:, _h : _h + space] = min_x * np.ones((X.shape[0], space))
@@ -715,7 +715,7 @@ def setup_axes(
 
     axs = []
     if ax is None:
-        for icolor, color in enumerate(panels):
+        for icolor, _color in enumerate(panels):
             left = panel_pos[2][2 * icolor]
             bottom = panel_pos[0][0]
             width = draw_region_width / figure_width
@@ -1351,7 +1351,7 @@ def _deprecated_scale(
         msg = "can’t specify both `scale` and `density_norm`"
         raise ValueError(msg)
     msg = "`scale` is deprecated, use `density_norm` instead"
-    warnings.warn(msg, FutureWarning)
+    warnings.warn(msg, FutureWarning, stacklevel=3)
     return scale
 
 

@@ -7,6 +7,7 @@ from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from importlib.util import find_spec
 from itertools import permutations
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -15,7 +16,7 @@ from anndata.tests.helpers import asarray, assert_equal
 import scanpy as sc
 
 if TYPE_CHECKING:
-    from collections.abc import MutableSequence
+    from collections.abc import Iterable, MutableSequence
 
     from numpy.typing import NDArray
 
@@ -39,9 +40,9 @@ def anndata_v0_8_constructor_compat(X, *args, **kwargs):
     from packaging.version import Version
 
     if Version(ad.__version__) < Version("0.9"):
-        return ad.AnnData(X=X, *args, **kwargs, dtype=X.dtype)
+        return ad.AnnData(X, *args, **kwargs, dtype=X.dtype)
     else:
-        return ad.AnnData(X=X, *args, **kwargs)
+        return ad.AnnData(X, *args, **kwargs)
 
 
 def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
@@ -77,7 +78,7 @@ def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
         np.testing.assert_array_equal(X_array, result_array)
 
 
-def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
+def check_rep_results(func, X, *, fields: Iterable[str] = ("layer", "obsm"), **kwargs):
     """Check that the results of a computation add values/ mutate the anndata object in a consistent way."""
     # Gen data
     empty_X = np.zeros(shape=X.shape, dtype=X.dtype)
@@ -112,7 +113,9 @@ def check_rep_results(func, X, *, fields=["layer", "obsm"], **kwargs):
         assert_equal(adata_X, adatas_proc[field])
 
 
-def _check_check_values_warnings(function, adata, expected_warning, kwargs={}):
+def _check_check_values_warnings(
+    function, adata, expected_warning, kwargs=MappingProxyType({})
+):
     """Run `function` on `adata` with provided arguments `kwargs` twice.
 
     Once with `check_values=True` and once with `check_values=False`.

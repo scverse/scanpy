@@ -134,7 +134,8 @@ def _ind_dist_shortcut(
             "Sparse matrix has no constant number of neighbors per row. "
             "Cannot efficiently get indices and distances."
         )
-        warn(msg, category=RuntimeWarning)
+        # 4: caller -> 3: `Neighbors.compute_neighbors` -> 2: `_get_indices_distances_from_sparse_matrix` -> 1: here
+        warn(msg, category=RuntimeWarning, stacklevel=4)
         return None
     n_obs, n_neighbors = D.shape[0], int(nnzs[0])
     return (

@@ -154,7 +154,7 @@ class StackedViolin(BasePlot):
         # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning)
+            warnings.warn(msg, FutureWarning, stacklevel=2)
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
@@ -229,7 +229,7 @@ class StackedViolin(BasePlot):
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning)
+            warnings.warn(msg, FutureWarning, stacklevel=2)
         if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
@@ -806,7 +806,7 @@ def stacked_violin(
             "`order` is deprecated (and never worked for `stacked_violin`), "
             "use categories_order instead"
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(

@@ -138,19 +138,15 @@ def magic(
     """
     try:
         from magic import MAGIC, __version__
-    except ImportError:
-        msg = (
-            "Please install magic package via `pip install --user "
-            "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
-        )
-        raise ImportError(msg)
+    except ImportError as e:
+        msg = "Please install magic package via `pip install magic-impute`"
+        raise ImportError(msg) from e
     else:
         if Version(__version__) < Version(MIN_VERSION):
             msg = (
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "
-                "Please update magic package via `pip install --user "
-                "--upgrade magic-impute`"
+                "Please update magic package via `pip install -U magic-impute`"
             )
             raise ImportError(msg)
 

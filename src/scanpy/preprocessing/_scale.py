@@ -197,6 +197,7 @@ def scale_array(
                 "zero-center being used with `DaskArray` sparse chunks. "
                 "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
                 UserWarning,
+                stacklevel=2,
             )
         X -= mean
 

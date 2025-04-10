@@ -136,7 +136,7 @@ def test_pbmc3k(image_comparer):
     data_df["leiden"] = adata.obs["leiden"]
     max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
     leiden_relabel = {}
-    for marker_gene, new_label in zip(marker_genes, new_labels):
+    for marker_gene, new_label in zip(marker_genes, new_labels, strict=True):
         leiden_relabel[max_idxs[marker_gene]] = new_label
     adata.obs["leiden_old"] = adata.obs["leiden"].copy()
     adata.rename_categories(

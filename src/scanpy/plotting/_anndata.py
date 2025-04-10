@@ -330,7 +330,7 @@ def _scatter_obs(
                 components -= 1
         except KeyError:
             msg = f"compute coordinates using visualization tool {basis} first"
-            raise KeyError(msg)
+            raise KeyError(msg) from None
     elif x is not None and y is not None:
         if use_raw:
             if x in adata.obs.columns:
@@ -458,7 +458,7 @@ def _scatter_obs(
         centroids[name] = Y_mask[i]
 
     # loop over all categorical annotation and plot it
-    for ikey, palette in zip(categoricals, palettes):
+    for ikey, palette in zip(categoricals, palettes, strict=True):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
             adata, key, palette=palette, force_update_colors=not palette_was_none
@@ -899,7 +899,11 @@ def violin(
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
             kwds["hue"] = groupby
             kwds["palette"] = dict(
-                zip(obs_df[groupby].cat.categories, adata.uns[f"{groupby}_colors"])
+                zip(
+                    obs_df[groupby].cat.categories,
+                    adata.uns[f"{groupby}_colors"],
+                    strict=True,
+                )
             )
     else:
         obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
@@ -932,7 +936,7 @@ def violin(
 
         if stripplot:
             grouped_df = obs_tidy.groupby(x, observed=True)
-            for ax_id, key in zip(range(g.axes.shape[1]), keys):
+            for ax_id, key in zip(range(g.axes.shape[1]), keys, strict=True):
                 sns.stripplot(
                     y=y,
                     data=grouped_df.get_group(key),
@@ -962,7 +966,7 @@ def violin(
             )
         else:
             axs = [ax]
-        for ax, y, ylab in zip(axs, ys, ylabel):
+        for ax, y, ylab in zip(axs, ys, ylabel, strict=True):
             ax = sns.violinplot(
                 x=x,
                 y=y,
@@ -1069,7 +1073,9 @@ def clustermap(
         row_colors = adata.obs[obs_keys]
         _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
         # do this more efficiently... just a quick solution
-        lut = dict(zip(row_colors.cat.categories, adata.uns[obs_keys + "_colors"]))
+        lut = dict(
+            zip(row_colors.cat.categories, adata.uns[obs_keys + "_colors"], strict=True)
+        )
         row_colors = adata.obs[obs_keys].map(lut)
         g = sns.clustermap(df, row_colors=row_colors.values, **kwds)
     else:
@@ -1473,7 +1479,7 @@ def heatmap(
         if var_groups is not None:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
-            for idx, (label, pos) in enumerate(zip(*var_groups)):
+            for idx, (label, pos) in enumerate(zip(*var_groups, strict=True)):
                 label_code = label2code[label] if var_groups_subset_of_groupby else idx
                 arr += [label_code] * (pos[1] + 1 - pos[0])
             gene_groups_ax.imshow(
@@ -1639,7 +1645,7 @@ def tracksplot(
     # a list of ranges that will be used to plot a different
     # color
     cumsum = [0] + list(np.cumsum(obs_tidy.index.value_counts(sort=False)))
-    x_values = [(x, y) for x, y in zip(cumsum[:-1], cumsum[1:])]
+    x_values = [(x, y) for x, y in zip(cumsum[:-1], cumsum[1:], strict=True)]
 
     dendro_height = 1 if dendrogram else 0
 
@@ -1677,7 +1683,7 @@ def tracksplot(
         else:
             ax = fig.add_subplot(axs[ax_idx, 0], sharex=first_ax)
         axs_list.append(ax)
-        for cat_idx, category in enumerate(categories):
+        for cat_idx, _category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
             ax.fill_between(
                 range(x_start, x_end),
@@ -2494,7 +2500,7 @@ def _plot_dendrogram(
         )
         ticks = None
 
-    for xs, ys in zip(icoord, dcoord):
+    for xs, ys in zip(icoord, dcoord, strict=True):
         if ticks is not None:
             xs = translate_pos(xs, ticks, orig_ticks)
         if orientation in ["right", "left"]:

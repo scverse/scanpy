@@ -155,7 +155,7 @@ def test_enumerated_palettes(request, adata, tmp_path, plotfunc):
     base_name = request.node.name
 
     categories = adata.obs["label"].cat.categories
-    colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12)))
+    colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12), strict=True))
 
     dict_pth = tmp_path / f"rgbdict_{base_name}.png"
     list_pth = tmp_path / f"rgblist_{base_name}.png"
