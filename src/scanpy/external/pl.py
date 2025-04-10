@@ -197,9 +197,9 @@ def sam(
     if isinstance(projection, str):
         try:
             dt = adata.obsm[projection]
-        except KeyError:
+        except KeyError as e:
             msg = "Please create a projection first using run_umap or run_tsne"
-            raise ValueError(msg)
+            raise ValueError(msg) from e
     else:
         dt = projection
 

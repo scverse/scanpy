@@ -191,12 +191,12 @@ def marker_gene_overlap(
             reference_markers = {
                 key: set(val) for key, val in reference_markers.items()
             }
-        except Exception:
+        except Exception as e:
             msg = (
                 "Please ensure that `reference_markers` contains "
                 "sets or lists of markers as values."
             )
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     if adj_pval_threshold is not None:
         if "pvals_adj" not in adata.uns[key]:

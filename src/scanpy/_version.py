@@ -24,9 +24,9 @@ def _get_version_from_vcs() -> str:  # pragma: no cover
     try:
         # Version can be either statically set in pyproject.toml or computed dynamically:
         return metadata.core.version or metadata.hatch.version.cached
-    except UnknownPluginError:
+    except UnknownPluginError as e:
         msg = "Unable to import hatch plugin."
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
 
 try:

@@ -136,8 +136,8 @@ def _vals_heterogeneous(
         idxer = slice(None)
     else:
         warnings.warn(
-            UserWarning(
-                f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
-            )
+            f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
+            UserWarning,
+            stacklevel=3,
         )
     return vals[idxer], idxer, full_result

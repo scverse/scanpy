@@ -81,7 +81,7 @@ def correlation_matrix(
         for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
             if j >= n_genes:
                 break
-            name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
+            name_list.append(k[group])
     else:
         if len(name_list) > n_genes:
             name_list = name_list[0:n_genes]
@@ -158,7 +158,7 @@ def ROC_AUC_analysis(
     for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
         if j >= n_genes:
             break
-        name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
+        name_list.append(k[group])
 
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
     groups = "all"

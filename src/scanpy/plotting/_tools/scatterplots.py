@@ -238,7 +238,7 @@ def embedding(
         wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
 
     if components is not None:
-        color, dimensions = list(zip(*product(color, dimensions)))
+        color, dimensions = list(zip(*product(color, dimensions), strict=True))
 
     color, dimensions, marker = _broadcast_args(color, dimensions, marker)
 
@@ -274,7 +274,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
+    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
@@ -1220,7 +1220,7 @@ def _get_palette(adata, values_key: str, palette=None):
         _utils._set_default_colors_for_categorical_obs(adata, values_key)
     else:
         _utils._validate_palette(adata, values_key)
-    return dict(zip(values.categories, adata.uns[color_key]))
+    return dict(zip(values.categories, adata.uns[color_key], strict=True))
 
 
 def _color_vector(

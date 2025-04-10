@@ -935,7 +935,6 @@ def test_plot_rank_genes_groups_gene_symbols(
 
     func(b)
     plt.savefig(pth_1_b)
-    pass
 
     check_same_image(pth_1_a, pth_1_b, tol=1, root=tmp_path)
 
@@ -1494,6 +1493,7 @@ def test_scatter_rep(tmp_path):
             list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
+            strict=True,
         ),
         columns=["rep", "gene", "result"],
     )

@@ -768,7 +768,7 @@ def _paga_graph(
     if isinstance(colors, str) and colors in var_names:
         x_color = []
         cats = adata.obs[groups_key].cat.categories
-        for icat, cat in enumerate(cats):
+        for cat in cats:
             subset = (cat == adata.obs[groups_key]).values
             if adata.raw is not None and use_raw:
                 adata_gene = adata.raw[:, colors]
@@ -785,7 +785,7 @@ def _paga_graph(
     ):
         x_color = []
         cats = adata.obs[groups_key].cat.categories
-        for icat, cat in enumerate(cats):
+        for cat in cats:
             subset = (cat == adata.obs[groups_key]).values
             x_color.append(adata.obs.loc[subset, colors].mean())
         colors = x_color
@@ -892,7 +892,7 @@ def _paga_graph(
             from matplotlib.colors import rgb2hex
 
             colors = [rgb2hex(c) for c in colors]
-        for count, n in enumerate(nx_g_solid.nodes()):
+        for count, _n in enumerate(nx_g_solid.nodes()):
             nx_g_solid.node[count]["label"] = str(node_labels[count])
             nx_g_solid.node[count]["color"] = str(colors[count])
             nx_g_solid.node[count]["viz"] = dict(
@@ -956,7 +956,9 @@ def _paga_graph(
             )
     # else pie chart plot
     else:
-        for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
+        for ix, (xx, yy) in enumerate(
+            zip(pos_array[:, 0], pos_array[:, 1], strict=True)
+        ):
             if not isinstance(colors[ix], Mapping):
                 msg = (
                     f"{colors[ix]} is neither a dict of valid "
@@ -982,7 +984,9 @@ def _paga_graph(
             cumsum = cumsum / cumsum[-1]
             cumsum = [0] + cumsum.tolist()
 
-            for r1, r2, color in zip(cumsum[:-1], cumsum[1:], color_single):
+            for r1, r2, color in zip(
+                cumsum[:-1], cumsum[1:], color_single, strict=True
+            ):
                 angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 20)
                 x = [0] + np.cos(angles).tolist()
                 y = [0] + np.sin(angles).tolist()
@@ -1221,7 +1225,7 @@ def paga_path(
         if not as_heatmap:
             ax.plot(x[xlim[0] : xlim[1]], label=key)
         if ikey == 0:
-            for igroup, group in enumerate(nodes):
+            for group in nodes:
                 if len(groups_names) > 0 and group not in groups_names:
                     label = groups_names[group]
                 else:
@@ -1291,16 +1295,9 @@ def paga_path(
         if show_node_names:
             ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0]) / 2
             x_tick_locs = _sc_utils.moving_average(x_tick_locs, n=2)
-            for ilabel, label in enumerate(x_tick_labels):
-                groups_axis.text(
-                    x_tick_locs[ilabel],
-                    ypos,
-                    x_tick_labels[ilabel],
-                    fontdict=dict(
-                        horizontalalignment="center",
-                        verticalalignment="center",
-                    ),
-                )
+            for loc, label in zip(x_tick_locs, x_tick_labels, strict=True):
+                font = dict(horizontalalignment="center", verticalalignment="center")
+                groups_axis.text(loc, ypos, label, fontdict=font)
         groups_axis.set_xticks([])
         groups_axis.grid(visible=False)
         groups_axis.tick_params(axis="both", which="both", length=0)

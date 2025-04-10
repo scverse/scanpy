@@ -55,7 +55,7 @@ dependencies = [
     "h5py>=3.7",
     "tqdm",
     "scikit-learn>=1.1,<1.6.0",
-    "statsmodels>=0.13",
+    "statsmodels>=0.14",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
@@ -226,22 +226,24 @@ docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
+    "B",       # Likely bugs and design issues
+    "D",       # Documentation style
     "E",       # Error detected by Pycodestyle
+    "EM",      # Traceback-friendly error messages
     "F",       # Errors detected by Pyflakes
-    "W",       # Warning detected by Pycodestyle
-    "UP",      # pyupgrade
-    "I",       # isort
-    "D",       # pydocstyle
-    "TC",      # manage type checking blocks
-    "TID251",  # Banned imports
+    "FBT",     # No positional boolean parameters
+    "I",       # Import sorting
     "ICN",     # Follow import conventions
+    "PIE",     # Syntax simplifications
+    "PLR0917", # Ban APIs with too many positional parameters
+    "PT",      # Pytest style
     "PTH",     # Pathlib instead of os.path
     "PYI",     # Typing
-    "PLR0917", # Ban APIs with too many positional parameters
-    "FBT",     # No positional boolean parameters
-    "PT",      # Pytest style
     "SIM",     # Simplify control flow
-    "EM",      # Traceback-friendly error messages
+    "TC",      # Manage type checking blocks
+    "UP",      # Update legacy syntax
+    "TID251",  # Banned imports
+    "W",       # Warning detected by Pycodestyle
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

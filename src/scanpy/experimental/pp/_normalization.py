@@ -59,6 +59,7 @@ def _pearson_residuals(
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
 
     if isinstance(X, CSBase):

@@ -138,9 +138,9 @@ def leiden(
 
             msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
             _utils.warn_once(msg, FutureWarning, stacklevel=3)
-        except ImportError:
+        except ImportError as e:
             msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
