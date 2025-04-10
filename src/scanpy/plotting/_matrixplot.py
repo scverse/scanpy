@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import rcParams
+from matplotlib import colormaps, rcParams
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -267,7 +266,7 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
             del self.kwds["cmap"]
         normalize = check_colornorm(

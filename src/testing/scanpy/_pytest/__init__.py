@@ -85,13 +85,15 @@ def pytest_collection_modifyitems(
 ) -> None:
     import pytest
 
-    run_internet = config.getoption("--internet-tests")
-    skip_internet = pytest.mark.skip(reason="need --internet-tests option to run")
+    skipif_not_run_internet = pytest.mark.skipif(
+        not config.getoption("--internet-tests"),
+        reason="need --internet-tests option to run",
+    )
     for item in items:
         # All tests marked with `pytest.mark.internet` get skipped unless
         # `--run-internet` passed
-        if not run_internet and ("internet" in item.keywords):
-            item.add_marker(skip_internet)
+        if "internet" in item.keywords:
+            item.add_marker(skipif_not_run_internet)
             item.add_marker(pytest.mark.flaky(reruns=5, reruns_delay=2))
 
 

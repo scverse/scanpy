@@ -129,7 +129,7 @@ def test_sig_conventions(f, qualname):
     elif first_param.name == "data":
         assert first_param.annotation.startswith("AnnData |")
     elif first_param.name in {"filename", "path"}:
-        assert first_param.annotation == "Path | str"
+        assert first_param.annotation == "PathLike[str] | str"
 
     # Test if functions with `copy` follow conventions
     if (copy_param := sig.parameters.get("copy")) is not None and (
