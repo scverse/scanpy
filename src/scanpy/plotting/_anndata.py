@@ -458,7 +458,7 @@ def _scatter_obs(
         centroids[name] = Y_mask[i]
 
     # loop over all categorical annotation and plot it
-    for ikey, palette in zip(categoricals, palettes, strict=True):
+    for ikey, palette in zip(categoricals, palettes, strict=False):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
             adata, key, palette=palette, force_update_colors=not palette_was_none
