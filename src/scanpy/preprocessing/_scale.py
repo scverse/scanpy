@@ -180,7 +180,7 @@ def scale_array(
         # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
         # This is faster than the maskless `axis_mul_or_truediv` path.
         np.ones(x.shape[0], dtype=np.bool_)
-        if isinstance(x, CSRBase) and mask_obs is None
+        if isinstance(x, CSRBase) and mask_obs is None and not zero_center
         else _check_mask(x, mask_obs, "obs")
     )
     if mask_obs is not None:

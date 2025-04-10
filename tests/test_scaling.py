@@ -75,7 +75,7 @@ X_scaled_for_mask_clipped = [
 )
 @pytest.mark.parametrize("container", ["anndata", "array"])
 @pytest.mark.parametrize("dtype", [np.float32, np.int64])
-@pytest.mark.parametrize("zero_center", [True, False])
+@pytest.mark.parametrize("zero_center", [True, False], ids=["center", "no_center"])
 @pytest.mark.parametrize(
     ("mask_obs", "x", "x_centered", "x_scaled"),
     [
