@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 from .. import logging as logg
-from .._compat import DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -33,9 +32,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, NDArray
 
-    from .._utils import _CSMatrix
-
-    _A = TypeVar("_A", bound=_CSMatrix | np.ndarray | DaskArray)
+    _A = TypeVar("_A", bound=CSBase | np.ndarray | DaskArray)
 
 
 @singledispatch
@@ -43,9 +40,8 @@ def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
-@clip.register(csr_matrix)
-@clip.register(csc_matrix)
-def _(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
+@clip.register(CSBase)
+def _(x: CSBase, *, max_value: float, zero_center: bool = True) -> CSBase:
     x.data = clip(x.data, max_value=max_value, zero_center=zero_center)
     return x
 
@@ -124,7 +120,7 @@ def scale(
     -------
     Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
 
-    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Scaled count data matrix.
     `adata.var['mean']` : :class:`pandas.Series` (dtype `float`)
         Means per gene before scaling.
@@ -148,8 +144,7 @@ def scale(
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
-@scale.register(csc_matrix)
-@scale.register(csr_matrix)
+@scale.register(CSBase)
 def scale_array(
     x: _A,
     *,
@@ -195,8 +190,8 @@ def scale_array(
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
-        if isinstance(x, csr_matrix | csc_matrix) or (
-            isinstance(x, DaskArray) and issparse(x._meta)
+        if isinstance(x, CSBase) or (
+            isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             warnings.warn(
                 "zero-center being used with `DaskArray` sparse chunks. "
@@ -209,7 +204,7 @@ def scale_array(
         x,
         std,
         op=truediv,
-        out=x if isinstance(x, np.ndarray | csr_matrix | csc_matrix) else None,
+        out=x if isinstance(x, np.ndarray | CSBase) else None,
         axis=1,
     )
 
@@ -237,8 +232,8 @@ def scale_array_masked(
         NDArray[np.float64],
     ]
 ):
-    if isinstance(x, csr_matrix | csc_matrix) and not zero_center:
-        if isinstance(x, csc_matrix):
+    if isinstance(x, CSBase) and not zero_center:
+        if isinstance(x, CSCBase):
             x = x.tocsr()
         mean, var = _get_mean_var(x[mask_obs, :])
         std = np.sqrt(var)

@@ -16,8 +16,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from .._compat import CSBase, _LegacyRandom
 
 
 try:
@@ -37,7 +36,7 @@ def leiden(
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: _CSMatrix | None = None,
+    adjacency: CSBase | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
