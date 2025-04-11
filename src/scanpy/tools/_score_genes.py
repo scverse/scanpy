@@ -42,10 +42,12 @@ def _get_sparce_nanmean_columns(
 def _get_sparce_nanmean_rows(
     data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
+    #copy 1 time
+    new_ptr = indptr[:-1]
     sum_arr = np.add.reduceat(
-        np.nan_to_num(data, nan=0.0), indptr[:-1], dtype=np.float64
+        np.nan_to_num(data, nan=0.0), new_ptr, dtype=np.float64
     )
-    nans_arr = np.add.reduceat(np.isnan(data), indptr[:-1], dtype=np.float64)
+    nans_arr = np.add.reduceat(np.isnan(data), new_ptr, dtype=np.float64)
     return sum_arr / (shape[1] - nans_arr)
 
 
