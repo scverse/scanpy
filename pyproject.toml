@@ -235,6 +235,7 @@ select = [
     "FBT",    # No positional boolean parameters
     "I",      # Import sorting
     "ICN",    # Follow import conventions
+    "ISC",    # Implicit string concatenation
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint

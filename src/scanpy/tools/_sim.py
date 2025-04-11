@@ -762,7 +762,7 @@ class GRNsim:
             settings.m(
                 0,
                 "... either no fixed point in [0,1]^2! \n"
-                + "    or fixed point is too close to bounds",
+                "    or fixed point is too close to bounds",
             )
             return None
         XbackUp = self.sim_model_backwards(
@@ -1247,7 +1247,7 @@ if __name__ == "__main__":
         default="",
         help=(
             "specify directory to store data, "
-            + ' must start with "sim/MODEL_...", see possible values for MODEL below '
+            ' must start with "sim/MODEL_...", see possible values for MODEL below '
         ),
     )
     aa("--show", action="store_true", help="show plots")
