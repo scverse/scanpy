@@ -54,13 +54,13 @@ else:
 __all__ = [
     "DaskArray",
     "ZappyArray",
+    "_numba_threading_layer",
+    "deprecated",
     "fullname",
+    "njit",
+    "old_positionals",
     "pkg_metadata",
     "pkg_version",
-    "old_positionals",
-    "deprecated",
-    "njit",
-    "_numba_threading_layer",
 ]
 
 

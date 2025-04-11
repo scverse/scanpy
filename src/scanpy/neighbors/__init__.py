@@ -704,8 +704,8 @@ class Neighbors:
                 # Use defaults from UMAP’s `nearest_neighbors` function
                 kwds.update(
                     n_jobs=settings.n_jobs,
-                    n_trees=min(64, 5 + int(round((self._adata.n_obs) ** 0.5 / 20.0))),
-                    n_iters=max(5, int(round(np.log2(self._adata.n_obs)))),
+                    n_trees=min(64, 5 + round((self._adata.n_obs) ** 0.5 / 20.0)),
+                    n_iters=max(5, round(np.log2(self._adata.n_obs))),
                 )
             transformer = PyNNDescentTransformer(**kwds)
         elif transformer == "rapids":

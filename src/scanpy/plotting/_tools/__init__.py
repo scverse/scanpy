@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+import operator
 from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import TYPE_CHECKING
@@ -546,7 +548,9 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     if var_names is not None:
         if isinstance(var_names, Mapping):
             # get a single list of all gene names in the dictionary
-            var_names_list = sum([list(x) for x in var_names.values()], [])
+            var_names_list = functools.reduce(
+                operator.iadd, [list(x) for x in var_names.values()], []
+            )
         elif isinstance(var_names, str):
             var_names_list = [var_names]
         else:

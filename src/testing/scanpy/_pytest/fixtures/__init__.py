@@ -23,12 +23,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
-    "float_dtype",
     "_doctest_env",
-    "pbmc3ks_parametrized_session",
+    "backed_adata",
+    "float_dtype",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
-    "backed_adata",
+    "pbmc3ks_parametrized_session",
 ]
 
 
