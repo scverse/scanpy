@@ -62,7 +62,7 @@ def imported_modules():
     return IMPORTED
 
 
-class CompareResult(TypedDict):  # noqa: D101
+class CompareResult(TypedDict):
     rms: float
     expected: str
     actual: str

@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from .._compat import CSBase, _LegacyRandom
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -48,14 +47,14 @@ except ImportError:
     "obsp",
     "copy",
 )
-def louvain(
+def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
     *,
     random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: _CSMatrix | None = None,
+    adjacency: CSBase | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
@@ -193,7 +192,7 @@ def louvain(
             "`flavor='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf

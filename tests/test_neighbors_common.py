@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from scipy import sparse
 
+    from scanpy._compat import CSRBase
+
 
 def mk_knn_matrix(
     n_obs: int,
@@ -26,7 +28,7 @@ def mk_knn_matrix(
     *,
     style: Literal["basic", "rapids", "sklearn"],
     duplicates: bool = False,
-) -> sparse.csr_matrix:
+) -> CSRBase:
     n_col = n_neighbors + (1 if style == "sklearn" else 0)
     dists = np.abs(np.random.randn(n_obs, n_col)) + 1e-8
     idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
@@ -84,7 +86,8 @@ def test_ind_dist_shortcut_manual(
     ],
 )
 def test_ind_dist_shortcut_premade(
-    n_neighbors: int | None, mk_mat: Callable[[int, int], sparse.csr_matrix]
+    n_neighbors: int | None,
+    mk_mat: Callable[[int, int], sparse.csr_matrix],  # noqa: TID251
 ):
     n_obs = 10
     if n_neighbors is None:

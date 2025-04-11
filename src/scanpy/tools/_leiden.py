@@ -15,29 +15,25 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
-
-
-try:
     from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
 
-    class MutableVertexPartition:
-        pass
+    from .._compat import CSBase, _LegacyRandom
+else:
+    try:
+        from leidenalg.VertexPartition import MutableVertexPartition
+    except ImportError:
+        MutableVertexPartition = type("MutableVertexPartition", (), {})
+        MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
-    MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
-
-def leiden(
+def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: _CSMatrix | None = None,
+    adjacency: CSBase | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -139,9 +135,9 @@ def leiden(
 
             msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
             _utils.warn_once(msg, FutureWarning, stacklevel=3)
-        except ImportError:
+        except ImportError as e:
             msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")

@@ -6,17 +6,14 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from scipy.sparse import issparse
 
 from ... import logging as logg
-from ..._compat import deprecated, old_positionals
+from ..._compat import CSBase, deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
-
-    from .._utils import _CSMatrix
 
 
 @deprecated("Use sc.pp.highly_variable_genes instead")
@@ -32,8 +29,8 @@ if TYPE_CHECKING:
     "subset",
     "copy",
 )
-def filter_genes_dispersion(
-    data: AnnData | _CSMatrix | np.ndarray,
+def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
+    data: AnnData | CSBase | np.ndarray,
     *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
@@ -128,7 +125,7 @@ def filter_genes_dispersion(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
         msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-        warnings.warn(msg, UserWarning)
+        warnings.warn(msg, UserWarning, stacklevel=2)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:
@@ -268,7 +265,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 
 def _filter_genes(X, e_cutoff, v_cutoff, meth):
     """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
-    if issparse(X):
+    if isinstance(X, CSBase):
         msg = "Not defined for sparse input. See `filter_genes_dispersion`."
         raise ValueError(msg)
     mean_filter = np.mean(X, axis=0) > e_cutoff

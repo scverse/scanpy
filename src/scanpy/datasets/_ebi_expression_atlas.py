@@ -19,6 +19,8 @@ from ._utils import check_datasetdir_exists
 if TYPE_CHECKING:
     from pandas._typing import ReadCsvBuffer
 
+    from scanpy._compat import CSRBase
+
 
 CHUNK_SIZE = int(1e7)
 
@@ -61,7 +63,7 @@ def download_experiment(accession: str):
     )
 
 
-def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> sparse.csr_matrix:
+def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> CSRBase:
     curline = stream.readline()
     while curline.startswith(b"%"):
         curline = stream.readline()
@@ -89,7 +91,7 @@ def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> sparse.csr_matrix:
             i[start : start + l] = chunk[1] - 1
             j[start : start + l] = chunk[0] - 1
             start += l
-    return sparse.csr_matrix((data, (i, j)), shape=(m, n))
+    return sparse.csr_matrix((data, (i, j)), shape=(m, n))  # noqa: TID251
 
 
 def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:

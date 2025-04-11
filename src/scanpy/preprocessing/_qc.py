@@ -7,13 +7,14 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
+from scipy import sparse
 
+from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
-from .._compat import DaskArray, njit
-from .._utils import _CSMatrix, _doc_params, axis_nnz, axis_sum
+from .._compat import CSBase, CSRBase, DaskArray, njit
+from .._utils import _doc_params, axis_nnz, axis_sum
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -25,24 +26,10 @@ from ._docs import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from typing import Any
 
     from anndata import AnnData
-
-
-def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
-    is_layer = layer is not None
-    if use_raw and is_layer:
-        msg = (
-            "Cannot use expression from both layer and raw. You provided:"
-            f"{use_raw=!r} and {layer=!r}"
-        )
-        raise ValueError(msg)
-    if is_layer:
-        return adata.layers[layer]
-    elif use_raw:
-        return adata.raw.X
-    else:
-        return adata.X
+    from numpy._typing._array_like import NDArray
 
 
 @_doc_params(
@@ -52,7 +39,7 @@ def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
     doc_qc_metric_naming=doc_qc_metric_naming,
     doc_obs_qc_returns=doc_obs_qc_returns,
 )
-def describe_obs(
+def describe_obs(  # noqa: PLR0913
     adata: AnnData,
     *,
     expr_type: str = "counts",
@@ -99,13 +86,12 @@ def describe_obs(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, coo_matrix):
-            X = csr_matrix(X)  # COO not subscriptable
-        if isinstance(X, _CSMatrix):
+        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        if isinstance(X, CSBase):
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     obs_metrics[f"n_{var_type}_by_{expr_type}"] = materialize_as_ndarray(
@@ -162,7 +148,7 @@ def describe_var(
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    X: _CSMatrix | coo_matrix | np.ndarray | None = None,
+    X: CSBase | sparse.coo_matrix | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """Describe variables of anndata.
 
@@ -189,10 +175,8 @@ def describe_var(
     """
     # Handle whether X is passed
     if X is None:
-        X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, coo_matrix):
-            X = csr_matrix(X)  # COO not subscriptable
-        if isinstance(X, _CSMatrix):
+        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        if isinstance(X, CSBase):
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
@@ -296,12 +280,11 @@ def calculate_qc_metrics(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Pass X so I only have to do it once
-    X = _choose_mtx_rep(adata, use_raw=use_raw, layer=layer)
-    if isinstance(X, coo_matrix):
-        X = csr_matrix(X)  # COO not subscriptable
-    if isinstance(X, _CSMatrix):
+    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    if isinstance(X, CSBase):
         X.eliminate_zeros()
 
     # Convert qc_vars to list if str
@@ -331,7 +314,7 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
+def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
     """Calculate cumulative proportions of top expressed genes.
 
     Parameters
@@ -344,16 +327,16 @@ def top_proportions(mtx: np.ndarray | _CSMatrix | coo_matrix, n: int):
         expressed gene.
 
     """
-    if issparse(mtx):
-        if not isinstance(mtx, csr_matrix):
-            mtx = csr_matrix(mtx)
+    if isinstance(mtx, CSBase | sparse.coo_matrix):
+        if not isinstance(mtx, CSRBase):
+            mtx = sparse.csr_matrix(mtx)  # noqa: TID251
         # Allowing numba to do more
         return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
     else:
         return top_proportions_dense(mtx, n)
 
 
-def top_proportions_dense(mtx, n):
+def top_proportions_dense(mtx: np.ndarray, n: int) -> NDArray[np.float64]:
     sums = mtx.sum(axis=1)
     partitioned = np.apply_along_axis(np.argpartition, 1, -mtx, n - 1)
     partitioned = partitioned[:, :n]
@@ -366,7 +349,9 @@ def top_proportions_dense(mtx, n):
     return values
 
 
-def top_proportions_sparse_csr(data, indptr, n):
+def top_proportions_sparse_csr(
+    data: NDArray[np.number[Any]], indptr: NDArray[np.integer[Any]], n: int
+) -> NDArray[np.float64]:
     values = np.zeros((indptr.size - 1, n), dtype=np.float64)
     for i in numba.prange(indptr.size - 1):
         start, end = indptr[i], indptr[i + 1]
@@ -385,7 +370,7 @@ def top_proportions_sparse_csr(data, indptr, n):
 def check_ns(func):
     @wraps(func)
     def check_ns_inner(
-        mtx: np.ndarray | _CSMatrix | coo_matrix | DaskArray, ns: Collection[int]
+        mtx: np.ndarray | CSBase | sparse.coo_matrix | DaskArray, ns: Collection[int]
     ):
         if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
             msg = "Positions outside range of features."
@@ -429,7 +414,7 @@ def top_segment_proportions(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
 @top_segment_proportions.register(DaskArray)
 @check_ns
 def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
-    if not isinstance(mtx._meta, csr_matrix | np.ndarray):
+    if not isinstance(mtx._meta, CSRBase | np.ndarray):
         msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
         raise ValueError(msg)
     return mtx.map_blocks(
@@ -437,13 +422,12 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
     ).compute()
 
 
-@top_segment_proportions.register(csr_matrix)
-@top_segment_proportions.register(csc_matrix)
-@top_segment_proportions.register(coo_matrix)
+@top_segment_proportions.register(CSBase)
+@top_segment_proportions.register(sparse.coo_matrix)
 @check_ns
-def _(mtx: _CSMatrix | coo_matrix, ns: Collection[int]) -> DaskArray:
-    if not isinstance(mtx, csr_matrix):
-        mtx = csr_matrix(mtx)
+def _(mtx: CSBase | sparse.coo_matrix, ns: Collection[int]) -> DaskArray:
+    if not isinstance(mtx, CSRBase):
+        mtx = sparse.csr_matrix(mtx)  # noqa: TID251
     return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
 
 

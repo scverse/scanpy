@@ -84,7 +84,7 @@ class FastSuite:
         ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
         [None, "off-axis"],
     )
-    param_names = ["dataset", "layer"]
+    param_names = ("dataset", "layer")
 
     def time_mean_var(self, *_):
         _get_mean_var(adata.X)
