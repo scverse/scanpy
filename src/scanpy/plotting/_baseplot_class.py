@@ -111,7 +111,7 @@ class BasePlot:
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -135,7 +135,7 @@ class BasePlot:
         norm: Normalize | None = None,
         **kwds,
     ):
-        self.var_names, self.var_groups = _var_groups(var_names, ref=adata.var_names)
+        self.var_names, self.var_groups = _var_groups(var_names)
         if self.var_groups is None:
             self.var_groups = VarGroups.validate(var_group_labels, var_group_positions)
         elif var_group_labels is not None or var_group_positions is not None:
@@ -646,7 +646,7 @@ class BasePlot:
             self.vboundnorm.norm,
         )
 
-    def make_figure(self):
+    def make_figure(self) -> None:  # noqa: PLR0912, PLR0915
         r"""Render the image but does not call :func:`matplotlib.pyplot.show`.
 
         Useful when several plots are put together into one figure.
@@ -909,7 +909,7 @@ class BasePlot:
 
 
 def _var_groups(
-    var_names: _VarNames | Mapping[str, _VarNames], *, ref: pd.Index[str]
+    var_names: _VarNames | Mapping[str, _VarNames],
 ) -> tuple[Sequence[str], VarGroups | None]:
     """Normalize var_names.
 
@@ -924,8 +924,8 @@ def _var_groups(
     var_group_labels: list[str] = []
     var_names_seq: list[str] = []
     var_group_positions: list[tuple[int, int]] = []
-    for label, vars_list in var_names.items():
-        vars_list = [vars_list] if isinstance(vars_list, str) else vars_list
+    for label, vars in var_names.items():
+        vars_list = [vars] if isinstance(vars, str) else vars
         start = len(var_names_seq)
         # use list() in case var_list is a numpy array or pandas series
         var_names_seq.extend(list(vars_list))

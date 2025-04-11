@@ -70,7 +70,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 
 
 @doctest_needs("leidenalg")
-def marker_gene_overlap(
+def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,

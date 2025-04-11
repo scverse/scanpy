@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("trimap")
-def trimap(
+def trimap(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,

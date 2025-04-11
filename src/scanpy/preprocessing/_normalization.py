@@ -106,7 +106,7 @@ def _normalize_csr(
     "inplace",
     "copy",
 )
-def normalize_total(
+def normalize_total(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     target_sum: float | None = None,

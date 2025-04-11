@@ -15,21 +15,18 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
+    from leidenalg.VertexPartition import MutableVertexPartition
 
     from .._compat import CSBase, _LegacyRandom
+else:
+    try:
+        from leidenalg.VertexPartition import MutableVertexPartition
+    except ImportError:
+        MutableVertexPartition = type("MutableVertexPartition", (), {})
+        MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
-try:
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
-
-    class MutableVertexPartition:
-        pass
-
-    MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
-
-
-def leiden(
+def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
