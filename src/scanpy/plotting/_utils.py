@@ -383,12 +383,13 @@ def _validate_palette(adata: AnnData, key: str) -> None:
     is a valid R color name, in which case it will be translated to a valid name
     """
     color_key = f"{key}_colors"
+    raw_palette = adata.uns[color_key]
     try:
         # check if the color is a valid R color and translate it
         # to a valid hex color value
-        _palette = [
+        palette = [
             color if is_color_like(color) else additional_colors[color]
-            for color in adata.uns[color_key]
+            for color in raw_palette
         ]
     except KeyError as e:
         logg.warning(
@@ -396,11 +397,11 @@ def _validate_palette(adata: AnnData, key: str) -> None:
             f"is not valid: {e.args[0]!r}. Default colors will be used instead."
         )
         _set_default_colors_for_categorical_obs(adata, key)
-        _palette = None
+        palette = None
     # Don’t modify if nothing changed
-    if _palette is None or np.array_equal(_palette, adata.uns[color_key]):
+    if palette is None or np.array_equal(palette, adata.uns[color_key]):
         return
-    adata.uns[color_key] = _palette
+    adata.uns[color_key] = palette
 
 
 def _set_colors_for_categorical_obs(
