@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-from anndata import AnnData  # noqa: TCH002
-from matplotlib.axes import Axes  # noqa: TCH002
+from anndata import AnnData  # noqa: TC002
+from matplotlib.axes import Axes  # noqa: TC002
 from sklearn.utils import deprecated
 
 from .._compat import old_positionals
@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "phate",
-    "trimap",
     "harmony_timeseries",
+    "phate",
     "sam",
+    "trimap",
     "wishbone_marker_trajectory",
 ]
 
