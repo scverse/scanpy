@@ -188,10 +188,10 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(name: str) -> Any:
+def _import_name(full_name: str) -> Any:
     from importlib import import_module
 
-    parts = name.split(".")
+    parts = full_name.split(".")
     obj = import_module(parts[0])
     for _i, name in enumerate(parts[1:]):
         i = _i
@@ -387,7 +387,7 @@ def compute_association_matrix_of_groups(
     asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
-            pred_group = str(ipred_group)
+            pred_group = str(ipred_group)  # noqa: PLW2901
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
@@ -927,7 +927,9 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
+def warn_with_traceback(  # noqa: PLR0917
+    message, category, filename, lineno, file=None, line=None
+) -> None:
     """Get full tracebacks when warning is raised by setting.
 
     warnings.showwarning = warn_with_traceback

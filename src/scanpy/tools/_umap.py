@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     "method",
     "neighbors_key",
 )
-def umap(
+def umap(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     *,
     min_dist: float = 0.5,

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     "copy",
     "random_state",
 )
-def scrublet(
+def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
     *,
@@ -301,7 +301,7 @@ def scrublet(
     return adata if copy else None
 
 
-def _scrublet_call_doublets(
+def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,
     *,

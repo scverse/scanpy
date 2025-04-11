@@ -42,7 +42,7 @@ def float_dtype(request):
 def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
     showwarning_orig = warnings.showwarning
 
-    def showwarning(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
+    def showwarning(message, category, filename, lineno, file=None, line=None) -> None:  # noqa: PLR0917
         if file is None:
             if line is None:
                 import linecache

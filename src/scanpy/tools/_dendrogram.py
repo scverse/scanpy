@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     "inplace",
 )
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def dendrogram(
+def dendrogram(  # noqa: PLR0913
     adata: AnnData,
     groupby: str | Sequence[str],
     *,

@@ -69,7 +69,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def neighbors(
+def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
@@ -297,7 +297,7 @@ def _make_forest_dict(forest):
 class OnFlySymMatrix:
     """Emulate a matrix where elements are calculated on the fly."""
 
-    def __init__(  # noqa: D107
+    def __init__(
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
@@ -369,7 +369,7 @@ class Neighbors:
     """
 
     @old_positionals("n_dcs", "neighbors_key")
-    def __init__(  # noqa: D107
+    def __init__(  # noqa: PLR0912, PLR0915
         self,
         adata: AnnData,
         *,
@@ -524,7 +524,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-    def compute_neighbors(
+    def compute_neighbors(  # noqa: PLR0912
         self,
         n_neighbors: int = 30,
         n_pcs: int | None = None,

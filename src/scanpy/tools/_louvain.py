@@ -47,7 +47,7 @@ except ImportError:
     "obsp",
     "copy",
 )
-def louvain(
+def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
     *,

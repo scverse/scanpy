@@ -226,55 +226,58 @@ docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
-    "B",       # Likely bugs and design issues
-    "D",       # Documentation style
-    "E",       # Error detected by Pycodestyle
-    "EM",      # Traceback-friendly error messages
-    "F",       # Errors detected by Pyflakes
-    "FBT",     # No positional boolean parameters
-    "I",       # Import sorting
-    "ICN",     # Follow import conventions
-    "PIE",     # Syntax simplifications
-    "PLR0917", # Ban APIs with too many positional parameters
-    "PT",      # Pytest style
-    "PTH",     # Pathlib instead of os.path
-    "PYI",     # Typing
-    "SIM",     # Simplify control flow
-    "TC",      # Manage type checking blocks
-    "UP",      # Update legacy syntax
-    "TID251",  # Banned imports
-    "W",       # Warning detected by Pycodestyle
+    "B",      # Likely bugs and design issues
+    "D",      # Documentation style
+    "E",      # Error detected by Pycodestyle
+    "EM",     # Traceback-friendly error messages
+    "F",      # Errors detected by Pyflakes
+    "FBT",    # No positional boolean parameters
+    "I",      # Import sorting
+    "ICN",    # Follow import conventions
+    "PIE",    # Syntax simplifications
+    "PL",     # Pylint
+    "PT",     # Pytest style
+    "PTH",    # Pathlib instead of os.path
+    "PYI",    # Typing
+    "RUF100", # Unused noqa
+    "SIM",    # Simplify control flow
+    "TC",     # Manage type checking blocks
+    "UP",     # Update legacy syntax
+    "TID251", # Banned imports
+    "W",      # Warning detected by Pycodestyle
 ]
+external = [ "PLR0917" ] # preview lint that we use
 ignore = [
-    # line too long -> we accept long comment lines; black gets rid of long code lines
-    "E501",
-    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
-    "E402",
     # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
     "E262",
+    # module level import not at top of file -> required to circumvent circular imports for Scanpys API
+    "E402",
+    # line too long -> we accept long comment lines; black gets rid of long code lines
+    "E501",
     # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
     "E741",
-    # `Literal["..."] | str` is useful for autocompletion
-    "PYI051",
     # We ban blank lines before docstrings instead of the opposite
     "D203",
     # We want multiline summaries to start on the first line, not the second
     "D213",
     # TODO: replace our current param docs reuse with this and remove it here:
     "D417",
+    # Numbers like “2” aren’t that “magic”.
+    "PLR2004",
+    # `Literal["..."] | str` is useful for autocompletion
+    "PYI051",
 ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
 # No need for docstrings for all benchmarks
 "benchmarks/**/*.py" = [ "D102", "D103" ]
-# No need for docstrings for all test modules and test functions
-"tests/**/*.py" = [ "D100", "D101", "D103" ]
+# D*: No need for docstrings for all test modules and test functions
+# PLR0913: Test may use many fixtures
+"tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 [tool.ruff.lint.isort]
 known-first-party = [ "scanpy", "testing.scanpy" ]
 required-imports = [ "from __future__ import annotations" ]
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
@@ -290,6 +293,11 @@ convention = "numpy"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = [  ]
 strict = true
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+[tool.ruff.lint.pylint]
+max-args = 10
+max-positional-args = 5
 
 [tool.towncrier]
 name = "scanpy"

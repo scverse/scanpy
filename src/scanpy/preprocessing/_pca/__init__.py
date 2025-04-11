@@ -59,7 +59,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 @_doc_params(
     mask_var_hvg=doc_mask_var_hvg,
 )
-def pca(
+def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
@@ -218,11 +218,10 @@ def pca(
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
+    elif pkg_version("anndata") < Version("0.8.0rc1"):
+        adata = AnnData(data, dtype=data.dtype)
     else:
-        if pkg_version("anndata") < Version("0.8.0rc1"):
-            adata = AnnData(data, dtype=data.dtype)
-        else:
-            adata = AnnData(data)
+        adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
@@ -286,12 +285,12 @@ def pca(
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            pca_.partial_fit(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            pca_.partial_fit(chunk_dense)
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            X_pca[start:end] = pca_.transform(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            X_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
         if isinstance(X, CSBase) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
