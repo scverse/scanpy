@@ -982,14 +982,14 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
 
             cumsum = np.cumsum(fracs)
             cumsum = cumsum / cumsum[-1]
-            cumsum = [0] + cumsum.tolist()
+            cumsum = [0, *cumsum.tolist()]
 
             for r1, r2, color in zip(
                 cumsum[:-1], cumsum[1:], color_single, strict=True
             ):
                 angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 20)
-                x = [0] + np.cos(angles).tolist()
-                y = [0] + np.sin(angles).tolist()
+                x = [0, *np.cos(angles).tolist()]
+                y = [0, *np.sin(angles).tolist()]
 
                 xy = np.column_stack([x, y])
                 s = np.abs(xy).max()

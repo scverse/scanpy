@@ -81,7 +81,7 @@ class FastSuite:
         ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
         ["counts", "counts-off-axis"],
     )
-    param_names = ["dataset", "layer"]
+    param_names = ("dataset", "layer")
 
     def time_calculate_qc_metrics(self, *_):
         sc.pp.calculate_qc_metrics(

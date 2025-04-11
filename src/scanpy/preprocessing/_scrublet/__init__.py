@@ -402,7 +402,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     # Estimate n_neighbors if not provided, and create scrublet object.
 
     if n_neighbors is None:
-        n_neighbors = int(round(0.5 * np.sqrt(adata_obs.shape[0])))
+        n_neighbors = round(0.5 * np.sqrt(adata_obs.shape[0]))
 
     # Note: Scrublet() will sparse adata_obs.X if it's not already, but this
     # matrix won't get used if we pre-set the normalised slots.
