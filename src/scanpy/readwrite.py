@@ -473,7 +473,7 @@ def read_visium(
                 adata.uns["spatial"][library_id]["images"][res] = imread(
                     str(files[f"{res}_image"])
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203
                 msg = f"Could not find '{res}_image'"
                 raise OSError(msg) from e
 
@@ -977,11 +977,10 @@ def get_used_files():
     for proc in loop_over_scanpy_processes:
         try:
             flist = proc.open_files()
-            for nt in flist:
-                filenames.append(nt.path)
+            filenames.extend(nt.path for nt in flist)
         # This catches a race condition where a process ends
         # before we can examine its files
-        except psutil.NoSuchProcess:
+        except psutil.NoSuchProcess:  # noqa: PERF203
             pass
     return set(filenames)
 

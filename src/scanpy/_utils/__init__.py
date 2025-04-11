@@ -204,7 +204,7 @@ def _import_name(full_name: str) -> Any:
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
-        except AttributeError as e:
+        except AttributeError as e:  # noqa: PERF203
             msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
             raise RuntimeError(msg) from e
     return obj

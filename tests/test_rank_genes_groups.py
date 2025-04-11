@@ -291,7 +291,7 @@ def test_wilcoxon_tie_correction(reference):
                 _, pvals[i] = mannwhitneyu(
                     X[:, i], Y[:, i], use_continuity=False, alternative="two-sided"
                 )
-            except ValueError:
+            except ValueError:  # noqa: PERF203
                 pvals[i] = 1
 
     if reference:

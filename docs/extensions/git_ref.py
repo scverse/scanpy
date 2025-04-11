@@ -28,14 +28,14 @@ def get() -> str | None:
     try:
         git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
         git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
     # (if no name found or relative ref, use commit hash instead)
     if not git_ref or re.search(r"[\^~]", git_ref):
         try:
             git_ref = git("rev-parse", "HEAD")
-        except Exception:
+        except Exception:  # noqa: BLE001
             git_ref = "main"
     return git_ref
 
