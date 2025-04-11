@@ -227,6 +227,7 @@ docstring-code-format = true
 [tool.ruff.lint]
 select = [
     "B",      # Likely bugs and design issues
+    "C4",     # Comprehensions
     "D",      # Documentation style
     "E",      # Error detected by Pycodestyle
     "EM",     # Traceback-friendly error messages
@@ -248,6 +249,8 @@ select = [
 ]
 external = [ "PLR0917" ] # preview lint that we use
 ignore = [
+    # dict() syntax is preferrable when creating dicts for kwargs
+    "C408",
     # E266 too many leading '#' for block comment -> Scanpy allows them for comments into sections
     "E262",
     # module level import not at top of file -> required to circumvent circular imports for Scanpys API

@@ -603,7 +603,7 @@ class GRNsim:
         elif "var" in self.model.name:
             # vector auto regressive process
             self.Coupl = Coupl
-            self.boolRules = {s: "" for s in self.varNames}
+            self.boolRules = dict.fromkeys(self.varNames, "")
             names = list(self.varNames.keys())
             for gp in range(self.dim):
                 pas = []
