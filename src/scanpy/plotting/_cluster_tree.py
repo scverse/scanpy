@@ -294,7 +294,9 @@ def compute_cluster_layout(
             g.add_vertices(nodes)
             g.add_edges([(nodes.index(u), nodes.index(v)) for u, v in edges])
             layout = g.layout_reingold_tilford(root=[0])
-            pos = {node: coord for node, coord in zip(nodes, layout.coords)}
+            pos = {
+                node: coord for node, coord in zip(nodes, layout.coords, strict=False)
+            }
         except ImportError as e:
             print(
                 f"igraph not installed or failed: {e}. Falling back to multipartite_layout."
@@ -354,7 +356,7 @@ def compute_cluster_layout(
                 if n_nodes > 1
                 else [0]
             )
-            for node, x in zip(sorted_nodes, x_positions):
+            for node, x in zip(sorted_nodes, x_positions, strict=False):
                 pos[node] = (x, y_level)
 
         # Upward sweep: Adjust nodes based on child positions
@@ -383,7 +385,7 @@ def compute_cluster_layout(
                 if n_nodes > 1
                 else [0]
             )
-            for node, x in zip(sorted_nodes, x_positions):
+            for node, x in zip(sorted_nodes, x_positions, strict=False):
                 pos[node] = (x, y_level)
 
     # Step 5: Optimize node ordering to further reduce crossings
@@ -738,7 +740,7 @@ def draw_cluster_tree(
             scaled_sizes = normalized_sizes * node_size
         else:
             scaled_sizes = np.array([node_size])
-        for node, scaled_size in zip(nodes_at_level, scaled_sizes):
+        for node, scaled_size in zip(nodes_at_level, scaled_sizes, strict=False):
             node_sizes[node] = scaled_size
 
     # Step 3: Generate color schemes for nodes
@@ -761,9 +763,9 @@ def draw_cluster_tree(
             for i, r in enumerate(resolutions):
                 color_spec = node_colormap[i]
                 if (
-                    isinstance(color_spec, str)
-                    and mcolors.is_color_like(color_spec)
-                    or isinstance(color_spec, tuple)
+                    isinstance(color_spec, str) and mcolors.is_color_like(color_spec)
+                ) or (
+                    isinstance(color_spec, tuple)
                     and len(color_spec) in (3, 4)
                     and all(isinstance(x, int | float) for x in color_spec)
                 ):
@@ -896,7 +898,7 @@ def draw_cluster_tree(
     }
 
     # for (u, v), w, e_color in zip([(u, v) for u, v in G.edges()], weights, edge_colors):
-    for (u, v), w, e_color in zip(edges, weights, edge_colors):
+    for (u, v), w, e_color in zip(edges, weights, edge_colors, strict=False):
         x1, y1 = pos[u]
         x2, y2 = pos[v]
         radius_parent = math.sqrt(node_sizes[u] / math.pi)

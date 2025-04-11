@@ -97,7 +97,9 @@ def find_cluster_specific_genes(
                             subcluster
                         ]
                         top_genes = [
-                            name for name, score in zip(names, scores) if score > 0
+                            name
+                            for name, score in zip(names, scores, strict=False)
+                            if score > 0
                         ][:n_top_genes]
                         parent_node = f"res_{res}_C{cluster}"
                         child_node = f"res_{resolutions[i + 1]}_C{subcluster}"
@@ -131,7 +133,9 @@ def find_cluster_specific_genes(
                     names = deg_adata.uns["rank_genes_groups"]["names"][cluster]
                     scores = deg_adata.uns["rank_genes_groups"]["scores"][cluster]
                     top_genes = [
-                        name for name, score in zip(names, scores) if score > 0
+                        name
+                        for name, score in zip(names, scores, strict=False)
+                        if score > 0
                     ][:n_top_genes]
                     parent_cluster = adata.obs[deg_adata.obs[res_key] == cluster][
                         prev_res_key

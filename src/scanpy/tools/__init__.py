@@ -42,6 +42,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "cluster_resolution_finder",
     "dendrogram",
     "diffmap",
     "dpt",
@@ -59,5 +60,4 @@ __all__ = [
     "sim",
     "tsne",
     "umap",
-    "cluster_resolution_finder",
 ]
