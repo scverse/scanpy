@@ -14,7 +14,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal
+    from typing import Any, Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -28,28 +28,37 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
+def _get_sparce_nanmean_columns(
+    data: NDArray[Any], indices: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    sum_arr = np.zeros(shape[1], dtype=np.float64)
+    nans_arr = np.zeros(shape[1], dtype=np.float64)
+    np.add.at(sum_arr, indices, np.nan_to_num(data, nan=0.0))
+    np.add.at(nans_arr, indices, np.isnan(data))
+    nans_arr[nans_arr == shape[0]] = np.nan
+    return sum_arr / (shape[0] - nans_arr)
+
+
+def _get_sparce_nanmean_rows(
+    data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    # copy 1 time
+    new_ptr = indptr[:-1]
+    sum_arr = np.add.reduceat(np.nan_to_num(data, nan=0.0), new_ptr, dtype=np.float64)
+    nans_arr = np.add.reduceat(np.isnan(data), new_ptr, dtype=np.float64)
+    return sum_arr / (shape[1] - nans_arr)
+
+
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not isinstance(X, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
-    # count the number of nan elements per row/column (dep. on axis)
-    Z = X.copy()
-    Z.data = np.isnan(Z.data)
-    Z.eliminate_zeros()
-    n_elements = Z.shape[axis] - Z.sum(axis)
-
-    # set the nans to 0, so that a normal .sum() works
-    Y = X.copy()
-    Y.data[np.isnan(Y.data)] = 0
-    Y.eliminate_zeros()
-
-    # the average
-    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
-    m = s / n_elements
-
-    return m
+    if axis == 1:
+        return _get_sparce_nanmean_rows(X.data, X.indptr, X.shape)
+    else:
+        return _get_sparce_nanmean_columns(X.data, X.indices, X.shape)
 
 
 @old_positionals(
