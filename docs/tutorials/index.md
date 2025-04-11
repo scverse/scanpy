@@ -1,7 +1,7 @@
 # Tutorials
 
 :::{seealso}
-For more tutorials featureing scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [scverse.org/learn](https://scverse.org/learn)
+For more tutorials featuring scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [scverse.org/learn](https://scverse.org/learn)
 :::
 
 ## Basic workflows
