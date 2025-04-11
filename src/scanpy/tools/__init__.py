@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._cluster_resolution import cluster_resolution_finder
 from ._dendrogram import dendrogram
 from ._diffmap import diffmap
 from ._dpt import dpt
@@ -41,6 +42,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "cluster_resolution_finder",
     "dendrogram",
     "diffmap",
     "dpt",
