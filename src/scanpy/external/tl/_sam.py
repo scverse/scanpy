@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     "verbose",
 )
 @doctest_needs("samalg")
-def sam(
+def sam(  # noqa: PLR0913
     adata: AnnData,
     *,
     max_iter: int = 10,

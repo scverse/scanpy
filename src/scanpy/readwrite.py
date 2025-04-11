@@ -655,7 +655,6 @@ def write(
     """
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
-        filename = filename
         ext_ = is_valid_filename(filename, return_ext=True)
         if ext is None:
             ext = ext_
@@ -712,9 +711,9 @@ def read_params(
     from collections import OrderedDict
 
     params = OrderedDict([])
-    for line in filename.open():
-        if "=" in line and (not as_header or line.startswith("#")):
-            line = line[1:] if line.startswith("#") else line
+    for line_raw in filename.open():
+        if "=" in line_raw and (not as_header or line_raw.startswith("#")):
+            line = line_raw[1:] if line_raw.startswith("#") else line_raw
             key, val = line.split("=")
             key = key.strip()
             val = val.strip()
@@ -745,7 +744,7 @@ def write_params(path: Path | str, *args, **maps):
 # -------------------------------------------------------------------------------
 
 
-def _read(
+def _read(  # noqa: PLR0912, PLR0915
     filename: Path,
     *,
     backed=None,
@@ -794,7 +793,7 @@ def _read(
             "which enables much faster reading from a cache file."
         )
     # do the actual reading
-    if ext == "xlsx" or ext == "xls":
+    if ext in {"xlsx", "xls"}:
         if sheet is None:
             msg = "Provide `sheet` parameter when reading '.xlsx' files."
             raise ValueError(msg)

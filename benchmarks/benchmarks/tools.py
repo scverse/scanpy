@@ -20,7 +20,7 @@ adata: AnnData
 
 
 def setup():
-    global adata
+    global adata  # noqa: PLW0603
     adata = pbmc68k_reduced()
     assert "X_pca" in adata.obsm
 

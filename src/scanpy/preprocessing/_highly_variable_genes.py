@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 import pandas as pd
-import scipy.sparse as sparse
 from anndata import AnnData
+from scipy import sparse
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, old_positionals
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def _highly_variable_genes_seurat_v3(
+def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     flavor: str = "seurat_v3",
@@ -520,7 +520,7 @@ def _highly_variable_genes_batched(
     "batch_key",
     "check_values",
 )
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     layer: str | None = None,

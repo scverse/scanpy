@@ -91,7 +91,7 @@ class ScanpyConfig:
     N_PCS: int
     """Default number of principal components to use."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         verbosity: Verbosity | int | str = Verbosity.warning,
@@ -409,7 +409,7 @@ class ScanpyConfig:
         "transparent",
         "ipython_format",
     )
-    def set_figure_params(
+    def set_figure_params(  # noqa: PLR0913
         self,
         *,
         scanpy: bool = True,

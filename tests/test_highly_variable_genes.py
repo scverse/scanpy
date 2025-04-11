@@ -366,7 +366,8 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
     ],
 )
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_compare_to_upstream(  # noqa: PLR0917
+def test_compare_to_upstream(
+    *,
     request: pytest.FixtureRequest,
     func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
@@ -622,7 +623,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
-    if flavor == "seurat" or flavor == "cell_ranger":
+    if flavor in {"seurat", "cell_ranger"}:
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 

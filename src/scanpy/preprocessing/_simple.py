@@ -867,7 +867,7 @@ def sample(
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
-def sample(
+def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
     *,

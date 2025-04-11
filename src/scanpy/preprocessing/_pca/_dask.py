@@ -60,7 +60,7 @@ class PCAEighDask:
             )
             raise ValueError(msg)
         self.__class__ = PCAEighDaskFit
-        self = cast("PCAEighDaskFit", self)
+        self = cast("PCAEighDaskFit", self)  # noqa: PLW0642
 
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components

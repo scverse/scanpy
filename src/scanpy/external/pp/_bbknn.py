@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
-def bbknn(
+def bbknn(  # noqa: PLR0913
     adata: AnnData,
     *,
     batch_key: str = "batch",

@@ -16,7 +16,7 @@ from ._utils import savefig_or_show
 
 
 @old_positionals("log", "show", "save", "highly_variable_genes")
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0912
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
     log: bool = False,

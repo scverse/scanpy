@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     "subset",
     "copy",
 )
-def filter_genes_dispersion(
+def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | CSBase | np.ndarray,
     *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",

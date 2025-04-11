@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sparse
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced

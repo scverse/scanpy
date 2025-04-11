@@ -127,7 +127,7 @@ def add_args(p):
     return p
 
 
-def sample_dynamic_data(**params):
+def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     model_key = Path(params["model"]).with_suffix("").name
     writedir = params.get("writedir")
     if writedir is None:
@@ -283,7 +283,7 @@ def sample_dynamic_data(**params):
     return adata
 
 
-def write_data(
+def write_data(  # noqa: PLR0912, PLR0913
     X,
     dir=Path("sim/test"),
     *,
@@ -446,7 +446,6 @@ class GRNsim:
     def sim_model(self, tmax, X0, noiseDyn=0, restart=0):
         """Simulate the model."""
         self.noiseDyn = noiseDyn
-        #
         X = np.zeros((tmax, self.dim))
         X[0] = X0 + noiseDyn * np.random.randn(self.dim)
         # run simulation
@@ -596,7 +595,7 @@ class GRNsim:
         # version of the discrete model)
         self.build_boolCoeff()
 
-    def set_coupl(self, Coupl=None):
+    def set_coupl(self, Coupl=None) -> None:  # noqa: PLR0912
         """Construct the coupling matrix (and adjacancy matrix) from predefined models or via sampling."""
         self.varNames = {str(i): i for i in range(self.dim)}
         if self.model not in self.availModels and Coupl is None:
@@ -671,13 +670,12 @@ class GRNsim:
                     self.Adj[i, j_par] = 1
                 else:
                     self.Adj[i, i] = 1
-        #
         self.Adj = np.abs(np.array(self.Adj_signed))
         # settings.m(0,self.Adj)
 
     def set_coupl_old(self):
         """Sample a coupling matrix using the adjacency matrix."""
-        if self.model == "krumsiek11" or self.model == "var":
+        if self.model in {"krumsiek11", "var"}:
             # we already built the coupling matrix in set_coupl20()
             return
         self.Coupl = np.zeros((self.dim, self.dim))
@@ -766,19 +764,16 @@ class GRNsim:
                 + "    or fixed point is too close to bounds",
             )
             return None
-        #
         XbackUp = self.sim_model_backwards(
             tmax=tmax / 3, X0=Xfix + np.array([0.02, -0.02])
         )
         XbackDo = self.sim_model_backwards(
             tmax=tmax / 3, X0=Xfix + np.array([-0.02, -0.02])
         )
-        #
         Xup = self.sim_model(tmax=tmax, X0=XbackUp[0])
         Xdo = self.sim_model(tmax=tmax, X0=XbackDo[0])
         # compute mean
         X0mean = 0.5 * (Xup[0] + Xdo[0])
-        #
         if np.min(X0mean) < 0.025 or np.max(X0mean) > 0.975:
             settings.m(0, "... initial point is too close to bounds")
             return None
@@ -836,7 +831,6 @@ class GRNsim:
         self.boolCoeff = {s: [] for s in self.varNames}
         # parents
         self.pas = {s: [] for s in self.varNames}
-        #
         for key, rule in self.boolRules.items():
             self.pas[key] = self.parents_from_boolRule(rule)
             pasIndices = [self.varNames[pa] for pa in self.pas[key]]
@@ -846,10 +840,9 @@ class GRNsim:
                     if np.abs(self.Coupl[self.varNames[key], g]) < 1e-10:
                         msg = f"specify coupling value for {key} <- {g}"
                         raise ValueError(msg)
-                else:
-                    if np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
-                        msg = f"there should be no coupling value for {key} <- {g}"
-                        raise ValueError(msg)
+                elif np.abs(self.Coupl[self.varNames[key], g]) > 1e-10:
+                    msg = f"there should be no coupling value for {key} <- {g}"
+                    raise ValueError(msg)
             if self.verbosity > 1:
                 settings.m(0, "..." + key)
                 settings.m(0, rule)
@@ -860,7 +853,6 @@ class GRNsim:
             ):
                 if self.process_rule(rule, self.pas[key], tuple):
                     self.boolCoeff[key].append(tuple)
-            #
             if self.verbosity > 1:
                 settings.m(0, self.boolCoeff[key])
 

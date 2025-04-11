@@ -36,7 +36,7 @@ _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"
     "obsp",
     "copy",
 )
-def draw_graph(
+def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,

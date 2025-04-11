@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     "return_info",
     "copy",
 )
-def dca(
+def dca(  # noqa: PLR0913
     adata: AnnData,
     mode: Literal["denoise", "latent"] = "denoise",
     *,

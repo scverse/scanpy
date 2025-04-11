@@ -333,7 +333,7 @@ def dpt_groups_pseudotime(
     "ax",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups(
+def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -511,7 +511,7 @@ def _fig_show_save_or_axes(
     return plot_obj.get_axes()
 
 
-def _rank_genes_groups_plot(
+def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     plot_type: str = "heatmap",
     *,
@@ -836,7 +836,7 @@ def rank_genes_groups_tracksplot(
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
     show_save_ax=doc_show_save_ax,
 )
-def rank_genes_groups_dotplot(
+def rank_genes_groups_dotplot(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -984,7 +984,7 @@ def rank_genes_groups_dotplot(
 
 @old_positionals("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
-def rank_genes_groups_stacked_violin(
+def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -1063,7 +1063,7 @@ def rank_genes_groups_stacked_violin(
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
     show_save_ax=doc_show_save_ax,
 )
-def rank_genes_groups_matrixplot(
+def rank_genes_groups_matrixplot(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -1207,7 +1207,7 @@ def rank_genes_groups_matrixplot(
     "save",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_violin(
+def rank_genes_groups_violin(  # noqa: PLR0913
     adata: AnnData,
     groups: Sequence[str] | None = None,
     *,
@@ -1430,7 +1430,7 @@ def sim(
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
-def embedding_density(
+def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     basis: str = "umap",
     *,

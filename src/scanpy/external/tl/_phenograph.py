@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phenograph")
-def phenograph(
+def phenograph(  # noqa: PLR0913
     data: AnnData | np.ndarray | SpBase,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     *,
