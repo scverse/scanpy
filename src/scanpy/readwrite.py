@@ -655,7 +655,6 @@ def write(
     """
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
-        filename = filename
         ext_ = is_valid_filename(filename, return_ext=True)
         if ext is None:
             ext = ext_
