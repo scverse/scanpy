@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Collection, Mapping, Sequence
-from itertools import product
+from itertools import pairwise, product
 from types import NoneType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict, cast
 
@@ -885,7 +885,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         raise ValueError(msg)
 
     if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw)
+        obs_df = get.obs_df(adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw)
         if kwds.get("palette") is None:
             if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
                 msg = (
@@ -1640,8 +1640,8 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     # obtain the start and end of each category and make
     # a list of ranges that will be used to plot a different
     # color
-    cumsum = [0] + list(np.cumsum(obs_tidy.index.value_counts(sort=False)))
-    x_values = [(x, y) for x, y in zip(cumsum[:-1], cumsum[1:], strict=True)]
+    cumsum = [0, *np.cumsum(obs_tidy.index.value_counts(sort=False)).tolist()]
+    x_values = list(pairwise(cumsum))
 
     dendro_height = 1 if dendrogram else 0
 
@@ -2071,7 +2071,7 @@ def _prepare_dataframe(  # noqa: PLR0912
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in list(adata.obs_keys()) + [adata.obs.index.name]:
+            if group not in [*adata.obs_keys(), adata.obs.index.name]:
                 if adata.obs.index.name is not None:
                     msg = f' or index name "{adata.obs.index.name}"'
                 else:

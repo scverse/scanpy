@@ -1,43 +1,43 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Mapping, Sequence  # noqa: TCH003
+from collections.abc import Mapping, Sequence  # noqa: TC003
 from copy import copy
 from functools import partial
 from itertools import combinations, product
 from numbers import Integral
 from typing import (
     TYPE_CHECKING,
-    Any,  # noqa: TCH003
-    Literal,  # noqa: TCH003
+    Any,  # noqa: TC003
+    Literal,  # noqa: TC003
 )
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData  # noqa: TCH002
-from cycler import Cycler  # noqa: TCH002
+from anndata import AnnData  # noqa: TC002
+from cycler import Cycler  # noqa: TC002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes  # noqa: TCH002
+from matplotlib.axes import Axes  # noqa: TC002
 from matplotlib.colors import (
-    Colormap,  # noqa: TCH002
+    Colormap,  # noqa: TC002
     Normalize,
 )
-from matplotlib.figure import Figure  # noqa: TCH002
-from numpy.typing import NDArray  # noqa: TCH002
+from matplotlib.figure import Figure  # noqa: TC002
+from numpy.typing import NDArray  # noqa: TC002
 from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
-    Empty,  # noqa: TCH001
+    Empty,  # noqa: TC001
     _doc_params,
     _empty,
     sanitize_anndata,
 )
 from ...get import _check_mask
-from ...tools._draw_graph import _Layout  # noqa: TCH001
+from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -47,11 +47,11 @@ from .._docs import (
     doc_show_save_ax,
 )
 from .._utils import (
-    ColorLike,  # noqa: TCH001
-    VBound,  # noqa: TCH001
-    _FontSize,  # noqa: TCH001
-    _FontWeight,  # noqa: TCH001
-    _LegendLoc,  # noqa: TCH001
+    ColorLike,  # noqa: TC001
+    VBound,  # noqa: TC001
+    _FontSize,  # noqa: TC001
+    _FontWeight,  # noqa: TC001
+    _LegendLoc,  # noqa: TC001
     check_colornorm,
     check_projection,
     circles,
@@ -1332,7 +1332,7 @@ def _check_spatial_data(
             )
             raise ValueError(msg)
         elif len(spatial_mapping) == 1:
-            library_id = list(spatial_mapping.keys())[0]
+            library_id = next(iter(spatial_mapping.keys()))
         else:
             library_id = None
     spatial_data = spatial_mapping[library_id] if library_id is not None else None

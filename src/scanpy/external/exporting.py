@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-__all__ = ["spring_project", "cellbrowser"]
+__all__ = ["cellbrowser", "spring_project"]
 
 
 @old_positionals(

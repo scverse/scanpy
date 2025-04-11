@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
 
 
-__all__ = ["_get_graph", "_SparseMetric"]
+__all__ = ["_SparseMetric", "_get_graph"]
 
 
 @dataclass

@@ -627,7 +627,7 @@ class DPT(Neighbors):
 
             segs_adjacency += [[] for i in range(n_add)]
             segs_connects += [[] for i in range(n_add)]
-            kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+            kseg_list = [iseg, *range(len(segs) - n_add, len(segs))]
             for jseg in prev_connecting_segments:
                 pos = segs_adjacency[jseg].index(iseg)
                 distances = []
