@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numba
+import math
 import numpy as np
 import pandas as pd
 
 from .. import logging as logg
-from .._compat import CSBase, njit, old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import _check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
@@ -29,39 +29,23 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-@njit
 def _get_sparce_nanmean_columns(
-    data: NDArray[Any], indicies: NDArray[np.int32], shape: tuple
+    data: NDArray[Any], indices: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
-    sums = np.zeros(shape[1], dtype=np.float64)
-    counts = np.repeat(float(shape[0]), shape[1])
-    for data_index in numba.prange(len(data)):
-        if np.isnan(data[data_index]):
-            counts[indicies[data_index]] -= 1.0
-            continue
-        sums[indicies[data_index]] += data[data_index]
-    # if we have row column nans return nan (not inf)
-    counts[counts == 0.0] = np.nan
-    return sums / counts
+    sum_arr = np.zeros(shape[1], dtype = np.float64)
+    nans_arr = np.zeros(shape[1], dtype = np.float64)
+    np.add.at(sum_arr, indices, np.nan_to_num(data, nan=0.0))
+    np.add.at(nans_arr, indices, np.isnan(data))
+    nans_arr[nans_arr==shape[0]] = np.nan
+    return sum_arr/(shape[0] - nans_arr)
 
 
-@njit
 def _get_sparce_nanmean_rows(
     data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
-    sums = np.zeros(shape[0], dtype=np.float64)
-    counts = np.repeat(float(shape[1]), shape[0])
-    for cur_row_index in numba.prange(shape[0]):
-        for data_index in numba.prange(
-            indptr[cur_row_index], indptr[cur_row_index + 1]
-        ):
-            if np.isnan(data[data_index]):
-                counts[cur_row_index] -= 1.0
-                continue
-            sums[cur_row_index] += data[data_index]
-    # if we have row from nans return nan (not inf)
-    counts[counts == 0.0] = np.nan
-    return sums / counts
+    sum_arr = np.add.reduceat(np.nan_to_num(data, nan=0.0), indptr[:-1], dtype=np.float64)
+    nans_arr = np.add.reduceat(np.isnan(data), indptr[:-1], dtype=np.float64)
+    return sum_arr/(shape[1] - nans_arr)
 
 
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
