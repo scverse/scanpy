@@ -29,7 +29,8 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _get_mean_columns(
+@njit
+def _get_sparce_nanmean_columns(
     data: NDArray[Any], indicies: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
     sums = np.zeros(shape[1], dtype=np.float64)
@@ -45,7 +46,7 @@ def _get_mean_columns(
 
 
 @njit
-def _get_mean_rows(
+def _get_sparce_nanmean_rows(
     data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
     sums = np.zeros(shape[0], dtype=np.float64)
@@ -70,9 +71,9 @@ def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
         raise TypeError(msg)
 
     if axis == 1:
-        return _get_mean_rows(X.data, X.indptr, X.shape)
+        return _get_sparce_nanmean_rows(X.data, X.indptr, X.shape)
     else:
-        return _get_mean_columns(X.data, X.indices, X.shape)
+        return _get_sparce_nanmean_columns(X.data, X.indices, X.shape)
 
 
 @old_positionals(
