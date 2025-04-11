@@ -436,7 +436,7 @@ class Scrublet:
                     logg.info(
                         f"Automatically set threshold at doublet score = {threshold:.2f}"
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.predicted_doublets_ = None
                 if verbose:
                     logg.warning(

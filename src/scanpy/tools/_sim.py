@@ -595,7 +595,7 @@ class GRNsim:
         # version of the discrete model)
         self.build_boolCoeff()
 
-    def set_coupl(self, Coupl=None) -> None:  # noqa: PLR0912
+    def set_coupl(self, Coupl=None) -> None:
         """Construct the coupling matrix (and adjacancy matrix) from predefined models or via sampling."""
         self.varNames = {str(i): i for i in range(self.dim)}
         if self.model not in self.availModels and Coupl is None:
@@ -603,13 +603,14 @@ class GRNsim:
         elif "var" in self.model.name:
             # vector auto regressive process
             self.Coupl = Coupl
-            self.boolRules = {s: "" for s in self.varNames}
+            self.boolRules = dict.fromkeys(self.varNames, "")
             names = list(self.varNames.keys())
             for gp in range(self.dim):
-                pas = []
-                for g in range(self.dim):
-                    if np.abs(self.Coupl[gp, g] > 1e-10):
-                        pas.append(names[g])
+                pas = [
+                    names[g]
+                    for g in range(self.dim)
+                    if np.abs(self.Coupl[gp, g] > 1e-10)
+                ]
                 self.boolRules[names[gp]] = "".join(
                     pas[:1] + [" or " + pa for pa in pas[1:]]
                 )
@@ -761,7 +762,7 @@ class GRNsim:
             settings.m(
                 0,
                 "... either no fixed point in [0,1]^2! \n"
-                + "    or fixed point is too close to bounds",
+                "    or fixed point is too close to bounds",
             )
             return None
         XbackUp = self.sim_model_backwards(
@@ -1246,7 +1247,7 @@ if __name__ == "__main__":
         default="",
         help=(
             "specify directory to store data, "
-            + ' must start with "sim/MODEL_...", see possible values for MODEL below '
+            ' must start with "sim/MODEL_...", see possible values for MODEL below '
         ),
     )
     aa("--show", action="store_true", help="show plots")

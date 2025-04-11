@@ -903,19 +903,17 @@ class DPT(Neighbors):
 
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment."""
-        # compute branchings using different starting points the first index of
-        # tips is the starting point for the other two, the order does not
-        # matter
-        ssegs = []
         # permutations of tip cells
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
             [1, 2, 0],  #             -"-                       second tip
             [2, 0, 1],  #             -"-                       third tip
         ]
-        for p in ps:
-            ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
-        return ssegs
+
+        # compute branchings using different starting points the first index of
+        # tips is the starting point for the other two, the order does not
+        # matter
+        return [self.__detect_branching_haghverdi16(Dseg, tips[p]) for p in ps]
 
     def _detect_branching_single_wolf17_tri(self, Dseg, tips):
         # all pairwise distances
