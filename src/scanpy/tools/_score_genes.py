@@ -15,7 +15,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal, Tuple
+    from typing import Literal, Tuple, Any
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _get_mean_columns(data, indicies: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
+def _get_mean_columns(data: NDArray[Any], indicies: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
     sums = np.zeros(shape[1], dtype=np.float64)
     counts = np.repeat(float(shape[0]), shape[1])
     for data_index in numba.prange(len(data)):
@@ -43,7 +43,7 @@ def _get_mean_columns(data, indicies: NDArray[np.int32], shape: Tuple) -> NDArra
 
      
 @njit
-def _get_mean_rows(data, indptr: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
+def _get_mean_rows(data: NDArray[Any], indptr: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
     sums = np.zeros(shape[0], dtype=np.float64)
     counts = np.repeat(float(shape[1]), shape[0])
     for cur_row_index in numba.prange(shape[0]):
@@ -64,24 +64,10 @@ def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
-    Z = X.copy()
-
-    # count the number of nonzero elements (include nans) per row/column (dep. on axis)
-    nonzeros_and_nones = Z.count_nonzero(axis=axis)
-
-    # just sum the data withput nan
-    Z.data[np.isnan(Z.data)] = 0
-    Z.eliminate_zeros()
-    s = Z.sum(axis, dtype="float64")
-
-    # Z.count_nonzero(axis=axis) is now non-zero not-nan elements in X
-    # diff between nonzeros_and_nones and curr nonzero is nans
-    n_elements = (
-        Z.shape[axis] - (nonzeros_and_nones - Z.count_nonzero(axis=axis))
-    ).reshape(s.shape, copy=False)
-    m = s / n_elements
-
-    return m
+    if axis==1:
+        return _get_mean_rows(X.data, X.indptr, X.shape)
+    else:
+        return _get_mean_columns(X.data, X.indices, X.shape)
 
 
 @old_positionals(
