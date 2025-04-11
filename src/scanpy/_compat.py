@@ -15,18 +15,42 @@ if TYPE_CHECKING:
     from importlib.metadata import PackageMetadata
 
 
+__all__ = [
+    "CSRBase",
+    "CSCBase",
+    "CSBase",
+    "SpBase",
+    "DaskArray",
+    "ZappyArray",
+    "fullname",
+    "pkg_metadata",
+    "pkg_version",
+    "old_positionals",
+    "deprecated",
+    "njit",
+    "_LegacyRandom",
+    "_legacy_numpy_gen",
+    "_numba_threading_layer",
+]
+
+
 P = ParamSpec("P")
 R = TypeVar("R")
 
 _LegacyRandom = int | np.random.RandomState | None
 
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
-"""Only use if you want to specially handle matrices as opposed to arrays"""
+SpBase = sparse.spmatrix | sparse.sparray  # noqa: TID251
+"""Only use when you directly convert it to a known subclass."""
 
-CSRBase = sparse.csr_matrix  # noqa: TID251
-CSCBase = sparse.csc_matrix  # noqa: TID251
-SpBase = sparse.spmatrix  # noqa: TID251
-CSBase = _CSMatrix
+_CSArray = sparse.csr_array | sparse.csc_array  # noqa: TID251
+"""Only use if you want to specially handle arrays as opposed to matrices."""
+
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
+"""Only use if you want to specially handle matrices as opposed to arrays."""
+
+CSRBase = sparse.csr_matrix | sparse.csr_array  # noqa: TID251
+CSCBase = sparse.csc_matrix | sparse.csc_array  # noqa: TID251
+CSBase = _CSArray | _CSMatrix
 
 
 if TYPE_CHECKING:
@@ -44,19 +68,6 @@ if find_spec("zappy") or TYPE_CHECKING:
 else:
     ZappyArray = type("ZappyArray", (), {})
     ZappyArray.__module__ = "zappy.base"
-
-
-__all__ = [
-    "DaskArray",
-    "ZappyArray",
-    "fullname",
-    "pkg_metadata",
-    "pkg_version",
-    "old_positionals",
-    "deprecated",
-    "njit",
-    "_numba_threading_layer",
-]
 
 
 def fullname(typ: type) -> str:
