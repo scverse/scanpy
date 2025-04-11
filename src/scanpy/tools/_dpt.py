@@ -376,7 +376,7 @@ class DPT(Neighbors):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:  # noqa: PLR0912
         """Out of a list of line segments, choose segment that has the most distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -529,7 +529,7 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(
+    def detect_branching(  # noqa: PLR0912, PLR0915
         self,
         *,
         segs: Sequence[np.ndarray],
@@ -745,7 +745,7 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(
+    def _detect_branching(  # noqa: PLR0915
         self,
         Dseg: np.ndarray,
         tips: np.ndarray,
@@ -790,7 +790,7 @@ class DPT(Neighbors):
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
         elif self.flavor == "wolf17_tri":
             ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
-        elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
+        elif self.flavor in {"wolf17_bi", "wolf17_bi_un"}:
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
             msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'

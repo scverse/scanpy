@@ -59,7 +59,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 @_doc_params(
     mask_var_hvg=doc_mask_var_hvg,
 )
-def pca(
+def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
@@ -285,12 +285,12 @@ def pca(
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            pca_.partial_fit(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            pca_.partial_fit(chunk_dense)
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            X_pca[start:end] = pca_.transform(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            X_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
         if isinstance(X, CSBase) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"

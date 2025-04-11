@@ -22,34 +22,13 @@ def _choose_representation(
     n_pcs: int | None = None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
-    from ..preprocessing import pca
-
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
     if use_rep is None:
-        if adata.n_vars > settings.N_PCS:
-            if "X_pca" in adata.obsm:
-                if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
-                    msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
-                    raise ValueError(msg)
-                X = adata.obsm["X_pca"][:, :n_pcs]
-                logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
-            else:
-                warnings.warn(
-                    f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
-                    "if you really want this, set `use_rep='X'`.\n         "
-                    "Falling back to preprocessing with `sc.pp.pca` and default params.",
-                    stacklevel=3,
-                )
-                n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
-                pca(adata, n_comps=n_pcs_pca)
-                X = adata.obsm["X_pca"]
-        else:
-            logg.info("    using data matrix X directly")
-            X = adata.X
+        X = _get_pca_or_small_x(adata, n_pcs)
     elif use_rep in adata.obsm and n_pcs is not None:
         if n_pcs > adata.obsm[use_rep].shape[1]:
             msg = (
@@ -68,6 +47,32 @@ def _choose_representation(
         raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
     return X
+
+
+def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+    if adata.n_vars <= settings.N_PCS:
+        logg.info("    using data matrix X directly")
+        return adata.X
+
+    if "X_pca" in adata.obsm:
+        if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
+            msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+            raise ValueError(msg)
+        X = adata.obsm["X_pca"][:, :n_pcs]
+        logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
+        return X
+
+    from ..preprocessing import pca
+
+    warnings.warn(
+        f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
+        "if you really want this, set `use_rep='X'`.\n         "
+        "Falling back to preprocessing with `sc.pp.pca` and default params.",
+        stacklevel=3,
+    )
+    n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
+    pca(adata, n_comps=n_pcs_pca)
+    return adata.obsm["X_pca"]
 
 
 def get_init_pos_from_paga(

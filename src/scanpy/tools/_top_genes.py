@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 @old_positionals("group", "n_genes", "data", "method", "annotation_key")
-def correlation_matrix(
+def correlation_matrix(  # noqa: PLR0912
     adata: AnnData,
     name_list: Collection[str] | None = None,
     groupby: str | None = None,

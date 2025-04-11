@@ -83,7 +83,7 @@ class _AxesSubplot(Axes, axes.SubplotBase):
     "save",
     "ax",
 )
-def matrix(
+def matrix(  # noqa: PLR0913
     matrix: ArrayLike | Image,
     *,
     xlabel: str | None = None,
@@ -126,7 +126,7 @@ def timeseries(X, **kwargs):
     timeseries_subplot(X, **kwargs)
 
 
-def timeseries_subplot(
+def timeseries_subplot(  # noqa: PLR0912, PLR0913
     X: np.ndarray,
     *,
     time=None,
@@ -382,24 +382,21 @@ def _validate_palette(adata: AnnData, key: str) -> None:
     Not only valid matplotlib colors are checked but also if the color name
     is a valid R color name, in which case it will be translated to a valid name
     """
-    _palette = []
     color_key = f"{key}_colors"
-
-    for color in adata.uns[color_key]:
-        if not is_color_like(color):
-            # check if the color is a valid R color and translate it
-            # to a valid hex color value
-            if color in additional_colors:
-                color = additional_colors[color]
-            else:
-                logg.warning(
-                    f"The following color value found in adata.uns['{key}_colors'] "
-                    f"is not valid: {color!r}. Default colors will be used instead."
-                )
-                _set_default_colors_for_categorical_obs(adata, key)
-                _palette = None
-                break
-        _palette.append(color)
+    try:
+        # check if the color is a valid R color and translate it
+        # to a valid hex color value
+        _palette = [
+            color if is_color_like(color) else additional_colors[color]
+            for color in adata.uns[color_key]
+        ]
+    except KeyError as e:
+        logg.warning(
+            f"The following color value found in adata.uns['{key}_colors'] "
+            f"is not valid: {e.args[0]!r}. Default colors will be used instead."
+        )
+        _set_default_colors_for_categorical_obs(adata, key)
+        _palette = None
     # Don’t modify if nothing changed
     if _palette is None or np.array_equal(_palette, adata.uns[color_key]):
         return
@@ -453,21 +450,17 @@ def _set_colors_for_categorical_obs(
                     f"categories length: {len(categories)}. "
                     "Some categories will have the same color."
                 )
-            # check that colors are valid
-            _color_list = []
-            for color in palette:
-                if not is_color_like(color):
-                    # check if the color is a valid R color and translate it
-                    # to a valid hex color value
-                    if color in additional_colors:
-                        color = additional_colors[color]
-                    else:
-                        msg = (
-                            "The following color value of the given palette "
-                            f"is not valid: {color}"
-                        )
-                        raise ValueError(msg)
-                _color_list.append(color)
+            try:  # check that colors are valid
+                _color_list = [
+                    color if is_color_like(color) else additional_colors[color]
+                    for color in palette
+                ]
+            except KeyError as e:
+                msg = (
+                    "The following color value of the given palette "
+                    f"is not valid: {e.args[0]!r}"
+                )
+                raise ValueError(msg) from None
 
             palette = cycler(color=_color_list)
         if not isinstance(palette, Cycler):
@@ -646,7 +639,7 @@ def scatter_group(
     return mask_obs
 
 
-def setup_axes(
+def setup_axes(  # noqa: PLR0912
     ax: Axes | Sequence[Axes] | None = None,
     *,
     panels="blue",
@@ -730,7 +723,7 @@ def setup_axes(
     return axs, panel_pos, draw_region_width, figure_width
 
 
-def scatter_base(
+def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
     Y: np.ndarray,
     *,
     colors: str | Sequence[ColorLike | np.ndarray] = "blue",
@@ -769,8 +762,8 @@ def scatter_base(
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
     else:
-        highlights_indices = highlights
-        highlights_labels = []
+        highlights_indices = map(int, highlights)
+        highlights_labels = map(str, highlights)
     # if we have a single array, transform it into a list with a single array
     if isinstance(colors, str):
         colors = [colors]
@@ -789,16 +782,18 @@ def scatter_base(
         left_margin=left_margin,
         show_ticks=show_ticks,
     )
-    for icolor, color in enumerate(colors):
+    for icolor, color_spec in enumerate(colors):
         ax = axs[icolor]
         marker = markers[icolor]
         bottom = panel_pos[0][0]
         height = panel_pos[1][0] - bottom
         Y_sort = Y
-        if not is_color_like(color) and sort_order:
-            sort = np.argsort(color)
-            color = color[sort]
+        if not is_color_like(color_spec) and sort_order:
+            sort = np.argsort(color_spec)
+            color = color_spec[sort]
             Y_sort = Y[sort]
+        else:
+            color = color_spec
         if projection == "2d":
             data = Y_sort[:, 0], Y_sort[:, 1]
         elif projection == "3d":
@@ -833,8 +828,9 @@ def scatter_base(
         if title is not None:
             ax.set_title(title[icolor])
         # output highlighted data points
-        for iihighlight, ihighlight in enumerate(highlights_indices):
-            ihighlight = ihighlight if isinstance(ihighlight, int) else int(ihighlight)
+        for ihighlight, highlight_text in zip(
+            highlights_indices, highlights_labels, strict=True
+        ):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
             if "3d" in projection:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
@@ -846,11 +842,6 @@ def scatter_base(
                 marker="x",
                 s=10,
                 zorder=20,
-            )
-            highlight_text = (
-                highlights_labels[iihighlight]
-                if len(highlights_labels) > 0
-                else str(ihighlight)
             )
             # the following is a Python 2 compatibility hack
             ax.text(

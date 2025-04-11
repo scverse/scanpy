@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     doc_qc_metric_naming=doc_qc_metric_naming,
     doc_obs_qc_returns=doc_obs_qc_returns,
 )
-def describe_obs(
+def describe_obs(  # noqa: PLR0913
     adata: AnnData,
     *,
     expr_type: str = "counts",

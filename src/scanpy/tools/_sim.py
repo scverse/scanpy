@@ -127,7 +127,7 @@ def add_args(p):
     return p
 
 
-def sample_dynamic_data(**params):
+def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     model_key = Path(params["model"]).with_suffix("").name
     writedir = params.get("writedir")
     if writedir is None:
@@ -283,7 +283,7 @@ def sample_dynamic_data(**params):
     return adata
 
 
-def write_data(
+def write_data(  # noqa: PLR0912, PLR0913
     X,
     dir=Path("sim/test"),
     *,
@@ -595,7 +595,7 @@ class GRNsim:
         # version of the discrete model)
         self.build_boolCoeff()
 
-    def set_coupl(self, Coupl=None):
+    def set_coupl(self, Coupl=None) -> None:  # noqa: PLR0912
         """Construct the coupling matrix (and adjacancy matrix) from predefined models or via sampling."""
         self.varNames = {str(i): i for i in range(self.dim)}
         if self.model not in self.availModels and Coupl is None:
@@ -675,7 +675,7 @@ class GRNsim:
 
     def set_coupl_old(self):
         """Sample a coupling matrix using the adjacency matrix."""
-        if self.model == "krumsiek11" or self.model == "var":
+        if self.model in {"krumsiek11", "var"}:
             # we already built the coupling matrix in set_coupl20()
             return
         self.Coupl = np.zeros((self.dim, self.dim))

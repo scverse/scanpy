@@ -177,7 +177,7 @@ class StackedViolin(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -270,7 +270,7 @@ class StackedViolin(BasePlot):
         "x_padding",
         "y_padding",
     )
-    def style(
+    def style(  # noqa: PLR0913
         self,
         *,
         cmap: Colormap | str | None | Empty = _empty,
@@ -667,7 +667,7 @@ class StackedViolin(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def stacked_violin(
+def stacked_violin(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],

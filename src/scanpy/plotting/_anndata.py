@@ -120,7 +120,7 @@ class VarGroups(NamedTuple):
     # 17 positionals are enough for backwards compatibility
 )
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
-def scatter(
+def scatter(  # noqa: PLR0913
     adata: AnnData,
     x: str | None = None,
     y: str | None = None,
@@ -251,7 +251,7 @@ def _check_if_annotations(
     return bool(color_valid.all())
 
 
-def _scatter_obs(
+def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     *,
     adata: AnnData,
     x: str | None = None,
@@ -305,7 +305,8 @@ def _scatter_obs(
         )
         raise ValueError(msg)
     if use_raw and layers not in [("X", "X", "X"), (None, None, None)]:
-        ValueError("`use_raw` must be `False` if layers are used.")
+        msg = "`use_raw` must be `False` if layers are used."
+        raise ValueError(msg)
 
     if legend_loc not in (valid_legend_locs := get_literal_vals(_utils._LegendLoc)):
         msg = f"Invalid `legend_loc`, need to be one of: {valid_legend_locs}."
@@ -357,9 +358,6 @@ def _scatter_obs(
     if legend_fontsize is None:
         legend_fontsize = rcParams["legend.fontsize"]
 
-    palette_was_none = False
-    if palette is None:
-        palette_was_none = True
     if isinstance(palette, Sequence) and not isinstance(palette, str):
         palettes = palette if not is_color_like(palette[0]) else [palette]
     else:
@@ -458,10 +456,10 @@ def _scatter_obs(
         centroids[name] = Y_mask[i]
 
     # loop over all categorical annotation and plot it
-    for ikey, palette in zip(categoricals, palettes, strict=False):
+    for ikey, pal in zip(categoricals, palettes, strict=False):
         key = keys[ikey]
         _utils.add_colors_for_categorical_sample_annotation(
-            adata, key, palette=palette, force_update_colors=not palette_was_none
+            adata, key, palette=pal, force_update_colors=palette is not None
         )
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
@@ -581,10 +579,10 @@ def _scatter_obs(
     # draw a frame around the scatter
     frameon = settings._frameon if frameon is None else frameon
     if not frameon and x is None and y is None:
-        for ax in axs:
-            ax.set_xlabel("")
-            ax.set_ylabel("")
-            ax.set_frame_on(False)
+        for ax_ in axs:
+            ax_.set_xlabel("")
+            ax_.set_ylabel("")
+            ax_.set_frame_on(False)
 
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("scatter" if basis is None else basis, show=show, save=save)
@@ -605,7 +603,7 @@ def _scatter_obs(
     "include_lowest",
     "show",
 )
-def ranking(
+def ranking(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     attr: Literal["var", "obs", "uns", "varm", "obsm"],
     keys: str | Sequence[str],
@@ -740,7 +738,7 @@ def ranking(
     "ax",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def violin(
+def violin(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     keys: str | Sequence[str],
     groupby: str | None = None,
@@ -948,8 +946,8 @@ def violin(
             g.set(yscale="log")
         g.set_titles(col_template="{col_name}").set_xlabels("")
         if rotation is not None:
-            for ax in g.axes[0]:
-                ax.tick_params(axis="x", labelrotation=rotation)
+            for ax_base in g.axes[0]:
+                ax_base.tick_params(axis="x", labelrotation=rotation)
     else:
         # set by default the violin plot cut=0 to limit the extend
         # of the violin plot (see stacked_violin code) for more info.
@@ -965,19 +963,19 @@ def violin(
             )
         else:
             axs = [ax]
-        for ax, y, ylab in zip(axs, ys, ylabel, strict=True):
-            ax = sns.violinplot(
+        for ax_base, y, ylab in zip(axs, ys, ylabel, strict=True):
+            sns.violinplot(
                 x=x,
                 y=y,
                 data=obs_tidy,
                 order=order,
                 orient="vertical",
                 density_norm=density_norm,
-                ax=ax,
+                ax=ax_base,
                 **kwds,
             )
             if stripplot:
-                ax = sns.stripplot(
+                sns.stripplot(
                     x=x,
                     y=y,
                     data=obs_tidy,
@@ -985,18 +983,17 @@ def violin(
                     jitter=jitter,
                     color="black",
                     size=size,
-                    ax=ax,
+                    ax=ax_base,
                 )
             if xlabel == "" and groupby is not None and rotation is None:
                 xlabel = groupby.replace("_", " ")
-            ax.set_xlabel(xlabel)
+            ax_base.set_xlabel(xlabel)
             if ylab is not None:
-                ax.set_ylabel(ylab)
-
+                ax_base.set_ylabel(ylab)
             if log:
-                ax.set_yscale("log")
+                ax_base.set_yscale("log")
             if rotation is not None:
-                ax.tick_params(axis="x", labelrotation=rotation)
+                ax_base.tick_params(axis="x", labelrotation=rotation)
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show("violin", show=show, save=save)
     if show:
@@ -1113,7 +1110,7 @@ def clustermap(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
 )
-def heatmap(
+def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
@@ -1517,7 +1514,7 @@ def heatmap(
     "figsize",
 )
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def tracksplot(
+def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str,
@@ -1855,7 +1852,7 @@ def dendrogram(
     "norm",
 )
 @_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
-def correlation_matrix(
+def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
@@ -2022,7 +2019,7 @@ def correlation_matrix(
     return axs
 
 
-def _prepare_dataframe(
+def _prepare_dataframe(  # noqa: PLR0912
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str] | None = None,
@@ -2413,7 +2410,7 @@ def _get_dendrogram_key(
     return dendrogram_key
 
 
-def _plot_dendrogram(
+def _plot_dendrogram(  # noqa: PLR0915
     dendro_ax: Axes,
     adata: AnnData,
     groupby: str | Sequence[str],
@@ -2501,9 +2498,9 @@ def _plot_dendrogram(
 
     for xs, ys in zip(icoord, dcoord, strict=True):
         if ticks is not None:
-            xs = translate_pos(xs, ticks, orig_ticks)
+            xs = translate_pos(xs, ticks, orig_ticks)  # noqa: PLW2901
         if orientation in ["right", "left"]:
-            xs, ys = ys, xs
+            xs, ys = ys, xs  # noqa: PLW2901
         dendro_ax.plot(xs, ys, color="#555555")
 
     dendro_ax.tick_params(bottom=False, top=False, left=False, right=False)
@@ -2684,7 +2681,7 @@ def _check_var_names_type(
     var_names: _VarNames | Mapping[str, _VarNames],
     var_group_labels: Sequence[str] | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
-) -> tuple[list[str], VarGroups | None]:
+) -> tuple[Sequence[str], VarGroups | None]:
     """If var_names is a dict, set the `var_group_labels` and `var_group_positions`.
 
     Returns
@@ -2692,27 +2689,11 @@ def _check_var_names_type(
     var_names, var_groups
 
     """
+    from ._baseplot_class import _var_groups
+
     if isinstance(var_names, Mapping):
-        if var_group_labels is not None or var_group_positions is not None:
-            logg.warning(
-                "`var_names` is a dictionary. This will reset the current "
-                "value of `var_group_labels` and `var_group_positions`."
-            )
-        var_group_labels = []
-        _var_names: list[str] = []
-        var_group_positions = []
-        start = 0
-        for label, vars_list in var_names.items():
-            if isinstance(vars_list, str):
-                vars_list = [vars_list]
-            # use list() in case var_list is a numpy array or pandas series
-            _var_names.extend(list(vars_list))
-            var_group_labels.append(label)
-            var_group_positions.append((start, start + len(vars_list) - 1))
-            start += len(vars_list)
-        var_names = _var_names
+        return _var_groups(var_names)
 
-    elif isinstance(var_names, str):
+    if isinstance(var_names, str):
         var_names = [var_names]
-
     return var_names, VarGroups.validate(var_group_labels, var_group_positions)

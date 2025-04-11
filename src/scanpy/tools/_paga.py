@@ -444,7 +444,7 @@ class PAGAComparePathsResult(NamedTuple):
     n_paths: int
 
 
-def paga_compare_paths(
+def paga_compare_paths(  # noqa: PLR0912, PLR0915
     adata1: AnnData,
     adata2: AnnData,
     adjacency_key: str = "connectivities",

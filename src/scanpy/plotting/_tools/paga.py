@@ -61,7 +61,7 @@ if TYPE_CHECKING:
     "title_graph",
     "groups_graph",
 )
-def paga_compare(
+def paga_compare(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     basis=None,
     *,
@@ -205,7 +205,7 @@ def paga_compare(
     return axs
 
 
-def _compute_pos(
+def _compute_pos(  # noqa: PLR0912
     adjacency_solid: SpBase | np.ndarray,
     *,
     layout: _Layout | None = None,
@@ -298,7 +298,7 @@ def _compute_pos(
     "node_size_scale",
     # 17 positionals are enough for backwards compat
 )
-def paga(
+def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
     threshold: float | None = None,
@@ -656,7 +656,7 @@ def paga(
     return axs
 
 
-def _paga_graph(
+def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     adata,
     ax,
     *,
@@ -1038,7 +1038,7 @@ def _paga_graph(
     "save",
     "ax",
 )
-def paga_path(
+def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     nodes: Sequence[str | int],
     keys: Sequence[str],
@@ -1215,9 +1215,9 @@ def paga_path(
         if n_avg > 1:
             x = moving_average(x)
             if ikey == 0:
-                for key in annotations:
-                    if not isinstance(anno_dict[key][0], str):
-                        anno_dict[key] = moving_average(anno_dict[key])
+                for k in annotations:
+                    if not isinstance(anno_dict[k][0], str):
+                        anno_dict[k] = moving_average(anno_dict[k])
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)

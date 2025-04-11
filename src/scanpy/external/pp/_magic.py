@@ -23,7 +23,7 @@ MIN_VERSION = "2.0"
 
 
 @doctest_needs("magic")
-def magic(
+def magic(  # noqa: PLR0913
     adata: AnnData,
     name_list: Literal["all_genes", "pca_only"] | Sequence[str] | None = None,
     *,

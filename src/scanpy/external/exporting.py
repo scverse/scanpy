@@ -33,7 +33,7 @@ __all__ = ["spring_project", "cellbrowser"]
     "neighbors_key",
     "overwrite",
 )
-def spring_project(
+def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
@@ -477,7 +477,6 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     Path(outpath).write_text(json.dumps(PAGA_data, indent=4))
 
 
-
 @old_positionals(
     "embedding_keys",
     "annot_keys",
@@ -488,7 +487,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     "port",
     "do_debug",
 )
-def cellbrowser(
+def cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,
     data_name: str,
