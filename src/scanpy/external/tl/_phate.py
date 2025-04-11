@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phate")
-def phate(
+def phate(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,

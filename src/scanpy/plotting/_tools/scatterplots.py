@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def embedding(
+def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     basis: str,
     *,
@@ -930,7 +930,7 @@ def pca(
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def spatial(
+def spatial(  # noqa: PLR0913
     adata: AnnData,
     *,
     basis: str = "spatial",
@@ -1086,7 +1086,7 @@ def _components_to_dimensions(
     return dimensions
 
 
-def _add_categorical_legend(
+def _add_categorical_legend(  # noqa: PLR0913
     ax: Axes,
     color_source_vector,
     *,

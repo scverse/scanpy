@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def tsne(
+def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
     *,

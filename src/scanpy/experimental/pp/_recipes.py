@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
-def recipe_pearson_residuals(
+def recipe_pearson_residuals(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,

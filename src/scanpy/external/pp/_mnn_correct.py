@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def mnn_correct(
+def mnn_correct(  # noqa: PLR0913
     *datas: AnnData | np.ndarray,
     var_index: Collection[str] | None = None,
     var_subset: Collection[str] | None = None,

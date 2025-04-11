@@ -134,7 +134,7 @@ def _standardize_data(
 
 
 @old_positionals("covariates", "inplace")
-def combat(
+def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",
     *,

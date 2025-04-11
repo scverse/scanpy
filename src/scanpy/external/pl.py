@@ -269,7 +269,7 @@ def sam(
     "ax",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def wishbone_marker_trajectory(
+def wishbone_marker_trajectory(  # noqa: PLR0913
     adata: AnnData,
     markers: Collection[str],
     *,

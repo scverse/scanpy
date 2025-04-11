@@ -93,7 +93,7 @@ def is_deprecated(f: FunctionType) -> bool:
     }
 
 
-class ExpectedSig(TypedDict):  # noqa: D101
+class ExpectedSig(TypedDict):
     first_name: str
     copy_default: Any
     return_ann: str | None
