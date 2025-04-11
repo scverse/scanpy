@@ -29,7 +29,7 @@ from .._settings import settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from typing import Literal
+    from typing import ClassVar, Literal
 
     from anndata import AnnData
 
@@ -379,7 +379,7 @@ class GRNsim:
     Also standard models are implemented.
     """
 
-    availModels = dict(
+    availModels: ClassVar = dict(
         krumsiek11=(
             "myeloid progenitor network, Krumsiek et al., PLOS One 6, e22649, "
             "\n      equations from Table 1 on page 3, "
@@ -1036,7 +1036,7 @@ def sample_coupling_matrix(
 class StaticCauseEffect:
     """Simulates static data to investigate structure learning."""
 
-    availModels = dict(
+    availModels: ClassVar = dict(
         line="y = αx \n",
         noise="y = noise \n",
         absline="y = |x| \n",

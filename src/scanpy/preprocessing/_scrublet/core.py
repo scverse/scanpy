@@ -177,7 +177,7 @@ class Scrublet:
             else total_counts_obs
         )
         self._n_neighbors = (
-            int(round(0.5 * np.sqrt(self._counts_obs.shape[0])))
+            round(0.5 * np.sqrt(self._counts_obs.shape[0]))
             if n_neighbors is None
             else n_neighbors
         )
@@ -334,7 +334,7 @@ class Scrublet:
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
-        k_adj = int(round(k * (1 + n_sim / float(n_obs))))
+        k_adj = round(k * (1 + n_sim / float(n_obs)))
 
         # Find k_adj nearest neighbors
         knn = Neighbors(manifold)

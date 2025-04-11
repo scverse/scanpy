@@ -263,6 +263,7 @@ ignore = [
     "PLR2004", # Numbers like “2” aren’t that “magic”.
     "PYI051",  # `Literal["..."] | str` is useful for autocompletion
 ]
+allowed-confusables = [ "×", "’", "–", "α" ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]

@@ -1332,7 +1332,7 @@ def _check_spatial_data(
             )
             raise ValueError(msg)
         elif len(spatial_mapping) == 1:
-            library_id = list(spatial_mapping.keys())[0]
+            library_id = next(iter(spatial_mapping.keys()))
         else:
             library_id = None
     spatial_data = spatial_mapping[library_id] if library_id is not None else None
