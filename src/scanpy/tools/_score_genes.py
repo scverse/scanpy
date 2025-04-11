@@ -63,7 +63,6 @@ def _get_mean_rows(
     return sums / counts
 
 
-@njit
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not isinstance(X, CSBase):
