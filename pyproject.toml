@@ -227,6 +227,7 @@ docstring-code-format = true
 [tool.ruff.lint]
 select = [
     "B",      # Likely bugs and design issues
+    "BLE",    # Blind exception raised
     "C4",     # Comprehensions
     "D",      # Documentation style
     "E",      # Error detected by Pycodestyle
