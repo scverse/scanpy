@@ -124,7 +124,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
     from packaging.version import Version
 
     requires_anndata_dask_support = (
-        len([mark for mark in item.iter_markers(name="anndata_dask_support")]) > 0
+        len(list(item.iter_markers(name="anndata_dask_support"))) > 0
     )
 
     if requires_anndata_dask_support and Version(anndata.__version__) < Version("0.10"):

@@ -525,11 +525,11 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         labels = [labels for _ in range(len(colors))]
 
     if title is None and len(colors) > 1:
-        title = [c for c in colors]
+        title = list(colors)
     elif isinstance(title, str):
-        title = [title for c in colors]
+        title = [title] * len(colors)
     elif title is None:
-        title = [None for c in colors]
+        title = [None] * len(colors)
 
     if colorbar is None:
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names

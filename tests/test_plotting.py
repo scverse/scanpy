@@ -1508,7 +1508,7 @@ def test_scatter_rep(tmp_path):
         X=np.zeros((15, 3)),
         layers={"layer": np.zeros((15, 3))},
         obsm={"X_pca": coords},
-        var=pd.DataFrame(index=[x for x in list("abc")]),
+        var=pd.DataFrame(index=list("abc")),
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(15)]),
     )
     adata.raw = adata.copy()

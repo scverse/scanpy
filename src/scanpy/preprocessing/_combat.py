@@ -218,11 +218,8 @@ def combat(  # noqa: PLR0915
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
     ).values
-    delta_hat = []
-
     # first estimate for the multiplicative batch effect
-    for batch_idxs in batch_info:
-        delta_hat.append(s_data.iloc[:, batch_idxs].var(axis=1))
+    delta_hat = [s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info]
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)

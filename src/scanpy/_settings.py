@@ -24,16 +24,14 @@ if TYPE_CHECKING:
         | Literal["raw", "rgba"]
     )
 
-_VERBOSITY_TO_LOGLEVEL = {
+_VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
     "error": "ERROR",
     "warning": "WARNING",
     "info": "INFO",
     "hint": "HINT",
     "debug": "DEBUG",
 }
-# Python 3.7+ ensures iteration order
-for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
-    _VERBOSITY_TO_LOGLEVEL[v] = level
+_VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
 
 
 class Verbosity(IntEnum):
