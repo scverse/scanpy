@@ -516,19 +516,18 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
         cc = rcParams["axes.prop_cycle"]()
         palette = [next(cc)["color"] for _ in range(length)]
 
+    elif length <= 20:
+        palette = palettes.default_20
+    elif length <= 28:
+        palette = palettes.default_28
+    elif length <= len(palettes.default_102):  # 103 colors
+        palette = palettes.default_102
     else:
-        if length <= 20:
-            palette = palettes.default_20
-        elif length <= 28:
-            palette = palettes.default_28
-        elif length <= len(palettes.default_102):  # 103 colors
-            palette = palettes.default_102
-        else:
-            palette = ["grey" for _ in range(length)]
-            logg.info(
-                f"the obs value {value_to_plot!r} has more than 103 categories. Uniform "
-                "'grey' color will be used for all categories."
-            )
+        palette = ["grey" for _ in range(length)]
+        logg.info(
+            f"the obs value {value_to_plot!r} has more than 103 categories. Uniform "
+            "'grey' color will be used for all categories."
+        )
 
     _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
@@ -1312,11 +1311,10 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
         if (vmin is not None) or (vmax is not None) or (vcenter is not None):
             msg = "Passing both norm and vmin/vmax/vcenter is not allowed."
             raise ValueError(msg)
+    elif vcenter is not None:
+        norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
     else:
-        if vcenter is not None:
-            norm = DivNorm(vmin=vmin, vmax=vmax, vcenter=vcenter)
-        else:
-            norm = Normalize(vmin=vmin, vmax=vmax)
+        norm = Normalize(vmin=vmin, vmax=vmax)
 
     return norm
 

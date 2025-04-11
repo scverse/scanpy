@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 import pandas as pd
-import scipy.sparse as sparse
 from anndata import AnnData
+from scipy import sparse
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, old_positionals

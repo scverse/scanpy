@@ -617,7 +617,7 @@ class StackedViolin(BasePlot):
             # and align the firts label on top of the tick and
             # the second below the tick. This avoid overlapping
             # of nearby ticks
-            import matplotlib.ticker as ticker
+            from matplotlib import ticker
 
             # use MaxNLocator to set 2 ticks
             row_ax.yaxis.set_major_locator(

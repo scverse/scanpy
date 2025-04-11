@@ -50,26 +50,22 @@ def _choose_representation(
         else:
             logg.info("    using data matrix X directly")
             X = adata.X
-    else:
-        if use_rep in adata.obsm and n_pcs is not None:
-            if n_pcs > adata.obsm[use_rep].shape[1]:
-                msg = (
-                    f"{use_rep} does not have enough Dimensions. Provide a "
-                    "Representation with equal or more dimensions than"
-                    "`n_pcs` or lower `n_pcs` "
-                )
-                raise ValueError(msg)
-            X = adata.obsm[use_rep][:, :n_pcs]
-        elif use_rep in adata.obsm and n_pcs is None:
-            X = adata.obsm[use_rep]
-        elif use_rep == "X":
-            X = adata.X
-        else:
+    elif use_rep in adata.obsm and n_pcs is not None:
+        if n_pcs > adata.obsm[use_rep].shape[1]:
             msg = (
-                f"Did not find {use_rep} in `.obsm.keys()`. "
-                "You need to compute it first."
+                f"{use_rep} does not have enough Dimensions. Provide a "
+                "Representation with equal or more dimensions than"
+                "`n_pcs` or lower `n_pcs` "
             )
             raise ValueError(msg)
+        X = adata.obsm[use_rep][:, :n_pcs]
+    elif use_rep in adata.obsm and n_pcs is None:
+        X = adata.obsm[use_rep]
+    elif use_rep == "X":
+        X = adata.X
+    else:
+        msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
+        raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
     return X
 
@@ -99,7 +95,7 @@ def get_init_pos_from_paga(
             connectivities = connectivities_coarse[i][neighbors]
             nearest_neighbor = neighbors[1][np.argmax(connectivities)]
             noise = np.random.random((len(subset[subset]), 2))
-            dist = pos[i] - pos[nearest_neighbor]
+            dist = group_pos - pos[nearest_neighbor]
             noise = noise * dist
             init_pos[subset] = group_pos - 0.5 * dist + noise
         else:

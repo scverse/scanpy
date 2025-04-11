@@ -218,11 +218,10 @@ def pca(
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
+    elif pkg_version("anndata") < Version("0.8.0rc1"):
+        adata = AnnData(data, dtype=data.dtype)
     else:
-        if pkg_version("anndata") < Version("0.8.0rc1"):
-            adata = AnnData(data, dtype=data.dtype)
-        else:
-            adata = AnnData(data)
+        adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)

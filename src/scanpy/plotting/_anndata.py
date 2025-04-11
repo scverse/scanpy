@@ -640,11 +640,10 @@ def ranking(
     if isinstance(keys, str) and indices is not None:
         scores = getattr(adata, attr)[keys][:, indices]
         keys = [f"{keys[:-1]}{i + 1}" for i in indices]
+    elif dictionary is None:
+        scores = getattr(adata, attr)[keys]
     else:
-        if dictionary is None:
-            scores = getattr(adata, attr)[keys]
-        else:
-            scores = getattr(adata, attr)[dictionary][keys]
+        scores = getattr(adata, attr)[dictionary][keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1:
         scores, keys = scores[:, None], [keys]
@@ -2187,7 +2186,7 @@ def _plot_var_groups_brackets(
     None
 
     """
-    import matplotlib.patches as patches
+    from matplotlib import patches
     from matplotlib.path import Path
 
     # get the 'brackets' coordinates as lists of start and end positions

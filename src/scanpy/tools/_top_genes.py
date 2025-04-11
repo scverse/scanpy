@@ -82,9 +82,8 @@ def correlation_matrix(
             if j >= n_genes:
                 break
             name_list.append(k[group])
-    else:
-        if len(name_list) > n_genes:
-            name_list = name_list[0:n_genes]
+    elif len(name_list) > n_genes:
+        name_list = name_list[0:n_genes]
 
     # If special method (later) , truncate
     adata_relevant = adata[:, name_list]
@@ -186,7 +185,7 @@ def ROC_AUC_analysis(
         ) = metrics.roc_curve(
             y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
         )
-        roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
+        roc_auc[name_list[i]] = metrics.auc(fpr[j], tpr[j])
     adata.uns["ROCfpr" + groupby + str(group)] = fpr
     adata.uns["ROCtpr" + groupby + str(group)] = tpr
     adata.uns["ROCthresholds" + groupby + str(group)] = thresholds

@@ -226,24 +226,24 @@ docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
-    "B",       # Likely bugs and design issues
-    "D",       # Documentation style
-    "E",       # Error detected by Pycodestyle
-    "EM",      # Traceback-friendly error messages
-    "F",       # Errors detected by Pyflakes
-    "FBT",     # No positional boolean parameters
-    "I",       # Import sorting
-    "ICN",     # Follow import conventions
-    "PIE",     # Syntax simplifications
-    "PLR0917", # Ban APIs with too many positional parameters
-    "PT",      # Pytest style
-    "PTH",     # Pathlib instead of os.path
-    "PYI",     # Typing
-    "SIM",     # Simplify control flow
-    "TC",      # Manage type checking blocks
-    "UP",      # Update legacy syntax
-    "TID251",  # Banned imports
-    "W",       # Warning detected by Pycodestyle
+    "B",      # Likely bugs and design issues
+    "D",      # Documentation style
+    "E",      # Error detected by Pycodestyle
+    "EM",     # Traceback-friendly error messages
+    "F",      # Errors detected by Pyflakes
+    "FBT",    # No positional boolean parameters
+    "I",      # Import sorting
+    "ICN",    # Follow import conventions
+    "PIE",    # Syntax simplifications
+    "PL",     # Pylint
+    "PT",     # Pytest style
+    "PTH",    # Pathlib instead of os.path
+    "PYI",    # Typing
+    "SIM",    # Simplify control flow
+    "TC",     # Manage type checking blocks
+    "UP",     # Update legacy syntax
+    "TID251", # Banned imports
+    "W",      # Warning detected by Pycodestyle
 ]
 ignore = [
     # line too long -> we accept long comment lines; black gets rid of long code lines

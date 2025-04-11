@@ -715,16 +715,14 @@ class DotPlot(BasePlot):
         cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
-        else:
-            if dot_max < 0 or dot_max > 1:
-                msg = "`dot_max` value has to be between 0 and 1"
-                raise ValueError(msg)
+        elif dot_max < 0 or dot_max > 1:
+            msg = "`dot_max` value has to be between 0 and 1"
+            raise ValueError(msg)
         if dot_min is None:
             dot_min = 0
-        else:
-            if dot_min < 0 or dot_min > 1:
-                msg = "`dot_min` value has to be between 0 and 1"
-                raise ValueError(msg)
+        elif dot_min < 0 or dot_min > 1:
+            msg = "`dot_min` value has to be between 0 and 1"
+            raise ValueError(msg)
 
         if dot_min != 0 or dot_max != 1:
             # clip frac between dot_min and  dot_max
