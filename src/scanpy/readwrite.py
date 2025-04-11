@@ -1039,8 +1039,7 @@ def get_used_files():
     for proc in loop_over_scanpy_processes:
         try:
             flist = proc.open_files()
-            for nt in flist:
-                filenames.append(nt.path)
+            filenames.extend(nt.path for nt in flist)
         # This catches a race condition where a process ends
         # before we can examine its files
         except psutil.NoSuchProcess:

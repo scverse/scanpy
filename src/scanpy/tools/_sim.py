@@ -595,7 +595,7 @@ class GRNsim:
         # version of the discrete model)
         self.build_boolCoeff()
 
-    def set_coupl(self, Coupl=None) -> None:  # noqa: PLR0912
+    def set_coupl(self, Coupl=None) -> None:
         """Construct the coupling matrix (and adjacancy matrix) from predefined models or via sampling."""
         self.varNames = {str(i): i for i in range(self.dim)}
         if self.model not in self.availModels and Coupl is None:
@@ -606,10 +606,11 @@ class GRNsim:
             self.boolRules = dict.fromkeys(self.varNames, "")
             names = list(self.varNames.keys())
             for gp in range(self.dim):
-                pas = []
-                for g in range(self.dim):
-                    if np.abs(self.Coupl[gp, g] > 1e-10):
-                        pas.append(names[g])
+                pas = [
+                    names[g]
+                    for g in range(self.dim)
+                    if np.abs(self.Coupl[gp, g] > 1e-10)
+                ]
                 self.boolRules[names[gp]] = "".join(
                     pas[:1] + [" or " + pa for pa in pas[1:]]
                 )
