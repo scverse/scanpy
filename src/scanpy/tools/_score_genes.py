@@ -6,15 +6,16 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+import numba
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase, old_positionals, njit
 from .._utils import _check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal
+    from typing import Literal, Tuple
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -28,6 +29,35 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
+def _get_mean_columns(data, indicies: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
+    sums = np.zeros(shape[1], dtype=np.float64)
+    counts = np.repeat(float(shape[0]), shape[1])
+    for data_index in numba.prange(len(data)):
+        if np.isnan(data[data_index]):
+            counts[indicies[data_index]] -= 1.0
+            continue
+        sums[indicies[data_index]] += data[data_index]
+    #if we have row column nans return nan (not inf)
+    counts[counts == 0.0] = np.nan
+    return sums/counts
+
+     
+@njit
+def _get_mean_rows(data, indptr: NDArray[np.int32], shape: Tuple) -> NDArray[np.float64]:
+    sums = np.zeros(shape[0], dtype=np.float64)
+    counts = np.repeat(float(shape[1]), shape[0])
+    for cur_row_index in numba.prange(shape[0]):
+        for data_index in numba.prange(indptr[cur_row_index], indptr[cur_row_index + 1]):
+            if np.isnan(data[data_index]):
+                counts[cur_row_index] -= 1.0
+                continue
+            sums[cur_row_index] += data[data_index]
+    #if we have row from nans return nan (not inf)
+    counts[counts == 0.0] = np.nan
+    return sums/counts
+
+
+@njit
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not isinstance(X, CSBase):
