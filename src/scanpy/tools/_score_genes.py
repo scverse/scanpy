@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import math
 import numpy as np
 import pandas as pd
 
@@ -32,20 +31,22 @@ if TYPE_CHECKING:
 def _get_sparce_nanmean_columns(
     data: NDArray[Any], indices: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
-    sum_arr = np.zeros(shape[1], dtype = np.float64)
-    nans_arr = np.zeros(shape[1], dtype = np.float64)
+    sum_arr = np.zeros(shape[1], dtype=np.float64)
+    nans_arr = np.zeros(shape[1], dtype=np.float64)
     np.add.at(sum_arr, indices, np.nan_to_num(data, nan=0.0))
     np.add.at(nans_arr, indices, np.isnan(data))
-    nans_arr[nans_arr==shape[0]] = np.nan
-    return sum_arr/(shape[0] - nans_arr)
+    nans_arr[nans_arr == shape[0]] = np.nan
+    return sum_arr / (shape[0] - nans_arr)
 
 
 def _get_sparce_nanmean_rows(
     data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
-    sum_arr = np.add.reduceat(np.nan_to_num(data, nan=0.0), indptr[:-1], dtype=np.float64)
+    sum_arr = np.add.reduceat(
+        np.nan_to_num(data, nan=0.0), indptr[:-1], dtype=np.float64
+    )
     nans_arr = np.add.reduceat(np.isnan(data), indptr[:-1], dtype=np.float64)
-    return sum_arr/(shape[1] - nans_arr)
+    return sum_arr / (shape[1] - nans_arr)
 
 
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
