@@ -1,3 +1,5 @@
+"""Functions and classes for computing nearest neighbors."""
+
 from __future__ import annotations
 
 import contextlib
@@ -9,12 +11,12 @@ from warnings import warn
 
 import numpy as np
 import scipy
-from scipy.sparse import issparse
+from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, CSRBase, SpBase, old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
@@ -31,7 +33,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
-    from scipy.sparse import csr_matrix
 
     from .._compat import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
@@ -57,7 +58,7 @@ class KwdsForTransformer(TypedDict):
     random_state: _LegacyRandom
 
 
-class NeighborsParams(TypedDict):
+class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
@@ -68,7 +69,7 @@ class NeighborsParams(TypedDict):
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def neighbors(
+def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
@@ -83,8 +84,7 @@ def neighbors(
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Computes the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
+    """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
@@ -172,16 +172,19 @@ def neighbors(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> # Basic usage
-    >>> sc.pp.neighbors(adata, 20, metric='cosine')
+    >>> sc.pp.neighbors(adata, 20, metric="cosine")
     >>> # Provide your own transformer for more control and flexibility
     >>> from sklearn.neighbors import KNeighborsTransformer
-    >>> transformer = KNeighborsTransformer(n_neighbors=10, metric='manhattan', algorithm='kd_tree')
+    >>> transformer = KNeighborsTransformer(
+    ...     n_neighbors=10, metric="manhattan", algorithm="kd_tree"
+    ... )
     >>> sc.pp.neighbors(adata, transformer=transformer)
     >>> # now you can e.g. access the index: `transformer._tree`
 
-    See also
+    See Also
     --------
     :doc:`/how-to/knn-transformers`
+
     """
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
@@ -245,7 +248,7 @@ def neighbors(
     return adata if copy else None
 
 
-class FlatTree(NamedTuple):
+class FlatTree(NamedTuple):  # noqa: D101
     hyperplanes: None
     offsets: None
     children: None
@@ -311,7 +314,7 @@ class OnFlySymMatrix:
         self.rows = {} if rows is None else rows
         self.restrict_array = restrict_array  # restrict the array to a subset
 
-    def __getitem__(self, index):
+    def __getitem__(self, index):  # noqa: D105
         if isinstance(index, int | np.integer):
             if self.restrict_array is None:
                 glob_index = index
@@ -349,8 +352,7 @@ class OnFlySymMatrix:
 
 
 class Neighbors:
-    """\
-    Data represented as graph of nearest neighbors.
+    """Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a graph of nearest neighbor relations (edges)
     among data points (nodes).
@@ -363,10 +365,11 @@ class Neighbors:
         Number of diffusion components to use.
     neighbors_key
         Where to look in `.uns` and `.obsp` for neighbors data
+
     """
 
     @old_positionals("n_dcs", "neighbors_key")
-    def __init__(
+    def __init__(  # noqa: PLR0912, PLR0915
         self,
         adata: AnnData,
         *,
@@ -378,9 +381,9 @@ class Neighbors:
         # use the graph in adata
         info_str = ""
         self.knn: bool | None = None
-        self._distances: np.ndarray | csr_matrix | None = None
-        self._connectivities: np.ndarray | csr_matrix | None = None
-        self._transitions_sym: np.ndarray | csr_matrix | None = None
+        self._distances: np.ndarray | CSRBase | None = None
+        self._connectivities: np.ndarray | CSRBase | None = None
+        self._transitions_sym: np.ndarray | CSRBase | None = None
         self._number_connected_components: int | None = None
         self._rp_forest: RPForestDict | None = None
         if neighbors_key is None:
@@ -388,10 +391,10 @@ class Neighbors:
         if neighbors_key in adata.uns:
             neighbors = NeighborsView(adata, neighbors_key)
             if "distances" in neighbors:
-                self.knn = issparse(neighbors["distances"])
+                self.knn = isinstance(neighbors["distances"], CSBase)
                 self._distances = neighbors["distances"]
             if "connectivities" in neighbors:
-                self.knn = issparse(neighbors["connectivities"])
+                self.knn = isinstance(neighbors["connectivities"], CSBase)
                 self._connectivities = neighbors["connectivities"]
             if "rp_forest" in neighbors:
                 self._rp_forest = neighbors["rp_forest"]
@@ -399,8 +402,12 @@ class Neighbors:
                 self.n_neighbors = neighbors["params"]["n_neighbors"]
             else:
 
-                def count_nonzero(a: np.ndarray | csr_matrix) -> int:
-                    return a.count_nonzero() if issparse(a) else np.count_nonzero(a)
+                def count_nonzero(a: np.ndarray | CSRBase) -> int:
+                    return (
+                        a.count_nonzero()
+                        if isinstance(a, CSRBase)
+                        else np.count_nonzero(a)
+                    )
 
                 # estimating n_neighbors
                 if self._connectivities is None:
@@ -415,7 +422,7 @@ class Neighbors:
                     )
             info_str += "`.distances` `.connectivities` "
             self._number_connected_components = 1
-            if issparse(self._connectivities):
+            if isinstance(self._connectivities, CSBase):
                 from scipy.sparse.csgraph import connected_components
 
                 self._connected_components = connected_components(self._connectivities)
@@ -443,20 +450,21 @@ class Neighbors:
 
     @property
     def rp_forest(self) -> RPForestDict | None:
+        """PyNNDescent index."""
         return self._rp_forest
 
     @property
-    def distances(self) -> np.ndarray | csr_matrix | None:
+    def distances(self) -> np.ndarray | CSRBase | None:
         """Distances between data points (sparse matrix)."""
         return self._distances
 
     @property
-    def connectivities(self) -> np.ndarray | csr_matrix | None:
+    def connectivities(self) -> np.ndarray | CSRBase | None:
         """Connectivities between data points (sparse matrix)."""
         return self._connectivities
 
     @property
-    def transitions(self) -> np.ndarray | csr_matrix:
+    def transitions(self) -> np.ndarray | CSRBase:
         """Transition matrix (sparse matrix).
 
         Is conjugate to the symmetrized transition matrix via::
@@ -469,12 +477,17 @@ class Neighbors:
         Notes
         -----
         This has not been tested, in contrast to `transitions_sym`.
+
         """
-        Zinv = self.Z.power(-1) if issparse(self.Z) else np.diag(1.0 / np.diag(self.Z))
+        Zinv = (
+            self.Z.power(-1)
+            if isinstance(self.Z, SpBase)  # can be DIA matrix
+            else np.diag(1.0 / np.diag(self.Z))
+        )
         return self.Z @ self.transitions_sym @ Zinv
 
     @property
-    def transitions_sym(self) -> np.ndarray | csr_matrix | None:
+    def transitions_sym(self) -> np.ndarray | CSRBase | None:
         """Symmetrized transition matrix (sparse matrix).
 
         Is conjugate to the transition matrix via::
@@ -511,7 +524,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-    def compute_neighbors(
+    def compute_neighbors(  # noqa: PLR0912
         self,
         n_neighbors: int = 30,
         n_pcs: int | None = None,
@@ -524,8 +537,7 @@ class Neighbors:
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
         random_state: _LegacyRandom = 0,
     ) -> None:
-        """\
-        Compute distances and connectivities of neighbors.
+        """Compute distances and connectivities of neighbors.
 
         Parameters
         ----------
@@ -543,6 +555,7 @@ class Neighbors:
         -------
         Writes sparse graph attributes `.distances` and,
         if `method` is not `None`, `.connectivities`.
+
         """
         from ..tools._utils import _choose_representation
 
@@ -609,7 +622,7 @@ class Neighbors:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
         self._number_connected_components = 1
-        if issparse(self._connectivities):
+        if isinstance(self._connectivities, CSBase):
             from scipy.sparse.csgraph import connected_components
 
             self._connected_components = connected_components(self._connectivities)
@@ -691,8 +704,8 @@ class Neighbors:
                 # Use defaults from UMAP’s `nearest_neighbors` function
                 kwds.update(
                     n_jobs=settings.n_jobs,
-                    n_trees=min(64, 5 + int(round((self._adata.n_obs) ** 0.5 / 20.0))),
-                    n_iters=max(5, int(round(np.log2(self._adata.n_obs)))),
+                    n_trees=min(64, 5 + round((self._adata.n_obs) ** 0.5 / 20.0)),
+                    n_iters=max(5, round(np.log2(self._adata.n_obs))),
                 )
             transformer = PyNNDescentTransformer(**kwds)
         elif transformer == "rapids":
@@ -700,7 +713,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning)
+            warn(msg, FutureWarning, stacklevel=3)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)
@@ -715,8 +728,7 @@ class Neighbors:
 
     @old_positionals("density_normalize")
     def compute_transitions(self, *, density_normalize: bool = True):
-        """\
-        Compute transition matrix.
+        """Compute transition matrix.
 
         Parameters
         ----------
@@ -727,6 +739,7 @@ class Neighbors:
         Returns
         -------
         Makes attributes `.transitions_sym` and `.transitions` available.
+
         """
         start = logg.info("computing transitions")
         W = self._connectivities
@@ -736,20 +749,20 @@ class Neighbors:
             # q[i] is an estimate for the sampling density at point i
             # it's also the degree of the underlying graph
             q = np.asarray(W.sum(axis=0))
-            if not issparse(W):
+            if not isinstance(W, CSBase):
                 Q = np.diag(1.0 / q)
             else:
-                Q = scipy.sparse.spdiags(1.0 / q, 0, W.shape[0], W.shape[0])
+                Q = sparse.spdiags(1.0 / q, 0, W.shape[0], W.shape[0])
             K = Q @ W @ Q
         else:
             K = W
 
         # z[i] is the square root of the row sum of K
         z = np.sqrt(np.asarray(K.sum(axis=0)))
-        if not issparse(K):
+        if not isinstance(K, CSBase):
             self.Z = np.diag(1.0 / z)
         else:
-            self.Z = scipy.sparse.spdiags(1.0 / z, 0, K.shape[0], K.shape[0])
+            self.Z = sparse.spdiags(1.0 / z, 0, K.shape[0], K.shape[0])
         self._transitions_sym = self.Z @ K @ self.Z
         logg.info("    finished", time=start)
 
@@ -760,8 +773,7 @@ class Neighbors:
         sort: Literal["decrease", "increase"] = "decrease",
         random_state: _LegacyRandom = 0,
     ):
-        """\
-        Compute eigen decomposition of transition matrix.
+        """Compute eigen decomposition of transition matrix.
 
         Parameters
         ----------
@@ -787,6 +799,7 @@ class Neighbors:
             projection on the diffusion components.  these are simply the
             components of the right eigenvectors and can directly be used for
             plotting.
+
         """
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
@@ -807,7 +820,7 @@ class Neighbors:
             # Setting the random initial vector
             random_state = check_random_state(random_state)
             v0 = random_state.standard_normal(matrix.shape[0])
-            evals, evecs = scipy.sparse.linalg.eigsh(
+            evals, evecs = sparse.linalg.eigsh(
                 matrix, k=n_comps, which=which, ncv=ncv, v0=v0
             )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
@@ -856,7 +869,7 @@ class Neighbors:
             )
             ** 2
             # account for float32 precision
-            for j in range(0, self.eigen_values.size)
+            for j in range(self.eigen_values.size)
             if self.eigen_values[j] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
@@ -866,7 +879,7 @@ class Neighbors:
         # PAGA paper) don't have it, which makes sense
         row += sum(
             (self.eigen_basis[i, k] - self.eigen_basis[:, k]) ** 2
-            for k in range(0, self.eigen_values.size)
+            for k in range(self.eigen_values.size)
             if self.eigen_values[k] >= 0.9994
         )
         if mask is not None:
@@ -889,6 +902,7 @@ class Neighbors:
         xroot
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
+
         """
         if self._adata.shape[1] != xroot.size:
             msg = "The root vector you provided does not have the correct dimension."

@@ -1,6 +1,4 @@
-"""\
-Calculate scores based on relative expression change of maker pairs
-"""
+"""Calculate scores based on relative expression change of maker pairs."""
 
 from __future__ import annotations
 
@@ -29,8 +27,7 @@ def sandbag(
     filter_genes: Genes | None = None,
     filter_samples: Genes | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
-    """\
-    Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
+    """Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
@@ -66,6 +63,7 @@ def sandbag(
     >>> from pypairs import datasets
     >>> adata = datasets.leng15()
     >>> marker_pairs = sandbag(adata, fraction=0.5)
+
     """
     _check_import()
     from pypairs import settings as pp_settings
@@ -94,8 +92,7 @@ def cyclone(
     min_iter: int = 100,
     min_pairs: int = 50,
 ) -> pd.DataFrame:
-    """\
-    Assigns scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
+    """Assign scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
 
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
@@ -129,6 +126,7 @@ def cyclone(
     If `marker_pairs` contains only the cell cycle categories G1, S and G2M an
     additional column `pypairs_cc_prediction` will be added.
     Where category S is assigned to samples where G1 and G2M score are < 0.5.
+
     """
     _check_import()
     from pypairs import settings as pp_settings
@@ -152,9 +150,9 @@ def cyclone(
 def _check_import():
     try:
         import pypairs
-    except ImportError:
+    except ImportError as e:
         msg = "You need to install the package `pypairs`."
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     min_version = Version("3.0.9")
     if Version(pypairs.__version__) < min_version:

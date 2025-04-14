@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sparse
 from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs
@@ -118,8 +118,7 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
 
 
 def test_scrublet_data(cache: pytest.Cache):
-    """
-    Test that Scrublet processing is arranged correctly.
+    """Test that Scrublet processing is arranged correctly.
 
     Check that simulations run on raw data.
     """
@@ -214,8 +213,7 @@ test_params = {
 
 @pytest.mark.parametrize(("param", "value"), test_params.items())
 def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
-    """
-    Test that Scrublet args are passed.
+    """Test that Scrublet args are passed.
 
     Check that changes to parameters change scrublet results.
     """

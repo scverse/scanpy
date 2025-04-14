@@ -29,8 +29,7 @@ def paga(
     neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Mapping out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
+    """Map out the coarse-grained connectivity structures of complex manifolds :cite:p:`Wolf2019`.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
@@ -104,6 +103,7 @@ def paga(
     pl.paga
     pl.paga_path
     pl.paga_compare
+
     """
     check_neighbors = "neighbors" if neighbors_key is None else neighbors_key
     if check_neighbors not in adata.uns:
@@ -194,11 +194,10 @@ class PAGA:
         connectivities = inter_es.copy()
         expected_n_edges = inter_es.copy()
         inter_es = inter_es.tocoo()
-        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
+        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data, strict=True):
             expected_random_null = (es[i] * ns[j] + es[j] * ns[i]) / (n - 1)
             scaled_value = v / expected_random_null if expected_random_null != 0 else 1
-            if scaled_value > 1:
-                scaled_value = 1
+            scaled_value = min(scaled_value, 1)
             connectivities[i, j] = scaled_value
             expected_n_edges[i, j] = expected_random_null
         # set attributes
@@ -223,7 +222,7 @@ class PAGA:
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         n_neighbors_sq = self._neighbors.n_neighbors**2
-        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
+        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data, strict=True):
             # have n_neighbors**2 inside sqrt for backwards compat
             geom_mean_approx_knn = np.sqrt(n_neighbors_sq * ns[i] * ns[j])
             scaled_value = v / geom_mean_approx_knn if geom_mean_approx_knn != 0 else 1
@@ -306,7 +305,9 @@ class PAGA:
         total_n = self._neighbors.n_neighbors * np.array(vc.sizes())
         # total_n_sum = sum(total_n)
         # expected_n_edges_random = self._adata.uns['paga']['expected_n_edges_random']
-        for i, j, v in zip(transitions.row, transitions.col, transitions.data):
+        for i, j, v in zip(
+            transitions.row, transitions.col, transitions.data, strict=True
+        ):
             # if expected_n_edges_random[i, j] != 0:
             #     # factor 0.5 because of asymmetry
             #     reference = 0.5 * expected_n_edges_random[i, j]
@@ -398,6 +399,7 @@ def paga_degrees(adata: AnnData) -> list[int]:
     Returns
     -------
     List of degrees for each node.
+
     """
     import networkx as nx
 
@@ -417,6 +419,7 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
     Returns
     -------
     Entropies of median expressions for each node.
+
     """
     from scipy.stats import entropy
 
@@ -441,7 +444,7 @@ class PAGAComparePathsResult(NamedTuple):
     n_paths: int
 
 
-def paga_compare_paths(
+def paga_compare_paths(  # noqa: PLR0912, PLR0915
     adata1: AnnData,
     adata2: AnnData,
     adjacency_key: str = "connectivities",
@@ -479,6 +482,7 @@ def paga_compare_paths(
         Fraction of consistent paths
     n_paths
         Number of paths
+
     """
     import networkx as nx
 

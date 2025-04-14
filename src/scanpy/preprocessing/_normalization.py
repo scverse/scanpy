@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals
 from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -46,13 +45,9 @@ def _normalize_data(X, counts, after=None, *, copy: bool = False):
             counts_greater_than_zero = counts[counts > 0]
             after = np.median(counts_greater_than_zero, axis=0)
     counts = counts / after
+    out = X if isinstance(X, np.ndarray | CSBase) else None
     return axis_mul_or_truediv(
-        X,
-        counts,
-        op=truediv,
-        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
-        allow_divide_by_zero=False,
-        axis=0,
+        X, counts, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
 
 
@@ -67,7 +62,7 @@ def _normalize_data(X, counts, after=None, *, copy: bool = False):
     "inplace",
     "copy",
 )
-def normalize_total(
+def normalize_total(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     target_sum: float | None = None,
@@ -80,8 +75,7 @@ def normalize_total(
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
-    """\
-    Normalize counts per cell.
+    """Normalize counts per cell.
 
     Normalize each cell by total counts over all genes,
     so that every cell has the same total count after normalization.
@@ -138,23 +132,28 @@ def normalize_total(
     `adata.X` and `adata.layers`, depending on `inplace`.
 
     Example
-    --------
+    -------
     >>> import sys
     >>> from anndata import AnnData
     >>> import scanpy as sc
-    >>> sc.settings.verbosity = 'info'
+    >>> sc.settings.verbosity = "info"
     >>> sc.settings.logfile = sys.stdout  # for doctests
     >>> np.set_printoptions(precision=2)
-    >>> adata = AnnData(np.array([
-    ...     [3, 3, 3, 6, 6],
-    ...     [1, 1, 1, 2, 2],
-    ...     [1, 22, 1, 2, 2],
-    ... ], dtype='float32'))
+    >>> adata = AnnData(
+    ...     np.array(
+    ...         [
+    ...             [3, 3, 3, 6, 6],
+    ...             [1, 1, 1, 2, 2],
+    ...             [1, 22, 1, 2, 2],
+    ...         ],
+    ...         dtype="float32",
+    ...     )
+    ... )
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)['X']
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)["X"]
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -162,9 +161,12 @@ def normalize_total(
            [0.14, 0.14, 0.14, 0.29, 0.29],
            [0.04, 0.79, 0.04, 0.07, 0.07]], dtype=float32)
     >>> X_norm = sc.pp.normalize_total(
-    ...     adata, target_sum=1, exclude_highly_expressed=True,
-    ...     max_fraction=0.2, inplace=False
-    ... )['X']
+    ...     adata,
+    ...     target_sum=1,
+    ...     exclude_highly_expressed=True,
+    ...     max_fraction=0.2,
+    ...     inplace=False,
+    ... )["X"]
     normalizing counts per cell. The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
         finished (0:00:00)
@@ -172,6 +174,7 @@ def normalize_total(
     array([[ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5,  0.5,  0.5,  1. ,  1. ],
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
+
     """
     if copy:
         if not inplace:
@@ -186,17 +189,17 @@ def normalize_total(
     # Deprecated features
     if layers is not None:
         warn(
-            FutureWarning(
-                "The `layers` argument is deprecated. Instead, specify individual "
-                "layers to normalize with `layer`."
-            )
+            "The `layers` argument is deprecated. Instead, specify individual "
+            "layers to normalize with `layer`.",
+            FutureWarning,
+            stacklevel=2,
         )
     if layer_norm is not None:
         warn(
-            FutureWarning(
-                "The `layer_norm` argument is deprecated. Specify the target size "
-                "factor directly with `target_sum`."
-            )
+            "The `layer_norm` argument is deprecated. Specify the target size "
+            "factor directly with `target_sum`.",
+            FutureWarning,
+            stacklevel=2,
         )
 
     if layers == "all":
@@ -232,7 +235,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-        warn(UserWarning("Some cells have zero counts"))
+        warn("Some cells have zero counts", UserWarning, stacklevel=2)
 
     if inplace:
         if key_added is not None:

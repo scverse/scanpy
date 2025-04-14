@@ -17,19 +17,18 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
 
-    from ..._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from ..._compat import CSBase, _LegacyRandom
 
 
 def _pca_compat_sparse(
-    x: _CSMatrix,
+    x: CSBase,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],
     mu: NDArray[np.floating] | None = None,
     random_state: _LegacyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
-    """Sparse PCA for scikit-learn <1.4"""
+    """Sparse PCA for scikit-learn <1.4."""
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(x.shape))

@@ -1,3 +1,5 @@
+"""External preprocessing and analysis tools and their plotting."""
+
 from __future__ import annotations
 
 import sys

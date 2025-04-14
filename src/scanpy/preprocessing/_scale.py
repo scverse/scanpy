@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import csc_matrix, csr_matrix, issparse
 
 from .. import logging as logg
-from .._compat import DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
@@ -30,8 +29,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-
-    from .._utils import _CSMatrix
 
 
 @njit
@@ -65,7 +62,7 @@ def clip_array(
     return X
 
 
-def clip_set(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CSMatrix:
+def clip_set(x: CSBase, *, max_value: float, zero_center: bool = True) -> CSBase:
     x = x.copy()
     x[x > max_value] = max_value
     if zero_center:
@@ -77,7 +74,7 @@ def clip_set(x: _CSMatrix, *, max_value: float, zero_center: bool = True) -> _CS
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale(
-    data: AnnData | _CSMatrix | np.ndarray | DaskArray,
+    data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -85,9 +82,8 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | _CSMatrix | np.ndarray | DaskArray | None:
-    """\
-    Scale data to unit variance and zero mean.
+) -> AnnData | CSBase | np.ndarray | DaskArray | None:
+    """Scale data to unit variance and zero mean.
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
@@ -129,6 +125,7 @@ def scale(
         Standard deviations per gene before scaling.
     `adata.var['var']` : :class:`pandas.Series` (dtype `float`)
         Variances per gene before scaling.
+
     """
     _check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
@@ -144,7 +141,7 @@ def scale(
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
-def scale_array(
+def scale_array(  # noqa: PLR0912
     X: np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
@@ -195,29 +192,25 @@ def scale_array(
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
-        if isinstance(X, DaskArray) and issparse(X._meta):
+        if isinstance(X, DaskArray) and isinstance(X._meta, CSBase):
             warnings.warn(
                 "zero-center being used with `DaskArray` sparse chunks. "
                 "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
                 UserWarning,
+                stacklevel=2,
             )
         X -= mean
 
-    X = axis_mul_or_truediv(
-        X,
-        std,
-        op=truediv,
-        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
-        axis=1,
-    )
+    out = X if isinstance(X, np.ndarray | CSBase) else None
+    X = axis_mul_or_truediv(X, std, op=truediv, out=out, axis=1)
 
     # do the clipping
     if max_value is not None:
         logg.debug(f"... clipping at max_value {max_value}")
         if isinstance(X, DaskArray):
-            clip = clip_set if issparse(X._meta) else clip_array
+            clip = clip_set if isinstance(X._meta, CSBase) else clip_array
             X = X.map_blocks(clip, max_value=max_value, zero_center=zero_center)
-        elif issparse(X):
+        elif isinstance(X, CSBase):
             X.data = clip_array(X.data, max_value=max_value, zero_center=False)
         else:
             X = clip_array(X, max_value=max_value, zero_center=zero_center)
@@ -227,10 +220,9 @@ def scale_array(
         return X
 
 
-@scale.register(csr_matrix)
-@scale.register(csc_matrix)
+@scale.register(CSBase)
 def scale_sparse(
-    X: _CSMatrix,
+    X: CSBase,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -264,7 +256,7 @@ def scale_sparse(
             mask_obs=mask_obs,
         )
     else:
-        if isinstance(X, csc_matrix):
+        if isinstance(X, CSCBase):
             X = X.tocsr()
         elif copy:
             X = X.copy()

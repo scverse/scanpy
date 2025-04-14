@@ -1,6 +1,6 @@
-"""
-This module will benchmark preprocessing operations in Scanpy that run on log-transformed data
-API documentation: https://scanpy.readthedocs.io/en/stable/api/preprocessing.html
+"""Benchmark preprocessing operations in Scanpy that run on log-transformed data.
+
+API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.html>.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ batch_key: str | None
 
 
 def setup(dataset: Dataset, layer: KeyX, *_):
-    """Setup global variables before each benchmark."""
+    """Set up global variables before each benchmark."""
     global adata, batch_key
     adata, batch_key = get_dataset(dataset, layer=layer)
 
@@ -84,7 +84,7 @@ class FastSuite:
         ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
         [None, "off-axis"],
     )
-    param_names = ["dataset", "layer"]
+    param_names = ("dataset", "layer")
 
     def time_mean_var(self, *_):
         _get_mean_var(adata.X)

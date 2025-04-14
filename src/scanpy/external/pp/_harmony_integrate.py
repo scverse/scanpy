@@ -1,10 +1,8 @@
-"""
-Use harmony to integrate cells from different experiments.
-"""
+"""Use harmony to integrate cells from different experiments."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence  # noqa: TCH003
+from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -26,8 +24,7 @@ def harmony_integrate(
     adjusted_basis: str = "X_pca_harmony",
     **kwargs,
 ):
-    """\
-    Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
+    """Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
 
     Harmony :cite:p:`Korsunsky2019` is an algorithm for integrating single-cell
     data from multiple experiments. This function uses the python
@@ -79,20 +76,21 @@ def harmony_integrate(
     be a column in ``adata.obs`` giving the experiment each cell came
     from.
 
-    >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
+    >>> adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
 
     Finally, run harmony. Afterwards, there will be a new table in
     ``adata.obsm`` containing the adjusted PC's.
 
-    >>> sce.pp.harmony_integrate(adata, 'batch')
-    >>> 'X_pca_harmony' in adata.obsm
+    >>> sce.pp.harmony_integrate(adata, "batch")
+    >>> "X_pca_harmony" in adata.obsm
     True
+
     """
     try:
         import harmonypy
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install harmonypy:\n\n\tpip install harmonypy"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     X = adata.obsm[basis].astype(np.float64)
 

@@ -85,7 +85,7 @@ def test_spatial_general(image_comparer):  # general coordinates
         "spatial"
     )  # spatial data don't have imgs, so remove entry from uns
     # Required argument for now
-    spot_size = list(spatial_metadata.values())[0]["scalefactors"][
+    spot_size = next(iter(spatial_metadata.values()))["scalefactors"][
         "spot_diameter_fullres"
     ]
 
@@ -126,7 +126,7 @@ def equivalent_spatial_plotters(adata):
     del no_spatial.uns["spatial"]
 
     img_key = "hires"
-    library_id = list(adata.uns["spatial"])[0]
+    library_id = next(iter(adata.uns["spatial"]))
     spatial_data = adata.uns["spatial"][library_id]
     img = spatial_data["images"][img_key]
     scale_factor = spatial_data["scalefactors"][f"tissue_{img_key}_scalef"]
@@ -174,9 +174,7 @@ def spatial_kwargs(request):
 
 
 def test_manual_equivalency(equivalent_spatial_plotters, tmp_path, spatial_kwargs):
-    """
-    Tests that manually passing values to sc.pl.spatial is similar to automatic extraction.
-    """
+    """Tests that manually passing values to sc.pl.spatial is similar to automatic extraction."""
     orig, removed = equivalent_spatial_plotters
 
     orig_pth = tmp_path / "orig.png"
@@ -240,9 +238,7 @@ def test_white_background_vs_no_img(adata, tmp_path, spatial_kwargs):
 
 
 def test_spatial_na_color(adata, tmp_path):
-    """
-    Check that na_color defaults to transparent when an image is present, light gray when not.
-    """
+    """Check that na_color defaults to transparent when an image is present, light gray when not."""
     white_background = np.ones_like(
         adata.uns["spatial"]["scanpy_img"]["images"]["hires"]
     )

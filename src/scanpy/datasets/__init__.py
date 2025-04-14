@@ -19,6 +19,7 @@ from ._ebi_expression_atlas import ebi_expression_atlas
 __all__ = [
     "blobs",
     "burczynski06",
+    "ebi_expression_atlas",
     "krumsiek11",
     "moignard15",
     "paul15",
@@ -27,5 +28,4 @@ __all__ = [
     "pbmc68k_reduced",
     "toggleswitch",
     "visium_sge",
-    "ebi_expression_atlas",
 ]

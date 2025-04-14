@@ -156,8 +156,8 @@ def test_heatmap(image_comparer):
     # small
     a = AnnData(
         np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
-        obs={"foo": "a b c".split()},
-        var=pd.DataFrame({"genes": "g1 g2 g3".split()}).set_index("genes"),
+        obs={"foo": ["a", "b", "c"]},
+        var=pd.DataFrame({"genes": ["g1", "g2", "g3"]}).set_index("genes"),
     )
     a.obs["foo"] = a.obs["foo"].astype("category")
     sc.pl.heatmap(
@@ -873,7 +873,7 @@ def test_rank_genes_group_axes(image_comparer):
 
 @pytest.fixture(scope="session")
 def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
-    """Create two anndata objects which are equivalent except for var_names
+    """Create two anndata objects which are equivalent except for var_names.
 
     Both have ensembl ids and hgnc symbols as columns in var. The first has ensembl
     ids as var_names, the second has symbols.
@@ -935,9 +935,8 @@ def test_plot_rank_genes_groups_gene_symbols(
 
     func(b)
     plt.savefig(pth_1_b)
-    pass
 
-    check_same_image(pth_1_a, pth_1_b, tol=1)
+    check_same_image(pth_1_a, pth_1_b, tol=1, root=tmp_path)
 
     pth_2_a = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_a.png"
     pth_2_b = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_b.png"
@@ -950,7 +949,7 @@ def test_plot_rank_genes_groups_gene_symbols(
     plt.savefig(pth_2_b)
     plt.close()
 
-    check_same_image(pth_2_a, pth_2_b, tol=1)
+    check_same_image(pth_2_a, pth_2_b, tol=1, root=tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -965,10 +964,7 @@ def test_plot_rank_genes_groups_gene_symbols(
     ],
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
-    """\
-    Checks that passing a negative value for n_genes works, and that passing
-    var_names as a dict works.
-    """
+    """Checks that once can pass a negative value for n_genes and var_names as a dict."""
     N = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
@@ -997,12 +993,12 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     wrapped(positive_n_pth, n_genes=N)
     wrapped(top_genes_pth, var_names=top_genes)
 
-    check_same_image(positive_n_pth, top_genes_pth, tol=1)
+    check_same_image(positive_n_pth, top_genes_pth, tol=1, root=tmp_path)
 
     wrapped(negative_n_pth, n_genes=-N)
     wrapped(bottom_genes_pth, var_names=bottom_genes)
 
-    check_same_image(negative_n_pth, bottom_genes_pth, tol=1)
+    check_same_image(negative_n_pth, bottom_genes_pth, tol=1, root=tmp_path)
 
     # Shouldn't be able to pass these together
     with pytest.raises(
@@ -1136,13 +1132,13 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
             "pca_sparse_layer",
             partial(sc.pl.pca, color=["CD3D", "CD79A"], layer="sparse", cmap="viridis"),
         ),
-        pytest.param(
-            "tsne",
-            partial(sc.pl.tsne, color=["CD3D", "louvain"]),
-            marks=pytest.mark.xfail(
-                reason="slight differences even after setting random_state."
-            ),
-        ),
+        # pytest.param(
+        #     "tsne",
+        #     partial(sc.pl.tsne, color=["CD3D", "louvain"]),
+        #     marks=pytest.mark.xfail(
+        #         reason="slight differences even after setting random_state."
+        #     ),
+        # ),
         ("umap_nocolor", sc.pl.umap),
         (
             "umap",
@@ -1222,7 +1218,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
     save_and_compare_images("embedding_groups_size")
 
 
-def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer, check_same_image):
+def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1322,12 +1318,19 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
     plt.close()
 
     check_same_image(
-        tmp_path / "umap_norm_fig1.png", tmp_path / "umap_norm_fig2.png", tol=1
+        tmp_path / "umap_norm_fig1.png",
+        tmp_path / "umap_norm_fig2.png",
+        tol=1,
+        root=tmp_path,
     )
 
     with pytest.raises(AssertionError):
         check_same_image(
-            tmp_path / "umap_norm_fig1.png", tmp_path / "umap_norm_fig0.png", tol=1
+            tmp_path / "umap_norm_fig1.png",
+            tmp_path / "umap_norm_fig0.png",
+            tol=1,
+            root=tmp_path,
+            save=False,
         )
 
 
@@ -1382,8 +1385,7 @@ def test_scatter_specify_layer_and_raw():
     "color", ["n_genes", "bulk_labels", ["n_genes", "bulk_labels"]]
 )
 def test_scatter_no_basis_per_obs(image_comparer, color):
-    """Test scatterplot of per-obs points with no basis"""
-
+    """Test scatterplot of per-obs points with no basis."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1401,8 +1403,7 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
 
 
 def test_scatter_no_basis_per_var(image_comparer):
-    """Test scatterplot of per-var points with no basis"""
-
+    """Test scatterplot of per-var points with no basis."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -1429,7 +1430,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw
     plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
     plt.close()
 
-    check_same_image(path1, path2, tol=15)
+    check_same_image(path1, path2, tol=15, root=tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -1445,7 +1446,7 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw
     ],
 )
 def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
-    """Test that `scatter()` raises `ValueError` where appropriate
+    """Test that `scatter()` raises `ValueError` where appropriate.
 
     If `sc.pl.scatter()` receives variable labels that either cannot be
     found or are incompatible with one another, the function should
@@ -1481,9 +1482,7 @@ def test_rankings(image_comparer):
 
 # TODO: Make more generic
 def test_scatter_rep(tmp_path):
-    """
-    Test to make sure I can predict when scatter reps should be the same
-    """
+    """Test to make sure I can predict when scatter reps should be the same."""
     rep_args = {
         "raw": {"use_raw": True},
         "layer": {"layer": "layer", "use_raw": False},
@@ -1494,6 +1493,7 @@ def test_scatter_rep(tmp_path):
             list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
+            strict=True,
         ),
         columns=["rep", "gene", "result"],
     )
@@ -1508,7 +1508,7 @@ def test_scatter_rep(tmp_path):
         X=np.zeros((15, 3)),
         layers={"layer": np.zeros((15, 3))},
         obsm={"X_pca": coords},
-        var=pd.DataFrame(index=[x for x in list("abc")]),
+        var=pd.DataFrame(index=list("abc")),
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(15)]),
     )
     adata.raw = adata.copy()
@@ -1696,7 +1696,7 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     plt.savefig(pth_b)
     plt.close()
 
-    check_same_image(pth_a, pth_b, tol=1)
+    check_same_image(pth_a, pth_b, tol=1, root=tmp_path)
 
 
 @needs.skmisc
@@ -1728,7 +1728,7 @@ def test_scrublet_plots(monkeypatch, image_comparer, id, params):
 
 
 def test_umap_mask_equal(tmp_path, check_same_image):
-    """Check that all desired cells are coloured and masked cells gray"""
+    """Check that all desired cells are coloured and masked cells gray."""
     pbmc = pbmc3k_processed()
     mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
@@ -1741,7 +1741,7 @@ def test_umap_mask_equal(tmp_path, check_same_image):
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
-    check_same_image(p1, p2, tol=1)
+    check_same_image(p1, p2, tol=1, root=tmp_path)
 
 
 def test_umap_mask_mult_plots():
@@ -1755,7 +1755,7 @@ def test_umap_mask_mult_plots():
 
 
 def test_string_mask(tmp_path, check_same_image):
-    """Check that the same mask given as string or bool array provides the same result"""
+    """Check that the same mask given as string or bool array provides the same result."""
     pbmc = pbmc3k_processed()
     pbmc.obs["mask"] = mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
@@ -1767,7 +1767,7 @@ def test_string_mask(tmp_path, check_same_image):
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
-    check_same_image(p1, p2, tol=1)
+    check_same_image(p1, p2, tol=1, root=tmp_path)
 
 
 def test_violin_scale_warning(monkeypatch):
