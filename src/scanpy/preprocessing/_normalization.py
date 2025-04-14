@@ -26,15 +26,21 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+    """Given a 1D array of counts, compute the median of the non-zero counts."""
+    if isinstance(counts, DaskArray):
+        counts = counts.compute()
+    counts_greater_than_zero = counts[counts > 0]
+    median = np.median(counts_greater_than_zero)
+    return median
+
+
 def _normalize_data(X, counts, after=None, *, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, int | np.integer):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     if after is None:
-        if isinstance(counts, DaskArray):
-            counts = counts.compute()
-        counts_greater_than_zero = counts[counts > 0]
-        after = np.median(counts_greater_than_zero, axis=0)
+        after = _compute_nnz_median(counts)
     counts = counts / after
     return axis_mul_or_truediv(
         X,
