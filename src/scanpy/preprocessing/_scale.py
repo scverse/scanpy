@@ -145,7 +145,7 @@ def scale(
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-def scale_array(  # noqa: PLR0912
+def scale_array(
     x: _A,
     *,
     zero_center: bool = True,
