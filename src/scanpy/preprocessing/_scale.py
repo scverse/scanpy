@@ -200,7 +200,7 @@ def scale_array(
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             msg = "zero-centering a sparse array/matrix densifies it."
-            warnings.warn(UserWarning, stacklevel=2)
+            warnings.warn(msg, UserWarning, stacklevel=2)
         x -= mean
 
     x = axis_mul_or_truediv(
