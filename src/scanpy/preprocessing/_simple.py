@@ -748,7 +748,7 @@ def regress_out(
         cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
         number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
 
-        X = _to_dense(X, order="F") if issparse(X) else X
+        X = _to_dense(X, order="F") if isinstance(X, CSBase) else X
         if np.issubdtype(X.dtype, np.integer):
             target_dtype = np.float32 if X.dtype.itemsize < 4 else np.float64
             X = X.astype(target_dtype)
