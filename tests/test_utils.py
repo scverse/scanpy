@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+import string
 from operator import mul, truediv
 from types import ModuleType
 from typing import TYPE_CHECKING
@@ -19,6 +21,7 @@ from scanpy._utils import (
     elem_mul,
     is_constant,
 )
+from scanpy._utils.random import ith_k_tuple, random_k_tuples, random_strings
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
@@ -291,3 +294,28 @@ def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
             return gen.choice(arr, size=(100, 100))
         case _:
             pytest.fail(f"Unknown {func=}")
+
+
+def test_ith_k_tuple() -> None:
+    """Test that the k-tuples appear in the expected order."""
+    np.testing.assert_equal(
+        ith_k_tuple(np.arange(2**3), n=2, k=3),
+        list(itertools.product(range(2), repeat=3)),
+    )
+
+
+def test_random_k_tuples() -> None:
+    """Test that random k-tuples are unique."""
+    tups = random_k_tuples(n=26, k=6, size=10_000)
+    assert tups.shape == (10_000, 6)
+    assert tups.dtype == np.int64
+    unique = np.unique(tups, axis=0)
+    assert len(unique) == len(tups)
+
+
+def test_random_strings() -> None:
+    strings = random_strings(size=26**2, length=2, alphabet=string.ascii_lowercase)
+    assert strings.shape == (26**2,)
+    assert strings.dtype == np.dtype("U2")
+    unique = np.unique(strings, axis=0)
+    assert len(unique) == len(strings)

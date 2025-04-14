@@ -16,7 +16,8 @@ from scanpy.get import obs_df
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata, subsample
+from ..._utils import _doc_params, _empty, sanitize_anndata
+from ..._utils.random import subsample
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -1398,8 +1399,8 @@ def sim(
         savefig_or_show("sim", save=save, show=show)
     else:
         # shuffled data
-        X = adata.X
-        X, rows = subsample(X, seed=1)
+        X, rows = subsample(adata.X, seed=1)
+        logg.debug(f"... subsampled to {X.shape[0]} of {adata.shape[0]} data points")
         timeseries(
             X,
             var_names=adata.var_names,

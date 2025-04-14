@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from scanpy.preprocessing._utils import _get_mean_var
-
-from ..._utils import _get_legacy_random
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -49,7 +48,7 @@ def subsample_counts(
     random_seed: _LegacyRandom = 0,
 ) -> tuple[CSBase, NDArray[np.int64]]:
     if rate < 1:
-        random_seed = _get_legacy_random(random_seed)
+        random_seed = check_random_state(random_seed)
         E.data = random_seed.binomial(np.round(E.data).astype(int), rate)
         current_totals = np.asarray(E.sum(1)).squeeze()
         unsampled_orig_totals = original_totals - current_totals
