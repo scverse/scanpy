@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sp
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -62,7 +62,7 @@ REP_PCA = np.array([REP_PCA_0, *([REP_PCA_1_6] * 6)], dtype=np.float32)
 
 def test_dendrogram_cor():
     rep = sc.AnnData(
-        sp.csr_matrix(
+        sparse.csr_matrix(  # noqa: TID251
             (
                 np.array([1.2762934659055623, 1.6916760106710726, 1.6916760106710726]),
                 np.array([12, 5, 44]),

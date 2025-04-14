@@ -5,17 +5,16 @@ from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
 
-import numba as nb
+import numba
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp_sparse
 from anndata import AnnData
 
-from scanpy import logging as logg
-from scanpy._compat import njit
-from scanpy._settings import Verbosity, settings
-from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
-from scanpy.experimental._docs import (
+from ... import logging as logg
+from ..._compat import CSBase, njit
+from ..._settings import Verbosity, settings
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from ...experimental._docs import (
     doc_adata,
     doc_check_values,
     doc_dist_params,
@@ -23,9 +22,9 @@ from scanpy.experimental._docs import (
     doc_inplace,
     doc_layer,
 )
-from scanpy.get import _get_obs_rep
-from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._utils import _get_mean_var
+from ...get import _get_obs_rep
+from ...preprocessing._distributed import materialize_as_ndarray
+from ...preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -62,7 +61,7 @@ def _calculate_res_sparse(
         return res
 
     residuals = np.zeros(n_genes, dtype=np.float64)
-    for gene in nb.prange(n_genes):
+    for gene in numba.prange(n_genes):
         start_idx = indptr[gene]
         stop_idx = indptr[gene + 1]
 
@@ -113,7 +112,7 @@ def _calculate_res_dense(
 
     residuals = np.zeros(n_genes, dtype=np.float64)
 
-    for gene in nb.prange(n_genes):
+    for gene in numba.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
             sum_clipped_res += clac_clipped_res_dense(gene, cell)
@@ -129,7 +128,7 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(
+def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     theta: float = 100,
@@ -151,6 +150,7 @@ def _highly_variable_pearson_residuals(
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
     # check theta
     if theta <= 0:
@@ -186,7 +186,7 @@ def _highly_variable_pearson_residuals(
             msg = "Pearson residuals require `clip>=0` or `clip=None`."
             raise ValueError(msg)
 
-        if sp_sparse.issparse(X_batch):
+        if isinstance(X_batch, CSBase):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
             calculate_res = partial(
@@ -308,7 +308,7 @@ def _highly_variable_pearson_residuals(
     layer=doc_layer,
     inplace=doc_inplace,
 )
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,

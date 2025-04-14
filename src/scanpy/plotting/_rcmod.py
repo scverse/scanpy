@@ -33,7 +33,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
         "Bitstream Vera Sans",
         "sans-serif",
     ]
-    fontsize = fontsize
     rcParams["font.size"] = fontsize
     rcParams["legend.fontsize"] = 0.92 * fontsize
     rcParams["axes.titlesize"] = fontsize

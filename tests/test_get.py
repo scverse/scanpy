@@ -48,7 +48,7 @@ def adata() -> AnnData:
         var=pd.DataFrame(
             {"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]
         ),
-        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},
+        layers={"double": sparse.csr_matrix(np.ones((2, 2)), dtype=int) * 2},  # noqa: TID251
     )
 
 
@@ -59,7 +59,7 @@ def adata() -> AnnData:
 
 def test_obs_df(adata: AnnData):
     adata.obsm["eye"] = np.eye(2, dtype=int)
-    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
+    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     # make raw with different genes than adata
     adata.raw = anndata_v0_8_constructor_compat(
@@ -197,8 +197,8 @@ def test_backed_vs_memory():
     # use non-sequential list of cell indices
     cell_indices = list(adata.obs_names[30::-2])
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=cell_indices + ["highly_variable"]),
-        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"]),
+        sc.get.var_df(adata, keys=[*cell_indices, "highly_variable"]),
+        sc.get.var_df(adata_backed, keys=[*cell_indices, "highly_variable"]),
     )
 
 
@@ -216,7 +216,7 @@ def test_column_content():
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
-    query = cell_ids + ["highly_variable", "dispersions_norm", "dispersions"]
+    query = [*cell_ids, "highly_variable", "dispersions_norm", "dispersions"]
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:
@@ -225,7 +225,7 @@ def test_column_content():
 
 def test_var_df(adata: AnnData):
     adata.varm["eye"] = np.eye(2, dtype=int)
-    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")
+    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     pd.testing.assert_frame_equal(
         sc.get.var_df(

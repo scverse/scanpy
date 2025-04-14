@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 import numpy as np
 from packaging.version import Version
+from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,6 +20,14 @@ R = TypeVar("R")
 
 _LegacyRandom = int | np.random.RandomState | None
 
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
+"""Only use if you want to specially handle matrices as opposed to arrays"""
+
+CSRBase = sparse.csr_matrix  # noqa: TID251
+CSCBase = sparse.csc_matrix  # noqa: TID251
+SpBase = sparse.spmatrix  # noqa: TID251
+CSBase = _CSMatrix
+
 
 if TYPE_CHECKING:
     # type checkers are confused and can only see …core.Array
@@ -26,29 +35,27 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-
-    class DaskArray:
-        pass
+    DaskArray = type("Array", (), {})
+    DaskArray.__module__ = "dask.array"
 
 
 if find_spec("zappy") or TYPE_CHECKING:
     from zappy.base import ZappyArray
 else:
-
-    class ZappyArray:
-        pass
+    ZappyArray = type("ZappyArray", (), {})
+    ZappyArray.__module__ = "zappy.base"
 
 
 __all__ = [
     "DaskArray",
     "ZappyArray",
+    "_numba_threading_layer",
+    "deprecated",
     "fullname",
+    "njit",
+    "old_positionals",
     "pkg_metadata",
     "pkg_version",
-    "old_positionals",
-    "deprecated",
-    "njit",
-    "_numba_threading_layer",
 ]
 
 
@@ -213,7 +220,7 @@ class _FakeRandomGen(np.random.Generator):
             if name.startswith("_") or not callable(meth):
                 continue
 
-            def mk_wrapper(name: str):
+            def mk_wrapper(name: str, meth):
                 # Old pytest versions try to run the doctests
                 @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
                 def wrapper(self: _FakeRandomGen, *args, **kwargs):
@@ -221,7 +228,7 @@ class _FakeRandomGen(np.random.Generator):
 
                 return wrapper
 
-            setattr(cls, name, mk_wrapper(name))
+            setattr(cls, name, mk_wrapper(name, meth))
 
 
 _FakeRandomGen._delegate()

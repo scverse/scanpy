@@ -8,7 +8,7 @@ from matplotlib import rcParams
 
 from .._compat import deprecated, old_positionals
 from .._settings import settings
-from . import _utils
+from ._utils import savefig_or_show
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
@@ -16,7 +16,7 @@ from . import _utils
 
 
 @old_positionals("log", "show", "save", "highly_variable_genes")
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0912
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
     log: bool = False,
@@ -73,6 +73,7 @@ def highly_variable_genes(
             ["highly variable genes", "other genes"],
             ["black", "grey"],
             [gene_subset, ~gene_subset],
+            strict=True,
         ):
             if False:
                 means_, var_or_disps_ = np.log10(means[mask]), np.log10(d[mask])
@@ -97,7 +98,7 @@ def highly_variable_genes(
         )
 
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
+    savefig_or_show("filter_genes_dispersion", show=show, save=save)
     if show:
         return None
     return plt.gca()

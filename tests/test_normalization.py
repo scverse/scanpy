@@ -7,9 +7,9 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
-from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy._utils import axis_sum
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
@@ -51,9 +51,9 @@ def test_normalize_matrix_types(
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.todense()
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
@@ -142,7 +142,9 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
 
 
 @pytest.mark.parametrize(
-    "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
+    "sparsity_func",
+    [np.array, sparse.csr_matrix],  # noqa: TID251
+    ids=lambda x: x.__name__,
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])

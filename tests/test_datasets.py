@@ -78,7 +78,14 @@ def test_pbmc3k_processed():
 
 
 @pytest.mark.internet
-def test_ebi_expression_atlas():
+def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
+    from scanpy.datasets import _ebi_expression_atlas as ea_mod
+
+    # make sure we use chunks when testing.
+    # This dataset has <8M entries, so 4M entries/chunk = 2 chunks
+    assert hasattr(ea_mod, "CHUNK_SIZE")
+    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", int(4e6))
+
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     # The shape changes sometimes
     assert 2261 <= adata.shape[0] <= 2315
@@ -151,10 +158,10 @@ def test_visium_datasets_images():
 
     # Test that tissue image is a tif image file (using `file`)
     process = subprocess.run(
-        ["file", "--mime-type", image_path], stdout=subprocess.PIPE
+        ["file", "--mime-type", image_path], stdout=subprocess.PIPE, check=True
     )
     output = process.stdout.strip().decode()  # make process output string
-    assert output == str(image_path) + ": image/tiff"
+    assert output == f"{image_path}: image/tiff"
 
 
 def test_download_failure():

@@ -26,16 +26,14 @@ if TYPE_CHECKING:
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
-_VERBOSITY_TO_LOGLEVEL = {
+_VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
     "error": "ERROR",
     "warning": "WARNING",
     "info": "INFO",
     "hint": "HINT",
     "debug": "DEBUG",
 }
-# Python 3.7+ ensures iteration order
-for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
-    _VERBOSITY_TO_LOGLEVEL[v] = level
+_VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
 
 
 class Verbosity(IntEnum):
@@ -93,7 +91,7 @@ class ScanpyConfig:
     N_PCS: int
     """Default number of principal components to use."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         verbosity: Verbosity | int | str = Verbosity.warning,
@@ -406,7 +404,7 @@ class ScanpyConfig:
         "transparent",
         "ipython_format",
     )
-    def set_figure_params(
+    def set_figure_params(  # noqa: PLR0913
         self,
         *,
         scanpy: bool = True,
