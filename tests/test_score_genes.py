@@ -42,12 +42,12 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan) -> CSRBase:
     return S
 
 
-def _create_adata(n_obs, n_var, p_zero, p_nan) -> AnnData:
+def _create_adata(n_obs: int, n_var: int, p_zero: float, p_nan: float) -> AnnData:
     """Create an AnnData with random data, sparseness and some NaN values."""
     X = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
     adata = AnnData(X)
     gene_names = _create_random_gene_names(n_var, length=6)
-    adata.var_names = gene_names
+    adata.var_names = gene_names.reshape(n_var)  # can be unsized
     return adata
 
 
