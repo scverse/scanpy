@@ -32,16 +32,6 @@ def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
     return median
 
 
-def _normalize_data(X, counts, after=None, *, copy: bool = False):
-    if after is None:
-        after = _compute_nnz_median(counts)
-    counts = counts / after
-    out = X if isinstance(X, np.ndarray | CSBase) else None
-    return axis_mul_or_truediv(
-        X, counts, op=truediv, out=out, allow_divide_by_zero=False, axis=0
-    )
-
-
 @njit
 def _normalize_csr(
     indptr,
@@ -54,6 +44,7 @@ def _normalize_csr(
     max_fraction: float = 0.05,
     n_threads: int = 10,
 ):
+    """For sparse CSR matrix, compute the normalization factors."""
     counts_per_cell = np.zeros(rows, dtype=data.dtype)
     for i in numba.prange(rows):
         count = 0.0
@@ -83,30 +74,31 @@ def _normalize_csr(
     return counts_per_cell, counts_per_cols
 
 
-@njit
-def _divide_target_sum(
-    indptr,
-    indices,
-    data,
-    *,
-    rows,
-    columns,
-    target_sum,
-    counts_per_cell,
-):
-    for i in numba.prange(rows):
-        count = counts_per_cell[i] / target_sum
-        for j in range(indptr[i], indptr[i + 1]):
-            data[j] /= count
-
-
 def _normalize_total_helper(
-    x,
+    x: np.ndarray | CSBase | DaskArray,
     *,
-    exclude_highly_expressed,
-    max_fraction,
-    target_sum,
-) -> tuple[np.ndarray, np.ndarray]:
+    exclude_highly_expressed: bool,
+    max_fraction: float,
+    target_sum: float | None,
+) -> tuple[np.ndarray | CSBase | DaskArray, np.ndarray, np.ndarray | None]:
+    """Return the normalized data, counts per cell, and gene subset.
+
+    It returns the normalized data, the counts per cell, and the gene subset.
+
+    Params
+    ------
+    See `normalize_total` for details.
+
+    Returns
+    -------
+    X
+        The normalized data matrix.
+    counts_per_cell
+        The normalization factors used for each cell (counts / target_sum).
+    gene_subset
+        If `exclude_highly_expressed=True`, a boolean mask indicating which genes
+        were not considered highly expressed. Otherwise, `None`.
+    """
     gene_subset = None
     counts_per_cell = None
     if isinstance(x, CSBase):
@@ -129,9 +121,7 @@ def _normalize_total_helper(
         counts_per_cell = axis_sum(x, axis=1)
         if exclude_highly_expressed:
             counts_per_cell = np.ravel(counts_per_cell)
-
             # at least one cell as more than max_fraction of counts per cell
-
             gene_subset = axis_sum(
                 (x > counts_per_cell[:, None] * max_fraction), axis=0
             )
@@ -306,7 +296,7 @@ def normalize_total(  # noqa: PLR0912
     if exclude_highly_expressed:
         msg = (
             ". The following highly-expressed genes are not considered during "
-            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"  # TODO: Test warnings
+            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
         logg.info(msg)
     cell_subset = counts_per_cell > 0
