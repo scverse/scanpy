@@ -1199,6 +1199,7 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if mask_obs is not None:
+        values = values.copy()
         values[~mask_obs] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
