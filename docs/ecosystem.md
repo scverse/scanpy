@@ -85,6 +85,8 @@ Interactive manifold viewers.
 
 - [diffxpy](https://github.com/theislab/diffxpy) {small}`Helmholtz Munich`
 
+(eco-data-integration)=
+
 ### Data integration
 
 - [scanaroma](https://github.com/brianhie/scanorama) {small}`MIT`
