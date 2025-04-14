@@ -16,21 +16,21 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "CSRBase",
-    "CSCBase",
     "CSBase",
-    "SpBase",
+    "CSCBase",
+    "CSRBase",
     "DaskArray",
+    "SpBase",
     "ZappyArray",
-    "fullname",
-    "pkg_metadata",
-    "pkg_version",
-    "old_positionals",
-    "deprecated",
-    "njit",
     "_LegacyRandom",
     "_legacy_numpy_gen",
     "_numba_threading_layer",
+    "deprecated",
+    "fullname",
+    "njit",
+    "old_positionals",
+    "pkg_metadata",
+    "pkg_version",
 ]
 
 
