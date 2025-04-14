@@ -26,13 +26,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _compute_nnz_median(counts: np.ndarray | DaskArray, axis: int = 0):
-    """Compute median of counts, ignoring zeros."""
+def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+    """Given a 1D array of counts, compute the median of the non-zero counts."""
     if isinstance(counts, DaskArray):
         counts = counts.compute()
     counts_greater_than_zero = counts[counts > 0]
-    after = np.median(counts_greater_than_zero, axis=0)
-    return after
+    median = np.median(counts_greater_than_zero)
+    return median
 
 
 def _normalize_data(X, counts, after=None, *, copy: bool = False):
