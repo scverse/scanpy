@@ -7,7 +7,18 @@ import pandas as pd
 import pytest
 
 import scanpy as sc
-from scanpy.tools._cluster_resolution import cluster_resolution_finder
+from scanpy.tools._cluster_resolution import find_cluster_resolution
+from testing.scanpy._helpers.data import pbmc68k_reduced
+
+
+@pytest.fixture
+def adata_for_test():
+    """Fixture to provide a preprocessed AnnData object for testing."""
+    import scanpy as sc
+
+    adata = pbmc68k_reduced()
+    sc.pp.neighbors(adata)
+    return adata
 
 
 # Test 1: Basic functionality
@@ -15,7 +26,7 @@ def test_cluster_resolution_finder_basic(adata_for_test):
     """Test that cluster_resolution_finder runs without errors and modifies adata."""
     adata = adata_for_test.copy()  # Create a copy to avoid modifying the fixture
     resolutions = [0.1, 0.5]
-    result = cluster_resolution_finder(
+    result = find_cluster_resolution(
         adata,
         resolutions,
         prefix="leiden_res_",
@@ -60,7 +71,7 @@ def test_cluster_resolution_finder_invalid_deg_mode(adata_for_test):
     with pytest.raises(
         ValueError, match=r"deg_mode must be 'within_parent' or 'per_resolution'"
     ):
-        cluster_resolution_finder(
+        find_cluster_resolution(
             adata,
             resolutions=[0.1],
             deg_mode="invalid_mode",  # type: ignore[arg-type]
@@ -72,7 +83,7 @@ def test_cluster_resolution_finder_empty_resolutions(adata_for_test):
     """Test that an empty resolutions list raises a ValueError."""
     adata = adata_for_test.copy()
     with pytest.raises(ValueError, match=r"resolutions list cannot be empty"):
-        cluster_resolution_finder(
+        find_cluster_resolution(
             adata,
             resolutions=[],
         )
@@ -85,7 +96,7 @@ def test_cluster_resolution_finder_negative_resolutions(adata_for_test):
     with pytest.raises(
         ValueError, match="All resolutions must be non-negative numbers"
     ):
-        sc.tl.cluster_resolution_finder(
+        sc.tl.find_cluster_resolution(
             adata,
             resolutions=[0.1, -0.5],
         )
@@ -109,7 +120,7 @@ def test_cluster_resolution_finder_missing_neighbors():
             "adata must have precomputed neighbors (run sc.pp.neighbors first)."
         ),
     ):
-        sc.tl.cluster_resolution_finder(
+        sc.tl.find_cluster_resolution(
             adata,
             resolutions=[0.1],
         )
@@ -120,7 +131,7 @@ def test_cluster_resolution_finder_unsupported_method(adata_for_test):
     """Test that an unsupported method raises a ValueError with a helpful message."""
     adata = adata_for_test.copy()
     with pytest.raises(ValueError, match="Only method='wilcoxon' is supported"):
-        cluster_resolution_finder(
+        find_cluster_resolution(
             adata,
             resolutions=[0.1],
             method="t-test",  # type: ignore[arg-type]
@@ -133,7 +144,7 @@ def test_cluster_resolution_finder_n_top_genes(adata_for_test, n_top_genes):
     """Test that n_top_genes bounds the number of genes stored in adata.uns."""
     adata = adata_for_test.copy()
     resolutions = [0.1, 0.5]
-    result = sc.tl.cluster_resolution_finder(
+    result = sc.tl.find_cluster_resolution(
         adata,
         resolutions,
         n_top_genes=n_top_genes,

@@ -148,13 +148,3 @@ def plt():
     from matplotlib import pyplot as plt
 
     return plt
-
-
-@pytest.fixture
-def adata_for_test():
-    """Fixture to provide a preprocessed AnnData object for testing."""
-    import scanpy as sc
-
-    adata = sc.datasets.pbmc68k_reduced()
-    sc.pp.neighbors(adata)
-    return adata

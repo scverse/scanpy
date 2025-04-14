@@ -28,23 +28,32 @@ def find_cluster_specific_genes(
     - "within_parent": DEGs between subclusters within each parental cluster.
     - "per_resolution": DEGs for each subcluster vs. all other cells at that resolution.
 
-    Args:
-        adata: AnnData object with clustering in obs.
-        resolutions: List of resolution values (e.g., [0.0, 0.2, 0.5]).
-        prefix: Prefix for clustering columns in adata.obs (default: "leiden_res_").
-        method: Method for DEG analysis (default: "wilcoxon").
-        n_top_genes: Number of top genes per child node (default: 3).
-        min_cells: Minimum cells required in a subcluster (default: 2).
-        deg_mode: "within_parent" or "per_resolution" (default: "within_parent").
+    Parameters
+    ----------
+    adata
+        AnnData object with clustering in obs.
+    resolutions
+        List of resolution values (e.g., `[0.0, 0.2, 0.5]`).
+    prefix
+        Prefix for clustering columns in :attr:`~anndata.AnnData.obs`
+    method
+        Method for DEG analysis
+    n_top_genes
+        Number of top genes per child node
+    min_cells
+        Minimum cells required in a subcluster
+    deg_mode
+        See above
 
     Returns
     -------
-        Dict mapping (parent_node, child_node) to top marker genes.
-        E.g., {("res_0.0_C0", "res_0.2_C1"): ["gene1", "gene2", "gene3"]}
+    Dict mapping (parent_node, child_node) to top marker genes.
+    E.g., {("res_0.0_C0", "res_0.2_C1"): ["gene1", "gene2", "gene3"]}
 
     Raises
     ------
-        ValueError: If deg_mode is invalid or input data is malformed.
+    ValueError
+        If deg_mode is invalid or input data is malformed.
     """
     from . import rank_genes_groups
 
@@ -151,7 +160,7 @@ def find_cluster_specific_genes(
     return top_genes_dict
 
 
-def cluster_resolution_finder(
+def find_cluster_resolution(
     adata: AnnData,
     resolutions: list[float],
     *,

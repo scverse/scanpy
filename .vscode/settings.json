@@ -19,5 +19,4 @@
     "python.testing.pytestArgs": ["-vv", "--color=yes"],
     "python.testing.pytestEnabled": true,
     "python.terminal.activateEnvironment": true,
-    "git.ignoreLimitWarning": true,
 }
