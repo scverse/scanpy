@@ -331,6 +331,4 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
 def test_compute_nnz_median(array_type, dtype):
     data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
     data = array_type(data)
-    computed = _compute_nnz_median(data)
-    expected = 5
-    assert np.allclose(computed, expected), f"Expected {expected}, got {computed}"
+    np.testing.assert_allclose(_compute_nnz_median(data), 5)
