@@ -750,7 +750,7 @@ def regress_out(
 
         X = _to_dense(X, order="F") if issparse(X) else X
         if np.issubdtype(X.dtype, np.integer):
-            target_dtype = np.float32 if X.dtype.itemsize == 4 else np.float64
+            target_dtype = np.float32 if X.dtype.itemsize < 4 else np.float64
             X = X.astype(target_dtype)
         regressors = _create_regressor_categorical(X, number_categories, cat_array)
         variable_is_categorical = True
