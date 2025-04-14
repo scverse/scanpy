@@ -39,8 +39,8 @@ MAP_ARRAY_TYPES: dict[
 ] = {
     ("mem", "dense"): (pytest.param(asarray, id="numpy_ndarray"),),
     ("mem", "sparse"): (
-        pytest.param(sparse.csr_matrix, id="scipy_csr"),
-        pytest.param(sparse.csc_matrix, id="scipy_csc"),
+        pytest.param(sparse.csr_matrix, id="scipy_csr"),  # noqa: TID251
+        pytest.param(sparse.csc_matrix, id="scipy_csc"),  # noqa: TID251
     ),
     ("dask", "dense"): (
         pytest.param(

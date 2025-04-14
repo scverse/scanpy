@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse
+from scipy import sparse
 
-from ..._compat import old_positionals
+from ..._compat import CSBase, old_positionals
 
 
 @old_positionals("max_fraction", "mult_with_mean")
 def normalize_per_cell_weinreb16_deprecated(
-    x: np.ndarray,
+    x: np.ndarray | CSBase,
     *,
     max_fraction: float = 1,
     mult_with_mean: bool = False,
@@ -39,17 +39,19 @@ def normalize_per_cell_weinreb16_deprecated(
         msg = "Choose max_fraction between 0 and 1."
         raise ValueError(msg)
 
-    counts_per_cell = x.sum(1).A1 if issparse(x) else x.sum(1)
+    counts_per_cell = x.sum(1)
+    if isinstance(counts_per_cell, np.matrix):
+        counts_per_cell = counts_per_cell.A1
     gene_subset = np.all(x <= counts_per_cell[:, None] * max_fraction, axis=0)
-    if issparse(x):
+    if isinstance(gene_subset, np.matrix):
         gene_subset = gene_subset.A1
-    tc_include = (
-        x[:, gene_subset].sum(1).A1 if issparse(x) else x[:, gene_subset].sum(1)
-    )
+    tc_include = x[:, gene_subset].sum(1)
+    if isinstance(tc_include, np.matrix):
+        tc_include = tc_include.A1
 
     x_norm = (
-        x.multiply(csr_matrix(1 / tc_include[:, None]))
-        if issparse(x)
+        x.multiply(sparse.csr_matrix(1 / tc_include[:, None]))  # noqa: TID251
+        if isinstance(x, CSBase)
         else x / tc_include[:, None]
     )
     if mult_with_mean:

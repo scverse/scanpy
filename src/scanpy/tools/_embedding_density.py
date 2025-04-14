@@ -34,7 +34,7 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
 
 
 @old_positionals("groupby", "key_added", "components")
-def embedding_density(
+def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",
     *,

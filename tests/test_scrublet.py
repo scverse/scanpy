@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sparse
 from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs

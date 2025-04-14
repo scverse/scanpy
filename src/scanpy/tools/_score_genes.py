@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import _check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
@@ -21,19 +20,18 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
 
     try:
         _StrIdx = pd.Index[str]
     except TypeError:  # Sphinx
         _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | _CSMatrix]
+    _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _sparse_nanmean(X: _CSMatrix, axis: Literal[0, 1]) -> NDArray[np.float64]:
+def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
-    if not issparse(X):
-        msg = "X must be a sparse matrix"
+    if not isinstance(X, CSBase):
+        msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
     # count the number of nan elements per row/column (dep. on axis)
@@ -57,7 +55,7 @@ def _sparse_nanmean(X: _CSMatrix, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @old_positionals(
     "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
 )
-def score_genes(
+def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
@@ -255,9 +253,9 @@ def _score_genes_bins(
 
 
 def _nan_means(
-    x, *, axis: Literal[0, 1], dtype: DTypeLike | None = None
+    x: np.ndarray | CSBase, *, axis: Literal[0, 1], dtype: DTypeLike | None = None
 ) -> NDArray[np.float64]:
-    if issparse(x):
+    if isinstance(x, CSBase):
         return np.array(_sparse_nanmean(x, axis=axis)).flatten()
     return np.nanmean(x, axis=axis, dtype=dtype)
 

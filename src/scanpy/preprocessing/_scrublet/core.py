@@ -21,9 +21,8 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._compat import _LegacyRandom
+    from ..._compat import CSBase, CSCBase, _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
-    from .._utils import _CSMatrix
 
 __all__ = ["Scrublet"]
 
@@ -66,7 +65,7 @@ class Scrublet:
 
     # init fields
 
-    counts_obs: InitVar[_CSMatrix | NDArray[np.integer]] = field(kw_only=False)
+    counts_obs: InitVar[CSBase | NDArray[np.integer]] = field(kw_only=False)
     total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
     n_neighbors: InitVar[int | None] = None
@@ -79,13 +78,13 @@ class Scrublet:
     _n_neighbors: int = field(init=False, repr=False)
     _random_state: RandomState = field(init=False, repr=False)
 
-    _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
+    _counts_obs: CSCBase = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_obs_norm: _CSMatrix = field(init=False, repr=False)
+    _counts_obs_norm: CSBase = field(init=False, repr=False)
 
-    _counts_sim: _CSMatrix = field(init=False, repr=False)
+    _counts_sim: CSBase = field(init=False, repr=False)
     _total_counts_sim: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_sim_norm: _CSMatrix | None = field(default=None, init=False, repr=False)
+    _counts_sim_norm: CSBase | None = field(default=None, init=False, repr=False)
 
     # Fields set by methods
 
@@ -166,19 +165,19 @@ class Scrublet:
 
     def __post_init__(
         self,
-        counts_obs: _CSMatrix | NDArray[np.integer],
+        counts_obs: CSBase | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
         random_state: _LegacyRandom,
     ) -> None:
-        self._counts_obs = sparse.csc_matrix(counts_obs)
+        self._counts_obs = sparse.csc_matrix(counts_obs)  # noqa: TID251
         self._total_counts_obs = (
             np.asarray(self._counts_obs.sum(1)).squeeze()
             if total_counts_obs is None
             else total_counts_obs
         )
         self._n_neighbors = (
-            int(round(0.5 * np.sqrt(self._counts_obs.shape[0])))
+            round(0.5 * np.sqrt(self._counts_obs.shape[0]))
             if n_neighbors is None
             else n_neighbors
         )
@@ -220,8 +219,8 @@ class Scrublet:
 
         pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
 
-        E1 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 0], :])
-        E2 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 1], :])
+        E1 = cast("CSCBase", self._counts_obs[pair_ix[:, 0], :])
+        E2 = cast("CSCBase", self._counts_obs[pair_ix[:, 1], :])
         tots1 = self._total_counts_obs[pair_ix[:, 0]]
         tots2 = self._total_counts_obs[pair_ix[:, 1]]
         if synthetic_doublet_umi_subsampling < 1:
@@ -335,7 +334,7 @@ class Scrublet:
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
-        k_adj = int(round(k * (1 + n_sim / float(n_obs))))
+        k_adj = round(k * (1 + n_sim / float(n_obs)))
 
         # Find k_adj nearest neighbors
         knn = Neighbors(manifold)
@@ -432,12 +431,12 @@ class Scrublet:
             from skimage.filters import threshold_minimum
 
             try:
-                threshold = cast(float, threshold_minimum(self.doublet_scores_sim_))
+                threshold = cast("float", threshold_minimum(self.doublet_scores_sim_))
                 if verbose:
                     logg.info(
                         f"Automatically set threshold at doublet score = {threshold:.2f}"
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.predicted_doublets_ = None
                 if verbose:
                     logg.warning(

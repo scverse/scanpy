@@ -67,10 +67,10 @@ def gen_adata(data_key, dim, df_base, df_groupby, X):
     obs_df, var_df = (df_groupby, df_base) if dim == "obs" else (df_base, df_groupby)
     data = X.T if dim == "var" and data_key != "varm" else X
     if data_key != "X":
-        data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}
+        data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}  # noqa: TID251
         data_dict_dense = {data_key: {"test": data}}
     else:
-        data_dict_sparse = {data_key: sparse.csr_matrix(data)}
+        data_dict_sparse = {data_key: sparse.csr_matrix(data)}  # noqa: TID251
         data_dict_dense = {data_key: data}
 
     adata_sparse = ad.AnnData(obs=obs_df, var=var_df, **data_dict_sparse)

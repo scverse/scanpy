@@ -20,7 +20,7 @@ adata: AnnData
 
 
 def setup():
-    global adata
+    global adata  # noqa: PLW0603
     adata = pbmc68k_reduced()
     assert "X_pca" in adata.obsm
 
@@ -47,3 +47,11 @@ def time_leiden():
 
 def peakmem_leiden():
     sc.tl.leiden(adata, flavor="igraph")
+
+
+def time_rank_genes_groups() -> None:
+    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
+
+
+def peakmem_rank_genes_groups() -> None:
+    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")

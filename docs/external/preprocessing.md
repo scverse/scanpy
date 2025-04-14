@@ -5,6 +5,8 @@
 .. currentmodule:: scanpy.external
 ```
 
+(external-data-integration)=
+
 ### Data integration
 
 ```{eval-rst}

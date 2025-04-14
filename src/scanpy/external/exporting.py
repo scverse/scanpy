@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-__all__ = ["spring_project", "cellbrowser"]
+__all__ = ["cellbrowser", "spring_project"]
 
 
 @old_positionals(
@@ -33,7 +33,7 @@ __all__ = ["spring_project", "cellbrowser"]
     "neighbors_key",
     "overwrite",
 )
-def spring_project(
+def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
@@ -90,17 +90,16 @@ def spring_project(
     if embedding_method not in adata.obsm_keys():
         if "X_" + embedding_method in adata.obsm_keys():
             embedding_method = "X_" + embedding_method
+        elif embedding_method in adata.uns:
+            embedding_method = (
+                "X_"
+                + embedding_method
+                + "_"
+                + adata.uns[embedding_method]["params"]["layout"]
+            )
         else:
-            if embedding_method in adata.uns:
-                embedding_method = (
-                    "X_"
-                    + embedding_method
-                    + "_"
-                    + adata.uns[embedding_method]["params"]["layout"]
-                )
-            else:
-                msg = f"Run the specified embedding method `{embedding_method}` first."
-                raise ValueError(msg)
+            msg = f"Run the specified embedding method `{embedding_method}` first."
+            raise ValueError(msg)
 
     coords = adata.obsm[embedding_method]
 
@@ -264,7 +263,7 @@ def _get_edges(adata, neighbors_key=None):
     else:
         matrix = neighbors["connectivities"]
     matrix = matrix.tocoo()
-    edges = [(i, j) for i, j in zip(matrix.row, matrix.col)]
+    edges = [(i, j) for i, j in zip(matrix.row, matrix.col, strict=True)]
 
     return edges
 
@@ -444,7 +443,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     # make node list
     nodes = []
     for i, name, xy, color, size, cells in zip(
-        range(len(names)), names, coords, colors, sizes, cell_groups
+        range(len(names)), names, coords, colors, sizes, cell_groups, strict=True
     ):
         nodes.append(
             {
@@ -459,7 +458,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     # make link list, avoid redundant encoding (graph is undirected)
     links = []
-    for source, target, weight in zip(sources, targets, weights):
+    for source, target, weight in zip(sources, targets, weights, strict=True):
         if source < target and weight > min_edge_weight_save:
             links.append(
                 {"source": int(source), "target": int(target), "weight": float(weight)}
@@ -477,8 +476,6 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     Path(outpath).write_text(json.dumps(PAGA_data, indent=4))
 
-    return None
-
 
 @old_positionals(
     "embedding_keys",
@@ -490,7 +487,7 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     "port",
     "do_debug",
 )
-def cellbrowser(
+def cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,
     data_name: str,

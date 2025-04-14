@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import scipy.sparse as scp
-
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import CSBase, old_positionals
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -29,7 +27,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("trimap")
-def trimap(
+def trimap(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,
@@ -104,9 +102,9 @@ def trimap(
     """
     try:
         from trimap import TRIMAP
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata
@@ -118,7 +116,7 @@ def trimap(
         X = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
     else:
         X = adata.X
-        if scp.issparse(X):
+        if isinstance(X, CSBase):
             msg = (
                 "trimap currently does not support sparse matrices. Please"
                 "use a dense matrix or apply pca first."

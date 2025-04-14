@@ -336,6 +336,6 @@ def palantir_results(
 def _check_import():
     try:
         import palantir  # noqa: F401
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install palantir:\n\tpip install palantir"
-        raise ImportError(msg)
+        raise ImportError(msg) from e

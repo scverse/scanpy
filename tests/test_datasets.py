@@ -14,6 +14,7 @@ import pytest
 from anndata.tests.helpers import assert_adata_equal
 
 import scanpy as sc
+from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -77,7 +78,14 @@ def test_pbmc3k_processed():
 
 
 @pytest.mark.internet
-def test_ebi_expression_atlas():
+def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
+    from scanpy.datasets import _ebi_expression_atlas as ea_mod
+
+    # make sure we use chunks when testing.
+    # This dataset has <8M entries, so 4M entries/chunk = 2 chunks
+    assert hasattr(ea_mod, "CHUNK_SIZE")
+    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", int(4e6))
+
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     # The shape changes sometimes
     assert 2261 <= adata.shape[0] <= 2315
@@ -150,10 +158,10 @@ def test_visium_datasets_images():
 
     # Test that tissue image is a tif image file (using `file`)
     process = subprocess.run(
-        ["file", "--mime-type", image_path], stdout=subprocess.PIPE
+        ["file", "--mime-type", image_path], stdout=subprocess.PIPE, check=True
     )
     output = process.stdout.strip().decode()  # make process output string
-    assert output == str(image_path) + ": image/tiff"
+    assert output == f"{image_path}: image/tiff"
 
 
 def test_download_failure():
@@ -190,11 +198,12 @@ def test_doc_shape(ds_name):
     assert dataset_fn.__doc__, "No docstring"
     start_line_2 = dataset_fn.__doc__.find("\n") + 1
     docstring = dedent(dataset_fn.__doc__[start_line_2:])
+    cached_fn = getattr(data, ds_name, dataset_fn)
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
             r"(Observation|Variable) names are not unique",
             category=UserWarning,
         )
-        dataset = dataset_fn()
+        dataset = cached_fn()
     assert repr(dataset) in docstring

@@ -38,7 +38,7 @@ from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import CSBase, DaskArray, _CSMatrix
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
@@ -49,7 +49,6 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -60,10 +59,10 @@ if TYPE_CHECKING:
     from igraph import Graph
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
-    from .._compat import _LegacyRandom
+    from .._compat import CSRBase, _LegacyRandom
     from ..neighbors import NeighborsParams, RPForestDict
 
-    _MemoryArray = NDArray | _CSMatrix
+    _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
 
     _ForT = TypeVar("_ForT", bound=Callable | type)
@@ -189,12 +188,13 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(name: str) -> Any:
+def _import_name(full_name: str) -> Any:
     from importlib import import_module
 
-    parts = name.split(".")
+    parts = full_name.split(".")
     obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
+    for _i, name in enumerate(parts[1:]):
+        i = _i
         try:
             obj = import_module(f"{obj.__name__}.{name}")
         except ModuleNotFoundError:
@@ -204,9 +204,9 @@ def _import_name(name: str) -> Any:
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
-        except AttributeError:
+        except AttributeError as e:
             msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from e
     return obj
 
 
@@ -303,7 +303,7 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
@@ -313,7 +313,7 @@ def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -
         weights = weights.A1
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
-    g.add_edges(list(zip(sources, targets)))
+    g.add_edges(list(zip(sources, targets, strict=True)))
     with suppress(KeyError):
         g.es["weight"] = weights
     if g.vcount() != adjacency.shape[0]:
@@ -387,7 +387,7 @@ def compute_association_matrix_of_groups(
     asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
-            pred_group = str(ipred_group)
+            pred_group = str(ipred_group)  # noqa: PLW2901
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
@@ -451,9 +451,9 @@ def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
 
     """
     ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
-    ref_dict = dict(zip(ref_unique, ref_counts))
+    ref_dict = dict(zip(ref_unique, ref_counts, strict=True))
     pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
-    pred_dict = dict(zip(pred_unique, pred_counts))
+    pred_dict = dict(zip(pred_unique, pred_counts, strict=True))
     associated_predictions = {}
     associated_overlaps = {}
     for ref_label in ref_unique:
@@ -594,10 +594,9 @@ def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
 
 
 @elem_mul.register(np.ndarray)
-@elem_mul.register(sparse.csc_matrix)
-@elem_mul.register(sparse.csr_matrix)
+@elem_mul.register(CSBase)
 def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, _CSMatrix):
+    if isinstance(x, CSBase):
         # returns coo_matrix, so cast back to input type
         return type(x)(x.multiply(y))
     return x * y
@@ -646,17 +645,16 @@ def axis_mul_or_truediv(
     return np.true_divide(X, scaling_array, out=out)
 
 
-@axis_mul_or_truediv.register(sparse.csr_matrix)
-@axis_mul_or_truediv.register(sparse.csc_matrix)
+@axis_mul_or_truediv.register(CSBase)
 def _(
-    X: _CSMatrix,
+    X: CSBase,
     scaling_array,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: _CSMatrix | None = None,
-) -> _CSMatrix:
+    out: CSBase | None = None,
+) -> CSBase:
     check_op(op)
     if out is not None and X.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
@@ -682,7 +680,7 @@ def _(
         if out is not None:
             X.data = new_data_op(X)
             return X
-        return sparse.csr_matrix(
+        return sparse.csr_matrix(  # noqa: TID251
             (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
         )
     transposed = X.T
@@ -739,7 +737,9 @@ def _(
                 )
             )
         ):
-            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            warnings.warn(
+                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
+            )
             scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
     else:
         scaling_array = da.from_array(
@@ -763,8 +763,8 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
-@axis_nnz.register(sparse.spmatrix)
-def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
+@axis_nnz.register(CSBase)
+def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
     return X.getnnz(axis=axis)
 
 
@@ -781,7 +781,7 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
 
 @overload
 def axis_sum(
-    X: sparse.spmatrix,
+    X: _CSMatrix,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -790,7 +790,7 @@ def axis_sum(
 
 @overload
 def axis_sum(
-    X: np.ndarray,
+    X: np.ndarray,  # TODO: or sparray
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -799,7 +799,7 @@ def axis_sum(
 
 @singledispatch
 def axis_sum(
-    X: np.ndarray | sparse.spmatrix,
+    X: np.ndarray | CSBase,
     *,
     axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
     dtype: DTypeLike | None = None,
@@ -825,8 +825,8 @@ def _(
     def sum_drop_keepdims(*args, **kwargs):
         kwargs.pop("computing_meta", None)
         # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, sparse.spmatrix | np.matrix) or isinstance(
-            args[0], sparse.spmatrix | np.matrix
+        if isinstance(X._meta, _CSMatrix | np.matrix) or isinstance(
+            args[0], _CSMatrix | np.matrix
         ):
             kwargs.pop("keepdims", None)
             axis = kwargs["axis"]
@@ -858,8 +858,7 @@ def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.csr_matrix)
-@check_nonnegative_integers.register(sparse.csc_matrix)
+@check_nonnegative_integers.register(CSBase)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
@@ -893,8 +892,8 @@ def select_groups(
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+            if name in adata.obs[key].values:
+                mask_obs = name == adata.obs[key].values
             else:
                 mask_obs = str(iname) == adata.obs[key].values
             groups_masks_obs[iname] = mask_obs
@@ -928,7 +927,9 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
+def warn_with_traceback(  # noqa: PLR0917
+    message, category, filename, lineno, file=None, line=None
+) -> None:
     """Get full tracebacks when warning is raised by setting.
 
     warnings.showwarning = warn_with_traceback
@@ -1128,9 +1129,7 @@ class NeighborsView:
         )
 
     @overload
-    def __getitem__(
-        self, key: Literal["distances", "connectivities"]
-    ) -> sparse.csr_matrix: ...
+    def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...
     @overload
     def __getitem__(self, key: Literal["params"]) -> NeighborsParams: ...
     @overload
@@ -1165,7 +1164,7 @@ class NeighborsView:
 
 def _choose_graph(
     adata: AnnData, obsp: str | None, neighbors_key: str | None
-) -> _CSMatrix:
+) -> CSBase:
     """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         msg = "You can't specify both obsp, neighbors_key. Please select only one."

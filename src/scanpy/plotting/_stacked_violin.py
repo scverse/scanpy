@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 from packaging.version import Version
 
@@ -154,7 +154,7 @@ class StackedViolin(BasePlot):
         # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning)
+            warnings.warn(msg, FutureWarning, stacklevel=2)
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
@@ -177,7 +177,7 @@ class StackedViolin(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -229,7 +229,7 @@ class StackedViolin(BasePlot):
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning)
+            warnings.warn(msg, FutureWarning, stacklevel=2)
         if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
@@ -270,7 +270,7 @@ class StackedViolin(BasePlot):
         "x_padding",
         "y_padding",
     )
-    def style(
+    def style(  # noqa: PLR0913
         self,
         *,
         cmap: Colormap | str | None | Empty = _empty,
@@ -405,7 +405,7 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = plt.get_cmap(self.kwds.pop("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.pop("cmap", self.cmap))
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -617,7 +617,7 @@ class StackedViolin(BasePlot):
             # and align the firts label on top of the tick and
             # the second below the tick. This avoid overlapping
             # of nearby ticks
-            import matplotlib.ticker as ticker
+            from matplotlib import ticker
 
             # use MaxNLocator to set 2 ticks
             row_ax.yaxis.set_major_locator(
@@ -667,7 +667,7 @@ class StackedViolin(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def stacked_violin(
+def stacked_violin(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
@@ -806,7 +806,7 @@ def stacked_violin(
             "`order` is deprecated (and never worked for `stacked_violin`), "
             "use categories_order instead"
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(

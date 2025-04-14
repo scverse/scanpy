@@ -7,7 +7,7 @@ from enum import IntEnum
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 from . import logging
 from ._compat import old_positionals
@@ -15,7 +15,7 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
-    from typing import Any, Literal, TextIO
+    from typing import Any, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -24,16 +24,16 @@ if TYPE_CHECKING:
         | Literal["raw", "rgba"]
     )
 
-_VERBOSITY_TO_LOGLEVEL = {
+AnnDataFileFormat = Literal["h5ad", "zarr"]
+
+_VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
     "error": "ERROR",
     "warning": "WARNING",
     "info": "INFO",
     "hint": "HINT",
     "debug": "DEBUG",
 }
-# Python 3.7+ ensures iteration order
-for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
-    _VERBOSITY_TO_LOGLEVEL[v] = level
+_VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
 
 
 class Verbosity(IntEnum):
@@ -91,12 +91,12 @@ class ScanpyConfig:
     N_PCS: int
     """Default number of principal components to use."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         verbosity: Verbosity | int | str = Verbosity.warning,
         plot_suffix: str = "",
-        file_format_data: str = "h5ad",
+        file_format_data: AnnDataFileFormat = "h5ad",
         file_format_figs: str = "pdf",
         autosave: bool = False,
         autoshow: bool = True,
@@ -105,14 +105,14 @@ class ScanpyConfig:
         datasetdir: Path | str = "./data/",
         figdir: Path | str = "./figures/",
         cache_compression: str | None = "lzf",
-        max_memory=15,
-        n_jobs=1,
+        max_memory: int = 15,
+        n_jobs: int = 1,
         logfile: Path | str | None = None,
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
-        n_pcs=50,
+        n_pcs: int = 50,
     ):
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
@@ -198,31 +198,26 @@ class ScanpyConfig:
         self._plot_suffix = plot_suffix
 
     @property
-    def file_format_data(self) -> str:
-        """File format for saving AnnData objects.
-
-        Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5ad'
-        (hdf5) for lossless saving.
-        """
+    def file_format_data(self) -> AnnDataFileFormat:
+        """File format for saving AnnData objects."""
         return self._file_format_data
 
     @file_format_data.setter
-    def file_format_data(self, file_format: str):
+    def file_format_data(self, file_format: AnnDataFileFormat):
         _type_check(file_format, "file_format_data", str)
-        file_format_options = {"txt", "csv", "h5ad"}
-        if file_format not in file_format_options:
+        if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
             msg = (
                 f"Cannot set file_format_data to {file_format}. "
                 f"Must be one of {file_format_options}"
             )
             raise ValueError(msg)
-        self._file_format_data = file_format
+        self._file_format_data: AnnDataFileFormat = file_format
 
     @property
     def file_format_figs(self) -> str:
         """File format for saving figures.
 
-        For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
+        For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
         `matplotlib.pyplot.savefig`).
         """
         return self._file_format_figs
@@ -409,7 +404,7 @@ class ScanpyConfig:
         "transparent",
         "ipython_format",
     )
-    def set_figure_params(
+    def set_figure_params(  # noqa: PLR0913
         self,
         *,
         scanpy: bool = True,
@@ -423,7 +418,7 @@ class ScanpyConfig:
         format: _Format = "pdf",
         facecolor: str | None = None,
         transparent: bool = False,
-        ipython_format: str = "png2x",
+        ipython_format: str | Iterable[str] = "retina",
     ) -> None:
         """Set resolution/size, styling and format of figures.
 
@@ -456,15 +451,19 @@ class ScanpyConfig:
             `rcParams['savefig.transparent']`.
         ipython_format
             Only concerns the notebook/IPython environment; see
-            :func:`~IPython.display.set_matplotlib_formats` for details.
+            `matplotlib_inline.backend_inline.set_matplotlib_formats
+            <https://github.com/ipython/matplotlib-inline/blob/b93777db35267acefe6e37d14214360362d2e8b2/matplotlib_inline/backend_inline.py#L280-L281>`_
+            for details.
 
         """
         if self._is_run_from_ipython():
-            import IPython
+            # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
+            from matplotlib_inline.backend_inline import set_matplotlib_formats
 
             if isinstance(ipython_format, str):
                 ipython_format = [ipython_format]
-            IPython.display.set_matplotlib_formats(*ipython_format)
+
+            set_matplotlib_formats(*ipython_format)
 
         from matplotlib import rcParams
 

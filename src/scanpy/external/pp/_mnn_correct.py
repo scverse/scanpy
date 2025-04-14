@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def mnn_correct(
+def mnn_correct(  # noqa: PLR0913
     *datas: AnnData | np.ndarray,
     var_index: Collection[str] | None = None,
     var_subset: Collection[str] | None = None,
@@ -132,9 +132,9 @@ def mnn_correct(
     try:
         import mnnpy
         from mnnpy import mnn_correct
-    except ImportError:
+    except ImportError as e:
         msg = "Please install the package mnnpy (https://github.com/chriscainx/mnnpy). "
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 

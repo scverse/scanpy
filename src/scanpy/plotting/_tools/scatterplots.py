@@ -1,43 +1,43 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Mapping, Sequence  # noqa: TCH003
+from collections.abc import Mapping, Sequence  # noqa: TC003
 from copy import copy
 from functools import partial
 from itertools import combinations, product
 from numbers import Integral
 from typing import (
     TYPE_CHECKING,
-    Any,  # noqa: TCH003
-    Literal,  # noqa: TCH003
+    Any,  # noqa: TC003
+    Literal,  # noqa: TC003
 )
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData  # noqa: TCH002
-from cycler import Cycler  # noqa: TCH002
+from anndata import AnnData  # noqa: TC002
+from cycler import Cycler  # noqa: TC002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes  # noqa: TCH002
+from matplotlib.axes import Axes  # noqa: TC002
 from matplotlib.colors import (
-    Colormap,  # noqa: TCH002
+    Colormap,  # noqa: TC002
     Normalize,
 )
-from matplotlib.figure import Figure  # noqa: TCH002
-from numpy.typing import NDArray  # noqa: TCH002
+from matplotlib.figure import Figure  # noqa: TC002
+from numpy.typing import NDArray  # noqa: TC002
 from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
-    Empty,  # noqa: TCH001
+    Empty,  # noqa: TC001
     _doc_params,
     _empty,
     sanitize_anndata,
 )
 from ...get import _check_mask
-from ...tools._draw_graph import _Layout  # noqa: TCH001
+from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -47,11 +47,11 @@ from .._docs import (
     doc_show_save_ax,
 )
 from .._utils import (
-    ColorLike,  # noqa: TCH001
-    VBound,  # noqa: TCH001
-    _FontSize,  # noqa: TCH001
-    _FontWeight,  # noqa: TCH001
-    _LegendLoc,  # noqa: TCH001
+    ColorLike,  # noqa: TC001
+    VBound,  # noqa: TC001
+    _FontSize,  # noqa: TC001
+    _FontWeight,  # noqa: TC001
+    _LegendLoc,  # noqa: TC001
     check_colornorm,
     check_projection,
     circles,
@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def embedding(
+def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     basis: str,
     *,
@@ -238,7 +238,7 @@ def embedding(
         wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
 
     if components is not None:
-        color, dimensions = list(zip(*product(color, dimensions)))
+        color, dimensions = list(zip(*product(color, dimensions), strict=True))
 
     color, dimensions, marker = _broadcast_args(color, dimensions, marker)
 
@@ -274,7 +274,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
+    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
@@ -930,7 +930,7 @@ def pca(
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def spatial(
+def spatial(  # noqa: PLR0913
     adata: AnnData,
     *,
     basis: str = "spatial",
@@ -1086,7 +1086,7 @@ def _components_to_dimensions(
     return dimensions
 
 
-def _add_categorical_legend(
+def _add_categorical_legend(  # noqa: PLR0913
     ax: Axes,
     color_source_vector,
     *,
@@ -1221,7 +1221,7 @@ def _get_palette(adata, values_key: str, palette=None):
         _utils._set_default_colors_for_categorical_obs(adata, values_key)
     else:
         _utils._validate_palette(adata, values_key)
-    return dict(zip(values.categories, adata.uns[color_key]))
+    return dict(zip(values.categories, adata.uns[color_key], strict=True))
 
 
 def _color_vector(
@@ -1333,7 +1333,7 @@ def _check_spatial_data(
             )
             raise ValueError(msg)
         elif len(spatial_mapping) == 1:
-            library_id = list(spatial_mapping.keys())[0]
+            library_id = next(iter(spatial_mapping.keys()))
         else:
             library_id = None
     spatial_data = spatial_mapping[library_id] if library_id is not None else None
@@ -1388,6 +1388,4 @@ def _broadcast_args(*args):
     if not (set(lens) == {1, longest} or set(lens) == {longest}):
         msg = f"Could not broadcast together arguments with shapes: {lens}."
         raise ValueError(msg)
-    return list(
-        [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
-    )
+    return [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]

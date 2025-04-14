@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, vstack
+from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, njit, old_positionals
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
-
-    from .._utils import _CSMatrix
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
@@ -46,15 +45,54 @@ def _select_top_n(scores: NDArray, n_top: int):
     return global_indices
 
 
+@njit
+def rankdata(data: NDArray[np.number]) -> NDArray[np.float64]:
+    """Parallelized version of scipy.stats.rankdata."""
+    ranked = np.empty(data.shape, dtype=np.float64)
+    for j in numba.prange(data.shape[1]):
+        arr = np.ravel(data[:, j])
+        sorter = np.argsort(arr)
+
+        arr = arr[sorter]
+        obs = np.concatenate((np.array([True]), arr[1:] != arr[:-1]))
+
+        dense = np.empty(obs.size, dtype=np.int64)
+        dense[sorter] = obs.cumsum()
+
+        # cumulative counts of each unique value
+        count = np.concatenate((np.flatnonzero(obs), np.array([len(obs)])))
+        ranked[:, j] = 0.5 * (count[dense] + count[dense - 1] + 1)
+
+    return ranked
+
+
+@njit
+def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
+    """Parallelized version of scipy.stats.tiecorrect."""
+    tc = np.ones(rankvals.shape[1], dtype=np.float64)
+    for j in numba.prange(rankvals.shape[1]):
+        arr = np.sort(np.ravel(rankvals[:, j]))
+        idx = np.flatnonzero(
+            np.concatenate((np.array([True]), arr[1:] != arr[:-1], np.array([True])))
+        )
+        cnt = np.diff(idx).astype(np.float64)
+
+        size = np.float64(arr.size)
+        if size >= 2:
+            tc[j] = 1.0 - (cnt**3 - cnt).sum() / (size**3 - size)
+
+    return tc
+
+
 def _ranks(
-    X: np.ndarray | _CSMatrix,
+    X: NDArray[np.number] | CSBase,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-) -> Generator[tuple[pd.DataFrame, int, int], None, None]:
+) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = X.shape[1]
 
-    if issparse(X):
-        merge = lambda tpl: vstack(tpl).toarray()
+    if isinstance(X, CSBase):
+        merge = lambda tpl: sparse.vstack(tpl).toarray()
         adapt = lambda X: X.toarray()
     else:
         merge = np.vstack
@@ -77,23 +115,8 @@ def _ranks(
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
 
-        df = pd.DataFrame(data=get_chunk(X, left, right))
-        ranks = df.rank()
+        ranks = rankdata(get_chunk(X, left, right))
         yield ranks, left, right
-
-
-def _tiecorrect(ranks: pd.DataFrame) -> np.float64:
-    size = np.float64(ranks.shape[0])
-    if size < 2:
-        return np.repeat(ranks.shape[1], 1.0)
-
-    arr = np.sort(ranks, axis=0)
-    tf = np.insert(arr[1:] != arr[:-1], (0, arr.shape[0] - 1), True, axis=0)
-    idx = np.where(tf, np.arange(tf.shape[0])[:, None], 0)
-    idx = np.sort(idx, axis=0)
-    cnt = np.diff(idx, axis=0).astype(np.float64)
-
-    return 1.0 - (cnt**3 - cnt).sum(axis=0) / (size**3 - size)
 
 
 class _RankGenes:
@@ -144,7 +167,7 @@ class _RankGenes:
         raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
-        if issparse(X):
+        if isinstance(X, CSBase):
             X.eliminate_zeros()
 
         if self.mask_var is not None:
@@ -197,7 +220,7 @@ class _RankGenes:
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
-        if issparse(self.X):
+        if isinstance(self.X, CSBase):
             get_nonzeros = lambda X: X.getnnz(axis=0)
         else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
@@ -234,7 +257,7 @@ class _RankGenes:
         self._basic_stats()
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
-            zip(self.groups_masks_obs, self.means, self.vars)
+            zip(self.groups_masks_obs, self.means, self.vars, strict=True)
         ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
@@ -311,7 +334,7 @@ class _RankGenes:
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask_obs, mask_obs_rest):
-                    scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
+                    scores[left:right] = ranks[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
@@ -339,9 +362,7 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
-                    scores[group_index, left:right] = ranks.iloc[mask_obs, :].sum(
-                        axis=0
-                    )
+                    scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
                     if tie_correct:
                         T[group_index, left:right] = _tiecorrect(ranks)
 
@@ -395,7 +416,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: _Method,
         *,
@@ -481,7 +502,7 @@ class _RankGenes:
     "tie_correct",
     "layer",
 )
-def rank_genes_groups(
+def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
@@ -513,7 +534,7 @@ def rank_genes_groups(
     mask_var
         Select subset of genes to use in statistical tests.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
     layer
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
@@ -733,8 +754,10 @@ def rank_genes_groups(
     return adata if copy else None
 
 
-def _calc_frac(X):
-    n_nonzero = X.getnnz(axis=0) if issparse(X) else np.count_nonzero(X, axis=0)
+def _calc_frac(X: NDArray[np.number] | CSBase) -> NDArray[np.float64]:
+    n_nonzero = (
+        X.getnnz(axis=0) if isinstance(X, CSBase) else np.count_nonzero(X, axis=0)
+    )
     return n_nonzero / X.shape[0]
 
 
@@ -748,7 +771,7 @@ def _calc_frac(X):
     "max_out_group_fraction",
     "compare_abs",
 )
-def filter_rank_genes_groups(
+def filter_rank_genes_groups(  # noqa: PLR0912
     adata: AnnData,
     *,
     key: str | None = None,

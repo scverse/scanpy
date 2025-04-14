@@ -6,6 +6,7 @@ This is kept seperate from the helpers file because it relies on pytest.
 from __future__ import annotations
 
 import warnings
+from contextlib import chdir
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -23,12 +24,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
-    "float_dtype",
     "_doctest_env",
-    "pbmc3ks_parametrized_session",
+    "backed_adata",
+    "float_dtype",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
-    "backed_adata",
+    "pbmc3ks_parametrized_session",
 ]
 
 
@@ -39,11 +40,9 @@ def float_dtype(request):
 
 @pytest.fixture
 def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
-    from scanpy._compat import chdir
-
     showwarning_orig = warnings.showwarning
 
-    def showwarning(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
+    def showwarning(message, category, filename, lineno, file=None, line=None) -> None:  # noqa: PLR0917
         if file is None:
             if line is None:
                 import linecache

@@ -1,9 +1,6 @@
 {
     "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-    "formatter": {
-        "indentStyle": "space",
-        "indentWidth": 4,
-    },
+    "formatter": { "useEditorconfig": true },
     "overrides": [
         {
             "include": ["./.vscode/*.json", "**/*.jsonc", "**/asv.conf.json"],
