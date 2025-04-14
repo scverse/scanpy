@@ -180,7 +180,7 @@ def _power(X: Array, power: float) -> Array:
     return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
-def aggregate(
+def aggregate(  # noqa: PLR0912
     adata: AnnData,
     by: str | Collection[str],
     func: AggType | Iterable[AggType],

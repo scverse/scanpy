@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("trimap")
-def trimap(
+def trimap(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,
@@ -102,9 +102,9 @@ def trimap(
     """
     try:
         from trimap import TRIMAP
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata

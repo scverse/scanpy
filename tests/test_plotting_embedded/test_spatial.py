@@ -85,7 +85,7 @@ def test_spatial_general(image_comparer):  # general coordinates
         "spatial"
     )  # spatial data don't have imgs, so remove entry from uns
     # Required argument for now
-    spot_size = list(spatial_metadata.values())[0]["scalefactors"][
+    spot_size = next(iter(spatial_metadata.values()))["scalefactors"][
         "spot_diameter_fullres"
     ]
 
@@ -126,7 +126,7 @@ def equivalent_spatial_plotters(adata):
     del no_spatial.uns["spatial"]
 
     img_key = "hires"
-    library_id = list(adata.uns["spatial"])[0]
+    library_id = next(iter(adata.uns["spatial"]))
     spatial_data = adata.uns["spatial"][library_id]
     img = spatial_data["images"][img_key]
     scale_factor = spatial_data["scalefactors"][f"tissue_{img_key}_scalef"]

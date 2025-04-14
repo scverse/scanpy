@@ -59,7 +59,7 @@ SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 @_doc_params(
     mask_var_hvg=doc_mask_var_hvg,
 )
-def pca(
+def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
@@ -218,11 +218,10 @@ def pca(
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
+    elif pkg_version("anndata") < Version("0.8.0rc1"):
+        adata = AnnData(data, dtype=data.dtype)
     else:
-        if pkg_version("anndata") < Version("0.8.0rc1"):
-            adata = AnnData(data, dtype=data.dtype)
-        else:
-            adata = AnnData(data)
+        adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
@@ -250,6 +249,7 @@ def pca(
             "can have slightly different results due the array being column major "
             "instead of row major.",
             UserWarning,
+            stacklevel=2,
         )
 
     # check_random_state returns a numpy RandomState when passed an int but
@@ -285,12 +285,12 @@ def pca(
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
         for chunk, _, _ in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            pca_.partial_fit(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            pca_.partial_fit(chunk_dense)
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
-            chunk = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            X_pca[start:end] = pca_.transform(chunk)
+            chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
+            X_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
         if isinstance(X, CSBase) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
@@ -303,14 +303,14 @@ def pca(
                         f"Ignoring {svd_solver=} and using 'arpack', "
                         "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
                     )
-                    warnings.warn(msg)
+                    warnings.warn(msg, UserWarning, stacklevel=2)
                 svd_solver = "arpack"
             elif svd_solver == "lobpcg":
                 msg = (
                     f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
                     "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
                 )
-                warnings.warn(msg, FutureWarning)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
             X_pca, pca_ = _pca_compat_sparse(
                 X, n_comps, solver=svd_solver, random_state=random_state
             )
@@ -331,10 +331,10 @@ def pca(
 
                 if random_state != 0:
                     msg = f"Ignoring {random_state=} when using a sparse dask array"
-                    warnings.warn(msg)
+                    warnings.warn(msg, UserWarning, stacklevel=2)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
-                    warnings.warn(msg)
+                    warnings.warn(msg, UserWarning, stacklevel=2)
                 pca_ = PCAEighDask(n_components=n_comps)
             else:
                 from dask_ml.decomposition import PCA
@@ -436,7 +436,7 @@ def _handle_mask_var(
             "Use_highly_variable=False can be called through mask_var=None"
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
-        warn(msg, FutureWarning)
+        warn(msg, FutureWarning, stacklevel=2)
         if mask_var is not _empty:
             msg = f"These arguments are incompatible. {hint}"
             raise ValueError(msg)
@@ -534,5 +534,6 @@ def _handle_x_args(
             f"Ignoring {svd_solver=} and using {default}, "
             f"{method.__module__}.{method.__qualname__}{suffix} only supports {args}."
         )
-        warnings.warn(msg)
+        # (4: caller of `pca` -> 3: `pca` -> 2: `_handle_{sklearn,dask_ml}_args` -> 1: here)
+        warnings.warn(msg, UserWarning, stacklevel=4)
     return default

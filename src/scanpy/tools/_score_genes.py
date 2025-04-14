@@ -55,7 +55,7 @@ def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @old_positionals(
     "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
 )
-def score_genes(
+def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,

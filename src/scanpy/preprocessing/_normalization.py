@@ -62,7 +62,7 @@ def _normalize_data(X, counts, after=None, *, copy: bool = False):
     "inplace",
     "copy",
 )
-def normalize_total(
+def normalize_total(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     target_sum: float | None = None,
@@ -189,17 +189,17 @@ def normalize_total(
     # Deprecated features
     if layers is not None:
         warn(
-            FutureWarning(
-                "The `layers` argument is deprecated. Instead, specify individual "
-                "layers to normalize with `layer`."
-            )
+            "The `layers` argument is deprecated. Instead, specify individual "
+            "layers to normalize with `layer`.",
+            FutureWarning,
+            stacklevel=2,
         )
     if layer_norm is not None:
         warn(
-            FutureWarning(
-                "The `layer_norm` argument is deprecated. Specify the target size "
-                "factor directly with `target_sum`."
-            )
+            "The `layer_norm` argument is deprecated. Specify the target size "
+            "factor directly with `target_sum`.",
+            FutureWarning,
+            stacklevel=2,
         )
 
     if layers == "all":
@@ -235,7 +235,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-        warn(UserWarning("Some cells have zero counts"))
+        warn("Some cells have zero counts", UserWarning, stacklevel=2)
 
     if inplace:
         if key_added is not None:

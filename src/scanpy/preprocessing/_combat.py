@@ -98,7 +98,7 @@ def _standardize_data(
     """
     # compute the design matrix
     batch_items = model.groupby(batch_key, observed=True).groups.items()
-    batch_levels, batch_info = zip(*batch_items)
+    batch_levels, batch_info = zip(*batch_items, strict=True)
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
@@ -134,7 +134,7 @@ def _standardize_data(
 
 
 @old_positionals("covariates", "inplace")
-def combat(
+def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",
     *,
@@ -218,11 +218,8 @@ def combat(
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
     ).values
-    delta_hat = []
-
     # first estimate for the multiplicative batch effect
-    for i, batch_idxs in enumerate(batch_info):
-        delta_hat.append(s_data.iloc[:, batch_idxs].var(axis=1))
+    delta_hat = [s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info]
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)

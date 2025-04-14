@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phenograph")
-def phenograph(
+def phenograph(  # noqa: PLR0913
     data: AnnData | np.ndarray | SpBase,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     *,
@@ -232,20 +232,20 @@ def phenograph(
         import phenograph
 
         assert phenograph.__version__ >= "1.5.3"
-    except (ImportError, AssertionError, AttributeError):
+    except (ImportError, AssertionError, AttributeError) as e:
         msg = (
             "please install the latest release of phenograph:\n\t"
             "pip install -U PhenoGraph"
         )
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     if isinstance(data, AnnData):
         adata = data
         try:
             data = data.obsm["X_pca"]
-        except KeyError:
+        except KeyError as e:
             msg = "Please run `sc.pp.pca` on `data` and try again!"
-            raise KeyError(msg)
+            raise KeyError(msg) from e
     else:
         adata = None
         copy = True

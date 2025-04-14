@@ -27,7 +27,7 @@ ROOT = HERE / "_images_pbmc3k"
 
 
 @needs.leidenalg
-def test_pbmc3k(image_comparer):
+def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     np.random.seed(0)
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
@@ -136,7 +136,7 @@ def test_pbmc3k(image_comparer):
     data_df["leiden"] = adata.obs["leiden"]
     max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
     leiden_relabel = {}
-    for marker_gene, new_label in zip(marker_genes, new_labels):
+    for marker_gene, new_label in zip(marker_genes, new_labels, strict=True):
         leiden_relabel[max_idxs[marker_gene]] = new_label
     adata.obs["leiden_old"] = adata.obs["leiden"].copy()
     adata.rename_categories(

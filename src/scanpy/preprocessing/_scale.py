@@ -145,7 +145,7 @@ def scale(
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-def scale_array(
+def scale_array(  # noqa: PLR0912
     x: _A,
     *,
     zero_center: bool = True,
@@ -199,9 +199,8 @@ def scale_array(
         if isinstance(x, CSBase) or (
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
-            warnings.warn(
-                "zero-centering a sparse array/matrix densifies it.", UserWarning
-            )
+            msg = "zero-centering a sparse array/matrix densifies it."
+            warnings.warn(UserWarning, stacklevel=2)
         x -= mean
 
     x = axis_mul_or_truediv(

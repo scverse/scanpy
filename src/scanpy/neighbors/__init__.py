@@ -69,7 +69,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def neighbors(
+def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
@@ -297,7 +297,7 @@ def _make_forest_dict(forest):
 class OnFlySymMatrix:
     """Emulate a matrix where elements are calculated on the fly."""
 
-    def __init__(  # noqa: D107
+    def __init__(
         self,
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
@@ -369,7 +369,7 @@ class Neighbors:
     """
 
     @old_positionals("n_dcs", "neighbors_key")
-    def __init__(  # noqa: D107
+    def __init__(  # noqa: PLR0912, PLR0915
         self,
         adata: AnnData,
         *,
@@ -524,7 +524,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-    def compute_neighbors(
+    def compute_neighbors(  # noqa: PLR0912
         self,
         n_neighbors: int = 30,
         n_pcs: int | None = None,
@@ -704,8 +704,8 @@ class Neighbors:
                 # Use defaults from UMAP’s `nearest_neighbors` function
                 kwds.update(
                     n_jobs=settings.n_jobs,
-                    n_trees=min(64, 5 + int(round((self._adata.n_obs) ** 0.5 / 20.0))),
-                    n_iters=max(5, int(round(np.log2(self._adata.n_obs)))),
+                    n_trees=min(64, 5 + round((self._adata.n_obs) ** 0.5 / 20.0)),
+                    n_iters=max(5, round(np.log2(self._adata.n_obs))),
                 )
             transformer = PyNNDescentTransformer(**kwds)
         elif transformer == "rapids":
@@ -713,7 +713,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning)
+            warn(msg, FutureWarning, stacklevel=3)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)
@@ -869,7 +869,7 @@ class Neighbors:
             )
             ** 2
             # account for float32 precision
-            for j in range(0, self.eigen_values.size)
+            for j in range(self.eigen_values.size)
             if self.eigen_values[j] < 0.9994
         )
         # thanks to Marius Lange for pointing Alex to this:
@@ -879,7 +879,7 @@ class Neighbors:
         # PAGA paper) don't have it, which makes sense
         row += sum(
             (self.eigen_basis[i, k] - self.eigen_basis[:, k]) ** 2
-            for k in range(0, self.eigen_values.size)
+            for k in range(self.eigen_values.size)
             if self.eigen_values[k] >= 0.9994
         )
         if mask is not None:

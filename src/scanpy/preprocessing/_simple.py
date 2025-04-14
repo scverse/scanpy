@@ -794,12 +794,6 @@ def _regress_out_chunk(
     import statsmodels.api as sm
     import statsmodels.tools.sm_exceptions as sme
 
-    Psw = (
-        sme.PerfectSeparationWarning
-        if hasattr(sme, "PerfectSeparationWarning")
-        else None
-    )
-
     responses_chunk_list = []
     for col_index in range(data_chunk.shape[1]):
         # if all values are identical, the statsmodel.api.GLM throws an error;
@@ -815,14 +809,12 @@ def _regress_out_chunk(
 
         try:
             with warnings.catch_warnings():
-                # See issue #3260 - for statsmodels>=0.14.0
-                if Psw:
-                    warnings.simplefilter("error", Psw)
+                warnings.simplefilter("error", sme.PerfectSeparationWarning)
                 result = sm.GLM(
                     data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
                 new_column = result.resid_response
-        except (sme.PerfectSeparationError, *([Psw] if Psw else [])):
+        except (sme.PerfectSeparationError, sme.PerfectSeparationWarning):
             logg.warning("Encountered perfect separation, setting to 0 as in R.")
             new_column = np.zeros(data_chunk.shape[0])
 
@@ -867,7 +859,7 @@ def sample(
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
-def sample(
+def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
     *,

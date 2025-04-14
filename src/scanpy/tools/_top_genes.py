@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 @old_positionals("group", "n_genes", "data", "method", "annotation_key")
-def correlation_matrix(
+def correlation_matrix(  # noqa: PLR0912
     adata: AnnData,
     name_list: Collection[str] | None = None,
     groupby: str | None = None,
@@ -81,10 +81,9 @@ def correlation_matrix(
         for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
             if j >= n_genes:
                 break
-            name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
-    else:
-        if len(name_list) > n_genes:
-            name_list = name_list[0:n_genes]
+            name_list.append(k[group])
+    elif len(name_list) > n_genes:
+        name_list = name_list[0:n_genes]
 
     # If special method (later) , truncate
     adata_relevant = adata[:, name_list]
@@ -158,7 +157,7 @@ def ROC_AUC_analysis(
     for j, k in enumerate(adata.uns["rank_genes_groups_gene_names"]):
         if j >= n_genes:
             break
-        name_list.append(adata.uns["rank_genes_groups_gene_names"][j][group])
+        name_list.append(k[group])
 
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
     groups = "all"
@@ -186,7 +185,7 @@ def ROC_AUC_analysis(
         ) = metrics.roc_curve(
             y_true, y_score, pos_label=None, sample_weight=None, drop_intermediate=False
         )
-        roc_auc[name_list[i]] = metrics.auc(fpr[name_list[i]], tpr[name_list[i]])
+        roc_auc[name_list[i]] = metrics.auc(fpr[j], tpr[j])
     adata.uns["ROCfpr" + groupby + str(group)] = fpr
     adata.uns["ROCtpr" + groupby + str(group)] = tpr
     adata.uns["ROCthresholds" + groupby + str(group)] = thresholds
