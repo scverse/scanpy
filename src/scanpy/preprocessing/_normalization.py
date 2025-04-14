@@ -100,6 +100,56 @@ def _divide_target_sum(
             data[j] /= count
 
 
+def _normalize_total_helper(
+    x,
+    *,
+    exclude_highly_expressed,
+    max_fraction,
+    target_sum,
+) -> tuple[np.ndarray, np.ndarray]:
+    gene_subset = None
+    counts_per_cell = None
+    if isinstance(x, CSBase):
+        n_threads = numba.get_num_threads()
+        counts_per_cell, counts_per_cols = _normalize_csr(
+            x.indptr,
+            x.indices,
+            x.data,
+            rows=x.shape[0],
+            columns=x.shape[1],
+            exclude_highly_expressed=exclude_highly_expressed,
+            max_fraction=max_fraction,
+            n_threads=n_threads,
+        )
+        if target_sum is None:
+            target_sum = np.median(counts_per_cell)
+        if exclude_highly_expressed:
+            gene_subset = ~np.where(counts_per_cols)[0]
+    else:
+        counts_per_cell = axis_sum(x, axis=1)
+        if exclude_highly_expressed:
+            counts_per_cell = np.ravel(counts_per_cell)
+
+            # at least one cell as more than max_fraction of counts per cell
+
+            gene_subset = axis_sum(
+                (x > counts_per_cell[:, None] * max_fraction), axis=0
+            )
+            gene_subset = np.asarray(np.ravel(gene_subset) == 0)
+            counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
+        counts_per_cell = np.ravel(counts_per_cell)
+        if target_sum is None:
+            target_sum = _compute_nnz_median(counts_per_cell)
+
+    counts_per_cell = counts_per_cell / target_sum
+    out = x if isinstance(x, np.ndarray | CSBase) else None
+    X = axis_mul_or_truediv(
+        x, counts_per_cell, op=truediv, out=out, allow_divide_by_zero=False, axis=0
+    )
+
+    return X, counts_per_cell, gene_subset
+
+
 @old_positionals(
     "target_sum",
     "exclude_highly_expressed",
@@ -109,7 +159,7 @@ def _divide_target_sum(
     "inplace",
     "copy",
 )
-def normalize_total(  # noqa: PLR0912, PLR0915
+def normalize_total(  # noqa: PLR0912
     adata: AnnData,
     *,
     target_sum: float | None = None,
@@ -246,59 +296,22 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float32)  # TODO: Check if float64 should be used
 
-    if isinstance(x, CSBase):
-        n_threads = numba.get_num_threads()
-        counts_per_cell, counts_per_cols = _normalize_csr(
-            x.indptr,
-            x.indices,
-            x.data,
-            rows=x.shape[0],
-            columns=x.shape[1],
-            exclude_highly_expressed=exclude_highly_expressed,
-            max_fraction=max_fraction,
-            n_threads=n_threads,
-        )
-        if target_sum is None:
-            target_sum = np.median(counts_per_cell)
-        _divide_target_sum(
-            x.indptr,
-            x.indices,
-            x.data,
-            rows=x.shape[0],
-            columns=x.shape[1],
-            target_sum=target_sum,
-            counts_per_cell=counts_per_cell,
-        )
-        if exclude_highly_expressed:
-            gene_subset = np.where(counts_per_cols)[0]
-
-    else:
-        counts_per_cell = axis_sum(x, axis=1)
-        if exclude_highly_expressed:
-            counts_per_cell = np.ravel(counts_per_cell)
-
-            # at least one cell as more than max_fraction of counts per cell
-
-            gene_subset = axis_sum(
-                (x > counts_per_cell[:, None] * max_fraction), axis=0
-            )
-            gene_subset = np.asarray(np.ravel(gene_subset) == 0)
-            counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
-        counts_per_cell = np.ravel(counts_per_cell)
+    X, counts_per_cell, gene_subset = _normalize_total_helper(
+        x,
+        exclude_highly_expressed=exclude_highly_expressed,
+        max_fraction=max_fraction,
+        target_sum=target_sum,
+    )
 
     if exclude_highly_expressed:
         msg = (
             ". The following highly-expressed genes are not considered during "
-            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
+            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"  # TODO: Test warnings
         )
         logg.info(msg)
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning, stacklevel=2)
-
-    X = x
-    if not isinstance(x, CSBase):
-        X = _normalize_data(x, counts_per_cell, target_sum, copy=not inplace)
 
     dat = dict(
         X=X,
