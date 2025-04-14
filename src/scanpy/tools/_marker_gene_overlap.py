@@ -70,7 +70,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 
 
 @doctest_needs("leidenalg")
-def marker_gene_overlap(
+def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,
@@ -191,12 +191,12 @@ def marker_gene_overlap(
             reference_markers = {
                 key: set(val) for key, val in reference_markers.items()
             }
-        except Exception:
+        except Exception as e:
             msg = (
                 "Please ensure that `reference_markers` contains "
                 "sets or lists of markers as values."
             )
-            raise ValueError(msg)
+            raise ValueError(msg) from e
 
     if adj_pval_threshold is not None:
         if "pvals_adj" not in adata.uns[key]:

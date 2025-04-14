@@ -141,7 +141,7 @@ def scale(
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
-def scale_array(
+def scale_array(  # noqa: PLR0912
     X: np.ndarray | DaskArray,
     *,
     zero_center: bool = True,
@@ -197,6 +197,7 @@ def scale_array(
                 "zero-center being used with `DaskArray` sparse chunks. "
                 "This can be bad if you have large chunks or intend to eventually read the whole data into memory.",
                 UserWarning,
+                stacklevel=2,
             )
         X -= mean
 

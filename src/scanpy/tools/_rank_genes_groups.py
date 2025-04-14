@@ -257,7 +257,7 @@ class _RankGenes:
         self._basic_stats()
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
-            zip(self.groups_masks_obs, self.means, self.vars)
+            zip(self.groups_masks_obs, self.means, self.vars, strict=True)
         ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
@@ -416,7 +416,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: _Method,
         *,
@@ -502,7 +502,7 @@ class _RankGenes:
     "tie_correct",
     "layer",
 )
-def rank_genes_groups(
+def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
@@ -771,7 +771,7 @@ def _calc_frac(X: NDArray[np.number] | CSBase) -> NDArray[np.float64]:
     "max_out_group_fraction",
     "compare_abs",
 )
-def filter_rank_genes_groups(
+def filter_rank_genes_groups(  # noqa: PLR0912
     adata: AnnData,
     *,
     key: str | None = None,

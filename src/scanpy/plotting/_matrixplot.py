@@ -116,7 +116,7 @@ class MatrixPlot(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -334,7 +334,7 @@ class MatrixPlot(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def matrixplot(
+def matrixplot(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],

@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
-def _calculate_log_likelihoods(
+def _calculate_log_likelihoods(  # noqa: PLR0915
     data: np.ndarray, number_of_noise_barcodes: int
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], dict[int, str]]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.

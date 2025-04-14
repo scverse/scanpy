@@ -197,8 +197,8 @@ def test_backed_vs_memory():
     # use non-sequential list of cell indices
     cell_indices = list(adata.obs_names[30::-2])
     pd.testing.assert_frame_equal(
-        sc.get.var_df(adata, keys=cell_indices + ["highly_variable"]),
-        sc.get.var_df(adata_backed, keys=cell_indices + ["highly_variable"]),
+        sc.get.var_df(adata, keys=[*cell_indices, "highly_variable"]),
+        sc.get.var_df(adata_backed, keys=[*cell_indices, "highly_variable"]),
     )
 
 
@@ -216,7 +216,7 @@ def test_column_content():
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
-    query = cell_ids + ["highly_variable", "dispersions_norm", "dispersions"]
+    query = [*cell_ids, "highly_variable", "dispersions_norm", "dispersions"]
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:

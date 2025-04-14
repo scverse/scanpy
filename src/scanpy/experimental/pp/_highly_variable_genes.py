@@ -128,7 +128,7 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(
+def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     theta: float = 100,
@@ -150,6 +150,7 @@ def _highly_variable_pearson_residuals(
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
     # check theta
     if theta <= 0:
@@ -307,7 +308,7 @@ def _highly_variable_pearson_residuals(
     layer=doc_layer,
     inplace=doc_inplace,
 )
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,

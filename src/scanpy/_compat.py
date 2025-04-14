@@ -231,7 +231,7 @@ class _FakeRandomGen(np.random.Generator):
             if name.startswith("_") or not callable(meth):
                 continue
 
-            def mk_wrapper(name: str):
+            def mk_wrapper(name: str, meth):
                 # Old pytest versions try to run the doctests
                 @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
                 def wrapper(self: _FakeRandomGen, *args, **kwargs):
@@ -239,7 +239,7 @@ class _FakeRandomGen(np.random.Generator):
 
                 return wrapper
 
-            setattr(cls, name, mk_wrapper(name))
+            setattr(cls, name, mk_wrapper(name, meth))
 
 
 _FakeRandomGen._delegate()
