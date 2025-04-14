@@ -17,7 +17,6 @@ from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, sanitize_anndata
-from ..._utils.random import subsample
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -1397,10 +1396,10 @@ def sim(
             np.arange(n_realizations).astype(int) + 1,
         )
         savefig_or_show("sim", save=save, show=show)
-    else:
-        # shuffled data
-        X, rows = subsample(adata.X, seed=1)
-        logg.debug(f"... subsampled to {X.shape[0]} of {adata.shape[0]} data points")
+    else:  # shuffle data
+        np.random.seed(1)
+        rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
+        X = adata[rows].X
         timeseries(
             X,
             var_names=adata.var_names,

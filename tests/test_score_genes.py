@@ -76,8 +76,8 @@ def test_add_score():
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
     sc.pp.log1p(adata)
 
-    # the actual genes names are all 6letters
-    # create some non-estinsting names with 7 letters:
+    # the actual genes names are all 6 letters
+    # create some non-exstisting names with 7 letters:
     non_existing_genes = _create_random_gene_names(3, length=7)
     some_genes = np.r_[
         np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
