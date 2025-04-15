@@ -32,19 +32,6 @@ def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
     return median
 
 
-def _normalize_data(X, counts, after=None, *, copy: bool = False):
-    X = X.copy() if copy else X
-    if issubclass(X.dtype.type, int | np.integer):
-        X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    if after is None:
-        after = _compute_nnz_median(counts)
-    counts = counts / after
-    out = X if isinstance(X, np.ndarray | CSBase) else None
-    return axis_mul_or_truediv(
-        X, counts, op=truediv, out=out, allow_divide_by_zero=False, axis=0
-    )
-
-
 @njit
 def _normalize_csr(
     indptr,
@@ -53,11 +40,11 @@ def _normalize_csr(
     *,
     rows,
     columns,
-    target_sum,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     n_threads: int = 10,
 ):
+    """For sparse CSR matrix, compute the normalization factors."""
     counts_per_cell = np.zeros(rows, dtype=data.dtype)
     for i in numba.prange(rows):
         count = 0.0
@@ -84,13 +71,73 @@ def _normalize_csr(
                     count += data[j]
             counts_per_cell[i] = count
 
-    if target_sum == 0:
-        target_sum = np.median(counts_per_cell)
-    for i in numba.prange(rows):
-        count = counts_per_cell[i] / target_sum
-        for j in range(indptr[i], indptr[i + 1]):
-            data[j] /= count
-    return counts_per_cell, target_sum, counts_per_cols
+    return counts_per_cell, counts_per_cols
+
+
+def _normalize_total_helper(
+    x: np.ndarray | CSBase | DaskArray,
+    *,
+    exclude_highly_expressed: bool,
+    max_fraction: float,
+    target_sum: float | None,
+) -> tuple[np.ndarray | CSBase | DaskArray, np.ndarray, np.ndarray | None]:
+    """Return the normalized data, counts per cell, and gene subset.
+
+    It returns the normalized data, the counts per cell, and the gene subset.
+
+    Params
+    ------
+    See `normalize_total` for details.
+
+    Returns
+    -------
+    X
+        The normalized data matrix.
+    counts_per_cell
+        The normalization factors used for each cell (counts / target_sum).
+    gene_subset
+        If `exclude_highly_expressed=True`, a boolean mask indicating which genes
+        were not considered highly expressed. Otherwise, `None`.
+    """
+    gene_subset = None
+    counts_per_cell = None
+    if isinstance(x, CSBase):
+        n_threads = numba.get_num_threads()
+        counts_per_cell, counts_per_cols = _normalize_csr(
+            x.indptr,
+            x.indices,
+            x.data,
+            rows=x.shape[0],
+            columns=x.shape[1],
+            exclude_highly_expressed=exclude_highly_expressed,
+            max_fraction=max_fraction,
+            n_threads=n_threads,
+        )
+        if target_sum is None:
+            target_sum = np.median(counts_per_cell)
+        if exclude_highly_expressed:
+            gene_subset = ~np.where(counts_per_cols)[0]
+    else:
+        counts_per_cell = axis_sum(x, axis=1)
+        if exclude_highly_expressed:
+            counts_per_cell = np.ravel(counts_per_cell)
+            # at least one cell as more than max_fraction of counts per cell
+            gene_subset = axis_sum(
+                (x > counts_per_cell[:, None] * max_fraction), axis=0
+            )
+            gene_subset = np.asarray(np.ravel(gene_subset) == 0)
+            counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
+        counts_per_cell = np.ravel(counts_per_cell)
+        if target_sum is None:
+            target_sum = _compute_nnz_median(counts_per_cell)
+
+    counts_per_cell = counts_per_cell / target_sum
+    out = x if isinstance(x, np.ndarray | CSBase) else None
+    X = axis_mul_or_truediv(
+        x, counts_per_cell, op=truediv, out=out, allow_divide_by_zero=False, axis=0
+    )
+
+    return X, counts_per_cell, gene_subset
 
 
 @old_positionals(
@@ -102,7 +149,7 @@ def _normalize_csr(
     "inplace",
     "copy",
 )
-def normalize_total(  # noqa: PLR0912, PLR0915
+def normalize_total(  # noqa: PLR0912
     adata: AnnData,
     *,
     target_sum: float | None = None,
@@ -227,87 +274,43 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     view_to_actual(adata)
 
     x = _get_obs_rep(adata, layer=layer)
+    if x is None:
+        msg = f"Layer {layer!r} not found in adata."
+        raise ValueError(msg)
+    if isinstance(x, CSCBase):
+        x = x.tocsr()
+    if not inplace:
+        x = x.copy()
+    if issubclass(x.dtype.type, int | np.integer):
+        x = x.astype(np.float32)  # TODO: Check if float64 should be used
 
-    if isinstance(x, CSBase):
-        msg = "normalizing counts per cell"
-        start = logg.info(msg)
-        if isinstance(x, CSCBase):
-            x = x.tocsr()
-        elif not inplace:
-            x = x.copy()
-        if issubclass(x.dtype.type, int | np.integer):
-            x = x.astype(np.float32)  # TODO: Check if float64 should be used
-        n_threads = numba.get_num_threads()
-        if target_sum is None:
-            target_sum = 0
-        counts_per_cell, target_sum, counts_per_cols = _normalize_csr(
-            x.indptr,
-            x.indices,
-            x.data,
-            rows=x.shape[0],
-            columns=x.shape[1],
-            target_sum=target_sum,
-            exclude_highly_expressed=exclude_highly_expressed,
-            max_fraction=max_fraction,
-            n_threads=n_threads,
+    start = logg.info("normalizing counts per cell")
+
+    X, counts_per_cell, gene_subset = _normalize_total_helper(
+        x,
+        exclude_highly_expressed=exclude_highly_expressed,
+        max_fraction=max_fraction,
+        target_sum=target_sum,
+    )
+
+    if exclude_highly_expressed:
+        logg.info(
+            "The following highly-expressed genes are not considered during normalization factor computation:\n"
+            f"{adata.var_names[~gene_subset].tolist()}"
         )
-        if exclude_highly_expressed:
-            gene_subset = np.where(counts_per_cols)
-            msg = (
-                "The following highly-expressed genes are not considered during "
-                f"normalization factor computation:\n{adata.var_names[gene_subset].tolist()}"
-            )
-            logg.info(msg)
-        if inplace:
-            if key_added is not None:
-                adata.obs[key_added] = counts_per_cell
-            _set_obs_rep(adata, x, layer=layer)
-        else:
-            # not recarray because need to support sparse
-            dat = dict(
-                X=x,
-                norm_factor=counts_per_cell,
-            )
 
-    else:
-        gene_subset = None
-        msg = "normalizing counts per cell"
+    cell_subset = counts_per_cell > 0
+    if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
+        warn("Some cells have zero counts", UserWarning, stacklevel=2)
 
-        counts_per_cell = axis_sum(x, axis=1)
-        if exclude_highly_expressed:
-            counts_per_cell = np.ravel(counts_per_cell)
-
-            # at least one cell as more than max_fraction of counts per cell
-
-            gene_subset = axis_sum(
-                (x > counts_per_cell[:, None] * max_fraction), axis=0
-            )
-            gene_subset = np.asarray(np.ravel(gene_subset) == 0)
-
-            msg += (
-                ". The following highly-expressed genes are not considered during "
-                f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
-            )
-            counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
-        start = logg.info(msg)
-        counts_per_cell = np.ravel(counts_per_cell)
-
-        cell_subset = counts_per_cell > 0
-        if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-            warn("Some cells have zero counts", UserWarning, stacklevel=2)
-
-        if inplace:
-            if key_added is not None:
-                adata.obs[key_added] = counts_per_cell
-            _set_obs_rep(
-                adata, _normalize_data(x, counts_per_cell, target_sum), layer=layer
-            )
-        else:
-            # not recarray because need to support sparse
-            dat = dict(
-                X=_normalize_data(x, counts_per_cell, target_sum, copy=True),
-                norm_factor=counts_per_cell,
-            )
+    dat = dict(
+        X=X,
+        norm_factor=counts_per_cell,
+    )
+    if inplace:
+        if key_added is not None:
+            adata.obs[key_added] = dat["norm_factor"]
+        _set_obs_rep(adata, dat["X"], layer=layer)
 
     logg.info(
         "    finished ({time_passed})",
