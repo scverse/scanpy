@@ -81,12 +81,10 @@ def _normalize_total_helper(
     max_fraction: float,
     target_sum: float | None,
 ) -> tuple[np.ndarray | CSBase | DaskArray, np.ndarray, np.ndarray | None]:
-    """Return the normalized data, counts per cell, and gene subset.
+    """Calculate the normalized data, counts per cell, and gene subset.
 
-    It returns the normalized data, the counts per cell, and the gene subset.
-
-    Params
-    ------
+    Parameters
+    ----------
     See `normalize_total` for details.
 
     Returns
@@ -179,8 +177,8 @@ def normalize_total(  # noqa: PLR0912
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
         is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
@@ -252,7 +250,8 @@ def normalize_total(  # noqa: PLR0912
     ...     max_fraction=0.2,
     ...     inplace=False,
     ... )["X"]
-    normalizing counts per cell. The following highly-expressed genes are not considered during normalization factor computation:
+    normalizing counts per cell
+    The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
         finished (0:00:00)
     >>> X_norm
