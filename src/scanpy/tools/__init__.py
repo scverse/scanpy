@@ -49,6 +49,7 @@ __all__ = [
     "draw_graph",
     "embedding_density",
     "filter_rank_genes_groups",
+    "find_cluster_resolution",
     "ingest",
     "leiden",
     "louvain",
@@ -60,5 +61,4 @@ __all__ = [
     "sim",
     "tsne",
     "umap",
-    "find_cluster_resolution",
 ]
