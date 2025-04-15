@@ -277,13 +277,14 @@ def normalize_total(  # noqa: PLR0912
     if x is None:
         msg = f"Layer {layer!r} not found in adata."
         raise ValueError(msg)
-    msg = "normalizing counts per cell"
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:
         x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float32)  # TODO: Check if float64 should be used
+
+    start = logg.info("normalizing counts per cell")
 
     X, counts_per_cell, gene_subset = _normalize_total_helper(
         x,
@@ -293,11 +294,11 @@ def normalize_total(  # noqa: PLR0912
     )
 
     if exclude_highly_expressed:
-        msg += (
-            ". The following highly-expressed genes are not considered during "
-            f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
+        logg.info(
+            "The following highly-expressed genes are not considered during normalization factor computation:\n"
+            f"{adata.var_names[~gene_subset].tolist()}"
         )
-    start = logg.info(msg)
+
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning, stacklevel=2)
