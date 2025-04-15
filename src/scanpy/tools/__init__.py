@@ -42,7 +42,6 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
-    "cluster_resolution_finder",
     "dendrogram",
     "diffmap",
     "dpt",

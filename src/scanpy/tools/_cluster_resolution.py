@@ -22,39 +22,7 @@ def find_cluster_specific_genes(
     min_cells: int = 2,
     deg_mode: Literal["within_parent", "per_resolution"] = "within_parent",
 ) -> dict[tuple[str, str], list[str]]:
-    """
-    Find differentially expressed genes for clusters in two modes.
-
-    - "within_parent": DEGs between subclusters within each parental cluster.
-    - "per_resolution": DEGs for each subcluster vs. all other cells at that resolution.
-
-    Parameters
-    ----------
-    adata
-        AnnData object with clustering in obs.
-    resolutions
-        List of resolution values (e.g., `[0.0, 0.2, 0.5]`).
-    prefix
-        Prefix for clustering columns in :attr:`~anndata.AnnData.obs`
-    method
-        Method for DEG analysis
-    n_top_genes
-        Number of top genes per child node
-    min_cells
-        Minimum cells required in a subcluster
-    deg_mode
-        See above
-
-    Returns
-    -------
-    Dict mapping (parent_node, child_node) to top marker genes.
-    E.g., {("res_0.0_C0", "res_0.2_C1"): ["gene1", "gene2", "gene3"]}
-
-    Raises
-    ------
-    ValueError
-        If deg_mode is invalid or input data is malformed.
-    """
+    """Find differentially expressed genes for clusters in two modes."""
     from . import rank_genes_groups
 
     if deg_mode not in ["within_parent", "per_resolution"]:
@@ -71,91 +39,140 @@ def find_cluster_specific_genes(
     top_genes_dict: dict[tuple[str, str], list[str]] = {}
 
     if deg_mode == "within_parent":
-        for i, res in enumerate(resolutions[:-1]):
-            res_key = f"{prefix}{res}"
-            next_res_key = f"{prefix}{resolutions[i + 1]}"
-            clusters = adata.obs[
-                res_key
-            ].cat.categories  # Use categorical for efficiency
-
-            for cluster in clusters:
-                cluster_mask = adata.obs[res_key] == cluster
-                cluster_adata = adata[cluster_mask, :]
-
-                subclusters = cluster_adata.obs[next_res_key].value_counts()
-                valid_subclusters = subclusters[subclusters >= min_cells].index
-
-                if len(valid_subclusters) < 2:
-                    print(
-                        f"Skipping res_{res}_C{cluster}: < 2 subclusters with >= {min_cells} cells."
-                    )
-                    continue
-
-                subcluster_mask = cluster_adata.obs[next_res_key].isin(
-                    valid_subclusters
-                )
-                deg_adata = cluster_adata[subcluster_mask, :]
-
-                try:
-                    rank_genes_groups(
-                        deg_adata, groupby=next_res_key, method="wilcoxon"
-                    )
-                    for subcluster in valid_subclusters:
-                        names = deg_adata.uns["rank_genes_groups"]["names"][subcluster]
-                        scores = deg_adata.uns["rank_genes_groups"]["scores"][
-                            subcluster
-                        ]
-                        top_genes = [
-                            name
-                            for name, score in zip(names, scores, strict=False)
-                            if score > 0
-                        ][:n_top_genes]
-                        parent_node = f"res_{res}_C{cluster}"
-                        child_node = f"res_{resolutions[i + 1]}_C{subcluster}"
-                        top_genes_dict[(parent_node, child_node)] = top_genes
-                        print(f"{parent_node} -> {child_node}: {top_genes}")
-                except Exception as e:
-                    print(f"DEG failed for res_{res}_C{cluster}: {e}")
-                    continue
-
+        top_genes_dict.update(
+            find_within_parent_degs(
+                adata,
+                resolutions,
+                prefix=prefix,
+                n_top_genes=n_top_genes,
+                min_cells=min_cells,
+                rank_genes_groups=rank_genes_groups,
+            )
+        )
     elif deg_mode == "per_resolution":
-        for i, res in enumerate(resolutions[1:], 1):
-            res_key = f"{prefix}{res}"
-            prev_res_key = f"{prefix}{resolutions[i - 1]}"
-            clusters = adata.obs[res_key].cat.categories
-            valid_clusters = [
-                c for c in clusters if (adata.obs[res_key] == c).sum() >= min_cells
-            ]
+        top_genes_dict.update(
+            find_per_resolution_degs(
+                adata,
+                resolutions,
+                prefix=prefix,
+                n_top_genes=n_top_genes,
+                min_cells=min_cells,
+                rank_genes_groups=rank_genes_groups,
+            )
+        )
 
-            if not valid_clusters:
+    return top_genes_dict
+
+
+def find_within_parent_degs(
+    adata: AnnData,
+    resolutions: Sequence[float],
+    *,
+    prefix: str,
+    n_top_genes: int,
+    min_cells: int,
+    rank_genes_groups,
+) -> dict[tuple[str, str], list[str]]:
+    top_genes_dict = {}
+
+    for i, res in enumerate(resolutions[:-1]):
+        res_key = f"{prefix}{res}"
+        next_res_key = f"{prefix}{resolutions[i + 1]}"
+        clusters = adata.obs[res_key].cat.categories
+
+        for cluster in clusters:
+            cluster_mask = adata.obs[res_key] == cluster
+            cluster_adata = adata[cluster_mask, :]
+
+            subclusters = cluster_adata.obs[next_res_key].value_counts()
+            valid_subclusters = subclusters[subclusters >= min_cells].index
+
+            if len(valid_subclusters) < 2:
                 print(
-                    f"Skipping resolution {res}: no clusters with >= {min_cells} cells."
+                    f"Skipping res_{res}_C{cluster}: < 2 subclusters with >= {min_cells} cells."
                 )
                 continue
 
-            deg_adata = adata[adata.obs[res_key].isin(valid_clusters), :]
+            subcluster_mask = cluster_adata.obs[next_res_key].isin(valid_subclusters)
+            deg_adata = cluster_adata[subcluster_mask, :]
+
             try:
-                rank_genes_groups(
-                    deg_adata, groupby=res_key, method="wilcoxon", reference="rest"
-                )
-                for cluster in valid_clusters:
-                    names = deg_adata.uns["rank_genes_groups"]["names"][cluster]
-                    scores = deg_adata.uns["rank_genes_groups"]["scores"][cluster]
+                rank_genes_groups(deg_adata, groupby=next_res_key, method="wilcoxon")
+                for subcluster in valid_subclusters:
+                    names = deg_adata.uns["rank_genes_groups"]["names"][subcluster]
+                    scores = deg_adata.uns["rank_genes_groups"]["scores"][subcluster]
                     top_genes = [
                         name
                         for name, score in zip(names, scores, strict=False)
                         if score > 0
                     ][:n_top_genes]
-                    parent_cluster = adata.obs[deg_adata.obs[res_key] == cluster][
-                        prev_res_key
-                    ].mode()[0]
-                    parent_node = f"res_{resolutions[i - 1]}_C{parent_cluster}"
-                    child_node = f"res_{res}_C{cluster}"
+                    parent_node = f"res_{res}_C{cluster}"
+                    child_node = f"res_{resolutions[i + 1]}_C{subcluster}"
                     top_genes_dict[(parent_node, child_node)] = top_genes
                     print(f"{parent_node} -> {child_node}: {top_genes}")
-            except Exception as e:
-                print(f"DEG failed at resolution {res}: {e}")
+            except KeyError as e:
+                print(f"Key error when processing {parent_node} -> {child_node}: {e}")
                 continue
+            except TypeError as e:
+                print(
+                    f"Type error with the data when processing {parent_node} -> {child_node}: {e}"
+                )
+                continue
+
+    return top_genes_dict
+
+
+def find_per_resolution_degs(
+    adata: AnnData,
+    resolutions: Sequence[float],
+    *,
+    prefix: str,
+    n_top_genes: int,
+    min_cells: int,
+    rank_genes_groups,
+) -> dict[tuple[str, str], list[str]]:
+    top_genes_dict = {}
+
+    for i, res in enumerate(resolutions[1:], 1):
+        res_key = f"{prefix}{res}"
+        prev_res_key = f"{prefix}{resolutions[i - 1]}"
+        clusters = adata.obs[res_key].cat.categories
+        valid_clusters = [
+            c for c in clusters if (adata.obs[res_key] == c).sum() >= min_cells
+        ]
+
+        if not valid_clusters:
+            print(f"Skipping resolution {res}: no clusters with >= {min_cells} cells.")
+            continue
+
+        deg_adata = adata[adata.obs[res_key].isin(valid_clusters), :]
+        try:
+            rank_genes_groups(
+                deg_adata, groupby=res_key, method="wilcoxon", reference="rest"
+            )
+            for cluster in valid_clusters:
+                names = deg_adata.uns["rank_genes_groups"]["names"][cluster]
+                scores = deg_adata.uns["rank_genes_groups"]["scores"][cluster]
+                top_genes = [
+                    name
+                    for name, score in zip(names, scores, strict=False)
+                    if score > 0
+                ][:n_top_genes]
+                parent_cluster = adata.obs[deg_adata.obs[res_key] == cluster][
+                    prev_res_key
+                ].mode()[0]
+                parent_node = f"res_{resolutions[i - 1]}_C{parent_cluster}"
+                child_node = f"res_{res}_C{cluster}"
+                top_genes_dict[(parent_node, child_node)] = top_genes
+                print(f"{parent_node} -> {child_node}: {top_genes}")
+        except KeyError as e:
+            print(f"Key error when processing {parent_node} -> {child_node}: {e}")
+            continue
+        except TypeError as e:
+            print(
+                f"Type error with the data when processing {parent_node} -> {child_node}: {e}"
+            )
+            continue
 
     return top_genes_dict
 
@@ -242,12 +259,6 @@ def find_cluster_resolution(
     if not all(isinstance(r, (int | float)) and r >= 0 for r in resolutions):
         msg = "All resolutions must be non-negative numbers"
         raise ValueError(msg)
-    if method != "wilcoxon":
-        msg = "Only method='wilcoxon' is supported"
-        raise ValueError(msg)
-    if flavor != "igraph":
-        msg = "Only flavor='igraph' is supported"
-        raise ValueError(msg)
 
     # Check if neighbors are computed (required for Leiden)
     if "neighbors" not in adata.uns:
@@ -269,9 +280,15 @@ def find_cluster_resolution(
                 sys, "_called_from_test"
             ):  # Suppress print in tests
                 print(f"Completed Leiden clustering for resolution {resolution}")
-        except Exception as e:
+        except ValueError as e:
+            msg = f"Leiden clustering failed at resolution {resolution} due to invalid value: {e}"
+            raise RuntimeError(msg) from None
+        except TypeError as e:
+            msg = f"Leiden clustering failed at resolution {resolution} due to incorrect type: {e}"
+            raise RuntimeError(msg) from None
+        except RuntimeError as e:
             msg = f"Leiden clustering failed at resolution {resolution}: {e}"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from None
 
     # Find cluster-specific genes
     top_genes_dict = find_cluster_specific_genes(
@@ -291,10 +308,13 @@ def find_cluster_resolution(
         )
     except KeyError as e:
         msg = f"Failed to create cluster_data DataFrame: missing column {e}"
-        raise RuntimeError(msg)
-    except Exception as e:
-        msg = f"Failed to create cluster_data DataFrame: {e}"
-        raise RuntimeError(msg)
+        raise RuntimeError(msg) from None
+    except ValueError as e:
+        msg = f"Failed to create cluster_data DataFrame due to invalid value: {e}"
+        raise RuntimeError(msg) from None
+    except TypeError as e:
+        msg = f"Failed to create cluster_data DataFrame due to incorrect type: {e}"
+        raise RuntimeError(msg) from None
 
     # Store the results in adata.uns
     adata.uns["cluster_resolution_top_genes"] = top_genes_dict
