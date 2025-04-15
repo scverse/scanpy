@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     "method",
     "neighbors_key",
 )
-def umap(
+def umap(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     *,
     min_dist: float = 0.5,
@@ -236,7 +236,7 @@ def umap(
             "`method='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         metric = neigh_params.get("metric", "euclidean")
         if metric != "euclidean":
             msg = (

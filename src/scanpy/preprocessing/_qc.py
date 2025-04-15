@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     doc_qc_metric_naming=doc_qc_metric_naming,
     doc_obs_qc_returns=doc_obs_qc_returns,
 )
-def describe_obs(
+def describe_obs(  # noqa: PLR0913
     adata: AnnData,
     *,
     expr_type: str = "counts",
@@ -86,6 +86,7 @@ def describe_obs(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Handle whether X is passed
     if X is None:
@@ -279,6 +280,7 @@ def calculate_qc_metrics(
         warn(
             "Argument `parallel` is deprecated, and currently has no effect.",
             FutureWarning,
+            stacklevel=2,
         )
     # Pass X so I only have to do it once
     X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)

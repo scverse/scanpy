@@ -144,6 +144,31 @@ def gen_pca_params(
         yield None, None, None
         return
 
+    svd_solvers, warn_pat_expected = possible_solvers(
+        array_type=array_type, svd_solver_type=svd_solver_type, zero_center=zero_center
+    )
+
+    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
+    for svd_solver in sorted(svd_solvers):
+        # explicit check for special case
+        if (
+            isinstance(array_type, type)
+            and issubclass(array_type, CSBase)
+            and zero_center
+            and svd_solver == "lobpcg"
+        ):
+            pat = r"legacy code"
+        else:
+            pat = warn_pat_expected
+        yield (svd_solver, pat, None)
+
+
+def possible_solvers(
+    *,
+    array_type: type[ArrayType],
+    svd_solver_type: Literal["valid", "invalid"],
+    zero_center: bool,
+) -> tuple[set[SVDSolver], str | None]:
     all_svd_solvers = get_literal_vals(SVDSolver)
     svd_solvers: set[SVDSolver]
     match array_type, zero_center:
@@ -171,20 +196,7 @@ def gen_pca_params(
         warn_pat_expected = None
     else:
         pytest.fail(f"Unknown {svd_solver_type=}")
-
-    # sorted to prevent https://github.com/pytest-dev/pytest-xdist/issues/432
-    for svd_solver in sorted(svd_solvers):
-        # explicit check for special case
-        if (
-            isinstance(array_type, type)
-            and issubclass(array_type, CSBase)
-            and zero_center
-            and svd_solver == "lobpcg"
-        ):
-            pat = r"legacy code"
-        else:
-            pat = warn_pat_expected
-        yield (svd_solver, pat, None)
+    return svd_solvers, warn_pat_expected
 
 
 @pytest.mark.parametrize(

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     "copy",
     "random_state",
 )
-def scrublet(
+def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
     *,
@@ -279,7 +279,7 @@ def scrublet(
 
         adata.uns["scrublet"] = {}
         adata.uns["scrublet"]["batches"] = dict(
-            zip(batches, [scrub["uns"] for scrub in scrubbed])
+            zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
         )
 
         # Record that we've done batched analysis, so e.g. the plotting
@@ -301,7 +301,7 @@ def scrublet(
     return adata if copy else None
 
 
-def _scrublet_call_doublets(
+def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,
     *,
@@ -402,7 +402,7 @@ def _scrublet_call_doublets(
     # Estimate n_neighbors if not provided, and create scrublet object.
 
     if n_neighbors is None:
-        n_neighbors = int(round(0.5 * np.sqrt(adata_obs.shape[0])))
+        n_neighbors = round(0.5 * np.sqrt(adata_obs.shape[0]))
 
     # Note: Scrublet() will sparse adata_obs.X if it's not already, but this
     # matrix won't get used if we pre-set the normalised slots.

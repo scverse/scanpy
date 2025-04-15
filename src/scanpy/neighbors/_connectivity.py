@@ -16,7 +16,7 @@ from ._common import (
 D = TypeVar("D", NDArray[np.float32], CSRBase)
 
 
-def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
+def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:  # noqa: PLR0912
     """Derive gaussian connectivities between data points from their distances.
 
     Parameters

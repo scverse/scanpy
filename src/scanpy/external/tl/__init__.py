@@ -12,14 +12,14 @@ from ._trimap import trimap
 from ._wishbone import wishbone
 
 __all__ = [
+    "cyclone",
     "harmony_timeseries",
     "palantir",
     "palantir_results",
     "phate",
     "phenograph",
-    "cyclone",
-    "sandbag",
     "sam",
+    "sandbag",
     "trimap",
     "wishbone",
 ]

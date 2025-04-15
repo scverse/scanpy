@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 # TODO: implement diffxpy method, make singledispatch
-def rank_genes_groups_df(
+def rank_genes_groups_df(  # noqa: PLR0912
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,

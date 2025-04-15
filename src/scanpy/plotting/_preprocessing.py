@@ -16,7 +16,7 @@ from ._utils import savefig_or_show
 
 
 @old_positionals("log", "show", "save", "highly_variable_genes")
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0912
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
     log: bool = False,
@@ -73,6 +73,7 @@ def highly_variable_genes(
             ["highly variable genes", "other genes"],
             ["black", "grey"],
             [gene_subset, ~gene_subset],
+            strict=True,
         ):
             if False:
                 means_, var_or_disps_ = np.log10(means[mask]), np.log10(d[mask])
