@@ -252,18 +252,7 @@ def find_cluster_resolution(
     if "pytest" in sys.modules:
         sys.stdout = io.StringIO()
 
-    # Validate inputs
-    if not resolutions:
-        msg = "resolutions list cannot be empty"
-        raise ValueError(msg)
-    if not all(isinstance(r, (int | float)) and r >= 0 for r in resolutions):
-        msg = "All resolutions must be non-negative numbers"
-        raise ValueError(msg)
-
-    # Check if neighbors are computed (required for Leiden)
-    if "neighbors" not in adata.uns:
-        msg = "adata must have precomputed neighbors (run sc.pp.neighbors first)."
-        raise ValueError(msg)
+    _validate_cluster_resolution_inputs(adata, resolutions, method, flavor)
 
     # Run Leiden clustering
     for resolution in resolutions:
@@ -319,3 +308,27 @@ def find_cluster_resolution(
     # Store the results in adata.uns
     adata.uns["cluster_resolution_top_genes"] = top_genes_dict
     adata.uns["cluster_resolution_cluster_data"] = cluster_data
+
+
+def _validate_cluster_resolution_inputs(
+    adata: AnnData,
+    resolutions: Sequence[float],
+    method: str,
+    flavor: str,
+) -> None:
+    """Validate inputs for the find_cluster_resolution function."""
+    if not resolutions:
+        msg = "resolutions list cannot be empty"
+        raise ValueError(msg)
+    if not all(isinstance(r, int | float) and r >= 0 for r in resolutions):
+        msg = "All resolutions must be non-negative numbers"
+        raise ValueError(msg)
+    if method != "wilcoxon":
+        msg = "Only method='wilcoxon' is supported"
+        raise ValueError(msg)
+    if flavor != "igraph":
+        msg = "Only flavor='igraph' is supported"
+        raise ValueError(msg)
+    if "neighbors" not in adata.uns:
+        msg = "adata must have precomputed neighbors (run sc.pp.neighbors first)."
+        raise ValueError(msg)
