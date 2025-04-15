@@ -12,7 +12,7 @@ from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy import sparse
 
-from scanpy._compat import CSBase, DaskArray, _legacy_numpy_gen, pkg_version
+from scanpy._compat import CSBase, DaskArray, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     axis_sum,
@@ -21,7 +21,12 @@ from scanpy._utils import (
     elem_mul,
     is_constant,
 )
-from scanpy._utils.random import ith_k_tuple, random_k_tuples, random_strings
+from scanpy._utils.random import (
+    ith_k_tuple,
+    legacy_numpy_gen,
+    random_k_tuples,
+    random_strings,
+)
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
@@ -287,7 +292,7 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
 def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
         np.random.seed(seed)
-    gen = np.random if direct else _legacy_numpy_gen(seed)
+    gen = np.random if direct else legacy_numpy_gen(seed)
     match func:
         case "choice":
             arr = np.arange(1000)

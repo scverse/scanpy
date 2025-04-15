@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 from collections.abc import Sequence
 from contextlib import contextmanager
+from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,19 +20,22 @@ if TYPE_CHECKING:
 __all__ = [
     "RNGLike",
     "SeedLike",
+    "_LegacyRandom",
     "ith_k_tuple",
+    "legacy_numpy_gen",
     "random_k_tuples",
     "random_strings",
 ]
 
 SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
 RNGLike = np.random.Generator | np.random.BitGenerator
+_LegacyRandom = int | np.random.RandomState | None
 
 
 # Compatibility with igraph’s RNG
 
 
-class RNGIgraph:
+class _RNGIgraph:
     """Random number generator for ipgraph so global seed is not changed.
 
     See :func:`igraph.set_random_number_generator` for the requirements.
@@ -51,7 +55,7 @@ def set_igraph_random_state(
     ensure_igraph()
     import igraph
 
-    rng = RNGIgraph(random_state)
+    rng = _RNGIgraph(random_state)
     try:
         igraph.set_random_number_generator(rng)
         yield None
@@ -59,7 +63,48 @@ def set_igraph_random_state(
         igraph.set_random_number_generator(random)
 
 
-# random k-tuples
+# Compatibility with legacy numpy
+
+
+def legacy_numpy_gen(
+    random_state: _LegacyRandom | None = None,
+) -> np.random.Generator:
+    """Return a random generator that behaves like the legacy one."""
+    if random_state is not None:
+        if isinstance(random_state, np.random.RandomState):
+            np.random.set_state(random_state.get_state(legacy=False))
+            return _FakeRandomGen(random_state)
+        np.random.seed(random_state)
+    return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
+
+
+class _FakeRandomGen(np.random.Generator):
+    _state: np.random.RandomState
+
+    def __init__(self, random_state: np.random.RandomState) -> None:
+        self._state = random_state
+
+    @classmethod
+    def _delegate(cls) -> None:
+        for name, meth in np.random.Generator.__dict__.items():
+            if name.startswith("_") or not callable(meth):
+                continue
+
+            def mk_wrapper(name: str, meth):
+                # Old pytest versions try to run the doctests
+                @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
+                def wrapper(self: _FakeRandomGen, *args, **kwargs):
+                    return getattr(self._state, name)(*args, **kwargs)
+
+                return wrapper
+
+            setattr(cls, name, mk_wrapper(name, meth))
+
+
+_FakeRandomGen._delegate()
+
+
+# Random k-tuples
 
 
 def ith_k_tuple(
