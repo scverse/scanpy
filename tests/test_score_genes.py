@@ -13,7 +13,7 @@ from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._utils.random import random_strings
+from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
 
-_create_random_gene_names = partial(random_strings, alphabet=string.ascii_uppercase)
+_create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
 """Create a bunch of random gene names (just CAPS letters)."""
 
 

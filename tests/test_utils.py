@@ -25,7 +25,7 @@ from scanpy._utils.random import (
     ith_k_tuple,
     legacy_numpy_gen,
     random_k_tuples,
-    random_strings,
+    random_str,
 )
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
@@ -318,8 +318,15 @@ def test_random_k_tuples() -> None:
     assert len(unique) == len(tups)
 
 
-def test_random_strings() -> None:
-    strings = random_strings(size=26**2, length=2, alphabet=string.ascii_lowercase)
+def test_random_str_0d() -> None:
+    string = random_str(length=3, alphabet="01")
+    assert string.shape == ()
+    assert string.dtype == np.dtype("U3")
+    assert str(string) in {"000", "001", "010", "011", "100", "101", "110", "111"}
+
+
+def test_random_str() -> None:
+    strings = random_str(size=26**2, length=2, alphabet=string.ascii_lowercase)
     assert strings.shape == (26**2,)
     assert strings.dtype == np.dtype("U2")
     unique = np.unique(strings, axis=0)

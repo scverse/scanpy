@@ -24,7 +24,7 @@ __all__ = [
     "ith_k_tuple",
     "legacy_numpy_gen",
     "random_k_tuples",
-    "random_strings",
+    "random_str",
 ]
 
 SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
@@ -177,8 +177,8 @@ def random_k_tuples(
     return ith_k_tuple(indices, n=n, k=k)
 
 
-def random_strings(
-    size: int, *, length: int, alphabet: str, rng: SeedLike | RNGLike | None = None
+def random_str(
+    size: int = 1, *, length: int, alphabet: str, rng: SeedLike | RNGLike | None = None
 ) -> NDArray[np.str_]:
     """Draw `size` distinct strings of length `k` from the given alphabet.
 
@@ -195,7 +195,7 @@ def random_strings(
 
     Returns
     -------
-    A 1D array where each element is a distinct string of length `length`
+    A 0-1D array where each element is a distinct string of length `length`.
     """
     letters = np.array(list(alphabet), dtype="U1")
     indices = random_k_tuples(size, n=len(letters), k=length, rng=rng)
