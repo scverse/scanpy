@@ -7,6 +7,7 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils import stats
 from scipy import sparse
 
 from scanpy.get import _get_obs_rep
@@ -14,7 +15,7 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import CSBase, CSRBase, DaskArray, njit
-from .._utils import _doc_params, axis_nnz, axis_sum
+from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -101,7 +102,7 @@ def describe_obs(  # noqa: PLR0913
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
         )
-    obs_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=1))
+    obs_metrics[f"total_{expr_type}"] = stats.sum(X, axis=1)
     if log1p:
         obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             obs_metrics[f"total_{expr_type}"]
@@ -114,8 +115,8 @@ def describe_obs(  # noqa: PLR0913
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
-            axis_sum(X[:, adata.var[qc_var].values], axis=1)
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
+            X[:, adata.var[qc_var].values], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -189,7 +190,7 @@ def describe_var(
     var_metrics[f"pct_dropout_by_{expr_type}"] = (
         1 - var_metrics[f"n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
-    var_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=0))
+    var_metrics[f"total_{expr_type}"] = stats.sum(X, axis=0)
     if log1p:
         var_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             var_metrics[f"total_{expr_type}"]

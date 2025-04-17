@@ -13,7 +13,6 @@ from scipy import sparse
 from scanpy._compat import CSBase, DaskArray, _legacy_numpy_gen, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
-    axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
     elem_mul,
@@ -149,22 +148,6 @@ def test_elem_mul(array_type):
     expd = np.array([[0, 2, 1], [3, 0, 0]])
     res = asarray(elem_mul(m1, m2))
     np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize(
-    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
-)
-def test_axis_sum(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    expd_0 = np.array([1, 1, 2])
-    expd_1 = np.array([2, 2])
-    res_0 = asarray(axis_sum(m1, axis=0))
-    res_1 = asarray(axis_sum(m1, axis=1))
-    if "matrix" in array_type.__name__:  # for sparse since dimension is kept
-        res_0 = res_0.ravel()
-        res_1 = res_1.ravel()
-    np.testing.assert_array_equal(res_0, expd_0)
-    np.testing.assert_array_equal(res_1, expd_1)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)

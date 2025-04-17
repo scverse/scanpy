@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
+from fast_array_utils import stats
 from sklearn.random_projection import sample_without_replacement
 
 from .._compat import CSBase, CSCBase, CSRBase, SpBase, njit
-from .._utils import axis_sum, elem_mul
+from .._utils import elem_mul
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 @singledispatch
 def axis_mean(X: DaskArray, *, axis: Literal[0, 1], dtype: DTypeLike) -> DaskArray:
-    total = axis_sum(X, axis=axis, dtype=dtype)
+    total = stats.sum(X, axis=axis, dtype=dtype)
     return total / X.shape[axis]
 
 

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, TypeVar, overload
 import numba
 import numpy as np
 from anndata import AnnData
+from fast_array_utils import stats
 from pandas.api.types import CategoricalDtype
 from scipy import sparse
 from sklearn.utils import check_array, sparsefuncs
@@ -23,7 +24,6 @@ from .._settings import settings as sett
 from .._utils import (
     _check_array_function_arguments,
     _resolve_axis,
-    axis_sum,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
@@ -172,17 +172,15 @@ def filter_cells(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
-    number_per_cell = axis_sum(
+    number_per_cell = stats.sum(
         X if min_genes is None and max_genes is None else X > 0, axis=1
     )
-    if isinstance(number_per_cell, np.matrix):
-        number_per_cell = number_per_cell.A1
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
 
-    s = axis_sum(~cell_subset)
+    s = stats.sum(~cell_subset)
     if s > 0:
         msg = f"filtered out {s} cells that have "
         if min_genes is not None or min_counts is not None:
@@ -290,17 +288,15 @@ def filter_genes(
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
-    number_per_gene = axis_sum(
+    number_per_gene = stats.sum(
         X if min_cells is None and max_cells is None else X > 0, axis=0
     )
-    if isinstance(number_per_gene, np.matrix):
-        number_per_gene = number_per_gene.A1
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
 
-    s = axis_sum(~gene_subset)
+    s = stats.sum(~gene_subset)
     if s > 0:
         msg = f"filtered out {s} genes that are detected "
         if min_cells is not None or min_counts is not None:
@@ -1053,7 +1049,7 @@ def _downsample_per_cell(
         original_type = type(X)
         if not isinstance(X, CSRBase):
             X = sparse.csr_matrix(X)  # noqa: TID251
-        totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
+        totals = stats.sum(X, axis=1)  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
@@ -1069,7 +1065,7 @@ def _downsample_per_cell(
         if not issubclass(original_type, CSRBase):  # Put it back
             X = original_type(X)
     else:
-        totals = np.ravel(axis_sum(X, axis=1))
+        totals = stats.sum(X, axis=1)
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
             row = X[rowidx, :]
