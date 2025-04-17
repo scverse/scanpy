@@ -13,6 +13,7 @@ from ._anndata import (
     tracksplot,
     violin,
 )
+from ._cluster_tree import cluster_decision_tree
 from ._dotplot import DotPlot, dotplot
 from ._matrixplot import MatrixPlot, matrixplot
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
@@ -58,6 +59,7 @@ __all__ = [
     "DotPlot",
     "MatrixPlot",
     "StackedViolin",
+    "cluster_decision_tree",
     "clustermap",
     "correlation_matrix",
     "dendrogram",
