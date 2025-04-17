@@ -8,13 +8,13 @@ import numpy as np
 import pandas as pd
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase, CSCBase, njit, old_positionals
 from .._utils import _check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal
+    from typing import Any, Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -28,28 +28,49 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
+@njit
+def _get_sparce_nanmean_indices(
+    data: NDArray[Any], indices: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    mask = np.isnan(data)
+    sum_arr = np.bincount(indices, weights=np.where(~mask, data, 0.0)).astype(
+        np.float64
+    )
+    nans_arr = np.bincount(indices, weights=mask).astype(np.float64)
+    nans_arr[nans_arr == shape[0]] = np.nan
+    return sum_arr / (shape[0] - nans_arr)
+
+
+# can't use numba with np.ufunc.reduceat
+def _get_sparce_nanmean_indptr(
+    data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    # copy 1 time
+    new_ptr = indptr[:-1]
+    mask = np.isnan(data)
+    sum_arr = np.add.reduceat(np.where(~mask, data, 0.0), new_ptr, dtype=np.float64)
+    nans_arr = np.add.reduceat(mask, new_ptr, dtype=np.float64)
+    nans_arr[nans_arr == shape[1]] = np.nan
+    return sum_arr / (shape[1] - nans_arr)
+
+
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not isinstance(X, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
-
-    # count the number of nan elements per row/column (dep. on axis)
-    Z = X.copy()
-    Z.data = np.isnan(Z.data)
-    Z.eliminate_zeros()
-    n_elements = Z.shape[axis] - Z.sum(axis)
-
-    # set the nans to 0, so that a normal .sum() works
-    Y = X.copy()
-    Y.data[np.isnan(Y.data)] = 0
-    Y.eliminate_zeros()
-
-    # the average
-    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
-    m = s / n_elements
-
-    return m
+    algo_shape = X.shape
+    algo_axis = axis
+    # in CSC ans CSR we have "transposed" form of data storaging (indices is colums/rows, indptr is row/columns)
+    # as a result, algorythm for CSC is algorythm for CSR but with transposed shape (columns in CSC is equal rows in CSR)
+    # base algo for CSR, for csc we should "transpose" matrix size and use same logics
+    if isinstance(X, CSCBase):
+        algo_shape = X.shape[::-1]
+        algo_axis = int(not axis)
+    if algo_axis == 1:
+        return _get_sparce_nanmean_indptr(X.data, X.indptr, algo_shape)
+    else:
+        return _get_sparce_nanmean_indices(X.data, X.indices, algo_shape)
 
 
 @old_positionals(
