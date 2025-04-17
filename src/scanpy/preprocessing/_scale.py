@@ -200,6 +200,8 @@ def scale_array(  # noqa: PLR0912
                 stacklevel=2,
             )
         X -= mean
+        if isinstance(X, DaskArray) and isinstance(X._meta, np.matrix):
+            X = X.map_blocks(lambda x: x.A, dtype=X.dtype)
 
     out = X if isinstance(X, np.ndarray | CSBase) else None
     X = axis_mul_or_truediv(X, std, op=truediv, out=out, axis=1)
