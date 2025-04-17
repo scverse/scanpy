@@ -241,7 +241,7 @@ def find_cluster_resolution(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.cluster_resolution_finder(adata, resolutions=[0.0, 0.5])
+    >>> sc.tl.find_cluster_resolution(adata, resolutions=[0.0, 0.5])
     >>> sc.pl.cluster_decision_tree(adata, resolutions=[0.0, 0.5])
     """
     import io
