@@ -10,6 +10,9 @@
 /docs/external/generated
 /docs/jupyter_execute
 cluster tree demo figure.pptx
+mytest.py
+_cluster_tree_standelone.py
+expected.png
 
 # tests
 /*cache/
