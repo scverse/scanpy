@@ -6,8 +6,9 @@ import pytest
 from scanpy.plotting._cluster_tree import cluster_decision_tree
 from scanpy.tools._cluster_resolution import find_cluster_resolution
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
-pytestmark = [pytest.mark.needs_leidenalg]
+pytestmark = [needs.leidenalg]
 
 
 @pytest.fixture
