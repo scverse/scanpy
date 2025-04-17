@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from igraph import Graph
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
 

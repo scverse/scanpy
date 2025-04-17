@@ -12,7 +12,7 @@ from .sparse_utils import sparse_multiply, sparse_zscore
 if TYPE_CHECKING:
     from typing import Literal
 
-    from ..._compat import _LegacyRandom
+    from ..._utils.random import _LegacyRandom
     from .core import Scrublet
 
 

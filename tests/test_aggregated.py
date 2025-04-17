@@ -471,9 +471,7 @@ def test_dispatch_not_implemented():
 def test_factors():
     from itertools import product
 
-    obs = pd.DataFrame(
-        product(range(5), range(5), range(5), range(5)), columns=list("abcd")
-    )
+    obs = pd.DataFrame(product(range(5), repeat=4), columns=list("abcd"))
     obs.index = [f"cell_{i:04d}" for i in range(obs.shape[0])]
     adata = ad.AnnData(
         X=np.arange(obs.shape[0]).reshape(-1, 1),

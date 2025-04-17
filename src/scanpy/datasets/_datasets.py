@@ -18,7 +18,7 @@ from ._utils import check_datasetdir_exists, filter_oldformatwarning
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
     VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
