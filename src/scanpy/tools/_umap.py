@@ -56,6 +56,7 @@ def umap(  # noqa: PLR0913, PLR0915
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
+    parallel: bool = False,
 ) -> AnnData | None:
     r"""Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
@@ -145,7 +146,8 @@ def umap(  # noqa: PLR0913, PLR0915
         :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
     copy
         Return a copy instead of writing to adata.
-
+    parallel
+        Whether to run the computation using numba parallel. Running in parallel is non-deterministic.
     Returns
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
@@ -212,6 +214,12 @@ def umap(  # noqa: PLR0913, PLR0915
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
+        if parallel and random_state is not None:
+            warnings.warn(
+                "Parallel execution was expected to be disabled when both `parallel=True` and `random_state` are set, "
+                "to ensure reproducibility. However, parallel execution still seems to occur, which may lead to "
+                "non-deterministic results."
+            )
         X_umap, _ = simplicial_set_embedding(
             data=X,
             graph=neighbors["connectivities"].tocoo(),
@@ -230,6 +238,7 @@ def umap(  # noqa: PLR0913, PLR0915
             densmap_kwds={},
             output_dens=False,
             verbose=settings.verbosity > 3,
+            parallel=parallel,
         )
     elif method == "rapids":
         msg = (
