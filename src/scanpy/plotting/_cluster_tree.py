@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, TypedDict, cast
 import igraph as ig
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, PathPatch
@@ -15,6 +14,7 @@ from matplotlib.path import Path
 if TYPE_CHECKING:
     from typing import NotRequired
 
+    import networkx as nx
     import pandas as pd
     from anndata import AnnData
 
@@ -92,17 +92,28 @@ class ClusterTreePlotter:
         """
         Initialize the cluster tree plotter.
 
-        Args:
-            adata: AnnData object with clustering results.
-            resolutions: List of resolution values.
-            output_settings: Output settings (output_path, draw, figsize, dpi).
-            node_style: Node styling (node_size, node_color, node_colormap, node_label_fontsize).
-            edge_style: Edge styling (edge_color, edge_curvature, edge_threshold, ...).
-            gene_label_settings: Gene label settings (show_gene_labels, n_top_genes, ...).
-            level_label_style: Level label settings (level_label_offset, level_label_fontsize).
-            title_style: Title settings (title, title_fontsize).
-            layout_settings: Layout settings (node_spacing, level_spacing).
-            clustering_settings: Clustering settings (prefix).
+        Parameters
+        ----------
+        adata
+            AnnData object with clustering results.
+        resolutions
+            List of resolution values.
+        output_settings
+            Output settings (output_path, draw, figsize, dpi).
+        node_style
+            Node styling (node_size, node_color, node_colormap, node_label_fontsize).
+        edge_style
+            Edge styling (edge_color, edge_curvature, edge_threshold, ...).
+        gene_label_settings
+            Gene label settings (show_gene_labels, n_top_genes, ...).
+        level_label_style
+            Level label settings (level_label_offset, level_label_fontsize).
+        title_style
+            Title settings (title, title_fontsize).
+        layout_settings
+            Layout settings (node_spacing, level_spacing).
+        clustering_settings
+            Clustering settings (prefix).
         """
         self.adata = adata
         self.resolutions = resolutions
@@ -207,13 +218,15 @@ class ClusterTreePlotter:
     def default_clustering_settings() -> ClusteringSettings:
         return {"prefix": "leiden_res_", "edge_threshold": 0.05}
 
-    def build_cluster_graph(self):
+    def build_cluster_graph(self) -> None:
         """
         Build a directed graph representing hierarchical clustering.
 
         Uses self.adata.obs, self.settings["clustering"]["prefix"], and self.settings["clustering"]["edge_threshold"].
         Stores the graph in self.G and updates top_genes_dict.
         """
+        import networkx as nx
+
         prefix = self.settings["clustering"]["prefix"]
         edge_threshold = self.settings["clustering"]["edge_threshold"]
         data = self.adata.obs
@@ -264,8 +277,10 @@ class ClusterTreePlotter:
             "top_genes_dict", {}
         )
 
-    def compute_cluster_layout(self):
+    def compute_cluster_layout(self) -> dict[str, tuple[float, float]]:
         """Compute node positions for the cluster decision tree with crossing minimization."""
+        import networkx as nx
+
         if self.G is None:
             msg = "Graph is not initialized. Call build_graph() first."
             raise ValueError(msg)
@@ -317,6 +332,8 @@ class ClusterTreePlotter:
         self, G: nx.DiGraph, node_spacing: float
     ) -> dict[str, tuple[float, float]]:
         """Apply Reingold-Tilford layout to the graph."""
+        import networkx as nx
+
         try:
             nodes = list(G.nodes)
             edges = [(u, v) for u, v in G.edges()]
@@ -542,6 +559,8 @@ class ClusterTreePlotter:
         if "cluster_resolution_cluster_data" not in self.adata.uns:
             msg = "adata.uns['cluster_resolution_cluster_data'] not found."
             raise ValueError(msg)
+
+        import networkx as nx
 
         # Retrieve settings
         settings = self._get_draw_settings()
@@ -839,6 +858,8 @@ class ClusterTreePlotter:
         gene_label_threshold: float,
     ) -> tuple[dict, dict]:
         """Draw the nodes and their labels."""
+        import networkx as nx
+
         node_colors = node_styles["colors"]
         node_sizes = node_styles["sizes"]
         node_labels = {}
@@ -1176,30 +1197,40 @@ class ClusterTreePlotter:
         layout_settings: dict | LayoutSettings | None = None,
         clustering_settings: dict | ClusteringSettings | None = None,
     ) -> nx.DiGraph:
-        """
-        Plot a hierarchical clustering decision tree based on multiple resolutions.
+        """Plot a hierarchical clustering decision tree based on multiple resolutions.
 
         This static method performs Leiden clustering at different resolutions (if not already computed),
         constructs a decision tree representing hierarchical relationships between clusters,
         and visualizes it as a directed graph. Nodes represent clusters at different resolutions,
         edges represent transitions between clusters, and edge weights indicate the proportion of
         cells transitioning from a parent to a child cluster.
-        Args:
-            adata: Annotated data matrix with clustering results in adata.uns["cluster_resolution_cluster_data"].
-            resolutions: List of resolution values for Leiden clustering.
-            output_settings: Dictionary with output options (output_path, draw, figsize, dpi).
-            node_style: Dictionary with node appearance (node_size, node_color, node_colormap, node_label_fontsize).
-            edge_style: Dictionary with edge appearance (edge_color, edge_curvature, edge_threshold, etc.).
-            gene_label_settings: Dictionary with gene label options (show_gene_labels, n_top_genes, etc.).
-            level_label_style: Dictionary with level label options (level_label_offset, level_label_fontsize).
-            title_style: Dictionary with title options (title, title_fontsize).
-            layout_settings: Dictionary with layout options (orientation, node_spacing, level_spacing, etc.).
-            clustering_settings: Dictionary with clustering options (prefix, edge_threshold).
+
+        Parameters
+        ----------
+        adata
+            Annotated data matrix with clustering results in adata.uns["cluster_resolution_cluster_data"].
+        resolutions
+            List of resolution values for Leiden clustering.
+        output_settings
+            Dictionary with output options (output_path, draw, figsize, dpi).
+        node_style
+            Dictionary with node appearance (node_size, node_color, node_colormap, node_label_fontsize).
+        edge_style
+            Dictionary with edge appearance (edge_color, edge_curvature, edge_threshold, etc.).
+        gene_label_settings
+            Dictionary with gene label options (show_gene_labels, n_top_genes, etc.).
+        level_label_style
+            Dictionary with level label options (level_label_offset, level_label_fontsize).
+        title_style
+            Dictionary with title options (title, title_fontsize).
+        layout_settings
+            Dictionary with layout options (orientation, node_spacing, level_spacing, etc.).
+        clustering_settings
+            Dictionary with clustering options (prefix, edge_threshold).
 
         Returns
         -------
-        G: nx.DiGraph
-            Directed graph representing the hierarchical clustering.
+        Directed graph representing the hierarchical clustering.
 
         """
         # Run all validations
