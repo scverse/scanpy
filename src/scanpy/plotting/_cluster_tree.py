@@ -7,7 +7,6 @@ import igraph as ig
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
 
@@ -751,6 +750,8 @@ class ClusterTreePlotter:
         node_colormap: list[str] | None,
     ) -> list[str] | dict[str, list] | None:
         """Generate color schemes for nodes."""
+        import seaborn as sns
+
         if node_color != "prefix":
             return None
 
