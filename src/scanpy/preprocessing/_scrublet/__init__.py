@@ -16,7 +16,7 @@ from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
-    from ..._compat import _LegacyRandom
+    from ..._utils.random import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 

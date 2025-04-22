@@ -47,8 +47,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import _LegacyRandom
-    from .._utils import RNGLike, SeedLike
+    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
 
 
 A = TypeVar("A", bound=np.ndarray | CSBase | DaskArray)
