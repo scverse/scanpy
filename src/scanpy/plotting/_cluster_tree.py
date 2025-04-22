@@ -7,6 +7,7 @@ import igraph as ig
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from matplotlib.patches import FancyArrowPatch, PathPatch
 from matplotlib.path import Path
 
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
 
     import networkx as nx
     import pandas as pd
-    import seaborn as sns  # noqa: TC004
     from anndata import AnnData
 
 
