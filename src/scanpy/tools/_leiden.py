@@ -8,6 +8,7 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._utils.random import set_igraph_random_state
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -17,7 +18,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from leidenalg.VertexPartition import MutableVertexPartition
 
-    from .._compat import CSBase, _LegacyRandom
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 else:
     try:
         from leidenalg.VertexPartition import MutableVertexPartition
@@ -176,7 +178,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
-        with _utils.set_igraph_random_state(random_state):
+        with set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
