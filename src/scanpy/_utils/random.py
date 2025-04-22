@@ -32,7 +32,9 @@ RNGLike = np.random.Generator | np.random.BitGenerator
 _LegacyRandom = int | np.random.RandomState | None
 
 
-# Compatibility with igraph’s RNG
+###################################
+# Compatibility with igraph’s RNG #
+###################################
 
 
 class _RNGIgraph:
@@ -63,7 +65,9 @@ def set_igraph_random_state(
         igraph.set_random_number_generator(random)
 
 
-# Compatibility with legacy numpy
+###################################
+# Compatibility with legacy numpy #
+###################################
 
 
 def legacy_numpy_gen(
@@ -104,7 +108,9 @@ class _FakeRandomGen(np.random.Generator):
 _FakeRandomGen._delegate()
 
 
-# Random k-tuples
+###################
+# Random k-tuples #
+###################
 
 
 def ith_k_tuple(
