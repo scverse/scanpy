@@ -15,7 +15,7 @@ from ._utils import _choose_representation
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
 
 @old_positionals(
