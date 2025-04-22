@@ -32,6 +32,7 @@ def show_param_warnings(app, exception):
     for (fname, fun), params in param_warnings.items():
         _, line = inspect.getsourcelines(fun)
         file_name = inspect.getsourcefile(fun)
+        assert file_name is not None
         params_str = "\n".join(f"\t{n}: {t}" for n, t in params)
         warnings.warn_explicit(
             f"\nParameters in `{fname}` have types in docstring.\n"
