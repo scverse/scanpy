@@ -29,7 +29,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      - run: uvx hatch env show --json
+      - run: jq --version
       - id: get-envs
         run: |
           ENVS_JSON=$(uvx hatch env show --json | jq -c 'to_entries
