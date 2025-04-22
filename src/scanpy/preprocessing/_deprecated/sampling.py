@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ..._compat import CSBase, _LegacyRandom
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 @old_positionals("n_obs", "random_state", "copy")

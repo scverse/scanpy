@@ -18,7 +18,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from leidenalg.VertexPartition import MutableVertexPartition
 
-    from .._compat import CSBase, _LegacyRandom
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 else:
     try:
         from leidenalg.VertexPartition import MutableVertexPartition

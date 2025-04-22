@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._compat import CSBase, CSCBase, _LegacyRandom
+    from ..._compat import CSBase, CSCBase
+    from ..._utils.random import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]

@@ -11,7 +11,8 @@ from scanpy.preprocessing._utils import _get_mean_var
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from ..._compat import CSBase, _LegacyRandom
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 def sparse_multiply(
