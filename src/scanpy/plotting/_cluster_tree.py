@@ -13,9 +13,9 @@ from matplotlib.path import Path
 if TYPE_CHECKING:
     from typing import NotRequired
 
-    import networkx as nx # noqa: F401
-    import seaborn as sns # noqa: F401
-    import pandas as pd
+    import networkx as nx # noqa: TC004
+    import pandas as pd # noqa: TC004
+    import seaborn as sns
     from anndata import AnnData
 
 
@@ -751,7 +751,6 @@ class ClusterTreePlotter:
         node_colormap: list[str] | None,
     ) -> list[str] | dict[str, list] | None:
         """Generate color schemes for nodes."""
-
         if node_color != "prefix":
             return None
 
