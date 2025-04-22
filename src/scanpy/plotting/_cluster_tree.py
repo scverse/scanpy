@@ -13,8 +13,8 @@ from matplotlib.path import Path
 if TYPE_CHECKING:
     from typing import NotRequired
 
-    import networkx as nx # noqa: TC004
-    import pandas as pd # noqa: TC004
+    import networkx as nx
+    import pandas as pd
     import seaborn as sns
     from anndata import AnnData
 
