@@ -36,7 +36,7 @@ jobs:
               select(.key | startswith("hatch-test"))
               | {
                 name: .key,
-                test-type: (if (.key | contains(["pre", "min"])) then "coverage" else null end),
+                "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
                 python: .value.python,
               }
             )')
