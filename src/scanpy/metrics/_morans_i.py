@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
+from scipy.sparse import csr_array
 
 from .._compat import CSRBase, njit
 from ..get import _get_obs_rep
@@ -102,6 +103,11 @@ def morans_i(
 
 @morans_i.register(CSRBase)
 def _morans_i(graph: CSRBase, /, vals: _Vals) -> NDArray:
+    return _MoransI(graph, vals)()
+
+
+@morans_i.register(csr_array)
+def _morans_i_csr_array(graph: csr_array, /, vals: _Vals) -> NDArray:
     return _MoransI(graph, vals)()
 
 

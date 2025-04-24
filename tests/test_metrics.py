@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 import threadpoolctl
 from scipy import sparse
+from scipy.sparse import csr_array
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
@@ -196,3 +197,14 @@ def test_confusion_matrix_api():
     pd.testing.assert_frame_equal(
         expected, sc.metrics.confusion_matrix(data["a"], "b", data)
     )
+
+
+def test_metrics_csr_array_support():
+    graph = csr_array(np.eye(5))
+    data = np.arange(20).reshape((5, 4))
+
+    result_mi = sc.metrics.morans_i(graph, data.T)
+    assert isinstance(result_mi, np.ndarray)
+
+    result_gc = sc.metrics.gearys_c(graph, data.T)
+    assert isinstance(result_gc, np.ndarray)
