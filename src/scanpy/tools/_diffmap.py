@@ -8,7 +8,7 @@ from ._dpt import _diffmap
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
 
 @old_positionals("neighbors_key", "random_state", "copy")

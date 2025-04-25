@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import CSBase, _LegacyRandom
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 
 try:
     from louvain.VertexPartition import MutableVertexPartition

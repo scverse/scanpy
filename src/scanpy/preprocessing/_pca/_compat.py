@@ -17,7 +17,8 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
 
-    from ..._compat import CSBase, _LegacyRandom
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 def _pca_compat_sparse(
