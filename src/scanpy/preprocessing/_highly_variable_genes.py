@@ -9,10 +9,9 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from scipy import sparse
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
@@ -103,11 +102,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
         if isinstance(data_batch, CSBase):
-            if isinstance(data_batch, CSRBase):
-                batch_counts = data_batch
-            else:
-                batch_counts = sparse.csr_matrix(data_batch)  # noqa: TID251
-
+            batch_counts = data_batch.tocsr()
             squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
                 batch_counts.indices,
                 batch_counts.data,

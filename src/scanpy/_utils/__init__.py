@@ -34,7 +34,6 @@ import h5py
 import numpy as np
 from anndata import __version__ as anndata_version
 from packaging.version import Version
-from scipy import sparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -680,9 +679,7 @@ def _(
         if out is not None:
             X.data = new_data_op(X)
             return X
-        return sparse.csr_matrix(  # noqa: TID251
-            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
-        )
+        return type(X)((new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape)
     transposed = X.T
     return axis_mul_or_truediv(
         transposed,
@@ -765,7 +762,7 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
 
 @axis_nnz.register(CSBase)
 def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
-    return X.getnnz(axis=axis)
+    return X.count_nonzero(axis=axis)
 
 
 @axis_nnz.register(DaskArray)

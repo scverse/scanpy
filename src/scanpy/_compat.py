@@ -22,8 +22,6 @@ __all__ = [
     "DaskArray",
     "SpBase",
     "ZappyArray",
-    "_LegacyRandom",
-    "_legacy_numpy_gen",
     "_numba_threading_layer",
     "deprecated",
     "fullname",
