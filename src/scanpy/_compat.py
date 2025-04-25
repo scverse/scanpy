@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import sys
 import warnings
-from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
+from functools import cache, partial, wraps
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
-import numpy as np
 from packaging.version import Version
 from scipy import sparse
 
@@ -35,7 +34,6 @@ __all__ = [
 P = ParamSpec("P")
 R = TypeVar("R")
 
-_LegacyRandom = int | np.random.RandomState | None
 
 SpBase = sparse.spmatrix | sparse.sparray  # noqa: TID251
 """Only use when you directly convert it to a known subclass."""
@@ -203,41 +201,3 @@ def _numba_threading_layer() -> Layer:
         f" ({available=}, {numba.config.THREADING_LAYER_PRIORITY=})"
     )
     raise ValueError(msg)
-
-
-def _legacy_numpy_gen(
-    random_state: _LegacyRandom | None = None,
-) -> np.random.Generator:
-    """Return a random generator that behaves like the legacy one."""
-    if random_state is not None:
-        if isinstance(random_state, np.random.RandomState):
-            np.random.set_state(random_state.get_state(legacy=False))
-            return _FakeRandomGen(random_state)
-        np.random.seed(random_state)
-    return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
-
-
-class _FakeRandomGen(np.random.Generator):
-    _state: np.random.RandomState
-
-    def __init__(self, random_state: np.random.RandomState) -> None:
-        self._state = random_state
-
-    @classmethod
-    def _delegate(cls) -> None:
-        for name, meth in np.random.Generator.__dict__.items():
-            if name.startswith("_") or not callable(meth):
-                continue
-
-            def mk_wrapper(name: str, meth):
-                # Old pytest versions try to run the doctests
-                @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
-                def wrapper(self: _FakeRandomGen, *args, **kwargs):
-                    return getattr(self._state, name)(*args, **kwargs)
-
-                return wrapper
-
-            setattr(cls, name, mk_wrapper(name, meth))
-
-
-_FakeRandomGen._delegate()

@@ -298,8 +298,10 @@ def test_sample_copy_backed_error(tmp_path):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("zero_center", [True, False])
-@pytest.mark.parametrize("max_value", [None, 1.0])
+@pytest.mark.parametrize(
+    "zero_center", [True, False], ids=["zero_center", "no_zero_center"]
+)
+@pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(array_type, zero_center, max_value):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
@@ -310,6 +312,7 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
     X = adata_casted.X
     if "dask" in array_type.__name__:
+        assert not isinstance(X._meta, np.matrix)
         X = X.compute()
     if isinstance(X, CSBase):
         X = X.todense()

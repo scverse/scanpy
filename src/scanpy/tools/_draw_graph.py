@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import SpBase, _LegacyRandom
+    from .._compat import SpBase
+    from .._utils.random import _LegacyRandom
 
     S = TypeVar("S", bound=LiteralString)
 
