@@ -113,8 +113,7 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    # https://github.com/sphinx-doc/sphinx/issues/13366
-    "sphinx>=7,<8.2.0",
+    "sphinx >=7, !=8.2.0",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.15.3",
     "sphinx-autodoc-typehints>=1.25.2",
@@ -150,7 +149,7 @@ scanorama = [ "scanorama" ]                      # Scanorama dataset integration
 scrublet = [ "scikit-image>=0.20" ]              # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2023.5.1,<2024.8.0" ]          # Use the Dask parallelization engine
+dask = [ "dask[array]>=2023.5.1" ]                    # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
