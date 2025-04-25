@@ -54,7 +54,7 @@ dependencies = [
     "seaborn>=0.13",
     "h5py>=3.7",
     "tqdm",
-    "scikit-learn>=1.1,<1.6.0",
+    "scikit-learn>=1.1",
     "statsmodels>=0.14",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
@@ -113,8 +113,7 @@ test-full = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    # https://github.com/sphinx-doc/sphinx/issues/13366
-    "sphinx>=7,<8.2.0",
+    "sphinx >=7, !=8.2.0",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.15.3",
     "sphinx-autodoc-typehints>=1.25.2",
@@ -150,7 +149,7 @@ scanorama = [ "scanorama" ]                      # Scanorama dataset integration
 scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2022.09.2,<2024.8.0" ]         # Use the Dask parallelization engine
+dask = [ "dask[array]>=2022.09.2" ]                   # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
