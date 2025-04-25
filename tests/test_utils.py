@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+import string
 from operator import mul, truediv
 from types import ModuleType
 from typing import TYPE_CHECKING
@@ -10,13 +12,19 @@ from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy import sparse
 
-from scanpy._compat import CSBase, DaskArray, _legacy_numpy_gen, pkg_version
+from scanpy._compat import CSBase, DaskArray, pkg_version
 from scanpy._utils import (
     axis_mul_or_truediv,
     check_nonnegative_integers,
     descend_classes_and_funcs,
     elem_mul,
     is_constant,
+)
+from scanpy._utils.random import (
+    ith_k_tuple,
+    legacy_numpy_gen,
+    random_k_tuples,
+    random_str,
 )
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
@@ -267,10 +275,42 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
 def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
         np.random.seed(seed)
-    gen = np.random if direct else _legacy_numpy_gen(seed)
+    gen = np.random if direct else legacy_numpy_gen(seed)
     match func:
         case "choice":
             arr = np.arange(1000)
             return gen.choice(arr, size=(100, 100))
         case _:
             pytest.fail(f"Unknown {func=}")
+
+
+def test_ith_k_tuple() -> None:
+    """Test that the k-tuples appear in the expected order."""
+    np.testing.assert_equal(
+        ith_k_tuple(np.arange(2**3), n=2, k=3),
+        list(itertools.product(range(2), repeat=3)),
+    )
+
+
+def test_random_k_tuples() -> None:
+    """Test that random k-tuples are unique."""
+    tups = random_k_tuples(n=26, k=6, size=10_000)
+    assert tups.shape == (10_000, 6)
+    assert tups.dtype == np.int64
+    unique = np.unique(tups, axis=0)
+    assert len(unique) == len(tups)
+
+
+def test_random_str_0d() -> None:
+    string = random_str(length=3, alphabet="01")
+    assert string.shape == ()
+    assert string.dtype == np.dtype("U3")
+    assert str(string) in {"000", "001", "010", "011", "100", "101", "110", "111"}
+
+
+def test_random_str() -> None:
+    strings = random_str(size=26**2, length=2, alphabet=string.ascii_lowercase)
+    assert strings.shape == (26**2,)
+    assert strings.dtype == np.dtype("U2")
+    unique = np.unique(strings, axis=0)
+    assert len(unique) == len(strings)

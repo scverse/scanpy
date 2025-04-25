@@ -31,7 +31,8 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
 
-    from ..._compat import SpBase, _LegacyRandom
+    from ..._compat import SpBase
+    from ..._utils.random import _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 

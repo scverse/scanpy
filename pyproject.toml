@@ -117,13 +117,12 @@ doc = [
     # https://github.com/sphinx-doc/sphinx/issues/13366
     "sphinx>=7,<8.2.0",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.14.1",
+    "scanpydoc>=0.15.3",
     "sphinx-autodoc-typehints>=1.25.2",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
     "sphinx-tabs",
-    "readthedocs-sphinx-search",
     "sphinxext-opengraph",              # for nice cards when sharing on social
     "sphinx-copybutton",
     "nbsphinx>=0.9",

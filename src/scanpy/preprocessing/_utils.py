@@ -16,8 +16,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import DTypeLike, NDArray
 
-    from .._compat import DaskArray, _LegacyRandom
+    from .._compat import DaskArray
     from .._utils import _SupportedArray
+    from .._utils.random import _LegacyRandom
 
 
 @singledispatch
