@@ -117,8 +117,7 @@ def modularity(connectivities, labels, mode="UNDIRECTED") -> float:
     """
     if isinstance(connectivities, CSRBase):
         # Convert sparse matrix to dense format so that igraph can handle it
-        # Weighted_Adjacency expects with nested lists or numpy arrays and not sparse
-        # matrices
+        # Weighted_Adjacency expects with nested lists or numpy arrays and not sparse matrices
         dense_connectivities = connectivities.toarray()
     else:
         dense_connectivities = connectivities
