@@ -15,7 +15,6 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
 from pandas.api.types import CategoricalDtype
-from scipy import sparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
@@ -1047,7 +1046,7 @@ def _downsample_per_cell(
     if isinstance(X, CSBase):
         original_type = type(X)
         if not isinstance(X, CSRBase):
-            X = sparse.csr_matrix(X)  # noqa: TID251
+            X = X.tocsr()
         totals = stats.sum(X, axis=1)  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
@@ -1092,7 +1091,7 @@ def _downsample_total_counts(
     if isinstance(X, CSBase):
         original_type = type(X)
         if not isinstance(X, CSRBase):
-            X = sparse.csr_matrix(X)  # noqa: TID251
+            X = X.tocsr()
         _downsample_array(
             X.data,
             total_counts,
