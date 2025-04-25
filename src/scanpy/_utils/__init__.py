@@ -34,7 +34,7 @@ from anndata import __version__ as anndata_version
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSMatrix
+from .._compat import CSBase, DaskArray, _CSArray, _CSMatrix, pkg_version
 from .._settings import settings
 from .compute.is_constant import is_constant  # noqa: F401
 
@@ -719,9 +719,20 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
-@axis_nnz.register(CSBase)
-def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
-    return X.count_nonzero(axis=axis)
+if pkg_version("scipy") >= Version("1.15"):
+    # newer scipy versions support the `axis` argument for count_nonzero
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        return X.count_nonzero(axis=axis)
+else:
+    # older scipy versions don’t have any way to get the nnz of a sparse array
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        if isinstance(X, _CSArray):
+            from scipy.sparse import csc_array, csr_array  # noqa: TID251
+
+            X = (csr_array if X.format == "csr" else csc_array)(X)
+        return X.getnnz(axis=axis)
 
 
 @axis_nnz.register(DaskArray)
