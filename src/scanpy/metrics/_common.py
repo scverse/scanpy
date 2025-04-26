@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, ClassVar, overload
 
 import numpy as np
 import pandas as pd
-from scipy import sparse
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname
 
@@ -108,7 +107,11 @@ def _(
 
 @_resolve_vals.register(SpBase)
 def _(val: SpBase) -> CSRBase:
-    return sparse.csr_matrix(val)  # noqa: TID251
+    if TYPE_CHECKING:
+        from scipy.sparse._base import _spbase
+
+        assert isinstance(val, _spbase)
+    return val.tocsr()
 
 
 @_resolve_vals.register(pd.DataFrame)
