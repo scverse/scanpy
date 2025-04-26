@@ -21,6 +21,7 @@ def find_cluster_specific_genes(
     n_top_genes: int = 3,
     min_cells: int = 2,
     deg_mode: Literal["within_parent", "per_resolution"] = "within_parent",
+    verbose: bool = False,
 ) -> dict[tuple[str, str], list[str]]:
     """Find differentially expressed genes for clusters in two modes."""
     from . import rank_genes_groups
@@ -47,6 +48,7 @@ def find_cluster_specific_genes(
                 n_top_genes=n_top_genes,
                 min_cells=min_cells,
                 rank_genes_groups=rank_genes_groups,
+                verbose=verbose,
             )
         )
     elif deg_mode == "per_resolution":
@@ -58,6 +60,7 @@ def find_cluster_specific_genes(
                 n_top_genes=n_top_genes,
                 min_cells=min_cells,
                 rank_genes_groups=rank_genes_groups,
+                verbose=verbose,
             )
         )
 
@@ -72,6 +75,7 @@ def find_within_parent_degs(
     n_top_genes: int,
     min_cells: int,
     rank_genes_groups,
+    verbose: bool = False,
 ) -> dict[tuple[str, str], list[str]]:
     top_genes_dict = {}
 
@@ -88,9 +92,10 @@ def find_within_parent_degs(
             valid_subclusters = subclusters[subclusters >= min_cells].index
 
             if len(valid_subclusters) < 2:
-                print(
-                    f"Skipping res_{res}_C{cluster}: < 2 subclusters with >= {min_cells} cells."
-                )
+                if verbose:
+                    print(
+                        f"Skipping res_{res}_C{cluster}: < 2 subclusters with >= {min_cells} cells."
+                    )
                 continue
 
             subcluster_mask = cluster_adata.obs[next_res_key].isin(valid_subclusters)
@@ -109,7 +114,8 @@ def find_within_parent_degs(
                     parent_node = f"res_{res}_C{cluster}"
                     child_node = f"res_{resolutions[i + 1]}_C{subcluster}"
                     top_genes_dict[(parent_node, child_node)] = top_genes
-                    print(f"{parent_node} -> {child_node}: {top_genes}")
+                    if verbose:
+                        print(f"{parent_node} -> {child_node}: {top_genes}")
             except KeyError as e:
                 print(f"Key error when processing {parent_node} -> {child_node}: {e}")
                 continue
@@ -130,6 +136,7 @@ def find_per_resolution_degs(
     n_top_genes: int,
     min_cells: int,
     rank_genes_groups,
+    verbose: bool = False,
 ) -> dict[tuple[str, str], list[str]]:
     top_genes_dict = {}
 
@@ -142,7 +149,10 @@ def find_per_resolution_degs(
         ]
 
         if not valid_clusters:
-            print(f"Skipping resolution {res}: no clusters with >= {min_cells} cells.")
+            if verbose:
+                print(
+                    f"Skipping resolution {res}: no clusters with >= {min_cells} cells."
+                )
             continue
 
         deg_adata = adata[adata.obs[res_key].isin(valid_clusters), :]
@@ -164,7 +174,8 @@ def find_per_resolution_degs(
                 parent_node = f"res_{resolutions[i - 1]}_C{parent_cluster}"
                 child_node = f"res_{res}_C{cluster}"
                 top_genes_dict[(parent_node, child_node)] = top_genes
-                print(f"{parent_node} -> {child_node}: {top_genes}")
+                if verbose:
+                    print(f"{parent_node} -> {child_node}: {top_genes}")
         except KeyError as e:
             print(f"Key error when processing {parent_node} -> {child_node}: {e}")
             continue
@@ -188,6 +199,7 @@ def find_cluster_resolution(
     deg_mode: Literal["within_parent", "per_resolution"] = "within_parent",
     flavor: Literal["igraph"] = "igraph",
     n_iterations: int = 2,
+    verbose: bool = False,
 ) -> None:
     """
     Find clusters across multiple resolutions and identify cluster-specific genes.
@@ -288,6 +300,7 @@ def find_cluster_resolution(
         n_top_genes=n_top_genes,
         min_cells=min_cells,
         deg_mode=deg_mode,
+        verbose=verbose,
     )
 
     # Create DataFrame for clusterDecisionTree
