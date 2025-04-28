@@ -225,13 +225,12 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     assert counts_per_cell.ndim == 1
     if exclude_highly_expressed:
         # at least one cell as more than max_fraction of counts per cell
-
-        x = x > counts_per_cell[:, None] * max_fraction
-        if isinstance(x, np.matrix):
-            x = x.A
-        elif isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
-            x = x.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
-        gene_subset = stats.sum(x, axis=0) == 0
+        hi_exp = x > counts_per_cell[:, None] * max_fraction
+        if isinstance(hi_exp, np.matrix):
+            hi_exp = hi_exp.A
+        elif isinstance(hi_exp, DaskArray) and isinstance(hi_exp._meta, np.matrix):
+            hi_exp = hi_exp.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+        gene_subset = stats.sum(hi_exp, axis=0) == 0
         assert gene_subset.ndim == 1
 
         msg += (
