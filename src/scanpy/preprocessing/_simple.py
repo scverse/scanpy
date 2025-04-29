@@ -14,7 +14,6 @@ import numba
 import numpy as np
 from anndata import AnnData
 from pandas.api.types import CategoricalDtype
-from scipy import sparse
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
@@ -47,8 +46,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._compat import _LegacyRandom
-    from .._utils import RNGLike, SeedLike
+    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
 
 
 A = TypeVar("A", bound=np.ndarray | CSBase | DaskArray)
@@ -1052,7 +1050,7 @@ def _downsample_per_cell(
     if isinstance(X, CSBase):
         original_type = type(X)
         if not isinstance(X, CSRBase):
-            X = sparse.csr_matrix(X)  # noqa: TID251
+            X = X.tocsr()
         totals = np.ravel(axis_sum(X, axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
         rows = np.split(X.data, X.indptr[1:-1])
@@ -1097,7 +1095,7 @@ def _downsample_total_counts(
     if isinstance(X, CSBase):
         original_type = type(X)
         if not isinstance(X, CSRBase):
-            X = sparse.csr_matrix(X)  # noqa: TID251
+            X = X.tocsr()
         _downsample_array(
             X.data,
             total_counts,

@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, concat
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from ... import logging as logg
-from ..._utils import _get_legacy_random
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._compat import CSBase, CSCBase, _LegacyRandom
+    from ..._compat import CSBase, CSCBase
+    from ..._utils.random import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
@@ -181,7 +182,7 @@ class Scrublet:
             if n_neighbors is None
             else n_neighbors
         )
-        self._random_state = _get_legacy_random(random_state)
+        self._random_state = check_random_state(random_state)
 
     def simulate_doublets(
         self,
