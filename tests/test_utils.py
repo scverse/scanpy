@@ -17,7 +17,6 @@ from scanpy._utils import (
     axis_mul_or_truediv,
     check_nonnegative_integers,
     descend_classes_and_funcs,
-    elem_mul,
     is_constant,
 )
 from scanpy._utils.random import (
@@ -146,15 +145,6 @@ def test_scale_rechunk(array_type, axis, op):
     out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     with pytest.warns(UserWarning, match="Rechunking scaling_array*"):
         res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=axis, out=out))
-    np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_elem_mul(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    m2 = array_type(asarray([[2, 2, 1], [3, 2, 0]]))
-    expd = np.array([[0, 2, 1], [3, 0, 0]])
-    res = asarray(elem_mul(m1, m2))
     np.testing.assert_array_equal(res, expd)
 
 

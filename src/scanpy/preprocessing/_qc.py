@@ -12,7 +12,6 @@ from scipy import sparse
 
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import CSBase, CSRBase, DaskArray, njit
 from .._utils import _doc_params, axis_nnz
@@ -181,7 +180,7 @@ def describe_var(
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
-        materialize_as_ndarray((axis_nnz(X, axis=0), _get_mean_var(X, axis=0)[0]))
+        materialize_as_ndarray((axis_nnz(X, axis=0), stats.mean(X, axis=0)))
     )
     if log1p:
         var_metrics[f"log1p_mean_{expr_type}"] = np.log1p(

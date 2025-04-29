@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from importlib.util import find_spec
-from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +21,7 @@ from testing.scanpy._helpers import (
     check_rep_results,
     maybe_dask_process_context,
 )
-from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
@@ -73,56 +72,6 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_mean_var(array_type):
-    pbmc = pbmc3k()
-    pbmc.X = array_type(pbmc.X)
-
-    true_mean = np.mean(asarray(pbmc.X), axis=0)
-    true_var = np.var(asarray(pbmc.X), axis=0, dtype=np.float64, ddof=1)
-
-    means, variances = sc.pp._utils._get_mean_var(pbmc.X)
-
-    np.testing.assert_allclose(true_mean, means)
-    np.testing.assert_allclose(true_var, variances)
-
-
-def test_mean_var_sparse():
-    from sklearn.utils.sparsefuncs import mean_variance_axis
-
-    csr64 = sparse.random(10000, 1000, format="csr", dtype=np.float64)
-    csc64 = csr64.tocsc()
-
-    # Test that we're equivalent for 64 bit
-    for mtx, ax in product((csr64, csc64), (0, 1)):
-        scm, scv = sc.pp._utils._get_mean_var(mtx, axis=ax)
-        skm, skv = mean_variance_axis(mtx, ax)
-        skv *= mtx.shape[ax] / (mtx.shape[ax] - 1)
-
-        assert np.allclose(scm, skm)
-        assert np.allclose(scv, skv)
-
-    csr32 = csr64.astype(np.float32)
-    csc32 = csc64.astype(np.float32)
-
-    # Test whether ours is more accurate for 32 bit
-    for mtx32, mtx64 in [(csc32, csc64), (csr32, csr64)]:
-        scm32, scv32 = sc.pp._utils._get_mean_var(mtx32)
-        scm64, scv64 = sc.pp._utils._get_mean_var(mtx64)
-        skm32, skv32 = mean_variance_axis(mtx32, 0)
-        skm64, skv64 = mean_variance_axis(mtx64, 0)
-        skv32 *= mtx.shape[0] / (mtx.shape[0] - 1)
-        skv64 *= mtx.shape[0] / (mtx.shape[0] - 1)
-
-        m_resid_sc = np.mean(np.abs(scm64 - scm32))
-        m_resid_sk = np.mean(np.abs(skm64 - skm32))
-        v_resid_sc = np.mean(np.abs(scv64 - scv32))
-        v_resid_sk = np.mean(np.abs(skv64 - skv32))
-
-        assert m_resid_sc < m_resid_sk
-        assert v_resid_sc < v_resid_sk
 
 
 def test_normalize_per_cell():

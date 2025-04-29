@@ -9,6 +9,7 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
 from ..._compat import CSBase, njit
@@ -24,7 +25,6 @@ from ...experimental._docs import (
 )
 from ...get import _get_obs_rep
 from ...preprocessing._distributed import materialize_as_ndarray
-from ...preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -234,7 +234,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     # Median rank across batches, ignoring batches in which gene was not selected
     medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
-    means, variances = materialize_as_ndarray(_get_mean_var(X))
+    means, variances = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     df = pd.DataFrame.from_dict(
         dict(
             means=means,

@@ -546,27 +546,6 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 
 
-@singledispatch
-def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
-    raise NotImplementedError
-
-
-@elem_mul.register(np.ndarray)
-@elem_mul.register(CSBase)
-def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, CSBase):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    return x * y
-
-
-@elem_mul.register(DaskArray)
-def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
-    import dask.array as da
-
-    return da.map_blocks(elem_mul, x, y)
-
-
 if TYPE_CHECKING:
     Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
