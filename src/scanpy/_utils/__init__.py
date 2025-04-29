@@ -36,7 +36,6 @@ from packaging.version import Version
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
-from .compute.is_constant import is_constant  # noqa: F401
 
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (

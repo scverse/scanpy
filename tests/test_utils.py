@@ -9,15 +9,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
-from packaging.version import Version
 from scipy import sparse
 
-from scanpy._compat import CSBase, DaskArray, pkg_version
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
     axis_mul_or_truediv,
     check_nonnegative_integers,
     descend_classes_and_funcs,
-    is_constant,
 )
 from scanpy._utils.random import (
     ith_k_tuple,
@@ -25,12 +23,10 @@ from scanpy._utils.random import (
     random_k_tuples,
     random_str,
 )
-from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
     ARRAY_TYPES_SPARSE,
-    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
 
 if TYPE_CHECKING:
@@ -179,63 +175,6 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
         # convert to python bool
         received = received.item()
     assert received is expected
-
-
-# TODO: Make it work for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED)
-def test_is_constant(array_type):
-    constant_inds = [1, 3]
-    A = np.arange(20).reshape(5, 4)
-    A[constant_inds, :] = 10
-    A = array_type(A)
-    AT = array_type(A.T)
-
-    assert not is_constant(A)
-    assert not np.any(is_constant(A, axis=0))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(A, axis=1)
-    )
-
-    assert not is_constant(AT)
-    assert not np.any(is_constant(AT, axis=1))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(AT, axis=0)
-    )
-
-
-@needs.dask
-@pytest.mark.parametrize(
-    ("axis", "expected"),
-    [
-        pytest.param(None, False, id="None"),
-        pytest.param(0, [True, True, False, False], id="0"),
-        pytest.param(1, [False, False, True, True, False, True], id="1"),
-    ],
-)
-@pytest.mark.parametrize("block_type", [np.array, sparse.csr_matrix])  # noqa: TID251
-def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_type):
-    import dask.array as da
-
-    if (
-        isinstance(block_type, type)
-        and issubclass(block_type, CSBase)
-        and (axis is None or pkg_version("dask") < Version("2023.2.0"))
-    ):
-        reason = "Dask has weak support for scipy sparse matrices"
-        # This test is flaky for old dask versions, but when `axis=None` it reliably fails
-        request.applymarker(pytest.mark.xfail(reason=reason, strict=axis is None))
-
-    x_data = [
-        [0, 0, 1, 1],
-        [0, 0, 1, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 0],
-    ]
-    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-    result = is_constant(x, axis=axis).compute()
-    np.testing.assert_array_equal(expected, result)
 
 
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])
