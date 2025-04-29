@@ -26,7 +26,6 @@ from ._docs import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection
-    from typing import Any
 
     from anndata import AnnData
     from numpy._typing._array_like import NDArray
@@ -333,7 +332,7 @@ def top_proportions(
         if not isinstance(mtx, CSRBase):
             mtx = mtx.tocsr()
         # Allowing numba to do more
-        return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
+        return top_proportions_sparse_csr(mtx, np.array(n))
     else:
         return top_proportions_dense(mtx, n)
 
@@ -351,19 +350,17 @@ def top_proportions_dense(mtx: np.ndarray, n: int) -> NDArray[np.float64]:
     return values
 
 
-def top_proportions_sparse_csr(
-    data: NDArray[np.number[Any]], indptr: NDArray[np.integer[Any]], n: int
-) -> NDArray[np.float64]:
-    values = np.zeros((indptr.size - 1, n), dtype=np.float64)
-    for i in numba.prange(indptr.size - 1):
-        start, end = indptr[i], indptr[i + 1]
+def top_proportions_sparse_csr(mtx: CSRBase, n: int) -> NDArray[np.float64]:
+    values = np.zeros((mtx.indptr.size - 1, n), dtype=np.float64)
+    for i in numba.prange(mtx.indptr.size - 1):
+        start, end = mtx.indptr[i], mtx.indptr[i + 1]
         vec = np.zeros(n, dtype=np.float64)
         if end - start <= n:
-            vec[: end - start] = data[start:end]
+            vec[: end - start] = mtx.data[start:end]
             total = vec.sum()
         else:
-            vec[:] = -(np.partition(-data[start:end], n - 1)[:n])
-            total = (data[start:end]).sum()  # Is this not just vec.sum()?
+            vec[:] = -(np.partition(-mtx.data[start:end], n - 1)[:n])
+            total = (mtx.data[start:end]).sum()  # Is this not just vec.sum()?
         vec[::-1].sort()
         values[i, :] = vec.cumsum() / total
     return values

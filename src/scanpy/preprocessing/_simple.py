@@ -14,6 +14,7 @@ import numba
 import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
+from fast_array_utils.conv import to_dense
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
 
@@ -31,7 +32,6 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
-from ._utils import _to_dense
 
 try:
     import dask.array as da
@@ -723,7 +723,7 @@ def regress_out(
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
         regressors = np.zeros(X.shape, dtype="float32")
-        X = _to_dense(X, order="F") if isinstance(X, CSBase) else X
+        X = to_dense(X, order="F") if isinstance(X, CSBase) else X
         # TODO figure out if we should use a numba kernel for this
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
@@ -742,7 +742,7 @@ def regress_out(
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
     if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
-        X = _to_dense(X, order="C") if isinstance(X, CSBase) else X
+        X = to_dense(X, order="C") if isinstance(X, CSBase) else X
         res = numpy_regress_out(X, regressors)
 
     # for a categorical variable or if the above checks failed,
@@ -752,7 +752,7 @@ def regress_out(
         # (the last chunk could be of smaller size than the others)
         len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
         n_chunks = int(np.ceil(X.shape[1] / len_chunk))
-        X = _to_dense(X, order="F") if isinstance(X, CSBase) else X
+        X = to_dense(X, order="F") if isinstance(X, CSBase) else X
         chunk_list = np.array_split(X, n_chunks, axis=1)
         regressors_chunk = (
             np.array_split(regressors, n_chunks, axis=1)

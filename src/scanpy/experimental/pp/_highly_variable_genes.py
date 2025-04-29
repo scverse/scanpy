@@ -34,9 +34,7 @@ if TYPE_CHECKING:
 
 @njit
 def _calculate_res_sparse(
-    indptr: NDArray[np.integer],
-    index: NDArray[np.integer],
-    data: NDArray[np.float64],
+    mat: CSBase,
     *,
     sums_genes: NDArray[np.float64],
     sums_cells: NDArray[np.float64],
@@ -48,8 +46,8 @@ def _calculate_res_sparse(
 ) -> NDArray[np.float64]:
     def get_value(cell: int, sparse_idx: int, stop_idx: int) -> np.float64:
         """Return the value at the specified cell location if it exists, or zero otherwise."""
-        if sparse_idx < stop_idx and index[sparse_idx] == cell:
-            return data[sparse_idx]
+        if sparse_idx < stop_idx and mat.indices[sparse_idx] == cell:
+            return mat.data[sparse_idx]
         else:
             return np.float64(0.0)
 
@@ -62,8 +60,8 @@ def _calculate_res_sparse(
 
     residuals = np.zeros(n_genes, dtype=np.float64)
     for gene in numba.prange(n_genes):
-        start_idx = indptr[gene]
-        stop_idx = indptr[gene + 1]
+        start_idx = mat.indptr[gene]
+        stop_idx = mat.indptr[gene + 1]
 
         sparse_idx = start_idx
         var_sum = np.float64(0.0)
@@ -189,12 +187,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         if isinstance(X_batch, CSBase):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
-            calculate_res = partial(
-                _calculate_res_sparse,
-                X_batch.indptr,
-                X_batch.indices,
-                X_batch.data.astype(np.float64),
-            )
+            calculate_res = partial(_calculate_res_sparse, X_batch.astype(np.float64))
         else:
             X_batch = np.array(X_batch, dtype=np.float64, order="F")
             calculate_res = partial(_calculate_res_dense, X_batch)

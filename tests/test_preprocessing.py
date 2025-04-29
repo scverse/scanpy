@@ -619,17 +619,3 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
-
-
-@pytest.mark.parametrize(
-    "array_type",
-    [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix],  # noqa: TID251
-)
-@pytest.mark.parametrize("order", ["C", "F"])
-def test_todense(array_type, order):
-    x_org = np.array([[0, 1, 2], [3, 0, 4]])
-    x_sparse = array_type(x_org)
-    x_dense = sc.pp._utils._to_dense(x_sparse, order=order)
-    np.testing.assert_array_equal(x_dense, x_org)
-    assert x_dense.flags["C_CONTIGUOUS"] == (order == "C")
-    assert x_dense.flags["F_CONTIGUOUS"] == (order == "F")
