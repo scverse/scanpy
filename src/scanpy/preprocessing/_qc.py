@@ -148,7 +148,7 @@ def describe_var(
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    X: CSBase | sparse.coo_matrix | np.ndarray | None = None,
+    X: CSBase | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """Describe variables of anndata.
 
@@ -314,7 +314,9 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
+def top_proportions(
+    mtx: np.ndarray | CSBase | sparse.coo_matrix | sparse.coo_array, n: int
+):
     """Calculate cumulative proportions of top expressed genes.
 
     Parameters
@@ -327,9 +329,9 @@ def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
         expressed gene.
 
     """
-    if isinstance(mtx, CSBase | sparse.coo_matrix):
+    if isinstance(mtx, CSBase | sparse.coo_matrix | sparse.coo_array):
         if not isinstance(mtx, CSRBase):
-            mtx = sparse.csr_matrix(mtx)  # noqa: TID251
+            mtx = mtx.tocsr()
         # Allowing numba to do more
         return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
     else:
@@ -427,7 +429,7 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
 @check_ns
 def _(mtx: CSBase | sparse.coo_matrix, ns: Collection[int]) -> DaskArray:
     if not isinstance(mtx, CSRBase):
-        mtx = sparse.csr_matrix(mtx)  # noqa: TID251
+        mtx = mtx.tocsr()
     return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(ns))
 
 
