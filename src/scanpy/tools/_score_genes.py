@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from numba import prange
 
 import numpy as np
 import pandas as pd
+from numba import prange
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, njit, old_positionals
@@ -15,7 +15,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Any, Literal
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -53,7 +53,8 @@ def _get_sparce_nanmean_indptr(
             result[i] = total / count
     return result
 
-@njit   
+
+@njit
 def _get_sparce_nanmean_indices(
     data: NDArray[np.float64], indices: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
@@ -62,7 +63,6 @@ def _get_sparce_nanmean_indices(
     sum_arr = np.zeros(num_bins, dtype=np.float64)
     count_arr = np.repeat(num_elements, num_bins)
     result = np.zeros(num_bins, dtype=np.float64)
-
 
     for i in range(data.size):
         idx = indices[i]
@@ -76,7 +76,7 @@ def _get_sparce_nanmean_indices(
         if count_arr[i] == 0:
             result[i] = np.nan
         else:
-            result[i] = sum_arr[i]/count_arr[i]
+            result[i] = sum_arr[i] / count_arr[i]
     return result
 
 
