@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from numba import prange
 
 import numpy as np
 import pandas as pd
@@ -29,29 +30,54 @@ if TYPE_CHECKING:
 
 
 @njit
-def _get_sparce_nanmean_indices(
-    data: NDArray[Any], indices: NDArray[np.int32], shape: tuple
-) -> NDArray[np.float64]:
-    mask = np.isnan(data)
-    sum_arr = np.bincount(indices, weights=np.where(~mask, data, 0.0)).astype(
-        np.float64
-    )
-    nans_arr = np.bincount(indices, weights=mask).astype(np.float64)
-    nans_arr[nans_arr == shape[0]] = np.nan
-    return sum_arr / (shape[0] - nans_arr)
-
-
-# can't use numba with np.ufunc.reduceat
 def _get_sparce_nanmean_indptr(
-    data: NDArray[Any], indptr: NDArray[np.int32], shape: tuple
+    data: NDArray[np.float64], indptr: NDArray[np.int32], shape: Tuple[int, int]
 ) -> NDArray[np.float64]:
-    # copy 1 time
-    new_ptr = indptr[:-1]
-    mask = np.isnan(data)
-    sum_arr = np.add.reduceat(np.where(~mask, data, 0.0), new_ptr, dtype=np.float64)
-    nans_arr = np.add.reduceat(mask, new_ptr, dtype=np.float64)
-    nans_arr[nans_arr == shape[1]] = np.nan
-    return sum_arr / (shape[1] - nans_arr)
+    n_rows = len(indptr) - 1
+    result = np.empty(n_rows, dtype=np.float64)
+
+    for i in prange(n_rows):
+        start = indptr[i]
+        end = indptr[i + 1]
+        count = np.float64(shape[1])
+        total = 0.0
+        for j in prange(start, end):
+            val = data[j]
+            if not np.isnan(val):
+                total += val
+            else:
+                count -= 1
+        if count == 0:
+            result[i] = np.nan
+        else:
+            result[i] = total / count
+    return result
+
+@njit   
+def _get_sparce_nanmean_indices(
+    data: NDArray[np.float64], indices: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    num_bins = shape[1]
+    num_elements = np.float64(shape[0])
+    sum_arr = np.zeros(num_bins, dtype=np.float64)
+    count_arr = np.repeat(num_elements, num_bins)
+    result = np.zeros(num_bins, dtype=np.float64)
+
+
+    for i in range(data.size):
+        idx = indices[i]
+        val = data[i]
+        if not np.isnan(val):
+            sum_arr[idx] += val
+        else:
+            count_arr[idx] -= 1.0
+
+    for i in range(num_bins):
+        if count_arr[i] == 0:
+            result[i] = np.nan
+        else:
+            result[i] = sum_arr[i]/count_arr[i]
+    return result
 
 
 def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
