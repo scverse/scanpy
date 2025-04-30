@@ -15,7 +15,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Literal
+    from typing import Any, Literal, Tuple
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
