@@ -15,7 +15,7 @@ from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
-    from typing import Any, Literal, Tuple
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 @njit
 def _get_sparce_nanmean_indptr(
-    data: NDArray[np.float64], indptr: NDArray[np.int32], shape: Tuple[int, int]
+    data: NDArray[np.float64], indptr: NDArray[np.int32], shape: tuple[int, int]
 ) -> NDArray[np.float64]:
     n_rows = len(indptr) - 1
     result = np.empty(n_rows, dtype=np.float64)
