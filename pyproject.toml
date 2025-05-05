@@ -90,7 +90,7 @@ test-min = [
     "pytest-xdist[psutil]",
     "pytest-randomly",
     "pytest-rerunfailures",
-    "profimp",
+    "tuna",
 ]
 test = [
     "scanpy[test-min]",
