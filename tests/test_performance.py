@@ -41,7 +41,7 @@ def get_import_paths(modules: Iterable[str]) -> Iterable[str]:
     from tuna import read_import_profile
 
     proc = run(
-        [sys.executable, "-X", "importtime", "-m", "profimp.main", "import scanpy"],
+        [sys.executable, "-X", "importtime", "-c", "import scanpy"],
         capture_output=True,
         check=True,
     )
