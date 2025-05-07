@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-import igraph as ig
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
+from scipy.sparse import coo_matrix
 
-from scanpy._compat import CSRBase
+from .._compat import CSRBase, SpBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
+
+    from anndata import AnnData
+    from numpy.typing import ArrayLike
 
 
 def confusion_matrix(
@@ -97,8 +100,13 @@ def confusion_matrix(
     return df
 
 
-def modularity(connectivities, labels, mode="UNDIRECTED") -> float:
-    # default mode is undirected?? can be specified as directed or undirected
+def modularity(
+    connectivities: ArrayLike | SpBase,
+    labels: pd.Series | ArrayLike,
+    mode: Literal["UNDIRECTED", "DIRECTED"] = "UNDIRECTED",
+) -> float:
+    # accepting both dense or spare matrices as the connectivity graph
+    # setting mode between directed and undirected
     """Compute the modularity of a graph given its connectivities and labels.
 
     Parameters
@@ -115,22 +123,40 @@ def modularity(connectivities, labels, mode="UNDIRECTED") -> float:
     float
         The modularity of the graph based on the provided clustering.
     """
-    if isinstance(connectivities, CSRBase):
-        # Convert sparse matrix to dense format so that igraph can handle it
-        # Weighted_Adjacency expects with nested lists or numpy arrays and not sparse matrices
-        dense_connectivities = connectivities.toarray()
+    try:
+        # try to import igraph in case the user wants to calculate modularity
+        # not in the main module to avoid import errors
+        import igraph as ig
+    except ImportError as e:
+        msg = "igraph is require for computing modularity"
+        raise ImportError(msg) from e
+    if isinstance(connectivities, CSRBase | SpBase):
+        # check if the connectivities is a sparse matrix
+        coo = coo_matrix(connectivities)
+        edges = list(zip(coo.row, coo.col, strict=False))
+        # converting to the coo format to extract the edges and weights
+        # storing only non-zero elements and their indices
+        weights = coo.data.tolist()
+        graph = ig.Graph(edges=edges, directed=mode == "DIRECTED")
+        graph.es["weight"] = weights
     else:
-        dense_connectivities = connectivities
-    # creating igraph graph from the dense connectivity matrix
-    graph = ig.Graph.Weighted_Adjacency(dense_connectivities.tolist(), mode=mode)
-    if isinstance(labels, pd.Series):
-        labels = labels.values
-    # making sure labels are in the right format, i.e., a list of integers
+        # if the graph is dense, creates it directly using igraph's adjacency matrix
+        dense_array = np.asarray(connectivities)
+        igraph_mode = ig.ADJ_UNDIRECTED if mode == "UNDIRECTED" else ig.ADJ_DIRECTED
+        graph = ig.Graph.Weighted_Adjacency(dense_array.tolist(), mode=igraph_mode)
+    # cluster labels to integer codes required by igraph
     labels = pd.Categorical(np.asarray(labels)).codes
+
     return graph.modularity(labels)
 
 
-def modularity_adata(adata: AnnData, labels="leiden", obsp="connectivities") -> float:
+def modularity_adata(
+    adata: AnnData,
+    labels: str | ArrayLike = "leiden",
+    obsp: str = "connectivities",
+    mode: Literal["UNDIRECTED", "DIRECTED"] = "UNDIRECTED",
+) -> float:
+    # default to leiden labels and connectivities as it is more common
     """Compute modularity from an AnnData object using stored graph and clustering labels.
 
     Parameters
@@ -147,9 +173,19 @@ def modularity_adata(adata: AnnData, labels="leiden", obsp="connectivities") -> 
     float
         The modularity of the graph based on the provided clustering.
     """
-    # if user passes leiden or louvain as a string, this will get the actual labels
-    # from adata.obs
+    # if labels is a key in adata.obs, get the values from adata.obs
+    # otherwise, assume it is an array-like object
     label_array = adata.obs[labels] if isinstance(labels, str) else labels
-    # extracting the connectivities from adata.obsp["connectivities"]
     connectivities = adata.obsp[obsp]
-    return modularity(connectivities, label_array)
+
+    if isinstance(connectivities, CSRBase):
+        # converting to dense if it is a CSR matrix
+        dense = connectivities.toarray()
+    else:
+        toarray = getattr(connectivities, "toarray", None)
+        dense = toarray() if callable(toarray) else connectivities
+
+    if isinstance(dense, pd.DataFrame):
+        dense = dense.values
+    dense = cast("ArrayLike", dense)
+    return modularity(dense, label_array, mode=mode)
