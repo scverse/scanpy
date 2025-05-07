@@ -152,6 +152,7 @@ def modularity(
 
 def modularity_adata(
     adata: AnnData,
+    *,
     labels: str | ArrayLike = "leiden",
     obsp: str = "connectivities",
     mode: Literal["UNDIRECTED", "DIRECTED"] = "UNDIRECTED",
