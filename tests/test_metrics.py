@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import warnings
 from functools import partial
 from string import ascii_letters
@@ -201,26 +202,9 @@ def test_confusion_matrix_api():
 
 
 # importing igraph, louvain, leiden if available
-try:
-    import igraph as ig
-
-    HAS_IGRAPH = True
-except ImportError:
-    HAS_IGRAPH = False
-
-try:
-    import louvain
-
-    HAS_LOUVAIN = True
-except ImportError:
-    HAS_LOUVAIN = False
-
-try:
-    import leidenalg
-
-    HAS_LEIDEN = True
-except ImportError:
-    HAS_LEIDEN = False
+HAS_IGRAPH = importlib.util.find_spec("igraph") is not None
+HAS_LOUVAIN = importlib.util.find_spec("louvain") is not None
+HAS_LEIDEN = importlib.util.find_spec("leidenalg") is not None
 
 
 # Test 1: Sample graph with clear community structure (dense & sparse, directed & undirected)
