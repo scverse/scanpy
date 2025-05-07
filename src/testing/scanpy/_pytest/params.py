@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 import pytest
 from anndata.tests.helpers import asarray
+from packaging.version import Version
 from scipy import sparse
 
 from .._helpers import (
@@ -19,6 +21,12 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from _pytest.mark.structures import ParameterSet
+
+
+skipif_no_sparray = pytest.mark.skipif(
+    Version(version("anndata")) < Version("0.11"),
+    reason="scipy cs{rc}_array not supported in anndata<0.11",
+)
 
 
 def param_with(
@@ -39,8 +47,9 @@ MAP_ARRAY_TYPES: dict[
 ] = {
     ("mem", "dense"): (pytest.param(asarray, id="numpy_ndarray"),),
     ("mem", "sparse"): (
-        pytest.param(sparse.csr_matrix, id="scipy_csr"),  # noqa: TID251
-        pytest.param(sparse.csc_matrix, id="scipy_csc"),  # noqa: TID251
+        pytest.param(sparse.csr_matrix, id="scipy_csr_mat"),  # noqa: TID251
+        pytest.param(sparse.csc_matrix, id="scipy_csc_mat"),  # noqa: TID251
+        pytest.param(sparse.csr_array, id="scipy_csr_arr", marks=[skipif_no_sparray]),  # noqa: TID251
     ),
     ("dask", "dense"): (
         pytest.param(
