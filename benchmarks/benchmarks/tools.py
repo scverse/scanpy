@@ -55,3 +55,11 @@ def time_rank_genes_groups() -> None:
 
 def peakmem_rank_genes_groups() -> None:
     sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
+
+
+def time_score_genes() -> None:
+    sc.tl.score_genes(adata, adata.var_names[:500])
+
+
+def peakmem_score_genes() -> None:
+    sc.tl.score_genes(adata, adata.var_names[:500])
