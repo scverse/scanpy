@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""A test script for scanpy’s CLI."""
+
+from __future__ import annotations
+
+import sys
+
+print("test", *sys.argv[1:])

@@ -1,7 +1,9 @@
 name: Bug report
 description: Scanpy doesn’t do what it should? Please help us fix it!
 #title: ...
-labels: ['Bug 🐛']
+type: Bug
+labels:
+- Triage 🩺
 #assignees: []
 body:
 - type: checkboxes
@@ -14,7 +16,7 @@ body:
       required: true
     - label: I have confirmed this bug exists on the latest version of scanpy.
       required: true
-    - label: (optional) I have confirmed this bug exists on the master branch of scanpy.
+    - label: (optional) I have confirmed this bug exists on the main branch of scanpy.
       required: false
 - type: markdown
   attributes:

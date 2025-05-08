@@ -43,7 +43,8 @@ you'd usually want to set `settings.autoshow` to `False`.
    ~_settings.ScanpyConfig.autosave
 ```
 
-The default directories for saving figures, caching files and storing datasets.
+IO related settings for saving figures, caching files and storing datasets.
+
 
 ```{eval-rst}
 .. autosummary::
@@ -52,6 +53,8 @@ The default directories for saving figures, caching files and storing datasets.
    ~_settings.ScanpyConfig.figdir
    ~_settings.ScanpyConfig.cachedir
    ~_settings.ScanpyConfig.datasetdir
+   ~_settings.ScanpyConfig.file_format_figs
+   ~_settings.ScanpyConfig.file_format_data
 ```
 
 The verbosity of logging output, where verbosity levels have the following
