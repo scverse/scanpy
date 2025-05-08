@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     "verbose",
 )
 @doctest_needs("samalg")
-def sam(
+def sam(  # noqa: PLR0913
     adata: AnnData,
     *,
     max_iter: int = 10,
@@ -205,14 +205,14 @@ def sam(
     """
     try:
         from samalg import SAM
-    except ImportError:
+    except ImportError as e:
         msg = (
             "\nplease install sam-algorithm: \n\n"
             "\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n"
             "\tcd self-assembling-manifold\n"
             "\tpip install ."
         )
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     logg.info("Self-assembling manifold")
 

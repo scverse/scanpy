@@ -4,37 +4,36 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from scanpy.preprocessing._utils import _get_mean_var
-
-from ..._utils import _get_legacy_random
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from ..._compat import _LegacyRandom
-    from ..._utils import _CSMatrix
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 def sparse_multiply(
-    E: _CSMatrix | NDArray[np.float64],
+    E: CSBase | NDArray[np.float64],
     a: float | NDArray[np.float64],
-) -> _CSMatrix:
+) -> CSBase:
     """Multiply each row of E by a scalar."""
     nrow = E.shape[0]
     w = sparse.dia_matrix((a, 0), shape=(nrow, nrow), dtype=a.dtype)
     r = w @ E
     if isinstance(r, np.ndarray):
-        return sparse.csc_matrix(r)
+        return sparse.csc_matrix(r)  # noqa: TID251
     return r
 
 
 def sparse_zscore(
-    E: _CSMatrix,
+    E: CSBase,
     *,
     gene_mean: NDArray[np.float64] | None = None,
     gene_stdev: NDArray[np.float64] | None = None,
-) -> _CSMatrix:
+) -> CSBase:
     """z-score normalize each column of E."""
     if gene_mean is None or gene_stdev is None:
         gene_means, gene_stdevs = _get_mean_var(E, axis=0)
@@ -43,14 +42,14 @@ def sparse_zscore(
 
 
 def subsample_counts(
-    E: _CSMatrix,
+    E: CSBase,
     *,
     rate: float,
     original_totals,
     random_seed: _LegacyRandom = 0,
-) -> tuple[_CSMatrix, NDArray[np.int64]]:
+) -> tuple[CSBase, NDArray[np.int64]]:
     if rate < 1:
-        random_seed = _get_legacy_random(random_seed)
+        random_seed = check_random_state(random_seed)
         E.data = random_seed.binomial(np.round(E.data).astype(int), rate)
         current_totals = np.asarray(E.sum(1)).squeeze()
         unsampled_orig_totals = original_totals - current_totals

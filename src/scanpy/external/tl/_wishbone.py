@@ -102,9 +102,9 @@ def wishbone(
     """
     try:
         from wishbone.core import wishbone as c_wishbone
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     # Start cell index
     s = np.where(adata.obs_names == start_cell)[0]

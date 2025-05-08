@@ -6,7 +6,8 @@ from warnings import warn
 
 import numpy as np
 from anndata import AnnData
-from scipy.sparse import issparse
+
+from scanpy._compat import CSBase
 
 from ... import logging as logg
 from ..._utils import (
@@ -35,7 +36,9 @@ if TYPE_CHECKING:
     from ..._utils import Empty
 
 
-def _pearson_residuals(X, theta, clip, check_values, *, copy: bool = False):
+def _pearson_residuals(
+    X: CSBase | np.ndarray, theta, clip, check_values, *, copy: bool = False
+):
     X = X.copy() if copy else X
 
     # check theta
@@ -56,9 +59,10 @@ def _pearson_residuals(X, theta, clip, check_values, *, copy: bool = False):
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
 
-    if issparse(X):
+    if isinstance(X, CSBase):
         sums_genes = np.sum(X, axis=0)
         sums_cells = np.sum(X, axis=1)
         sum_total = np.sum(sums_genes).squeeze()

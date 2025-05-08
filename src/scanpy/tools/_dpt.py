@@ -376,7 +376,7 @@ class DPT(Neighbors):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:  # noqa: PLR0912
         """Out of a list of line segments, choose segment that has the most distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -518,7 +518,7 @@ class DPT(Neighbors):
         changepoints = np.arange(indices.size - 1)[np.diff(segs_names) == 1] + 1
         if self.iroot is not None:
             pseudotime = self.pseudotime[indices]
-            for iseg, seg in enumerate(self.segs):
+            for seg in self.segs:
                 # only consider one segment, it's already ordered by segment
                 seg_sorted = seg[indices]
                 # consider the pseudotime on this segment and sort them
@@ -529,7 +529,7 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(
+    def detect_branching(  # noqa: PLR0912, PLR0915
         self,
         *,
         segs: Sequence[np.ndarray],
@@ -602,7 +602,7 @@ class DPT(Neighbors):
             ]
             # TODO Evaluate whether to assign the variable or not
             prev_connecting_points = segs_connects[iseg]  # noqa: F841
-            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
+            for jseg in prev_connecting_segments:
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
                     if iseg_new != trunk:
@@ -627,7 +627,7 @@ class DPT(Neighbors):
 
             segs_adjacency += [[] for i in range(n_add)]
             segs_connects += [[] for i in range(n_add)]
-            kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+            kseg_list = [iseg, *range(len(segs) - n_add, len(segs))]
             for jseg in prev_connecting_segments:
                 pos = segs_adjacency[jseg].index(iseg)
                 distances = []
@@ -745,7 +745,7 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(
+    def _detect_branching(  # noqa: PLR0915
         self,
         Dseg: np.ndarray,
         tips: np.ndarray,
@@ -790,7 +790,7 @@ class DPT(Neighbors):
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
         elif self.flavor == "wolf17_tri":
             ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
-        elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
+        elif self.flavor in {"wolf17_bi", "wolf17_bi_un"}:
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
             msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
@@ -801,7 +801,7 @@ class DPT(Neighbors):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
         ssegs = []
-        for iseg, mask in enumerate(masks):
+        for mask in masks:
             mask[nonunique] = False
             ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask])
         # compute new tips within new segments
@@ -903,19 +903,17 @@ class DPT(Neighbors):
 
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment."""
-        # compute branchings using different starting points the first index of
-        # tips is the starting point for the other two, the order does not
-        # matter
-        ssegs = []
         # permutations of tip cells
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
             [1, 2, 0],  #             -"-                       second tip
             [2, 0, 1],  #             -"-                       third tip
         ]
-        for i, p in enumerate(ps):
-            ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
-        return ssegs
+
+        # compute branchings using different starting points the first index of
+        # tips is the starting point for the other two, the order does not
+        # matter
+        return [self.__detect_branching_haghverdi16(Dseg, tips[p]) for p in ps]
 
     def _detect_branching_single_wolf17_tri(self, Dseg, tips):
         # all pairwise distances

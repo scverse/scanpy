@@ -135,7 +135,7 @@ class DotPlot(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -299,7 +299,7 @@ class DotPlot(BasePlot):
         "x_padding",
         "y_padding",
     )
-    def style(
+    def style(  # noqa: PLR0913
         self,
         *,
         cmap: Colormap | str | None | Empty = _empty,
@@ -615,7 +615,7 @@ class DotPlot(BasePlot):
         return normalize
 
     @staticmethod
-    def _dotplot(
+    def _dotplot(  # noqa: PLR0912, PLR0913, PLR0915
         dot_size: pd.DataFrame,
         dot_color: pd.DataFrame,
         dot_ax: Axes,
@@ -715,16 +715,14 @@ class DotPlot(BasePlot):
         cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
-        else:
-            if dot_max < 0 or dot_max > 1:
-                msg = "`dot_max` value has to be between 0 and 1"
-                raise ValueError(msg)
+        elif dot_max < 0 or dot_max > 1:
+            msg = "`dot_max` value has to be between 0 and 1"
+            raise ValueError(msg)
         if dot_min is None:
             dot_min = 0
-        else:
-            if dot_min < 0 or dot_min > 1:
-                msg = "`dot_min` value has to be between 0 and 1"
-                raise ValueError(msg)
+        elif dot_min < 0 or dot_min > 1:
+            msg = "`dot_min` value has to be between 0 and 1"
+            raise ValueError(msg)
 
         if dot_min != 0 or dot_max != 1:
             # clip frac between dot_min and  dot_max
@@ -843,7 +841,7 @@ class DotPlot(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def dotplot(
+def dotplot(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],

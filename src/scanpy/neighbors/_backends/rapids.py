@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from numpy.typing import ArrayLike
-    from scipy.sparse import csr_matrix
+
+    from ..._compat import CSRBase
 
     _Algorithm = Literal["rbc", "brute", "ivfflat", "ivfpq"]
     _Metric = Literal[
@@ -85,7 +86,7 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         self.nn.fit(X_contiguous)
         return self
 
-    def transform(self, X: ArrayLike) -> csr_matrix:
+    def transform(self, X: ArrayLike) -> CSRBase:
         """Perform knn search on the index."""
         self._transform_checks(X)
         X_contiguous = np.ascontiguousarray(X, dtype=np.float32)

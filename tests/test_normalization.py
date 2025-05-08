@@ -7,10 +7,11 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 from scipy import sparse
-from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy._utils import axis_sum
+from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
@@ -18,7 +19,7 @@ from testing.scanpy._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -50,9 +51,9 @@ def test_normalize_matrix_types(
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.todense()
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
@@ -141,7 +142,9 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
 
 
 @pytest.mark.parametrize(
-    "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
+    "sparsity_func",
+    [np.array, sparse.csr_matrix],  # noqa: TID251
+    ids=lambda x: x.__name__,
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])
@@ -323,3 +326,11 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     assert adata.varm["PCs"].shape == (n_genes, n_comps)
     # number of all-zero-colums should be number of non-hvgs
     assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == n_genes - n_hvgs
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_DENSE)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_compute_nnz_median(array_type, dtype):
+    data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
+    data = array_type(data)
+    np.testing.assert_allclose(_compute_nnz_median(data), 5)

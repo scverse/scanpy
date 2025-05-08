@@ -1,39 +1,35 @@
 from __future__ import annotations
 
 import pickle
+import string
 from contextlib import nullcontext
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix
+from scipy import sparse
 
 import scanpy as sc
+from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from numpy.typing import NDArray
+    from scanpy._compat import CSRBase
 
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
 
-
-def _create_random_gene_names(n_genes, name_length) -> NDArray[np.str_]:
-    """Create a bunch of random gene names (just CAPS letters)."""
-    return np.array(
-        [
-            "".join(map(chr, np.random.randint(65, 90, name_length)))
-            for _ in range(n_genes)
-        ]
-    )
+_create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
+"""Create a bunch of random gene names (just CAPS letters)."""
 
 
-def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
+def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan) -> CSRBase:
     """Create a sparse matrix with certain amounts of NaN and Zeros."""
     A = np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
     maskzero = np.random.rand(rows, cols) < percent_zero
@@ -42,16 +38,16 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan):
         A[maskzero] = 0
     if np.any(masknan):
         A[masknan] = np.nan
-    S = csr_matrix(A)
+    S = sparse.csr_matrix(A)  # noqa: TID251
     return S
 
 
-def _create_adata(n_obs, n_var, p_zero, p_nan):
+def _create_adata(n_obs: int, n_var: int, p_zero: float, p_nan: float) -> AnnData:
     """Create an AnnData with random data, sparseness and some NaN values."""
     X = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
     adata = AnnData(X)
-    gene_names = _create_random_gene_names(n_var, name_length=6)
-    adata.var_names = gene_names
+    gene_names = _create_random_gene_names(n_var, length=6)
+    adata.var_names = gene_names.reshape(n_var)  # can be unsized
     return adata
 
 
@@ -80,9 +76,9 @@ def test_add_score():
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
     sc.pp.log1p(adata)
 
-    # the actual genes names are all 6letters
-    # create some non-estinsting names with 7 letters:
-    non_existing_genes = _create_random_gene_names(n_genes=3, name_length=7)
+    # the actual genes names are all 6 letters
+    # create some non-exstisting names with 7 letters:
+    non_existing_genes = _create_random_gene_names(3, length=7)
     some_genes = np.r_[
         np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
@@ -118,7 +114,7 @@ def test_sparse_nanmean():
     # edge case of only NaNs per row
     A = np.full((10, 1), np.nan)
 
-    meanA = np.array(_sparse_nanmean(csr_matrix(A), 0)).flatten()
+    meanA = np.array(_sparse_nanmean(sparse.csr_matrix(A), 0)).flatten()  # noqa: TID251
     np.testing.assert_allclose(np.nanmean(A, 0), meanA)
 
 
@@ -189,7 +185,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     sparse_scores = adata.obs["Test"].values.tolist()
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
-    def mock_fn(x: csr_matrix, axis: Literal[0, 1]):
+    def mock_fn(x: CSRBase, axis: Literal[0, 1]):
         return np.nanmean(x.toarray(), axis, dtype="float64")
 
     monkeypatch.setattr(sc.tl._score_genes, "_sparse_nanmean", mock_fn)
@@ -202,7 +198,7 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
 def test_missing_genes():
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
     # These genes have a different length of name
-    non_extant_genes = _create_random_gene_names(n_genes=3, name_length=7)
+    non_extant_genes = _create_random_gene_names(3, length=7)
 
     with pytest.raises(ValueError, match=r"No valid genes were passed for scoring"):
         sc.tl.score_genes(adata, non_extant_genes)

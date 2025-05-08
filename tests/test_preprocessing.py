@@ -12,10 +12,10 @@ import pytest
 from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from numpy.testing import assert_allclose
-from scipy import sparse as sp
-from scipy.sparse import coo_matrix, csc_matrix, csr_matrix, issparse
+from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
@@ -30,8 +30,6 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from numpy.typing import NDArray
-
-    CSMatrix = sp.csc_matrix | sp.csr_matrix
 
 
 HERE = Path(__file__).parent
@@ -71,7 +69,7 @@ def base(request):
 
 def test_log1p_rep(count_matrix_format, base, dtype):
     X = count_matrix_format(
-        np.abs(sp.random(100, 200, density=0.3, dtype=dtype)).toarray()
+        np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
@@ -94,7 +92,7 @@ def test_mean_var(array_type):
 def test_mean_var_sparse():
     from sklearn.utils.sparsefuncs import mean_variance_axis
 
-    csr64 = sp.random(10000, 1000, format="csr", dtype=np.float64)
+    csr64 = sparse.random(10000, 1000, format="csr", dtype=np.float64)
     csc64 = csr64.tocsc()
 
     # Test that we're equivalent for 64 bit
@@ -140,7 +138,7 @@ def test_normalize_per_cell():
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
     adata = AnnData(A.copy())
-    adata_sparse = AnnData(sp.csr_matrix(A.copy()))
+    adata_sparse = AnnData(sparse.csr_matrix(A.copy()))  # noqa: TID251
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
@@ -181,7 +179,7 @@ def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
 def test_sample(
     *,
     request: pytest.FixtureRequest,
-    array_type: Callable[[np.ndarray], np.ndarray | CSMatrix],
+    array_type: Callable[[np.ndarray], np.ndarray | CSBase],
     which: Literal["copy", "inplace", "array"],
     axis: Literal[0, 1],
     f_or_n: float | int,  # noqa: PYI041
@@ -300,8 +298,10 @@ def test_sample_copy_backed_error(tmp_path):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("zero_center", [True, False])
-@pytest.mark.parametrize("max_value", [None, 1.0])
+@pytest.mark.parametrize(
+    "zero_center", [True, False], ids=["zero_center", "no_zero_center"]
+)
+@pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(array_type, zero_center, max_value):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
@@ -312,10 +312,11 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
     X = adata_casted.X
     if "dask" in array_type.__name__:
+        assert not isinstance(X._meta, np.matrix)
         X = X.compute()
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.todense()
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
@@ -357,14 +358,14 @@ def zero_center(request):
 
 def test_scale_rep(count_matrix_format, zero_center):
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
     check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
     check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
 def test_scale_array(count_matrix_format, zero_center):
     """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
+    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
     adata = anndata_v0_8_constructor_compat(X=X.copy())
 
     sc.pp.scale(adata, zero_center=zero_center)
@@ -483,7 +484,7 @@ def test_regress_out_constants_equivalent():
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
-@pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
+@pytest.fixture(params=[lambda x: x.copy(), sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
 def count_matrix_format(request):
     return request.param
 
@@ -514,7 +515,7 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
         adata, counts_per_cell=TARGET, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -542,7 +543,7 @@ def test_downsample_counts_per_cell_multiple_targets(
         adata, counts_per_cell=TARGETS, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -568,7 +569,7 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
         adata_orig, total_counts=target, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -625,9 +626,9 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.todense()
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
@@ -664,14 +665,17 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     X = adata_casted.X
     if "dask" in array_type.__name__:
         X = X.compute()
-    if issparse(X):
+    if isinstance(X, CSBase):
         X = X.todense()
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", [csr_matrix, csc_matrix, coo_matrix])
+@pytest.mark.parametrize(
+    "array_type",
+    [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix],  # noqa: TID251
+)
 @pytest.mark.parametrize("order", ["C", "F"])
 def test_todense(array_type, order):
     x_org = np.array([[0, 1, 2], [3, 0, 4]])

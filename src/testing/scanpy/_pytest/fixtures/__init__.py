@@ -24,12 +24,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
-    "float_dtype",
     "_doctest_env",
-    "pbmc3ks_parametrized_session",
+    "backed_adata",
+    "float_dtype",
     "pbmc3k_parametrized",
     "pbmc3k_parametrized_small",
-    "backed_adata",
+    "pbmc3ks_parametrized_session",
 ]
 
 
@@ -42,7 +42,7 @@ def float_dtype(request):
 def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, None]:
     showwarning_orig = warnings.showwarning
 
-    def showwarning(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
+    def showwarning(message, category, filename, lineno, file=None, line=None) -> None:  # noqa: PLR0917
         if file is None:
             if line is None:
                 import linecache

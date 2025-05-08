@@ -12,15 +12,15 @@ from .sparse_utils import sparse_multiply, sparse_zscore
 if TYPE_CHECKING:
     from typing import Literal
 
-    from ..._compat import _LegacyRandom
+    from ..._utils.random import _LegacyRandom
     from .core import Scrublet
 
 
 def mean_center(self: Scrublet) -> None:
     gene_means = self._counts_obs_norm.mean(0)
-    self._counts_obs_norm = sparse.csc_matrix(self._counts_obs_norm - gene_means)
+    self._counts_obs_norm = sparse.csc_matrix(self._counts_obs_norm - gene_means)  # noqa: TID251
     if self._counts_sim_norm is not None:
-        self._counts_sim_norm = sparse.csc_matrix(self._counts_sim_norm - gene_means)
+        self._counts_sim_norm = sparse.csc_matrix(self._counts_sim_norm - gene_means)  # noqa: TID251
 
 
 def normalize_variance(self: Scrublet) -> None:

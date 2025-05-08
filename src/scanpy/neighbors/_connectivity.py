@@ -5,17 +5,18 @@ from typing import TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.sparse import coo_matrix, csr_matrix, issparse
+from scipy import sparse
 
+from .._compat import CSRBase
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
 )
 
-D = TypeVar("D", NDArray[np.float32], csr_matrix)
+D = TypeVar("D", NDArray[np.float32], CSRBase)
 
 
-def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
+def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:  # noqa: PLR0912
     """Derive gaussian connectivities between data points from their distances.
 
     Parameters
@@ -29,7 +30,7 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
 
     """
     # init distances
-    if isinstance(distances, csr_matrix):
+    if isinstance(distances, CSRBase):
         Dsq = distances.power(2)
         indices, distances_sq = _get_indices_distances_from_sparse_matrix(
             Dsq, n_neighbors
@@ -47,7 +48,7 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
 
     # choose sigma, the heuristic here doesn't seem to make much of a difference,
     # but is used to reproduce the figures of Haghverdi et al. (2016)
-    if issparse(distances):
+    if isinstance(distances, CSRBase):
         # as the distances are not sorted
         # we have decay within the n_neighbors first neighbors
         sigmas_sq = np.median(distances_sq, axis=1)
@@ -58,7 +59,7 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
     sigmas = np.sqrt(sigmas_sq)
 
     # compute the symmetric weight matrix
-    if not issparse(distances):
+    if not isinstance(distances, CSRBase):
         Num = 2 * np.multiply.outer(sigmas, sigmas)
         Den = np.add.outer(sigmas_sq, sigmas_sq)
         W = np.sqrt(Num / Den) * np.exp(-Dsq / Den)
@@ -79,7 +80,7 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:
             # set all entries that are not nearest neighbors to zero
             W[~mask] = 0
     else:
-        assert isinstance(Dsq, csr_matrix)
+        assert isinstance(Dsq, CSRBase)
         W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
         for i in range(len(Dsq.indptr[:-1])):
             row = Dsq.indices[Dsq.indptr[i] : Dsq.indptr[i + 1]]
@@ -106,7 +107,7 @@ def umap(
     n_neighbors: int,
     set_op_mix_ratio: float = 1.0,
     local_connectivity: float = 1.0,
-) -> csr_matrix:
+) -> CSRBase:
     """Wrap for `umap.fuzzy_simplicial_set` :cite:p:`McInnes2018`.
 
     Given a set of data X, a neighborhood size, and a measure of distance
@@ -121,7 +122,7 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         from umap.umap_ import fuzzy_simplicial_set
 
-    X = coo_matrix((n_obs, 1))
+    X = sparse.coo_matrix((n_obs, 1))
     connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
         X,
         n_neighbors,

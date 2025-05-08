@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals
 from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -26,33 +25,25 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+    """Given a 1D array of counts, compute the median of the non-zero counts."""
+    if isinstance(counts, DaskArray):
+        counts = counts.compute()
+    counts_greater_than_zero = counts[counts > 0]
+    median = np.median(counts_greater_than_zero)
+    return median
+
+
 def _normalize_data(X, counts, after=None, *, copy: bool = False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, int | np.integer):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     if after is None:
-        if isinstance(counts, DaskArray):
-
-            def nonzero_median(x):
-                return np.ma.median(np.ma.masked_array(x, x == 0)).item()
-
-            after = da.from_delayed(
-                dask.delayed(nonzero_median)(counts),
-                shape=(),
-                meta=counts._meta,
-                dtype=counts.dtype,
-            )
-        else:
-            counts_greater_than_zero = counts[counts > 0]
-            after = np.median(counts_greater_than_zero, axis=0)
+        after = _compute_nnz_median(counts)
     counts = counts / after
+    out = X if isinstance(X, np.ndarray | CSBase) else None
     return axis_mul_or_truediv(
-        X,
-        counts,
-        op=truediv,
-        out=X if isinstance(X, np.ndarray) or issparse(X) else None,
-        allow_divide_by_zero=False,
-        axis=0,
+        X, counts, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
 
 
@@ -67,7 +58,7 @@ def _normalize_data(X, counts, after=None, *, copy: bool = False):
     "inplace",
     "copy",
 )
-def normalize_total(
+def normalize_total(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     target_sum: float | None = None,
@@ -194,17 +185,17 @@ def normalize_total(
     # Deprecated features
     if layers is not None:
         warn(
-            FutureWarning(
-                "The `layers` argument is deprecated. Instead, specify individual "
-                "layers to normalize with `layer`."
-            )
+            "The `layers` argument is deprecated. Instead, specify individual "
+            "layers to normalize with `layer`.",
+            FutureWarning,
+            stacklevel=2,
         )
     if layer_norm is not None:
         warn(
-            FutureWarning(
-                "The `layer_norm` argument is deprecated. Specify the target size "
-                "factor directly with `target_sum`."
-            )
+            "The `layer_norm` argument is deprecated. Specify the target size "
+            "factor directly with `target_sum`.",
+            FutureWarning,
+            stacklevel=2,
         )
 
     if layers == "all":
@@ -240,7 +231,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-        warn(UserWarning("Some cells have zero counts"))
+        warn("Some cells have zero counts", UserWarning, stacklevel=2)
 
     if inplace:
         if key_added is not None:

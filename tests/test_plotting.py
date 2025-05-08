@@ -935,7 +935,6 @@ def test_plot_rank_genes_groups_gene_symbols(
 
     func(b)
     plt.savefig(pth_1_b)
-    pass
 
     check_same_image(pth_1_a, pth_1_b, tol=1, root=tmp_path)
 
@@ -1494,6 +1493,7 @@ def test_scatter_rep(tmp_path):
             list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
             [1, 2, 3, 3, 1, 2, 2, 3, 1],
+            strict=True,
         ),
         columns=["rep", "gene", "result"],
     )
@@ -1508,7 +1508,7 @@ def test_scatter_rep(tmp_path):
         X=np.zeros((15, 3)),
         layers={"layer": np.zeros((15, 3))},
         obsm={"X_pca": coords},
-        var=pd.DataFrame(index=[x for x in list("abc")]),
+        var=pd.DataFrame(index=list("abc")),
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(15)]),
     )
     adata.raw = adata.copy()
@@ -1752,6 +1752,16 @@ def test_umap_mask_mult_plots():
     axes = sc.pl.umap(pbmc, color=color, mask_obs=mask_obs, show=False)
     assert isinstance(axes, list)
     assert len(axes) == len(color)
+
+
+def test_umap_mask_no_modification():
+    """Check that mask_obs argument doesn't affect the data being plotted."""
+    pbmc = pbmc3k_processed()
+    data_copy = pbmc.obs["louvain"].copy()
+    sc.pl.umap(
+        pbmc, mask_obs=(pbmc.obs["louvain"] == "B cells"), color="louvain", show=False
+    )
+    pd.testing.assert_series_equal(pbmc.obs["louvain"], data_copy)
 
 
 def test_string_mask(tmp_path, check_same_image):
