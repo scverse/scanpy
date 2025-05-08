@@ -21,9 +21,11 @@ from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
 from ._common import (
+    _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
+from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
@@ -74,6 +76,7 @@ def neighbors(  # noqa: PLR0913
     n_neighbors: int = 15,
     n_pcs: int | None = None,
     *,
+    distance_matrix: np.ndarray | None = None,
     use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
@@ -186,6 +189,15 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    if distance_matrix is not None:
+        # Added this to support the new distance matrix function
+        # if a precomputed distance matrix is provided, skip the PCA and distance computation
+        return neighbors_from_distance(
+            adata,
+            distance_matrix,
+            n_neighbors=n_neighbors,
+            method=method,
+        )
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
     if adata.is_view:  # we shouldn't need this here...
@@ -246,6 +258,102 @@ def neighbors(  # noqa: PLR0913
         ),
     )
     return adata if copy else None
+
+
+def neighbors_from_distance(
+    adata: AnnData,
+    distance_matrix: np.ndarray | SpBase,
+    n_neighbors: int = 15,
+    method: Literal["umap", "gauss"] = "umap",  # default to umap
+    key_added: str | None = None,
+) -> AnnData:
+    # computes the neighborhood graph from a precomputed distance matrix
+    # both umap an gauss are supported, default is umap
+    # skipping PCA and distance computation and goes straight to the graph
+    # key_added is the key under which to store the results in adata.uns or adata.obsp
+    """Compute neighbors from a precomputer distance matrix.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    distance_matrix
+        Precomputed dense or sparse distance matrix.
+    n_neighbors
+        Number of nearest neighbors to use in the graph.
+    method
+        Method to use for computing the graph. Currently only 'umap' is supported.
+    key_added
+        Optional key under which to store the results. Default is 'neighbors'.
+
+    Returns
+    -------
+    adata
+        Annotated data with computed distances and connectivities.
+    """
+    if isinstance(distance_matrix, SpBase):
+        # spare matrices can save memory for large datasets
+        # csr_matrix is the most efficient format for sparse matrices
+        # setting the diagonal to 0 is important = distance to self must not affect umap or gauss
+        # elimimate zeros is important to save memory, avoids storing explicit zeros
+        distance_matrix = sparse.csr_matrix(distance_matrix)  # noqa: TID251
+        distance_matrix.setdiag(0)
+        distance_matrix.eliminate_zeros()
+        # extracting for each observation the indices and distances of the n_neighbors
+        # being then used by umap or gauss
+        knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+            distance_matrix, n_neighbors
+        )
+    else:
+        # if it is dense, converting it to ndarray
+        # and setting the diagonal to 0
+        # extracting knn indices and distances
+        distance_matrix = np.asarray(distance_matrix)
+        np.fill_diagonal(distance_matrix, 0)
+        knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
+            distance_matrix, n_neighbors
+        )
+
+    if method == "umap":
+        # using umap to build connectivities from distances
+        connectivities = umap(
+            knn_indices,
+            knn_distances,
+            n_obs=adata.n_obs,
+            n_neighbors=n_neighbors,
+        )
+    elif method == "gauss":
+        # using gauss to build connectivities from distances
+        # requires sparse matrix for efficiency
+        connectivities = _connectivity.gauss(
+            sparse.csr_matrix(distance_matrix),  # noqa: TID251
+            n_neighbors,
+            knn=True,
+        )
+    else:
+        msg = f"Method {method} not implemented."
+        raise NotImplementedError(msg)
+    # defining where to store graph info
+    key = "neighbors" if key_added is None else key_added
+    dists_key = "distances" if key_added is None else key_added + "_distances"
+    conns_key = "connectivities" if key_added is None else key_added + "_connectivities"
+    # storing the actual distance and connectivitiy matrices as obsp
+    adata.uns[dists_key] = sparse.csr_matrix(distance_matrix)  # noqa: TID251
+    adata.obsp[conns_key] = connectivities
+    # populating with metadata describing how neighbors were computed
+    # I think might be important as many functions downstream rely
+    # on .uns['neighbors'] to find correct .obsp key
+    adata.uns[key] = {
+        "connectivities_key": "connectivities",
+        "distances_key": "distances",
+        "params": {
+            "n_neighbors": n_neighbors,
+            "method": method,
+            "random_state": 0,
+            "metric": "euclidean",
+        },
+    }
+    return adata
 
 
 class FlatTree(NamedTuple):  # noqa: D101
