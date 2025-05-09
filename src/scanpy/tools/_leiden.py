@@ -16,14 +16,14 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from leidenalg.VertexPartition import MutableVertexPartition
 
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
-else:
-    try:
-        from leidenalg.VertexPartition import MutableVertexPartition
-    except ImportError:
+
+try:  # separate block for fallible import
+    from leidenalg.VertexPartition import MutableVertexPartition
+except ImportError:
+    if not TYPE_CHECKING:
         MutableVertexPartition = type("MutableVertexPartition", (), {})
         MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 

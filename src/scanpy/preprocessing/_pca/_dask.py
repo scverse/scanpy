@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
+from fast_array_utils import stats
 
 from scanpy._utils._doctests import doctest_needs
 
 from ..._compat import CSBase
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -200,10 +200,9 @@ def _cov_sparse_dask(
         meta=np.array([], dtype=dtype),
         dtype=dtype,
     ).sum(axis=0)
-    mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
         "tuple[NDArray, NDArray[np.float64]]",
-        dask.compute(gram_matrix_dask, mean_x_dask),
+        dask.compute(gram_matrix_dask, stats.mean(x, axis=0, dtype=dtype)),
     )
     gram_matrix /= x.shape[0]
 

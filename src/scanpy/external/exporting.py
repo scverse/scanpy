@@ -11,11 +11,11 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse
+from fast_array_utils.stats import mean_var
 from pandas.api.types import CategoricalDtype
 
 from .._compat import old_positionals
 from .._utils import NeighborsView
-from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -344,7 +344,7 @@ def _frac_to_hex(frac):
 
 
 def _get_color_stats_genes(color_stats, E, gene_list):
-    means, variances = _get_mean_var(E)
+    means, variances = mean_var(E, axis=0, correction=1)
     stdevs = np.zeros(variances.shape, dtype=float)
     stdevs[variances > 0] = np.sqrt(variances[variances > 0])
     mins = E.min(0).todense().A1

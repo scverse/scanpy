@@ -109,16 +109,13 @@ class _MoransI(_SparseMetric):
     name = "Moran’s I"
 
     def mtx(self, vals_het: NDArray | CSRBase, /) -> NDArray:
-        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
         if isinstance(vals_het, np.ndarray):
-            return _morans_i_mtx(*g_parts, vals_het)
-        v_parts = (vals_het.data, vals_het.indices, vals_het.indptr)
-        return _morans_i_mtx_csr(*g_parts, *v_parts, vals_het.shape)
+            return _morans_i_mtx(self.graph, vals_het)
+        return _morans_i_mtx_csr(self.graph, vals_het)
 
     def vec(self) -> np.float64:
         W = self.graph.data.sum()
-        g_parts = (self.graph.data, self.graph.indices, self.graph.indptr)
-        return _morans_i_vec_W(*g_parts, self._vals, W)
+        return _morans_i_vec_W(self.graph, self._vals, W)
 
 
 ###############################################################################
@@ -128,82 +125,49 @@ class _MoransI(_SparseMetric):
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _morans_i_vec_W(
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x: np.ndarray,
-    W: np.float64,
-) -> np.float64:
+def _morans_i_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
     z = x - x.mean()
     z2ss = (z * z).sum()
     n = len(x)
     inum = 0.0
 
     for i in numba.prange(n):
-        s = slice(g_indptr[i], g_indptr[i + 1])
-        i_indices = g_indices[s]
-        i_data = g_data[s]
+        s = slice(g.indptr[i], g.indptr[i + 1])
+        i_indices = g.indices[s]
+        i_data = g.data[s]
         inum += (i_data * z[i_indices]).sum() * z[i]
 
     return len(x) / W * inum / z2ss
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _morans_i_vec_W_sparse(  # noqa: PLR0917
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x_data: np.ndarray,
-    x_indices: np.ndarray,
-    n: int,
-    W: np.float64,
+def _morans_i_vec_W_sparse(
+    g: CSRBase, x_data: np.ndarray, x_indices: np.ndarray, n: int, W: np.float64
 ) -> np.float64:
-    x = np.zeros(n, dtype=x_data.dtype)
-    x[x_indices] = x_data
-    return _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
+    x_vec = np.zeros(n, dtype=x_data.dtype)
+    x_vec[x_indices] = x_data
+    return _morans_i_vec_W(g, x_vec, W)
 
 
 @njit
-def _morans_i_mtx(
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    X: np.ndarray,
-) -> np.ndarray:
+def _morans_i_mtx(g: CSRBase, X: np.ndarray) -> np.ndarray:
     m, n = X.shape
-    assert n == len(g_indptr) - 1
-    W = g_data.sum()
+    assert n == len(g.indptr) - 1
+    W = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     for k in numba.prange(m):
         x = X[k, :]
-        out[k] = _morans_i_vec_W(g_data, g_indices, g_indptr, x, W)
+        out[k] = _morans_i_vec_W(g, x, W)
     return out
 
 
 @njit
-def _morans_i_mtx_csr(  # noqa: PLR0917
-    g_data: np.ndarray,
-    g_indices: np.ndarray,
-    g_indptr: np.ndarray,
-    x_data: np.ndarray,
-    x_indices: np.ndarray,
-    x_indptr: np.ndarray,
-    x_shape: tuple,
-) -> np.ndarray:
-    m, n = x_shape
-    W = g_data.sum()
+def _morans_i_mtx_csr(g: CSRBase, x: CSRBase) -> np.ndarray:
+    m, n = x.shape
+    W = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
-    x_data_list = np.split(x_data, x_indptr[1:-1])
-    x_indices_list = np.split(x_indices, x_indptr[1:-1])
+    x_data_list = np.split(x.data, x.indptr[1:-1])
+    x_indices_list = np.split(x.indices, x.indptr[1:-1])
     for k in numba.prange(m):
-        out[k] = _morans_i_vec_W_sparse(
-            g_data,
-            g_indices,
-            g_indptr,
-            x_data_list[k],
-            x_indices_list[k],
-            n,
-            W,
-        )
+        out[k] = _morans_i_vec_W_sparse(g, x_data_list[k], x_indices_list[k], n, W)
     return out

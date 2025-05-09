@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from fast_array_utils.stats import mean_var
 from scipy import sparse
 from sklearn.utils import check_random_state
-
-from scanpy.preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -36,7 +35,7 @@ def sparse_zscore(
 ) -> CSBase:
     """z-score normalize each column of E."""
     if gene_mean is None or gene_stdev is None:
-        gene_means, gene_stdevs = _get_mean_var(E, axis=0)
+        gene_means, gene_stdevs = mean_var(E, axis=0, correction=1)
         gene_stdevs = np.sqrt(gene_stdevs)
     return sparse_multiply(np.asarray((E - gene_mean).T), 1 / gene_stdev).T
 

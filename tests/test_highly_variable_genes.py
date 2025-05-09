@@ -9,11 +9,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from fast_array_utils import stats
 from pandas.testing import assert_frame_equal, assert_index_equal
 
 import scanpy as sc
 from scanpy._compat import CSRBase
-from scanpy.preprocessing._utils import _get_mean_var
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -146,7 +146,7 @@ def test_keep_layer(base, flavor):
 def test_no_filter_genes(flavor):
     """Test that even with columns containing all-zeros in the data, n_top_genes is respected."""
     adata = sc.datasets.pbmc3k()
-    means, _ = _get_mean_var(adata.X)
+    means = stats.mean(adata.X, axis=0)
     assert (means == 0).any()
     sc.pp.normalize_total(adata, target_sum=10000)
     sc.pp.log1p(adata)
@@ -575,9 +575,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     batch[1500:] = 1
     pbmc.obs["batch"] = batch
 
-    # true_mean, true_var = _get_mean_var(pbmc.X)
-    true_mean = np.mean(pbmc.X.toarray(), axis=0)
-    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
+    true_mean, true_var = stats.mean_var(pbmc.X, axis=0, correction=1)
 
     result_df = sc.pp.highly_variable_genes(
         pbmc, batch_key="batch", flavor="seurat_v3", n_top_genes=4000, inplace=False

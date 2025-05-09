@@ -8,7 +8,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import scanpy as sc
-from scanpy.preprocessing._utils import _get_mean_var
 
 from ._utils import get_dataset, param_skipper
 
@@ -75,19 +74,3 @@ def time_scale(*_):
 
 def peakmem_scale(*_):
     sc.pp.scale(adata, max_value=10)
-
-
-class FastSuite:
-    """Suite for fast preprocessing operations."""
-
-    params: tuple[list[Dataset], list[KeyX]] = (
-        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-        [None, "off-axis"],
-    )
-    param_names = ("dataset", "layer")
-
-    def time_mean_var(self, *_):
-        _get_mean_var(adata.X)
-
-    def peakmem_mean_var(self, *_):
-        _get_mean_var(adata.X)
