@@ -65,7 +65,7 @@ def _pca_compat_sparse(
     X_pca = (u * s)[:, idx]
     ev = s[idx] ** 2 / (x.shape[0] - 1)
 
-    _, total_var = mean_var(x, correction=1)
+    total_var = mean_var(x, correction=1, axis=0)[1].sum()
     ev_ratio = ev / total_var
 
     from sklearn.decomposition import PCA
