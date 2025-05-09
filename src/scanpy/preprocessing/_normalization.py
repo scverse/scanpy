@@ -222,7 +222,6 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     msg = "normalizing counts per cell"
 
     counts_per_cell = stats.sum(x, axis=1)
-    assert counts_per_cell.ndim == 1
     if exclude_highly_expressed:
         # at least one cell as more than max_fraction of counts per cell
         hi_exp = x > counts_per_cell[:, None] * max_fraction
@@ -231,14 +230,12 @@ def normalize_total(  # noqa: PLR0912, PLR0915
         elif isinstance(hi_exp, DaskArray) and isinstance(hi_exp._meta, np.matrix):
             hi_exp = hi_exp.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
         gene_subset = stats.sum(hi_exp, axis=0) == 0
-        assert gene_subset.ndim == 1
 
         msg += (
             ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
         counts_per_cell = stats.sum(x[:, gene_subset], axis=1)
-        assert counts_per_cell.ndim == 1
 
     start = logg.info(msg)
 
