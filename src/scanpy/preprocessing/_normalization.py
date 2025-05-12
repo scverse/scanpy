@@ -6,10 +6,11 @@ from warnings import warn
 
 import numba
 import numpy as np
+from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
-from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
+from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
@@ -116,15 +117,14 @@ def _normalize_total_helper(
         if exclude_highly_expressed:
             gene_subset = ~np.where(counts_per_cols)[0]
     else:
-        counts_per_cell = axis_sum(x, axis=1)
+        counts_per_cell = stats.sum(x, axis=1)
         if exclude_highly_expressed:
             counts_per_cell = np.ravel(counts_per_cell)
             # at least one cell as more than max_fraction of counts per cell
-            gene_subset = axis_sum(
-                (x > counts_per_cell[:, None] * max_fraction), axis=0
-            )
-            gene_subset = np.asarray(np.ravel(gene_subset) == 0)
-            counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
+            hi_exp = dematrix(x > counts_per_cell[:, None] * max_fraction)
+            gene_subset = stats.sum(hi_exp, axis=0) == 0
+
+            counts_per_cell = stats.sum(x[:, gene_subset], axis=1)
         counts_per_cell = np.ravel(counts_per_cell)
         if target_sum is None:
             target_sum = _compute_nnz_median(counts_per_cell)
@@ -291,12 +291,6 @@ def normalize_total(  # noqa: PLR0912
         max_fraction=max_fraction,
         target_sum=target_sum,
     )
-
-    if exclude_highly_expressed:
-        logg.info(
-            "The following highly-expressed genes are not considered during normalization factor computation:\n"
-            f"{adata.var_names[~gene_subset].tolist()}"
-        )
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
