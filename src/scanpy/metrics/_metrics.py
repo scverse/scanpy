@@ -10,7 +10,7 @@ from natsort import natsorted
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import coo_matrix
 
-from .._compat import CSRBase, SpBase
+from .._compat import SpBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -130,7 +130,7 @@ def modularity(
     except ImportError as e:
         msg = "igraph is require for computing modularity"
         raise ImportError(msg) from e
-    if isinstance(connectivities, CSRBase | SpBase):
+    if isinstance(connectivities, SpBase):
         # check if the connectivities is a sparse matrix
         coo = coo_matrix(connectivities)
         edges = list(zip(coo.row, coo.col, strict=False))
