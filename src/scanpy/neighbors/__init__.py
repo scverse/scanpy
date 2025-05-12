@@ -265,7 +265,7 @@ def neighbors_from_distance(
     distances: np.ndarray | SpBase,
     *,
     n_neighbors: int = 15,
-    method: Literal["umap", "gauss"] = "umap",  # default to umap
+    method: _Method = "umap",  # default to umap
     key_added: str | None = None,
 ) -> AnnData:
     ### inconsistent neighbors = bkk and n throw some stuff = bad way of writing the graph
@@ -295,10 +295,6 @@ def neighbors_from_distance(
         Annotated data with computed distances and connectivities.
     """
     if isinstance(distances, SpBase):
-        # spare matrices can save memory for large datasets
-        # csr_matrix is the most efficient format for sparse matrices
-        # setting the diagonal to 0 is important = distance to self must not affect umap or gauss
-        # elimimate zeros is important to save memory, avoids storing explicit zeros
         distances = sparse.csr_matrix(distances)  # noqa: TID251
         distances.setdiag(0)
         distances.eliminate_zeros()
