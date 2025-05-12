@@ -60,9 +60,7 @@ def confusion_matrix(
     orig, new = pd.Series(orig), pd.Series(new)
     assert len(orig) == len(new)
 
-    unique_labels = pd.unique(
-        np.concatenate((np.asarray(orig.values), np.asarray(new.values)))
-    )
+    unique_labels = pd.unique(np.concatenate((orig.to_numpy(), new.to_numpy())))
 
     # Compute
     mtx = _confusion_matrix(orig, new, labels=unique_labels)
