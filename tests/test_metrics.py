@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import warnings
 from functools import partial
 from string import ascii_letters
@@ -200,12 +199,6 @@ def test_confusion_matrix_api():
     pd.testing.assert_frame_equal(
         expected, sc.metrics.confusion_matrix(data["a"], "b", data)
     )
-
-
-# importing igraph, louvain, leiden if available
-HAS_IGRAPH = importlib.util.find_spec("igraph") is not None
-HAS_LOUVAIN = importlib.util.find_spec("louvain") is not None
-HAS_LEIDEN = importlib.util.find_spec("leidenalg") is not None
 
 
 # Test 1: Sample graph with clear community structure (dense & sparse, directed & undirected)
