@@ -76,7 +76,7 @@ def neighbors(  # noqa: PLR0913
     n_neighbors: int = 15,
     n_pcs: int | None = None,
     *,
-    distance_matrix: np.ndarray | None = None,
+    distances: np.ndarray | SpBase | None = None,
     use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
@@ -189,12 +189,12 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
-    if distance_matrix is not None:
+    if distances is not None:
         # Added this to support the new distance matrix function
         # if a precomputed distance matrix is provided, skip the PCA and distance computation
         return neighbors_from_distance(
             adata,
-            distance_matrix,
+            distances,
             n_neighbors=n_neighbors,
             method=method,
         )
@@ -262,11 +262,13 @@ def neighbors(  # noqa: PLR0913
 
 def neighbors_from_distance(
     adata: AnnData,
-    distance_matrix: np.ndarray | SpBase,
+    distances: np.ndarray | SpBase,
     n_neighbors: int = 15,
     method: Literal["umap", "gauss"] = "umap",  # default to umap
     key_added: str | None = None,
 ) -> AnnData:
+    ### inconsistent neighbors = bkk and n throw some stuff = bad way of writing the graph
+    ### adjust for this = knn = True
     # computes the neighborhood graph from a precomputed distance matrix
     # both umap an gauss are supported, default is umap
     # skipping PCA and distance computation and goes straight to the graph
@@ -277,7 +279,7 @@ def neighbors_from_distance(
     ----------
     adata
         Annotated data matrix.
-    distance_matrix
+    distances
         Precomputed dense or sparse distance matrix.
     n_neighbors
         Number of nearest neighbors to use in the graph.
@@ -291,27 +293,27 @@ def neighbors_from_distance(
     adata
         Annotated data with computed distances and connectivities.
     """
-    if isinstance(distance_matrix, SpBase):
+    if isinstance(distances, SpBase):
         # spare matrices can save memory for large datasets
         # csr_matrix is the most efficient format for sparse matrices
         # setting the diagonal to 0 is important = distance to self must not affect umap or gauss
         # elimimate zeros is important to save memory, avoids storing explicit zeros
-        distance_matrix = sparse.csr_matrix(distance_matrix)  # noqa: TID251
-        distance_matrix.setdiag(0)
-        distance_matrix.eliminate_zeros()
+        distances = sparse.csr_matrix(distances)  # noqa: TID251
+        distances.setdiag(0)
+        distances.eliminate_zeros()
         # extracting for each observation the indices and distances of the n_neighbors
         # being then used by umap or gauss
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-            distance_matrix, n_neighbors
+            distances, n_neighbors
         )
     else:
         # if it is dense, converting it to ndarray
         # and setting the diagonal to 0
         # extracting knn indices and distances
-        distance_matrix = np.asarray(distance_matrix)
-        np.fill_diagonal(distance_matrix, 0)
+        distances = np.asarray(distances)
+        np.fill_diagonal(distances, 0)
         knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-            distance_matrix, n_neighbors
+            distances, n_neighbors
         )
 
     if method == "umap":
@@ -326,7 +328,7 @@ def neighbors_from_distance(
         # using gauss to build connectivities from distances
         # requires sparse matrix for efficiency
         connectivities = _connectivity.gauss(
-            sparse.csr_matrix(distance_matrix),  # noqa: TID251
+            sparse.csr_matrix(distances),  # noqa: TID251
             n_neighbors,
             knn=True,
         )
@@ -338,7 +340,7 @@ def neighbors_from_distance(
     dists_key = "distances" if key_added is None else key_added + "_distances"
     conns_key = "connectivities" if key_added is None else key_added + "_connectivities"
     # storing the actual distance and connectivitiy matrices as obsp
-    adata.uns[dists_key] = sparse.csr_matrix(distance_matrix)  # noqa: TID251
+    adata.uns[dists_key] = sparse.csr_matrix(distances)  # noqa: TID251
     adata.obsp[conns_key] = connectivities
     # populating with metadata describing how neighbors were computed
     # I think might be important as many functions downstream rely
