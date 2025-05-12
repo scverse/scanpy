@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -179,14 +179,7 @@ def modularity_adata(
     label_array = adata.obs[labels] if isinstance(labels, str) else labels
     connectivities = adata.obsp[obsp]
 
-    if isinstance(connectivities, CSRBase):
-        # converting to dense if it is a CSR matrix
-        dense = connectivities.toarray()
-    else:
-        toarray = getattr(connectivities, "toarray", None)
-        dense = toarray() if callable(toarray) else connectivities
+    if isinstance(connectivities, pd.DataFrame):
+        connectivities = connectivities.values
 
-    if isinstance(dense, pd.DataFrame):
-        dense = dense.values
-    dense = cast("ArrayLike", dense)
-    return modularity(dense, label_array, mode=mode)
+    return modularity(connectivities, label_array, mode=mode)

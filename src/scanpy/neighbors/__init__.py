@@ -258,65 +258,6 @@ def neighbors(  # noqa: PLR0913
     return adata if copy else None
 
 
-# def neighbors_from_distance(
-#     adata: AnnData,
-#     distance_matrix: np.ndarray,
-#     n_neighbors: int = 15,
-#     method: Literal["umap", "gauss"] = "umap",  # default to umap
-# ) -> None:
-#     # computes the neighborhood graph from a precomputed distance matrix
-#     # only umap is supported
-#     # skipping PCA and distance computation and goes straight to the graph
-#     """Compute neighbors from a precomputer distance matrix.
-
-#     Parameters
-#     ----------
-#     adata : AnnData
-#         Annotated data matrix.
-#     distance_matrix : np.ndarray
-#         Precomputed dense or sparse distance matrix.
-#     n_neighbors : int
-#         Number of nearest neighbors to use in the graph.
-#     method : str
-#         Method to use for computing the graph. Currently only 'umap' is supported.
-#     """
-#     if isinstance(distance_matrix, SpBase):
-#         distance_matrix = np.asarray(sparse.csr_matrix(distance_matrix).toarray())
-
-#     knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-#         distance_matrix, n_neighbors
-#     )
-#     if method == "umap":
-#         connectivities = umap(
-#             knn_indices,
-#             knn_distances,
-#             n_obs=adata.n_obs,
-#             n_neighbors=n_neighbors,
-#         )
-#     elif method == "gauss":
-#         connectivities = _connectivity.gauss(
-#             sparse.csr_matrix(distance_matrix),
-#             n_neighbors,
-#             knn=True,
-#         )
-#     else:
-#         msg = f"Method {method} not implemented."
-#         raise NotImplementedError(msg)
-
-#     adata.obsp["connectivities"] = connectivities
-#     adata.obsp["distances"] = sparse.csr_matrix(distance_matrix)
-#     adata.uns["neighbors"] = {
-#         "connectivities_key": "connectivities",
-#         "distances_key": "distances",
-#         "params": {
-#             "n_neighbors": n_neighbors,
-#             "method": method,
-#             "random_state": 0,
-#             "metric": "euclidean",
-#         },
-#     }
-
-
 class FlatTree(NamedTuple):  # noqa: D101
     hyperplanes: None
     offsets: None
