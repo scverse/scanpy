@@ -13,6 +13,7 @@ import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
 from testing.scanpy._helpers import anndata_v0_8_constructor_compat
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -241,3 +242,22 @@ def test_restore_n_neighbors(neigh, conv):
         ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
+
+
+def test_neighbors_distance_equivalence():
+    adata = pbmc68k_reduced()
+    adata_d = adata.copy()
+
+    sc.pp.neighbors(adata)
+    # reusing the same distances
+    sc.pp.neighbors(adata_d, distances=adata.obsp["distances"])
+    np.testing.assert_allclose(
+        adata.obsp["connectivities"].toarray(),
+        adata_d.obsp["connectivities"].toarray(),
+        rtol=1e-5,
+    )
+    np.testing.assert_allclose(
+        adata.obsp["distances"].toarray(),
+        adata_d.obsp["distances"].toarray(),
+        rtol=1e-5,
+    )

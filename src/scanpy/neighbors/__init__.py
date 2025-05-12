@@ -337,7 +337,7 @@ def neighbors_from_distance(
     dists_key = "distances" if key_added is None else key_added + "_distances"
     conns_key = "connectivities" if key_added is None else key_added + "_connectivities"
     # storing the actual distance and connectivitiy matrices as obsp
-    adata.uns[dists_key] = sparse.csr_matrix(distances)  # noqa: TID251
+    adata.obsp[dists_key] = sparse.csr_matrix(distances)  # noqa: TID251
     adata.obsp[conns_key] = connectivities
     # populating with metadata describing how neighbors were computed
     # I think might be important as many functions downstream rely
