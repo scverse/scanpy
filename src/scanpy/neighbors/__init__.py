@@ -263,6 +263,7 @@ def neighbors(  # noqa: PLR0913
 def neighbors_from_distance(
     adata: AnnData,
     distances: np.ndarray | SpBase,
+    *,
     n_neighbors: int = 15,
     method: Literal["umap", "gauss"] = "umap",  # default to umap
     key_added: str | None = None,
