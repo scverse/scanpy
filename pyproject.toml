@@ -48,6 +48,7 @@ classifiers = [
 dependencies = [
     "anndata>=0.8",
     "numpy>=1.24",
+    "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7",
     "pandas >=1.5",
     "scipy>=1.8",
@@ -213,7 +214,7 @@ exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
-    '@(numba\.|nb\.)njit.*',
+    '@(numba\.|nb\.)?njit.*',
 ]
 
 [tool.ruff]

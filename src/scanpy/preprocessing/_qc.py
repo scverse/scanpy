@@ -7,13 +7,13 @@ from warnings import warn
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils import stats
 from scipy import sparse
 
 from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._utils import _get_mean_var
 
 from .._compat import CSBase, CSRBase, DaskArray, _register_union, njit
-from .._utils import _doc_params, axis_nnz, axis_sum
+from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
     doc_expr_reps,
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
+    from numpy.typing import NDArray
 
 
 def _choose_mtx_rep(adata, *, use_raw: bool = False, layer: str | None = None):
@@ -116,7 +117,7 @@ def describe_obs(  # noqa: PLR0913
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
         )
-    obs_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=1))
+    obs_metrics[f"total_{expr_type}"] = stats.sum(X, axis=1)
     if log1p:
         obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             obs_metrics[f"total_{expr_type}"]
@@ -129,8 +130,8 @@ def describe_obs(  # noqa: PLR0913
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics[f"total_{expr_type}_{qc_var}"] = np.ravel(
-            axis_sum(X[:, adata.var[qc_var].values], axis=1)
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
+            X[:, adata.var[qc_var].values], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -197,7 +198,7 @@ def describe_var(
             X.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
-        materialize_as_ndarray((axis_nnz(X, axis=0), _get_mean_var(X, axis=0)[0]))
+        materialize_as_ndarray((axis_nnz(X, axis=0), stats.mean(X, axis=0)))
     )
     if log1p:
         var_metrics[f"log1p_mean_{expr_type}"] = np.log1p(
@@ -206,7 +207,7 @@ def describe_var(
     var_metrics[f"pct_dropout_by_{expr_type}"] = (
         1 - var_metrics[f"n_cells_by_{expr_type}"] / X.shape[0]
     ) * 100
-    var_metrics[f"total_{expr_type}"] = np.ravel(axis_sum(X, axis=0))
+    var_metrics[f"total_{expr_type}"] = stats.sum(X, axis=0)
     if log1p:
         var_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             var_metrics[f"total_{expr_type}"]
@@ -350,7 +351,7 @@ def top_proportions(mtx: np.ndarray | CSBase | sparse.coo_matrix, n: int):
         if not isinstance(mtx, CSRBase):
             mtx = sparse.csr_matrix(mtx)  # noqa: TID251
         # Allowing numba to do more
-        return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
+        return top_proportions_sparse_csr(mtx, n)
     else:
         return top_proportions_dense(mtx, n)
 
@@ -368,17 +369,17 @@ def top_proportions_dense(mtx, n):
     return values
 
 
-def top_proportions_sparse_csr(data, indptr, n):
-    values = np.zeros((indptr.size - 1, n), dtype=np.float64)
-    for i in numba.prange(indptr.size - 1):
-        start, end = indptr[i], indptr[i + 1]
+def top_proportions_sparse_csr(mtx: CSRBase, n: int) -> NDArray[np.float64]:
+    values = np.zeros((mtx.indptr.size - 1, n), dtype=np.float64)
+    for i in numba.prange(mtx.indptr.size - 1):
+        start, end = mtx.indptr[i], mtx.indptr[i + 1]
         vec = np.zeros(n, dtype=np.float64)
         if end - start <= n:
-            vec[: end - start] = data[start:end]
+            vec[: end - start] = mtx.data[start:end]
             total = vec.sum()
         else:
-            vec[:] = -(np.partition(-data[start:end], n - 1)[:n])
-            total = (data[start:end]).sum()  # Is this not just vec.sum()?
+            vec[:] = -(np.partition(-mtx.data[start:end], n - 1)[:n])
+            total = (mtx.data[start:end]).sum()  # Is this not just vec.sum()?
         vec[::-1].sort()
         values[i, :] = vec.cumsum() / total
     return values

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, DaskArray, _register_union, njit, old_positionals
@@ -19,7 +20,6 @@ from .._utils import (
     view_to_actual,
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
-from ._utils import _get_mean_var
 
 # install dask if available
 try:
@@ -188,7 +188,7 @@ def scale_array(  # noqa: PLR0912
         )
         X = X.astype(float)
 
-    mean, var = _get_mean_var(X)
+    mean, var = mean_var(X, axis=0, correction=1)
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
@@ -266,7 +266,7 @@ def scale_sparse(
         if mask_obs is not None:
             mask_obs = _check_mask(X, mask_obs, "obs")
 
-    mean, var = _get_mean_var(X[mask_obs, :])
+    mean, var = mean_var(X[mask_obs, :], axis=0, correction=1)
 
     std = np.sqrt(var)
     std[std == 0] = 1

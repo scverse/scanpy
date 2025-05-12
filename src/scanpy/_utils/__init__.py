@@ -35,9 +35,8 @@ from packaging.version import Version
 from scipy import sparse
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSMatrix, _register_union
+from .._compat import CSBase, DaskArray, _register_union
 from .._settings import settings
-from .compute.is_constant import is_constant  # noqa: F401
 
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
@@ -54,7 +53,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
-    from numpy.typing import ArrayLike, DTypeLike, NDArray
+    from numpy.typing import ArrayLike, NDArray
 
     from .._compat import CSRBase
     from ..neighbors import NeighborsParams, RPForestDict
@@ -547,27 +546,6 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 
 
-@singledispatch
-def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
-    raise NotImplementedError
-
-
-@elem_mul.register(np.ndarray)
-@_register_union(elem_mul, CSBase)
-def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, CSBase):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    return x * y
-
-
-@elem_mul.register(DaskArray)
-def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
-    import dask.array as da
-
-    return da.map_blocks(elem_mul, x, y)
-
-
 if TYPE_CHECKING:
     Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
@@ -607,7 +585,7 @@ def axis_mul_or_truediv(
 @_register_union(axis_mul_or_truediv, CSBase)
 def _(
     X: CSBase,
-    scaling_array,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
@@ -735,78 +713,6 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
         meta=np.array([], dtype=np.int64),
         drop_axis=0,
         chunks=len(X.to_delayed()) * (X.chunksize[int(not axis)],),
-    )
-
-
-@overload
-def axis_sum(
-    X: _CSMatrix,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.matrix: ...
-
-
-@overload
-def axis_sum(
-    X: np.ndarray,  # TODO: or sparray
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray: ...
-
-
-@singledispatch
-def axis_sum(
-    X: np.ndarray | CSBase,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray | np.matrix:
-    return np.sum(X, axis=axis, dtype=dtype)
-
-
-@axis_sum.register(DaskArray)
-def _(
-    X: DaskArray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> DaskArray:
-    import dask.array as da
-
-    if dtype is None:
-        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
-
-    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
-        return X.sum(axis=axis, dtype=dtype)
-
-    def sum_drop_keepdims(*args, **kwargs):
-        kwargs.pop("computing_meta", None)
-        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, _CSMatrix | np.matrix) or isinstance(
-            args[0], _CSMatrix | np.matrix
-        ):
-            kwargs.pop("keepdims", None)
-            axis = kwargs["axis"]
-            if isinstance(axis, tuple):
-                if len(axis) != 1:
-                    msg = f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
-                    raise ValueError(msg)
-                kwargs["axis"] = axis[0]
-        # returns a np.matrix normally, which is undesireable
-        return np.array(np.sum(*args, dtype=dtype, **kwargs))
-
-    def aggregate_sum(*args, **kwargs):
-        return np.sum(args[0], dtype=dtype, **kwargs)
-
-    return da.reduction(
-        X,
-        sum_drop_keepdims,
-        aggregate_sum,
-        axis=axis,
-        dtype=dtype,
-        meta=np.array([], dtype=dtype),
     )
 
 

@@ -128,6 +128,10 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    fast_array_utils=(
+        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
+        None,
+    ),
     h5py=("https://docs.h5py.org/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),

@@ -15,7 +15,7 @@ from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
-from scanpy._utils import elem_mul, select_groups
+from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
@@ -130,7 +130,8 @@ def test_results_layers(array_type):
 
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
-    adata.X = elem_mul(adata.X, np.random.randint(0, 2, adata.shape, dtype=bool))
+    mask = np.random.randint(0, 2, adata.shape, dtype=bool)
+    adata.X[mask] = 0
 
     _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
