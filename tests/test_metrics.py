@@ -16,6 +16,7 @@ from scipy.sparse import csr_matrix  # noqa: TID251
 import scanpy as sc
 from scanpy.metrics import modularity, modularity_adata
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
@@ -212,9 +213,8 @@ HAS_LEIDEN = importlib.util.find_spec("leidenalg") is not None
     "mode", ["UNDIRECTED", "DIRECTED"], ids=["undirected", "directed"]
 )
 @pytest.mark.parametrize("use_sparse", [False, True], ids=["sparse", "dense"])
+@needs.igraph
 def test_modularity_sample_structure(mode, use_sparse):
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
     # 4 node adjacency matrix with two separate 2-node communities
     mat = np.array(
         [
@@ -233,9 +233,8 @@ def test_modularity_sample_structure(mode, use_sparse):
 
 
 # Test 2: Edge case when all nodes belong to the same community/cluster
+@needs.igraph
 def test_modularity_single_community():
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
     # fully connected graph sample
     adj = np.ones((4, 4)) - np.eye(4)
     labels = ["A", "A", "A", "A"]
@@ -246,9 +245,8 @@ def test_modularity_single_community():
 
 
 # Test 3: Invalad input, labels length does not match adjacency matrix size
+@needs.igraph
 def test_modularity_invalid_labels():
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
     from igraph._igraph import InternalError
 
     adj = np.eye(4)
@@ -262,13 +260,10 @@ def test_modularity_invalid_labels():
 
 # Test 4: Pass both Louvain and Leiden clustering algorithms
 @pytest.mark.parametrize("cluster_method", ["louvain", "leiden"])
+@needs.igraph
+@needs.louvain
+@needs.leidenalg
 def test_modularity_adata_multiple_clusterings(cluster_method):
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
-    if cluster_method == "louvain" and HAS_LOUVAIN is False:
-        pytest.skip("louvain is not installed")
-    if cluster_method == "leiden" and HAS_LEIDEN is False:
-        pytest.skip("leiden is not installed")
     # Loading PBMC Data and compute PCA and neighbors graph
     adata = sc.datasets.pbmc3k()
     sc.pp.pca(adata)
@@ -291,9 +286,8 @@ def test_modularity_adata_multiple_clusterings(cluster_method):
 
 
 # Test 5: Modularity should be the same no matter the order of the labels
+@needs.igraph
 def test_modularity_order():
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
     adj = np.array(
         [
             [1, 1, 0, 0],
@@ -310,9 +304,8 @@ def test_modularity_order():
 
 
 # Test 6: Modularity on disconnected graph lke edge-case behavior in some algorithms
+@needs.igraph
 def test_modularity_disconnected_graph():
-    if HAS_IGRAPH is False:
-        pytest.skip("igraph is not installed")
     adj = np.zeros((4, 4))
     labels = ["A", "B", "C", "D"]
     score = modularity(adj, labels)
