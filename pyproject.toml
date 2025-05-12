@@ -214,7 +214,7 @@ exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     # https://github.com/numba/numba/issues/4268
-    '@(numba\.|nb\.)njit.*',
+    '@(numba\.|nb\.)?njit.*',
 ]
 
 [tool.ruff]
