@@ -21,11 +21,9 @@ from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
 from ._common import (
-    _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
     _get_sparse_matrix_from_indices_distances,
 )
-from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
