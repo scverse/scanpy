@@ -82,7 +82,6 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_tabs.tabs",
-    "sphinx_search.extension",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -129,6 +128,10 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    fast_array_utils=(
+        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
+        None,
+    ),
     h5py=("https://docs.h5py.org/en/stable/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),

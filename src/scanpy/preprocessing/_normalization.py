@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
+from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
-from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
+from .._utils import axis_mul_or_truediv, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
@@ -25,25 +26,30 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _normalize_data(X, counts, after=None, *, copy: bool = False):
+def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+    """Given a 1D array of counts, compute the median of the non-zero counts."""
+    if isinstance(counts, DaskArray):
+        counts = counts.compute()
+    counts_greater_than_zero = counts[counts > 0]
+    median = np.median(counts_greater_than_zero)
+    return median
+
+
+def _normalize_data(
+    X: np.ndarray | CSBase,
+    counts: np.ndarray,
+    after: float | None = None,
+    *,
+    copy: bool = False,
+) -> np.ndarray:
+    if counts.ndim != 1:
+        msg = "counts must be a 1D array"
+        raise ValueError(msg)
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, int | np.integer):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
     if after is None:
-        if isinstance(counts, DaskArray):
-
-            def nonzero_median(x):
-                return np.ma.median(np.ma.masked_array(x, x == 0)).item()
-
-            after = da.from_delayed(
-                dask.delayed(nonzero_median)(counts),
-                shape=(),
-                meta=counts._meta,
-                dtype=counts.dtype,
-            )
-        else:
-            counts_greater_than_zero = counts[counts > 0]
-            after = np.median(counts_greater_than_zero, axis=0)
+        after = _compute_nnz_median(counts)
     counts = counts / after
     out = X if isinstance(X, np.ndarray | CSBase) else None
     return axis_mul_or_truediv(
@@ -94,8 +100,8 @@ def normalize_total(  # noqa: PLR0912, PLR0915
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`
         is `True`, `layer_norm` is not `None`, or if `key_added` is not `None`.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
@@ -215,23 +221,23 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     gene_subset = None
     msg = "normalizing counts per cell"
 
-    counts_per_cell = axis_sum(x, axis=1)
+    counts_per_cell = stats.sum(x, axis=1)
     if exclude_highly_expressed:
-        counts_per_cell = np.ravel(counts_per_cell)
-
         # at least one cell as more than max_fraction of counts per cell
-
-        gene_subset = axis_sum((x > counts_per_cell[:, None] * max_fraction), axis=0)
-        gene_subset = np.asarray(np.ravel(gene_subset) == 0)
+        hi_exp = x > counts_per_cell[:, None] * max_fraction
+        if isinstance(hi_exp, np.matrix):
+            hi_exp = hi_exp.A
+        elif isinstance(hi_exp, DaskArray) and isinstance(hi_exp._meta, np.matrix):
+            hi_exp = hi_exp.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+        gene_subset = stats.sum(hi_exp, axis=0) == 0
 
         msg += (
             ". The following highly-expressed genes are not considered during "
             f"normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}"
         )
-        counts_per_cell = axis_sum(x[:, gene_subset], axis=1)
+        counts_per_cell = stats.sum(x[:, gene_subset], axis=1)
 
     start = logg.info(msg)
-    counts_per_cell = np.ravel(counts_per_cell)
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):

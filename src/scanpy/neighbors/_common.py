@@ -4,9 +4,8 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import numpy as np
+from fast_array_utils.stats import is_constant
 from scipy import sparse
-
-from .._utils.compute.is_constant import is_constant
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

@@ -125,22 +125,23 @@ def test_clip(zero_center):
 
 
 @pytest.mark.parametrize(
-    ("mask_obs", "X", "X_scaled", "X_clipped"),
+    ("mask_obs", "x", "x_scaled", "x_clipped"),
     [
-        (None, X_original, X_scaled_original, X_scaled_original_clipped),
-        (
+        pytest.param(
+            None, X_original, X_scaled_original, X_scaled_original_clipped, id="no_mask"
+        ),
+        pytest.param(
             np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool),
             X_for_mask,
             X_scaled_for_mask,
             X_scaled_for_mask_clipped,
+            id="mask",
         ),
     ],
 )
-def test_scale_sparse(*, mask_obs, X, X_scaled, X_clipped):
-    adata0 = AnnData(sparse.csr_matrix(X).astype(np.float32))  # noqa: TID251
-    sc.pp.scale(adata0, mask_obs=mask_obs, zero_center=False)
-    assert np.allclose(sparse.csr_matrix(adata0.X).toarray(), X_scaled)  # noqa: TID251
-    # test scaling with explicit zero_center == True
-    adata1 = AnnData(sparse.csr_matrix(X).astype(np.float32))  # noqa: TID251
-    sc.pp.scale(adata1, zero_center=False, mask_obs=mask_obs, max_value=1)
-    assert np.allclose(sparse.csr_matrix(adata1.X).toarray(), X_clipped)  # noqa: TID251
+@pytest.mark.parametrize("clip", [False, True], ids=["no_clip", "clip"])
+def test_scale_sparse(*, mask_obs, x, x_scaled, x_clipped, clip):
+    max_value, expected = (1, x_clipped) if clip else (None, x_scaled)
+    adata = AnnData(sparse.csr_matrix(x).astype(np.float32))  # noqa: TID251
+    sc.pp.scale(adata, mask_obs=mask_obs, zero_center=False, max_value=max_value)
+    assert np.allclose(sparse.csr_matrix(adata.X).toarray(), expected)  # noqa: TID251
