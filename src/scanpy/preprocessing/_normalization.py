@@ -9,7 +9,7 @@ from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
-from .._utils import axis_mul_or_truediv, view_to_actual
+from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
@@ -224,11 +224,7 @@ def normalize_total(  # noqa: PLR0912, PLR0915
     counts_per_cell = stats.sum(x, axis=1)
     if exclude_highly_expressed:
         # at least one cell as more than max_fraction of counts per cell
-        hi_exp = x > counts_per_cell[:, None] * max_fraction
-        if isinstance(hi_exp, np.matrix):
-            hi_exp = hi_exp.A
-        elif isinstance(hi_exp, DaskArray) and isinstance(hi_exp._meta, np.matrix):
-            hi_exp = hi_exp.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+        hi_exp = dematrix(x > counts_per_cell[:, None] * max_fraction)
         gene_subset = stats.sum(hi_exp, axis=0) == 0
 
         msg += (

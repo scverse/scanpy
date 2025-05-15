@@ -15,6 +15,7 @@ from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
 from .._utils import (
     _check_array_function_arguments,
     axis_mul_or_truediv,
+    dematrix,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
     view_to_actual,
@@ -202,6 +203,7 @@ def scale_array(
             msg = "zero-centering a sparse array/matrix densifies it."
             warnings.warn(msg, UserWarning, stacklevel=2)
         x -= mean
+        x = dematrix(x)
 
     x = axis_mul_or_truediv(
         x,
