@@ -12,7 +12,7 @@ from packaging.version import Version
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import _choose_graph
+from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -203,9 +203,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         indices = cudf.Series(adjacency.indices)
         if use_weights:
             sources, targets = adjacency.nonzero()
-            weights = adjacency[sources, targets]
-            if isinstance(weights, np.matrix):
-                weights = weights.A1
+            weights = dematrix(adjacency[sources, targets]).ravel()
             weights = cudf.Series(weights)
         else:
             weights = None
