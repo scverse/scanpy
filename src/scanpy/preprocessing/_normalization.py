@@ -8,7 +8,7 @@ import numpy as np
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
-from .._utils import axis_mul_or_truediv, axis_sum, view_to_actual
+from .._utils import axis_mul_or_truediv, axis_sum, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:
@@ -216,9 +216,8 @@ def normalize_total(  # noqa: PLR0912, PLR0915
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
-
-        gene_subset = axis_sum((x > counts_per_cell[:, None] * max_fraction), axis=0)
-        gene_subset = np.asarray(np.ravel(gene_subset) == 0)
+        hi_exp = dematrix(x > counts_per_cell[:, None] * max_fraction)
+        gene_subset = axis_sum(hi_exp, axis=0) == 0
 
         msg += (
             ". The following highly-expressed genes are not considered during "
