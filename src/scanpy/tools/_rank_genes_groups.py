@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
@@ -18,7 +19,6 @@ from .._utils import (
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask
-from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -214,8 +214,8 @@ class _RankGenes:
         else:
             mask_rest = self.groups_masks_obs[self.ireference]
             X_rest = self.X[mask_rest]
-            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
-                X_rest
+            self.means[self.ireference], self.vars[self.ireference] = mean_var(
+                X_rest, axis=0, correction=1
             )
             # deleting the next line causes a memory leak for some reason
             del X_rest
@@ -234,7 +234,9 @@ class _RankGenes:
             if self.ireference is not None and group_index == self.ireference:
                 continue
 
-            self.means[group_index], self.vars[group_index] = _get_mean_var(X_mask)
+            self.means[group_index], self.vars[group_index] = mean_var(
+                X_mask, axis=0, correction=1
+            )
 
             if self.ireference is None:
                 mask_rest = ~mask_obs
@@ -242,7 +244,7 @@ class _RankGenes:
                 (
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
-                ) = _get_mean_var(X_rest)
+                ) = mean_var(X_rest, axis=0, correction=1)
                 # this can be costly for sparse data
                 if self.comp_pts:
                     self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]

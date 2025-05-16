@@ -5,11 +5,11 @@ import pandas as pd
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
+from fast_array_utils import stats
 from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray
-from scanpy._utils import axis_sum
 from scanpy.preprocessing._qc import (
     describe_obs,
     describe_var,
@@ -103,7 +103,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         else adata_prepared.X
     )
     max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.coo_matrix):
+    if isinstance(max_X, sparse.coo_matrix | sparse.coo_array):
         max_X = max_X.toarray()
     elif isinstance(max_X, DaskArray):
         max_X = max_X.compute()
@@ -113,8 +113,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         >= adata_prepared.obs["log1p_n_genes_by_counts"]
     ).all()
     assert (
-        adata_prepared.obs["total_counts"]
-        == np.ravel(axis_sum(adata_prepared.X, axis=1))
+        adata_prepared.obs["total_counts"] == stats.sum(adata_prepared.X, axis=1)
     ).all()
     assert (
         adata_prepared.obs["total_counts"] >= adata_prepared.obs["log1p_total_counts"]

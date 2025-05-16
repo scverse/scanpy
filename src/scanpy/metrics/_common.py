@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, ClassVar, overload
 
 import numpy as np
 import pandas as pd
-from scipy import sparse
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname
 
@@ -108,7 +107,11 @@ def _(
 
 @_resolve_vals.register(SpBase)
 def _(val: SpBase) -> CSRBase:
-    return sparse.csr_matrix(val)  # noqa: TID251
+    if TYPE_CHECKING:
+        from scipy.sparse._base import _spbase
+
+        assert isinstance(val, _spbase)
+    return val.tocsr()
 
 
 @_resolve_vals.register(pd.DataFrame)
@@ -127,7 +130,7 @@ def _vals_heterogeneous(
     For details on why this is neccesary, see:
     https://github.com/scverse/scanpy/issues/1806
     """
-    from scanpy._utils import is_constant
+    from fast_array_utils.stats import is_constant
 
     full_result = np.empty(vals.shape[0], dtype=np.float64)
     full_result.fill(np.nan)

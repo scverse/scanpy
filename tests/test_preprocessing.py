@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from importlib.util import find_spec
-from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,8 +21,8 @@ from testing.scanpy._helpers import (
     check_rep_results,
     maybe_dask_process_context,
 )
-from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -73,56 +72,6 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_mean_var(array_type):
-    pbmc = pbmc3k()
-    pbmc.X = array_type(pbmc.X)
-
-    true_mean = np.mean(asarray(pbmc.X), axis=0)
-    true_var = np.var(asarray(pbmc.X), axis=0, dtype=np.float64, ddof=1)
-
-    means, variances = sc.pp._utils._get_mean_var(pbmc.X)
-
-    np.testing.assert_allclose(true_mean, means)
-    np.testing.assert_allclose(true_var, variances)
-
-
-def test_mean_var_sparse():
-    from sklearn.utils.sparsefuncs import mean_variance_axis
-
-    csr64 = sparse.random(10000, 1000, format="csr", dtype=np.float64)
-    csc64 = csr64.tocsc()
-
-    # Test that we're equivalent for 64 bit
-    for mtx, ax in product((csr64, csc64), (0, 1)):
-        scm, scv = sc.pp._utils._get_mean_var(mtx, axis=ax)
-        skm, skv = mean_variance_axis(mtx, ax)
-        skv *= mtx.shape[ax] / (mtx.shape[ax] - 1)
-
-        assert np.allclose(scm, skm)
-        assert np.allclose(scv, skv)
-
-    csr32 = csr64.astype(np.float32)
-    csc32 = csc64.astype(np.float32)
-
-    # Test whether ours is more accurate for 32 bit
-    for mtx32, mtx64 in [(csc32, csc64), (csr32, csr64)]:
-        scm32, scv32 = sc.pp._utils._get_mean_var(mtx32)
-        scm64, scv64 = sc.pp._utils._get_mean_var(mtx64)
-        skm32, skv32 = mean_variance_axis(mtx32, 0)
-        skm64, skv64 = mean_variance_axis(mtx64, 0)
-        skv32 *= mtx.shape[0] / (mtx.shape[0] - 1)
-        skv64 *= mtx.shape[0] / (mtx.shape[0] - 1)
-
-        m_resid_sc = np.mean(np.abs(scm64 - scm32))
-        m_resid_sk = np.mean(np.abs(skm64 - skm32))
-        v_resid_sc = np.mean(np.abs(scv64 - scv32))
-        v_resid_sk = np.mean(np.abs(skv64 - skv32))
-
-        assert m_resid_sc < m_resid_sk
-        assert v_resid_sc < v_resid_sk
 
 
 def test_normalize_per_cell():
@@ -321,18 +270,13 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
-ARRAY_TYPES_DASK_SPARSE = [
-    a for a in ARRAY_TYPES if "sparse" in a.id and "dask" in a.id
-]
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK_SPARSE)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
 def test_scale_zero_center_warns_dask_sparse(array_type):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match="zero-center being used with `DaskArray`*"):
+    with pytest.warns(UserWarning, match="zero-center.*sparse"):
         sc.pp.scale(adata_casted)
     sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
@@ -670,17 +614,3 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
-
-
-@pytest.mark.parametrize(
-    "array_type",
-    [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix],  # noqa: TID251
-)
-@pytest.mark.parametrize("order", ["C", "F"])
-def test_todense(array_type, order):
-    x_org = np.array([[0, 1, 2], [3, 0, 4]])
-    x_sparse = array_type(x_org)
-    x_dense = sc.pp._utils._to_dense(x_sparse, order=order)
-    np.testing.assert_array_equal(x_dense, x_org)
-    assert x_dense.flags["C_CONTIGUOUS"] == (order == "C")
-    assert x_dense.flags["F_CONTIGUOUS"] == (order == "F")
