@@ -15,25 +15,24 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = [  ]
-features = [ "dev", "test", "dask-ml" ]
+features = [ "dev", "test" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
-    { if = [ "min" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
+    { if = [ "min-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-vers.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
-    { if = [ "min" ], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
+    { if = [
+        "min-vers",
+    ], value = "uv run ci/scripts/min-vers.py pyproject.toml --all-extras -o ci/scanpy-min-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "min" ], value = "3.11" },
-    { if = [ "stable", "full", "pre" ], value = "3.13" },
-]
-overrides.matrix.deps.features = [
-    { if = [ "full" ], value = "test-full" },
+    { if = [ "min-vers" ], value = "3.11" },
+    { if = [ "stable", "pre" ], value = "3.13" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
 ]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "full", "pre", "min" ]
+deps = [ "stable", "pre", "min-vers" ]
