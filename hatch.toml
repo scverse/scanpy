@@ -15,7 +15,7 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = [  ]
-features = [ "dev", "test" ]
+features = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
@@ -33,6 +33,9 @@ overrides.matrix.deps.python = [
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
 ]
+overrides.matrix.deps.features = [
+    { if = [ "stable", "pre", "min-vers" ], value = "test" },
+]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "pre", "min-vers" ]
+deps = [ "stable", "pre", "min-vers", "min-extras" ]
