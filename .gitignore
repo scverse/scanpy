@@ -9,6 +9,10 @@
 /docs/api/generated
 /docs/external/generated
 /docs/jupyter_execute
+cluster tree demo figure.pptx
+mytest.py
+_cluster_tree_standelone.py
+expected.png
 
 # tests
 /*cache/
@@ -45,3 +49,5 @@ Thumbs.db
 # asv benchmark files
 /benchmarks/.asv
 /benchmarks/data/
+myenv/
+test.py
