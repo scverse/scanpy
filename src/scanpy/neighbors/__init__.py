@@ -31,7 +31,7 @@ from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
-    from typing import Any, Literal, NotRequired
+    from typing import Any, Literal, NotRequired, Unpack
 
     from anndata import AnnData
     from igraph import Graph
@@ -58,6 +58,13 @@ class KwdsForTransformer(TypedDict):
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
     random_state: _LegacyRandom
+
+
+class NeighborsDict(TypedDict):  # noqa: D101
+    connectivities_key: str
+    distances_key: str
+    params: NeighborsParams
+    rp_forest: NotRequired[RPForestDict]
 
 
 class NeighborsParams(TypedDict):  # noqa: D101
@@ -138,6 +145,7 @@ def neighbors(  # noqa: PLR0913
                Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
+        If `distances` is given, this parameter is simply stored in `.uns` (see below).
 
         *ignored if ``transformer`` is an instance.*
     metric_kwds
@@ -190,12 +198,15 @@ def neighbors(  # noqa: PLR0913
 
     """
     if distances is not None:
-        # Added this to support the new distance matrix function
+        if callable(metric):
+            msg = "`metric` must be a string if `distances` is given."
+            raise TypeError(msg)
         # if a precomputed distance matrix is provided, skip the PCA and distance computation
         return neighbors_from_distance(
             adata,
             distances,
             n_neighbors=n_neighbors,
+            metric=metric,
             method=method,
         )
     start = logg.info("computing neighbors")
@@ -215,46 +226,31 @@ def neighbors(  # noqa: PLR0913
         random_state=random_state,
     )
 
-    if key_added is None:
-        key_added = "neighbors"
-        conns_key = "connectivities"
-        dists_key = "distances"
-    else:
-        conns_key = key_added + "_connectivities"
-        dists_key = key_added + "_distances"
-
-    adata.uns[key_added] = {}
-
-    neighbors_dict = adata.uns[key_added]
-
-    neighbors_dict["connectivities_key"] = conns_key
-    neighbors_dict["distances_key"] = dists_key
-
-    neighbors_dict["params"] = NeighborsParams(
+    key_added, neighbors_dict = _get_metadata(
+        key_added,
         n_neighbors=neighbors.n_neighbors,
         method=method,
         random_state=random_state,
         metric=metric,
+        **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
+        **({} if use_rep is None else dict(use_rep=use_rep)),
+        **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
-    if metric_kwds:
-        neighbors_dict["params"]["metric_kwds"] = metric_kwds
-    if use_rep is not None:
-        neighbors_dict["params"]["use_rep"] = use_rep
-    if n_pcs is not None:
-        neighbors_dict["params"]["n_pcs"] = n_pcs
-
-    adata.obsp[dists_key] = neighbors.distances
-    adata.obsp[conns_key] = neighbors.connectivities
 
     if neighbors.rp_forest is not None:
         neighbors_dict["rp_forest"] = neighbors.rp_forest
+
+    adata.uns[key_added] = neighbors_dict
+    adata.obsp[neighbors_dict["distances_key"]] = neighbors.distances
+    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors.connectivities
+
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"added to `.uns[{key_added!r}]`\n"
-            f"    `.obsp[{dists_key!r}]`, distances for each pair of neighbors\n"
-            f"    `.obsp[{conns_key!r}]`, weighted adjacency matrix"
+            f"    `.obsp[{neighbors_dict['distances_key']!r}]`, distances for each pair of neighbors\n"
+            f"    `.obsp[{neighbors_dict['connectivities_key']!r}]`, weighted adjacency matrix"
         ),
     )
     return adata if copy else None
@@ -265,6 +261,7 @@ def neighbors_from_distance(
     distances: np.ndarray | SpBase,
     *,
     n_neighbors: int = 15,
+    metric: _Metric = "euclidean",
     method: _Method = "umap",  # default to umap
     key_added: str | None = None,
 ) -> AnnData:
@@ -298,61 +295,57 @@ def neighbors_from_distance(
         distances = sparse.csr_matrix(distances)  # noqa: TID251
         distances.setdiag(0)
         distances.eliminate_zeros()
-        # extracting for each observation the indices and distances of the n_neighbors
-        # being then used by umap or gauss
-        knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-            distances, n_neighbors
-        )
     else:
-        # if it is dense, converting it to ndarray
-        # and setting the diagonal to 0
-        # extracting knn indices and distances
         distances = np.asarray(distances)
         np.fill_diagonal(distances, 0)
-        knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-            distances, n_neighbors
-        )
 
     if method == "umap":
-        # using umap to build connectivities from distances
+        if isinstance(distances, CSRBase):
+            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
+                distances, n_neighbors
+            )
+        else:
+            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
+                distances, n_neighbors
+            )
         connectivities = umap(
-            knn_indices,
-            knn_distances,
-            n_obs=adata.n_obs,
-            n_neighbors=n_neighbors,
+            knn_indices, knn_distances, n_obs=adata.n_obs, n_neighbors=n_neighbors
         )
     elif method == "gauss":
-        # using gauss to build connectivities from distances
-        # requires sparse matrix for efficiency
-        connectivities = _connectivity.gauss(
-            sparse.csr_matrix(distances),  # noqa: TID251
-            n_neighbors,
-            knn=True,
-        )
+        distances = sparse.csr_matrix(distances)  # noqa: TID251
+        connectivities = _connectivity.gauss(distances, n_neighbors, knn=True)
     else:
         msg = f"Method {method} not implemented."
         raise NotImplementedError(msg)
-    # defining where to store graph info
-    key = "neighbors" if key_added is None else key_added
-    dists_key = "distances" if key_added is None else key_added + "_distances"
-    conns_key = "connectivities" if key_added is None else key_added + "_connectivities"
-    # storing the actual distance and connectivitiy matrices as obsp
-    adata.obsp[dists_key] = sparse.csr_matrix(distances)  # noqa: TID251
-    adata.obsp[conns_key] = connectivities
-    # populating with metadata describing how neighbors were computed
-    # I think might be important as many functions downstream rely
-    # on .uns['neighbors'] to find correct .obsp key
-    adata.uns[key] = {
-        "connectivities_key": "connectivities",
-        "distances_key": "distances",
-        "params": {
-            "n_neighbors": n_neighbors,
-            "method": method,
-            "random_state": 0,
-            "metric": "euclidean",
-        },
-    }
+
+    key_added, neighbors_dict = _get_metadata(
+        key_added,
+        n_neighbors=n_neighbors,
+        method=method,
+        random_state=0,
+        metric=metric,
+    )
+    adata.uns[key_added] = neighbors_dict
+    adata.obsp[neighbors_dict["distances_key"]] = distances
+    adata.obsp[neighbors_dict["connectivities_key"]] = connectivities
     return adata
+
+
+def _get_metadata(
+    key_added: str | None,
+    **params: Unpack[NeighborsParams],
+) -> tuple[str, NeighborsDict]:
+    if key_added is None:
+        return "neighbors", NeighborsDict(
+            connectivities_key="connectivities",
+            distances_key="distances",
+            params=params,
+        )
+    return key_added, NeighborsDict(
+        connectivities_key=f"{key_added}_connectivities",
+        distances_key=f"{key_added}_distances",
+        params=params,
+    )
 
 
 class FlatTree(NamedTuple):  # noqa: D101
