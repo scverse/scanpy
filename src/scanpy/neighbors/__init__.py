@@ -74,7 +74,6 @@ def neighbors(  # noqa: PLR0913
     n_neighbors: int = 15,
     n_pcs: int | None = None,
     *,
-    distance_matrix: np.ndarray | None = None,
     use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
@@ -187,13 +186,6 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
-    # if distance_matrix is not None:
-    #     return neighbors_from_distance(
-    #         adata,
-    #         distance_matrix,
-    #         n_neighbors=n_neighbors,
-    #         method=method,
-    #     )
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
     if adata.is_view:  # we shouldn't need this here...
