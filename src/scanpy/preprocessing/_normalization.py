@@ -9,8 +9,7 @@ import numpy as np
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
-from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
+from .._utils import axis_mul_or_truediv, dematrix, njit, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 try:

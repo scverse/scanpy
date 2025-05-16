@@ -4,6 +4,7 @@ import numpy as np
 from scipy import sparse
 
 from ..._compat import CSBase, old_positionals
+from ..._utils import dematrix
 
 
 @old_positionals("max_fraction", "mult_with_mean")
@@ -39,15 +40,11 @@ def normalize_per_cell_weinreb16_deprecated(
         msg = "Choose max_fraction between 0 and 1."
         raise ValueError(msg)
 
-    counts_per_cell = x.sum(1)
-    if isinstance(counts_per_cell, np.matrix):
-        counts_per_cell = counts_per_cell.A1
-    gene_subset = np.all(x <= counts_per_cell[:, None] * max_fraction, axis=0)
-    if isinstance(gene_subset, np.matrix):
-        gene_subset = gene_subset.A1
-    tc_include = x[:, gene_subset].sum(1)
-    if isinstance(tc_include, np.matrix):
-        tc_include = tc_include.A1
+    counts_per_cell = dematrix(x.sum(1)).ravel()
+    gene_subset = dematrix(
+        np.all(x <= counts_per_cell[:, None] * max_fraction, axis=0)
+    ).ravel()
+    tc_include = dematrix(x[:, gene_subset].sum(1)).ravel()
 
     x_norm = (
         x.multiply(sparse.csr_matrix(1 / tc_include[:, None]))  # noqa: TID251
