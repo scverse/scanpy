@@ -9,7 +9,7 @@ import numpy as np
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -35,9 +35,7 @@ def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
 
 @njit
 def _normalize_csr(
-    indptr,
-    indices,
-    data,
+    mat: CSRBase,
     *,
     rows,
     columns,
@@ -46,11 +44,11 @@ def _normalize_csr(
     n_threads: int = 10,
 ):
     """For sparse CSR matrix, compute the normalization factors."""
-    counts_per_cell = np.zeros(rows, dtype=data.dtype)
+    counts_per_cell = np.zeros(rows, dtype=mat.data.dtype)
     for i in numba.prange(rows):
         count = 0.0
-        for j in range(indptr[i], indptr[i + 1]):
-            count += data[j]
+        for j in range(mat.indptr[i], mat.indptr[i + 1]):
+            count += mat.data[j]
         counts_per_cell[i] = count
     if exclude_highly_expressed:
         counts_per_cols_t = np.zeros((n_threads, columns), dtype=np.int32)
@@ -58,18 +56,18 @@ def _normalize_csr(
 
         for i in numba.prange(n_threads):
             for r in range(i, rows, n_threads):
-                for j in range(indptr[r], indptr[r + 1]):
-                    if data[j] > max_fraction * counts_per_cell[r]:
-                        minor_index = indices[j]
+                for j in range(mat.indptr[r], mat.indptr[r + 1]):
+                    if mat.data[j] > max_fraction * counts_per_cell[r]:
+                        minor_index = mat.indices[j]
                         counts_per_cols_t[i, minor_index] += 1
         for c in numba.prange(columns):
             counts_per_cols[c] = counts_per_cols_t[:, c].sum()
 
         for i in numba.prange(rows):
             count = 0.0
-            for j in range(indptr[i], indptr[i + 1]):
-                if counts_per_cols[indices[j]] == 0:
-                    count += data[j]
+            for j in range(mat.indptr[i], mat.indptr[i + 1]):
+                if counts_per_cols[mat.indices[j]] == 0:
+                    count += mat.data[j]
             counts_per_cell[i] = count
 
     return counts_per_cell, counts_per_cols
@@ -100,12 +98,10 @@ def _normalize_total_helper(
     """
     gene_subset = None
     counts_per_cell = None
-    if isinstance(x, CSBase):
+    if isinstance(x, CSRBase):
         n_threads = numba.get_num_threads()
         counts_per_cell, counts_per_cols = _normalize_csr(
-            x.indptr,
-            x.indices,
-            x.data,
+            x,
             rows=x.shape[0],
             columns=x.shape[1],
             exclude_highly_expressed=exclude_highly_expressed,
