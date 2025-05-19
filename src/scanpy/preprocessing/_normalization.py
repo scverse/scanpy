@@ -119,13 +119,11 @@ def _normalize_total_helper(
     else:
         counts_per_cell = stats.sum(x, axis=1)
         if exclude_highly_expressed:
-            counts_per_cell = np.ravel(counts_per_cell)
             # at least one cell as more than max_fraction of counts per cell
             hi_exp = dematrix(x > counts_per_cell[:, None] * max_fraction)
             gene_subset = stats.sum(hi_exp, axis=0) == 0
 
             counts_per_cell = stats.sum(x[:, gene_subset], axis=1)
-        counts_per_cell = np.ravel(counts_per_cell)
         if target_sum is None:
             target_sum = _compute_nnz_median(counts_per_cell)
 
@@ -134,7 +132,6 @@ def _normalize_total_helper(
     X = axis_mul_or_truediv(
         x, counts_per_cell, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
-
     return X, counts_per_cell, gene_subset
 
 
