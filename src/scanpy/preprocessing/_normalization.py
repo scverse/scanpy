@@ -275,6 +275,7 @@ def normalize_total(  # noqa: PLR0912
         raise ValueError(msg)
     if isinstance(x, CSCBase):
         x = x.tocsr()
+        x = x.astype(np.float64)
     if not inplace:
         x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
