@@ -108,7 +108,8 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
         ),
         (n_sim, adata.n_obs),
     )
-    X = I @ adata.layers["raw"]
+    # maintain data type, just like the real scrublet function.
+    X = (I @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
         X,
         var=pd.DataFrame(index=adata.var_names),
