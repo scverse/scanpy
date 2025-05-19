@@ -292,6 +292,12 @@ def normalize_total(  # noqa: PLR0912
         target_sum=target_sum,
     )
 
+    if exclude_highly_expressed:
+        logg.info(
+            "The following highly-expressed genes are not considered during normalization factor computation:\n"
+            f"{adata.var_names[~gene_subset].tolist()}"
+        )
+
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning, stacklevel=2)
@@ -318,3 +324,4 @@ def normalize_total(  # noqa: PLR0912
         return adata
     elif not inplace:
         return dat
+    return None
