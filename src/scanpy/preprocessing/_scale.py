@@ -146,7 +146,8 @@ def scale(
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
-@scale.register(CSBase)
+@scale.register(CSRBase)
+@scale.register(CSCBase)
 def scale_array(
     x: _A,
     *,
