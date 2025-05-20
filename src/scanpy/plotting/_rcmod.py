@@ -14,7 +14,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
 
     Call this through `settings.set_figure_params`.
     """
-
     # figure
     rcParams["figure.figsize"] = (4, 4)
     rcParams["figure.subplot.left"] = 0.18
@@ -34,7 +33,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
         "Bitstream Vera Sans",
         "sans-serif",
     ]
-    fontsize = fontsize
     rcParams["font.size"] = fontsize
     rcParams["legend.fontsize"] = 0.92 * fontsize
     rcParams["axes.titlesize"] = fontsize

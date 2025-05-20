@@ -8,17 +8,16 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp_sparse
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
-from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def _highly_variable_genes_seurat_v3(
+def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     flavor: str = "seurat_v3",
@@ -38,8 +37,7 @@ def _highly_variable_genes_seurat_v3(
     subset: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    See `highly_variable_genes`.
+    """See `highly_variable_genes`.
 
     For further implementation details see https://www.overleaf.com/read/ckptrbgzzzpg
 
@@ -60,13 +58,13 @@ def _highly_variable_genes_seurat_v3(
         Rank of the gene according to normalized variance, median rank in the case of multiple batches.
     highly_variable_nbatches : :class:`int`
         If batch_key is given, this denotes in how many batches genes are detected as HVG.
-    """
 
+    """
     try:
         from skmisc.loess import loess
-    except ImportError:
+    except ImportError as e:
         msg = "Please install skmisc package via `pip install --user scikit-misc"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
 
@@ -74,9 +72,10 @@ def _highly_variable_genes_seurat_v3(
         warnings.warn(
             f"`{flavor=!r}` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
 
-    df["means"], df["variances"] = _get_mean_var(data)
+    df["means"], df["variances"] = mean_var(data, axis=0, correction=1)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -87,7 +86,7 @@ def _highly_variable_genes_seurat_v3(
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
-        mean, var = _get_mean_var(data_batch)
+        mean, var = mean_var(data_batch, axis=0, correction=1)
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -102,12 +101,8 @@ def _highly_variable_genes_seurat_v3(
         N = data_batch.shape[0]
         vmax = np.sqrt(N)
         clip_val = reg_std * vmax + mean
-        if sp_sparse.issparse(data_batch):
-            if isinstance(data_batch, sp_sparse.csr_matrix):
-                batch_counts = data_batch
-            else:
-                batch_counts = sp_sparse.csr_matrix(data_batch)
-
+        if isinstance(data_batch, CSBase):
+            batch_counts = data_batch.tocsr()
             squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
                 batch_counts.indices,
                 batch_counts.data,
@@ -249,7 +244,8 @@ class _Cutoffs:
         }
         if {k: v for k, v in locals().items() if k in cutoffs} != defaults:
             msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-            warnings.warn(msg, UserWarning)
+            # 3: caller -> 2: `highly_variable_genes` -> 1: here
+            warnings.warn(msg, UserWarning, stacklevel=3)
         return n_top_genes
 
     def in_bounds(
@@ -273,13 +269,13 @@ def _highly_variable_genes_single_batch(
     n_bins: int = 20,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
 ) -> pd.DataFrame:
-    """\
-    See `highly_variable_genes`.
+    """See `highly_variable_genes`.
 
     Returns
     -------
     A DataFrame that contains the columns
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
+
     """
     X = _get_obs_rep(adata, layer=layer)
 
@@ -297,7 +293,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = materialize_as_ndarray(_get_mean_var(X))
+    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -307,7 +303,9 @@ def _highly_variable_genes_single_batch(
         mean = np.log1p(mean)
 
     # all of the following quantities are "per-gene" here
-    df = pd.DataFrame(dict(zip(["means", "dispersions"], (mean, dispersion))))
+    df = pd.DataFrame(
+        dict(zip(["means", "dispersions"], (mean, dispersion), strict=True))
+    )
     df["mean_bin"] = _get_mean_bins(df["means"], flavor, n_bins)
     disp_stats = _get_disp_stats(df, flavor)
 
@@ -412,7 +410,8 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
     x = x[~np.isnan(x)]
     if n > x.size:
         msg = "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions."
-        warnings.warn(msg, UserWarning)
+        # 5: caller -> 4: `highly_variable_genes` -> 3: `_…_single_batch` -> 2: `_subset_genes` -> 1: here
+        warnings.warn(msg, UserWarning, stacklevel=5)
         n = x.size
     if isinstance(x, DaskArray):
         return x.topk(n)[-1]
@@ -516,7 +515,7 @@ def _highly_variable_genes_batched(
     "batch_key",
     "check_values",
 )
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     layer: str | None = None,
@@ -533,8 +532,7 @@ def highly_variable_genes(
     batch_key: str | None = None,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
+    """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
     Expects logarithmized data, except when `flavor='seurat_v3'`/`'seurat_v3_paper'`, in which count
     data is expected.
@@ -644,8 +642,8 @@ def highly_variable_genes(
     Notes
     -----
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
-    """
 
+    """
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):
@@ -658,7 +656,7 @@ def highly_variable_genes(
     if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:
             sig = signature(_highly_variable_genes_seurat_v3)
-            n_top_genes = cast(int, sig.parameters["n_top_genes"].default)
+            n_top_genes = cast("int", sig.parameters["n_top_genes"].default)
         return _highly_variable_genes_seurat_v3(
             adata,
             flavor=flavor,

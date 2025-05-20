@@ -155,7 +155,7 @@ def test_enumerated_palettes(request, adata, tmp_path, plotfunc):
     base_name = request.node.name
 
     categories = adata.obs["label"].cat.categories
-    colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12)))
+    colors_rgb = dict(zip(categories, sns.color_palette(n_colors=12), strict=False))
 
     dict_pth = tmp_path / f"rgbdict_{base_name}.png"
     list_pth = tmp_path / f"rgblist_{base_name}.png"
@@ -190,7 +190,7 @@ def test_dimension_broadcasting(adata, tmp_path, check_same_image):
     plt.savefig(color_pth, dpi=40)
     plt.close()
 
-    check_same_image(dims_pth, color_pth, tol=5)
+    check_same_image(dims_pth, color_pth, tol=5, root=tmp_path)
 
 
 def test_marker_broadcasting(adata, tmp_path, check_same_image):
@@ -210,7 +210,7 @@ def test_marker_broadcasting(adata, tmp_path, check_same_image):
     plt.savefig(color_pth, dpi=40)
     plt.close()
 
-    check_same_image(dims_pth, color_pth, tol=5)
+    check_same_image(dims_pth, color_pth, tol=5, root=tmp_path)
 
 
 def test_dimensions_same_as_components(adata, tmp_path, check_same_image):
@@ -240,7 +240,7 @@ def test_dimensions_same_as_components(adata, tmp_path, check_same_image):
     plt.savefig(dims_pth, dpi=40)
     plt.close()
 
-    check_same_image(dims_pth, comp_pth, tol=5)
+    check_same_image(dims_pth, comp_pth, tol=5, root=tmp_path)
 
 
 def test_embedding_colorbar_location(image_comparer):

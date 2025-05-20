@@ -13,14 +13,13 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import CSBase, old_positionals
 from ..._settings import settings
 from .. import _utils
 from .._utils import matrix
@@ -31,9 +30,9 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
-    from scipy.sparse import spmatrix
 
-    from ..._compat import _LegacyRandom
+    from ..._compat import SpBase
+    from ..._utils.random import _LegacyRandom
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
@@ -63,7 +62,7 @@ if TYPE_CHECKING:
     "title_graph",
     "groups_graph",
 )
-def paga_compare(
+def paga_compare(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     basis=None,
     *,
@@ -91,8 +90,7 @@ def paga_compare(
     pos=None,
     **paga_graph_params,
 ):
-    """\
-    Scatter and PAGA graph side-by-side.
+    """Scatter and PAGA graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
     :func:`~scanpy.pl.paga` for all related parameters.
@@ -114,6 +112,7 @@ def paga_compare(
     Returns
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
+
     """
     axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
@@ -207,8 +206,8 @@ def paga_compare(
     return axs
 
 
-def _compute_pos(
-    adjacency_solid: spmatrix | np.ndarray,
+def _compute_pos(  # noqa: PLR0912
+    adjacency_solid: SpBase | np.ndarray,
     *,
     layout: _Layout | None = None,
     random_state: _LegacyRandom = 0,
@@ -300,7 +299,7 @@ def _compute_pos(
     "node_size_scale",
     # 17 positionals are enough for backwards compat
 )
-def paga(
+def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
     threshold: float | None = None,
@@ -344,8 +343,7 @@ def paga(
     save: bool | str | None = None,
     ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
-    """\
-    Plot the PAGA graph through thresholding low-connectivity edges.
+    r"""Plot the PAGA graph through thresholding low-connectivity edges.
 
     Compute a coarse-grained layout of the data. Reuse this by passing
     `init_pos='paga'` to :func:`~scanpy.tl.umap` or
@@ -456,7 +454,7 @@ def paga(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
         A matplotlib axes object.
 
@@ -491,13 +489,13 @@ def paga(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.paga
     pl.paga_compare
     pl.paga_path
-    """
 
+    """
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning("`groups` is deprecated in `pl.paga`: use `labels` instead")
@@ -528,11 +526,11 @@ def paga(
         labels = [labels for _ in range(len(colors))]
 
     if title is None and len(colors) > 1:
-        title = [c for c in colors]
+        title = list(colors)
     elif isinstance(title, str):
-        title = [title for c in colors]
+        title = [title] * len(colors)
     elif title is None:
-        title = [None for c in colors]
+        title = [None] * len(colors)
 
     if colorbar is None:
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names
@@ -659,7 +657,7 @@ def paga(
     return axs
 
 
-def _paga_graph(
+def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     adata,
     ax,
     *,
@@ -771,7 +769,7 @@ def _paga_graph(
     if isinstance(colors, str) and colors in var_names:
         x_color = []
         cats = adata.obs[groups_key].cat.categories
-        for icat, cat in enumerate(cats):
+        for cat in cats:
             subset = (cat == adata.obs[groups_key]).values
             if adata.raw is not None and use_raw:
                 adata_gene = adata.raw[:, colors]
@@ -788,7 +786,7 @@ def _paga_graph(
     ):
         x_color = []
         cats = adata.obs[groups_key].cat.categories
-        for icat, cat in enumerate(cats):
+        for cat in cats:
             subset = (cat == adata.obs[groups_key]).values
             x_color.append(adata.obs.loc[subset, colors].mean())
         colors = x_color
@@ -895,7 +893,7 @@ def _paga_graph(
             from matplotlib.colors import rgb2hex
 
             colors = [rgb2hex(c) for c in colors]
-        for count, n in enumerate(nx_g_solid.nodes()):
+        for count, _n in enumerate(nx_g_solid.nodes()):
             nx_g_solid.node[count]["label"] = str(node_labels[count])
             nx_g_solid.node[count]["color"] = str(colors[count])
             nx_g_solid.node[count]["viz"] = dict(
@@ -959,7 +957,9 @@ def _paga_graph(
             )
     # else pie chart plot
     else:
-        for ix, (xx, yy) in enumerate(zip(pos_array[:, 0], pos_array[:, 1])):
+        for ix, (xx, yy) in enumerate(
+            zip(pos_array[:, 0], pos_array[:, 1], strict=True)
+        ):
             if not isinstance(colors[ix], Mapping):
                 msg = (
                     f"{colors[ix]} is neither a dict of valid "
@@ -983,12 +983,14 @@ def _paga_graph(
 
             cumsum = np.cumsum(fracs)
             cumsum = cumsum / cumsum[-1]
-            cumsum = [0] + cumsum.tolist()
+            cumsum = [0, *cumsum.tolist()]
 
-            for r1, r2, color in zip(cumsum[:-1], cumsum[1:], color_single):
+            for r1, r2, color in zip(
+                cumsum[:-1], cumsum[1:], color_single, strict=True
+            ):
                 angles = np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 20)
-                x = [0] + np.cos(angles).tolist()
-                y = [0] + np.sin(angles).tolist()
+                x = [0, *np.cos(angles).tolist()]
+                y = [0, *np.sin(angles).tolist()]
 
                 xy = np.column_stack([x, y])
                 s = np.abs(xy).max()
@@ -1037,7 +1039,7 @@ def _paga_graph(
     "save",
     "ax",
 )
-def paga_path(
+def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     nodes: Sequence[str | int],
     keys: Sequence[str],
@@ -1068,8 +1070,7 @@ def paga_path(
     save: bool | str | None = None,
     ax: Axes | None = None,
 ) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
-    """\
-    Gene expression and annotation changes along paths in the abstracted graph.
+    r"""Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
@@ -1117,7 +1118,7 @@ def paga_path(
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
+        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
     ax
          A matplotlib axes object.
 
@@ -1125,6 +1126,7 @@ def paga_path(
     -------
     A :class:`~matplotlib.axes.Axes` object, if `ax` is `None`, else `None`.
     If `return_data`, return the timeseries data in addition to an axes.
+
     """
     ax_was_none = ax is None
 
@@ -1202,7 +1204,7 @@ def paga_path(
             values = (
                 adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
             )[idcs]
-            x += (values.toarray() if issparse(values) else values).tolist()
+            x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
                 x_tick_locs.append(len(x))
@@ -1214,9 +1216,9 @@ def paga_path(
         if n_avg > 1:
             x = moving_average(x)
             if ikey == 0:
-                for key in annotations:
-                    if not isinstance(anno_dict[key][0], str):
-                        anno_dict[key] = moving_average(anno_dict[key])
+                for k in annotations:
+                    if not isinstance(anno_dict[k][0], str):
+                        anno_dict[k] = moving_average(anno_dict[k])
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
@@ -1224,7 +1226,7 @@ def paga_path(
         if not as_heatmap:
             ax.plot(x[xlim[0] : xlim[1]], label=key)
         if ikey == 0:
-            for igroup, group in enumerate(nodes):
+            for group in nodes:
                 if len(groups_names) > 0 and group not in groups_names:
                     label = groups_names[group]
                 else:
@@ -1294,16 +1296,9 @@ def paga_path(
         if show_node_names:
             ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0]) / 2
             x_tick_locs = _sc_utils.moving_average(x_tick_locs, n=2)
-            for ilabel, label in enumerate(x_tick_labels):
-                groups_axis.text(
-                    x_tick_locs[ilabel],
-                    ypos,
-                    x_tick_labels[ilabel],
-                    fontdict=dict(
-                        horizontalalignment="center",
-                        verticalalignment="center",
-                    ),
-                )
+            for loc, label in zip(x_tick_locs, x_tick_labels, strict=True):
+                font = dict(horizontalalignment="center", verticalalignment="center")
+                groups_axis.text(loc, ypos, label, fontdict=font)
         groups_axis.set_xticks([])
         groups_axis.grid(visible=False)
         groups_axis.tick_params(axis="both", which="both", length=0)
@@ -1370,7 +1365,7 @@ def paga_adjacency(
     show: bool | None = None,
     save: bool | str | None = None,
 ) -> None:
-    """Connectivity of paga groups."""
+    """Plot connectivity of paga groups."""
     connectivity = adata.uns[adjacency].toarray()
     connectivity_select = adata.uns[adjacency_tree]
     if as_heatmap:

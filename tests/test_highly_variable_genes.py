@@ -9,11 +9,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from fast_array_utils import stats
 from pandas.testing import assert_frame_equal, assert_index_equal
-from scipy import sparse
 
 import scanpy as sc
-from scanpy.preprocessing._utils import _get_mean_var
+from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -120,7 +120,7 @@ def test_keep_layer(base, flavor):
     sc.pp.filter_genes(adata, min_counts=1)
 
     sc.pp.log1p(adata, base=base)
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     X_orig = adata.X.copy()
 
     if flavor == "seurat":
@@ -146,7 +146,7 @@ def test_keep_layer(base, flavor):
 def test_no_filter_genes(flavor):
     """Test that even with columns containing all-zeros in the data, n_top_genes is respected."""
     adata = sc.datasets.pbmc3k()
-    means, _ = _get_mean_var(adata.X)
+    means = stats.mean(adata.X, axis=0)
     assert (means == 0).any()
     sc.pp.normalize_total(adata, target_sum=10000)
     sc.pp.log1p(adata)
@@ -366,7 +366,8 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
     ],
 )
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_compare_to_upstream(  # noqa: PLR0917
+def test_compare_to_upstream(
+    *,
     request: pytest.FixtureRequest,
     func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
@@ -574,9 +575,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     batch[1500:] = 1
     pbmc.obs["batch"] = batch
 
-    # true_mean, true_var = _get_mean_var(pbmc.X)
-    true_mean = np.mean(pbmc.X.toarray(), axis=0)
-    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
+    true_mean, true_var = stats.mean_var(pbmc.X, axis=0, correction=1)
 
     result_df = sc.pp.highly_variable_genes(
         pbmc, batch_key="batch", flavor="seurat_v3", n_top_genes=4000, inplace=False
@@ -610,8 +609,9 @@ def test_cutoff_info():
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(flavor, array_type, batch_key):
-    """Tests that, with `n_top_genes=n`
-    - `inplace` and `subset` interact correctly
+    """Tests `n_top_genes=n`.
+
+    - if `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
@@ -621,7 +621,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
-    if flavor == "seurat" or flavor == "cell_ranger":
+    if flavor in {"seurat", "cell_ranger"}:
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 

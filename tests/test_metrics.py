@@ -2,25 +2,21 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from operator import eq
 from string import ascii_letters
+from typing import TYPE_CHECKING
 
-import numba
 import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
-mark_flaky = pytest.mark.xfail(
-    strict=False,
-    reason="This used to work reliably, but doesn’t anymore",
-)
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
@@ -28,28 +24,17 @@ def metric(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(
-    scope="session",
-    params=[
-        # pytest.param(eq, marks=[mark_flaky]),
-        pytest.param(eq),
-        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
-    ],
-)
-def assert_equal(request: pytest.FixtureRequest):
-    return request.param
-
-
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
-def threading(request):
+def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     if request.param == "single-threaded":
         with threadpoolctl.threadpool_limits(limits=1):
-            yield None
+            yield
     elif request.param == "multi-threaded":
-        yield None
+        yield
 
 
-def test_consistency(metric, threading):
+@pytest.mark.usefixtures("_threading")
+def test_consistency(metric) -> None:
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
@@ -78,10 +63,7 @@ def test_consistency(metric, threading):
     all_genes = metric(pbmc, layer="raw")
     first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
-    if Version(numba.__version__) < Version("0.57"):
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
-    else:
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
@@ -104,23 +86,24 @@ def test_correctness(metric, size, expected):
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
+    graph = sparse.csr_matrix(graph)  # noqa: TID251
 
     np.testing.assert_equal(metric(graph, connected), expected)
     np.testing.assert_equal(
         metric(graph, connected),
-        metric(graph, sparse.csr_matrix(connected)),
+        metric(graph, sparse.csr_matrix(connected)),  # noqa: TID251
     )
     # Checking that obsp works
-    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
+    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})  # noqa: TID251
     np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
+@pytest.mark.usefixtures("_threading")
 @pytest.mark.parametrize(
     "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_graph_metrics_w_constant_values(
-    request: pytest.FixtureRequest, metric, array_type, threading
+    request: pytest.FixtureRequest, metric, array_type
 ):
     if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"

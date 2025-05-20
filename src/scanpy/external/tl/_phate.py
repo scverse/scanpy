@@ -1,6 +1,4 @@
-"""\
-Embed high-dimensional data using PHATE
-"""
+"""Embed high-dimensional data using PHATE."""
 
 from __future__ import annotations
 
@@ -16,7 +14,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._compat import _LegacyRandom
+    from ..._utils.random import _LegacyRandom
 
 
 @old_positionals(
@@ -35,7 +33,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phate")
-def phate(
+def phate(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,
@@ -54,8 +52,7 @@ def phate(
     copy: bool = False,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    PHATE :cite:p:`Moon2019`.
+    """PHATE :cite:p:`Moon2019`.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for
@@ -142,9 +139,10 @@ def phate(
     (2000, 100)
     >>> adata = AnnData(tree_data)
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
-    >>> adata.obsm['X_phate'].shape
+    >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(adata)
+
     """
     start = logg.info("computing PHATE")
     adata = adata.copy() if copy else adata
@@ -153,12 +151,12 @@ def phate(
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
-    except ImportError:
+    except ImportError as e:
         msg = (
             "You need to install the package `phate`: please run `pip install "
             "--user phate` in a terminal."
         )
-        raise ImportError(msg)
+        raise ImportError(msg) from e
     X_phate = phate.PHATE(
         n_components=n_components,
         k=k,

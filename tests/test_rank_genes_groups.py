@@ -15,10 +15,11 @@ from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
-from scanpy._utils import elem_mul, select_groups
+from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
+from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
@@ -129,7 +130,8 @@ def test_results_layers(array_type):
 
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
-    adata.X = elem_mul(adata.X, np.random.randint(0, 2, adata.shape, dtype=bool))
+    mask = np.random.randint(0, 2, adata.shape, dtype=bool)
+    adata.X[mask] = 0
 
     _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
@@ -213,7 +215,7 @@ def test_emptycat():
 
 
 def test_log1p_save_restore(tmp_path):
-    """tests the sequence log1p→save→load→rank_genes_groups"""
+    """Tests the sequence log1p→save→load→rank_genes_groups."""
     from anndata import read_h5ad
 
     pbmc = pbmc68k_reduced()
@@ -317,12 +319,11 @@ def test_wilcoxon_huge_data(monkeypatch):
     [pytest.param(0, 0, id="equal"), pytest.param(2, 1, id="more")],
 )
 def test_mask_n_genes(n_genes_add, n_genes_out_add):
-    """\
-    Check that no. genes in output is
+    """Check if no. genes in output is correct.
+
     1. =n_genes when n_genes<sum(mask)
     2. =sum(mask) when n_genes>sum(mask)
     """
-
     pbmc = pbmc68k_reduced()
     mask_var = np.zeros(pbmc.shape[1]).astype(bool)
     mask_var[:6].fill(True)  # noqa: FBT003
@@ -342,13 +343,9 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
 
 
 def test_mask_not_equal():
-    """\
-    Check that mask is applied successfully to data set \
-    where test statistics are already available (test stats overwritten).
-    """
-
+    """Check that mask is applied successfully to data set where test statistics are already available (test stats overwritten)."""
     pbmc = pbmc68k_reduced()
-    mask_var = np.random.choice([True, False], pbmc.shape[1])
+    mask_var = random_mask(pbmc.shape[1])
     n_genes = sum(mask_var)
 
     run = partial(

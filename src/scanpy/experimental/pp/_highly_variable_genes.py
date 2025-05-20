@@ -5,17 +5,17 @@ from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
 
-import numba as nb
+import numba
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp_sparse
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
-from scanpy import logging as logg
-from scanpy._compat import njit
-from scanpy._settings import Verbosity, settings
-from scanpy._utils import _doc_params, check_nonnegative_integers, view_to_actual
-from scanpy.experimental._docs import (
+from ... import logging as logg
+from ..._compat import CSBase, njit
+from ..._settings import Verbosity, settings
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from ...experimental._docs import (
     doc_adata,
     doc_check_values,
     doc_dist_params,
@@ -23,9 +23,8 @@ from scanpy.experimental._docs import (
     doc_inplace,
     doc_layer,
 )
-from scanpy.get import _get_obs_rep
-from scanpy.preprocessing._distributed import materialize_as_ndarray
-from scanpy.preprocessing._utils import _get_mean_var
+from ...get import _get_obs_rep
+from ...preprocessing._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -35,9 +34,7 @@ if TYPE_CHECKING:
 
 @njit
 def _calculate_res_sparse(
-    indptr: NDArray[np.integer],
-    index: NDArray[np.integer],
-    data: NDArray[np.float64],
+    mat: CSBase,
     *,
     sums_genes: NDArray[np.float64],
     sums_cells: NDArray[np.float64],
@@ -48,12 +45,9 @@ def _calculate_res_sparse(
     n_cells: int,
 ) -> NDArray[np.float64]:
     def get_value(cell: int, sparse_idx: int, stop_idx: int) -> np.float64:
-        """
-        This function navigates the sparsity of the CSC (Compressed Sparse Column) matrix,
-        returning the value at the specified cell location if it exists, or zero otherwise.
-        """
-        if sparse_idx < stop_idx and index[sparse_idx] == cell:
-            return data[sparse_idx]
+        """Return the value at the specified cell location if it exists, or zero otherwise."""
+        if sparse_idx < stop_idx and mat.indices[sparse_idx] == cell:
+            return mat.data[sparse_idx]
         else:
             return np.float64(0.0)
 
@@ -65,9 +59,9 @@ def _calculate_res_sparse(
         return res
 
     residuals = np.zeros(n_genes, dtype=np.float64)
-    for gene in nb.prange(n_genes):
-        start_idx = indptr[gene]
-        stop_idx = indptr[gene + 1]
+    for gene in numba.prange(n_genes):
+        start_idx = mat.indptr[gene]
+        stop_idx = mat.indptr[gene + 1]
 
         sparse_idx = start_idx
         var_sum = np.float64(0.0)
@@ -116,7 +110,7 @@ def _calculate_res_dense(
 
     residuals = np.zeros(n_genes, dtype=np.float64)
 
-    for gene in nb.prange(n_genes):
+    for gene in numba.prange(n_genes):
         sum_clipped_res = np.float64(0.0)
         for cell in range(n_cells):
             sum_clipped_res += clac_clipped_res_dense(gene, cell)
@@ -132,7 +126,7 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(
+def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     theta: float = 100,
@@ -154,6 +148,7 @@ def _highly_variable_pearson_residuals(
         warnings.warn(
             "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
             UserWarning,
+            stacklevel=3,
         )
     # check theta
     if theta <= 0:
@@ -189,15 +184,10 @@ def _highly_variable_pearson_residuals(
             msg = "Pearson residuals require `clip>=0` or `clip=None`."
             raise ValueError(msg)
 
-        if sp_sparse.issparse(X_batch):
+        if isinstance(X_batch, CSBase):
             X_batch = X_batch.tocsc()
             X_batch.eliminate_zeros()
-            calculate_res = partial(
-                _calculate_res_sparse,
-                X_batch.indptr,
-                X_batch.indices,
-                X_batch.data.astype(np.float64),
-            )
+            calculate_res = partial(_calculate_res_sparse, X_batch.astype(np.float64))
         else:
             X_batch = np.array(X_batch, dtype=np.float64, order="F")
             calculate_res = partial(_calculate_res_dense, X_batch)
@@ -237,7 +227,7 @@ def _highly_variable_pearson_residuals(
     # Median rank across batches, ignoring batches in which gene was not selected
     medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
-    means, variances = materialize_as_ndarray(_get_mean_var(X))
+    means, variances = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     df = pd.DataFrame.from_dict(
         dict(
             means=means,
@@ -311,7 +301,7 @@ def _highly_variable_pearson_residuals(
     layer=doc_layer,
     inplace=doc_inplace,
 )
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
     theta: float = 100,
@@ -325,8 +315,7 @@ def highly_variable_genes(
     subset: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
-    """\
-    Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
+    """Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
 
     In :cite:t:`Lause2021`, Pearson residuals of a negative binomial offset model are computed
     (with overdispersion `theta` shared across genes). By default, overdispersion
@@ -375,8 +364,8 @@ def highly_variable_genes(
     Notes
     -----
     Experimental version of `sc.pp.highly_variable_genes()`
-    """
 
+    """
     logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):

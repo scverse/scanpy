@@ -8,6 +8,7 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._utils.random import set_igraph_random_state
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -16,28 +17,25 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 
-
-try:
+try:  # separate block for fallible import
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
-
-    class MutableVertexPartition:
-        pass
-
-    MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
+    if not TYPE_CHECKING:
+        MutableVertexPartition = type("MutableVertexPartition", (), {})
+        MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
-def leiden(
+def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: _CSMatrix | None = None,
+    adjacency: CSBase | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -48,8 +46,7 @@ def leiden(
     flavor: Literal["leidenalg", "igraph"] = "leidenalg",
     **clustering_args,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Traag2019`.
+    """Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
@@ -119,6 +116,7 @@ def leiden(
     `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
     if flavor not in {"igraph", "leidenalg"}:
         msg = (
@@ -139,9 +137,9 @@ def leiden(
 
             msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
             _utils.warn_once(msg, FutureWarning, stacklevel=3)
-        except ImportError:
+        except ImportError as e:
             msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            raise ImportError(msg)
+            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
@@ -180,7 +178,7 @@ def leiden(
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
-        with _utils.set_igraph_random_state(random_state):
+        with set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)

@@ -1,6 +1,4 @@
-"""\
-Denoise high-dimensional data using MAGIC
-"""
+"""Denoise high-dimensional data using MAGIC."""
 
 from __future__ import annotations
 
@@ -19,13 +17,13 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._compat import _LegacyRandom
+    from ..._utils.random import _LegacyRandom
 
 MIN_VERSION = "2.0"
 
 
 @doctest_needs("magic")
-def magic(
+def magic(  # noqa: PLR0913
     adata: AnnData,
     name_list: Literal["all_genes", "pca_only"] | Sequence[str] | None = None,
     *,
@@ -42,8 +40,7 @@ def magic(
     copy: bool | None = None,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Markov Affinity-based Graph Imputation of Cells (MAGIC) API :cite:p:`vanDijk2018`.
+    """Markov Affinity-based Graph Imputation of Cells (MAGIC) API :cite:p:`vanDijk2018`.
 
     MAGIC is an algorithm for denoising and transcript recover of single cells
     applied to single-cell sequencing data. MAGIC builds a graph from the data
@@ -128,32 +125,28 @@ def magic(
     >>> adata = sc.datasets.paul15()
     >>> sc.pp.normalize_per_cell(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
-    >>> adata_magic = sce.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], knn=5)
+    >>> adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
     >>> adata_magic.shape
     (2730, 3)
-    >>> sce.pp.magic(adata, name_list='pca_only', knn=5)
-    >>> adata.obsm['X_magic'].shape
+    >>> sce.pp.magic(adata, name_list="pca_only", knn=5)
+    >>> adata.obsm["X_magic"].shape
     (2730, 100)
-    >>> sce.pp.magic(adata, name_list='all_genes', knn=5)
+    >>> sce.pp.magic(adata, name_list="all_genes", knn=5)
     >>> adata.X.shape
     (2730, 3451)
-    """
 
+    """
     try:
         from magic import MAGIC, __version__
-    except ImportError:
-        msg = (
-            "Please install magic package via `pip install --user "
-            "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
-        )
-        raise ImportError(msg)
+    except ImportError as e:
+        msg = "Please install magic package via `pip install magic-impute`"
+        raise ImportError(msg) from e
     else:
         if Version(__version__) < Version(MIN_VERSION):
             msg = (
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "
-                "Please update magic package via `pip install --user "
-                "--upgrade magic-impute`"
+                "Please update magic package via `pip install -U magic-impute`"
             )
             raise ImportError(msg)
 

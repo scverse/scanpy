@@ -12,7 +12,7 @@ from packaging.version import Version
 from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils import _choose_graph
+from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -21,8 +21,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -48,14 +48,14 @@ except ImportError:
     "obsp",
     "copy",
 )
-def louvain(
+def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
     *,
     random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: _CSMatrix | None = None,
+    adjacency: CSBase | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
@@ -65,8 +65,7 @@ def louvain(
     obsp: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
+    """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
@@ -139,6 +138,7 @@ def louvain(
     `adata.uns['louvain' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
@@ -193,7 +193,7 @@ def louvain(
             "`flavor='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf
@@ -203,9 +203,7 @@ def louvain(
         indices = cudf.Series(adjacency.indices)
         if use_weights:
             sources, targets = adjacency.nonzero()
-            weights = adjacency[sources, targets]
-            if isinstance(weights, np.matrix):
-                weights = weights.A1
+            weights = dematrix(adjacency[sources, targets]).ravel()
             weights = cudf.Series(weights)
         else:
             weights = None

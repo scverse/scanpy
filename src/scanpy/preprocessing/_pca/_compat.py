@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from fast_array_utils.stats import mean_var
 from packaging.version import Version
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
 from ..._compat import pkg_version
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -17,19 +17,19 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
 
-    from ..._compat import _LegacyRandom
-    from .._utils import _CSMatrix
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 def _pca_compat_sparse(
-    x: _CSMatrix,
+    x: CSBase,
     n_pcs: int,
     *,
     solver: Literal["arpack", "lobpcg"],
     mu: NDArray[np.floating] | None = None,
     random_state: _LegacyRandom = None,
 ) -> tuple[NDArray[np.floating], PCA]:
-    """Sparse PCA for scikit-learn <1.4"""
+    """Sparse PCA for scikit-learn <1.4."""
     random_state = check_random_state(random_state)
     np.random.set_state(random_state.get_state())
     random_init = np.random.rand(np.min(x.shape))
@@ -65,7 +65,7 @@ def _pca_compat_sparse(
     X_pca = (u * s)[:, idx]
     ev = s[idx] ** 2 / (x.shape[0] - 1)
 
-    total_var = _get_mean_var(x)[1].sum()
+    total_var = mean_var(x, correction=1, axis=0)[1].sum()
     ev_ratio = ev / total_var
 
     from sklearn.decomposition import PCA

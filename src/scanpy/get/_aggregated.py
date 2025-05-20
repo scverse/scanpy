@@ -9,6 +9,8 @@ from anndata import AnnData, utils
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
+from scanpy._compat import CSBase
+
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
 
@@ -17,15 +19,14 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
+    Array = np.ndarray | CSBase
 
 # Used with get_literal_vals
 AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
 
 
 class Aggregate:
-    """\
-    Functionality for generic grouping and aggregating.
+    """Functionality for generic grouping and aggregating.
 
     There is currently support for count_nonzero, sum, mean, and variance.
 
@@ -65,34 +66,34 @@ class Aggregate:
     data: Array
 
     def count_nonzero(self) -> NDArray[np.integer]:
-        """\
-        Count the number of observations in each group.
+        """Count the number of observations in each group.
 
         Returns
         -------
         Array of counts.
+
         """
         # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
         # return self.indicator_matrix @ pattern
         return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
     def sum(self) -> Array:
-        """\
-        Compute the sum per feature per group of observations.
+        """Compute the sum per feature per group of observations.
 
         Returns
         -------
         Array of sum.
+
         """
         return utils.asarray(self.indicator_matrix @ self.data)
 
     def mean(self) -> Array:
-        """\
-        Compute the mean per feature per group of observations.
+        """Compute the mean per feature per group of observations.
 
         Returns
         -------
         Array of mean.
+
         """
         return (
             utils.asarray(self.indicator_matrix @ self.data)
@@ -100,8 +101,7 @@ class Aggregate:
         )
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
-        """\
-        Compute the count, as well as mean and variance per feature, per group of observations.
+        """Compute the count, as well as mean and variance per feature, per group of observations.
 
         The formula `Var(X) = E(X^2) - E(X)^2` suffers loss of precision when the variance is a
         very small fraction of the squared mean. In particular, when X is constant, the formula may
@@ -117,6 +117,7 @@ class Aggregate:
         Returns
         -------
         Object with `count`, `mean`, and `var` attributes.
+
         """
         assert dof >= 0
 
@@ -139,19 +140,18 @@ class Aggregate:
         return mean_, var_
 
     def median(self) -> Array:
-        """\
-        Compute the median per feature per group of observations.
+        """Compute the median per feature per group of observations.
 
         Returns
         -------
         Array of median.
-        """
 
+        """
         medians = []
         for group in np.unique(self.groupby.codes):
             group_mask = self.groupby.codes == group
             group_data = self.data[group_mask]
-            if sparse.issparse(group_data):
+            if isinstance(group_data, CSBase):
                 if group_data.format != "csc":
                     group_data = group_data.tocsc()
                 medians.append(csc_median_axis_0(group_data))
@@ -161,8 +161,7 @@ class Aggregate:
 
 
 def _power(X: Array, power: float) -> Array:
-    """\
-    Generate elementwise power of a matrix.
+    """Generate elementwise power of a matrix.
 
     Needed for non-square sparse matrices because they do not support `**` so the `.power` function is used.
 
@@ -176,11 +175,12 @@ def _power(X: Array, power: float) -> Array:
     Returns
     -------
     Matrix whose power has been raised.
+
     """
     return X**power if isinstance(X, np.ndarray) else X.power(power)
 
 
-def aggregate(
+def aggregate(  # noqa: PLR0912
     adata: AnnData,
     by: str | Collection[str],
     func: AggType | Iterable[AggType],
@@ -192,8 +192,7 @@ def aggregate(
     obsm: str | None = None,
     varm: str | None = None,
 ) -> AnnData:
-    """\
-    Aggregate data matrix based on some categorical grouping.
+    """Aggregate data matrix based on some categorical grouping.
 
     This function is useful for pseudobulking as well as plotting.
 
@@ -230,14 +229,15 @@ def aggregate(
 
     Examples
     --------
-
     Calculating mean expression and number of nonzero entries per cluster:
 
     >>> import scanpy as sc, pandas as pd
     >>> pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
     >>> pbmc.shape
     (2638, 13714)
-    >>> aggregated = sc.get.aggregate(pbmc, by="louvain", func=["mean", "count_nonzero"])
+    >>> aggregated = sc.get.aggregate(
+    ...     pbmc, by="louvain", func=["mean", "count_nonzero"]
+    ... )
     >>> aggregated
     AnnData object with n_obs × n_vars = 8 × 13714
         obs: 'louvain'
@@ -247,13 +247,16 @@ def aggregate(
     We can group over multiple columns:
 
     >>> pbmc.obs["percent_mito_binned"] = pd.cut(pbmc.obs["percent_mito"], bins=5)
-    >>> sc.get.aggregate(pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"])
+    >>> sc.get.aggregate(
+    ...     pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"]
+    ... )
     AnnData object with n_obs × n_vars = 40 × 13714
         obs: 'louvain', 'percent_mito_binned'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
     Note that this filters out any combination of groups that wasn't present in the original data.
+
     """
     if not isinstance(adata, AnnData):
         msg = (
@@ -338,8 +341,7 @@ def aggregate_df(data, by, func, *, mask=None, dof=1):
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(sparse.csr_matrix)
-@_aggregate.register(sparse.csc_matrix)
+@_aggregate.register(CSBase)
 def aggregate_array(
     data: Array,
     by: pd.Categorical,
@@ -379,9 +381,7 @@ def aggregate_array(
 def _combine_categories(
     label_df: pd.DataFrame, cols: Collection[str] | str
 ) -> tuple[pd.Categorical, pd.DataFrame]:
-    """
-    Returns both the result categories and a dataframe labelling each row
-    """
+    """Return both the result categories and a dataframe labelling each row."""
     from itertools import product
 
     if isinstance(cols, str):

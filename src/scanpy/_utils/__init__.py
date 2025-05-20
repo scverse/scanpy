@@ -1,4 +1,4 @@
-"""Utility functions and classes
+"""Utility functions and classes.
 
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
@@ -8,16 +8,14 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
-import random
 import re
 import sys
 import warnings
-from collections.abc import Sequence
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
-from textwrap import dedent
+from textwrap import indent
 from types import MethodType, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -34,13 +32,10 @@ import h5py
 import numpy as np
 from anndata import __version__ as anndata_version
 from packaging.version import Version
-from scipy import sparse
-from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
-from .compute.is_constant import is_constant  # noqa: F401
 
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
@@ -49,7 +44,6 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
-_CSMatrix = sparse.csr_matrix | sparse.csc_matrix
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -58,17 +52,18 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
-    from numpy.typing import ArrayLike, DTypeLike, NDArray
+    from numpy.typing import ArrayLike, NDArray
 
-    from .._compat import _LegacyRandom
+    from .._compat import CSRBase
     from ..neighbors import NeighborsParams, RPForestDict
 
-    _MemoryArray = NDArray | _CSMatrix
+    _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
 
+    _SA = TypeVar("_SA", bound=_SupportedArray)
 
-SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
-RNGLike = np.random.Generator | np.random.BitGenerator
+    _ForT = TypeVar("_ForT", bound=Callable | type)
+
 
 LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
@@ -83,19 +78,6 @@ class Empty(Enum):
 _empty = Empty.token
 
 
-class RNGIgraph:
-    """
-    Random number generator for ipgraph so global seed is not changed.
-    See :func:`igraph.set_random_number_generator` for the requirements.
-    """
-
-    def __init__(self, random_state: int = 0) -> None:
-        self._rng = check_random_state(random_state)
-
-    def __getattr__(self, attr: str):
-        return getattr(self._rng, "normal" if attr == "gauss" else attr)
-
-
 def ensure_igraph() -> None:
     if importlib.util.find_spec("igraph"):
         return
@@ -105,22 +87,6 @@ def ensure_igraph() -> None:
         "`pip3 install igraph`."
     )
     raise ImportError(msg)
-
-
-@contextmanager
-def set_igraph_random_state(random_state: int):
-    ensure_igraph()
-    import igraph
-
-    rng = RNGIgraph(random_state)
-    try:
-        igraph.set_random_number_generator(rng)
-        yield None
-    finally:
-        igraph.set_random_number_generator(random)
-
-
-EPS = 1e-15
 
 
 def check_versions():
@@ -187,12 +153,13 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(name: str) -> Any:
+def _import_name(full_name: str) -> Any:
     from importlib import import_module
 
-    parts = name.split(".")
+    parts = full_name.split(".")
     obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
+    for _i, name in enumerate(parts[1:]):
+        i = _i
         try:
             obj = import_module(f"{obj.__name__}.{name}")
         except ModuleNotFoundError:
@@ -202,9 +169,9 @@ def _import_name(name: str) -> Any:
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
-        except AttributeError:
+        except AttributeError as e:
             msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from e
     return obj
 
 
@@ -243,21 +210,35 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def _doc_params(**kwds):
-    """\
-    Docstrings should start with ``\\`` in the first line for proper formatting.
-    """
+_leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)
 
-    def dec(obj):
-        obj.__orig_doc__ = obj.__doc__
-        obj.__doc__ = dedent(obj.__doc__).format_map(kwds)
+
+def _doc_params(**replacements: str):
+    def dec(obj: _ForT) -> _ForT:
+        assert obj.__doc__
+        assert "\t" not in obj.__doc__
+
+        # The first line of the docstring is unindented,
+        # so find indent size starting after it.
+        start_line_2 = obj.__doc__.find("\n") + 1
+        assert start_line_2 > 0, f"{obj.__name__} has single-line docstring."
+        n_spaces = min(
+            len(m.group(1))
+            for m in _leading_whitespace_re.finditer(obj.__doc__[start_line_2:])
+        )
+
+        # The placeholder is already indented, so only indent subsequent lines
+        indented_replacements = {
+            k: indent(v, " " * n_spaces)[n_spaces:] for k, v in replacements.items()
+        }
+        obj.__doc__ = obj.__doc__.format_map(indented_replacements)
         return obj
 
     return dec
 
 
 def _check_array_function_arguments(**kwargs):
-    """Checks for invalid arguments when an array is passed.
+    """Check for invalid arguments when an array is passed.
 
     Helper for functions that work on either AnnData objects or array-likes.
     """
@@ -271,8 +252,7 @@ def _check_array_function_arguments(**kwargs):
 def _check_use_raw(
     adata: AnnData, use_raw: None | bool, *, layer: str | None = None
 ) -> bool:
-    """
-    Normalize checking `use_raw`.
+    """Normalize checking `use_raw`.
 
     My intentention here is to also provide a single place to throw a deprecation warning from in future.
     """
@@ -288,17 +268,15 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: _CSMatrix, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
     sources, targets = adjacency.nonzero()
-    weights = adjacency[sources, targets]
-    if isinstance(weights, np.matrix):
-        weights = weights.A1
+    weights = dematrix(adjacency[sources, targets]).ravel()
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
-    g.add_edges(list(zip(sources, targets)))
+    g.add_edges(list(zip(sources, targets, strict=True)))
     with suppress(KeyError):
         g.es["weight"] = weights
     if g.vcount() != adjacency.shape[0]:
@@ -356,6 +334,7 @@ def compute_association_matrix_of_groups(
     asso_matrix
         Matrix where rows correspond to the predicted labels and columns to the
         reference labels, entries are proportional to degree of association.
+
     """
     if normalization not in {"prediction", "reference"}:
         msg = '`normalization` needs to be either "prediction" or "reference".'
@@ -371,7 +350,7 @@ def compute_association_matrix_of_groups(
     asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
-            pred_group = str(ipred_group)
+            pred_group = str(ipred_group)  # noqa: PLW2901
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
@@ -417,7 +396,7 @@ def get_associated_colors_of_groups(
 
 
 def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
-    """Which predicted label explains which reference label?
+    """Identify which predicted label explains which reference label.
 
     A predicted label explains the reference label which maximizes the minimum
     of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
@@ -432,11 +411,12 @@ def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
     If ``return_overlaps`` is ``True``, this will in addition return the overlap
     of the reference group with the predicted group; normalized with respect to
     the reference group size and the predicted group size, respectively.
+
     """
     ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
-    ref_dict = dict(zip(ref_unique, ref_counts))
+    ref_dict = dict(zip(ref_unique, ref_counts, strict=True))
     pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
-    pred_dict = dict(zip(pred_unique, pred_counts))
+    pred_dict = dict(zip(pred_unique, pred_counts, strict=True))
     associated_predictions = {}
     associated_overlaps = {}
     for ref_label in ref_unique:
@@ -495,16 +475,11 @@ def moving_average(a: np.ndarray, n: int):
     Returns
     -------
     An array view storing the moving average.
-    """
+
+    """  # noqa: D401
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1 :] / n
-
-
-def _get_legacy_random(seed: _LegacyRandom) -> np.random.RandomState:
-    if isinstance(seed, np.random.RandomState):
-        return seed
-    return np.random.RandomState(seed)
 
 
 # --------------------------------------------------------------------------------
@@ -518,13 +493,12 @@ def update_params(
     *,
     check: bool = False,
 ) -> dict[str, Any]:
-    """\
-    Update old_params with new_params.
+    """Update `old_params` with `new_params`.
 
-    If check==False, this merely adds and overwrites the content of old_params.
+    If check==False, this merely adds and overwrites the content of `old_params`.
 
     If check==True, this only allows updating of parameters that are already
-    present in old_params.
+    present in `old_params`.
 
     Parameters
     ----------
@@ -535,6 +509,7 @@ def update_params(
     Returns
     -------
     updated_params
+
     """
     updated_params = dict(old_params)
     if new_params:  # allow for new_params to be None
@@ -568,28 +543,6 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
-
-
-@singledispatch
-def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
-    raise NotImplementedError
-
-
-@elem_mul.register(np.ndarray)
-@elem_mul.register(sparse.csc_matrix)
-@elem_mul.register(sparse.csr_matrix)
-def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, _CSMatrix):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    return x * y
-
-
-@elem_mul.register(DaskArray)
-def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
-    import dask.array as da
-
-    return da.map_blocks(elem_mul, x, y)
 
 
 if TYPE_CHECKING:
@@ -628,17 +581,16 @@ def axis_mul_or_truediv(
     return np.true_divide(X, scaling_array, out=out)
 
 
-@axis_mul_or_truediv.register(sparse.csr_matrix)
-@axis_mul_or_truediv.register(sparse.csc_matrix)
+@axis_mul_or_truediv.register(CSBase)
 def _(
-    X: _CSMatrix,
-    scaling_array,
+    X: CSBase,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: _CSMatrix | None = None,
-) -> _CSMatrix:
+    out: CSBase | None = None,
+) -> CSBase:
     check_op(op)
     if out is not None and X.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
@@ -664,9 +616,7 @@ def _(
         if out is not None:
             X.data = new_data_op(X)
             return X
-        return sparse.csr_matrix(
-            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
-        )
+        return type(X)((new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape)
     transposed = X.T
     return axis_mul_or_truediv(
         transposed,
@@ -721,7 +671,9 @@ def _(
                 )
             )
         ):
-            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            warnings.warn(
+                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
+            )
             scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
     else:
         scaling_array = da.from_array(
@@ -745,9 +697,20 @@ def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(X, axis=axis)
 
 
-@axis_nnz.register(sparse.spmatrix)
-def _(X: sparse.spmatrix, axis: Literal[0, 1]) -> np.ndarray:
-    return X.getnnz(axis=axis)
+if pkg_version("scipy") >= Version("1.15"):
+    # newer scipy versions support the `axis` argument for count_nonzero
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        return X.count_nonzero(axis=axis)
+else:
+    # older scipy versions don’t have any way to get the nnz of a sparse array
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        if isinstance(X, _CSArray):
+            from scipy.sparse import csc_array, csr_array  # noqa: TID251
+
+            X = (csr_array if X.format == "csr" else csc_array)(X)
+        return X.getnnz(axis=axis)
 
 
 @axis_nnz.register(DaskArray)
@@ -761,87 +724,14 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
     )
 
 
-@overload
-def axis_sum(
-    X: sparse.spmatrix,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.matrix: ...
-
-
-@overload
-def axis_sum(
-    X: np.ndarray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray: ...
-
-
-@singledispatch
-def axis_sum(
-    X: np.ndarray | sparse.spmatrix,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray | np.matrix:
-    return np.sum(X, axis=axis, dtype=dtype)
-
-
-@axis_sum.register(DaskArray)
-def _(
-    X: DaskArray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> DaskArray:
-    import dask.array as da
-
-    if dtype is None:
-        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
-
-    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
-        return X.sum(axis=axis, dtype=dtype)
-
-    def sum_drop_keepdims(*args, **kwargs):
-        kwargs.pop("computing_meta", None)
-        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, sparse.spmatrix | np.matrix) or isinstance(
-            args[0], sparse.spmatrix | np.matrix
-        ):
-            kwargs.pop("keepdims", None)
-            axis = kwargs["axis"]
-            if isinstance(axis, tuple):
-                if len(axis) != 1:
-                    msg = f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
-                    raise ValueError(msg)
-                kwargs["axis"] = axis[0]
-        # returns a np.matrix normally, which is undesireable
-        return np.array(np.sum(*args, dtype=dtype, **kwargs))
-
-    def aggregate_sum(*args, **kwargs):
-        return np.sum(args[0], dtype=dtype, **kwargs)
-
-    return da.reduction(
-        X,
-        sum_drop_keepdims,
-        aggregate_sum,
-        axis=axis,
-        dtype=dtype,
-        meta=np.array([], dtype=dtype),
-    )
-
-
 @singledispatch
 def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
-    """Checks values of X to ensure it is count data"""
+    """Check values of X to ensure it is count data."""
     raise NotImplementedError
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.csr_matrix)
-@check_nonnegative_integers.register(sparse.csc_matrix)
+@check_nonnegative_integers.register(CSBase)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
@@ -860,6 +750,14 @@ def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
     return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
 
 
+def dematrix(x: _SA | np.matrix) -> _SA:
+    if isinstance(x, np.matrix):
+        return x.A
+    if isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
+        return x.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+    return x
+
+
 def select_groups(
     adata: AnnData,
     groups_order_subset: Iterable[str] | Literal["all"] = "all",
@@ -875,8 +773,8 @@ def select_groups(
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+            if name in adata.obs[key].values:
+                mask_obs = name == adata.obs[key].values
             else:
                 mask_obs = str(iname) == adata.obs[key].values
             groups_masks_obs[iname] = mask_obs
@@ -910,14 +808,17 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
-    """Get full tracebacks when warning is raised by setting
+def warn_with_traceback(  # noqa: PLR0917
+    message, category, filename, lineno, file=None, line=None
+) -> None:
+    """Get full tracebacks when warning is raised by setting.
 
     warnings.showwarning = warn_with_traceback
 
-    See also
+    See Also
     --------
     https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
+
     """
     import traceback
 
@@ -934,80 +835,6 @@ def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
     warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 
 
-def subsample(
-    X: np.ndarray,
-    subsample: int = 1,
-    seed: int = 0,
-) -> tuple[np.ndarray, np.ndarray]:
-    """\
-    Subsample a fraction of 1/subsample samples from the rows of X.
-
-    Parameters
-    ----------
-    X
-        Data array.
-    subsample
-        1/subsample is the fraction of data sampled, n = X.shape[0]/subsample.
-    seed
-        Seed for sampling.
-
-    Returns
-    -------
-    Xsampled
-        Subsampled X.
-    rows
-        Indices of rows that are stored in Xsampled.
-    """
-    if subsample == 1 and seed == 0:
-        return X, np.arange(X.shape[0], dtype=int)
-    if seed == 0:
-        # this sequence is defined simply by skipping rows
-        # is faster than sampling
-        rows = np.arange(0, X.shape[0], subsample, dtype=int)
-        n = rows.size
-        Xsampled = np.array(X[rows])
-    else:
-        if seed < 0:
-            msg = f"Invalid seed value < 0: {seed}"
-            raise ValueError(msg)
-        n = int(X.shape[0] / subsample)
-        np.random.seed(seed)
-        Xsampled, rows = subsample_n(X, n=n)
-    logg.debug(f"... subsampled to {n} of {X.shape[0]} data points")
-    return Xsampled, rows
-
-
-def subsample_n(
-    X: np.ndarray, n: int = 0, seed: int = 0
-) -> tuple[np.ndarray, np.ndarray]:
-    """Subsample n samples from rows of array.
-
-    Parameters
-    ----------
-    X
-        Data array.
-    n
-        Sample size.
-    seed
-        Seed for sampling.
-
-    Returns
-    -------
-    Xsampled
-        Subsampled X.
-    rows
-        Indices of rows that are stored in Xsampled.
-    """
-    if n < 0:
-        msg = "n must be greater 0"
-        raise ValueError(msg)
-    np.random.seed(seed)
-    n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
-    rows = np.random.choice(X.shape[0], size=n, replace=False)
-    Xsampled = X[rows]
-    return Xsampled, rows
-
-
 def check_presence_download(filename: Path, backup_url):
     """Check if file is present otherwise download."""
     if not filename.is_file():
@@ -1017,7 +844,7 @@ def check_presence_download(filename: Path, backup_url):
 
 
 def lazy_import(full_name):
-    """Imports a module in a way that it’s only executed on member access"""
+    """Import a module in a way that it’s only executed on member access."""
     try:
         return sys.modules[full_name]
     except KeyError:
@@ -1051,7 +878,6 @@ class NeighborsView:
 
     Parameters
     ----------
-
     adata
         AnnData object.
     key
@@ -1072,6 +898,7 @@ class NeighborsView:
         adata.uns[key]['params']
         adata.uns[key]['connectivities_key'] in adata.obsp
         'params' in adata.uns[key]
+
     """
 
     def __init__(self, adata: AnnData, key=None):
@@ -1108,9 +935,7 @@ class NeighborsView:
         )
 
     @overload
-    def __getitem__(
-        self, key: Literal["distances", "connectivities"]
-    ) -> sparse.csr_matrix: ...
+    def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...
     @overload
     def __getitem__(self, key: Literal["params"]) -> NeighborsParams: ...
     @overload
@@ -1145,7 +970,7 @@ class NeighborsView:
 
 def _choose_graph(
     adata: AnnData, obsp: str | None, neighbors_key: str | None
-) -> _CSMatrix:
+) -> CSBase:
     """Choose connectivities from neighbbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         msg = "You can't specify both obsp, neighbors_key. Please select only one."

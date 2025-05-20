@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
+    rev: v0.11.8
     hooks:
     -   id: ruff
         args: ["--fix"]
@@ -17,10 +17,9 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v0.6.1
+    rev: v1.9.4
     hooks:
     -   id: biome-format
-        additional_dependencies: ["@biomejs/biome@1.9.4"]
 -   repo: https://github.com/ComPWA/taplo-pre-commit
     rev: v0.9.3
     hooks:

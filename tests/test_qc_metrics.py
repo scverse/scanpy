@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from importlib.metadata import version
-
 import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
-from packaging.version import Version
+from fast_array_utils import stats
 from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import DaskArray
-from scanpy._utils import axis_sum
 from scanpy.preprocessing._qc import (
     describe_obs,
     describe_var,
@@ -28,7 +25,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 def adata() -> AnnData:
     a = np.random.binomial(100, 0.005, (1000, 1000))
     adata = AnnData(
-        sparse.csr_matrix(a),
+        sparse.csr_matrix(a),  # noqa: TID251
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
@@ -53,7 +50,7 @@ def adata_prepared(request: pytest.FixtureRequest, adata: AnnData) -> AnnData:
 
 @pytest.mark.parametrize(
     "a",
-    [np.ones((100, 100)), sparse.csr_matrix(np.ones((100, 100)))],
+    [np.ones((100, 100)), sparse.csr_matrix(np.ones((100, 100)))],  # noqa: TID251
     ids=["dense", "sparse"],
 )
 def test_proportions(a):
@@ -106,7 +103,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         else adata_prepared.X
     )
     max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.coo_matrix):
+    if isinstance(max_X, sparse.coo_matrix | sparse.coo_array):
         max_X = max_X.toarray()
     elif isinstance(max_X, DaskArray):
         max_X = max_X.compute()
@@ -116,8 +113,7 @@ def test_qc_metrics(adata_prepared: AnnData):
         >= adata_prepared.obs["log1p_n_genes_by_counts"]
     ).all()
     assert (
-        adata_prepared.obs["total_counts"]
-        == np.ravel(axis_sum(adata_prepared.X, axis=1))
+        adata_prepared.obs["total_counts"] == stats.sum(adata_prepared.X, axis=1)
     ).all()
     assert (
         adata_prepared.obs["total_counts"] >= adata_prepared.obs["log1p_total_counts"]
@@ -201,19 +197,7 @@ def adata_mito():
     return adata_dense, init_var
 
 
-skip_if_adata_0_12 = pytest.mark.skipif(
-    Version(version("anndata")) >= Version("0.12.0.dev0"),
-    reason="Newer AnnData removes implicit support for COO matrices",
-)
-
-
-@pytest.mark.parametrize(
-    "cls",
-    [
-        *ARRAY_TYPES_MEM,
-        pytest.param(sparse.coo_matrix, marks=[skip_if_adata_0_12], id="scipy_coo"),
-    ],
-)
+@pytest.mark.parametrize("cls", ARRAY_TYPES_MEM)
 def test_qc_metrics_format(cls):
     adata_dense, init_var = adata_mito()
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], inplace=True)

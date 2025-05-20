@@ -14,7 +14,7 @@ HERE: Path = Path(__file__).parent
 
 @pytest.fixture(scope="module")
 def adata():
-    """A bit cute."""
+    # A bit cute.
     from matplotlib.image import imread
     from sklearn.cluster import DBSCAN
     from sklearn.datasets import make_blobs

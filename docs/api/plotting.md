@@ -89,6 +89,8 @@ a method with the same name in `pl`.
    pl.pca_overview
 ```
 
+(pl-embeddings)=
+
 #### Embeddings
 
 ```{eval-rst}

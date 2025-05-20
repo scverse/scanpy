@@ -15,7 +15,7 @@ from ._utils import _choose_representation
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
 
 @old_positionals(
@@ -29,10 +29,11 @@ if TYPE_CHECKING:
     "copy",
 )
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def tsne(
+def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
     *,
+    n_components: int = 2,
     use_rep: str | None = None,
     perplexity: float = 30,
     metric: str = "euclidean",
@@ -44,8 +45,7 @@ def tsne(
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
+    r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
     t-distributed stochastic neighborhood embedding (tSNE, :cite:t:`vanDerMaaten2008`) was
     proposed for visualizating single-cell data by :cite:t:`Amir2013`. Here, by default,
@@ -61,6 +61,8 @@ def tsne(
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
+    n_components
+        The number of dimensions of the embedding.
     perplexity
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -91,11 +93,11 @@ def tsne(
         `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
     key_added
         If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_tsne']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['tsne']`.
+        :attr:`~anndata.AnnData.obsm`\ `['X_tsne']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['tsne']`.
         If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     copy
         Return a copy instead of writing to `adata`.
 
@@ -125,6 +127,7 @@ def tsne(
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
+        n_components=n_components,
     )
     if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
@@ -132,19 +135,19 @@ def tsne(
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
         warnings.warn(
-            UserWarning(
-                "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
-                "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
-                "If you'd like the old behaviour (which is deprecated), pass "
-                "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore."
-            )
+            "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
+            "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
+            "If you'd like the old behaviour (which is deprecated), pass "
+            "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore.",
+            UserWarning,
+            stacklevel=2,
         )
     if use_fast_tsne:
         warnings.warn(
-            FutureWarning(
-                "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
-                "will be dropped in a future version of scanpy."
-            )
+            "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
+            "will be dropped in a future version of scanpy.",
+            FutureWarning,
+            stacklevel=2,
         )
 
     # deal with different tSNE implementations
@@ -159,9 +162,9 @@ def tsne(
         except ImportError:
             use_fast_tsne = False
             warnings.warn(
-                UserWarning(
-                    "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
-                )
+                "Could not import 'MulticoreTSNE'. Falling back to scikit-learn.",
+                UserWarning,
+                stacklevel=2,
             )
     if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearn.manifold import TSNE
@@ -180,6 +183,7 @@ def tsne(
         n_jobs=n_jobs,
         metric=metric,
         use_rep=use_rep,
+        n_components=n_components,
     )
     key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
     adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates

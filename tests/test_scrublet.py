@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sparse
 from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs
@@ -108,7 +108,8 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
         ),
         (n_sim, adata.n_obs),
     )
-    X = I @ adata.layers["raw"]
+    # maintain data type, just like the real scrublet function.
+    X = (I @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
         X,
         var=pd.DataFrame(index=adata.var_names),
@@ -118,8 +119,7 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
 
 
 def test_scrublet_data(cache: pytest.Cache):
-    """
-    Test that Scrublet processing is arranged correctly.
+    """Test that Scrublet processing is arranged correctly.
 
     Check that simulations run on raw data.
     """
@@ -156,32 +156,14 @@ def test_scrublet_data(cache: pytest.Cache):
         random_state=random_state,
     )
 
-    try:
-        # Require that the doublet scores are the same whether simulation is via
-        # the main function or manually provided
-        assert_allclose(
-            adata_scrublet_manual_sim.obs["doublet_score"],
-            adata_scrublet_auto_sim.obs["doublet_score"],
-            atol=1e-15,
-            rtol=1e-15,
-        )
-    except AssertionError:
-        import zarr
-
-        # try debugging https://github.com/scverse/scanpy/issues/3068
-        cache_path = cache.mkdir("debug")
-        store_manual = zarr.ZipStore(cache_path / "scrublet-manual.zip", mode="w")
-        store_auto = zarr.ZipStore(cache_path / "scrublet-auto.zip", mode="w")
-        z_manual = zarr.zeros(
-            adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
-        )
-        z_auto = zarr.zeros(
-            adata_scrublet_auto_sim.shape[0], chunks=10, store=store_auto
-        )
-        z_manual[...] = adata_scrublet_manual_sim.obs["doublet_score"].values
-        z_auto[...] = adata_scrublet_auto_sim.obs["doublet_score"].values
-
-        raise
+    # Require that the doublet scores are the same whether simulation is via
+    # the main function or manually provided
+    assert_allclose(
+        adata_scrublet_manual_sim.obs["doublet_score"],
+        adata_scrublet_auto_sim.obs["doublet_score"],
+        atol=1e-15,
+        rtol=1e-15,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -214,8 +196,7 @@ test_params = {
 
 @pytest.mark.parametrize(("param", "value"), test_params.items())
 def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
-    """
-    Test that Scrublet args are passed.
+    """Test that Scrublet args are passed.
 
     Check that changes to parameters change scrublet results.
     """
