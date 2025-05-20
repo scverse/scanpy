@@ -102,9 +102,9 @@ def _normalize_total_helper(
     if isinstance(x, CSRBase):
         n_threads = numba.get_num_threads()
         counts_per_cell, counts_per_cols = _normalize_csr(
-            x.data,
-            x.indices,
             x.indptr,
+            x.indices,
+            x.data,
             rows=x.shape[0],
             columns=x.shape[1],
             exclude_highly_expressed=exclude_highly_expressed,
