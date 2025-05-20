@@ -41,7 +41,8 @@ def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
-@clip.register(CSBase)
+@clip.register(CSCBase)
+@clip.register(CSRBase)
 def _(x: CSBase, *, max_value: float, zero_center: bool = True) -> CSBase:
     x.data = clip(x.data, max_value=max_value, zero_center=zero_center)
     return x
