@@ -23,7 +23,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -321,18 +321,13 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
 
 
-ARRAY_TYPES_DASK_SPARSE = [
-    a for a in ARRAY_TYPES if "sparse" in a.id and "dask" in a.id
-]
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK_SPARSE)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
 def test_scale_zero_center_warns_dask_sparse(array_type):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match="zero-center being used with `DaskArray`*"):
+    with pytest.warns(UserWarning, match="zero-center.*sparse"):
         sc.pp.scale(adata_casted)
     sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)

@@ -62,6 +62,8 @@ if TYPE_CHECKING:
     _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
 
+    _SA = TypeVar("_SA", bound=_SupportedArray)
+
     _ForT = TypeVar("_ForT", bound=Callable | type)
 
 
@@ -273,9 +275,7 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> G
     import igraph as ig
 
     sources, targets = adjacency.nonzero()
-    weights = adjacency[sources, targets]
-    if isinstance(weights, np.matrix):
-        weights = weights.A1
+    weights = dematrix(adjacency[sources, targets]).ravel()
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets, strict=True)))
@@ -834,6 +834,14 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
 @check_nonnegative_integers.register(DaskArray)
 def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
     return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+
+
+def dematrix(x: _SA | np.matrix) -> _SA:
+    if isinstance(x, np.matrix):
+        return x.A
+    if isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
+        return x.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+    return x
 
 
 def select_groups(
