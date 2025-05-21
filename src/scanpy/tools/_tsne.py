@@ -15,7 +15,7 @@ from ._utils import _choose_representation
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
 
 @old_positionals(
@@ -33,6 +33,7 @@ def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
     *,
+    n_components: int = 2,
     use_rep: str | None = None,
     perplexity: float = 30,
     metric: str = "euclidean",
@@ -60,6 +61,8 @@ def tsne(  # noqa: PLR0913
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
+    n_components
+        The number of dimensions of the embedding.
     perplexity
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -124,6 +127,7 @@ def tsne(  # noqa: PLR0913
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
+        n_components=n_components,
     )
     if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
         params_sklearn["square_distances"] = True
@@ -179,6 +183,7 @@ def tsne(  # noqa: PLR0913
         n_jobs=n_jobs,
         metric=metric,
         use_rep=use_rep,
+        n_components=n_components,
     )
     key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
     adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates

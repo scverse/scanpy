@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+import string
 from operator import mul, truediv
 from types import ModuleType
 from typing import TYPE_CHECKING
@@ -7,24 +9,24 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
-from packaging.version import Version
 from scipy import sparse
 
-from scanpy._compat import CSBase, DaskArray, _legacy_numpy_gen, pkg_version
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
     axis_mul_or_truediv,
-    axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
-    elem_mul,
-    is_constant,
 )
-from testing.scanpy._pytest.marks import needs
+from scanpy._utils.random import (
+    ith_k_tuple,
+    legacy_numpy_gen,
+    random_k_tuples,
+    random_str,
+)
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
     ARRAY_TYPES_SPARSE,
-    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
 
 if TYPE_CHECKING:
@@ -143,31 +145,6 @@ def test_scale_rechunk(array_type, axis, op):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_elem_mul(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    m2 = array_type(asarray([[2, 2, 1], [3, 2, 0]]))
-    expd = np.array([[0, 2, 1], [3, 0, 0]])
-    res = asarray(elem_mul(m1, m2))
-    np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize(
-    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
-)
-def test_axis_sum(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    expd_0 = np.array([1, 1, 2])
-    expd_1 = np.array([2, 2])
-    res_0 = asarray(axis_sum(m1, axis=0))
-    res_1 = asarray(axis_sum(m1, axis=1))
-    if "matrix" in array_type.__name__:  # for sparse since dimension is kept
-        res_0 = res_0.ravel()
-        res_1 = res_1.ravel()
-    np.testing.assert_array_equal(res_0, expd_0)
-    np.testing.assert_array_equal(res_1, expd_1)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("array_value", "expected"),
     [
@@ -200,63 +177,6 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
     assert received is expected
 
 
-# TODO: Make it work for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED)
-def test_is_constant(array_type):
-    constant_inds = [1, 3]
-    A = np.arange(20).reshape(5, 4)
-    A[constant_inds, :] = 10
-    A = array_type(A)
-    AT = array_type(A.T)
-
-    assert not is_constant(A)
-    assert not np.any(is_constant(A, axis=0))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(A, axis=1)
-    )
-
-    assert not is_constant(AT)
-    assert not np.any(is_constant(AT, axis=1))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(AT, axis=0)
-    )
-
-
-@needs.dask
-@pytest.mark.parametrize(
-    ("axis", "expected"),
-    [
-        pytest.param(None, False, id="None"),
-        pytest.param(0, [True, True, False, False], id="0"),
-        pytest.param(1, [False, False, True, True, False, True], id="1"),
-    ],
-)
-@pytest.mark.parametrize("block_type", [np.array, sparse.csr_matrix])  # noqa: TID251
-def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_type):
-    import dask.array as da
-
-    if (
-        isinstance(block_type, type)
-        and issubclass(block_type, CSBase)
-        and (axis is None or pkg_version("dask") < Version("2023.2.0"))
-    ):
-        reason = "Dask has weak support for scipy sparse matrices"
-        # This test is flaky for old dask versions, but when `axis=None` it reliably fails
-        request.applymarker(pytest.mark.xfail(reason=reason, strict=axis is None))
-
-    x_data = [
-        [0, 0, 1, 1],
-        [0, 0, 1, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 0],
-    ]
-    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-    result = is_constant(x, axis=axis).compute()
-    np.testing.assert_array_equal(expected, result)
-
-
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])
 @pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
 @pytest.mark.parametrize("func", ["choice"])
@@ -284,10 +204,42 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
 def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
         np.random.seed(seed)
-    gen = np.random if direct else _legacy_numpy_gen(seed)
+    gen = np.random if direct else legacy_numpy_gen(seed)
     match func:
         case "choice":
             arr = np.arange(1000)
             return gen.choice(arr, size=(100, 100))
         case _:
             pytest.fail(f"Unknown {func=}")
+
+
+def test_ith_k_tuple() -> None:
+    """Test that the k-tuples appear in the expected order."""
+    np.testing.assert_equal(
+        ith_k_tuple(np.arange(2**3), n=2, k=3),
+        list(itertools.product(range(2), repeat=3)),
+    )
+
+
+def test_random_k_tuples() -> None:
+    """Test that random k-tuples are unique."""
+    tups = random_k_tuples(n=26, k=6, size=10_000)
+    assert tups.shape == (10_000, 6)
+    assert tups.dtype == np.int64
+    unique = np.unique(tups, axis=0)
+    assert len(unique) == len(tups)
+
+
+def test_random_str_0d() -> None:
+    string = random_str(length=3, alphabet="01")
+    assert string.shape == ()
+    assert string.dtype == np.dtype("U3")
+    assert str(string) in {"000", "001", "010", "011", "100", "101", "110", "111"}
+
+
+def test_random_str() -> None:
+    strings = random_str(size=26**2, length=2, alphabet=string.ascii_lowercase)
+    assert strings.shape == (26**2,)
+    assert strings.dtype == np.dtype("U2")
+    unique = np.unique(strings, axis=0)
+    assert len(unique) == len(strings)
