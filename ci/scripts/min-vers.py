@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = [ "packaging" ]
 # ///
-"""Parse a pyproject.toml file and output a list of minimum dependencies."""
+"""Parse a pyproject.toml file and output a list of minimum dependency versions."""
 
 from __future__ import annotations
 
@@ -31,8 +31,9 @@ def min_dep(req: Requirement) -> Requirement:
     Example
     -------
     >>> min_dep(Requirement("numpy>=1.0"))
-    <Requirement('numpy==1.0.*')>
-
+    <Requirement('numpy==1.0')>
+    >>> min_dep(Requirement("numpy<3.0"))
+    <Requirement('numpy<3.0')>
     """
     req_name = req.name
     if req.extras:
@@ -44,7 +45,6 @@ def min_dep(req: Requirement) -> Requirement:
     if not filter_specs:
         # TODO: handle markers
         return Requirement(f"{req_name}{req.specifier}")
-
     min_version = Version("0.0.0.a1")
     for spec in filter_specs:
         if spec.operator in {">", ">=", "~="}:
@@ -52,16 +52,17 @@ def min_dep(req: Requirement) -> Requirement:
         elif spec.operator == "==":
             min_version = Version(spec.version)
 
-    return Requirement(f"{req_name}=={min_version}.*")
+    return Requirement(f"{req_name}=={min_version}")
 
 
 def extract_min_deps(
     dependencies: Iterable[Requirement], *, pyproject
 ) -> Generator[Requirement, None, None]:
-    """Extract minimum dependencies from a list of requirements."""
+    """Extract minimum dependency versions from a list of requirements."""
     dependencies = deque(dependencies)  # We'll be mutating this
     project_name = pyproject["project"]["name"]
 
+    deps = {}
     while len(dependencies) > 0:
         req = dependencies.pop()
 
@@ -74,7 +75,11 @@ def extract_min_deps(
                 extra_deps = pyproject["project"]["optional-dependencies"][extra]
                 dependencies += map(Requirement, extra_deps)
         else:
-            yield min_dep(req)
+            if req.name in deps:
+                req.specifier &= deps[req.name].specifier
+                req.extras |= deps[req.name].extras
+            deps[req.name] = min_dep(req)
+    yield from deps.values()
 
 
 class Args(argparse.Namespace):
@@ -100,6 +105,7 @@ class Args(argparse.Namespace):
             prog="min-deps",
             description=cls.__doc__,
             usage="pip install `python min-deps.py pyproject.toml`",
+            allow_abbrev=False,
         )
         parser.add_argument(
             "_path",
