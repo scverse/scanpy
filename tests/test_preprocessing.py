@@ -402,13 +402,22 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
-def test_regress_out_layer():
+@pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
+def test_regress_out_layer(dtype):
     from scipy.sparse import random
 
-    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
+    adata = AnnData(
+        random(1000, 100, density=0.6, format="csr", dtype=np.uint16).astype(dtype)
+    )
     adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
-    adata.layers["counts"] = adata.X.copy()
+    if dtype == np.float64:
+        dtype_cast = dtype
+    if dtype == np.int64:
+        dtype_cast = np.float64
+    if dtype == np.int32:
+        dtype_cast = np.float32
+    adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
     single = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
@@ -419,7 +428,7 @@ def test_regress_out_layer():
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+    np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():
