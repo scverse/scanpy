@@ -187,7 +187,6 @@ filterwarnings = [
     "error:Observation names are not unique:UserWarning",
     "error:The dtype argument is deprecated and will be removed:FutureWarning",
     "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
-    "error:The default of observed=False is deprecated:FutureWarning",
     "error:Series\\.__getitem__ treating keys as positions is deprecated:FutureWarning",
     "error:The default value of 'ignore' for the `na_action` parameter in pandas\\.Categorical\\.map:FutureWarning",
     "error:The provided callable.* is currently using:FutureWarning",
