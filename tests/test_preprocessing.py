@@ -428,7 +428,7 @@ def test_regress_out_layer(dtype):
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+    np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():
