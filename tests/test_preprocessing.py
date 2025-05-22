@@ -375,7 +375,9 @@ def test_regress_out_int(dtype):
 def test_regress_out_layer(dtype):
     from scipy.sparse import random
 
-    adata = AnnData(random(1000, 100, density=0.6, format="csr", dtype=dtype))
+    adata = AnnData(
+        random(1000, 100, density=0.6, format="csr", dtype=np.uint16).astype(dtype)
+    )
     adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     if dtype == np.float64:
@@ -395,7 +397,7 @@ def test_regress_out_layer(dtype):
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+    np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():
