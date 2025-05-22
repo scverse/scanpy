@@ -15,6 +15,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase
+from scanpy.datasets._datasets import pbmc3k
 from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
@@ -349,6 +350,21 @@ def test_regress_out_ordinal():
     )
 
     np.testing.assert_array_equal(single.X, multi.X)
+
+
+@pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
+def test_regress_out_int(dtype):
+    adata = pbmc3k()[:200, :200].copy()
+    adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
+    adata.obs["labels"] = pd.Categorical(
+        (["A"] * (adata.X.shape[0] - 100)) + (["B"] * 100)
+    )
+    adata_other = adata.copy()
+    adata_other.X = adata_other.X.astype(dtype)
+    # results using only one processor
+    sc.pp.regress_out(adata, keys=["labels"])
+    sc.pp.regress_out(adata_other, keys=["labels"])
+    assert_equal(adata_other, adata)
 
 
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
