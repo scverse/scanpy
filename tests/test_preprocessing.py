@@ -356,6 +356,7 @@ def test_regress_out_ordinal():
 def test_regress_out_int(dtype):
     adata = pbmc3k()[:200, :200].copy()
     adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
+    dtype = adata.X.dtype
     adata.obs["labels"] = pd.Categorical(
         (["A"] * (adata.X.shape[0] - 100)) + (["B"] * 100)
     )
@@ -365,6 +366,9 @@ def test_regress_out_int(dtype):
     sc.pp.regress_out(adata, keys=["labels"])
     sc.pp.regress_out(adata_other, keys=["labels"])
     assert_equal(adata_other, adata)
+    # This file was generated under scanpy 1.10.3
+    ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
+    assert_equal(ground_truth, adata_other.X)
 
 
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])

@@ -632,7 +632,8 @@ def _create_regressor_categorical(
     X: np.ndarray, number_categories: int, cat_array: np.ndarray
 ) -> np.ndarray:
     # create regressor matrix for categorical variables
-    regressors = np.zeros(X.shape, dtype=X.dtype)
+    # would be best to use X dtype but this matches old behavior
+    regressors = np.zeros(X.shape, dtype=np.float32)
     # iterate over categories
     for category in range(number_categories):
         # iterate over genes and calculate mean expression
