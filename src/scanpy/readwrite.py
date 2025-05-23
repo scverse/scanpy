@@ -820,7 +820,7 @@ def _read(  # noqa: PLR0912, PLR0915
         msg = f"Please provide one of the available extensions.\n{avail_exts}"
         raise ValueError(msg)
     else:
-        ext = is_valid_filename(filename, return_ext=True)
+        ext = is_valid_filename(filename, return_ext=True, ext=ext)
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f"... did not find original file {filename}")
