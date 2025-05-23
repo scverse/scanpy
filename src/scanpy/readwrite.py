@@ -1148,7 +1148,7 @@ def is_valid_filename(
         if not (joined_file_ext := ".".join(ext_from_file)).endswith(ext):
             msg = f"{joined_file_ext} does not end in expected extension {ext}"
             raise ValueError(msg)
-        return ext
+        return ext if return_ext else True
     if len(ext_from_file) > 2:
         logg.warning(
             f"Your filename has more than two extensions: {ext_from_file}.\n"
