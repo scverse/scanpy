@@ -265,12 +265,6 @@ def neighbors_from_distance(
     method: _Method = "umap",  # default to umap
     key_added: str | None = None,
 ) -> AnnData:
-    ### inconsistent neighbors = bkk and n throw some stuff = bad way of writing the graph
-    ### adjust for this = knn = True
-    # computes the neighborhood graph from a precomputed distance matrix
-    # both umap an gauss are supported, default is umap
-    # skipping PCA and distance computation and goes straight to the graph
-    # key_added is the key under which to store the results in adata.uns or adata.obsp
     """Compute neighbors from a precomputer distance matrix.
 
     Parameters
