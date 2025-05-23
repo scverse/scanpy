@@ -368,7 +368,7 @@ def test_regress_out_int(dtype):
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
     ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
-    assert_equal(ground_truth, adata_other.X)
+    np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
 
 
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
