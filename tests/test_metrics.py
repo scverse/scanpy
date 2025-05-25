@@ -10,10 +10,8 @@ import pandas as pd
 import pytest
 import threadpoolctl
 from scipy import sparse
-from scipy.sparse import csr_matrix  # noqa: TID251
 
 import scanpy as sc
-from scanpy.metrics import modularity, modularity_adata
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
