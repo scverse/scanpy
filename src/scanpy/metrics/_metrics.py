@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
+from scipy.sparse import coo_matrix
+
+from .._compat import SpBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
