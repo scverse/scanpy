@@ -34,9 +34,8 @@ from anndata import __version__ as anndata_version
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, _CSMatrix, pkg_version
+from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
-from .compute.is_constant import is_constant  # noqa: F401
 
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
@@ -53,13 +52,15 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
-    from numpy.typing import ArrayLike, DTypeLike, NDArray
+    from numpy.typing import ArrayLike, NDArray
 
     from .._compat import CSRBase
     from ..neighbors import NeighborsParams, RPForestDict
 
     _MemoryArray = NDArray | CSBase
     _SupportedArray = _MemoryArray | DaskArray
+
+    _SA = TypeVar("_SA", bound=_SupportedArray)
 
     _ForT = TypeVar("_ForT", bound=Callable | type)
 
@@ -272,9 +273,7 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> G
     import igraph as ig
 
     sources, targets = adjacency.nonzero()
-    weights = adjacency[sources, targets]
-    if isinstance(weights, np.matrix):
-        weights = weights.A1
+    weights = dematrix(adjacency[sources, targets]).ravel()
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets, strict=True)))
@@ -546,27 +545,6 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 
 
-@singledispatch
-def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
-    raise NotImplementedError
-
-
-@elem_mul.register(np.ndarray)
-@elem_mul.register(CSBase)
-def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, CSBase):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    return x * y
-
-
-@elem_mul.register(DaskArray)
-def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
-    import dask.array as da
-
-    return da.map_blocks(elem_mul, x, y)
-
-
 if TYPE_CHECKING:
     Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
@@ -606,7 +584,7 @@ def axis_mul_or_truediv(
 @axis_mul_or_truediv.register(CSBase)
 def _(
     X: CSBase,
-    scaling_array,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
@@ -746,78 +724,6 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
     )
 
 
-@overload
-def axis_sum(
-    X: _CSMatrix,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.matrix: ...
-
-
-@overload
-def axis_sum(
-    X: np.ndarray,  # TODO: or sparray
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray: ...
-
-
-@singledispatch
-def axis_sum(
-    X: np.ndarray | CSBase,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray | np.matrix:
-    return np.sum(X, axis=axis, dtype=dtype)
-
-
-@axis_sum.register(DaskArray)
-def _(
-    X: DaskArray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> DaskArray:
-    import dask.array as da
-
-    if dtype is None:
-        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
-
-    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
-        return X.sum(axis=axis, dtype=dtype)
-
-    def sum_drop_keepdims(*args, **kwargs):
-        kwargs.pop("computing_meta", None)
-        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, _CSMatrix | np.matrix) or isinstance(
-            args[0], _CSMatrix | np.matrix
-        ):
-            kwargs.pop("keepdims", None)
-            axis = kwargs["axis"]
-            if isinstance(axis, tuple):
-                if len(axis) != 1:
-                    msg = f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
-                    raise ValueError(msg)
-                kwargs["axis"] = axis[0]
-        # returns a np.matrix normally, which is undesireable
-        return np.array(np.sum(*args, dtype=dtype, **kwargs))
-
-    def aggregate_sum(*args, **kwargs):
-        return np.sum(args[0], dtype=dtype, **kwargs)
-
-    return da.reduction(
-        X,
-        sum_drop_keepdims,
-        aggregate_sum,
-        axis=axis,
-        dtype=dtype,
-        meta=np.array([], dtype=dtype),
-    )
-
-
 @singledispatch
 def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
     """Check values of X to ensure it is count data."""
@@ -842,6 +748,14 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
 @check_nonnegative_integers.register(DaskArray)
 def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
     return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+
+
+def dematrix(x: _SA | np.matrix) -> _SA:
+    if isinstance(x, np.matrix):
+        return x.A
+    if isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
+        return x.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+    return x
 
 
 def select_groups(

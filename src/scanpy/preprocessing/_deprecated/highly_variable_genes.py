@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
 from ..._compat import CSBase, deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -154,7 +154,7 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
         return adata if copy else None
     start = logg.info("extracting highly variable genes")
     X = data  # no copy necessary, X remains unchanged in the following
-    mean, var = materialize_as_ndarray(_get_mean_var(X))
+    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean

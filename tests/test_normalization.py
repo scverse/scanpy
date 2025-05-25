@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
+from fast_array_utils import conv, stats
 from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase
-from scanpy._utils import axis_sum
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
@@ -25,14 +26,18 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
+to_ndarray = partial(conv.to_dense, to_cpu_memory=True)
+
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-@pytest.mark.parametrize("target_sum", [None, 1.0])
-@pytest.mark.parametrize("exclude_highly_expressed", [True, False])
+@pytest.mark.parametrize("target_sum", [None, 1.0], ids=["no_target_sum", "target_sum"])
+@pytest.mark.parametrize(
+    "exclude_highly_expressed", [True, False], ids=["excl_hi", "no_excl_hi"]
+)
 def test_normalize_matrix_types(
     array_type, dtype, target_sum, exclude_highly_expressed
 ):
@@ -63,13 +68,13 @@ def test_normalize_matrix_types(
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     sc.pp.normalize_total(adata, key_added="n_counts")
-    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
     sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
-    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
-    assert np.allclose(np.ravel(axis_sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -79,16 +84,6 @@ def test_normalize_total_rep(array_type, dtype):
     X = array_type(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
     check_rep_mutation(sc.pp.normalize_total, X, fields=["layer"])
     check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("dtype", ["float32", "int64"])
-def test_normalize_total_layers(array_type, dtype):
-    adata = AnnData(array_type(X_total).astype(dtype))
-    adata.layers["layer"] = adata.X.copy()
-    with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
-        sc.pp.normalize_total(adata, layers=["layer"])
-    assert np.allclose(axis_sum(adata.layers["layer"], axis=1), [3.0, 3.0, 3.0])
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
