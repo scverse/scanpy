@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from fast_array_utils.stats import is_constant
 from sklearn.neighbors import KNeighborsTransformer
 
-from scanpy._utils.compute.is_constant import is_constant
 from scanpy.neighbors._common import (
     _get_sparse_matrix_from_indices_distances,
     _has_self_column,
