@@ -130,7 +130,7 @@ def _vals_heterogeneous(
     For details on why this is neccesary, see:
     https://github.com/scverse/scanpy/issues/1806
     """
-    from scanpy._utils import is_constant
+    from fast_array_utils.stats import is_constant
 
     full_result = np.empty(vals.shape[0], dtype=np.float64)
     full_result.fill(np.nan)

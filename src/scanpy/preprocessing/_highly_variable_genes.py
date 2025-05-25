@@ -9,6 +9,7 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
@@ -17,7 +18,6 @@ from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
-from ._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -75,7 +75,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             stacklevel=3,
         )
 
-    df["means"], df["variances"] = _get_mean_var(data)
+    df["means"], df["variances"] = mean_var(data, axis=0, correction=1)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -86,7 +86,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
-        mean, var = _get_mean_var(data_batch)
+        mean, var = mean_var(data_batch, axis=0, correction=1)
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -293,7 +293,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = materialize_as_ndarray(_get_mean_var(X))
+    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
