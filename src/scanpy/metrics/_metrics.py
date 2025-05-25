@@ -14,7 +14,6 @@ from .._compat import SpBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import ArrayLike
@@ -67,9 +66,7 @@ def confusion_matrix(
     orig, new = pd.Series(orig), pd.Series(new)
     assert len(orig) == len(new)
 
-    unique_labels = pd.unique(
-        np.concatenate((np.asarray(orig.values), np.asarray(new.values)))
-    )
+    unique_labels = pd.unique(np.concatenate((orig.to_numpy(), new.to_numpy())))
 
     # Compute
     mtx = _confusion_matrix(orig, new, labels=unique_labels)
@@ -103,20 +100,19 @@ def confusion_matrix(
 def modularity(
     connectivities: ArrayLike | SpBase,
     labels: pd.Series | ArrayLike,
-    mode: Literal["UNDIRECTED", "DIRECTED"] = "UNDIRECTED",
+    *,
+    is_directed: bool,
 ) -> float:
-    # accepting both dense or spare matrices as the connectivity graph
-    # setting mode between directed and undirected
     """Compute the modularity of a graph given its connectivities and labels.
 
     Parameters
     ----------
-    connectivities: array-like or sparse matrix
+    connectivities:
         Weighted adjacency matrix representing the graph. Can be a dense NumPy array or a sparse CSR matrix.
-    labels: array-like or pandas.Series
+    labels:
         Cluster labels for each node in the graph.
-    mode: str
-        The mode of the graph. Can be "UNDIRECTED" or "DIRECTED". Default is "UNDIRECTED".
+    is_directed:
+        Whether the graph is directed or undirected. If True, the graph is treated as directed; otherwise, it is treated as undirected.
 
     Returns
     -------
@@ -137,12 +133,12 @@ def modularity(
         # converting to the coo format to extract the edges and weights
         # storing only non-zero elements and their indices
         weights = coo.data.tolist()
-        graph = ig.Graph(edges=edges, directed=mode == "DIRECTED")
+        graph = ig.Graph(edges=edges, directed=is_directed)
         graph.es["weight"] = weights
     else:
         # if the graph is dense, creates it directly using igraph's adjacency matrix
         dense_array = np.asarray(connectivities)
-        igraph_mode = ig.ADJ_UNDIRECTED if mode == "UNDIRECTED" else ig.ADJ_DIRECTED
+        igraph_mode = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
         graph = ig.Graph.Weighted_Adjacency(dense_array.tolist(), mode=igraph_mode)
     # cluster labels to integer codes required by igraph
     labels = pd.Categorical(np.asarray(labels)).codes
@@ -155,7 +151,7 @@ def modularity_adata(
     *,
     labels: str | ArrayLike = "leiden",
     obsp: str = "connectivities",
-    mode: Literal["UNDIRECTED", "DIRECTED"] = "UNDIRECTED",
+    is_directed: bool,
 ) -> float:
     # default to leiden labels and connectivities as it is more common
     """Compute modularity from an AnnData object using stored graph and clustering labels.
@@ -174,12 +170,10 @@ def modularity_adata(
     float
         The modularity of the graph based on the provided clustering.
     """
-    # if labels is a key in adata.obs, get the values from adata.obs
-    # otherwise, assume it is an array-like object
     label_array = adata.obs[labels] if isinstance(labels, str) else labels
     connectivities = adata.obsp[obsp]
 
     if isinstance(connectivities, pd.DataFrame):
         connectivities = connectivities.values
 
-    return modularity(connectivities, label_array, mode=mode)
+    return modularity(connectivities, label_array, is_directed=is_directed)

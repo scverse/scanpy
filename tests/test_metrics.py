@@ -202,12 +202,10 @@ def test_confusion_matrix_api():
 
 
 # Test 1: Sample graph with clear community structure (dense & sparse, directed & undirected)
-@pytest.mark.parametrize(
-    "mode", ["UNDIRECTED", "DIRECTED"], ids=["undirected", "directed"]
-)
+@pytest.mark.parametrize("is_directed", [False, True], ids=["undirected", "directed"])
 @pytest.mark.parametrize("use_sparse", [False, True], ids=["sparse", "dense"])
 @needs.igraph
-def test_modularity_sample_structure(mode, use_sparse):
+def test_modularity_sample_structure(use_sparse, is_directed):
     # 4 node adjacency matrix with two separate 2-node communities
     mat = np.array(
         [
@@ -219,7 +217,7 @@ def test_modularity_sample_structure(mode, use_sparse):
     )
     labels = ["A", "A", "B", "B"]
     adj = csr_matrix(mat) if use_sparse else mat
-    score = modularity(adj, labels, mode=mode)
+    score = modularity(adj, labels, is_directed=is_directed)
 
     # Modularity should be between 0 and 1
     assert 0 <= score <= 1
@@ -231,7 +229,7 @@ def test_modularity_single_community():
     # fully connected graph sample
     adj = np.ones((4, 4)) - np.eye(4)
     labels = ["A", "A", "A", "A"]
-    score = modularity(adj, labels)
+    score = modularity(adj, labels, is_directed=False)
 
     # modularity should be 0
     assert score == pytest.approx(0.0, rel=1e-6)
@@ -248,7 +246,7 @@ def test_modularity_invalid_labels():
         InternalError,
         match="Membership vector size differs",
     ):
-        modularity(adj, labels)
+        modularity(adj, labels, is_directed=False)
 
 
 # Test 4: Pass both Louvain and Leiden clustering algorithms
@@ -265,14 +263,14 @@ def test_modularity_adata_multiple_clusterings(cluster_method):
     if cluster_method == "louvain":
         sc.tl.louvain(adata)
         score_louvain = modularity_adata(
-            adata, labels="louvain", obsp="connectivities", mode="UNDIRECTED"
+            adata, labels="louvain", obsp="connectivities", is_directed=False
         )
         # Score should be between 0 and 1
         assert 0 <= score_louvain <= 1
     if cluster_method == "leiden":
         sc.tl.leiden(adata)
         score_leiden = modularity_adata(
-            adata, labels="leiden", obsp="connectivities", mode="UNDIRECTED"
+            adata, labels="leiden", obsp="connectivities", is_directed=False
         )
         # Score should be between 0 and 1
         assert 0 <= score_leiden <= 1
@@ -291,8 +289,8 @@ def test_modularity_order():
     )
     labels1 = ["A", "A", "B", "B"]
     labels2 = ["B", "B", "A", "A"]
-    score_1 = modularity(adj, labels1)
-    score_2 = modularity(adj, labels2)
+    score_1 = modularity(adj, labels1, is_directed=False)
+    score_2 = modularity(adj, labels2, is_directed=False)
     assert score_1 == score_2
 
 
@@ -301,7 +299,7 @@ def test_modularity_order():
 def test_modularity_disconnected_graph():
     adj = np.zeros((4, 4))
     labels = ["A", "B", "C", "D"]
-    score = modularity(adj, labels)
+    score = modularity(adj, labels, is_directed=False)
 
     # Modularity should be undefined for disconnected graphs
     assert np.isnan(score)
