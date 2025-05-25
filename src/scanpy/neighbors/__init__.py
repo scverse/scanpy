@@ -93,6 +93,7 @@ def neighbors(  # noqa: PLR0913
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
     copy: bool = False,
+    is_directed: bool = False,
 ) -> AnnData | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
@@ -236,6 +237,8 @@ def neighbors(  # noqa: PLR0913
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
+
+    neighbors_dict["params"]["is_directed"] = is_directed
 
     if neighbors.rp_forest is not None:
         neighbors_dict["rp_forest"] = neighbors.rp_forest

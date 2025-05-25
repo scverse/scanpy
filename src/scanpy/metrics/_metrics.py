@@ -149,8 +149,8 @@ def modularity(
 def modularity_adata(
     adata: AnnData,
     *,
-    labels: str | ArrayLike = "leiden",
-    obsp: str = "connectivities",
+    label_key: str | ArrayLike = "leiden",
+    key: str = "neighbors",
     is_directed: bool,
 ) -> float:
     # default to leiden labels and connectivities as it is more common
@@ -158,20 +158,25 @@ def modularity_adata(
 
     Parameters
     ----------
-    adata: AnnData
+    adata:
         The AnnData object containing the data.
-    labels: str or array-like
-        The key in adata.obs that contains the cluster labels.
-    obsp: str
-        The key in adata.obsp that contains the connectivities.
+    label_key:
+        The key in `adata.obs` that contains the clustering labels. Defaults to "leiden".
+    key:
+        The key in `adata.obsp` that contains the connectivities. Defaults to "neighbors".
+    is_directed:
+        Whether the graph is directed or undirected. If True, the graph is treated as directed; otherwise, it is treated as undirected.
 
     Returns
     -------
     float
         The modularity of the graph based on the provided clustering.
     """
-    label_array = adata.obs[labels] if isinstance(labels, str) else labels
-    connectivities = adata.obsp[obsp]
+    label_array = adata.obs[label_key] if isinstance(label_key, str) else label_key
+    connectivities_key = adata.uns[key]["connectivities_key"]
+    params = adata.uns[key]["params"]
+    connectivities = adata.obsp[connectivities_key]
+    is_directed = params["is_directed"]
 
     if isinstance(connectivities, pd.DataFrame):
         connectivities = connectivities.values
