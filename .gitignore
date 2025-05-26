@@ -27,7 +27,7 @@
 
 # Python build files
 __pycache__/
-/ci/scanpy-min-vers.txt
+/ci/scanpy-low-vers.txt
 /dist/
 /*-env/
 /env-*/

@@ -19,23 +19,23 @@ features = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
-    { if = [ "min-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-vers.txt" },
+    { if = [ "low-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
     { if = [
-        "min-vers",
-    ], value = "uv run ci/scripts/min-vers.py pyproject.toml --all-extras -o ci/scanpy-min-vers.txt" },
+        "low-vers",
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "min-vers" ], value = "3.11" },
+    { if = [ "low-vers" ], value = "3.11" },
     { if = [ "stable", "pre" ], value = "3.13" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
 ]
 overrides.matrix.deps.features = [
-    { if = [ "stable", "pre", "min-vers" ], value = "test" },
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
 ]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "pre", "min-vers", "min-extras" ]
+deps = [ "stable", "pre", "low-vers", "few-extras" ]
