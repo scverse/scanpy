@@ -261,3 +261,7 @@ def test_neighbors_distance_equivalence():
         adata_d.obsp["distances"].toarray(),
         rtol=1e-5,
     )
+    p, p_d = (ad.uns["neighbors"]["params"].copy() for ad in (adata, adata_d))
+    assert p.pop("metric") == "euclidean"
+    assert p_d.pop("metric") is None
+    assert p == p_d

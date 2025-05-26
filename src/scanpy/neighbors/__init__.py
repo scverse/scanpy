@@ -71,7 +71,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
-    metric: _Metric | _MetricFn
+    metric: _Metric | _MetricFn | None
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
@@ -88,7 +88,7 @@ def neighbors(  # noqa: PLR0913
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
-    metric: _Metric | _MetricFn = "euclidean",
+    metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
@@ -145,7 +145,8 @@ def neighbors(  # noqa: PLR0913
                Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
-        If `distances` is given, this parameter is simply stored in `.uns` (see below).
+        If `distances` is given, this parameter is simply stored in `.uns` (see below),
+        otherwise defaults to `'euclidean'`.
 
         *ignored if ``transformer`` is an instance.*
     metric_kwds
@@ -209,6 +210,8 @@ def neighbors(  # noqa: PLR0913
             metric=metric,
             method=method,
         )
+    if metric is None:
+        metric = "euclidean"
     start = logg.info("computing neighbors")
     adata = adata.copy() if copy else adata
     if adata.is_view:  # we shouldn't need this here...
@@ -261,7 +264,7 @@ def neighbors_from_distance(
     distances: np.ndarray | SpBase,
     *,
     n_neighbors: int = 15,
-    metric: _Metric = "euclidean",
+    metric: _Metric | None = None,
     method: _Method = "umap",  # default to umap
     key_added: str | None = None,
 ) -> AnnData:
@@ -275,8 +278,10 @@ def neighbors_from_distance(
         Precomputed dense or sparse distance matrix.
     n_neighbors
         Number of nearest neighbors to use in the graph.
+    metric
+        Name of metric used to compute `distances`.
     method
-        Method to use for computing the graph. Currently only 'umap' is supported.
+        Method to use for computing the graph. Currently only `'umap'` is supported.
     key_added
         Optional key under which to store the results. Default is 'neighbors'.
 
