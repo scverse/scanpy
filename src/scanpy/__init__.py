@@ -45,7 +45,7 @@ else:
     )
 from anndata import AnnData, concat
 
-from . import datasets, experimental, external, get, logging, metrics, queries
+from . import datasets, experimental, get, logging, metrics, queries
 from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
@@ -67,7 +67,6 @@ __all__ = [
     "concat",
     "datasets",
     "experimental",
-    "external",
     "get",
     "logging",
     "metrics",
@@ -91,3 +90,12 @@ __all__ = [
     "tl",
     "write",
 ]
+
+
+def __getattr__(name: str) -> object:
+    if name == "external":
+        from . import external
+
+        return external
+
+    raise AttributeError(name)

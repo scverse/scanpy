@@ -107,10 +107,7 @@ test-full = [
     "zappy",
     # additional tested algorithms
     "scanpy[louvain]",
-    "scanpy[magic]",
     "scanpy[skmisc]",
-    "scanpy[harmony]",
-    "scanpy[scanorama]",
     "scanpy[dask-ml]",
 ]
 doc = [
@@ -142,11 +139,7 @@ dev = [
 paga = [ "igraph" ]
 louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ] # Louvain community detection
 leiden = [ "igraph>=0.10", "leidenalg>=0.9.0" ]  # Leiden community detection
-bbknn = [ "bbknn" ]                              # Batch balanced KNN (batch correction)
-magic = [ "magic-impute>=2.0" ]                  # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.1.3" ]                # highly_variable_genes method 'seurat_v3'
-harmony = [ "harmonypy" ]                        # Harmony dataset integration
-scanorama = [ "scanorama" ]                      # Scanorama dataset integration
 scrublet = [ "scikit-image>=0.20" ]              # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors

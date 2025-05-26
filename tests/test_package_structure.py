@@ -27,10 +27,6 @@ api_module_names = [
     "sc.tl",
     "sc.pl",
     "sc.experimental.pp",
-    "sc.external.pp",
-    "sc.external.tl",
-    "sc.external.pl",
-    "sc.external.exporting",
     "sc.get",
     "sc.logging",
     # "sc.neighbors",  # Not documented
@@ -54,9 +50,17 @@ api_functions = [
 
 
 @pytest.mark.xfail(reason="TODO: unclear if we want this to totally match, let’s see")
+@pytest.mark.filterwarnings("ignore::DeprecationWarning:scanpy.external")
 def test_descend_classes_and_funcs():
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs
+
+
+def test_external_is_deprecated() -> None:
+    with pytest.warns(DeprecationWarning, match=r"scanpy.external"):
+        import scanpy.external
+
+        importlib.reload(scanpy.external)
 
 
 @pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")
