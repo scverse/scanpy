@@ -103,9 +103,7 @@ test = [
     "scanpy[scrublet]",
     "scanpy[louvain]",
     "scanpy[leiden]",
-    "scanpy[magic]",
     "scanpy[skmisc]",
-    "scanpy[harmony]",
     "scanpy[dask-ml]",
 ]
 doc = [
