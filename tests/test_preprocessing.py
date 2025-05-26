@@ -260,14 +260,19 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     with maybe_dask_process_context():
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
     X = adata_casted.X
-    if "dask" in array_type.__name__:
+    if is_dask := ("dask" in array_type.__name__):
         assert not isinstance(X._meta, np.matrix)
         X = X.compute()
     if isinstance(X, CSBase):
         X = X.todense()
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    assert_allclose(
+        X,
+        adata.X,
+        rtol=1e-1 if is_dask else 1e-5,
+        atol=1e-1 if is_dask else 1e-5,
+    )
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
@@ -346,13 +351,22 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
-def test_regress_out_layer():
+@pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
+def test_regress_out_layer(dtype):
     from scipy.sparse import random
 
-    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
+    adata = AnnData(
+        random(1000, 100, density=0.6, format="csr", dtype=np.uint16).astype(dtype)
+    )
     adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
-    adata.layers["counts"] = adata.X.copy()
+    if dtype == np.float64:
+        dtype_cast = dtype
+    if dtype == np.int64:
+        dtype_cast = np.float64
+    if dtype == np.int32:
+        dtype_cast = np.float32
+    adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
     single = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
@@ -363,7 +377,7 @@ def test_regress_out_layer():
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+    np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():

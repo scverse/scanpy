@@ -742,6 +742,14 @@ def regress_out(
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
     if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
+        # Because we update `X` in `numpy_regress_out`, it needs to be floating point to match
+        # the incoming values.
+        if np.issubdtype(X.dtype, np.integer):
+            target_dtype = np.float32 if X.dtype.itemsize <= 4 else np.float64
+            kwargs = {}
+            if isinstance(X, np.ndarray):
+                kwargs["order"] = "C"
+            X = X.astype(target_dtype, **kwargs)
         X = to_dense(X, order="C") if isinstance(X, CSBase) else X
         res = numpy_regress_out(X, regressors)
 
