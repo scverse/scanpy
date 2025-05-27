@@ -349,7 +349,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         if isinstance(X, DaskArray):
             if isinstance(X._meta, CSBase):
-                msg = "Dask sparse arrays do not support zero-centering (yet)"
+                msg = (
+                    "`zero_center=False` is not supported for sparse Dask arrays (yet). "
+                    "See <https://github.com/dask/dask-ml/issues/123>."
+                )
                 raise TypeError(msg)
             from dask_ml.decomposition import TruncatedSVD
 
