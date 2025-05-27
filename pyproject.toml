@@ -132,7 +132,7 @@ dev = [
 ]
 # Algorithms
 paga = [ "igraph" ]
-louvain = [ "igraph", "louvain>=0.7.1" ]          # Louvain community detection
+louvain = [ "igraph", "louvain>=0.8.2" ]          # Louvain community detection
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ] # Leiden community detection
 bbknn = [ "bbknn" ]                               # Batch balanced KNN (batch correction)
 magic = [ "magic-impute>=2.0.4" ]                 # MAGIC imputation method
