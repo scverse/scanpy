@@ -47,22 +47,22 @@ classifiers = [
 ]
 dependencies = [
     "anndata>=0.8",
-    "numpy>=1.24",
-    "matplotlib>=3.7",
-    "pandas >=1.5",
-    "scipy>=1.8",
-    "seaborn>=0.13",
-    "h5py>=3.7",
+    "numpy>=1.24.1",
+    "matplotlib>=3.7.5",
+    "pandas >=1.5.3",
+    "scipy>=1.8.1",
+    "seaborn>=0.13.2",
+    "h5py>=3.7.0",
     "tqdm",
     "scikit-learn>=1.1.3",
     "statsmodels>=0.14.4",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
-    "networkx>=2.7",
+    "networkx>=2.7.1",
     "natsort",
     "joblib",
-    "numba>=0.57",
-    "umap-learn>=0.5.13",
-    "pynndescent>=0.5",
+    "numba>=0.57.1",
+    "umap-learn>=0.5.6",
+    "pynndescent>=0.5.13",
     "packaging>=21.3",
     "session-info2",
     "legacy-api-wrap>=1.4.1",                     # for positional API deprecations
@@ -84,7 +84,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=8.2",
+    "pytest>=8.2.2",
     "pytest-mock",
     "pytest-cov",
     "pytest-xdist[psutil]",
@@ -132,11 +132,11 @@ dev = [
 ]
 # Algorithms
 paga = [ "igraph" ]
-louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ]  # Louvain community detection
+louvain = [ "igraph", "louvain>=0.7.1" ]          # Louvain community detection
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ] # Leiden community detection
 bbknn = [ "bbknn" ]                               # Batch balanced KNN (batch correction)
 magic = [ "magic-impute>=2.0.4" ]                 # MAGIC imputation method
-skmisc = [ "scikit-misc>=0.1.3" ]                 # highly_variable_genes method 'seurat_v3'
+skmisc = [ "scikit-misc>=0.1.4" ]                 # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                         # Harmony dataset integration
 scanorama = [ "scanorama" ]                       # Scanorama dataset integration
 scrublet = [ "scikit-image" ]                     # Doublet detection with automatic thresholds
