@@ -15,14 +15,13 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase
-from scanpy.datasets._datasets import pbmc3k
 from testing.scanpy._helpers import (
     anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
     maybe_dask_process_context,
 )
-from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
