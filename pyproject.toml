@@ -54,18 +54,18 @@ dependencies = [
     "seaborn>=0.13",
     "h5py>=3.7",
     "tqdm",
-    "scikit-learn>=1.1",
-    "statsmodels>=0.14",
+    "scikit-learn>=1.1.3",
+    "statsmodels>=0.14.4",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
     "networkx>=2.7",
     "natsort",
     "joblib",
     "numba>=0.57",
-    "umap-learn>=0.5,!=0.5.0",
+    "umap-learn>=0.5.13",
     "pynndescent>=0.5",
     "packaging>=21.3",
     "session-info2",
-    "legacy-api-wrap>=1.4",                       # for positional API deprecations
+    "legacy-api-wrap>=1.4.1",                     # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
 ]
 dynamic = [ "version" ]
@@ -94,22 +94,15 @@ test-min = [
 ]
 test = [
     "scanpy[test-min]",
-    # Optional but important dependencies
-    "scanpy[leiden]",
-    "zarr<3",
+    # optional storage and processing modes
     "scanpy[dask]",
-    "scanpy[scrublet]",
-]
-test-full = [
-    "scanpy[test]",
-    # optional storage modes
     "zappy",
+    "zarr<3",
     # additional tested algorithms
+    "scanpy[scrublet]",
     "scanpy[louvain]",
-    "scanpy[magic]",
+    "scanpy[leiden]",
     "scanpy[skmisc]",
-    "scanpy[harmony]",
-    "scanpy[scanorama]",
     "scanpy[dask-ml]",
 ]
 doc = [
@@ -139,14 +132,14 @@ dev = [
 ]
 # Algorithms
 paga = [ "igraph" ]
-louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ] # Louvain community detection
-leiden = [ "igraph>=0.10", "leidenalg>=0.9.0" ]  # Leiden community detection
-bbknn = [ "bbknn" ]                              # Batch balanced KNN (batch correction)
-magic = [ "magic-impute>=2.0" ]                  # MAGIC imputation method
-skmisc = [ "scikit-misc>=0.1.3" ]                # highly_variable_genes method 'seurat_v3'
-harmony = [ "harmonypy" ]                        # Harmony dataset integration
-scanorama = [ "scanorama" ]                      # Scanorama dataset integration
-scrublet = [ "scikit-image" ]                    # Doublet detection with automatic thresholds
+louvain = [ "igraph", "louvain>=0.6.0,!=0.6.2" ]  # Louvain community detection
+leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ] # Leiden community detection
+bbknn = [ "bbknn" ]                               # Batch balanced KNN (batch correction)
+magic = [ "magic-impute>=2.0.4" ]                 # MAGIC imputation method
+skmisc = [ "scikit-misc>=0.1.3" ]                 # highly_variable_genes method 'seurat_v3'
+harmony = [ "harmonypy" ]                         # Harmony dataset integration
+scanorama = [ "scanorama" ]                       # Scanorama dataset integration
+scrublet = [ "scikit-image" ]                     # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2022.09.2" ]                   # Use the Dask parallelization engine
