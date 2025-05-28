@@ -11,49 +11,56 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  UV_CONSTRAINT: ci/constraints.txt
 
 defaults:
   run:
     shell: bash -e {0} # -e to fail on error
 
 jobs:
-  pytest:
+  get-environments:
     runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+      - id: get-envs
+        run: |
+          ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
+            | map(
+              select(.key | startswith("hatch-test"))
+              | {
+                name: .key,
+                "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
+                python: .value.python,
+              }
+            )')
+          echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
 
+  test:
+    needs: get-environments
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - python-version: '3.10'
-          - python-version: '3.12'
-          - python-version: '3.12'
-            dependencies-version: min-optional
-          - python-version: '3.12'
-            dependencies-version: pre-release
-            test-type: coverage
-          - python-version: '3.10'
-            dependencies-version: minimum
-            test-type: coverage
-
-    env:  # for use codecov’s env_vars tagging
-      PYTHON: ${{ matrix.python-version }}
-      DEPS: ${{ matrix.dependencies-version || 'default' }}
-      TESTS: ${{ matrix.test-type || 'default' }}
-
+        env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+    env:  # environment variable for use in codecov’s env_vars tagging
+      ENV_NAME: ${{ matrix.env.name }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           filter: blob:none
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: ${{ matrix.env.python }}
           cache-dependency-glob: pyproject.toml
 
       - name: Cache downloaded data
@@ -63,36 +70,23 @@ jobs:
           key: pytest
 
       - name: Install dependencies
-        if: matrix.dependencies-version == null
-        run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
-      - name: Install dependencies (no optional features)
-        if: matrix.dependencies-version == 'min-optional'
-        run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
-      - name: Install dependencies (minimum versions)
-        if: matrix.dependencies-version == 'minimum'
-        run: |
-          uv pip install --system --compile tomli packaging
-          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
-          uv pip install --system --compile $deps "scanpy @ ."
-      - name: Install dependencies (pre-release versions)
-        if: matrix.dependencies-version == 'pre-release'
-        run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
+        run: uvx hatch -v env create ${{ matrix.env.name }}
 
-      - name: Run pytest
-        if: matrix.test-type == null
-        run: pytest
-      - name: Run pytest (coverage)
-        if: matrix.test-type == 'coverage'
-        run: coverage run -m pytest --cov --cov-report=xml
+      - name: Run tests
+        if: matrix.env.test-type == null
+        run: uvx hatch run ${{ matrix.env.name }}:run
+      - name: Run tests (coverage)
+        if: matrix.env.test-type == 'coverage'
+        run: uvx hatch run ${{ matrix.env.name }}:run-cov --cov --cov-report=xml
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@v4
-        if: matrix.test-type == 'coverage'
+        uses: codecov/codecov-action@v5
+        if: matrix.env.test-type == 'coverage'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: "PYTHON,DEPS,TESTS"
+          env_vars: ENV_NAME
           fail_ci_if_error: true
-          file: test-data/coverage.xml
+          files: test-data/coverage.xml
 
       - name: Upload test results
         # yaml strings can’t start with “!”, so using explicit substitution
@@ -100,18 +94,18 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: "PYTHON,DEPS,TESTS"
+          env_vars: ENV_NAME
           fail_ci_if_error: true
           file: test-data/test-results.xml
 
       - name: Publish debug artifacts
-        if: matrix.test-type == 'coverage'
+        if: matrix.env.test-type == 'coverage'
         uses: actions/upload-artifact@v4
         with:
-          name: debug-data-${{ matrix.python-version }}-${{ matrix.dependencies-version || 'default' }}-${{ matrix.test-type || 'default' }}
+          name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
 
-  check-build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,3 +120,15 @@ jobs:
           enable-cache: false
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
+
+  check:
+    if: always()
+    needs:
+      - get-environments
+      - test
+      - build
+    runs-on: ubuntu-latest
+    steps:
+        - uses: re-actors/alls-green@release/v1
+          with:
+            jobs: ${{ toJSON(needs) }}
