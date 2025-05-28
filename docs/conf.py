@@ -73,7 +73,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
     "sphinxcontrib.bibtex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
@@ -81,6 +80,7 @@ extensions = [
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
+    "sphinx_issues",
     "sphinx_tabs.tabs",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
@@ -245,8 +245,5 @@ plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
 # link config
-extlinks = {
-    "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
-    "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-}
+issues_github_path = "scverse/scanpy"
 rtd_links_prefix = PurePosixPath("src")

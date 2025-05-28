@@ -36,6 +36,7 @@ else:
         read_text,
         read_zarr,
     )
+
 from anndata import AnnData
 from matplotlib.image import imread
 
@@ -146,7 +147,7 @@ def read(
 
     """
     filename = Path(filename)  # allow passing strings
-    if is_valid_filename(filename):
+    if is_valid_filename(filename, ext=ext):
         return _read(
             filename,
             backed=backed,
@@ -819,7 +820,7 @@ def _read(  # noqa: PLR0912, PLR0915
         msg = f"Please provide one of the available extensions.\n{avail_exts}"
         raise ValueError(msg)
     else:
-        ext = is_valid_filename(filename, return_ext=True)
+        ext = is_valid_filename(filename, return_ext=True, ext=ext)
     is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f"... did not find original file {filename}")
@@ -1130,31 +1131,43 @@ def _check_datafile_present_and_download(path: Path, backup_url=None):
 
 @overload
 def is_valid_filename(
-    filename: Path, *, return_ext: Literal[False] = False
+    filename: Path, *, return_ext: Literal[False] = False, ext: str | None = None
 ) -> bool: ...
 @overload
-def is_valid_filename(filename: Path, *, return_ext: Literal[True]) -> str: ...
+def is_valid_filename(
+    filename: Path, *, return_ext: Literal[True], ext: str | None = None
+) -> str: ...
 
 
-def is_valid_filename(filename: Path, *, return_ext: bool = False) -> str | bool:
+def is_valid_filename(
+    filename: Path, *, return_ext: bool = False, ext: str | None = None
+) -> str | bool:
     """Check whether the argument is a filename."""
-    ext = filename.suffixes
-
-    if len(ext) > 2:
+    ext_from_file = filename.suffixes
+    if ext is not None:
+        if not (joined_file_ext := ".".join(ext_from_file)).endswith(ext):
+            msg = f"{joined_file_ext} does not end in expected extension {ext}"
+            raise ValueError(msg)
+        return ext if return_ext else True
+    if len(ext_from_file) > 2:
         logg.warning(
-            f"Your filename has more than two extensions: {ext}.\n"
-            f"Only considering the two last: {ext[-2:]}."
+            f"Your filename has more than two extensions: {ext_from_file}.\n"
+            f"Only considering the two last: {ext_from_file[-2:]}."
         )
-        ext = ext[-2:]
+        ext_from_file = ext_from_file[-2:]
 
     # cases for gzipped/bzipped text files
-    if len(ext) == 2 and ext[0][1:] in text_exts and ext[1][1:] in ("gz", "bz2"):
-        return ext[0][1:] if return_ext else True
-    elif ext and ext[-1][1:] in avail_exts:
-        return ext[-1][1:] if return_ext else True
-    elif "".join(ext) == ".soft.gz":
+    if (
+        len(ext_from_file) == 2
+        and ext_from_file[0][1:] in text_exts
+        and ext_from_file[1][1:] in ("gz", "bz2")
+    ):
+        return ext_from_file[0][1:] if return_ext else True
+    elif ext_from_file and ext_from_file[-1][1:] in avail_exts:
+        return ext_from_file[-1][1:] if return_ext else True
+    elif "".join(ext_from_file) == ".soft.gz":
         return "soft.gz" if return_ext else True
-    elif "".join(ext) == ".mtx.gz":
+    elif "".join(ext_from_file) == ".mtx.gz":
         return "mtx.gz" if return_ext else True
     elif not return_ext:
         return False
