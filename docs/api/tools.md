@@ -42,7 +42,6 @@ Compute densities on embeddings.
    :toctree: ../generated/
 
    tl.leiden
-   tl.louvain
    tl.dendrogram
    tl.dpt
    tl.paga

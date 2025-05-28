@@ -101,7 +101,6 @@ test = [
     "zarr<3",
     # additional tested algorithms
     "scanpy[scrublet]",
-    "scanpy[louvain]",
     "scanpy[leiden]",
     "scanpy[skmisc]",
     "scanpy[dask-ml]",
@@ -133,14 +132,14 @@ dev = [
 ]
 # Algorithms
 paga = [ "igraph" ]
-louvain = [ "igraph", "louvain>=0.8.2" ]          # Louvain community detection
-leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ] # Leiden community detection
-bbknn = [ "bbknn" ]                               # Batch balanced KNN (batch correction)
-magic = [ "magic-impute>=2.0.4" ]                 # MAGIC imputation method
-skmisc = [ "scikit-misc>=0.5.1" ]                 # highly_variable_genes method 'seurat_v3'
-harmony = [ "harmonypy" ]                         # Harmony dataset integration
-scanorama = [ "scanorama" ]                       # Scanorama dataset integration
-scrublet = [ "scikit-image>=0.20.0" ]             # Doublet detection with automatic thresholds
+louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ] # Louvain community detection
+leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ]      # Leiden community detection
+bbknn = [ "bbknn" ]                                    # Batch balanced KNN (batch correction)
+magic = [ "magic-impute>=2.0.4" ]                      # MAGIC imputation method
+skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes method 'seurat_v3'
+harmony = [ "harmonypy" ]                              # Harmony dataset integration
+scanorama = [ "scanorama" ]                            # Scanorama dataset integration
+scrublet = [ "scikit-image>=0.20.0" ]                  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2023.5.1" ]                    # Use the Dask parallelization engine
