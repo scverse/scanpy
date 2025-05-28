@@ -4,7 +4,7 @@ import inspect
 import sys
 from contextlib import contextmanager
 from enum import IntEnum
-from logging import getLevelName
+from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Literal, get_args
@@ -23,10 +23,14 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
+    _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
+    _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
+
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
-_VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
+
+_VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
     "error": "ERROR",
     "warning": "WARNING",
     "info": "INFO",
@@ -45,7 +49,7 @@ class Verbosity(IntEnum):
     hint = 3
     debug = 4
 
-    def __eq__(self, other: Verbosity | int | str) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Verbosity):
             return self is other
         if isinstance(other, int):
@@ -56,12 +60,12 @@ class Verbosity(IntEnum):
 
     @property
     def level(self) -> int:
-        # getLevelName(str) returns the int level…
-        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self.name])
+        m = getLevelNamesMapping()
+        return m[_VERBOSITY_TO_LOGLEVEL[self.name]]
 
     @contextmanager
     def override(
-        self, verbosity: Verbosity | str | int
+        self, verbosity: Verbosity | _VerbosityName | int
     ) -> Generator[Verbosity, None, None]:
         """Temporarily override verbosity."""
         settings.verbosity = verbosity
@@ -73,7 +77,7 @@ class Verbosity(IntEnum):
 Verbosity.warn = Verbosity.warning
 
 
-def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
+def _type_check(var: Any, varname: str, types: type | tuple[type, ...]) -> None:
     if isinstance(var, types):
         return
     if isinstance(types, type):
@@ -94,7 +98,7 @@ class ScanpyConfig:
     def __init__(  # noqa: PLR0913
         self,
         *,
-        verbosity: Verbosity | int | str = Verbosity.warning,
+        verbosity: Verbosity | _VerbosityName | int = Verbosity.warning,
         plot_suffix: str = "",
         file_format_data: AnnDataFileFormat = "h5ad",
         file_format_figs: str = "pdf",
@@ -165,8 +169,8 @@ class ScanpyConfig:
         return self._verbosity
 
     @verbosity.setter
-    def verbosity(self, verbosity: Verbosity | int | str):
-        verbosity_str_options = [
+    def verbosity(self, verbosity: Verbosity | _VerbosityName | int) -> None:
+        verbosity_str_options: list[_VerbosityName] = [
             v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
         if isinstance(verbosity, Verbosity):
@@ -181,8 +185,7 @@ class ScanpyConfig:
                     f"Accepted string values are: {verbosity_str_options}"
                 )
                 raise ValueError(msg)
-            else:
-                self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
+            self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
         _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity.name])
@@ -193,7 +196,7 @@ class ScanpyConfig:
         return self._plot_suffix
 
     @plot_suffix.setter
-    def plot_suffix(self, plot_suffix: str):
+    def plot_suffix(self, plot_suffix: str) -> None:
         _type_check(plot_suffix, "plot_suffix", str)
         self._plot_suffix = plot_suffix
 
@@ -203,7 +206,7 @@ class ScanpyConfig:
         return self._file_format_data
 
     @file_format_data.setter
-    def file_format_data(self, file_format: AnnDataFileFormat):
+    def file_format_data(self, file_format: AnnDataFileFormat) -> None:
         _type_check(file_format, "file_format_data", str)
         if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
             msg = (
@@ -223,7 +226,7 @@ class ScanpyConfig:
         return self._file_format_figs
 
     @file_format_figs.setter
-    def file_format_figs(self, figure_format: str):
+    def file_format_figs(self, figure_format: str) -> None:
         _type_check(figure_format, "figure_format_data", str)
         self._file_format_figs = figure_format
 
@@ -236,7 +239,7 @@ class ScanpyConfig:
         return self._autosave
 
     @autosave.setter
-    def autosave(self, autosave: bool):
+    def autosave(self, autosave: bool) -> None:
         _type_check(autosave, "autosave", bool)
         self._autosave = autosave
 
@@ -249,7 +252,7 @@ class ScanpyConfig:
         return self._autoshow
 
     @autoshow.setter
-    def autoshow(self, autoshow: bool):
+    def autoshow(self, autoshow: bool) -> None:
         _type_check(autoshow, "autoshow", bool)
         self._autoshow = autoshow
 
@@ -259,7 +262,7 @@ class ScanpyConfig:
         return self._writedir
 
     @writedir.setter
-    def writedir(self, writedir: Path | str):
+    def writedir(self, writedir: Path | str) -> None:
         _type_check(writedir, "writedir", (str, Path))
         self._writedir = Path(writedir)
 
@@ -269,7 +272,7 @@ class ScanpyConfig:
         return self._cachedir
 
     @cachedir.setter
-    def cachedir(self, cachedir: Path | str):
+    def cachedir(self, cachedir: Path | str) -> None:
         _type_check(cachedir, "cachedir", (str, Path))
         self._cachedir = Path(cachedir)
 
@@ -279,7 +282,7 @@ class ScanpyConfig:
         return self._datasetdir
 
     @datasetdir.setter
-    def datasetdir(self, datasetdir: Path | str):
+    def datasetdir(self, datasetdir: Path | str) -> None:
         _type_check(datasetdir, "datasetdir", (str, Path))
         self._datasetdir = Path(datasetdir).resolve()
 
@@ -289,7 +292,7 @@ class ScanpyConfig:
         return self._figdir
 
     @figdir.setter
-    def figdir(self, figdir: Path | str):
+    def figdir(self, figdir: Path | str) -> None:
         _type_check(figdir, "figdir", (str, Path))
         self._figdir = Path(figdir)
 
@@ -302,7 +305,7 @@ class ScanpyConfig:
         return self._cache_compression
 
     @cache_compression.setter
-    def cache_compression(self, cache_compression: str | None):
+    def cache_compression(self, cache_compression: str | None) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "
@@ -320,7 +323,7 @@ class ScanpyConfig:
         return self._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory: float):
+    def max_memory(self, max_memory: float) -> None:
         _type_check(max_memory, "max_memory", (int, float))
         self._max_memory = max_memory
 
@@ -335,7 +338,7 @@ class ScanpyConfig:
         return self._n_jobs
 
     @n_jobs.setter
-    def n_jobs(self, n_jobs: int):
+    def n_jobs(self, n_jobs: int) -> None:
         _type_check(n_jobs, "n_jobs", int)
         self._n_jobs = n_jobs
 
@@ -345,7 +348,7 @@ class ScanpyConfig:
         return self._logpath
 
     @logpath.setter
-    def logpath(self, logpath: Path | str | None):
+    def logpath(self, logpath: Path | str | None) -> None:
         _type_check(logpath, "logfile", (str, Path))
         # set via “file object” branch of logfile.setter
         self.logfile = Path(logpath).open("a")  # noqa: SIM115
@@ -364,7 +367,7 @@ class ScanpyConfig:
         return self._logfile
 
     @logfile.setter
-    def logfile(self, logfile: Path | str | TextIO | None):
+    def logfile(self, logfile: Path | str | TextIO | None) -> None:
         if not hasattr(logfile, "write") and logfile:
             self.logpath = logfile
         else:  # file object
@@ -380,7 +383,7 @@ class ScanpyConfig:
         return self._categories_to_ignore
 
     @categories_to_ignore.setter
-    def categories_to_ignore(self, categories_to_ignore: Iterable[str]):
+    def categories_to_ignore(self, categories_to_ignore: Iterable[str]) -> None:
         categories_to_ignore = list(categories_to_ignore)
         for i, cat in enumerate(categories_to_ignore):
             _type_check(cat, f"categories_to_ignore[{i}]", str)
@@ -487,7 +490,7 @@ class ScanpyConfig:
         self._frameon = frameon
 
     @staticmethod
-    def _is_run_from_ipython():
+    def _is_run_from_ipython() -> bool:
         """Determine whether we're currently in IPython."""
         import builtins
 

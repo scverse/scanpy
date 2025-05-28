@@ -132,7 +132,7 @@ SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
 
 def gen_pca_params(
     *,
-    array_type: type[ArrayType],
+    array_type: ArrayType,
     svd_solver_type: Literal[None, "valid", "invalid"],
     zero_center: bool,
 ) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:
@@ -165,7 +165,7 @@ def gen_pca_params(
 
 def possible_solvers(
     *,
-    array_type: type[ArrayType],
+    array_type: ArrayType,
     svd_solver_type: Literal["valid", "invalid"],
     zero_center: bool,
 ) -> tuple[set[SVDSolver], str | None]:
@@ -246,9 +246,6 @@ def test_pca_warnings(
         return
 
     warnings.simplefilter("error")
-    warnings.filterwarnings(
-        "ignore", "pkg_resources is deprecated as an API", DeprecationWarning
-    )
     sc.pp.pca(adata, svd_solver=svd_solver, zero_center=zero_center)
 
 
