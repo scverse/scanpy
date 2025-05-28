@@ -172,6 +172,9 @@ filterwarnings = [
     "error:The specified parameters:FutureWarning",
     # When calling `.show()` in tests, this is raised
     "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+    # Deprecated tools we still test
+    "ignore:pkg_resources:UserWarning:louvain",
+    "ignore:.*superseded by.*leidenalg:DeprecationWarning",
 
     # We explicitly handle the below errors in tests
     "error:`anndata.read` is deprecated:FutureWarning",
