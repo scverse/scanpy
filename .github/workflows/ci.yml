@@ -8,7 +8,7 @@ on:
   pull_request:
 
 env:
-  PYTEST_ADDOPTS: "-v --color=yes --parallel --randomize --internet-tests --junitxml=test-data/test-results.xml"
+  PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
   UV_CONSTRAINT: ci/constraints.txt
@@ -74,10 +74,10 @@ jobs:
 
       - name: Run tests
         if: matrix.env.test-type == null
-        run: uvx hatch run ${{ matrix.env.name }}:run
+        run: uvx hatch run ${{ matrix.env.name }}:run -r
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov --cov --cov-report=xml
+        run: uvx hatch run ${{ matrix.env.name }}:run-cov -r --cov --cov-report=xml
 
       - name: Upload coverage data
         uses: codecov/codecov-action@v5
