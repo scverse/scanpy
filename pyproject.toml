@@ -111,6 +111,7 @@ doc = [
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.15.3",
     "sphinx-autodoc-typehints>=1.25.2",
+    "sphinx-issues>=5.0.1",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
