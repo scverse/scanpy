@@ -694,7 +694,7 @@ def regress_out(
         If provided, which element of layers to regress on.
     n_jobs
         Number of jobs for parallel computation.
-        `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+        `None` means using :attr:`scanpy.settings.n_jobs`.
     copy
         Determines whether a copy of `adata` is returned.
 

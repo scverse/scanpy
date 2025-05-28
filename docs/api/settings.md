@@ -18,14 +18,14 @@ high-resolution jupyter display backend useful for use in notebooks.
    set_figure_params
 ```
 
-An instance of the {class}`~scanpy._settings.ScanpyConfig` is available as `scanpy.settings` and allows configuring Scanpy.
+An object that allows configuring Scanpy.
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: ../generated/
 
-   _settings.ScanpyConfig
+   settings
 ```
 
 Some selected settings are discussed in the following.
@@ -39,8 +39,8 @@ you'd usually want to set `settings.autoshow` to `False`.
 .. autosummary::
    :nosignatures:
 
-   ~_settings.ScanpyConfig.autoshow
-   ~_settings.ScanpyConfig.autosave
+   ~settings.autoshow
+   ~settings.autosave
 ```
 
 IO related settings for saving figures, caching files and storing datasets.
@@ -50,11 +50,11 @@ IO related settings for saving figures, caching files and storing datasets.
 .. autosummary::
    :nosignatures:
 
-   ~_settings.ScanpyConfig.figdir
-   ~_settings.ScanpyConfig.cachedir
-   ~_settings.ScanpyConfig.datasetdir
-   ~_settings.ScanpyConfig.file_format_figs
-   ~_settings.ScanpyConfig.file_format_data
+   ~settings.figdir
+   ~settings.cachedir
+   ~settings.datasetdir
+   ~settings.file_format_figs
+   ~settings.file_format_data
 ```
 
 The verbosity of logging output, where verbosity levels have the following
@@ -65,7 +65,7 @@ details, etc.
 .. autosummary::
    :nosignatures:
 
-   ~_settings.ScanpyConfig.verbosity
+   ~settings.verbosity
 ```
 
 Print versions of packages that might influence numerical results.

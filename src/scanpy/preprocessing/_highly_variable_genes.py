@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from inspect import signature
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import numba
 import numpy as np
@@ -20,15 +20,16 @@ from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
-    from typing import Literal
-
     from numpy.typing import NDArray
+
+
+Flavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
-    flavor: str = "seurat_v3",
+    flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -526,7 +527,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"] = "seurat",
+    flavor: Flavor | None = None,
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -595,9 +596,9 @@ def highly_variable_genes(  # noqa: PLR0913
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
     flavor
-        Choose the flavor for identifying highly variable genes. For the dispersion
-        based methods in their default workflows, Seurat passes the cutoffs whereas
-        Cell Ranger passes `n_top_genes`.
+        Choose the flavor for identifying highly variable genes (default depends on :preset:`highly_variable_genes`).
+        For the dispersion based methods in their default workflows,
+        `'seurat'` passes the cutoffs whereas `'cell_ranger'` passes `n_top_genes`.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
@@ -644,6 +645,11 @@ def highly_variable_genes(  # noqa: PLR0913
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
 
     """
+    if flavor is None:
+        from .. import settings
+
+        flavor = settings.preset.highly_variable_genes
+
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):

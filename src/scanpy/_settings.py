@@ -3,7 +3,8 @@ from __future__ import annotations
 import inspect
 import sys
 from contextlib import contextmanager
-from enum import IntEnum
+from enum import IntEnum, StrEnum, auto
+from functools import cached_property
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Any, TextIO
 
+    from .preprocessing import _highly_variable_genes as hvg
+
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
         Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
@@ -28,6 +31,19 @@ if TYPE_CHECKING:
 
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
+
+
+class Preset(StrEnum):
+    ScanpyV1 = auto()
+    SeuratV5 = auto()
+
+    @cached_property
+    def highly_variable_genes(self) -> hvg.Flavor:
+        match self:
+            case Preset.ScanpyV1:
+                return "seurat"
+            case Preset.SeuratV5:
+                return "seurat_v3"
 
 
 _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
@@ -89,8 +105,8 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]) -> None:
     raise TypeError(msg)
 
 
-class ScanpyConfig:
-    """Config manager for scanpy."""
+class Settings:
+    """Settings manager for scanpy."""
 
     N_PCS: int
     """Default number of principal components to use."""
@@ -98,6 +114,7 @@ class ScanpyConfig:
     def __init__(  # noqa: PLR0913
         self,
         *,
+        preset: Preset = Preset.ScanpyV1,
         verbosity: Verbosity | _VerbosityName | int = Verbosity.warning,
         plot_suffix: str = "",
         file_format_data: AnnDataFileFormat = "h5ad",
@@ -117,7 +134,8 @@ class ScanpyConfig:
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True,
         n_pcs: int = 50,
-    ):
+    ) -> None:
+        self.preset = preset
         # logging
         self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
         self.logfile = logfile
@@ -155,6 +173,15 @@ class ScanpyConfig:
         """Stores the previous memory usage."""
 
         self.N_PCS = n_pcs
+
+    @property
+    def preset(self) -> Preset:
+        """Preset to use."""
+        return self._preset
+
+    @preset.setter
+    def preset(self, preset: Preset | str) -> None:
+        self._preset = Preset(preset)
 
     @property
     def verbosity(self) -> Verbosity:
@@ -232,7 +259,7 @@ class ScanpyConfig:
 
     @property
     def autosave(self) -> bool:
-        """Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
+        """Automatically save figures in :attr:`~scanpy.settings.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
@@ -504,4 +531,4 @@ class ScanpyConfig:
         )
 
 
-settings = ScanpyConfig()
+settings = Settings()
