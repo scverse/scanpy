@@ -11,7 +11,7 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -24,14 +24,12 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
 
-try:
-    from louvain.VertexPartition import MutableVertexPartition
-except ImportError:
-
-    class MutableVertexPartition:
-        pass
-
-    MutableVertexPartition.__module__ = "louvain.VertexPartition"
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from louvain.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
 @old_positionals(
@@ -48,6 +46,7 @@ except ImportError:
     "obsp",
     "copy",
 )
+@deprecated("Use `scanpy.tl.leiden` instead")
 def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
@@ -66,6 +65,9 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     copy: bool = False,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
+
+    .. deprecated:: 1.12.0
+       Use :func:`scanpy.tl.leiden` instead.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell

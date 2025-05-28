@@ -45,10 +45,11 @@ Some key points:
 - When docs exist in the same file as code, line length restrictions still apply. In files which are just docs, go with a sentence per line (for easier `git diff`s).
 - Check that the docs look like what you expect them too! It's easy to forget to add a reference to function, be sure it got added and looks right.
 
-Look at [sc.tl.louvain](https://github.com/scverse/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90) as an example for everything mentioned here.
+Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned here.
 
 [napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
 [sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+[`sc.tl.leiden`’s docstring]: https://github.com/scverse/scanpy/blob/350c3424d2f96c4a3a7bb3b7d0428d38d842ebe8/src/scanpy/tools/_leiden.py#L49-L120
 
 ### Plots in docstrings
 

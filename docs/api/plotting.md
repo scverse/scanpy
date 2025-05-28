@@ -118,7 +118,7 @@ Compute densities on embeddings.
 
 #### Branching trajectories and pseudotime, clustering
 
-Visualize clusters using one of the embedding methods passing `color='louvain'`.
+Visualize clusters using one of the embedding methods passing e.g. `color='leiden'`.
 
 ```{eval-rst}
 .. autosummary::
