@@ -35,6 +35,15 @@ def test_slugify(path):
     assert _slugify(path) == "C-foo-bar"
 
 
+def test_read_ext_match(tmp_path):
+    adata_path = tmp_path / "foo.bar.anndata.h5ad"
+    AnnData(np.array([[1, 2], [3, 4]])).write_h5ad(adata_path)
+    with pytest.raises(ValueError, match="does not end in expected extension"):
+        sc.read(adata_path, ext="zarr")
+    # should not warn: https://github.com/scverse/scanpy/issues/2288
+    sc.read(adata_path, ext="h5ad")
+
+
 @pytest.mark.parametrize("ext", ["h5ad", pytest.param("zarr", marks=needs.zarr), "csv"])
 @pytest.mark.parametrize("style", ["path", "ext", "default"])
 def test_write(
