@@ -87,17 +87,21 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
        - -
          - :class:`~numpy.ndarray`, :class:`~scipy.sparse.spmatrix`, or :class:`~scipy.sparse.sparray`
-         - dask :class:`~dask.array.Array`
+         - :class:`dask.array.Array`
        - - `chunked=False`, `zero_center=True`
          - sklearn :class:`~sklearn.decomposition.PCA` (`'arpack'`)
-         - - *dense*: dask-ml :class:`~dask_ml.decomposition.PCA` (`'auto'`)
-           - *sparse*: custom implementation (`'covariance_eigh'`)
+         - - *dense*: dask-ml :class:`~dask_ml.decomposition.PCA`\ [#high-mem]_ (`'auto'`)
+           - *sparse* or `svd_solver='covariance_eigh'`: custom implementation (`'covariance_eigh'`)
        - - `chunked=False`, `zero_center=False`
          - sklearn :class:`~sklearn.decomposition.TruncatedSVD` (`'randomized'`)
-         - dask-ml :class:`~dask_ml.decomposition.TruncatedSVD` (`'tsqr'`)
+         - dask-ml :class:`~dask_ml.decomposition.TruncatedSVD`\ [#dense-only]_ (`'tsqr'`)
        - - `chunked=True` (`zero_center` ignored)
          - sklearn :class:`~sklearn.decomposition.IncrementalPCA` (`'auto'`)
-         - dask-ml :class:`~dask_ml.decomposition.IncrementalPCA` (`'auto'`)
+         - dask-ml :class:`~dask_ml.decomposition.IncrementalPCA`\ [#densifies]_ (`'auto'`)
+
+    .. [#high-mem] Consider `svd_solver='covariance_eigh'` to reduce memory usage (see :issue:`dask/dask-ml#985`).
+    .. [#dense-only] This implementation can not handle sparse chunks, try manually densifying them.
+    .. [#densifies] This implementation densifies sparse chunks and therefore has increased memory usage.
 
     Parameters
     ----------
