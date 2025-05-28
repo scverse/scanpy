@@ -628,6 +628,23 @@ DT = TypeVar("DT")
 
 
 @njit
+def _create_regressor_categorical(
+    X: np.ndarray, number_categories: int, cat_array: np.ndarray
+) -> np.ndarray:
+    # create regressor matrix for categorical variables
+    # would be best to use X dtype but this matches old behavior
+    regressors = np.zeros(X.shape, dtype=np.float32)
+    # iterate over categories
+    for category in range(number_categories):
+        # iterate over genes and calculate mean expression
+        # for each gene per category
+        mask = category == cat_array
+        for ix in numba.prange(X.T.shape[0]):
+            regressors[mask, ix] = X.T[ix, mask].mean()
+    return regressors
+
+
+@njit
 def get_resid(
     data: np.ndarray,
     regressor: np.ndarray,
@@ -722,13 +739,15 @@ def regress_out(
             )
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
-        regressors = np.zeros(X.shape, dtype="float32")
+        # set number of categories to the same dtype as the categories
+        cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
+        number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
+
         X = to_dense(X, order="F") if isinstance(X, CSBase) else X
-        # TODO figure out if we should use a numba kernel for this
-        for category in adata.obs[keys[0]].cat.categories:
-            mask = (category == adata.obs[keys[0]]).values
-            for ix, x in enumerate(X.T):
-                regressors[mask, ix] = x[mask].mean()
+        if np.issubdtype(X.dtype, np.integer):
+            target_dtype = np.float32 if X.dtype.itemsize <= 4 else np.float64
+            X = X.astype(target_dtype)
+        regressors = _create_regressor_categorical(X, number_categories, cat_array)
         variable_is_categorical = True
     # regress on one or several ordinal variables
     else:

@@ -21,7 +21,7 @@ from testing.scanpy._helpers import (
     check_rep_results,
     maybe_dask_process_context,
 )
-from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
@@ -351,6 +351,25 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
+@pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
+def test_regress_out_int(dtype):
+    adata = pbmc3k()[:200, :200].copy()
+    adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
+    dtype = adata.X.dtype
+    adata.obs["labels"] = pd.Categorical(
+        (["A"] * (adata.X.shape[0] - 100)) + (["B"] * 100)
+    )
+    adata_other = adata.copy()
+    adata_other.X = adata_other.X.astype(dtype)
+    # results using only one processor
+    sc.pp.regress_out(adata, keys=["labels"])
+    sc.pp.regress_out(adata_other, keys=["labels"])
+    assert_equal(adata_other, adata)
+    # This file was generated under scanpy 1.10.3
+    ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
+    np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
+
+
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
 def test_regress_out_layer(dtype):
     from scipy.sparse import random
@@ -417,14 +436,21 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
-def test_regress_out_reproducible():
-    adata = pbmc68k_reduced()
+@pytest.mark.parametrize(
+    ("keys", "test_file", "atol"),
+    [
+        (["n_counts", "percent_mito"], "regress_test_small.npy", 0.0),
+        (["bulk_labels"], "regress_test_small_cat.npy", 1e-6),
+    ],
+)
+def test_regress_out_reproducible(keys, test_file, atol):
+    adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
-    sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+    sc.pp.regress_out(adata, keys=keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
-    tester = np.load(DATA_PATH / "regress_test_small.npy")
-    np.testing.assert_allclose(adata.X, tester)
+    tester = np.load(DATA_PATH / test_file)
+    np.testing.assert_allclose(adata.X, tester, atol=atol)
 
 
 def test_regress_out_constants_equivalent():
