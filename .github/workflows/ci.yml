@@ -8,9 +8,10 @@ on:
   pull_request:
 
 env:
-  PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
+  PYTEST_ADDOPTS: "-v --color=yes --parallel --randomize --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  UV_CONSTRAINT: ci/constraints.txt
 
 defaults:
   run:
