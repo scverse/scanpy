@@ -24,14 +24,12 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
 
-try:
-    from louvain.VertexPartition import MutableVertexPartition
-except ImportError:
-
-    class MutableVertexPartition:
-        pass
-
-    MutableVertexPartition.__module__ = "louvain.VertexPartition"
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from louvain.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
 @old_positionals(
