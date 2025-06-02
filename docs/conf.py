@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime
 from functools import partial
@@ -17,6 +18,7 @@ matplotlib.use("agg")
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
+os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
 import scanpy
 
 if TYPE_CHECKING:

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from session_info2 import SessionInfo
 
-    from ._settings import Settings
+    from ._settings import settings
 
 
 # This is currently the only documented API
@@ -74,7 +74,7 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings: Settings):
+def _set_log_file(settings: settings) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
@@ -86,7 +86,7 @@ def _set_log_file(settings: Settings):
     root.addHandler(h)
 
 
-def _set_log_level(settings: Settings, level: int):
+def _set_log_level(settings: settings, level: int) -> None:
     root = settings._root_logger
     root.setLevel(level)
     for h in list(root.handlers):
