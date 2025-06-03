@@ -35,7 +35,7 @@ AnnDataFileFormat = Literal["h5ad", "zarr"]
 
 
 class Preset(StrEnum):
-    """Presets for :func:`scanpy.settings.preset`.
+    """Presets for :attr:`scanpy.settings.preset`.
 
     See properties below for details.
     """
@@ -67,18 +67,18 @@ _VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values(
 
 
 class Verbosity(IntEnum):
-    """Logging verbosity levels."""
+    """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
 
     error = 0
-    """Error (0)"""
+    """Error (`0`)"""
     warning = 1
-    """Warning (1)"""
+    """Warning (`1`)"""
     info = 2
-    """Info (2)"""
+    """Info (`2`)"""
     hint = 3
-    """Hint (3)"""
+    """Hint (`3`)"""
     debug = 4
-    """Debug (4)"""
+    """Debug (`4`)"""
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Verbosity):
