@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from inspect import signature
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
@@ -20,10 +20,11 @@ from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
-
-Flavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+    from .._types import HVGFlavor
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -527,7 +528,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Flavor | None = None,
+    flavor: HVGFlavor | None = None,
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,

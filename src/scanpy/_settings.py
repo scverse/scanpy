@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Any, ClassVar, Self, TextIO
 
-    from .preprocessing import _highly_variable_genes as hvg
+    from ._types import HVGFlavor
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -35,11 +35,20 @@ AnnDataFileFormat = Literal["h5ad", "zarr"]
 
 
 class Preset(StrEnum):
+    """Presets for :func:`scanpy.settings.preset`.
+
+    See properties below for details.
+    """
+
     ScanpyV1 = auto()
+    """Scanpy 1.*’s default settings."""
+
     SeuratV5 = auto()
+    """Try to match Seurat 5.* as closely as possible."""
 
     @cached_property
-    def highly_variable_genes(self) -> hvg.Flavor:
+    def highly_variable_genes(self) -> HVGFlavor:
+        """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         match self:
             case Preset.ScanpyV1:
                 return "seurat"
@@ -430,8 +439,8 @@ class SettingsMeta(SingletonMeta):
         dpi
             Resolution of rendered figures – this influences the size of figures in notebooks.
         dpi_save
-            Resolution of saved figures. This should typically be higher to achieve
-            publication quality.
+            Resolution of saved figures.
+            This should typically be higher to achieve publication quality.
         frameon
             Add frames and axes labels to scatter plots.
         vector_friendly
@@ -439,7 +448,7 @@ class SettingsMeta(SingletonMeta):
         fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
         figsize
-            Set plt.rcParams['figure.figsize'].
+            Set `rcParams['figure.figsize']`.
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
         format
@@ -448,8 +457,8 @@ class SettingsMeta(SingletonMeta):
             Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
             `rcParams['axes.facecolor'] = facecolor`.
         transparent
-            Save figures with transparent back ground. Sets
-            `rcParams['savefig.transparent']`.
+            Save figures with transparent background.
+            Sets `rcParams['savefig.transparent']`.
         ipython_format
             Only concerns the notebook/IPython environment; see
             `matplotlib_inline.backend_inline.set_matplotlib_formats

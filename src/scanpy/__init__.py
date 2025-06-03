@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 
 from packaging.version import Version
@@ -16,7 +15,7 @@ del check_versions
 # the actual API
 # (start with settings as several tools are using it)
 
-from ._settings import Verbosity, settings
+from ._settings import Preset, Verbosity, settings
 
 set_figure_params = settings.set_figure_params
 
@@ -63,6 +62,7 @@ del sys, annotate_doc_types
 __all__ = [
     "AnnData",
     "Neighbors",
+    "Preset",
     "Verbosity",
     "__version__",
     "concat",

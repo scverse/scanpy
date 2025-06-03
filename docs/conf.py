@@ -91,7 +91,12 @@ extensions = [
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
+autodoc_default_options = {
+    # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
+    "members": False,
+    # show “Bases: SomeClass” at the top of class docs
+    "show-inheritance": True,
+}
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
