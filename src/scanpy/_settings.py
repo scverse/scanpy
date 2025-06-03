@@ -70,10 +70,15 @@ class Verbosity(IntEnum):
     """Logging verbosity levels."""
 
     error = 0
+    """Error (0)"""
     warning = 1
+    """Warning (1)"""
     info = 2
+    """Info (2)"""
     hint = 3
+    """Hint (3)"""
     debug = 4
+    """Debug (4)"""
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Verbosity):
@@ -133,7 +138,7 @@ class SettingsMeta(SingletonMeta):
     _cachedir: Path
     _datasetdir: Path
     _figdir: Path
-    _cache_compression: str | None
+    _cache_compression: Literal["lzf", "gzip", None]
     _max_memory: float
     _n_jobs: int
     _categories_to_ignore: list[str]
@@ -161,14 +166,7 @@ class SettingsMeta(SingletonMeta):
 
     @property
     def verbosity(cls) -> Verbosity:
-        """Verbosity level (default `warning`).
-
-        Level 0: only show 'error' messages.
-        Level 1: also show 'warning' messages.
-        Level 2: also show 'info' messages.
-        Level 3: also show 'hint' messages.
-        Level 4: also show very detailed progress for 'debug'ging.
-        """
+        """Verbosity level (default :attr:`Verbosity.warning`)."""
         return cls._verbosity
 
     @verbosity.setter
@@ -300,15 +298,12 @@ class SettingsMeta(SingletonMeta):
         cls._figdir = Path(figdir)
 
     @property
-    def cache_compression(cls) -> str | None:
-        """Compression for `sc.read(..., cache=True)` (default `'lzf'`).
-
-        May be `'lzf'`, `'gzip'`, or `None`.
-        """
+    def cache_compression(cls) -> Literal["lzf", "gzip", None]:
+        """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
         return cls._cache_compression
 
     @cache_compression.setter
-    def cache_compression(cls, cache_compression: str | None) -> None:
+    def cache_compression(cls, cache_compression: Literal["lzf", "gzip", None]) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "
