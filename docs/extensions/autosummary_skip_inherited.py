@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 
 def skip_inherited(  # noqa: PLR0917
     app: Sphinx,
-    what: Literal["module", "class", "exception", "function", "method", "attribute"],
+    what: Literal[
+        "module", "class", "exception", "function", "method", "attribute", "property"
+    ],
     name: str,
     obj: object,
     skip: bool,  # noqa: FBT001
@@ -37,10 +39,15 @@ def skip_inherited(  # noqa: PLR0917
     else:
         return None
 
-    # skip if not a direct member of parent class
-    if name not in parent.__dict__:
-        return True
-    return None
+    # return if it’s a member of the parent class
+    typ = parent
+    while typ is not type:
+        if name in typ.__dict__:
+            return None
+        typ = type(typ)
+
+    # skip since we know it’s not a member of the parent class
+    return True
 
 
 def setup(app: Sphinx) -> None:
