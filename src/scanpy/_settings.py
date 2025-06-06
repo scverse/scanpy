@@ -244,7 +244,7 @@ class SettingsMeta(SingletonMeta):
         """File format for saving figures.
 
         For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
-        `matplotlib.pyplot.savefig`).
+        :func:`matplotlib.pyplot.savefig`).
         """
         return cls._file_format_figs
 
