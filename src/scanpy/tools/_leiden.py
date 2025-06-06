@@ -20,12 +20,12 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
 
-try:  # separate block for fallible import
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
-    if not TYPE_CHECKING:
-        MutableVertexPartition = type("MutableVertexPartition", (), {})
-        MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from leidenalg.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
 def leiden(  # noqa: PLR0912, PLR0913, PLR0915
