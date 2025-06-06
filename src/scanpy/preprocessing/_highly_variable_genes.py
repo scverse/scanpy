@@ -597,7 +597,8 @@ def highly_variable_genes(  # noqa: PLR0913
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
     flavor
-        Choose the flavor for identifying highly variable genes (default depends on :attr:`~scanpy.Preset.highly_variable_genes`).
+        Choose the flavor for identifying highly variable genes
+        (default depends on :attr:`scanpy.settings.preset` property :attr:`~scanpy.Preset.highly_variable_genes`).
         For the dispersion based methods in their default workflows,
         `'seurat'` passes the cutoffs whereas `'cell_ranger'` passes `n_top_genes`.
     subset
