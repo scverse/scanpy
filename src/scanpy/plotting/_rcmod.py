@@ -12,7 +12,7 @@ from . import palettes
 def set_rcParams_scanpy(fontsize=14, color_map=None):
     """Set matplotlib.rcParams to Scanpy defaults.
 
-    Call this through `settings.set_figure_params`.
+    Call this through :func:`scanpy.set_figure_params`.
     """
     # figure
     rcParams["figure.figsize"] = (4, 4)

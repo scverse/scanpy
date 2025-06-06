@@ -24,11 +24,13 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
+    from .._types import HVGFlavor
+
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
-    flavor: str = "seurat_v3",
+    flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -526,7 +528,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"] = "seurat",
+    flavor: HVGFlavor = "seurat",
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,

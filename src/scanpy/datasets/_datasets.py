@@ -375,7 +375,7 @@ def pbmc3k() -> AnnData:
 
     .. note::
        This downloads 5.9 MB of data upon the first call of the function and stores it in
-       :attr:`~scanpy._settings.ScanpyConfig.datasetdir`\ `/pbmc3k_raw.h5ad`.
+       :attr:`~scanpy.settings.datasetdir`\ `/pbmc3k_raw.h5ad`.
 
     The following code was run to produce the file.
 
