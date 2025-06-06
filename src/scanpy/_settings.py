@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import inspect
+import re
 import sys
 from contextlib import contextmanager
 from enum import EnumMeta, IntEnum, StrEnum, auto
-from functools import cached_property
+from functools import cached_property, partial, wraps
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal, LiteralString, TypeVar, get_args
 
 from . import logging
 from ._compat import deprecated, old_positionals
@@ -16,7 +17,7 @@ from ._singleton import SingletonMeta
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable, Mapping
     from typing import Any, ClassVar, Self, TextIO
 
     from ._types import HVGFlavor
@@ -30,8 +31,48 @@ if TYPE_CHECKING:
     _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
     _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
+T = TypeVar("T", bound=LiteralString)
+
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
+
+
+_preset_postprocessors: list[Callable[[], None]] = []
+
+
+def _postprocess_preset_prop(
+    prop: cached_property[T],
+    param: str,
+    get_map: Callable[[], Mapping[Preset, LiteralString]],
+) -> None:
+    map = get_map()
+
+    map_type = inspect.signature(get_map).return_annotation
+    value_type = re.fullmatch(r"Mapping\[Preset, (.*)\]", map_type)[1]
+
+    added_doc = "\n".join(
+        f":attr:`{k.name}`\n    Default: `{param}={v!r}`" for k, v in map.items()
+    )
+
+    prop.__doc__ = f"{prop.__doc__}\n\n{added_doc}"
+    prop.func.__annotations__["return"] = value_type
+
+
+def _preset_property(
+    param: str,
+) -> Callable[[Callable[[], Mapping[Preset, T]]], cached_property[T]]:
+    def decorator(get_map: Callable[[], Mapping[Preset, T]]) -> cached_property[T]:
+        @wraps(get_map)
+        def get(self: Preset) -> T:
+            return get_map()[self]
+
+        prop = cached_property(get)
+        _preset_postprocessors.append(
+            partial(_postprocess_preset_prop, prop, param, get_map)
+        )
+        return prop
+
+    return decorator
 
 
 class Preset(StrEnum):
@@ -46,14 +87,17 @@ class Preset(StrEnum):
     SeuratV5 = auto()
     """Try to match Seurat 5.* as closely as possible."""
 
-    @cached_property
-    def highly_variable_genes(self) -> HVGFlavor:
+    @_preset_property("flavor")
+    def highly_variable_genes() -> Mapping[Preset, HVGFlavor]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
-        match self:
-            case Preset.ScanpyV1:
-                return "seurat"
-            case Preset.SeuratV5:
-                return "seurat_v3"
+        return {
+            Preset.ScanpyV1: "seurat",
+            Preset.SeuratV5: "seurat_v3",
+        }
+
+
+for _postprocess in _preset_postprocessors:
+    _postprocess()
 
 
 _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
