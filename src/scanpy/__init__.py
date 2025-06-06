@@ -15,7 +15,7 @@ del check_versions
 # the actual API
 # (start with settings as several tools are using it)
 
-from ._settings import Preset, Verbosity, settings
+from ._settings import Verbosity, settings
 
 set_figure_params = settings._set_figure_params
 
@@ -62,7 +62,6 @@ del sys, annotate_doc_types
 __all__ = [
     "AnnData",
     "Neighbors",
-    "Preset",
     "Verbosity",
     "__version__",
     "concat",

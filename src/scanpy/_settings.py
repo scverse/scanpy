@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import inspect
-import re
 import sys
 from contextlib import contextmanager
-from enum import EnumMeta, IntEnum, StrEnum, auto
-from functools import cached_property, partial, wraps
+from enum import EnumMeta, IntEnum
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
@@ -17,10 +15,8 @@ from ._singleton import SingletonMeta
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import Generator, Iterable
     from typing import Any, ClassVar, Self, TextIO
-
-    from ._types import HVGFlavor
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -35,69 +31,6 @@ T = TypeVar("T", bound=LiteralString)
 
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
-
-
-_preset_postprocessors: list[Callable[[], None]] = []
-
-
-def _postprocess_preset_prop(
-    prop: cached_property[T],
-    param: str,
-    get_map: Callable[[], Mapping[Preset, LiteralString]],
-) -> None:
-    map = get_map()
-
-    map_type = inspect.signature(get_map).return_annotation
-    value_type = re.fullmatch(r"Mapping\[Preset, (.*)\]", map_type)[1]
-
-    added_doc = "\n".join(
-        f":attr:`{k.name}`\n    Default: `{param}={v!r}`" for k, v in map.items()
-    )
-
-    prop.__doc__ = f"{prop.__doc__}\n\n{added_doc}"
-    prop.func.__annotations__["return"] = value_type
-
-
-def _preset_property(
-    param: str,
-) -> Callable[[Callable[[], Mapping[Preset, T]]], cached_property[T]]:
-    def decorator(get_map: Callable[[], Mapping[Preset, T]]) -> cached_property[T]:
-        @wraps(get_map)
-        def get(self: Preset) -> T:
-            return get_map()[self]
-
-        prop = cached_property(get)
-        _preset_postprocessors.append(
-            partial(_postprocess_preset_prop, prop, param, get_map)
-        )
-        return prop
-
-    return decorator
-
-
-class Preset(StrEnum):
-    """Presets for :attr:`scanpy.settings.preset`.
-
-    See properties below for details.
-    """
-
-    ScanpyV1 = auto()
-    """Scanpy 1.*’s default settings."""
-
-    SeuratV5 = auto()
-    """Try to match Seurat 5.* as closely as possible."""
-
-    @_preset_property("flavor")
-    def highly_variable_genes() -> Mapping[Preset, HVGFlavor]:
-        """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
-        return {
-            Preset.ScanpyV1: "seurat",
-            Preset.SeuratV5: "seurat_v3",
-        }
-
-
-for _postprocess in _preset_postprocessors:
-    _postprocess()
 
 
 _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
@@ -178,7 +111,6 @@ def _type_check(var: Any, varname: str, types: type | tuple[type, ...]) -> None:
 
 
 class SettingsMeta(SingletonMeta):
-    _preset: Preset
     # logging
     _root_logger: _RootLogger
     _logfile: TextIO | None
@@ -210,15 +142,6 @@ class SettingsMeta(SingletonMeta):
     """Variable for timing program parts."""
     _previous_memory_usage: int
     """Stores the previous memory usage."""
-
-    @property
-    def preset(cls) -> Preset:
-        """Preset to use."""
-        return cls._preset
-
-    @preset.setter
-    def preset(cls, preset: Preset | str) -> None:
-        cls._preset = Preset(preset)
 
     @property
     def verbosity(cls) -> Verbosity:
@@ -582,7 +505,6 @@ class settings(metaclass=SettingsMeta):
     def __new__(cls) -> type[Self]:
         return cls
 
-    _preset = Preset.ScanpyV1
     # logging
     _root_logger: ClassVar = _RootLogger(logging.INFO)
     _logfile: ClassVar = None

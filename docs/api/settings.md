@@ -30,16 +30,6 @@ An object that allows configuring Scanpy.
 
 Some selected settings are discussed in the following.
 
-Presets allow to set the behavior of many scanpy functions at once:
-
-```{eval-rst}
-.. autosummary::
-   :signatures: none
-   :toctree: ../generated/
-
-   Preset
-```
-
 Verbosity controls the amount of logging output:
 
 ```{eval-rst}
