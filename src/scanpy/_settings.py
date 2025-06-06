@@ -140,8 +140,7 @@ class SettingsMeta(SingletonMeta):
     _logfile: TextIO | None
     _verbosity: Verbosity
     # rest
-    N_PCS: int
-    """Default number of principal components to use."""
+    _n_pcs: int
     _plot_suffix: str
     _file_format_data: AnnDataFileFormat
     _file_format_figs: str
@@ -203,6 +202,16 @@ class SettingsMeta(SingletonMeta):
         else:
             _type_check(verbosity, "verbosity", (str, int))
         _set_log_level(cls, _VERBOSITY_TO_LOGLEVEL[cls._verbosity.name])
+
+    @property
+    def N_PCS(cls) -> int:
+        """Default number of principal components to use."""
+        return cls._n_pcs
+
+    @N_PCS.setter
+    def N_PCS(cls, n_pcs: int) -> None:
+        _type_check(n_pcs, "n_pcs", int)
+        cls._n_pcs = n_pcs
 
     @property
     def plot_suffix(cls) -> str:
@@ -408,6 +417,10 @@ class SettingsMeta(SingletonMeta):
     # Functions
     # --------------------------------------------------------------------------------
 
+    @deprecated("Use `scanpy.set_figure_params` instead")
+    def set_figure_params(cls, *args, **kwargs) -> None:
+        cls.set_figure_params(*args, **kwargs)
+
     @old_positionals(
         "scanpy",
         "dpi",
@@ -422,7 +435,7 @@ class SettingsMeta(SingletonMeta):
         "transparent",
         "ipython_format",
     )
-    def set_figure_params(  # noqa: PLR0913
+    def _set_figure_params(  # noqa: PLR0913
         cls,
         *,
         scanpy: bool = True,
@@ -532,7 +545,7 @@ class settings(metaclass=SettingsMeta):
     _logpath: ClassVar = None
     _verbosity: ClassVar = Verbosity.warning
     # rest
-    N_PCS: ClassVar = 50
+    _n_pcs: ClassVar = 50
     _plot_suffix: ClassVar = ""
     _file_format_data: ClassVar = "h5ad"
     _file_format_figs: ClassVar = "pdf"

@@ -17,7 +17,7 @@ del check_versions
 
 from ._settings import Preset, Verbosity, settings
 
-set_figure_params = settings.set_figure_params
+set_figure_params = settings._set_figure_params
 
 import anndata
 
