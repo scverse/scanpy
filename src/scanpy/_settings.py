@@ -9,7 +9,7 @@ from functools import cached_property, partial, wraps
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, LiteralString, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, LiteralString, ParamSpec, TypeVar, get_args
 
 from . import logging
 from ._compat import deprecated, old_positionals
@@ -18,7 +18,8 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Mapping
-    from typing import Any, ClassVar, Self, TextIO
+    from types import UnionType
+    from typing import ClassVar, Concatenate, Self, TextIO
 
     from ._types import HVGFlavor
 
@@ -31,7 +32,11 @@ if TYPE_CHECKING:
     _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
     _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
-T = TypeVar("T", bound=LiteralString)
+L = TypeVar("L", bound=LiteralString)
+S = TypeVar("S")
+T = TypeVar("T")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
@@ -41,9 +46,7 @@ _preset_postprocessors: list[Callable[[], None]] = []
 
 
 def _postprocess_preset_prop(
-    prop: cached_property[T],
-    param: str,
-    get_map: Callable[[], Mapping[Preset, LiteralString]],
+    prop: cached_property[L], param: str, get_map: Callable[[], Mapping[Preset, L]]
 ) -> None:
     map = get_map()
 
@@ -60,10 +63,10 @@ def _postprocess_preset_prop(
 
 def _preset_property(
     param: str,
-) -> Callable[[Callable[[], Mapping[Preset, T]]], cached_property[T]]:
-    def decorator(get_map: Callable[[], Mapping[Preset, T]]) -> cached_property[T]:
+) -> Callable[[Callable[[], Mapping[Preset, L]]], cached_property[L]]:
+    def decorator(get_map: Callable[[], Mapping[Preset, L]]) -> cached_property[L]:
         @wraps(get_map)
-        def get(self: Preset) -> T:
+        def get(self: Preset) -> L:
             return get_map()[self]
 
         prop = cached_property(get)
@@ -165,16 +168,33 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         settings.verbosity = self
 
 
-def _type_check(var: Any, varname: str, types: type | tuple[type, ...]) -> None:
+def _type_check(var: object, name: str, types: type | UnionType) -> None:
     if isinstance(var, types):
         return
     if isinstance(types, type):
         possible_types_str = types.__name__
     else:
-        type_names = [t.__name__ for t in types]
+        type_names = [t.__name__ for t in get_args(types)]
         possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
-    msg = f"{varname} must be of type {possible_types_str}"
+    msg = f"{name} must be of type {possible_types_str}"
     raise TypeError(msg)
+
+
+def _type_check_arg2(
+    types: type | UnionType,
+) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
+    def decorator(
+        func: Callable[Concatenate[S, T, P], R],
+    ) -> Callable[Concatenate[S, T, P], R]:
+        @wraps(func)
+        def wrapped(self: S, var: T, *args: P.args, **kwargs: P.kwargs) -> R:
+            __tracebackhide__ = True
+            _type_check(var, func.__name__, types)
+            return func(self, var, *args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 class SettingsMeta(SingletonMeta):
@@ -244,7 +264,7 @@ class SettingsMeta(SingletonMeta):
                 raise ValueError(msg)
             cls._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
-            _type_check(verbosity, "verbosity", (str, int))
+            _type_check(verbosity, "verbosity", str | int)
         _set_log_level(cls, _VERBOSITY_TO_LOGLEVEL[cls._verbosity.name])
 
     @property
@@ -253,8 +273,8 @@ class SettingsMeta(SingletonMeta):
         return cls._n_pcs
 
     @N_PCS.setter
+    @_type_check_arg2(int)
     def N_PCS(cls, n_pcs: int) -> None:
-        _type_check(n_pcs, "n_pcs", int)
         cls._n_pcs = n_pcs
 
     @property
@@ -263,8 +283,8 @@ class SettingsMeta(SingletonMeta):
         return cls._plot_suffix
 
     @plot_suffix.setter
+    @_type_check_arg2(str)
     def plot_suffix(cls, plot_suffix: str) -> None:
-        _type_check(plot_suffix, "plot_suffix", str)
         cls._plot_suffix = plot_suffix
 
     @property
@@ -273,8 +293,8 @@ class SettingsMeta(SingletonMeta):
         return cls._file_format_data
 
     @file_format_data.setter
+    @_type_check_arg2(str)
     def file_format_data(cls, file_format: AnnDataFileFormat) -> None:
-        _type_check(file_format, "file_format_data", str)
         if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
             msg = (
                 f"Cannot set file_format_data to {file_format}. "
@@ -293,8 +313,8 @@ class SettingsMeta(SingletonMeta):
         return cls._file_format_figs
 
     @file_format_figs.setter
+    @_type_check_arg2(str)
     def file_format_figs(self, figure_format: str) -> None:
-        _type_check(figure_format, "figure_format_data", str)
         self._file_format_figs = figure_format
 
     @property
@@ -306,8 +326,8 @@ class SettingsMeta(SingletonMeta):
         return cls._autosave
 
     @autosave.setter
+    @_type_check_arg2(bool)
     def autosave(cls, autosave: bool) -> None:
-        _type_check(autosave, "autosave", bool)
         cls._autosave = autosave
 
     @property
@@ -319,8 +339,8 @@ class SettingsMeta(SingletonMeta):
         return cls._autoshow
 
     @autoshow.setter
+    @_type_check_arg2(bool)
     def autoshow(cls, autoshow: bool) -> None:
-        _type_check(autoshow, "autoshow", bool)
         cls._autoshow = autoshow
 
     @property
@@ -329,8 +349,8 @@ class SettingsMeta(SingletonMeta):
         return cls._writedir
 
     @writedir.setter
+    @_type_check_arg2(Path | str)
     def writedir(cls, writedir: Path | str) -> None:
-        _type_check(writedir, "writedir", (str, Path))
         cls._writedir = Path(writedir)
 
     @property
@@ -339,8 +359,8 @@ class SettingsMeta(SingletonMeta):
         return cls._cachedir
 
     @cachedir.setter
+    @_type_check_arg2(Path | str)
     def cachedir(cls, cachedir: Path | str) -> None:
-        _type_check(cachedir, "cachedir", (str, Path))
         cls._cachedir = Path(cachedir)
 
     @property
@@ -349,8 +369,8 @@ class SettingsMeta(SingletonMeta):
         return cls._datasetdir
 
     @datasetdir.setter
+    @_type_check_arg2(Path | str)
     def datasetdir(cls, datasetdir: Path | str) -> None:
-        _type_check(datasetdir, "datasetdir", (str, Path))
         cls._datasetdir = Path(datasetdir).resolve()
 
     @property
@@ -359,8 +379,8 @@ class SettingsMeta(SingletonMeta):
         return cls._figdir
 
     @figdir.setter
+    @_type_check_arg2(Path | str)
     def figdir(cls, figdir: Path | str) -> None:
-        _type_check(figdir, "figdir", (str, Path))
         cls._figdir = Path(figdir)
 
     @property
@@ -387,8 +407,8 @@ class SettingsMeta(SingletonMeta):
         return cls._max_memory
 
     @max_memory.setter
+    @_type_check_arg2(int | float)
     def max_memory(cls, max_memory: float) -> None:
-        _type_check(max_memory, "max_memory", (int, float))
         cls._max_memory = max_memory
 
     @property
@@ -402,8 +422,8 @@ class SettingsMeta(SingletonMeta):
         return cls._n_jobs
 
     @n_jobs.setter
+    @_type_check_arg2(int)
     def n_jobs(cls, n_jobs: int) -> None:
-        _type_check(n_jobs, "n_jobs", int)
         cls._n_jobs = n_jobs
 
     @property
@@ -412,8 +432,8 @@ class SettingsMeta(SingletonMeta):
         return cls._logpath
 
     @logpath.setter
+    @_type_check_arg2(Path | str)
     def logpath(cls, logpath: Path | str | None) -> None:
-        _type_check(logpath, "logfile", (str, Path))
         if logpath is None:
             cls._logfile = None
             cls._logpath = None
