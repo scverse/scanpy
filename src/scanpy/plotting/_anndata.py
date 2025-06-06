@@ -146,7 +146,6 @@ def scatter(  # noqa: PLR0913
     size: float | None = None,
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
-    show: bool | None = None,
     save: str | bool | None = None,
     ax: Axes | None = None,
 ) -> Axes | list[Axes] | None:
@@ -756,9 +755,9 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     # deprecatd
+    save: bool | str | None = None,
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
@@ -1013,7 +1012,7 @@ def clustermap(
     *,
     use_raw: bool | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwds,
 ) -> ClusterGrid | None:
     """Hierarchically-clustered heatmap.

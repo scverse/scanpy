@@ -16,7 +16,7 @@ from matplotlib.figure import SubplotParams as sppars
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, _empty
 from . import palettes
@@ -94,8 +94,9 @@ def matrix(  # noqa: PLR0913
     colorbar_shrink: float = 0.5,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
     """Plot a matrix."""
     if ax is None:
@@ -306,6 +307,9 @@ additional_colors = {
 # -------------------------------------------------------------------------------
 
 
+@deprecated(
+    "Argument `save` is deprecated and will be removed in a future version. Use `sc.pl.plot(show=False).figure.savefig()` instead."
+)
 def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
