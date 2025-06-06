@@ -37,7 +37,7 @@ def adata() -> AnnData:
 
 def prepare_adata(adata: AnnData) -> AnnData:
     if isinstance(adata.X, DaskArray):
-        adata.X = adata.X.rechunk((100, -1))
+        adata.X = adata.X.rechunk((10, -1))
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
     )
