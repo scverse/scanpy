@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import sys
 from contextlib import contextmanager
-from enum import IntEnum, StrEnum, auto
+from enum import EnumMeta, IntEnum, StrEnum, auto
 from functools import cached_property
 from logging import getLevelNamesMapping
 from pathlib import Path
@@ -11,7 +11,7 @@ from time import time
 from typing import TYPE_CHECKING, Literal, get_args
 
 from . import logging
-from ._compat import old_positionals
+from ._compat import deprecated, old_positionals
 from ._singleton import SingletonMeta
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
@@ -66,7 +66,14 @@ _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
 _VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
 
 
-class Verbosity(IntEnum):
+class VerbosityMeta(EnumMeta):
+    @property
+    @deprecated("Use `Verbosity.warning` instead")
+    def warn(cls) -> Verbosity:
+        return Verbosity.warning
+
+
+class Verbosity(IntEnum, metaclass=VerbosityMeta):
     """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
 
     error = 0
@@ -91,6 +98,7 @@ class Verbosity(IntEnum):
 
     @property
     def level(self) -> int:
+        """The :ref:`logging level <levels>` corresponding to this verbosity level."""
         m = getLevelNamesMapping()
         return m[_VERBOSITY_TO_LOGLEVEL[self.name]]
 
@@ -102,10 +110,6 @@ class Verbosity(IntEnum):
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
-
-
-# backwards compat
-Verbosity.warn = Verbosity.warning
 
 
 def _type_check(var: Any, varname: str, types: type | tuple[type, ...]) -> None:
