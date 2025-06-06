@@ -109,13 +109,12 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         """Temporarily override verbosity.
 
         >>> import scanpy as sc
-        >>> sc.settings.verbosity
-        <Verbosity.hint: 3>
+        >>> sc.settings.verbosity = sc.Verbosity.info
         >>> with sc.settings.verbosity.override(settings.verbosity.debug):
         ...     sc.settings.verbosity
         <Verbosity.debug: 4>
         >>> sc.settings.verbosity
-        <Verbosity.hint: 3>
+        <Verbosity.info: 2>
         """
         settings.verbosity = verbosity
         yield self
