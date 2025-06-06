@@ -12,5 +12,6 @@
    pp.filter_genes_dispersion
    pp.normalize_per_cell
    pp.subsample
+   tl.louvain
    logging.print_versions
 ```
