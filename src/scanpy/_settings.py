@@ -106,7 +106,17 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
     def override(
         self, verbosity: Verbosity | _VerbosityName | int
     ) -> Generator[Verbosity, None, None]:
-        """Temporarily override verbosity."""
+        """Temporarily override verbosity.
+
+        >>> import scanpy as sc
+        >>> sc.settings.verbosity
+        <Verbosity.hint: 3>
+        >>> with sc.settings.verbosity.override(settings.verbosity.debug):
+        ...     sc.settings.verbosity
+        <Verbosity.debug: 4>
+        >>> sc.settings.verbosity
+        <Verbosity.hint: 3>
+        """
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
