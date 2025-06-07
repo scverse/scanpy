@@ -112,10 +112,10 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     wspace: float | None = None,
     title: str | Sequence[str] | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     return_fig: bool | None = None,
     marker: str | Sequence[str] = ".",
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot for user specified embedding basis (e.g. umap, pca, etc).
@@ -831,7 +831,7 @@ def pca(
     annotate_var_explained: bool = False,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in PCA coordinates.
@@ -946,7 +946,7 @@ def spatial(  # noqa: PLR0913
     na_color: ColorLike | None = None,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in spatial coordinates.
