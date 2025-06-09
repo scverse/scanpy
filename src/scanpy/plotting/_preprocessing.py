@@ -22,7 +22,7 @@ def highly_variable_genes(  # noqa: PLR0912
     log: bool = False,
     show: bool | None = None,
     highly_variable_genes: bool = True,
-    # deprecatd
+    # deprecated
     save: bool | str | None = None,
 ) -> None:
     """Plot dispersions or normalized variance versus means for genes.
@@ -113,7 +113,7 @@ def filter_genes_dispersion(
     *,
     log: bool = False,
     show: bool | None = None,
-    # deprecatd
+    # deprecated
     save: bool | str | None = None,
 ) -> None:
     """Plot dispersions versus means for genes.

@@ -146,8 +146,10 @@ def scatter(  # noqa: PLR0913
     size: float | None = None,
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
-    save: str | bool | None = None,
+    show: bool | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: str | bool | None = None,
 ) -> Axes | list[Axes] | None:
     """Scatter plot along observations or variables axes.
 
@@ -756,7 +758,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     rotation: float | None = None,
     show: bool | None = None,
     ax: Axes | None = None,
-    # deprecatd
+    # deprecated
     save: bool | str | None = None,
     scale: DensityNorm | Empty = _empty,
     **kwds,
