@@ -48,7 +48,7 @@ def skip_inherited(  # noqa: PLR0917
             return None
         typ = type(typ)
 
-    # skip since we know it’s not a member of the parent class
+    # Skip this `name` because the `parent` `type` lacks the `name`, which indicates `name` does not belong to `parent`
     return True
 
 
