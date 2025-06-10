@@ -28,7 +28,7 @@ overrides.matrix.deps.pre-install-commands = [
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.11" },
-    { if = [ "stable", "pre" ], value = "3.13" },
+    { if = [ "stable", "pre", "few-extras" ], value = "3.13" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
