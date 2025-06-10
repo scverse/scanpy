@@ -30,9 +30,8 @@ class SingletonMeta(type):
         if documenting():
             props = {}
             for name in dir(cls):
-                if name.startswith("_") or name in cls.__dict__:
+                if (attr := getattr(mcls, name, None)) is None:
                     continue
-                attr = getattr(mcls, name)
                 if isinstance(attr, FunctionType | MethodType):
                     # Circumvent https://github.com/tox-dev/sphinx-autodoc-typehints/pull/157
                     setattr(cls, name, getattr(cls, name))
