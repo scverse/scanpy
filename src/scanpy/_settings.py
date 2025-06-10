@@ -8,7 +8,7 @@ from functools import wraps
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, LiteralString, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
 
 from . import logging
 from ._compat import deprecated, old_positionals
@@ -18,7 +18,7 @@ from .logging import _RootLogger, _set_log_file, _set_log_level
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
     from types import UnionType
-    from typing import ClassVar, Concatenate, Self, TextIO
+    from typing import ClassVar, Concatenate, LiteralString, Self, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -28,6 +28,11 @@ if TYPE_CHECKING:
     )
     _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
     _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
+else:
+    try:
+        from typing import LiteralString
+    except ImportError:
+        LiteralString = str
 
 L = TypeVar("L", bound=LiteralString)
 S = TypeVar("S")
