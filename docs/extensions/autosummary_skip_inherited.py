@@ -46,6 +46,8 @@ def skip_inherited(  # noqa: PLR0917
     while typ is not type:
         if name in typ.__dict__:
             return None
+        # Metaclasses need the while loop to trace back to their parents.
+        # See `SingletonMeta` and the documentation of `settings` for an example.
         typ = type(typ)
 
     # Skip this `name` because the `parent` `type` lacks the `name`, which indicates `name` does not belong to `parent`
