@@ -29,6 +29,8 @@ def skip_inherited(  # noqa: PLR0917
 
     # find parent class
     for frame, _ in walk_stack(None):
+        # Sadly `autodoc-skip-member` doesn’t give access to the parent object, so we need to do this.
+        # Find this stack frame: https://github.com/sphinx-doc/sphinx/blob/a5366394ae527712c4edfeb07a5fbeecd4ca72e1/sphinx/ext/autosummary/generate.py#L496-L517
         if frame.f_code.co_name == "_get_members" and frame.f_code.co_filename.endswith(
             "/generate.py"
         ):
@@ -44,9 +46,11 @@ def skip_inherited(  # noqa: PLR0917
     while typ is not type:
         if name in typ.__dict__:
             return None
+        # Metaclasses need the while loop to trace back to their parents.
+        # See `SingletonMeta` and the documentation of `settings` for an example.
         typ = type(typ)
 
-    # skip since we know it’s not a member of the parent class
+    # Skip this `name` because the `parent` `type` lacks the `name`, which indicates `name` does not belong to `parent`
     return True
 
 

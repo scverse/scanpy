@@ -6,14 +6,9 @@ from types import FunctionType, MethodType
 
 
 def documenting() -> bool:
-    """Return whether this is being called from Sphinx.
-
-    (but not when e.g. a log message is accessing `settings.verbosity`)
-    """
+    """Return whether this is being called from Sphinx."""
     if not os.environ.get("SPHINX_RUNNING"):
         return False
-    found = False
-    logging = False
     for frame in extract_stack():
         # Let any sphinx ext get the docstring
         if frame.name in {
@@ -23,10 +18,8 @@ def documenting() -> bool:
             "get_object_members",  # Class level of autodoc
             "import_object",  # Attr level of autodoc
         }:
-            found = True
-        if frame.filename.endswith("/logging.py"):
-            logging = True
-    return found and not logging
+            return True
+    return False
 
 
 class SingletonMeta(type):
@@ -37,9 +30,8 @@ class SingletonMeta(type):
         if documenting():
             props = {}
             for name in dir(cls):
-                if name.startswith("_") or name in cls.__dict__:
+                if (attr := getattr(mcls, name, None)) is None:
                     continue
-                attr = getattr(mcls, name)
                 if isinstance(attr, FunctionType | MethodType):
                     # Circumvent https://github.com/tox-dev/sphinx-autodoc-typehints/pull/157
                     setattr(cls, name, getattr(cls, name))
