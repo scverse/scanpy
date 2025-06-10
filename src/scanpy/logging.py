@@ -11,14 +11,12 @@ from typing import TYPE_CHECKING, overload
 
 import anndata.logging
 
-from ._compat import deprecated
-
 if TYPE_CHECKING:
     from typing import IO
 
     from session_info2 import SessionInfo
 
-    from ._settings import ScanpyConfig
+    from ._settings import settings
 
 
 # This is currently the only documented API
@@ -74,7 +72,7 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings: ScanpyConfig):
+def _set_log_file(settings: settings) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
@@ -86,7 +84,7 @@ def _set_log_file(settings: ScanpyConfig):
     root.addHandler(h)
 
 
-def _set_log_level(settings: ScanpyConfig, level: int):
+def _set_log_level(settings: settings, level: int) -> None:
     root = settings._root_logger
     root.setLevel(level)
     for h in list(root.handlers):
@@ -156,7 +154,6 @@ def print_header(*, file: IO[str] | None = None):
     return sinfo
 
 
-@deprecated("Use `print_header` instead")
 def print_versions() -> SessionInfo:
     """Alias for `print_header`.
 

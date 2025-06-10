@@ -111,8 +111,8 @@ def phate(  # noqa: PLR0913
     random_state
         Random seed. Defaults to the global `numpy` random number generator
     verbose
-        If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
-        If `None`, `sc.settings.verbosity` is used.
+        If `True` or an :class:`int`/:class:`~scanpy.Verbosity` ≥ 2/:attr:`~scanpy.Verbosity.hint`, print status messages.
+        If `None`, :attr:`scanpy.settings.verbosity` is used.
     copy
         Return a copy instead of writing to `adata`.
     kwargs

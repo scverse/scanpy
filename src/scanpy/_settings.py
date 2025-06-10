@@ -3,19 +3,22 @@ from __future__ import annotations
 import inspect
 import sys
 from contextlib import contextmanager
-from enum import IntEnum
+from enum import EnumMeta, IntEnum
+from functools import wraps
 from logging import getLevelName
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, LiteralString, ParamSpec, TypeVar, get_args
 
 from . import logging
-from ._compat import old_positionals
+from ._compat import deprecated, old_positionals
+from ._singleton import SingletonMeta
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
-    from typing import Any, Literal, TextIO
+    from collections.abc import Callable, Generator, Iterable
+    from types import UnionType
+    from typing import ClassVar, Concatenate, Self, TextIO
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -23,8 +26,20 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
+    _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
+    _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
-_VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
+L = TypeVar("L", bound=LiteralString)
+S = TypeVar("S")
+T = TypeVar("T")
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+AnnDataFileFormat = Literal["h5ad", "zarr"]
+
+
+_VERBOSITY_TO_LOGLEVEL: dict[int | str, _LoggingLevelName] = {
     "error": "ERROR",
     "warning": "WARNING",
     "info": "INFO",
@@ -34,14 +49,26 @@ _VERBOSITY_TO_LOGLEVEL: dict[int | str, str] = {
 _VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
 
 
-class Verbosity(IntEnum):
-    """Logging verbosity levels."""
+class VerbosityMeta(EnumMeta):
+    @property
+    @deprecated("Use `Verbosity.warning` instead")
+    def warn(cls) -> Verbosity:
+        return Verbosity.warning
+
+
+class Verbosity(IntEnum, metaclass=VerbosityMeta):
+    """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
 
     error = 0
+    """Error (`0`)"""
     warning = 1
+    """Warning (`1`)"""
     info = 2
+    """Info (`2`)"""
     hint = 3
+    """Hint (`3`)"""
     debug = 4
+    """Debug (`4`)"""
 
     def __eq__(self, other: Verbosity | int | str) -> bool:
         if isinstance(other, Verbosity):
@@ -54,6 +81,7 @@ class Verbosity(IntEnum):
 
     @property
     def level(self) -> int:
+        """The :ref:`logging level <levels>` corresponding to this verbosity level."""
         # getLevelName(str) returns the int level…
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self.name])
 
@@ -61,116 +89,97 @@ class Verbosity(IntEnum):
     def override(
         self, verbosity: Verbosity | str | int
     ) -> Generator[Verbosity, None, None]:
-        """Temporarily override verbosity."""
+        """Temporarily override verbosity.
+
+        >>> import scanpy as sc
+        >>> sc.settings.verbosity = sc.Verbosity.info
+        >>> with sc.settings.verbosity.override(settings.verbosity.debug):
+        ...     sc.settings.verbosity
+        <Verbosity.debug: 4>
+        >>> sc.settings.verbosity
+        <Verbosity.info: 2>
+        """
         settings.verbosity = verbosity
         yield self
         settings.verbosity = self
 
 
-# backwards compat
-Verbosity.warn = Verbosity.warning
-
-
-def _type_check(var: Any, varname: str, types: type | tuple[type, ...]):
+def _type_check(var: object, name: str, types: type | UnionType):
     if isinstance(var, types):
         return
     if isinstance(types, type):
         possible_types_str = types.__name__
     else:
-        type_names = [t.__name__ for t in types]
+        type_names = [t.__name__ for t in get_args(types)]
         possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
-    msg = f"{varname} must be of type {possible_types_str}"
+    msg = f"{name} must be of type {possible_types_str}"
     raise TypeError(msg)
 
 
-class ScanpyConfig:
-    """Config manager for scanpy."""
+def _type_check_arg2(
+    types: type | UnionType,
+) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
+    def decorator(
+        func: Callable[Concatenate[S, T, P], R],
+    ) -> Callable[Concatenate[S, T, P], R]:
+        @wraps(func)
+        def wrapped(self: S, var: T, *args: P.args, **kwargs: P.kwargs) -> R:
+            __tracebackhide__ = True
+            _type_check(var, func.__name__, types)
+            return func(self, var, *args, **kwargs)
 
-    N_PCS: int
-    """Default number of principal components to use."""
+        return wrapped
 
-    def __init__(  # noqa: PLR0913
-        self,
-        *,
-        verbosity: Verbosity | int | str = Verbosity.warning,
-        plot_suffix: str = "",
-        file_format_data: str = "h5ad",
-        file_format_figs: str = "pdf",
-        autosave: bool = False,
-        autoshow: bool = True,
-        writedir: Path | str = "./write/",
-        cachedir: Path | str = "./cache/",
-        datasetdir: Path | str = "./data/",
-        figdir: Path | str = "./figures/",
-        cache_compression: str | None = "lzf",
-        max_memory=15,
-        n_jobs=1,
-        logfile: Path | str | None = None,
-        categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
-        _frameon: bool = True,
-        _vector_friendly: bool = False,
-        _low_resolution_warning: bool = True,
-        n_pcs=50,
-    ):
-        # logging
-        self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
-        self.logfile = logfile
-        self.verbosity = verbosity
-        # rest
-        self.plot_suffix = plot_suffix
-        self.file_format_data = file_format_data
-        self.file_format_figs = file_format_figs
-        self.autosave = autosave
-        self.autoshow = autoshow
-        self.writedir = writedir
-        self.cachedir = cachedir
-        self.datasetdir = datasetdir
-        self.figdir = figdir
-        self.cache_compression = cache_compression
-        self.max_memory = max_memory
-        self.n_jobs = n_jobs
-        self.categories_to_ignore = categories_to_ignore
-        self._frameon = _frameon
-        """bool: See set_figure_params."""
+    return decorator
 
-        self._vector_friendly = _vector_friendly
-        """Set to true if you want to include pngs in svgs and pdfs."""
 
-        self._low_resolution_warning = _low_resolution_warning
-        """Print warning when saving a figure with low resolution."""
-
-        self._start = time()
-        """Time when the settings module is first imported."""
-
-        self._previous_time = self._start
-        """Variable for timing program parts."""
-
-        self._previous_memory_usage = -1
-        """Stores the previous memory usage."""
-
-        self.N_PCS = n_pcs
+class SettingsMeta(SingletonMeta):
+    # logging
+    _root_logger: _RootLogger
+    _logfile: TextIO | None
+    _verbosity: Verbosity
+    # rest
+    _n_pcs: int
+    _plot_suffix: str
+    _file_format_data: AnnDataFileFormat
+    _file_format_figs: str
+    _autosave: bool
+    _autoshow: bool
+    _writedir: Path
+    _cachedir: Path
+    _datasetdir: Path
+    _figdir: Path
+    _cache_compression: Literal["lzf", "gzip", None]
+    _max_memory: float
+    _n_jobs: int
+    _categories_to_ignore: list[str]
+    _frameon: bool
+    """See set_figure_params."""
+    _vector_friendly: bool
+    """Set to true if you want to include pngs in svgs and pdfs."""
+    _low_resolution_warning: bool
+    """Print warning when saving a figure with low resolution."""
+    _start: float
+    """Time when the settings module is first imported."""
+    _previous_time: float
+    """Variable for timing program parts."""
+    _previous_memory_usage: int
+    """Stores the previous memory usage."""
 
     @property
-    def verbosity(self) -> Verbosity:
-        """Verbosity level (default `warning`).
-
-        Level 0: only show 'error' messages.
-        Level 1: also show 'warning' messages.
-        Level 2: also show 'info' messages.
-        Level 3: also show 'hint' messages.
-        Level 4: also show very detailed progress for 'debug'ging.
-        """
-        return self._verbosity
+    def verbosity(cls) -> Verbosity:
+        """Verbosity level (default :attr:`Verbosity.warning`)."""
+        return cls._verbosity
 
     @verbosity.setter
-    def verbosity(self, verbosity: Verbosity | int | str):
-        verbosity_str_options = [
+    def verbosity(cls, verbosity: Verbosity | _VerbosityName | int) -> None:
+        verbosity_str_options: list[_VerbosityName] = [
             v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
         ]
         if isinstance(verbosity, Verbosity):
-            self._verbosity = verbosity
+            cls._verbosity = verbosity
         elif isinstance(verbosity, int):
-            self._verbosity = Verbosity(verbosity)
+            cls._verbosity = Verbosity(verbosity)
         elif isinstance(verbosity, str):
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
@@ -179,183 +188,188 @@ class ScanpyConfig:
                     f"Accepted string values are: {verbosity_str_options}"
                 )
                 raise ValueError(msg)
-            else:
-                self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
+            cls._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
-            _type_check(verbosity, "verbosity", (str, int))
-        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity.name])
+            _type_check(verbosity, "verbosity", str | int)
+        _set_log_level(cls, _VERBOSITY_TO_LOGLEVEL[cls._verbosity.name])
 
     @property
-    def plot_suffix(self) -> str:
+    def N_PCS(cls) -> int:
+        """Default number of principal components to use."""
+        return cls._n_pcs
+
+    @N_PCS.setter
+    @_type_check_arg2(int)
+    def N_PCS(cls, n_pcs: int) -> None:
+        cls._n_pcs = n_pcs
+
+    @property
+    def plot_suffix(cls) -> str:
         """Global suffix that is appended to figure filenames."""
-        return self._plot_suffix
+        return cls._plot_suffix
 
     @plot_suffix.setter
-    def plot_suffix(self, plot_suffix: str):
-        _type_check(plot_suffix, "plot_suffix", str)
-        self._plot_suffix = plot_suffix
+    @_type_check_arg2(str)
+    def plot_suffix(cls, plot_suffix: str) -> None:
+        cls._plot_suffix = plot_suffix
 
     @property
-    def file_format_data(self) -> str:
-        """File format for saving AnnData objects.
-
-        Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5ad'
-        (hdf5) for lossless saving.
-        """
-        return self._file_format_data
+    def file_format_data(cls) -> AnnDataFileFormat:
+        """File format for saving AnnData objects."""
+        return cls._file_format_data
 
     @file_format_data.setter
-    def file_format_data(self, file_format: str):
-        _type_check(file_format, "file_format_data", str)
-        file_format_options = {"txt", "csv", "h5ad"}
-        if file_format not in file_format_options:
+    @_type_check_arg2(str)
+    def file_format_data(cls, file_format: AnnDataFileFormat) -> None:
+        if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
             msg = (
                 f"Cannot set file_format_data to {file_format}. "
                 f"Must be one of {file_format_options}"
             )
             raise ValueError(msg)
-        self._file_format_data = file_format
+        cls._file_format_data: AnnDataFileFormat = file_format
 
     @property
-    def file_format_figs(self) -> str:
+    def file_format_figs(cls) -> str:
         """File format for saving figures.
 
-        For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
-        `matplotlib.pyplot.savefig`).
+        For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
+        :func:`matplotlib.pyplot.savefig`).
         """
-        return self._file_format_figs
+        return cls._file_format_figs
 
     @file_format_figs.setter
-    def file_format_figs(self, figure_format: str):
-        _type_check(figure_format, "figure_format_data", str)
+    @_type_check_arg2(str)
+    def file_format_figs(self, figure_format: str) -> None:
         self._file_format_figs = figure_format
 
     @property
-    def autosave(self) -> bool:
-        """Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
+    def autosave(cls) -> bool:
+        """Automatically save figures in :attr:`~scanpy.settings.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
-        return self._autosave
+        return cls._autosave
 
     @autosave.setter
-    def autosave(self, autosave: bool):
-        _type_check(autosave, "autosave", bool)
-        self._autosave = autosave
+    @_type_check_arg2(bool)
+    def autosave(cls, autosave: bool) -> None:
+        cls._autosave = autosave
 
     @property
-    def autoshow(self) -> bool:
+    def autoshow(cls) -> bool:
         """Automatically show figures if `autosave == False` (default `True`).
 
         There is no need to call the matplotlib pl.show() in this case.
         """
-        return self._autoshow
+        return cls._autoshow
 
     @autoshow.setter
-    def autoshow(self, autoshow: bool):
-        _type_check(autoshow, "autoshow", bool)
-        self._autoshow = autoshow
+    @_type_check_arg2(bool)
+    def autoshow(cls, autoshow: bool) -> None:
+        cls._autoshow = autoshow
 
     @property
-    def writedir(self) -> Path:
+    def writedir(cls) -> Path:
         """Directory where the function scanpy.write writes to by default."""
-        return self._writedir
+        return cls._writedir
 
     @writedir.setter
-    def writedir(self, writedir: Path | str):
-        _type_check(writedir, "writedir", (str, Path))
-        self._writedir = Path(writedir)
+    @_type_check_arg2(Path | str)
+    def writedir(cls, writedir: Path | str) -> None:
+        cls._writedir = Path(writedir)
 
     @property
-    def cachedir(self) -> Path:
+    def cachedir(cls) -> Path:
         """Directory for cache files (default `'./cache/'`)."""
-        return self._cachedir
+        return cls._cachedir
 
     @cachedir.setter
-    def cachedir(self, cachedir: Path | str):
-        _type_check(cachedir, "cachedir", (str, Path))
-        self._cachedir = Path(cachedir)
+    @_type_check_arg2(Path | str)
+    def cachedir(cls, cachedir: Path | str) -> None:
+        cls._cachedir = Path(cachedir)
 
     @property
-    def datasetdir(self) -> Path:
+    def datasetdir(cls) -> Path:
         """Directory for example :mod:`~scanpy.datasets` (default `'./data/'`)."""
-        return self._datasetdir
+        return cls._datasetdir
 
     @datasetdir.setter
-    def datasetdir(self, datasetdir: Path | str):
-        _type_check(datasetdir, "datasetdir", (str, Path))
-        self._datasetdir = Path(datasetdir).resolve()
+    @_type_check_arg2(Path | str)
+    def datasetdir(cls, datasetdir: Path | str) -> None:
+        cls._datasetdir = Path(datasetdir).resolve()
 
     @property
-    def figdir(self) -> Path:
+    def figdir(cls) -> Path:
         """Directory for saving figures (default `'./figures/'`)."""
-        return self._figdir
+        return cls._figdir
 
     @figdir.setter
-    def figdir(self, figdir: Path | str):
-        _type_check(figdir, "figdir", (str, Path))
-        self._figdir = Path(figdir)
+    @_type_check_arg2(Path | str)
+    def figdir(cls, figdir: Path | str) -> None:
+        cls._figdir = Path(figdir)
 
     @property
-    def cache_compression(self) -> str | None:
-        """Compression for `sc.read(..., cache=True)` (default `'lzf'`).
-
-        May be `'lzf'`, `'gzip'`, or `None`.
-        """
-        return self._cache_compression
+    def cache_compression(cls) -> Literal["lzf", "gzip", None]:
+        """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
+        return cls._cache_compression
 
     @cache_compression.setter
-    def cache_compression(self, cache_compression: str | None):
+    def cache_compression(cls, cache_compression: Literal["lzf", "gzip", None]) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "
                 "must be in {'lzf', 'gzip', None}"
             )
             raise ValueError(msg)
-        self._cache_compression = cache_compression
+        cls._cache_compression = cache_compression
 
     @property
-    def max_memory(self) -> int | float:
+    def max_memory(cls) -> int | float:
         """Maximum memory usage in Gigabyte.
 
         Is currently not well respected…
         """
-        return self._max_memory
+        return cls._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory: float):
-        _type_check(max_memory, "max_memory", (int, float))
-        self._max_memory = max_memory
+    @_type_check_arg2(int | float)
+    def max_memory(cls, max_memory: float) -> None:
+        cls._max_memory = max_memory
 
     @property
-    def n_jobs(self) -> int:
+    def n_jobs(cls) -> int:
         """Default number of jobs/ CPUs to use for parallel computing.
 
         Set to `-1` in order to use all available cores.
         Not all algorithms support special behavior for numbers < `-1`,
         so make sure to leave this setting as >= `-1`.
         """
-        return self._n_jobs
+        return cls._n_jobs
 
     @n_jobs.setter
-    def n_jobs(self, n_jobs: int):
-        _type_check(n_jobs, "n_jobs", int)
-        self._n_jobs = n_jobs
+    @_type_check_arg2(int)
+    def n_jobs(cls, n_jobs: int) -> None:
+        cls._n_jobs = n_jobs
 
     @property
-    def logpath(self) -> Path | None:
+    def logpath(cls) -> Path | None:
         """The file path `logfile` was set to."""
-        return self._logpath
+        return cls._logpath
 
     @logpath.setter
-    def logpath(self, logpath: Path | str | None):
-        _type_check(logpath, "logfile", (str, Path))
+    @_type_check_arg2(Path | str)
+    def logpath(cls, logpath: Path | str | None) -> None:
+        if logpath is None:
+            cls._logfile = None
+            cls._logpath = None
+            return
         # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open("a")  # noqa: SIM115
-        self._logpath = Path(logpath)
+        cls.logfile = Path(logpath).open("a")  # noqa: SIM115
+        cls._logpath = Path(logpath)
 
     @property
-    def logfile(self) -> TextIO:
+    def logfile(cls) -> TextIO | None:
         """The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
@@ -364,34 +378,37 @@ class ScanpyConfig:
 
         For backwards compatibility, setting it to `''` behaves like setting it to `None`.
         """
-        return self._logfile
+        return cls._logfile
 
     @logfile.setter
-    def logfile(self, logfile: Path | str | TextIO | None):
+    def logfile(cls, logfile: Path | str | TextIO | None) -> None:
         if not hasattr(logfile, "write") and logfile:
-            self.logpath = logfile
+            cls.logpath = logfile
         else:  # file object
             if not logfile:  # None or ''
-                logfile = sys.stdout if self._is_run_from_ipython() else sys.stderr
-            self._logfile = logfile
-            self._logpath = None
-            _set_log_file(self)
+                logfile = sys.stdout if cls._is_run_from_ipython() else sys.stderr
+            cls._logfile = logfile
+            cls._logpath = None
+            _set_log_file(cls)
 
     @property
-    def categories_to_ignore(self) -> list[str]:
+    def categories_to_ignore(cls) -> list[str]:
         """Categories that are omitted in plotting etc."""
-        return self._categories_to_ignore
+        return cls._categories_to_ignore
 
     @categories_to_ignore.setter
-    def categories_to_ignore(self, categories_to_ignore: Iterable[str]):
+    def categories_to_ignore(cls, categories_to_ignore: Iterable[str]) -> None:
         categories_to_ignore = list(categories_to_ignore)
         for i, cat in enumerate(categories_to_ignore):
             _type_check(cat, f"categories_to_ignore[{i}]", str)
-        self._categories_to_ignore = categories_to_ignore
+        cls._categories_to_ignore = categories_to_ignore
 
     # --------------------------------------------------------------------------------
     # Functions
     # --------------------------------------------------------------------------------
+
+    def set_figure_params(cls, *args, **kwargs) -> None:
+        cls.set_figure_params(*args, **kwargs)
 
     @old_positionals(
         "scanpy",
@@ -407,8 +424,8 @@ class ScanpyConfig:
         "transparent",
         "ipython_format",
     )
-    def set_figure_params(  # noqa: PLR0913
-        self,
+    def _set_figure_params(  # noqa: PLR0913
+        cls,
         *,
         scanpy: bool = True,
         dpi: int = 80,
@@ -432,8 +449,8 @@ class ScanpyConfig:
         dpi
             Resolution of rendered figures – this influences the size of figures in notebooks.
         dpi_save
-            Resolution of saved figures. This should typically be higher to achieve
-            publication quality.
+            Resolution of saved figures.
+            This should typically be higher to achieve publication quality.
         frameon
             Add frames and axes labels to scatter plots.
         vector_friendly
@@ -441,7 +458,7 @@ class ScanpyConfig:
         fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
         figsize
-            Set plt.rcParams['figure.figsize'].
+            Set `rcParams['figure.figsize']`.
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
         format
@@ -450,8 +467,8 @@ class ScanpyConfig:
             Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
             `rcParams['axes.facecolor'] = facecolor`.
         transparent
-            Save figures with transparent back ground. Sets
-            `rcParams['savefig.transparent']`.
+            Save figures with transparent background.
+            Sets `rcParams['savefig.transparent']`.
         ipython_format
             Only concerns the notebook/IPython environment; see
             `matplotlib_inline.backend_inline.set_matplotlib_formats
@@ -459,7 +476,7 @@ class ScanpyConfig:
             for details.
 
         """
-        if self._is_run_from_ipython():
+        if cls._is_run_from_ipython():
             # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
             from matplotlib_inline.backend_inline import set_matplotlib_formats
 
@@ -470,8 +487,8 @@ class ScanpyConfig:
 
         from matplotlib import rcParams
 
-        self._vector_friendly = vector_friendly
-        self.file_format_figs = format
+        cls._vector_friendly = vector_friendly
+        cls.file_format_figs = format
         if dpi is not None:
             rcParams["figure.dpi"] = dpi
         if dpi_save is not None:
@@ -487,7 +504,7 @@ class ScanpyConfig:
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
             rcParams["figure.figsize"] = figsize
-        self._frameon = frameon
+        cls._frameon = frameon
 
     @staticmethod
     def _is_run_from_ipython():
@@ -496,12 +513,43 @@ class ScanpyConfig:
 
         return getattr(builtins, "__IPYTHON__", False)
 
-    def __str__(self) -> str:
+    def __str__(cls) -> str:
         return "\n".join(
             f"{k} = {v!r}"
-            for k, v in inspect.getmembers(self)
+            for k, v in inspect.getmembers(cls)
             if not k.startswith("_") and k != "getdoc"
         )
 
 
-settings = ScanpyConfig()
+class settings(metaclass=SettingsMeta):
+    """Settings for scanpy."""
+
+    def __new__(cls) -> type[Self]:
+        return cls
+
+    # logging
+    _root_logger: ClassVar = _RootLogger(logging.INFO)
+    _logfile: ClassVar = None
+    _logpath: ClassVar = None
+    _verbosity: ClassVar = Verbosity.warning
+    # rest
+    _n_pcs: ClassVar = 50
+    _plot_suffix: ClassVar = ""
+    _file_format_data: ClassVar = "h5ad"
+    _file_format_figs: ClassVar = "pdf"
+    _autosave: ClassVar = False
+    _autoshow: ClassVar = True
+    _writedir: ClassVar = Path("./write")
+    _cachedir: ClassVar = Path("./cache")
+    _datasetdir: ClassVar = Path("./data")
+    _figdir: ClassVar = Path("./figures")
+    _cache_compression: ClassVar = "lzf"
+    _max_memory: ClassVar = 15
+    _n_jobs: ClassVar = 1
+    _categories_to_ignore: ClassVar = ["N/A", "dontknow", "no_gate", "?"]
+    _frameon: ClassVar = True
+    _vector_friendly: ClassVar = False
+    _low_resolution_warning: ClassVar = True
+    _start: ClassVar = time()
+    _previous_time: ClassVar = _start
+    _previous_memory_usage: ClassVar = -1

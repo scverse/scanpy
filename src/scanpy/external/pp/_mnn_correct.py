@@ -111,7 +111,7 @@ def mnn_correct(  # noqa: PLR0913
         :attr:`~anndata.AnnData.raw` attribute.
     n_jobs
         The number of jobs. When set to `None`, automatically uses
-        :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+        :attr:`scanpy.settings.n_jobs`.
     kwargs
         optional keyword arguments for irlb.
 
