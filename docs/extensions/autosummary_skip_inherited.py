@@ -29,6 +29,8 @@ def skip_inherited(  # noqa: PLR0917
 
     # find parent class
     for frame, _ in walk_stack(None):
+        # Sadly `autodoc-skip-member` doesn’t give access to the parent object, so we need to do this.
+        # Find this stack frame: https://github.com/sphinx-doc/sphinx/blob/a5366394ae527712c4edfeb07a5fbeecd4ca72e1/sphinx/ext/autosummary/generate.py#L496-L517
         if frame.f_code.co_name == "_get_members" and frame.f_code.co_filename.endswith(
             "/generate.py"
         ):
