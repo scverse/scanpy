@@ -38,7 +38,7 @@ jobs:
               | {
                 name: .key,
                 "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
-                python: .value.python | sub("3[.]13", "3.13.3"),  # https://github.com/numba/numba/issues/10101
+                python: .value.python | sub("3[.]13"; "3.13.3"),  # https://github.com/numba/numba/issues/10101
               }
             )')
           echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
