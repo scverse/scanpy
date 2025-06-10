@@ -122,7 +122,7 @@ def ebi_expression_atlas(
 
     The atlas_ can be browsed online to find the ``accession`` you want.
     Downloaded datasets are saved in the directory specified by
-    :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
+    :attr:`~scanpy.settings.datasetdir`.
 
     .. _atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 

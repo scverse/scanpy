@@ -87,7 +87,7 @@ def tsne(  # noqa: PLR0913
         If `None`, the initial state is not reproducible.
     n_jobs
         Number of jobs for parallel computation.
-        `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+        `None` means using :attr:`scanpy.settings.n_jobs`.
     key_added
         If not specified, the embedding is stored as
         :attr:`~anndata.AnnData.obsm`\ `['X_tsne']` and the the parameters in
