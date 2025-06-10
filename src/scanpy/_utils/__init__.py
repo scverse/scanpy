@@ -720,8 +720,7 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
         partial(axis_nnz, axis=axis),
         dtype=np.int64,
         meta=np.array([], dtype=np.int64),
-        drop_axis=0,
-        chunks=len(X.to_delayed()) * (X.chunksize[int(not axis)],),
+        drop_axis=axis,
     )
 
 
