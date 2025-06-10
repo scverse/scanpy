@@ -13,4 +13,5 @@
    pp.normalize_per_cell
    pp.subsample
    tl.louvain
+   logging.print_versions
 ```

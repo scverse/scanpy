@@ -106,7 +106,7 @@ test = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx >=7, !=8.2.0",
+    "sphinx>=8.2.3",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.15.3",
     "sphinx-autodoc-typehints>=1.25.2",

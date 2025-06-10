@@ -207,7 +207,8 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
 
 def annotate_doc_types(mod: ModuleType, root: str):
     for c_or_f in descend_classes_and_funcs(mod, root):
-        c_or_f.getdoc = partial(getdoc, c_or_f)
+        with suppress(AttributeError):
+            c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
 _leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)

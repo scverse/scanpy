@@ -78,9 +78,12 @@ def test_write(
             assert sc.settings.file_format_data == ff
             return  # return early
         case "default", _:
-            monkeypatch.setattr(sc.settings, "file_format_data", ext)
-            with ctx:
-                sc.write("test", adata)
+            sc.settings.file_format_data, old = ext, sc.settings.file_format_data
+            try:
+                with ctx:
+                    sc.write("test", adata)
+            finally:
+                sc.settings.file_format_data = old
             d = sc.settings.writedir
         case _:
             pytest.fail("add branch for new style")
