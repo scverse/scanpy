@@ -98,6 +98,24 @@ class Preset(StrEnum):
             Preset.SeuratV5: "seurat_v3",
         }
 
+    @contextmanager
+    def override(self, preset: Preset) -> Generator[Preset, None, None]:
+        """Temporarily override :attr:`scanpy.settings.preset`.
+
+        >>> import scanpy as sc
+        >>> sc.settings.preset = sc.Preset.ScanpyV1
+        >>> with sc.settings.preset.override(sc.Preset.SeuratV5):
+        ...     sc.settings.preset
+        <Preset.SeuratV5: 'seuratv5'>
+        >>> sc.settings.preset
+        <Preset.ScanpyV1: 'scanpyv1'>
+        """
+        settings.preset = preset
+        try:
+            yield self
+        finally:
+            settings.preset = self
+
 
 for _postprocess in _preset_postprocessors:
     _postprocess()
@@ -164,8 +182,10 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         <Verbosity.info: 2>
         """
         settings.verbosity = verbosity
-        yield self
-        settings.verbosity = self
+        try:
+            yield self
+        finally:
+            settings.verbosity = self
 
 
 def _type_check(var: object, name: str, types: type | UnionType) -> None:
