@@ -100,6 +100,7 @@ class Preset(StrEnum):
 
     @_preset_property("{min,max}_{counts,genes}")
     def filter_cells() -> Mapping[Preset, FilterCellsCutoffs]:
+        """Cutoffs for :func:`~scanpy.pp.filter_cells`."""
         return {
             Preset.ScanpyV1: FilterCellsCutoffs(None, None, None, None),
             Preset.SeuratV5: FilterCellsCutoffs(
@@ -109,6 +110,7 @@ class Preset(StrEnum):
 
     @_preset_property("{min,max}_{counts,cells}")
     def filter_genes() -> Mapping[Preset, FilterGenesCutoffs]:
+        """Cutoffs for :func:`~scanpy.pp.filter_genes`."""
         return {
             Preset.ScanpyV1: FilterGenesCutoffs(None, None, None, None),
             Preset.SeuratV5: FilterGenesCutoffs(
