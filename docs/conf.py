@@ -219,8 +219,9 @@ qualname_overrides = {
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
-    "scanpy._types.FilterCellsCutoffs": "tuple",
-    "scanpy._types.FilterGenesCutoffs": "tuple",
+    "scanpy._param_sets.HVGFlavor": "tuple",
+    "scanpy._param_sets.FilterCellsCutoffs": "tuple",
+    "scanpy._param_sets.FilterGenesCutoffs": "tuple",
     "pandas.core.series.Series": "pandas.Series",
     "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
 }

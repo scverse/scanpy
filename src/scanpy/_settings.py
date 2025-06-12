@@ -9,20 +9,18 @@ from functools import cached_property, partial, wraps
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, NamedTuple, ParamSpec, TypeVar, get_args
 
 from . import logging
 from ._compat import deprecated, old_positionals
+from ._param_sets import FilterCellsCutoffs, FilterGenesCutoffs, HVGFlavor
 from ._singleton import SingletonMeta
-from ._types import FilterCellsCutoffs, FilterGenesCutoffs
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Mapping
     from types import UnionType
     from typing import ClassVar, Concatenate, Self, TextIO
-
-    from ._types import HVGFlavor
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -33,6 +31,7 @@ if TYPE_CHECKING:
     _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
     _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
+NT = TypeVar("NT", bound=NamedTuple)
 S = TypeVar("S")
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -45,8 +44,16 @@ AnnDataFileFormat = Literal["h5ad", "zarr"]
 _preset_postprocessors: list[Callable[[], None]] = []
 
 
+def _non_defaults(nt: NamedTuple) -> Generator[tuple[str, object], None, None]:
+    cls = type(nt)
+    for param in cls._fields:
+        value = getattr(nt, param)
+        if param not in cls._field_defaults or value != cls._field_defaults[param]:
+            yield param, value
+
+
 def _postprocess_preset_prop(
-    prop: cached_property[T], param: str, get_map: Callable[[], Mapping[Preset, T]]
+    prop: cached_property[NT], get_map: Callable[[], Mapping[Preset, NT]]
 ) -> None:
     map = get_map()
 
@@ -54,28 +61,28 @@ def _postprocess_preset_prop(
     value_type = re.fullmatch(r"Mapping\[Preset, (.*)\]", map_type)[1]
 
     added_doc = "\n".join(
-        f":attr:`{k.name}`\n    Default: `{param}={v!r}`" for k, v in map.items()
+        ":attr:`{name}`\n    Defaults: {defaults}".format(
+            name=k.name,
+            defaults=", ".join(
+                f"`{param}={default!r}`" for param, default in _non_defaults(params)
+            )
+            or "none",
+        )
+        for k, params in map.items()
     )
 
     prop.__doc__ = f"{prop.__doc__}\n\n{added_doc}"
     prop.func.__annotations__["return"] = value_type
 
 
-def _preset_property(
-    param: str,
-) -> Callable[[Callable[[], Mapping[Preset, T]]], cached_property[T]]:
-    def decorator(get_map: Callable[[], Mapping[Preset, T]]) -> cached_property[T]:
-        @wraps(get_map)
-        def get(self: Preset) -> T:
-            return get_map()[self]
+def _preset_property(get_map: Callable[[], Mapping[Preset, NT]]) -> cached_property[NT]:
+    @wraps(get_map)
+    def get(self: Preset) -> NT:
+        return get_map()[self]
 
-        prop = cached_property(get)
-        _preset_postprocessors.append(
-            partial(_postprocess_preset_prop, prop, param, get_map)
-        )
-        return prop
-
-    return decorator
+    prop = cached_property(get)
+    _preset_postprocessors.append(partial(_postprocess_preset_prop, prop, get_map))
+    return prop
 
 
 class Preset(StrEnum):
@@ -90,15 +97,15 @@ class Preset(StrEnum):
     SeuratV5 = auto()
     """Try to match Seurat 5.* as closely as possible."""
 
-    @_preset_property("flavor")
+    @_preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGFlavor]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
-            Preset.ScanpyV1: "seurat",
-            Preset.SeuratV5: "seurat_v3",
+            Preset.ScanpyV1: HVGFlavor(flavor="seurat"),
+            Preset.SeuratV5: HVGFlavor(flavor="seurat_v3"),
         }
 
-    @_preset_property("{min,max}_{counts,genes}")
+    @_preset_property
     def filter_cells() -> Mapping[Preset, FilterCellsCutoffs]:
         """Cutoffs for :func:`~scanpy.pp.filter_cells`."""
         return {
@@ -108,7 +115,7 @@ class Preset(StrEnum):
             ),
         }
 
-    @_preset_property("{min,max}_{counts,cells}")
+    @_preset_property
     def filter_genes() -> Mapping[Preset, FilterGenesCutoffs]:
         """Cutoffs for :func:`~scanpy.pp.filter_genes`."""
         return {

@@ -20,8 +20,8 @@ from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
+from .._param_sets import FilterCellsCutoffs, FilterGenesCutoffs
 from .._settings import settings as sett
-from .._types import FilterCellsCutoffs, FilterGenesCutoffs
 from .._utils import (
     _check_array_function_arguments,
     _resolve_axis,
