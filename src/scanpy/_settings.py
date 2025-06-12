@@ -9,11 +9,12 @@ from functools import cached_property, partial, wraps
 from logging import getLevelNamesMapping
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, LiteralString, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
 
 from . import logging
 from ._compat import deprecated, old_positionals
 from ._singleton import SingletonMeta
+from ._types import FilterCellsCutoffs, FilterGenesCutoffs
 from .logging import _RootLogger, _set_log_file, _set_log_level
 
 if TYPE_CHECKING:
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
     _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
-L = TypeVar("L", bound=LiteralString)
 S = TypeVar("S")
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -46,7 +46,7 @@ _preset_postprocessors: list[Callable[[], None]] = []
 
 
 def _postprocess_preset_prop(
-    prop: cached_property[L], param: str, get_map: Callable[[], Mapping[Preset, L]]
+    prop: cached_property[T], param: str, get_map: Callable[[], Mapping[Preset, T]]
 ) -> None:
     map = get_map()
 
@@ -63,10 +63,10 @@ def _postprocess_preset_prop(
 
 def _preset_property(
     param: str,
-) -> Callable[[Callable[[], Mapping[Preset, L]]], cached_property[L]]:
-    def decorator(get_map: Callable[[], Mapping[Preset, L]]) -> cached_property[L]:
+) -> Callable[[Callable[[], Mapping[Preset, T]]], cached_property[T]]:
+    def decorator(get_map: Callable[[], Mapping[Preset, T]]) -> cached_property[T]:
         @wraps(get_map)
-        def get(self: Preset) -> L:
+        def get(self: Preset) -> T:
             return get_map()[self]
 
         prop = cached_property(get)
@@ -96,6 +96,24 @@ class Preset(StrEnum):
         return {
             Preset.ScanpyV1: "seurat",
             Preset.SeuratV5: "seurat_v3",
+        }
+
+    @_preset_property("{min,max}_{counts,genes}")
+    def filter_cells() -> Mapping[Preset, FilterCellsCutoffs]:
+        return {
+            Preset.ScanpyV1: FilterCellsCutoffs(None, None, None, None),
+            Preset.SeuratV5: FilterCellsCutoffs(
+                min_genes=200, min_counts=None, max_genes=None, max_counts=None
+            ),
+        }
+
+    @_preset_property("{min,max}_{counts,cells}")
+    def filter_genes() -> Mapping[Preset, FilterGenesCutoffs]:
+        return {
+            Preset.ScanpyV1: FilterGenesCutoffs(None, None, None, None),
+            Preset.SeuratV5: FilterGenesCutoffs(
+                min_cells=3, min_counts=None, max_cells=None, max_counts=None
+            ),
         }
 
     @contextmanager

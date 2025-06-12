@@ -21,6 +21,7 @@ from sklearn.utils import check_array, sparsefuncs
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
+from .._types import FilterCellsCutoffs, FilterGenesCutoffs
 from .._utils import (
     _check_array_function_arguments,
     _resolve_axis,
@@ -71,7 +72,8 @@ def filter_cells(
     `min_genes` genes expressed. This is to filter measurement outliers,
     i.e. “unreliable” observations.
 
-    Only provide one of the optional parameters `min_counts`, `min_genes`,
+    Unless you use a :attr:`scanpy.settings.preset`,
+    only provide one of the optional parameters `min_counts`, `min_genes`,
     `max_counts`, `max_genes` per call.
 
     Parameters
@@ -138,10 +140,18 @@ def filter_cells(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = sum(
-        option is not None for option in [min_genes, min_counts, max_genes, max_counts]
+    cutoffs = FilterCellsCutoffs(
+        min_counts=min_counts,
+        min_genes=min_genes,
+        max_counts=max_counts,
+        max_genes=max_genes,
     )
-    if n_given_options != 1:
+    del min_counts, min_genes, max_counts, max_genes
+    if cutoffs.n == 0:
+        from .. import settings
+
+        cutoffs = settings.preset.filter_cells
+    if cutoffs.n != 1:
         msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
@@ -153,25 +163,25 @@ def filter_cells(
         cell_subset, number = materialize_as_ndarray(
             filter_cells(
                 adata.X,
-                min_counts=min_counts,
-                min_genes=min_genes,
-                max_counts=max_counts,
-                max_genes=max_genes,
+                min_counts=cutoffs.min_counts,
+                min_genes=cutoffs.min_genes,
+                max_counts=cutoffs.max_counts,
+                max_genes=cutoffs.max_genes,
             ),
         )
         if not inplace:
             return cell_subset, number
-        if min_genes is None and max_genes is None:
+        if cutoffs.min_genes is None and cutoffs.max_genes is None:
             adata.obs["n_counts"] = number
         else:
             adata.obs["n_genes"] = number
         adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
-    min_number = min_counts if min_genes is None else min_genes
-    max_number = max_counts if max_genes is None else max_genes
+    min_number = cutoffs.min_counts if cutoffs.min_genes is None else cutoffs.min_genes
+    max_number = cutoffs.max_counts if cutoffs.max_genes is None else cutoffs.max_genes
     number_per_cell = stats.sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
+        X if cutoffs.min_genes is None and cutoffs.max_genes is None else X > 0, axis=1
     )
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
@@ -181,19 +191,19 @@ def filter_cells(
     s = stats.sum(~cell_subset)
     if s > 0:
         msg = f"filtered out {s} cells that have "
-        if min_genes is not None or min_counts is not None:
+        if cutoffs.min_genes is not None or cutoffs.min_counts is not None:
             msg += "less than "
             msg += (
-                f"{min_genes} genes expressed"
-                if min_counts is None
-                else f"{min_counts} counts"
+                f"{cutoffs.min_genes} genes expressed"
+                if cutoffs.min_counts is None
+                else f"{cutoffs.min_counts} counts"
             )
-        if max_genes is not None or max_counts is not None:
+        if cutoffs.max_genes is not None or cutoffs.max_counts is not None:
             msg += "more than "
             msg += (
-                f"{max_genes} genes expressed"
-                if max_counts is None
-                else f"{max_counts} counts"
+                f"{cutoffs.max_genes} genes expressed"
+                if cutoffs.max_counts is None
+                else f"{cutoffs.max_counts} counts"
             )
         logg.info(msg)
     return cell_subset, number_per_cell
@@ -218,7 +228,8 @@ def filter_genes(
     least `min_cells` cells or have at most `max_counts` counts or are expressed
     in at most `max_cells` cells.
 
-    Only provide one of the optional parameters `min_counts`, `min_cells`,
+    Unless you use a :attr:`scanpy.settings.preset`,
+    only provide one of the optional parameters `min_counts`, `min_cells`,
     `max_counts`, `max_cells` per call.
 
     Parameters
@@ -252,10 +263,18 @@ def filter_genes(
     """
     if copy:
         logg.warning("`copy` is deprecated, use `inplace` instead.")
-    n_given_options = sum(
-        option is not None for option in [min_cells, min_counts, max_cells, max_counts]
+    cutoffs = FilterGenesCutoffs(
+        min_counts=min_counts,
+        min_cells=min_cells,
+        max_counts=max_counts,
+        max_cells=max_cells,
     )
-    if n_given_options != 1:
+    del min_counts, min_cells, max_counts, max_cells
+    if cutoffs.n == 0:
+        from .. import settings
+
+        cutoffs = settings.preset.filter_genes
+    if cutoffs.n != 1:
         msg = (
             "Only provide one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
@@ -268,15 +287,15 @@ def filter_genes(
         gene_subset, number = materialize_as_ndarray(
             filter_genes(
                 adata.X,
-                min_cells=min_cells,
-                min_counts=min_counts,
-                max_cells=max_cells,
-                max_counts=max_counts,
+                min_cells=cutoffs.min_cells,
+                min_counts=cutoffs.min_counts,
+                max_cells=cutoffs.max_cells,
+                max_counts=cutoffs.max_counts,
             )
         )
         if not inplace:
             return gene_subset, number
-        if min_cells is None and max_cells is None:
+        if cutoffs.min_cells is None and cutoffs.max_cells is None:
             adata.var["n_counts"] = number
         else:
             adata.var["n_cells"] = number
@@ -284,10 +303,10 @@ def filter_genes(
         return adata if copy else None
 
     X = data  # proceed with processing the data matrix
-    min_number = min_counts if min_cells is None else min_cells
-    max_number = max_counts if max_cells is None else max_cells
+    min_number = cutoffs.min_counts if cutoffs.min_cells is None else cutoffs.min_cells
+    max_number = cutoffs.max_counts if cutoffs.max_cells is None else cutoffs.max_cells
     number_per_gene = stats.sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
+        X if cutoffs.min_cells is None and cutoffs.max_cells is None else X > 0, axis=0
     )
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
@@ -297,15 +316,19 @@ def filter_genes(
     s = stats.sum(~gene_subset)
     if s > 0:
         msg = f"filtered out {s} genes that are detected "
-        if min_cells is not None or min_counts is not None:
+        if cutoffs.min_cells is not None or cutoffs.min_counts is not None:
             msg += "in less than "
             msg += (
-                f"{min_cells} cells" if min_counts is None else f"{min_counts} counts"
+                f"{cutoffs.min_cells} cells"
+                if cutoffs.min_counts is None
+                else f"{cutoffs.min_counts} counts"
             )
-        if max_cells is not None or max_counts is not None:
+        if cutoffs.max_cells is not None or cutoffs.max_counts is not None:
             msg += "in more than "
             msg += (
-                f"{max_cells} cells" if max_counts is None else f"{max_counts} counts"
+                f"{cutoffs.max_cells} cells"
+                if cutoffs.max_counts is None
+                else f"{cutoffs.max_counts} counts"
             )
         logg.info(msg)
     return gene_subset, number_per_gene
