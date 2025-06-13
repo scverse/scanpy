@@ -650,7 +650,7 @@ def highly_variable_genes(  # noqa: PLR0913
     if flavor is None:
         from .. import settings
 
-        flavor = settings.preset.highly_variable_genes
+        flavor = settings.preset.highly_variable_genes.flavor
 
     start = logg.info("extracting highly variable genes")
 

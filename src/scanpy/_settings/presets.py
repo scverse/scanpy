@@ -9,15 +9,17 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
-    from typing import Literal
 
 NT = TypeVar("NT", bound=NamedTuple)
 
-__all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGFlavor", "Preset"]
+__all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGPreset", "Preset"]
 
 
-class HVGFlavor(NamedTuple):
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+
+
+class HVGPreset(NamedTuple):
+    flavor: HVGFlavor
 
 
 class FilterCellsCutoffs(NamedTuple):
@@ -100,15 +102,19 @@ class Preset(StrEnum):
     ScanpyV1 = auto()
     """Scanpy 1.*’s default settings."""
 
+    ScanpyV2Preview = auto()
+    """Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+
     SeuratV5 = auto()
     """Try to match Seurat 5.* as closely as possible."""
 
     @preset_property
-    def highly_variable_genes() -> Mapping[Preset, HVGFlavor]:
+    def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
-            Preset.ScanpyV1: HVGFlavor(flavor="seurat"),
-            Preset.SeuratV5: HVGFlavor(flavor="seurat_v3"),
+            Preset.ScanpyV1: HVGPreset(flavor="seurat"),
+            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper"),
+            Preset.SeuratV5: HVGPreset(flavor="seurat_v3_paper"),
         }
 
     @preset_property
@@ -116,6 +122,7 @@ class Preset(StrEnum):
         """Cutoffs for :func:`~scanpy.pp.filter_cells`."""
         return {
             Preset.ScanpyV1: FilterCellsCutoffs(None, None, None, None),
+            Preset.ScanpyV2Preview: FilterCellsCutoffs(None, None, None, None),
             Preset.SeuratV5: FilterCellsCutoffs(
                 min_genes=200, min_counts=None, max_genes=None, max_counts=None
             ),
@@ -126,6 +133,7 @@ class Preset(StrEnum):
         """Cutoffs for :func:`~scanpy.pp.filter_genes`."""
         return {
             Preset.ScanpyV1: FilterGenesCutoffs(None, None, None, None),
+            Preset.ScanpyV2Preview: FilterGenesCutoffs(None, None, None, None),
             Preset.SeuratV5: FilterGenesCutoffs(
                 min_cells=3, min_counts=None, max_cells=None, max_counts=None
             ),
