@@ -69,7 +69,7 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
 
         >>> import scanpy as sc
         >>> sc.settings.verbosity = sc.Verbosity.info
-        >>> with sc.settings.verbosity.override(settings.verbosity.debug):
+        >>> with sc.settings.verbosity.override(sc.settings.verbosity.debug):
         ...     sc.settings.verbosity
         <Verbosity.debug: 4>
         >>> sc.settings.verbosity
