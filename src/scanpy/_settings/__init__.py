@@ -319,14 +319,14 @@ class SettingsMeta(SingletonMeta):
 
     @logfile.setter
     def logfile(cls, logfile: Path | str | TextIO | None) -> None:
-        if not hasattr(logfile, "write") and logfile:
+        if not logfile:  # "" or None
+            logfile = sys.stdout if cls._is_run_from_ipython() else sys.stderr
+        if isinstance(logfile, Path | str):
             cls.logpath = logfile
-        else:  # file object
-            if not logfile:  # None or ''
-                logfile = sys.stdout if cls._is_run_from_ipython() else sys.stderr
-            cls._logfile = logfile
-            cls._logpath = None
-            _set_log_file(cls)
+            return
+        cls._logfile = logfile
+        cls._logpath = None
+        _set_log_file(cls)
 
     @property
     def categories_to_ignore(cls) -> list[str]:
