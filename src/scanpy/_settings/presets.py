@@ -15,6 +15,7 @@ NT = TypeVar("NT", bound=NamedTuple)
 __all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGPreset", "Preset"]
 
 
+DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 
 
@@ -42,6 +43,10 @@ class FilterGenesCutoffs(NamedTuple):
     @property
     def n(self) -> int:
         return sum([i is not None for i in self])
+
+
+class RankGenesGroupsPreset(NamedTuple):
+    method: DETest
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -137,6 +142,15 @@ class Preset(StrEnum):
             Preset.SeuratV5: FilterGenesCutoffs(
                 min_cells=3, min_counts=None, max_cells=None, max_counts=None
             ),
+        }
+
+    @preset_property
+    def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
+        """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
+        return {
+            Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test"),
+            Preset.ScanpyV2Preview: RankGenesGroupsPreset(method="wilcoxon"),
+            Preset.SeuratV5: RankGenesGroupsPreset(method="wilcoxon"),
         }
 
     @contextmanager

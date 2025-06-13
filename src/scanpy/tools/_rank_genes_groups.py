@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
@@ -13,6 +13,7 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, njit, old_positionals
+from .._settings.presets import DETest
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -22,15 +23,13 @@ from ..get import _check_mask
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import NDArray
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
-
-# Used with get_literal_vals
-_Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
 _CONST_MAX_SIZE = 10000000
 
@@ -420,7 +419,7 @@ class _RankGenes:
 
     def compute_statistics(  # noqa: PLR0912
         self,
-        method: _Method,
+        method: DETest,
         *,
         corr_method: _CorrMethod = "benjamini-hochberg",
         n_genes_user: int | None = None,
@@ -517,7 +516,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     key_added: str | None = None,
     copy: bool = False,
-    method: _Method | None = None,
+    method: DETest | None = None,
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
@@ -630,13 +629,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         raise ValueError(msg)
 
     if method is None:
-        method = "t-test"
+        from scanpy import settings
+
+        method = settings.preset.rank_genes_groups.method
 
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    if method not in (avail_methods := get_literal_vals(_Method)):
+    if method not in (avail_methods := get_literal_vals(DETest)):
         msg = f"Method must be one of {avail_methods}."
         raise ValueError(msg)
 
