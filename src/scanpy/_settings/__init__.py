@@ -11,6 +11,7 @@ from .. import logging
 from .._compat import deprecated, old_positionals
 from .._singleton import SingletonMeta
 from ..logging import _RootLogger, _set_log_file, _set_log_level
+from .presets import Preset
 from .verbosity import Verbosity
 
 if TYPE_CHECKING:
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
-
 
 S = TypeVar("S")
 T = TypeVar("T")
@@ -67,6 +67,7 @@ def _type_check_arg2(
 
 
 class SettingsMeta(SingletonMeta):
+    _preset: Preset
     # logging
     _root_logger: _RootLogger
     _logfile: TextIO | None
@@ -98,6 +99,15 @@ class SettingsMeta(SingletonMeta):
     """Variable for timing program parts."""
     _previous_memory_usage: int
     """Stores the previous memory usage."""
+
+    @property
+    def preset(cls) -> Preset:
+        """Preset to use."""
+        return cls._preset
+
+    @preset.setter
+    def preset(cls, preset: Preset | str) -> None:
+        cls._preset = Preset(preset)
 
     @property
     def verbosity(cls) -> Verbosity:
@@ -455,6 +465,7 @@ class settings(metaclass=SettingsMeta):
     def __new__(cls) -> type[Self]:
         return cls
 
+    _preset = Preset.ScanpyV1
     # logging
     _root_logger: ClassVar = _RootLogger(logging.INFO)
     _logfile: ClassVar = None
