@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from .._param_sets import HVGFlavor
+    from .._settings.presets import HVGFlavor
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915

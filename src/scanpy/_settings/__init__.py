@@ -1,26 +1,25 @@
 from __future__ import annotations
 
 import inspect
-import re
 import sys
-from contextlib import contextmanager
-from enum import EnumMeta, IntEnum, StrEnum, auto
-from functools import cached_property, partial, wraps
-from logging import getLevelNamesMapping
+from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, NamedTuple, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
 
-from . import logging
-from ._compat import deprecated, old_positionals
-from ._param_sets import FilterCellsCutoffs, FilterGenesCutoffs, HVGFlavor
-from ._singleton import SingletonMeta
-from .logging import _RootLogger, _set_log_file, _set_log_level
+from .. import logging
+from .._compat import deprecated, old_positionals
+from .._singleton import SingletonMeta
+from ..logging import _RootLogger, _set_log_file, _set_log_level
+from .presets import Preset
+from .verbosity import Verbosity
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable, Mapping
+    from collections.abc import Callable, Iterable
     from types import UnionType
     from typing import ClassVar, Concatenate, Self, TextIO
+
+    from .verbosity import _VerbosityName
 
     # Collected from the print_* functions in matplotlib.backends
     _Format = (
@@ -28,10 +27,7 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
-    _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
-    _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
 
-NT = TypeVar("NT", bound=NamedTuple)
 S = TypeVar("S")
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -39,180 +35,6 @@ R = TypeVar("R")
 
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
-
-
-_preset_postprocessors: list[Callable[[], None]] = []
-
-
-def _non_defaults(nt: NamedTuple) -> Generator[tuple[str, object], None, None]:
-    cls = type(nt)
-    for param in cls._fields:
-        value = getattr(nt, param)
-        if param not in cls._field_defaults or value != cls._field_defaults[param]:
-            yield param, value
-
-
-def _postprocess_preset_prop(
-    prop: cached_property[NT], get_map: Callable[[], Mapping[Preset, NT]]
-) -> None:
-    map = get_map()
-
-    map_type = inspect.signature(get_map).return_annotation
-    value_type = re.fullmatch(r"Mapping\[Preset, (.*)\]", map_type)[1]
-
-    added_doc = "\n".join(
-        ":attr:`{name}`\n    Defaults: {defaults}".format(
-            name=k.name,
-            defaults=", ".join(
-                f"`{param}={default!r}`" for param, default in _non_defaults(params)
-            )
-            or "none",
-        )
-        for k, params in map.items()
-    )
-
-    prop.__doc__ = f"{prop.__doc__}\n\n{added_doc}"
-    prop.func.__annotations__["return"] = value_type
-
-
-def _preset_property(get_map: Callable[[], Mapping[Preset, NT]]) -> cached_property[NT]:
-    @wraps(get_map)
-    def get(self: Preset) -> NT:
-        return get_map()[self]
-
-    prop = cached_property(get)
-    _preset_postprocessors.append(partial(_postprocess_preset_prop, prop, get_map))
-    return prop
-
-
-class Preset(StrEnum):
-    """Presets for :attr:`scanpy.settings.preset`.
-
-    See properties below for details.
-    """
-
-    ScanpyV1 = auto()
-    """Scanpy 1.*’s default settings."""
-
-    SeuratV5 = auto()
-    """Try to match Seurat 5.* as closely as possible."""
-
-    @_preset_property
-    def highly_variable_genes() -> Mapping[Preset, HVGFlavor]:
-        """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
-        return {
-            Preset.ScanpyV1: HVGFlavor(flavor="seurat"),
-            Preset.SeuratV5: HVGFlavor(flavor="seurat_v3"),
-        }
-
-    @_preset_property
-    def filter_cells() -> Mapping[Preset, FilterCellsCutoffs]:
-        """Cutoffs for :func:`~scanpy.pp.filter_cells`."""
-        return {
-            Preset.ScanpyV1: FilterCellsCutoffs(None, None, None, None),
-            Preset.SeuratV5: FilterCellsCutoffs(
-                min_genes=200, min_counts=None, max_genes=None, max_counts=None
-            ),
-        }
-
-    @_preset_property
-    def filter_genes() -> Mapping[Preset, FilterGenesCutoffs]:
-        """Cutoffs for :func:`~scanpy.pp.filter_genes`."""
-        return {
-            Preset.ScanpyV1: FilterGenesCutoffs(None, None, None, None),
-            Preset.SeuratV5: FilterGenesCutoffs(
-                min_cells=3, min_counts=None, max_cells=None, max_counts=None
-            ),
-        }
-
-    @contextmanager
-    def override(self, preset: Preset) -> Generator[Preset, None, None]:
-        """Temporarily override :attr:`scanpy.settings.preset`.
-
-        >>> import scanpy as sc
-        >>> sc.settings.preset = sc.Preset.ScanpyV1
-        >>> with sc.settings.preset.override(sc.Preset.SeuratV5):
-        ...     sc.settings.preset
-        <Preset.SeuratV5: 'seuratv5'>
-        >>> sc.settings.preset
-        <Preset.ScanpyV1: 'scanpyv1'>
-        """
-        settings.preset = preset
-        try:
-            yield self
-        finally:
-            settings.preset = self
-
-
-for _postprocess in _preset_postprocessors:
-    _postprocess()
-
-
-_VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
-    "error": "ERROR",
-    "warning": "WARNING",
-    "info": "INFO",
-    "hint": "HINT",
-    "debug": "DEBUG",
-}
-_VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values()))))
-
-
-class VerbosityMeta(EnumMeta):
-    @property
-    @deprecated("Use `Verbosity.warning` instead")
-    def warn(cls) -> Verbosity:
-        return Verbosity.warning
-
-
-class Verbosity(IntEnum, metaclass=VerbosityMeta):
-    """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
-
-    error = 0
-    """Error (`0`)"""
-    warning = 1
-    """Warning (`1`)"""
-    info = 2
-    """Info (`2`)"""
-    hint = 3
-    """Hint (`3`)"""
-    debug = 4
-    """Debug (`4`)"""
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Verbosity):
-            return self is other
-        if isinstance(other, int):
-            return self.value == other
-        if isinstance(other, str):
-            return self.name == other
-        return NotImplemented
-
-    @property
-    def level(self) -> int:
-        """The :ref:`logging level <levels>` corresponding to this verbosity level."""
-        m = getLevelNamesMapping()
-        return m[_VERBOSITY_TO_LOGLEVEL[self.name]]
-
-    @contextmanager
-    def override(
-        self, verbosity: Verbosity | _VerbosityName | int
-    ) -> Generator[Verbosity, None, None]:
-        """Temporarily override verbosity.
-
-        >>> import scanpy as sc
-        >>> sc.settings.verbosity = sc.Verbosity.info
-        >>> with sc.settings.verbosity.override(settings.verbosity.debug):
-        ...     sc.settings.verbosity
-        <Verbosity.debug: 4>
-        >>> sc.settings.verbosity
-        <Verbosity.info: 2>
-        """
-        settings.verbosity = verbosity
-        try:
-            yield self
-        finally:
-            settings.verbosity = self
 
 
 def _type_check(var: object, name: str, types: type | UnionType) -> None:
@@ -294,25 +116,19 @@ class SettingsMeta(SingletonMeta):
 
     @verbosity.setter
     def verbosity(cls, verbosity: Verbosity | _VerbosityName | int) -> None:
-        verbosity_str_options: list[_VerbosityName] = [
-            v for v in _VERBOSITY_TO_LOGLEVEL if isinstance(v, str)
-        ]
-        if isinstance(verbosity, Verbosity):
-            cls._verbosity = verbosity
-        elif isinstance(verbosity, int):
-            cls._verbosity = Verbosity(verbosity)
-        elif isinstance(verbosity, str):
-            verbosity = verbosity.lower()
-            if verbosity not in verbosity_str_options:
-                msg = (
-                    f"Cannot set verbosity to {verbosity}. "
-                    f"Accepted string values are: {verbosity_str_options}"
-                )
-                raise ValueError(msg)
-            cls._verbosity = Verbosity(verbosity_str_options.index(verbosity))
-        else:
-            _type_check(verbosity, "verbosity", str | int)
-        _set_log_level(cls, _VERBOSITY_TO_LOGLEVEL[cls._verbosity.name])
+        try:
+            cls._verbosity = (
+                Verbosity[verbosity.lower()]
+                if isinstance(verbosity, str)
+                else Verbosity(verbosity)
+            )
+        except KeyError:
+            msg = (
+                f"Cannot set verbosity to {verbosity}. "
+                f"Accepted string values are: {Verbosity.__members__.keys()}"
+            )
+            raise ValueError(msg) from None
+        _set_log_level(cls, cls._verbosity.level)
 
     @property
     def N_PCS(cls) -> int:
@@ -621,7 +437,7 @@ class SettingsMeta(SingletonMeta):
             rcParams["figure.facecolor"] = facecolor
             rcParams["axes.facecolor"] = facecolor
         if scanpy:
-            from .plotting._rcmod import set_rcParams_scanpy
+            from ..plotting._rcmod import set_rcParams_scanpy
 
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:

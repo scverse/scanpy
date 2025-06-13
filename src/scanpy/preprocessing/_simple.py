@@ -20,8 +20,8 @@ from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
-from .._param_sets import FilterCellsCutoffs, FilterGenesCutoffs
-from .._settings import settings as sett
+from .._settings import settings
+from .._settings.presets import FilterCellsCutoffs, FilterGenesCutoffs
 from .._utils import (
     _check_array_function_arguments,
     _resolve_axis,
@@ -747,7 +747,7 @@ def regress_out(
     if isinstance(X, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
-    n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
     # regress on a single categorical variable
     variable_is_categorical = False
