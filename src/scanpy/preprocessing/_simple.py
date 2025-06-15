@@ -873,7 +873,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",

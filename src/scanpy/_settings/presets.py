@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
 
+    from .._utils.random import RNGLike, SeedLike
+
 NT = TypeVar("NT", bound=NamedTuple)
 
 __all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGPreset", "Preset"]
@@ -43,6 +45,11 @@ class FilterGenesCutoffs(NamedTuple):
     @property
     def n(self) -> int:
         return sum([i is not None for i in self])
+
+
+class Pca(NamedTuple):
+    key_added: str | None
+    rng: RNGLike | SeedLike | None
 
 
 class RankGenesGroupsPreset(NamedTuple):
@@ -142,6 +149,15 @@ class Preset(StrEnum):
             Preset.SeuratV5: FilterGenesCutoffs(
                 min_cells=3, min_counts=None, max_cells=None, max_counts=None
             ),
+        }
+
+    @preset_property
+    def pca() -> Mapping[Preset, Pca]:
+        """Settings for :func:`~scanpy.pp.pca`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: Pca(key_added=None, rng=0),
+            Preset.ScanpyV2Preview: Pca(key_added="pca", rng=None),
+            Preset.SeuratV5: Pca(),  # TODO
         }
 
     @preset_property
