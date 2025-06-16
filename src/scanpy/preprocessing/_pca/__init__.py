@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from ..._utils import Empty
-    from ..._utils.random import RNGLike, SeedLike, _LegacyRandom
+    from ..._utils.random import _LegacyRandom
 
     MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
     MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
@@ -68,15 +68,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
     chunk_size: int | None = None,
-    rng: SeedLike | RNGLike | None = None,
+    random_state: _LegacyRandom = 0,
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
     key_added: str | None = None,
     copy: bool = False,
-    # deprecated
-    random_state: _LegacyRandom = 0,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
 
@@ -209,10 +207,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         raise NotImplementedError(msg)
     if key_added is None:
         key_added = settings.preset.pca.key_added
-    if False:  # TODO
-        if rng is None:
-            rng = settings.preset.pca.rng
-        rng = np.random.default_rng(rng)
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {"auto", "randomized"} and not chunked:
