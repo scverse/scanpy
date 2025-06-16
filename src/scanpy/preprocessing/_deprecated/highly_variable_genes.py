@@ -42,7 +42,8 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     log: bool = True,
     subset: bool = True,
     copy: bool = False,
-) -> AnnData | np.recarray | None:
+    return_df: bool | None = None,
+) -> AnnData | pd.DataFrame | np.recarray | None:
     """Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
     .. deprecated:: 1.3.6
@@ -117,8 +118,8 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     **dispersions_norm** : adata.var
         Normalized dispersions per gene. Logarithmized when `log` is `True`.
 
-    If a data matrix `X` is passed, the annotation is returned as `np.recarray`
-    with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+    If a data matrix `X` is passed, the annotation is returned as `pd.DataFrame` (if `return_df=True`) or `np.recarray`
+    with the same information stored in columns: `gene_subset`, `means`, `dispersions`, `dispersions_norm`.
 
     """
     if n_top_genes is not None and not all(
@@ -126,6 +127,10 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     ):
         msg = "If you pass `n_top_genes`, all cutoffs are ignored."
         warnings.warn(msg, UserWarning, stacklevel=2)
+    if return_df is None:
+        from scanpy import settings
+
+        return_df = settings.preset.highly_variable_genes.return_df
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:
@@ -143,10 +148,10 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
             max_mean=max_mean,
             n_top_genes=n_top_genes,
             flavor=flavor,
-        )
-        adata.var["means"] = result["means"]
-        adata.var["dispersions"] = result["dispersions"]
-        adata.var["dispersions_norm"] = result["dispersions_norm"]
+            return_df=True,
+        ).set_index(adata.var_names)
+        assert isinstance(result, pd.DataFrame)
+        adata.var[cols] = result[cols := ["means", "dispersions", "dispersions_norm"]]
         if subset:
             adata._inplace_subset_var(result["gene_subset"])
         else:
@@ -154,21 +159,21 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
         return adata if copy else None
     start = logg.info("extracting highly variable genes")
     X = data  # no copy necessary, X remains unchanged in the following
-    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    means, vars = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
-    mean[mean == 0] = 1e-12  # set entries equal to zero to small value
-    dispersion = var / mean
+    means[means == 0] = 1e-12  # set entries equal to zero to small value
+    dispersions = vars / means
     if log:  # logarithmized mean as in Seurat
-        dispersion[dispersion == 0] = np.nan
-        dispersion = np.log(dispersion)
-        mean = np.log1p(mean)
+        dispersions[dispersions == 0] = np.nan
+        dispersions = np.log(dispersions)
+        means = np.log1p(means)
     # all of the following quantities are "per-gene" here
     df = pd.DataFrame()
-    df["mean"] = mean
-    df["dispersion"] = dispersion
+    df["means"] = means
+    df["dispersions"] = dispersions
     if flavor == "seurat":
-        df["mean_bin"] = pd.cut(df["mean"], bins=n_bins)
-        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
+        df["mean_bin"] = pd.cut(df["means"], bins=n_bins)
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         # retrieve those genes that have nan std, these are the ones where
@@ -187,70 +192,59 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
         disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin.values].values
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
-        df["dispersion_norm"] = (
+        df["dispersions_norm"] = (
             # use values here as index differs
-            df["dispersion"].values - disp_mean_bin[df["mean_bin"].values].values
+            df["dispersions"].values - disp_mean_bin[df["mean_bin"].values].values
         ) / disp_std_bin[df["mean_bin"].values].values
     elif flavor == "cell_ranger":
         from statsmodels import robust
 
         df["mean_bin"] = pd.cut(
-            df["mean"],
-            np.r_[-np.inf, np.percentile(df["mean"], np.arange(10, 105, 5)), np.inf],
+            df["means"],
+            np.r_[-np.inf, np.percentile(df["means"], np.arange(10, 105, 5)), np.inf],
         )
-        disp_grouped = df.groupby("mean_bin", observed=True)["dispersion"]
+        disp_grouped = df.groupby("mean_bin", observed=True)["dispersions"]
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        df["dispersion_norm"] = (
+        df["dispersions_norm"] = (
             np.abs(
-                df["dispersion"].values - disp_median_bin[df["mean_bin"].values].values
+                df["dispersions"].values - disp_median_bin[df["mean_bin"].values].values
             )
             / disp_mad_bin[df["mean_bin"].values].values
         )
     else:
         msg = '`flavor` needs to be "seurat" or "cell_ranger"'
         raise ValueError(msg)
-    dispersion_norm = df["dispersion_norm"].values.astype("float32")
+    dispersions_norm = df["dispersions_norm"].values.astype("float32")
     if n_top_genes is not None:
-        dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
-        dispersion_norm[
-            ::-1
-        ].sort()  # interestingly, np.argpartition is slightly slower
-        disp_cut_off = dispersion_norm[n_top_genes - 1]
-        gene_subset = df["dispersion_norm"].values >= disp_cut_off
+        dispersions_norm = dispersions_norm[~np.isnan(dispersions_norm)]
+        # interestingly, np.argpartition is slightly slower than this:
+        dispersions_norm[::-1].sort()
+        disp_cut_off = dispersions_norm[n_top_genes - 1]
+        gene_subset = df["dispersions_norm"].values >= disp_cut_off
         logg.debug(
             f"the {n_top_genes} top genes correspond to a "
             f"normalized dispersion cutoff of {disp_cut_off}"
         )
     else:
         max_disp = np.inf if max_disp is None else max_disp
-        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
+        dispersions_norm[np.isnan(dispersions_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce(
             (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
+                means > min_mean,
+                means < max_mean,
+                dispersions_norm > min_disp,
+                dispersions_norm < max_disp,
             )
         )
+    df["gene_subset"] = gene_subset
+    df["dispersions_norm"] = df["dispersions_norm"].astype("float32")
     logg.info("    finished", time=start)
-    return np.rec.fromarrays(
-        (
-            gene_subset,
-            df["mean"].values,
-            df["dispersion"].values,
-            df["dispersion_norm"].values.astype("float32", copy=False),
-        ),
-        dtype=[
-            ("gene_subset", bool),
-            ("means", "float32"),
-            ("dispersions", "float32"),
-            ("dispersions_norm", "float32"),
-        ],
-    )
+    rv = df[["gene_subset", "means", "dispersions", "dispersions_norm"]]
+    return rv if return_df else rv.to_records(index=False)
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):

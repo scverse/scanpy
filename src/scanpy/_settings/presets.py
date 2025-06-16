@@ -23,6 +23,7 @@ LeidenFlavor = Literal["leidenalg", "igraph"]
 
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
+    return_df: bool
 
 
 class FilterCellsCutoffs(NamedTuple):
@@ -127,9 +128,9 @@ class Preset(StrEnum):
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
-            Preset.ScanpyV1: HVGPreset(flavor="seurat"),
-            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper"),
-            Preset.SeuratV5: HVGPreset(flavor="seurat_v3_paper"),
+            Preset.ScanpyV1: HVGPreset(flavor="seurat", return_df=False),
+            Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper", return_df=True),
+            Preset.SeuratV5: HVGPreset(flavor="seurat_v3_paper", return_df=True),
         }
 
     @preset_property
