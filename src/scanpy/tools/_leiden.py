@@ -122,9 +122,9 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         from scanpy import settings
 
         flavor = settings.preset.leiden.flavor
+    _utils.ensure_igraph()  # we need igraph regardless of `flavor`
     match flavor:
         case "igraph":
-            _utils.ensure_igraph()
             if directed:
                 msg = "Cannot use igraph’s leiden implementation with a directed graph."
                 raise ValueError(msg)
