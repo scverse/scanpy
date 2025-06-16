@@ -13,11 +13,11 @@ from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     from anndata import AnnData
 
     from .._compat import CSBase
+    from .._settings.presets import LeidenFlavor
     from .._utils.random import _LegacyRandom
 
     try:  # sphinx-autodoc-typehints + optional dependency
@@ -43,7 +43,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
+    flavor: LeidenFlavor | None = None,
     **clustering_args,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -118,28 +118,34 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     """
-    if flavor not in {"igraph", "leidenalg"}:
-        msg = (
-            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
-        )
-        raise ValueError(msg)
-    _utils.ensure_igraph()
-    if flavor == "igraph":
-        if directed:
-            msg = "Cannot use igraph’s leiden implementation with a directed graph."
-            raise ValueError(msg)
-        if partition_type is not None:
-            msg = "Do not pass in partition_type argument when using igraph."
-            raise ValueError(msg)
-    else:
-        try:
-            import leidenalg
+    if flavor is None:
+        from scanpy import settings
 
-            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
+        flavor = settings.preset.leiden.flavor
+    match flavor:
+        case "igraph":
+            _utils.ensure_igraph()
+            if directed:
+                msg = "Cannot use igraph’s leiden implementation with a directed graph."
+                raise ValueError(msg)
+            if partition_type is not None:
+                msg = "Do not pass in partition_type argument when using igraph."
+                raise ValueError(msg)
+        case "leidenalg":
+            try:
+                import leidenalg
+            except ImportError as e:
+                msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+                raise ImportError(msg) from e
+            msg = (
+                "In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n"
+                'To achieve the future defaults please pass: `flavor="igraph"` and n_iterations=2. '
+                "directed must also be False to work with igraph's implementation."
+            )
             _utils.warn_once(msg, FutureWarning, stacklevel=3)
-        except ImportError as e:
-            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            raise ImportError(msg) from e
+        case _:
+            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
+            raise ValueError(msg)
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")

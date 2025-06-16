@@ -18,6 +18,7 @@ __all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGPreset", "Preset"]
 
 DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+LeidenFlavor = Literal["leidenalg", "igraph"]
 
 
 class HVGPreset(NamedTuple):
@@ -46,12 +47,16 @@ class FilterGenesCutoffs(NamedTuple):
         return sum([i is not None for i in self])
 
 
-class Pca(NamedTuple):
+class PcaPreset(NamedTuple):
     key_added: str | None
 
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
+
+
+class LeidenPreset(NamedTuple):
+    flavor: LeidenFlavor
 
 
 preset_postprocessors: list[Callable[[], None]] = []
@@ -150,12 +155,12 @@ class Preset(StrEnum):
         }
 
     @preset_property
-    def pca() -> Mapping[Preset, Pca]:
+    def pca() -> Mapping[Preset, PcaPreset]:
         """Settings for :func:`~scanpy.pp.pca`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: Pca(key_added=None),
-            Preset.ScanpyV2Preview: Pca(key_added="pca"),
-            Preset.SeuratV5: Pca(key_added="pca"),
+            Preset.ScanpyV1: PcaPreset(key_added=None),
+            Preset.ScanpyV2Preview: PcaPreset(key_added="pca"),
+            Preset.SeuratV5: PcaPreset(key_added="pca"),
         }
 
     @preset_property
@@ -165,6 +170,15 @@ class Preset(StrEnum):
             Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test"),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(method="wilcoxon"),
             Preset.SeuratV5: RankGenesGroupsPreset(method="wilcoxon"),
+        }
+
+    @preset_property
+    def leiden() -> Mapping[Preset, LeidenPreset]:
+        """Flavor for :func:`~scanpy.tl.leiden`."""
+        return {
+            Preset.ScanpyV1: LeidenPreset(flavor="leidenalg"),
+            Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph"),
+            Preset.SeuratV5: LeidenPreset(flavor="leidenalg"),
         }
 
     @contextmanager
