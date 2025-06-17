@@ -13,7 +13,16 @@ if TYPE_CHECKING:
 
 NT = TypeVar("NT", bound=NamedTuple)
 
-__all__ = ["FilterCellsCutoffs", "FilterGenesCutoffs", "HVGPreset", "Preset"]
+__all__ = [
+    "DETest",
+    "HVGFlavor",
+    "HVGPreset",
+    "LeidenFlavor",
+    "LeidenPreset",
+    "PcaPreset",
+    "Preset",
+    "RankGenesGroupsPreset",
+]
 
 
 DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
@@ -24,28 +33,6 @@ LeidenFlavor = Literal["leidenalg", "igraph"]
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
     return_df: bool
-
-
-class FilterCellsCutoffs(NamedTuple):
-    min_genes: int | None = None
-    min_counts: int | None = None
-    max_genes: int | None = None
-    max_counts: int | None = None
-
-    @property
-    def n(self) -> int:
-        return sum([i is not None for i in self])
-
-
-class FilterGenesCutoffs(NamedTuple):
-    min_cells: int | None = None
-    min_counts: int | None = None
-    max_cells: int | None = None
-    max_counts: int | None = None
-
-    @property
-    def n(self) -> int:
-        return sum([i is not None for i in self])
 
 
 class PcaPreset(NamedTuple):
@@ -131,28 +118,6 @@ class Preset(StrEnum):
             Preset.ScanpyV1: HVGPreset(flavor="seurat", return_df=False),
             Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper", return_df=True),
             Preset.SeuratV5: HVGPreset(flavor="seurat_v3_paper", return_df=True),
-        }
-
-    @preset_property
-    def filter_cells() -> Mapping[Preset, FilterCellsCutoffs]:
-        """Cutoffs for :func:`~scanpy.pp.filter_cells`."""
-        return {
-            Preset.ScanpyV1: FilterCellsCutoffs(None, None, None, None),
-            Preset.ScanpyV2Preview: FilterCellsCutoffs(None, None, None, None),
-            Preset.SeuratV5: FilterCellsCutoffs(
-                min_genes=200, min_counts=None, max_genes=None, max_counts=None
-            ),
-        }
-
-    @preset_property
-    def filter_genes() -> Mapping[Preset, FilterGenesCutoffs]:
-        """Cutoffs for :func:`~scanpy.pp.filter_genes`."""
-        return {
-            Preset.ScanpyV1: FilterGenesCutoffs(None, None, None, None),
-            Preset.ScanpyV2Preview: FilterGenesCutoffs(None, None, None, None),
-            Preset.SeuratV5: FilterGenesCutoffs(
-                min_cells=3, min_counts=None, max_cells=None, max_counts=None
-            ),
         }
 
     @preset_property

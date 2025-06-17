@@ -98,24 +98,23 @@ def recipe_seurat(
         Return a copy if true.
 
     """
-    from .. import Preset, pl, pp, settings
+    from .. import pl, pp
     from ._deprecated.highly_variable_genes import filter_genes_dispersion
 
     if copy:
         adata = adata.copy()
-
-    with settings.preset.override(Preset.SeuratV5):
-        pp.filter_cells(adata)
-        pp.filter_genes(adata)
-        pp.normalize_total(adata, target_sum=1e4)
-        filter_result = filter_genes_dispersion(adata.X, log=not log)
-        if plot:
-            pl.filter_genes_dispersion(filter_result, log=not log)
-        adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
-        if log:
-            pp.log1p(adata)
-        pp.scale(adata, max_value=10)
-
+    pp.filter_cells(adata, min_genes=200)
+    pp.filter_genes(adata, min_cells=3)
+    pp.normalize_total(adata, target_sum=1e4)
+    filter_result = filter_genes_dispersion(
+        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log
+    )
+    if plot:
+        pl.filter_genes_dispersion(filter_result, log=not log)
+    adata._inplace_subset_var(filter_result["gene_subset"])  # filter genes
+    if log:
+        pp.log1p(adata)
+    pp.scale(adata, max_value=10)
     return adata if copy else None
 
 
