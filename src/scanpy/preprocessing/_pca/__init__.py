@@ -73,7 +73,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
-    key_added: str | None = None,
+    key_added: str | None | Empty = _empty,
     copy: bool = False,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
@@ -205,7 +205,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer` and `chunked` at the same time."
         raise NotImplementedError(msg)
-    if key_added is None:
+    if key_added is _empty:
         key_added = settings.preset.pca.key_added
 
     # chunked calculation is not randomized, anyways

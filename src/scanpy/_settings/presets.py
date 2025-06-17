@@ -41,6 +41,7 @@ class PcaPreset(NamedTuple):
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
+    mask_var: str | None
 
 
 class LeidenPreset(NamedTuple):
@@ -133,9 +134,13 @@ class Preset(StrEnum):
     def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
         """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
         return {
-            Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test"),
-            Preset.ScanpyV2Preview: RankGenesGroupsPreset(method="wilcoxon"),
-            Preset.SeuratV5: RankGenesGroupsPreset(method="wilcoxon"),
+            Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test", mask_var=None),
+            Preset.ScanpyV2Preview: RankGenesGroupsPreset(
+                method="wilcoxon", mask_var=None
+            ),
+            Preset.SeuratV5: RankGenesGroupsPreset(
+                method="wilcoxon", mask_var="highly_variable"
+            ),
         }
 
     @preset_property

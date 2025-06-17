@@ -15,6 +15,7 @@ from .. import logging as logg
 from .._compat import CSBase, njit, old_positionals
 from .._settings.presets import DETest
 from .._utils import (
+    _empty,
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import NDArray
+
+    from .._utils import Empty
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
@@ -507,7 +510,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool_] | str | None = None,
+    mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -620,6 +623,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    from scanpy import settings
+
+    if mask_var is _empty:
+        mask_var = settings.preset.rank_genes_groups.mask_var
+    if method is None:
+        method = settings.preset.rank_genes_groups.method
+
     mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
@@ -627,11 +637,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     elif use_raw is True and adata.raw is None:
         msg = "Received `use_raw=True`, but `adata.raw` is empty."
         raise ValueError(msg)
-
-    if method is None:
-        from scanpy import settings
-
-        method = settings.preset.rank_genes_groups.method
 
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
