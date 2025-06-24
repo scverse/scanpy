@@ -1,9 +1,9 @@
 {
-    "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+    "$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
     "formatter": { "useEditorconfig": true },
     "overrides": [
         {
-            "include": ["./.vscode/*.json", "**/*.jsonc", "**/asv.conf.json"],
+            "includes": [".vscode/**/*.json", "**/*.jsonc", "**/asv.conf.json"],
             "json": {
                 "formatter": {
                     "trailingCommas": "all",
@@ -15,4 +15,20 @@
             },
         },
     ],
+    "linter": {
+        "rules": {
+            "style": {
+                "noParameterAssign": "error",
+                "useAsConstAssertion": "error",
+                "useDefaultParameterLast": "error",
+                "useEnumInitializers": "error",
+                "useSelfClosingElements": "error",
+                "useSingleVarDeclarator": "error",
+                "noUnusedTemplateLiteral": "error",
+                "useNumberNamespace": "error",
+                "noInferrableTypes": "error",
+                "noUselessElse": "error",
+            },
+        },
+    },
 }
