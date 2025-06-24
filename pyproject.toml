@@ -121,7 +121,6 @@ doc = [
     "ipython>=7.20",                    # for nbsphinx code highlighting
     "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
-    "setuptools",                       # undeclared dependency of sphinxcontrib-bibtex→pybtex
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga,dask-ml]",
     "sam-algorithm",
