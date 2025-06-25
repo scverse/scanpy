@@ -254,6 +254,7 @@ ignore = [
     "D417",    # TODO: replace our current param docs reuse with this and remove it here:
     "PLR2004", # Numbers like “2” aren’t that “magic”.
     "PYI051",  # `Literal["..."] | str` is useful for autocompletion
+    "PLC0415", # `import` should be at the top-level of a file
 ]
 allowed-confusables = [ "×", "’", "–", "α" ]
 [tool.ruff.lint.per-file-ignores]

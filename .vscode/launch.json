@@ -9,7 +9,7 @@
             "args": ["-M", "html", ".", "_build"],
             "cwd": "${workspaceFolder}/docs",
             "console": "internalConsole",
-            "justMyCode": false,
+            "justMyCode": false
         },
         {
             "name": "Python: Debug Test",
@@ -20,7 +20,7 @@
             "console": "internalConsole",
             "justMyCode": false,
             "env": { "PYTEST_ADDOPTS": "--color=yes" },
-            "presentation": { "hidden": true },
-        },
-    ],
+            "presentation": { "hidden": true }
+        }
+    ]
 }
