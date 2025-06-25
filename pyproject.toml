@@ -51,7 +51,7 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7.5",
     "pandas >=2.0.3",
-    "scipy>=1.11.1",
+    "scipy>=1.11.1,<1.16.0",
     "seaborn>=0.13.2",
     "h5py>=3.8.0",
     "tqdm",
