@@ -50,7 +50,7 @@ dependencies = [
     "numpy>=1.24.1",
     "matplotlib>=3.7.5",
     "pandas >=1.5.3",
-    "scipy>=1.8.1",
+    "scipy>=1.8.1,<1.16.0",
     "seaborn>=0.13.2",
     "h5py>=3.7.0",
     "tqdm",
