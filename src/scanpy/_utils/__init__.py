@@ -472,7 +472,7 @@ def moving_average(a: np.ndarray, n: int):
     a
         One-dimensional array.
     n
-        Number of entries to average over. n=2 means averaging over the currrent
+        Number of entries to average over. n=2 means averaging over the current
         the previous entry.
 
     Returns
@@ -874,7 +874,7 @@ def select_groups(
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(
-                np.in1d(
+                np.isin(
                     np.arange(len(adata.obs[key].cat.categories)).astype(str),
                     np.array(groups_order_subset),
                 )
@@ -1057,7 +1057,7 @@ class NeighborsView:
 def _choose_graph(
     adata: AnnData, obsp: str | None, neighbors_key: str | None
 ) -> CSBase:
-    """Choose connectivities from neighbbors or another obsp entry."""
+    """Choose connectivities from neighbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
         msg = "You can't specify both obsp, neighbors_key. Please select only one."
         raise ValueError(msg)
