@@ -84,7 +84,7 @@ def test_neighbors(adatas):
 
     num_correct = 0.0
     for i in range(adata_new.n_obs):
-        num_correct += np.sum(np.in1d(true_indices[i], indices[i]))
+        num_correct += np.sum(np.isin(true_indices[i], indices[i]))
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
