@@ -6,13 +6,42 @@ import pandas as pd
 import pytest
 from packaging.version import Version
 from scipy import sparse
+from tests.test_pca import maybe_convert_array_to_dask
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
+from testing.scanpy import _helpers
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import param_with
+
+
+def _chunked_1d(
+    f,
+):
+    def wrapper(a: np.ndarray):
+        da = f(a)
+        return da.rechunk((da.chunksize[0], -1))
+
+    return wrapper
+
+
+DASK_CONVERTERS = {
+    f: _chunked_1d(f)
+    for f in (_helpers.as_dense_dask_array, _helpers.as_sparse_dask_array)
+}
+ARRAY_TYPES = [
+    param_with(
+        at,
+        maybe_convert_array_to_dask,
+        marks=[needs.dask_ml] if at.id == "dask_array_dense" else [],
+    )
+    for at in ARRAY_TYPES_ALL
+]
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
@@ -93,7 +122,7 @@ def test_mask(axis):
     assert np.all(by_name["0"].layers["sum"] == 0)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -102,7 +131,9 @@ def test_aggregate_vs_pandas(metric, array_type):
     adata.X = array_type(adata.X)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
-
+    # TODO: upstream
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.compute(scheduler="single-threaded")
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -124,7 +155,10 @@ def test_aggregate_vs_pandas(metric, array_type):
     )
     expected.index.name = None
     expected.columns.name = None
-
+    if isinstance(result.layers[metric], DaskArray):
+        result.layers[metric] = result.layers[metric].compute(
+            scheduler="single-threaded"
+        )
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
@@ -139,7 +173,7 @@ def test_aggregate_vs_pandas(metric, array_type):
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_axis(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -387,7 +421,7 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_arraytype(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[

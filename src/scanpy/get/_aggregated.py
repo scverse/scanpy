@@ -9,7 +9,7 @@ from anndata import AnnData, utils
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase
+from scanpy._compat import CSBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
@@ -333,6 +333,48 @@ def _aggregate(
 ):
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
+
+
+@_aggregate.register(DaskArray)
+def aggregate_dask(
+    data: DaskArray,
+    by: pd.Categorical,
+    func: AggType | Iterable[AggType],
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+):
+    n_chunks = len(data.blocks.ravel())
+    group_counts = np.bincount(by.codes)
+
+    def aggregate_chunk(chunk: Array, block_info=None):
+        subset = slice(*block_info[0]["array-location"][0])
+        by_subsetted = by[subset]
+        mask_subsetted = mask[subset] if mask is not None else mask
+        if func in {"mean", "count_nonzero", "sum"}:
+            res = _aggregate(chunk, by_subsetted, func, mask=mask_subsetted, dof=dof)[
+                func
+            ][None, ...]
+            if func == "mean":
+                return res / n_chunks
+            return res
+        if func == "var":
+            _, var = _aggregate(
+                chunk, by_subsetted, func, mask=mask_subsetted, dof=dof
+            )[func][None, ...]
+            if dof != 0:
+                var *= (group_counts / (group_counts - dof))[:, np.newaxis]
+            return var
+
+    return {
+        f: data.map_blocks(
+            aggregate_chunk,
+            new_axis=(1,),
+            chunks=((1,) * data.blocks.size, (len(by.categories),), (data.shape[1],)),
+            meta=np.array([], dtype=np.int32),  # TODO: figure out dtype
+        ).sum(axis=0)
+        for f in set([func] if isinstance(func, str) else func)
+    }
 
 
 @_aggregate.register(pd.DataFrame)
