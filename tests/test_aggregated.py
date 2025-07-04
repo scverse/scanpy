@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 from packaging.version import Version
 from scipy import sparse
-from tests.test_pca import maybe_convert_array_to_dask
 
 import scanpy as sc
 from scanpy._compat import DaskArray
@@ -18,6 +17,8 @@ from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
 from testing.scanpy._pytest.params import param_with
+
+from .test_pca import maybe_convert_array_to_dask
 
 
 def _chunked_1d(
