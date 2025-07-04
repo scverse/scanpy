@@ -129,6 +129,7 @@ def test_aggregate_vs_pandas(metric, array_type):
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
     # TODO: upstream
@@ -179,10 +180,19 @@ def test_aggregate_axis(array_type, metric):
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
+    # TODO: disallow transposing dask sparse matrices in anndata
+    # This test actually passes in all cases except with sparse var calculation,
+    # even though I'm not clear on the behavior of transpose with sparse matrices in dask.
+    adata_T = adata.T
+    adata_T.X = array_type(adata_T.X)
+    xfail_dask_median(adata_T, metric)
     adata.X = array_type(adata.X)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
-    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1).T
-
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
+    if isinstance(adata.X, DaskArray):
+        for d in [expected, actual]:
+            d.layers[metric] = d.layers[metric].compute(scheduler="single-threaded")
+    actual = actual.T
     assert_equal(expected, actual)
 
 
@@ -421,6 +431,11 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
+def xfail_dask_median(adata, metric):
+    if isinstance(adata.X, DaskArray) and metric == "median":
+        pytest.xfail("Median calculation not implemented for Dask")
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_arraytype(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
@@ -428,8 +443,12 @@ def test_aggregate_arraytype(array_type, metric):
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(aggregate.layers[metric], np.ndarray)
+    assert isinstance(
+        aggregate.layers[metric],
+        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
+    )
 
 
 def test_aggregate_obsm_varm():
