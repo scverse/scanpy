@@ -393,7 +393,8 @@ def aggregate_dask(
         aggregated["var"] = aggredated_mean_var["var"]
         if has_mean:
             aggregated["mean"] = aggredated_mean_var["mean"]
-    # division must come after, not before, the summation for numerical precision.
+    # division must come after, not before, the summation for numerical precision
+    # i.e., we can't just call map blocks over the mean function.
     elif has_mean:
         group_counts = np.bincount(by.codes)
         aggregated["mean"] = (
