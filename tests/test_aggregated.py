@@ -8,11 +8,13 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+
+from .test_pca import ARRAY_TYPES
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
@@ -93,16 +95,19 @@ def test_mask(axis):
     assert np.all(by_name["0"].layers["sum"] == 0)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
-
+    # TODO: upstream
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.compute(scheduler="single-threaded")
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -124,7 +129,10 @@ def test_aggregate_vs_pandas(metric, array_type):
     )
     expected.index.name = None
     expected.columns.name = None
-
+    if isinstance(result.layers[metric], DaskArray):
+        result.layers[metric] = result.layers[metric].compute(
+            scheduler="single-threaded"
+        )
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
@@ -139,16 +147,24 @@ def test_aggregate_vs_pandas(metric, array_type):
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_axis(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
+    # TODO: This test actually passes in all cases except with sparse var calculation.
+    # There appear to be some sort of roundtripping issue with transposition.
+    adata_T = adata.T
+    adata_T.X = array_type(adata_T.X)
+    xfail_dask_median(adata_T, metric)
     adata.X = array_type(adata.X)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
-    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1).T
-
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
+    if isinstance(adata.X, DaskArray):
+        for d in [expected, actual]:
+            d.layers[metric] = d.layers[metric].compute(scheduler="single-threaded")
+    actual = actual.T
     assert_equal(expected, actual)
 
 
@@ -387,15 +403,24 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def xfail_dask_median(adata, metric):
+    if isinstance(adata.X, DaskArray) and metric == "median":
+        pytest.xfail("Median calculation not implemented for Dask")
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_arraytype(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(aggregate.layers[metric], np.ndarray)
+    assert isinstance(
+        aggregate.layers[metric],
+        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
+    )
 
 
 def test_aggregate_obsm_varm():
