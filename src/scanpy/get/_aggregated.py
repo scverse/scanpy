@@ -101,9 +101,6 @@ class Aggregate:
             / np.bincount(self.groupby.codes)[:, None]
         )
 
-    def sum_sq(self) -> Array:
-        return utils.asarray(self.indicator_matrix @ _power(self.data, 2))
-
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
 
@@ -128,7 +125,10 @@ class Aggregate:
         group_counts = np.bincount(self.groupby.codes)
         mean_ = self.mean()
         # sparse matrices do not support ** for elementwise power.
-        mean_sq = self.sum_sq() / group_counts[:, None]
+        mean_sq = (
+            utils.asarray(self.indicator_matrix @ _power(self.data, 2))
+            / group_counts[:, None]
+        )
         sq_mean = mean_**2
         var_ = mean_sq - sq_mean
         # TODO: Why these values exactly? Because they are high relative to the datatype?
