@@ -11,38 +11,10 @@ import scanpy as sc
 from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
-from testing.scanpy import _helpers
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
-from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import param_with
 
-from .test_pca import maybe_convert_array_to_dask
-
-
-def _chunked_1d(
-    f,
-):
-    def wrapper(a: np.ndarray):
-        da = f(a)
-        return da.rechunk((da.chunksize[0], -1))
-
-    return wrapper
-
-
-DASK_CONVERTERS = {
-    f: _chunked_1d(f)
-    for f in (_helpers.as_dense_dask_array, _helpers.as_sparse_dask_array)
-}
-ARRAY_TYPES = [
-    param_with(
-        at,
-        maybe_convert_array_to_dask,
-        marks=[needs.dask_ml] if at.id == "dask_array_dense" else [],
-    )
-    for at in ARRAY_TYPES_ALL
-]
+from .test_pca import ARRAY_TYPES
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
