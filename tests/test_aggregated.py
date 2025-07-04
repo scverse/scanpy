@@ -153,9 +153,8 @@ def test_aggregate_axis(array_type, metric):
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
-    # TODO: disallow transposing dask sparse matrices in anndata
-    # This test actually passes in all cases except with sparse var calculation,
-    # even though I'm not clear on the behavior of transpose with sparse matrices in dask.
+    # TODO: This test actually passes in all cases except with sparse var calculation.
+    # There appear to be some sort of roundtripping issue with transposition.
     adata_T = adata.T
     adata_T.X = array_type(adata_T.X)
     xfail_dask_median(adata_T, metric)
