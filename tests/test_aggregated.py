@@ -105,7 +105,6 @@ def test_aggregate_vs_pandas(metric, array_type):
     xfail_dask_median(adata, metric)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
-    # TODO: upstream
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.compute(scheduler="single-threaded")
     if metric == "count_nonzero":
