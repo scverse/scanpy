@@ -350,7 +350,7 @@ def aggregate_dask_mean_var(
 ) -> MeanVarDict:
     mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
     sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
-    var = sq_mean - (mean**2)
+    var = sq_mean - fau_power(mean, 2)
     if dof != 0:
         group_counts = np.bincount(by.codes)
         var *= (group_counts / (group_counts - dof))[:, np.newaxis]
@@ -366,7 +366,9 @@ def aggregate_dask(
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
 ) -> dict[AggType, np.ndarray]:
-    def aggregate_chunk_no_var(chunk: Array, block_info=None, *, func: AggType = func):
+    def aggregate_chunk_sum_or_count_nonzero(
+        chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
+    ):
         subset = slice(*block_info[0]["array-location"][0])
         by_subsetted = by[subset]
         mask_subsetted = mask[subset] if mask is not None else mask
@@ -381,7 +383,7 @@ def aggregate_dask(
     funcs_no_var_or_mean = funcs - {"var", "mean"}
     aggregated = {
         f: data.map_blocks(
-            partial(aggregate_chunk_no_var, func=func),
+            partial(aggregate_chunk_sum_or_count_nonzero, func=func),
             new_axis=(1,),
             chunks=((1,) * data.blocks.size, (len(by.categories),), (data.shape[1],)),
             meta=np.array([], dtype=np.float64),  # TODO: figure out dtype

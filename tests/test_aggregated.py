@@ -8,7 +8,7 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import CSRBase, DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -152,15 +152,17 @@ def test_aggregate_axis(array_type, metric):
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
-    # TODO: This test actually passes in all cases except with sparse var calculation.
-    # There appear to be some sort of roundtripping issue with transposition.
-    adata_T = adata.T
-    adata_T.X = array_type(adata_T.X)
-    xfail_dask_median(adata_T, metric)
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
     actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
-    if isinstance(adata.X, DaskArray):
+    # TODO: There is something going on where the default scheduler + var + sparse-in-dask
+    # causes differences between the two, although single-threaded does not.
+    if (
+        isinstance(adata.X, DaskArray)
+        and metric == "var"
+        and isinstance(adata.X._meta, CSRBase)
+    ):
         for d in [expected, actual]:
             d.layers[metric] = d.layers[metric].compute(scheduler="single-threaded")
     actual = actual.T
