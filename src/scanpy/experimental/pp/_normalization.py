@@ -226,7 +226,9 @@ def normalize_pearson_residuals_pca(
 
     """
     # Unify new mask argument and deprecated use_highly_varible argument
-    _, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
+    _, mask_var = _handle_mask_var(
+        adata, mask_var, use_highly_variable=use_highly_variable
+    )
     del use_highly_variable
 
     if mask_var is not None:

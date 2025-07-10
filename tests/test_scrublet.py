@@ -41,6 +41,7 @@ def paul500() -> AnnData:
 )
 @pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
+    *,
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],

@@ -339,6 +339,7 @@ def savefig(writekey, dpi=None, ext=None):
 
 def savefig_or_show(
     writekey: str,
+    *,
     show: bool | None = None,
     dpi: int | None = None,
     ext: str | None = None,
@@ -1345,6 +1346,6 @@ def _deprecated_scale(
     return scale
 
 
-def _dk(dendrogram: bool | str | None) -> str | None:
+def _dk(dendrogram: bool | str | None) -> str | None:  # noqa: FBT001
     """Convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
     return None if isinstance(dendrogram, bool) else dendrogram

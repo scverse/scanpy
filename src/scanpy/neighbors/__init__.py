@@ -768,6 +768,7 @@ class Neighbors:
 
     def compute_eigen(
         self,
+        *,
         n_comps: int = 15,
         sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
