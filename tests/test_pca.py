@@ -238,7 +238,7 @@ def test_pca_warnings(
     adata = AnnData(A)
 
     if warn_pat_expected is not None:
-        with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):
+        with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):  # noqa: PT031
             warnings.filterwarnings(
                 "ignore", r".*Using a dense eigensolver instead of LOBPCG", UserWarning
             )
