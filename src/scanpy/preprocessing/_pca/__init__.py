@@ -224,7 +224,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
-    mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
+    mask_var_param, mask_var = _handle_mask_var(
+        adata, mask_var, use_highly_variable=use_highly_variable
+    )
     del use_highly_variable
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
@@ -424,9 +426,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
 
 def _handle_mask_var(
-    *,
     adata: AnnData,
     mask_var: NDArray[np.bool_] | str | Empty | None,
+    *,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
     """Unify new mask argument and deprecated use_highly_varible argument.
