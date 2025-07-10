@@ -55,6 +55,10 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
             return self.name == other
         return NotImplemented
 
+    def __hash__(self) -> int:
+        # See https://docs.astral.sh/ruff/rules/eq-without-hash/
+        return super().__hash__()
+
     @property
     def level(self) -> int:
         """The :ref:`logging level <levels>` corresponding to this verbosity level."""

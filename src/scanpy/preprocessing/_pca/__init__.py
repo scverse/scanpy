@@ -424,6 +424,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
 
 def _handle_mask_var(
+    *,
     adata: AnnData,
     mask_var: NDArray[np.bool_] | str | Empty | None,
     use_highly_variable: bool | None,
