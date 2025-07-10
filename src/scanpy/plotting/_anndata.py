@@ -2357,7 +2357,7 @@ def _format_first_three_categories(categories):
     """Clean up warning message."""
     categories = list(categories)
     if len(categories) > 3:
-        categories = categories[:3] + ["etc."]
+        categories = [*categories[:3], "etc."]
     return ", ".join(categories)
 
 

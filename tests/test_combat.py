@@ -62,6 +62,7 @@ def test_combat_obs_names():
     )
     with pytest.warns(UserWarning, match="Observation names are not unique"):
         a = sc.AnnData(X, obs)
+    with pytest.warns(UserWarning, match="Observation names are not unique"):
         b = a.copy()
     b.obs_names_make_unique()
 
