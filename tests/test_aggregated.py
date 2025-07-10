@@ -8,7 +8,7 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSRBase, DaskArray
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -106,7 +106,7 @@ def test_aggregate_vs_pandas(metric, array_type):
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
     if isinstance(adata.X, DaskArray):
-        adata.X = adata.X.compute(scheduler="single-threaded")
+        adata.X = adata.X.compute()
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -129,9 +129,7 @@ def test_aggregate_vs_pandas(metric, array_type):
     expected.index.name = None
     expected.columns.name = None
     if isinstance(result.layers[metric], DaskArray):
-        result.layers[metric] = result.layers[metric].compute(
-            scheduler="single-threaded"
-        )
+        result.layers[metric] = result.layers[metric].compute()
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
@@ -156,15 +154,6 @@ def test_aggregate_axis(array_type, metric):
     xfail_dask_median(adata, metric)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
     actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
-    # TODO: There is something going on where the default scheduler + var + sparse-in-dask
-    # causes differences between the two, although single-threaded does not.
-    if (
-        isinstance(adata.X, DaskArray)
-        and metric == "var"
-        and isinstance(adata.X._meta, CSRBase)
-    ):
-        for d in [expected, actual]:
-            d.layers[metric] = d.layers[metric].compute(scheduler="single-threaded")
     actual = actual.T
     assert_equal(expected, actual)
 

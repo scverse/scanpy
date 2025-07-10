@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | CSBase
+    Array = np.ndarray | CSBase | DaskArray
 
 # Used with get_literal_vals
 AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
@@ -350,7 +350,8 @@ def aggregate_dask_mean_var(
 ) -> MeanVarDict:
     mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
     sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
-    var = sq_mean - fau_power(mean, 2)
+    # TODO: If we don't compute here, the results are not deterministic for sparse.
+    var = sq_mean.compute() - fau_power(mean, 2)
     if dof != 0:
         group_counts = np.bincount(by.codes)
         var *= (group_counts / (group_counts - dof))[:, np.newaxis]
@@ -365,7 +366,7 @@ def aggregate_dask(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
-) -> dict[AggType, np.ndarray]:
+) -> dict[AggType, DaskArray]:
     def aggregate_chunk_sum_or_count_nonzero(
         chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
     ):
