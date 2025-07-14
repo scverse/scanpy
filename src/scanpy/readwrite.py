@@ -814,7 +814,7 @@ def _read(  # noqa: PLR0912, PLR0915
                 "... assuming '.data' means tab or white-space separated text file"
             )
             logg.hint("change this by passing `ext` to sc.read")
-        adata = read_text(filename, delimiter, first_column_names)
+        adata = read_text(filename, delimiter, first_column_names=first_column_names)
     elif ext == "soft.gz":
         adata = _read_softgz(filename)
     elif ext == "loom":
