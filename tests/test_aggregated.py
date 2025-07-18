@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -13,7 +15,13 @@ from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scanpy._compat import CSRBase
 
 ARRAY_TYPES = [
     at
@@ -203,6 +211,44 @@ def test_aggregate_incorrect_dim():
 
     with pytest.raises(ValueError, match="was 'foo'"):
         sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
+
+
+def to_bad_chunking(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x,
+        chunks=(x.shape[0] // 2, x.shape[1] // 2),
+        meta=sparse.csr_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+def to_csc(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x.tocsc(),
+        chunks=(x.shape[0] // 2, x.shape[1]),
+        meta=sparse.csc_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+@needs.dask
+@pytest.mark.anndata_dask_support
+@pytest.mark.parametrize(
+    ("func", "error_msg"),
+    [
+        pytest.param(to_csc, "only csr_matrix", id="csc"),
+        pytest.param(
+            to_bad_chunking, "Feature axis must be unchunked", id="bad_chunking"
+        ),
+    ],
+)
+def test_aggregate_bad_dask_array(func: Callable[[CSRBase], DaskArray], error_msg: str):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata.X = func(adata.X)
+    with pytest.raises(ValueError, match=error_msg):
+        sc.get.aggregate(adata, ["louvain"], "sum")
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])

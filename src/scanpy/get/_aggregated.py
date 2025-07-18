@@ -10,7 +10,7 @@ from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase, DaskArray
+from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
@@ -367,6 +367,13 @@ def aggregate_dask(
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
 ) -> dict[AggType, DaskArray]:
+    if not isinstance(data._meta, CSRBase | np.ndarray):
+        msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
+        raise ValueError(msg)
+    if data.chunksize[1] != data.shape[1]:
+        msg = "Feature axis must be unchunked"
+        raise ValueError(msg)
+
     def aggregate_chunk_sum_or_count_nonzero(
         chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
     ):
