@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -8,11 +10,24 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scanpy._compat import CSRBase
+
+ARRAY_TYPES = [
+    at
+    for at in ARRAY_TYPES_ALL
+    if at.id not in {"dask_array_dense", "dask_array_sparse"}
+]
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
@@ -93,16 +108,18 @@ def test_mask(axis):
     assert np.all(by_name["0"].layers["sum"] == 0)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_vs_pandas(metric, array_type):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
-
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.compute()
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -124,7 +141,8 @@ def test_aggregate_vs_pandas(metric, array_type):
     )
     expected.index.name = None
     expected.columns.name = None
-
+    if isinstance(result.layers[metric], DaskArray):
+        result.layers[metric] = result.layers[metric].compute()
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
@@ -139,16 +157,17 @@ def test_aggregate_vs_pandas(metric, array_type):
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_axis(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
-    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1).T
-
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
+    actual = actual.T
     assert_equal(expected, actual)
 
 
@@ -192,6 +211,44 @@ def test_aggregate_incorrect_dim():
 
     with pytest.raises(ValueError, match="was 'foo'"):
         sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
+
+
+def to_bad_chunking(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x,
+        chunks=(x.shape[0] // 2, x.shape[1] // 2),
+        meta=sparse.csr_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+def to_csc(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x.tocsc(),
+        chunks=(x.shape[0] // 2, x.shape[1]),
+        meta=sparse.csc_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+@needs.dask
+@pytest.mark.anndata_dask_support
+@pytest.mark.parametrize(
+    ("func", "error_msg"),
+    [
+        pytest.param(to_csc, "only csr_matrix", id="csc"),
+        pytest.param(
+            to_bad_chunking, "Feature axis must be unchunked", id="bad_chunking"
+        ),
+    ],
+)
+def test_aggregate_bad_dask_array(func: Callable[[CSRBase], DaskArray], error_msg: str):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata.X = func(adata.X)
+    with pytest.raises(ValueError, match=error_msg):
+        sc.get.aggregate(adata, ["louvain"], "sum")
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
@@ -387,15 +444,24 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def xfail_dask_median(adata, metric):
+    if isinstance(adata.X, DaskArray) and metric == "median":
+        pytest.xfail("Median calculation not implemented for Dask")
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_aggregate_arraytype(array_type, metric):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(aggregate.layers[metric], np.ndarray)
+    assert isinstance(
+        aggregate.layers[metric],
+        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
+    )
 
 
 def test_aggregate_obsm_varm():

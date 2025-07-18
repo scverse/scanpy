@@ -78,14 +78,27 @@ def test_segments_binary():
     "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_top_segments(request: pytest.FixtureRequest, array_type):
+    if "dask" in array_type.__name__ and "1d_chunked" not in array_type.__name__:
+        reason = "DaskArray with feature axis chunking not yet supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    a = array_type(np.ones((300, 100)))
+    with maybe_dask_process_context():
+        seg = top_segment_proportions(a, [50, 100])
+    assert (seg[:, 0] == 0.5).all()
+    assert (seg[:, 1] == 1.0).all()
+
+
+@pytest.mark.parametrize(
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
+)
+def test_top_proportions(request: pytest.FixtureRequest, array_type):
     if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(np.ones((300, 100)))
-    seg = top_segment_proportions(a, [50, 100])
-    assert (seg[:, 0] == 0.5).all()
-    assert (seg[:, 1] == 1.0).all()
-    segfull = top_segment_proportions(a, np.arange(100) + 1)
+    # while dask is xfailed, since this relies on numba, we need to run it in the threaded context.
+    with maybe_dask_process_context():
+        segfull = top_segment_proportions(a, np.arange(100) + 1)
     propfull = top_proportions(a, 100)
     assert (segfull == propfull).all()
 
