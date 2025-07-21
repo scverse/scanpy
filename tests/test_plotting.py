@@ -1754,6 +1754,18 @@ def test_umap_mask_mult_plots():
     assert len(axes) == len(color)
 
 
+def test_umap_categories_change():
+    """Check that altering the categories of interest causes a recalculation of colors."""
+    pbmc = pbmc3k_processed()
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+    pbmc.obs.loc[pbmc.obs["louvain"] == "NK cells", "louvain"] = "B cells"
+    pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.remove_unused_categories()
+    # see https://github.com/scverse/scanpy/issues/3716 for why this used to fail
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+
+
 def test_umap_mask_no_modification():
     """Check that mask_obs argument doesn't affect the data being plotted."""
     pbmc = pbmc3k_processed()
