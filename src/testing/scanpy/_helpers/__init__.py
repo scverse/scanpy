@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
+def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs) -> None:
     """Check that only the array meant to be modified is modified."""
     adata = AnnData(X.copy())
 

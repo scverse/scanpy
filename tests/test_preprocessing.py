@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import nullcontext
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ import pandas as pd
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
+from fast_array_utils import conv
 from numpy.testing import assert_allclose
 from scipy import sparse
 
@@ -255,19 +257,26 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
-    with maybe_dask_process_context():
+    warn_ctx = pytest.warns(UserWarning, match=r"zero-centering.*densifies")
+    with warn_ctx if zero_center else nullcontext():
+        sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
+    with (
+        (
+            warn_ctx
+            if zero_center
+            and any(pat in array_type.__name__ for pat in ("sparse", "csc", "csr"))
+            else nullcontext()
+        ),
+        maybe_dask_process_context(),
+    ):
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
-    X = adata_casted.X
-    if is_dask := ("dask" in array_type.__name__):
-        assert not isinstance(X._meta, np.matrix)
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
+        if is_dask := ("dask" in array_type.__name__):
+            assert not isinstance(adata_casted.X._meta, np.matrix)
+            adata_casted.X.compute()  # make sure warning happens here
+    adata.X = conv.to_dense(adata.X)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     assert_allclose(
-        X,
+        adata_casted.X,
         adata.X,
         rtol=1e-1 if is_dask else 1e-5,
         atol=1e-1 if is_dask else 1e-5,
@@ -610,14 +619,9 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
         min_cells=min_cells,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -649,11 +653,6 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
         min_genes=min_genes,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
