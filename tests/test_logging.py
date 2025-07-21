@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
@@ -130,7 +131,10 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     "func",
     [
         sc.logging.print_header,
-        sc.logging.print_versions,
+        pytest.param(
+            sc.logging.print_versions,
+            marks=pytest.mark.filterwarnings("ignore:.*print_header:FutureWarning"),
+        ),
         sc.logging.print_version_and_date,
     ],
 )
@@ -143,6 +147,9 @@ def test_call_outputs(func):
     with redirect_stdout(output_io):
         out = func()
         if out is not None:
-            print(out)
+            with warnings.catch_warnings():
+                # https://github.com/pallets/markupsafe/issues/487
+                warnings.simplefilter("ignore")
+                print(out)
     output = output_io.getvalue()
     assert output != ""
