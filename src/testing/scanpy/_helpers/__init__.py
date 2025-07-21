@@ -101,7 +101,7 @@ def check_rep_results(func, X, *, fields: Iterable[str] = ("layer", "obsm"), **k
 
 
 def _check_check_values_warnings(
-    function, adata, expected_warning, kwargs=MappingProxyType({})
+    function, adata: AnnData, expected_warning: str, kwargs=MappingProxyType({})
 ):
     """Run `function` on `adata` with provided arguments `kwargs` twice.
 
@@ -110,12 +110,14 @@ def _check_check_values_warnings(
     """
     # expecting 0 no-int warnings
     with warnings.catch_warnings(record=True) as record:
+        warnings.filterwarnings("always")
         function(adata.copy(), **kwargs, check_values=False)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning not in warning_msgs
 
     # expecting 1 no-int warning
     with warnings.catch_warnings(record=True) as record:
+        warnings.filterwarnings("always")
         function(adata.copy(), **kwargs, check_values=True)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning in warning_msgs

@@ -411,7 +411,10 @@ def _subset_genes(
 def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArray:
     x = x[~np.isnan(x)]
     if n > x.size:
-        msg = "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions."
+        msg = (
+            f"`n_top_genes` (={n}) > number of normalized dispersions (={x.size}), "
+            "returning all genes with normalized dispersions."
+        )
         # 5: caller -> 4: `highly_variable_genes` -> 3: `_…_single_batch` -> 2: `_subset_genes` -> 1: here
         warnings.warn(msg, UserWarning, stacklevel=5)
         n = x.size

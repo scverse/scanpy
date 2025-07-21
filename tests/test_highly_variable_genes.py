@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from contextlib import nullcontext
 from pathlib import Path
 from string import ascii_letters
 from typing import TYPE_CHECKING
@@ -391,11 +392,12 @@ def test_compare_to_upstream(
         sc.pp.log1p(pbmc)
         sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
     elif func == "fgd":
-        sc.pp.filter_genes_dispersion(
-            pbmc, flavor=flavor, **params, log=True, subset=False
-        )
+        with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
+            sc.pp.filter_genes_dispersion(
+                pbmc, flavor=flavor, **params, log=True, subset=False
+            )
     else:
-        raise AssertionError()
+        pytest.fail(f"Unknown func {func}")
 
     np.testing.assert_array_equal(
         hvg_info["highly_variable"], pbmc.var["highly_variable"]
@@ -505,7 +507,7 @@ def test_seurat_v3_warning():
 
 def test_batches():
     adata = pbmc68k_reduced()
-    adata[:100, :100].X = np.zeros((100, 100))
+    adata.X[:100, :100] = np.zeros((100, 100))
 
     adata.obs["batch"] = ["0" if i < 100 else "1" for i in range(adata.n_obs)]
     adata_1 = adata[adata.obs["batch"] == "0"].copy()
@@ -558,6 +560,7 @@ def test_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 def test_degenerate_batches():
     adata = AnnData(
         X=np.random.randn(10, 100),
@@ -692,10 +695,17 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     adata_dask = adata.copy()
     adata_dask.X = to_dask(adata_dask.X)
 
-    output_mem, output_dask = (
-        sc.pp.highly_variable_genes(ad, flavor=flavor, n_top_genes=15, inplace=False)
-        for ad in [adata, adata_dask]
-    )
+    with (
+        pytest.warns(UserWarning, match="n_top_genes.*normalized dispersions")
+        if flavor == "cell_ranger"
+        else nullcontext()
+    ):
+        output_mem, output_dask = (
+            sc.pp.highly_variable_genes(
+                ad, flavor=flavor, n_top_genes=15, inplace=False
+            )
+            for ad in [adata, adata_dask]
+        )
 
     assert isinstance(output_mem, pd.DataFrame)
     assert isinstance(output_dask, pd.DataFrame)
