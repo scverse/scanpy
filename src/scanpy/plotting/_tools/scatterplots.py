@@ -24,6 +24,7 @@ from matplotlib.colors import (
     Normalize,
 )
 from matplotlib.figure import Figure  # noqa: TC002
+from matplotlib.markers import MarkerStyle
 from numpy.typing import NDArray  # noqa: TC002
 from packaging.version import Version
 
@@ -404,12 +405,16 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                         **kwargs_outline,
                     )
 
+            edgecolor = kwargs_scatter.pop("edgecolor", None)
+            if not MarkerStyle(marker[count]).is_filled():
+                edgecolor = None
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
+                edgecolor=edgecolor,
                 **kwargs_scatter,
             )
 
