@@ -280,9 +280,10 @@ def test_scale_zero_center_warns_dask_sparse(array_type):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match="zero-center.*sparse"):
+    with pytest.warns(UserWarning, match=r"zero-center.*sparse"):
         sc.pp.scale(adata_casted)
-    sc.pp.scale(adata)
+    with pytest.warns(UserWarning, match=r"zero-center.*sparse"):
+        sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
@@ -292,7 +293,10 @@ def test_scale():
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
-    with pytest.warns(Warning, match="view"):
+    with (
+        pytest.warns(UserWarning, match=r"zero-center.*sparse"),
+        pytest.warns(UserWarning, match=r"Received a view"),
+    ):
         sc.pp.scale(v)
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)

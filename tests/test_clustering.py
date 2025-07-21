@@ -189,7 +189,14 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 @pytest.mark.parametrize(
     ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
-        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            0.8,
+            [0.9, 1.1],
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_custom_key(

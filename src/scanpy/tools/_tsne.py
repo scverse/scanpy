@@ -135,10 +135,10 @@ def tsne(  # noqa: PLR0913
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
         warnings.warn(
-            "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
-            "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
-            "If you'd like the old behaviour (which is deprecated), pass "
-            "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore.",
+            "In previous versions of scanpy, calling tsne with `n_jobs` > 1 would use MulticoreTSNE. "
+            "Now this uses the scikit-learn version of TSNE by default. "
+            "If you’d like the old behaviour (which is deprecated), pass `use_fast_tsne=True`. "
+            "Note, MulticoreTSNE is not actually faster anymore.",
             UserWarning,
             stacklevel=2,
         )
@@ -154,18 +154,18 @@ def tsne(  # noqa: PLR0913
     if use_fast_tsne:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
-
-            tsne = TSNE(**params_sklearn)
-            logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
-            # need to transform to float64 for MulticoreTSNE...
-            X_tsne = tsne.fit_transform(X.astype("float64"))
         except ImportError:
             use_fast_tsne = False
             warnings.warn(
                 "Could not import 'MulticoreTSNE'. Falling back to scikit-learn.",
-                UserWarning,
+                ImportWarning,
                 stacklevel=2,
             )
+        else:
+            tsne = TSNE(**params_sklearn)
+            logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
+            # need to transform to float64 for MulticoreTSNE...
+            X_tsne = tsne.fit_transform(X.astype("float64"))
     if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearn.manifold import TSNE
 
