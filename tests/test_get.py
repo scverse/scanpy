@@ -6,7 +6,7 @@ from itertools import chain, repeat
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData
+from anndata import AnnData, ImplicitModificationWarning
 from scipy import sparse
 
 import scanpy as sc
@@ -174,6 +174,7 @@ def test_repeated_gene_symbols():
 
 
 @pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
+@pytest.mark.filterwarnings("ignore::FutureWarning:anndata")
 def test_backed_vs_memory():
     """Compares backed vs. memory."""
     from pathlib import Path
@@ -328,6 +329,7 @@ def test_non_unique_cols_value_error():
         sc.get.obs_df(adata, ["repeated_col"])
 
 
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
 def test_non_unique_var_index_value_error():
     adata = sc.AnnData(
         X=np.ones((2, 3)),
@@ -356,16 +358,16 @@ def test_keys_in_both_obs_and_var_index_value_error():
 
 
 @TRANSPOSE_PARAMS
-def test_repeated_cols(dim, transform, func):
-    adata = transform(
-        sc.AnnData(
+def test_repeated_cols(dim, transform, func) -> None:
+    with pytest.warns(ImplicitModificationWarning):
+        adata = AnnData(
             np.ones((5, 10)),
             obs=pd.DataFrame(
                 np.ones((5, 2)), columns=["a_column_name", "a_column_name"]
             ),
             var=pd.DataFrame(index=[f"gene-{i}" for i in range(10)]),
         )
-    )
+    adata = transform(adata)
     # (?s) is inline re.DOTALL
     with pytest.raises(ValueError, match=rf"(?s)^adata\.{dim}.*a_column_name.*$"):
         func(adata, ["gene_5"])
@@ -377,15 +379,15 @@ def test_repeated_index_vals(dim, transform, func):
     # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
 
-    adata = transform(
-        sc.AnnData(
+    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
+        adata = AnnData(
             np.ones((5, 10)),
             var=pd.DataFrame(
                 index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
             ),
-        ),
-        expect_duplicates=True,
-    )
+        )
+
+    adata = transform(adata, expect_duplicates=True)
 
     with pytest.raises(
         ValueError,
@@ -405,11 +407,12 @@ def test_repeated_index_vals(dim, transform, func):
 )
 def shared_key_adata(request):
     kind = request.param
-    adata = sc.AnnData(
-        np.arange(50).reshape((5, 10)),
-        obs=pd.DataFrame(np.zeros((5, 1)), columns=["var_id"]),
-        var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
-    )
+    with pytest.warns(ImplicitModificationWarning):
+        adata = sc.AnnData(
+            np.arange(50).reshape((5, 10)),
+            obs=pd.DataFrame(np.zeros((5, 1)), columns=["var_id"]),
+            var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
+        )
     if kind == "obs_df":
         return (
             adata,
