@@ -78,19 +78,25 @@ def test_log1p_rep(count_matrix_format, base, dtype):
 def test_normalize_per_cell():
     A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
     adata = AnnData(A.copy())
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts="n_counts2")
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(
+            adata, counts_per_cell_after=1, key_n_counts="n_counts2"
+        )
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
     adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
     adata = AnnData(A.copy())
     adata_sparse = AnnData(sparse.csr_matrix(A.copy()))  # noqa: TID251
-    sc.pp.normalize_per_cell(adata)
-    sc.pp.normalize_per_cell(adata_sparse)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
@@ -312,16 +318,24 @@ def test_scale():
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
-@pytest.fixture(params=[True, False])
-def zero_center(request):
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
+def zero_center(request) -> bool:
     return request.param
 
 
 def test_scale_rep(count_matrix_format, zero_center):
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
-    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center")
+        if zero_center
+        and any(f in count_matrix_format.__name__ for f in ("csr", "csc"))
+        else nullcontext()
+    )
+    with ctx:
+        check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    with ctx:
+        check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
 def test_scale_array(count_matrix_format, zero_center):
@@ -338,8 +352,10 @@ def test_recipe_plotting():
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
     # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_seurat(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():
@@ -419,8 +435,8 @@ def test_regress_out_view():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
     subset_adata_copy = subset_adata.copy()
-
-    sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
     sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
