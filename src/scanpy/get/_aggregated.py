@@ -396,7 +396,12 @@ def aggregate_dask(
             partial(aggregate_chunk_sum_or_count_nonzero, func=func),
             new_axis=(1,),
             chunks=((1,) * data.blocks.size, (len(by.categories),), (data.shape[1],)),
-            meta=np.array([], dtype=np.float64),  # TODO: figure out dtype
+            meta=np.array(
+                [],
+                dtype=np.float64
+                if func not in ["count_nonzero", "sum"]
+                else data.dtype,
+            ),
         ).sum(axis=0)
         for f in funcs_no_var_or_mean
     }
