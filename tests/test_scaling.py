@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import warnings
+from contextlib import nullcontext
+
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -95,9 +98,18 @@ def test_scale(
     *, typ, container, zero_center, dtype, mask_obs, x, x_centered, x_scaled
 ):
     x = AnnData(typ(x, dtype=dtype)) if container == "anndata" else typ(x, dtype=dtype)
-    scaled = sc.pp.scale(
-        x, zero_center=zero_center, copy=container == "array", mask_obs=mask_obs
-    )
+    with warnings.catch_warnings():
+        # TODO: fix setting slices of sparse matrices in scale()
+        warnings.filterwarnings("always", category=sparse.SparseEfficiencyWarning)
+
+        with (
+            pytest.warns(UserWarning, match=r"zero-center.*densifies")
+            if zero_center and any(f in typ.__name__ for f in ("csr", "csc"))
+            else nullcontext()
+        ):
+            scaled = sc.pp.scale(
+                x, zero_center=zero_center, copy=container == "array", mask_obs=mask_obs
+            )
     received = sparse.csr_matrix(  # noqa: TID251
         x.X if scaled is None else scaled
     ).toarray()
@@ -115,10 +127,15 @@ def test_mask_string():
     assert "mean of some cells" in adata.var.columns
 
 
-@pytest.mark.parametrize("zero_center", [True, False])
-def test_clip(zero_center):
+@pytest.mark.parametrize("zero_center", [True, False], ids=["center", "no_center"])
+def test_clip(*, zero_center: bool) -> None:
     adata = sc.datasets.pbmc3k()
-    sc.pp.scale(adata, max_value=1, zero_center=zero_center)
+    with (
+        (pytest.warns(UserWarning, match=r"zero-center.*densifies"))
+        if zero_center
+        else nullcontext()
+    ):
+        sc.pp.scale(adata, max_value=1, zero_center=zero_center)
     if zero_center:
         assert adata.X.min() >= -1
     assert adata.X.max() <= 1

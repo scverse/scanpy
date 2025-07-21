@@ -295,9 +295,9 @@ def test_scale_zero_center_warns_dask_sparse(array_type):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match=r"zero-center.*sparse"):
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
         sc.pp.scale(adata_casted)
-    with pytest.warns(UserWarning, match=r"zero-center.*sparse"):
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
         sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
@@ -309,7 +309,7 @@ def test_scale():
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
     with (
-        pytest.warns(UserWarning, match=r"zero-center.*sparse"),
+        pytest.warns(UserWarning, match=r"zero-center.*densifies"),
         pytest.warns(UserWarning, match=r"Received a view"),
     ):
         sc.pp.scale(v)
@@ -327,7 +327,7 @@ def test_scale_rep(count_matrix_format, zero_center):
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
     ctx = (
-        pytest.warns(UserWarning, match=r"zero-center")
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
         if zero_center
         and any(f in count_matrix_format.__name__ for f in ("csr", "csc"))
         else nullcontext()
