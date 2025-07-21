@@ -205,5 +205,8 @@ def test_doc_shape(ds_name):
             r"(Observation|Variable) names are not unique",
             category=UserWarning,
         )
+        warnings.filterwarnings(
+            "ignore", r".*squidpy\.(datasets|read)", category=FutureWarning
+        )
         dataset = cached_fn()
     assert repr(dataset) in docstring
