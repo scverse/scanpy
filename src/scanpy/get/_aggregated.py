@@ -331,7 +331,7 @@ def _aggregate(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
-) -> dict[AggType, np.ndarray]:
+) -> dict[AggType, np.ndarray | DaskArray]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
 
@@ -350,8 +350,10 @@ def aggregate_dask_mean_var(
 ) -> MeanVarDict:
     mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
     sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
-    # TODO: If we don't compute here, the results are not deterministic for sparse.
-    var = sq_mean.compute() - fau_power(mean, 2)
+    # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
+    if isinstance(data._meta, CSRBase):
+        sq_mean = sq_mean.compute()
+    var = sq_mean - fau_power(mean, 2)
     if dof != 0:
         group_counts = np.bincount(by.codes)
         var *= (group_counts / (group_counts - dof))[:, np.newaxis]
