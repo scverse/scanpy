@@ -556,38 +556,38 @@ class GRNsim:
             settings.m(0, "reading model", self.model)
         # read model
         boolRules = []
-        for line in self.model.open():
-            if line.startswith("#") and "modelType =" in line:
-                keyval = line
-                if "|" in line:
-                    keyval, type = line.split("|")[:2]
-                self.modelType = keyval.split("=")[1].strip()
-            if line.startswith("#") and "invTimeStep =" in line:
-                keyval = line
-                if "|" in line:
-                    keyval, type = line.split("|")[:2]
-                self.invTimeStep = float(keyval.split("=")[1].strip())
-            if not line.startswith("#"):
-                boolRules.append([s.strip() for s in line.split("=")])
-            if line.startswith("# coupling list:"):
-                break
+        with self.model.open() as f:
+            for line in f:
+                if line.startswith("#") and "modelType =" in line:
+                    keyval = line
+                    if "|" in line:
+                        keyval, type = line.split("|")[:2]
+                    self.modelType = keyval.split("=")[1].strip()
+                if line.startswith("#") and "invTimeStep =" in line:
+                    keyval = line
+                    if "|" in line:
+                        keyval, type = line.split("|")[:2]
+                    self.invTimeStep = float(keyval.split("=")[1].strip())
+                if not line.startswith("#"):
+                    boolRules.append([s.strip() for s in line.split("=")])
+                if line.startswith("# coupling list:"):
+                    break
         self.dim = len(boolRules)
         self.boolRules = dict(boolRules)
         self.varNames = {s: i for i, s in enumerate(self.boolRules.keys())}
         names = self.varNames
         # read couplings via names
         self.Coupl = np.zeros((self.dim, self.dim))
-        boolContinue = True
-        for (
-            line
-        ) in self.model.open():  # open(self.model.replace('/model','/couplList')):
-            if line.startswith("# coupling list:"):
-                boolContinue = False
-            if boolContinue:
-                continue
-            if not line.startswith("#"):
-                gps, gs, val = line.strip().split()
-                self.Coupl[int(names[gps]), int(names[gs])] = float(val)
+        reading = False
+        with self.model.open() as f:
+            for line in f:  # open(self.model.replace('/model','/couplList')):
+                if line.startswith("# coupling list:"):
+                    reading = True
+                if not reading:
+                    continue
+                if not line.startswith("#"):
+                    gps, gs, val = line.strip().split()
+                    self.Coupl[int(names[gps]), int(names[gs])] = float(val)
         # adjancecy matrices
         self.Adj_signed = np.sign(self.Coupl)
         self.Adj = np.abs(np.array(self.Adj_signed))

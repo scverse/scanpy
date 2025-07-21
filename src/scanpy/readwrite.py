@@ -769,8 +769,10 @@ def read_params(
     from collections import OrderedDict
 
     params = OrderedDict([])
-    for line_raw in filename.open():
-        if "=" in line_raw and (not as_header or line_raw.startswith("#")):
+    with filename.open() as f:
+        for line_raw in f:
+            if "=" not in line_raw or (as_header and not line_raw.startswith("#")):
+                continue
             line = line_raw[1:] if line_raw.startswith("#") else line_raw
             key, val = line.split("=")
             key = key.strip()
