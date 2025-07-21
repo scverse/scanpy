@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import partial
+
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -124,7 +126,7 @@ def test_leiden_equal_defaults(adata_neighbors):
         adata_neighbors, flavor="leidenalg", directed=True, copy=True
     )
     igraph_clustered = sc.tl.leiden(
-        adata_neighbors, copy=True, n_iterations=2, directed=False
+        adata_neighbors, flavor="igraph", copy=True, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
@@ -149,7 +151,12 @@ def test_leiden_objective_function(adata_neighbors):
 @pytest.mark.parametrize(
     ("clustering", "key"),
     [
-        pytest.param(sc.tl.leiden, "leiden", marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):

@@ -10,8 +10,6 @@ from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.datasets._utils import filter_oldformatwarning
-from testing.scanpy._helpers import anndata_v0_8_constructor_compat
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 
@@ -40,7 +38,7 @@ def adata() -> AnnData:
     `adata.X` is `np.ones((2, 2))`.
     `adata.layers['double']` is sparse `np.ones((2,2)) * 2` to also test sparse matrices.
     """
-    return anndata_v0_8_constructor_compat(
+    return AnnData(
         X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
@@ -62,7 +60,7 @@ def test_obs_df(adata: AnnData):
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     # make raw with different genes than adata
-    adata.raw = anndata_v0_8_constructor_compat(
+    adata.raw = AnnData(
         X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", "raw3"]},
@@ -175,7 +173,7 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-@filter_oldformatwarning
+@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
 def test_backed_vs_memory():
     """Compares backed vs. memory."""
     from pathlib import Path

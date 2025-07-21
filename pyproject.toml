@@ -170,26 +170,13 @@ markers = [
     "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
-    # legacy-api-wrap: internal use of positional API
-    "error:The specified parameters:FutureWarning",
-    # When calling `.show()` in tests, this is raised
-    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
-
-    # We explicitly handle the below errors in tests
-    "error:`anndata.read` is deprecated:FutureWarning",
-    "error:Observation names are not unique:UserWarning",
-    "error:The dtype argument is deprecated and will be removed:FutureWarning",
-    "error:The behavior of DataFrame\\.sum with axis=None is deprecated:FutureWarning",
-    "error:The default of observed=False is deprecated:FutureWarning",
-    "error:Series\\.__getitem__ treating keys as positions is deprecated:FutureWarning",
-    "error:The default value of 'ignore' for the `na_action` parameter in pandas\\.Categorical\\.map:FutureWarning",
-    "error:The provided callable.* is currently using:FutureWarning",
-    "error:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
-    "error:A value is trying to be set on a copy of a slice from a DataFrame",
-    "error:No data for colormapping provided via 'c'",
-    "error:\\n*The `scale` parameter has been renamed and will be removed",
-    "error:\\n*Passing `palette` without assigning `hue` is deprecated",
-    "error:\\n*Setting a gradient palette using color= is deprecated",
+    "error",
+    # Umap warns when tensorflow isn’t installed.
+    "ignore::ImportWarning:umap",
+    # seaborn causes some matplotlib warnings
+    "ignore::PendingDeprecationWarning:seaborn",
+    # we want to see and eventually fix these
+    "default::numba.core.errors.NumbaPerformanceWarning",
 ]
 
 [tool.coverage.run]

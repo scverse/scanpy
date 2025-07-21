@@ -16,7 +16,6 @@ from scipy import sparse
 import scanpy as sc
 from scanpy._compat import CSBase
 from testing.scanpy._helpers import (
-    anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
     maybe_dask_process_context,
@@ -315,7 +314,7 @@ def test_scale_rep(count_matrix_format, zero_center):
 def test_scale_array(count_matrix_format, zero_center):
     """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    adata = anndata_v0_8_constructor_compat(X=X.copy())
+    adata = AnnData(X=X.copy())
 
     sc.pp.scale(adata, zero_center=zero_center)
     scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
@@ -487,7 +486,7 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
@@ -519,7 +518,7 @@ def test_downsample_counts_per_cell_multiple_targets(
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
@@ -545,7 +544,7 @@ def test_downsample_counts_per_cell_multiple_targets(
 def test_downsample_total_counts(count_matrix_format, replace, dtype):
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata_orig = anndata_v0_8_constructor_compat(X=count_matrix_format(X))
+    adata_orig = AnnData(X=count_matrix_format(X))
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))

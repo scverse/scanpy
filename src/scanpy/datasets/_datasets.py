@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
 from ..readwrite import read, read_visium
-from ._utils import check_datasetdir_exists, filter_oldformatwarning
+from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -318,7 +318,6 @@ def toggleswitch() -> AnnData:
     return adata
 
 
-@filter_oldformatwarning
 def pbmc68k_reduced() -> AnnData:
     r"""Subsampled and processed 68k PBMCs.
 
@@ -354,12 +353,12 @@ def pbmc68k_reduced() -> AnnData:
     """
     filename = HERE / "10x_pbmc68k_reduced.h5ad"
     with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(filename)
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
     r"""3k PBMCs from 10x Genomics.
@@ -406,12 +405,13 @@ def pbmc3k() -> AnnData:
 
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
+        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
@@ -447,6 +447,7 @@ def pbmc3k_processed() -> AnnData:
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 

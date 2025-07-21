@@ -15,6 +15,7 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
+import pytest
 from matplotlib.testing import setup
 
 setup()
@@ -69,18 +70,21 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
-    filter_result = sc.pp.filter_genes_dispersion(
-        adata.X,
-        min_mean=0.0125,
-        max_mean=3,
-        min_disp=0.5,
-    )
-    sc.pl.filter_genes_dispersion(filter_result, show=False)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
+        filter_result = sc.pp.filter_genes_dispersion(
+            adata.X,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+        )
+    with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
+        sc.pl.filter_genes_dispersion(filter_result, show=False)
     save_and_compare_images("filter_genes_dispersion")
 
-    adata = adata[:, filter_result.gene_subset]
+    adata = adata[:, filter_result.gene_subset].copy()
     sc.pp.log1p(adata)
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)

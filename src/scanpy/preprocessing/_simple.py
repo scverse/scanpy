@@ -470,7 +470,7 @@ def sqrt(
     return X.sqrt() if isinstance(X, CSBase) else np.sqrt(X)
 
 
-@deprecated("Use sc.pp.normalize_total instead")
+@deprecated("Use `sc.pp.normalize_total` instead.")
 @old_positionals(
     "counts_per_cell_after",
     "counts_per_cell",

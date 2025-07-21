@@ -8,7 +8,6 @@ import pytest
 from anndata import read_zarr
 
 from scanpy._compat import DaskArray, ZappyArray
-from scanpy.datasets._utils import filter_oldformatwarning
 from scanpy.preprocessing import (
     filter_cells,
     filter_genes,
@@ -32,8 +31,10 @@ pytestmark = [needs.zarr]
 
 
 @pytest.fixture
-@filter_oldformatwarning
-def adata() -> AnnData:
+def adata(request: pytest.FixtureRequest) -> AnnData:
+    request.applymarker(
+        pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
+    )
     a = read_zarr(input_file)
     a.var_names_make_unique()
     a.X = a.X[:]  # convert to numpy array
@@ -46,8 +47,10 @@ def adata() -> AnnData:
         pytest.param("dask", marks=[needs.dask, pytest.mark.anndata_dask_support]),
     ]
 )
-@filter_oldformatwarning
 def adata_dist(request: pytest.FixtureRequest) -> AnnData:
+    request.applymarker(
+        pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
+    )
     # regular anndata except for X, which we replace on the next line
     a = read_zarr(input_file)
     a.var_names_make_unique()
@@ -75,7 +78,7 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
-@pytest.mark.filterwarnings("ignore:Use sc.pp.normalize_total instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:sc.pp.normalize_total:FutureWarning")
 def test_normalize_per_cell(
     request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
 ):
@@ -139,7 +142,7 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
-@filter_oldformatwarning
+@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
 def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     import zarr
 
