@@ -6,6 +6,7 @@ This is kept seperate from the helpers file because it relies on pytest.
 from __future__ import annotations
 
 import warnings
+from collections import defaultdict
 from contextlib import chdir
 from typing import TYPE_CHECKING
 
@@ -53,21 +54,16 @@ def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, N
         else:
             showwarning_orig(message, category, filename, lineno, file, line)
 
-    # make errors (except plt.show) visible and the rest ignored
+    # ignore plt.show() warning only in doctests.
+    warnings.filterwarnings(
+        "ignore",
+        r"FigureCanvasAgg is non-interactive, and thus cannot be shown",
+        UserWarning,
+    )
+    # make errors visible and the rest ignored
+    action_map = defaultdict(lambda: "ignore", error="default")
     warnings.filters = [
-        (
-            "ignore",
-            r"FigureCanvasAgg is non-interactive, and thus cannot be shown",
-            UserWarning,
-            None,
-            0,
-        ),
-        *[
-            ("default", *rest)
-            for action, *rest in warnings.filters
-            if action == "error"
-        ],
-        ("ignore", None, Warning, None, 0),
+        (action_map[action], *rest) for action, *rest in warnings.filters
     ]
 
     warnings.showwarning = showwarning

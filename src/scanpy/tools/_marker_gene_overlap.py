@@ -139,7 +139,7 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pp.pca(adata, svd_solver="arpack")
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.leiden(adata)
+    >>> sc.tl.leiden(adata, flavor="igraph")
     >>> sc.tl.rank_genes_groups(adata, groupby="leiden")
     >>> marker_genes = {
     ...     "CD4 T cells": {"IL7R"},
