@@ -4,7 +4,7 @@ import warnings
 from contextlib import nullcontext
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -29,11 +29,35 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal
 
-    from numpy.typing import NDArray
+    from numpy.typing import DTypeLike, NDArray
+
+
+class _MatrixFormat(NamedTuple):
+    callback: Callable[[NDArray], CSBase | NDArray]
+    is_sparse: bool
+
+    def __call__(self, x: NDArray) -> CSBase | NDArray:
+        return self.callback(x)
 
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
+
+
+@pytest.fixture(params=[np.asarray, sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
+def count_matrix_format(request: pytest.FixtureRequest) -> _MatrixFormat:
+    is_sparse = isinstance(request.param, type) and issubclass(request.param, CSBase)
+    return _MatrixFormat(request.param, is_sparse=is_sparse)
+
+
+@pytest.fixture(params=[np.int64, np.float32, np.float64])
+def dtype(request: pytest.FixtureRequest) -> DTypeLike:
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
+def zero_center(request: pytest.FixtureRequest) -> bool:
+    return request.param
 
 
 def test_log1p(tmp_path):
@@ -67,7 +91,7 @@ def base(request):
     return request.param
 
 
-def test_log1p_rep(count_matrix_format, base, dtype):
+def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -> None:
     X = count_matrix_format(
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
@@ -75,7 +99,7 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     check_rep_results(sc.pp.log1p, X, base=base)
 
 
-def test_normalize_per_cell():
+def test_normalize_per_cell() -> None:
     A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
     adata = AnnData(A.copy())
     with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
@@ -254,9 +278,6 @@ def test_sample_copy_backed_error(tmp_path):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    "zero_center", [True, False], ids=["zero_center", "no_zero_center"]
-)
 @pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(array_type, zero_center, max_value):
     adata = pbmc68k_reduced()
@@ -318,18 +339,12 @@ def test_scale():
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
-@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
-def zero_center(request) -> bool:
-    return request.param
-
-
-def test_scale_rep(count_matrix_format, zero_center):
+def test_scale_rep(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
     ctx = (
         pytest.warns(UserWarning, match=r"zero-center.*densifies")
-        if zero_center
-        and any(f in count_matrix_format.__name__ for f in ("csr", "csc"))
+        if zero_center and count_matrix_format.is_sparse
         else nullcontext()
     )
     with ctx:
@@ -338,13 +353,20 @@ def test_scale_rep(count_matrix_format, zero_center):
         check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
-def test_scale_array(count_matrix_format, zero_center):
+def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
     """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
     adata = AnnData(X=X.copy())
 
-    sc.pp.scale(adata, zero_center=zero_center)
-    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
+        if zero_center and count_matrix_format.is_sparse
+        else nullcontext()
+    )
+    with ctx:
+        sc.pp.scale(adata, zero_center=zero_center)
+    with ctx:
+        scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
     np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
 
 
@@ -496,22 +518,10 @@ def test_regress_out_constants_equivalent():
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
-@pytest.fixture(params=[lambda x: x.copy(), sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
-def count_matrix_format(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def replace(request):
-    return request.param
-
-
-@pytest.fixture(params=[np.int64, np.float32, np.float64])
-def dtype(request):
-    return request.param
-
-
-def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_counts_per_cell(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
@@ -541,9 +551,10 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
 def test_downsample_counts_per_cell_multiple_targets(
-    count_matrix_format, replace, dtype
-):
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
@@ -570,7 +581,10 @@ def test_downsample_counts_per_cell_multiple_targets(
     assert X.dtype == adata.X.dtype
 
 
-def test_downsample_total_counts(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_total_counts(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
     adata_orig = AnnData(X=count_matrix_format(X))
