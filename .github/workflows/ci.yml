@@ -9,6 +9,7 @@ on:
 
 env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
+  PYTHONTRACEMALLOC: "20"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
   UV_CONSTRAINT: ci/constraints.txt
