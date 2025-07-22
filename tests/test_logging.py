@@ -82,14 +82,17 @@ def test_logfile(tmp_path: Path, caplog: pytest.LogCaptureFixture):
 
     p = tmp_path / "test.log"
     s.logpath = p
-    assert s.logpath == p
-    assert s.logfile.name == str(p)
-    log.hint("test2")
-    log.debug("invisible")
-    assert s.logpath.read_text() == "--> test2\n"
+    try:
+        assert s.logpath == p
+        assert s.logfile.name == str(p)
+        log.hint("test2")
+        log.debug("invisible")
+        assert s.logpath.read_text() == "--> test2\n"
 
-    # setting a logfile removes all handlers
-    assert not caplog.records
+        # setting a logfile removes all handlers
+        assert not caplog.records
+    finally:
+        s.logfile.close()  # TODO: make this unnecessary
 
 
 def test_timing(monkeypatch, capsys: pytest.CaptureFixture):

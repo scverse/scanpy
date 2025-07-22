@@ -407,12 +407,11 @@ def test_repeated_index_vals(dim, transform, func):
 )
 def shared_key_adata(request):
     kind = request.param
-    with pytest.warns(ImplicitModificationWarning):
-        adata = sc.AnnData(
-            np.arange(50).reshape((5, 10)),
-            obs=pd.DataFrame(np.zeros((5, 1)), columns=["var_id"]),
-            var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
-        )
+    adata = sc.AnnData(
+        np.arange(50).reshape((5, 10)),
+        obs=dict(var_id=np.zeros(5)),
+        var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
+    )
     if kind == "obs_df":
         return (
             adata,

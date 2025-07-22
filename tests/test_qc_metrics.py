@@ -199,19 +199,14 @@ def adata_mito() -> AnnData:
 
 
 @pytest.mark.parametrize("cls", ARRAY_TYPES_MEM)
-def test_qc_metrics_format(cls, adata_mito: AnnData) -> None:
-    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=["mito"], inplace=True)
-    adata = AnnData(X=cls(adata_mito.X), var=adata_mito.var.copy())
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], inplace=True)
-    assert np.allclose(adata.obs, adata_mito.obs)
-    for col in adata.var:  # np.allclose doesn't like mix of types
-        assert np.allclose(adata.var[col], adata_mito.var[col])
-
-
-def test_qc_metrics_format_str_qc_vars(adata_mito: AnnData) -> None:
-    sc.pp.calculate_qc_metrics(adata_mito, qc_vars="mito", inplace=True)
-    adata = AnnData(X=adata_mito.X, var=adata_mito.var.copy())
-    sc.pp.calculate_qc_metrics(adata, qc_vars="mito", inplace=True)
+@pytest.mark.parametrize("qc_var_param", ["mito", ["mito"]], ids=["str", "list"])
+def test_qc_metrics_format(
+    cls, adata_mito: AnnData, qc_var_param: list[str] | str
+) -> None:
+    var = adata_mito.var.copy()
+    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, inplace=True)
+    adata = AnnData(X=cls(adata_mito.X), var=var)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, inplace=True)
     assert np.allclose(adata.obs, adata_mito.obs)
     for col in adata.var:  # np.allclose doesn't like mix of types
         assert np.allclose(adata.var[col], adata_mito.var[col])
