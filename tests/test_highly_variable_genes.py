@@ -595,7 +595,7 @@ def test_cellranger_n_top_genes_warning():
 
     with pytest.warns(
         UserWarning,
-        match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+        match="`n_top_genes`.*> number of normalized dispersions.*returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
