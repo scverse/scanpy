@@ -42,16 +42,9 @@ def test_burczynski06():
 
 @pytest.mark.internet
 @needs.openpyxl
+@pytest.mark.filterwarnings("ignore:Unknown extension is not supported:UserWarning")
 def test_moignard15():
-    with warnings.catch_warnings():
-        # https://foss.heptapod.net/openpyxl/openpyxl/-/issues/2051
-        warnings.filterwarnings(
-            "ignore",
-            r"datetime\.datetime\.utcnow\(\) is deprecated",
-            category=DeprecationWarning,
-            module="openpyxl",
-        )
-        adata = sc.datasets.moignard15()
+    adata = sc.datasets.moignard15()
     assert adata.shape == (3934, 42)
 
 
@@ -201,12 +194,11 @@ def test_doc_shape(ds_name):
     cached_fn = getattr(data, ds_name, dataset_fn)
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore",
-            r"(Observation|Variable) names are not unique",
-            category=UserWarning,
+            "ignore", r"(Observation|Variable) names are not unique", UserWarning
         )
-        warnings.filterwarnings(
-            "ignore", r".*squidpy\.(datasets|read)", category=FutureWarning
+        warnings.filterwarnings(  # openpyxl complaining about MS Excel stuff
+            "ignore", r"Unknown extension is not supported", UserWarning
         )
+        warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
         dataset = cached_fn()
     assert repr(dataset) in docstring

@@ -198,6 +198,8 @@ def moignard15() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.moignard15()
+    UserWarning: Unknown extension is not supported and will be removed
+        warn(msg)
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
