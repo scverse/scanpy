@@ -123,6 +123,8 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        utils.warn_names_duplicates("var")
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
 
@@ -541,6 +543,10 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        utils.warn_names_duplicates("var")
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
@@ -553,4 +559,6 @@ def visium_sge(
         sample_id, spaceranger_version, download_image=include_hires_tiff
     )
     source_image_path = sample_dir / "image.tif" if include_hires_tiff else None
-    return read_visium(sample_dir, source_image_path=source_image_path)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*squidpy\.read", FutureWarning)
+        return read_visium(sample_dir, source_image_path=source_image_path)

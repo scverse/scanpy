@@ -53,10 +53,22 @@ def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, N
         else:
             showwarning_orig(message, category, filename, lineno, file, line)
 
-    # make errors visible and the rest ignored
+    # make errors (except plt.show) visible and the rest ignored
     warnings.filters = [
-        ("default", *rest) for action, *rest in warnings.filters if action == "error"
-    ] + [("ignore", None, Warning, None, 0)]
+        (
+            "ignore",
+            r"FigureCanvasAgg is non-interactive, and thus cannot be shown",
+            UserWarning,
+            None,
+            0,
+        ),
+        *[
+            ("default", *rest)
+            for action, *rest in warnings.filters
+            if action == "error"
+        ],
+        ("ignore", None, Warning, None, 0),
+    ]
 
     warnings.showwarning = showwarning
     with chdir(tmp_path):

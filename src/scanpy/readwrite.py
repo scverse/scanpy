@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from functools import partial
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, cast, get_args, overload
@@ -227,7 +228,13 @@ def read_10x_h5(
     with h5py.File(str(path), "r") as f:
         v3 = "/matrix" in f
     if v3:
-        adata = _read_10x_h5(path, _read_v3_10x_h5)
+        with warnings.catch_warnings():
+            if genome or gex_only:
+                # this will be thrown below by “adata.copy()”
+                warnings.filterwarnings(
+                    "ignore", r".*names are not unique", UserWarning
+                )
+            adata = _read_10x_h5(path, _read_v3_10x_h5)
         if genome:
             if genome not in adata.var["genome"].values:
                 msg = (
@@ -581,16 +588,19 @@ def read_10x_mtx(
     path = Path(path)
     prefix = "" if prefix is None else prefix
     is_legacy = (path / f"{prefix}genes.tsv").is_file()
-    adata = _read_10x_mtx(
-        path,
-        var_names=var_names,
-        make_unique=make_unique,
-        cache=cache,
-        cache_compression=cache_compression,
-        prefix=prefix,
-        is_legacy=is_legacy,
-        compressed=compressed,
-    )
+    with warnings.catch_warnings():
+        # this will be thrown below in “adata[:, ...].copy()”
+        warnings.filterwarnings("ignore", r".*names are not unique", UserWarning)
+        adata = _read_10x_mtx(
+            path,
+            var_names=var_names,
+            make_unique=make_unique,
+            cache=cache,
+            cache_compression=cache_compression,
+            prefix=prefix,
+            is_legacy=is_legacy,
+            compressed=compressed,
+        )
     if is_legacy or not gex_only:
         return adata
     gex_rows = adata.var["feature_types"] == "Gene Expression"

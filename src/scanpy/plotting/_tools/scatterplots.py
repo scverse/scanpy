@@ -37,6 +37,7 @@ from ..._utils import (
     _empty,
     sanitize_anndata,
 )
+from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
@@ -928,6 +929,7 @@ def pca(
 
 
 @deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -998,8 +1000,12 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+        sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
     --------

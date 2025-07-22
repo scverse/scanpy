@@ -544,6 +544,8 @@ def normalize_per_cell(
     >>> print(adata.X.sum(axis=1))
     [ 1.  3. 11.]
     >>> sc.pp.normalize_per_cell(adata)
+    FutureWarning: Use `sc.pp.normalize_total` instead.
+        sc.pp.normalize_per_cell(adata)
     >>> print(adata.obs)
        n_counts
     0       1.0
@@ -556,6 +558,8 @@ def normalize_per_cell(
     ...     counts_per_cell_after=1,
     ...     key_n_counts="n_counts2",
     ... )
+    FutureWarning: Use `sc.pp.normalize_total` instead.
+        sc.pp.normalize_per_cell(
     >>> print(adata.obs)
        n_counts  n_counts2
     0       1.0        3.0
@@ -565,56 +569,61 @@ def normalize_per_cell(
     [1. 1. 1.]
 
     """
-    if isinstance(data, AnnData):
-        start = logg.info("normalizing by total count per cell")
-        adata = data.copy() if copy else data
-        if counts_per_cell is None:
-            cell_subset, counts_per_cell = materialize_as_ndarray(
-                filter_cells(adata.X, min_counts=min_counts)
-            )
-            adata.obs[key_n_counts] = counts_per_cell
-            adata._inplace_subset_obs(cell_subset)
-            counts_per_cell = counts_per_cell[cell_subset]
-        normalize_per_cell(
-            adata.X,
-            counts_per_cell_after=counts_per_cell_after,
-            counts_per_cell=counts_per_cell,
-        )
-
-        layers = adata.layers.keys() if layers == "all" else layers
-        if use_rep == "after":
-            after = counts_per_cell_after
-        elif use_rep == "X":
-            after = np.median(counts_per_cell[cell_subset])
-        elif use_rep is None:
-            after = None
-        else:
-            msg = 'use_rep should be "after", "X" or None'
-            raise ValueError(msg)
-        for layer in layers:
-            _subset, counts = filter_cells(adata.layers[layer], min_counts=min_counts)
-            temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
-            adata.layers[layer] = temp
-
-        logg.info(
-            "    finished ({time_passed}): normalized adata.X and added\n"
-            f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
-            time=start,
-        )
-        return adata if copy else None
-    # proceed with data matrix
-    X = data.copy() if copy else data
-    if counts_per_cell is None:
-        if not copy:
-            msg = "Can only be run with copy=True"
-            raise ValueError(msg)
-        cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
-        X = X[cell_subset]
-        counts_per_cell = counts_per_cell[cell_subset]
-    if counts_per_cell_after is None:
-        counts_per_cell_after = np.median(counts_per_cell)
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.filterwarnings("ignore", r".*sc\.pp\.normalize_total", FutureWarning)
+
+        if isinstance(data, AnnData):
+            start = logg.info("normalizing by total count per cell")
+            adata = data.copy() if copy else data
+            if counts_per_cell is None:
+                cell_subset, counts_per_cell = materialize_as_ndarray(
+                    filter_cells(adata.X, min_counts=min_counts)
+                )
+                adata.obs[key_n_counts] = counts_per_cell
+                adata._inplace_subset_obs(cell_subset)
+                counts_per_cell = counts_per_cell[cell_subset]
+            normalize_per_cell(
+                adata.X,
+                counts_per_cell_after=counts_per_cell_after,
+                counts_per_cell=counts_per_cell,
+            )
+
+            layers = adata.layers.keys() if layers == "all" else layers
+            if use_rep == "after":
+                after = counts_per_cell_after
+            elif use_rep == "X":
+                after = np.median(counts_per_cell[cell_subset])
+            elif use_rep is None:
+                after = None
+            else:
+                msg = 'use_rep should be "after", "X" or None'
+                raise ValueError(msg)
+            for layer in layers:
+                _subset, counts = filter_cells(
+                    adata.layers[layer], min_counts=min_counts
+                )
+                temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
+                adata.layers[layer] = temp
+
+            logg.info(
+                "    finished ({time_passed}): normalized adata.X and added\n"
+                f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
+                time=start,
+            )
+            return adata if copy else None
+        # proceed with data matrix
+        X = data.copy() if copy else data
+        if counts_per_cell is None:
+            if not copy:
+                msg = "Can only be run with copy=True"
+                raise ValueError(msg)
+            cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
+            X = X[cell_subset]
+            counts_per_cell = counts_per_cell[cell_subset]
+        if counts_per_cell_after is None:
+            counts_per_cell_after = np.median(counts_per_cell)
+
+        warnings.simplefilter("ignore")  # division by zero I guess
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
         if not isinstance(X, CSBase):
