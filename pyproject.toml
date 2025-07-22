@@ -177,8 +177,6 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning:seaborn",
     # matplotlib<3.10.4 causes a Pillow warning
     "ignore:.*Pillow:DeprecationWarning",
-    # leidenalg (≤0.10.0) keeps using the wrong number of backslashes
-    "ignore::SyntaxWarning:leidenalg",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
 ]
