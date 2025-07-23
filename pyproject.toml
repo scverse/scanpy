@@ -173,7 +173,7 @@ filterwarnings = [
     'error',
     # Umap warns when tensorflow isn’t installed.
     'ignore::ImportWarning:umap',
-    # seaborn causes some matplotlib warnings
+    # seaborn≤0.13.2 causes some matplotlib warnings
     'ignore::PendingDeprecationWarning:seaborn',
     # matplotlib<3.10.4 causes a Pillow warning
     'ignore:.*Pillow:DeprecationWarning',
