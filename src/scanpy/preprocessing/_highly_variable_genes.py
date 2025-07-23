@@ -335,7 +335,10 @@ def _get_mean_bins(
         msg = '`flavor` needs to be "seurat" or "cell_ranger"'
         raise ValueError(msg)
 
-    return pd.cut(means, bins=bins)
+    rv = pd.cut(means, bins=bins)
+    # pandas converts Categoricals of Interval to string anyway: https://github.com/pandas-dev/pandas/issues/61928
+    # As long as it does, doing it manually is more efficient
+    return rv.cat.set_categories(rv.cat.categories.astype("string"), rename=True)
 
 
 def _get_disp_stats(
