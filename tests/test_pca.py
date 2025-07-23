@@ -4,7 +4,6 @@ import warnings
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Literal
 
-import anndata as ad
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -456,12 +455,6 @@ def test_mask(request: pytest.FixtureRequest, array_type):
         reason = "TODO: Dask arrays are not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
-        reason = (
-            "TODO: Previous version of anndata would return an F ordered array for one"
-            " case here, which surprisingly considerably changes the results of PCA."
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
     mask_var = _helpers.random_mask(adata.shape[1])
 
     adata_masked = adata[:, mask_var].copy()
@@ -476,21 +469,6 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     np.testing.assert_allclose(
         adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
     )
-
-
-def test_mask_order_warning(request: pytest.FixtureRequest):
-    if Version(ad.__version__) >= Version("0.9"):
-        reason = "Not expected to warn in later versions of anndata"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
-    adata = ad.AnnData(X=np.random.randn(50, 5))
-    mask = np.array([True, False, True, False, True])
-
-    with pytest.warns(
-        UserWarning,
-        match="When using a mask parameter with anndata<0.9 on a dense array",
-    ):
-        sc.pp.pca(adata, mask_var=mask)
 
 
 def test_mask_defaults(array_type, float_dtype):

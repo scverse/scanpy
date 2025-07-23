@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
@@ -81,14 +82,17 @@ def test_logfile(tmp_path: Path, caplog: pytest.LogCaptureFixture):
 
     p = tmp_path / "test.log"
     s.logpath = p
-    assert s.logpath == p
-    assert s.logfile.name == str(p)
-    log.hint("test2")
-    log.debug("invisible")
-    assert s.logpath.read_text() == "--> test2\n"
+    try:
+        assert s.logpath == p
+        assert s.logfile.name == str(p)
+        log.hint("test2")
+        log.debug("invisible")
+        assert s.logpath.read_text() == "--> test2\n"
 
-    # setting a logfile removes all handlers
-    assert not caplog.records
+        # setting a logfile removes all handlers
+        assert not caplog.records
+    finally:
+        s.logfile.close()  # TODO: make this unnecessary
 
 
 def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
@@ -130,7 +134,10 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     "func",
     [
         sc.logging.print_header,
-        sc.logging.print_versions,
+        pytest.param(
+            sc.logging.print_versions,
+            marks=pytest.mark.filterwarnings("ignore:.*print_header:FutureWarning"),
+        ),
         sc.logging.print_version_and_date,
     ],
 )
@@ -143,6 +150,9 @@ def test_call_outputs(func):
     with redirect_stdout(output_io):
         out = func()
         if out is not None:
-            print(out)
+            with warnings.catch_warnings():
+                # https://github.com/pallets/markupsafe/issues/487
+                warnings.simplefilter("ignore")
+                print(out)
     output = output_io.getvalue()
     assert output != ""

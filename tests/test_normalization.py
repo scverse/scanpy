@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -11,7 +12,6 @@ from fast_array_utils import conv, stats
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
@@ -53,14 +53,9 @@ def test_normalize_matrix_types(
         target_sum=target_sum,
         exclude_highly_expressed=exclude_highly_expressed,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata.X = conv.to_dense(adata.X)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    np.testing.assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -77,6 +72,7 @@ def test_normalize_total(array_type, dtype):
     assert np.allclose(to_ndarray(stats.sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
 
 
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
@@ -92,7 +88,8 @@ def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     v = adata[:, :]
 
-    sc.pp.normalize_total(v)
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.normalize_total(v)
     sc.pp.normalize_total(adata)
 
     assert not v.is_view
@@ -244,14 +241,19 @@ def test_normalize_pearson_residuals_pca(
             adata, flavor="pearson_residuals", n_top_genes=n_hvgs
         )
 
-    # inplace=False
-    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata.copy(), inplace=False, n_comps=n_comps, **params
+    ctx = (
+        pytest.warns(FutureWarning, match=r"use_highly_variable.*deprecated")
+        if "use_highly_variable" in params
+        else nullcontext()
     )
-    # inplace=True modifies the input adata object
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata, inplace=True, n_comps=n_comps, **params
-    )
+    with ctx:  # inplace=False
+        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata.copy(), inplace=False, n_comps=n_comps, **params
+        )
+    with ctx:  # inplace=True modifies the input adata object
+        sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata, inplace=True, n_comps=n_comps, **params
+        )
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),

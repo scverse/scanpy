@@ -78,11 +78,12 @@ def _set_log_file(settings: SettingsMeta) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
     root.addHandler(h)
 
 

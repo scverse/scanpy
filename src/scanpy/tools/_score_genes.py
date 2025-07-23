@@ -234,7 +234,7 @@ def _score_genes_bins(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
+    keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
     for cut in np.unique(obs_cut.loc[gene_list]):

@@ -43,7 +43,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph", None] = None,
     **clustering_args,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -118,6 +118,14 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     """
+    if flavor is None:
+        flavor = "leidenalg"
+        msg = (
+            "In the future, the default backend for leiden will be igraph instead of leidenalg. "
+            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+            "`directed` must also be `False` to work with igraph’s implementation."
+        )
+        _utils.warn_once(msg, FutureWarning, stacklevel=2)
     if flavor not in {"igraph", "leidenalg"}:
         msg = (
             f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
@@ -134,11 +142,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         try:
             import leidenalg
-
-            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
-            _utils.warn_once(msg, FutureWarning, stacklevel=3)
         except ImportError as e:
-            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
             raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 

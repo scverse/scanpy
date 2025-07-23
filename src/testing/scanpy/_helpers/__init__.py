@@ -11,6 +11,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import numpy as np
+from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 
 import scanpy as sc
@@ -31,23 +32,9 @@ if TYPE_CHECKING:
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def anndata_v0_8_constructor_compat(X, *args, **kwargs):
-    """Construct AnnData that uses dtype of X for test compatibility with older AnnData versions.
-
-    Once the minimum version of AnnData is 0.9, this function can be replaced with the default constructor.
-    """
-    import anndata as ad
-    from packaging.version import Version
-
-    if Version(ad.__version__) < Version("0.9"):
-        return ad.AnnData(X, *args, **kwargs, dtype=X.dtype)
-    else:
-        return ad.AnnData(X, *args, **kwargs)
-
-
-def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
+def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs) -> None:
     """Check that only the array meant to be modified is modified."""
-    adata = anndata_v0_8_constructor_compat(X.copy())
+    adata = AnnData(X.copy())
 
     for field in fields:
         sc.get._set_obs_rep(adata, X, **{field: field})
@@ -114,7 +101,7 @@ def check_rep_results(func, X, *, fields: Iterable[str] = ("layer", "obsm"), **k
 
 
 def _check_check_values_warnings(
-    function, adata, expected_warning, kwargs=MappingProxyType({})
+    function, adata: AnnData, expected_warning: str, kwargs=MappingProxyType({})
 ):
     """Run `function` on `adata` with provided arguments `kwargs` twice.
 
@@ -123,12 +110,14 @@ def _check_check_values_warnings(
     """
     # expecting 0 no-int warnings
     with warnings.catch_warnings(record=True) as record:
+        warnings.filterwarnings("always")
         function(adata.copy(), **kwargs, check_values=False)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning not in warning_msgs
 
     # expecting 1 no-int warning
     with warnings.catch_warnings(record=True) as record:
+        warnings.filterwarnings("always")
         function(adata.copy(), **kwargs, check_values=True)
     warning_msgs = [w.message.args[0] for w in record]
     assert expected_warning in warning_msgs
