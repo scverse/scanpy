@@ -236,9 +236,9 @@ def to_csc(x: CSRBase):
 @pytest.mark.parametrize(
     ("func", "error_msg"),
     [
-        pytest.param(to_csc, "only csr_matrix", id="csc"),
+        pytest.param(to_csc, r"only csr_matrix", id="csc"),
         pytest.param(
-            to_bad_chunking, "Feature axis must be unchunked", id="bad_chunking"
+            to_bad_chunking, r"Feature axis must be unchunked", id="bad_chunking"
         ),
     ],
 )

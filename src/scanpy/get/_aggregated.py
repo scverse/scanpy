@@ -357,7 +357,7 @@ def aggregate_dask_mean_var(
     if dof != 0:
         group_counts = np.bincount(by.codes)
         var *= (group_counts / (group_counts - dof))[:, np.newaxis]
-    return {"var": var, "mean": mean}
+    return MeanVarDict(mean=mean, var=var)
 
 
 @_aggregate.register(DaskArray)
