@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from itertools import chain, combinations, repeat
 from pathlib import Path
@@ -365,10 +366,12 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
         "group c": ["Cebpa", "Pu.1", "cJun", "EgrNab", "Gfi1"],
     }
 
-    if id.endswith("dict"):
-        fn(adata, genes_dict, show=False)
-    else:
-        fn(adata, adata.var_names, show=False)
+    with warnings.catch_warnings():
+        # https://github.com/pandas-dev/pandas/issues/61928
+        warnings.filterwarnings(
+            "ignore", r"invalid value encountered in cast", RuntimeWarning
+        )
+        fn(adata, genes_dict if id.endswith("dict") else adata.var_names, show=False)
     save_and_compare_images(id)
 
 

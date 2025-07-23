@@ -371,7 +371,9 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
     np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
 
 
-def test_recipe_plotting():
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
+def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
     if pkg_version("pandas") < Version("2.2"):

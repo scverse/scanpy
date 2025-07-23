@@ -30,6 +30,8 @@ ROOT = HERE / "_images_pbmc3k"
 
 
 @needs.leidenalg
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     np.random.seed(0)
