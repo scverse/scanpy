@@ -662,10 +662,10 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
 @pytest.mark.parametrize(
     ("max_genes", "max_counts", "min_genes", "min_counts"),
     [
-        (100, None, None, None),
-        (None, 100, None, None),
-        (None, None, 20, None),
-        (None, None, None, 20),
+        pytest.param(100, None, None, None, id="max_genes"),
+        pytest.param(None, 100, None, None, id="max_counts"),
+        pytest.param(None, None, 20, None, id="min_genes"),
+        pytest.param(None, None, None, 20, id="min_counts"),
     ],
 )
 def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
@@ -673,6 +673,9 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
+    if pkg_version("pandas") < Version("2.2"):
+        # https://github.com/pandas-dev/pandas/issues/54661
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     sc.pp.filter_cells(
         adata,
         max_genes=max_genes,

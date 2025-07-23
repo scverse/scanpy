@@ -11,12 +11,14 @@
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from pathlib import Path
 
 import numpy as np
 import pytest
 from matplotlib.testing import setup
+from sklearn.exceptions import ConvergenceWarning
 
 setup()
 
@@ -155,7 +157,10 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_1")
 
-    sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
+    with warnings.catch_warnings():
+        # This seems to only happen with older versions of scipy for some reason
+        warnings.filterwarnings("always", category=ConvergenceWarning)
+        sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_2")
 
