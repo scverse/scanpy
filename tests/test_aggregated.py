@@ -119,9 +119,7 @@ def test_aggregate_vs_pandas(metric, array_type):
             .groupby(["louvain", "percent_mito_binned"], observed=True)
             .agg(metric)
         )
-    expected.index = expected.index.to_frame().apply(
-        lambda x: "_".join(map(str, x)), axis=1
-    )
+    expected.index = expected.index.to_frame().astype("string").agg("_".join, axis=1)
     expected.index.name = None
     expected.columns.name = None
 
