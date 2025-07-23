@@ -90,6 +90,7 @@ def test_scale_column(array_type, op):
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero encountered:RuntimeWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_divide_by_zero(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))

@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import nullcontext
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData
+from anndata import AnnData, ImplicitModificationWarning
 from anndata.tests.helpers import asarray, assert_equal
+from fast_array_utils import conv
 from numpy.testing import assert_allclose
 from scipy import sparse
+from setuptools_scm import Version
 
 import scanpy as sc
-from scanpy._compat import CSBase
+from scanpy._compat import CSBase, pkg_version
 from testing.scanpy._helpers import (
-    anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
     maybe_dask_process_context,
@@ -28,11 +30,35 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal
 
-    from numpy.typing import NDArray
+    from numpy.typing import DTypeLike, NDArray
+
+
+class _MatrixFormat(NamedTuple):
+    callback: Callable[[NDArray], CSBase | NDArray]
+    is_sparse: bool
+
+    def __call__(self, x: NDArray) -> CSBase | NDArray:
+        return self.callback(x)
 
 
 HERE = Path(__file__).parent
 DATA_PATH = HERE / "_data"
+
+
+@pytest.fixture(params=[np.asarray, sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
+def count_matrix_format(request: pytest.FixtureRequest) -> _MatrixFormat:
+    is_sparse = isinstance(request.param, type) and issubclass(request.param, CSBase)
+    return _MatrixFormat(request.param, is_sparse=is_sparse)
+
+
+@pytest.fixture(params=[np.int64, np.float32, np.float64])
+def dtype(request: pytest.FixtureRequest) -> DTypeLike:
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
+def zero_center(request: pytest.FixtureRequest) -> bool:
+    return request.param
 
 
 def test_log1p(tmp_path):
@@ -66,7 +92,7 @@ def base(request):
     return request.param
 
 
-def test_log1p_rep(count_matrix_format, base, dtype):
+def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -> None:
     X = count_matrix_format(
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
@@ -74,22 +100,28 @@ def test_log1p_rep(count_matrix_format, base, dtype):
     check_rep_results(sc.pp.log1p, X, base=base)
 
 
-def test_normalize_per_cell():
+def test_normalize_per_cell() -> None:
     A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
     adata = AnnData(A.copy())
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts="n_counts2")
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(
+            adata, counts_per_cell_after=1, key_n_counts="n_counts2"
+        )
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
     adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
     adata = AnnData(A.copy())
     adata_sparse = AnnData(sparse.csr_matrix(A.copy()))  # noqa: TID251
-    sc.pp.normalize_per_cell(adata)
-    sc.pp.normalize_per_cell(adata_sparse)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
@@ -247,28 +279,32 @@ def test_sample_copy_backed_error(tmp_path):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    "zero_center", [True, False], ids=["zero_center", "no_zero_center"]
-)
 @pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(array_type, zero_center, max_value):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
-    with maybe_dask_process_context():
+    warn_ctx = pytest.warns(UserWarning, match=r"zero-centering.*densifies")
+    with warn_ctx if zero_center else nullcontext():
+        sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
+    with (
+        (
+            warn_ctx
+            if zero_center
+            and any(pat in array_type.__name__ for pat in ("sparse", "csc", "csr"))
+            else nullcontext()
+        ),
+        maybe_dask_process_context(),
+    ):
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
-    X = adata_casted.X
-    if is_dask := ("dask" in array_type.__name__):
-        assert not isinstance(X._meta, np.matrix)
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
+        if is_dask := ("dask" in array_type.__name__):
+            assert not isinstance(adata_casted.X._meta, np.matrix)
+            adata_casted.X.compute()  # make sure warning happens here
+    adata.X = conv.to_dense(adata.X)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     assert_allclose(
-        X,
+        adata_casted.X,
         adata.X,
         rtol=1e-1 if is_dask else 1e-5,
         atol=1e-1 if is_dask else 1e-5,
@@ -281,9 +317,10 @@ def test_scale_zero_center_warns_dask_sparse(array_type):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match="zero-center.*sparse"):
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
         sc.pp.scale(adata_casted)
-    sc.pp.scale(adata)
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
+        sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
@@ -293,41 +330,60 @@ def test_scale():
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
-    with pytest.warns(Warning, match="view"):
+    with (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies"),
+        pytest.warns(UserWarning, match=r"Received a view"),
+    ):
         sc.pp.scale(v)
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
-@pytest.fixture(params=[True, False])
-def zero_center(request):
-    return request.param
-
-
-def test_scale_rep(count_matrix_format, zero_center):
+def test_scale_rep(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
-    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
+        if zero_center and count_matrix_format.is_sparse
+        else nullcontext()
+    )
+    with ctx:
+        check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    with ctx:
+        check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
-def test_scale_array(count_matrix_format, zero_center):
+def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
     """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
     X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    adata = anndata_v0_8_constructor_compat(X=X.copy())
+    adata = AnnData(X=X.copy())
 
-    sc.pp.scale(adata, zero_center=zero_center)
-    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
+        if zero_center and count_matrix_format.is_sparse
+        else nullcontext()
+    )
+    with ctx:
+        sc.pp.scale(adata, zero_center=zero_center)
+    with ctx:
+        scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
     np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
 
 
-def test_recipe_plotting():
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
+def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
+    if pkg_version("pandas") < Version("2.2"):
+        # https://github.com/pandas-dev/pandas/issues/54661
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_seurat(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():
@@ -407,8 +463,8 @@ def test_regress_out_view():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
     subset_adata_copy = subset_adata.copy()
-
-    sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
     sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
@@ -468,26 +524,14 @@ def test_regress_out_constants_equivalent():
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
-@pytest.fixture(params=[lambda x: x.copy(), sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
-def count_matrix_format(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def replace(request):
-    return request.param
-
-
-@pytest.fixture(params=[np.int64, np.float32, np.float64])
-def dtype(request):
-    return request.param
-
-
-def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_counts_per_cell(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
@@ -513,13 +557,14 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
 def test_downsample_counts_per_cell_multiple_targets(
-    count_matrix_format, replace, dtype
-):
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
@@ -542,10 +587,13 @@ def test_downsample_counts_per_cell_multiple_targets(
     assert X.dtype == adata.X.dtype
 
 
-def test_downsample_total_counts(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_total_counts(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata_orig = anndata_v0_8_constructor_compat(X=count_matrix_format(X))
+    adata_orig = AnnData(X=count_matrix_format(X))
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
@@ -607,24 +655,19 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
         min_cells=min_cells,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("max_genes", "max_counts", "min_genes", "min_counts"),
     [
-        (100, None, None, None),
-        (None, 100, None, None),
-        (None, None, 20, None),
-        (None, None, None, 20),
+        pytest.param(100, None, None, None, id="max_genes"),
+        pytest.param(None, 100, None, None, id="max_counts"),
+        pytest.param(None, None, 20, None, id="min_genes"),
+        pytest.param(None, None, None, 20, id="min_counts"),
     ],
 )
 def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
@@ -632,6 +675,9 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
+    if pkg_version("pandas") < Version("2.2"):
+        # https://github.com/pandas-dev/pandas/issues/54661
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     sc.pp.filter_cells(
         adata,
         max_genes=max_genes,
@@ -646,11 +692,6 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
         min_genes=min_genes,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)

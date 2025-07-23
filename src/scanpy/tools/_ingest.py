@@ -232,6 +232,7 @@ class Ingest:
         self._umap = UMAP(
             metric=self._metric,
             random_state=adata.uns["umap"]["params"].get("random_state", 0),
+            n_jobs=1,  # umap can’t be run in parallel with random_state != None
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
