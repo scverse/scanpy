@@ -35,6 +35,16 @@ def metric(request: pytest.FixtureRequest) -> AggType:
     return request.param
 
 
+def xfail_dask_median(
+    adata: ad.AnnData,
+    metric: AggType,
+    request: pytest.FixtureRequest,
+):
+    if isinstance(adata.X, DaskArray) and metric == "median":
+        reason = "Median calculation not implemented for Dask"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+
 @pytest.fixture
 def df_base():
     ax_base = ["A", "B"]
@@ -109,13 +119,15 @@ def test_mask(axis):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_aggregate_vs_pandas(metric, array_type):
+def test_aggregate_vs_pandas(
+    metric: AggType, array_type, request: pytest.FixtureRequest
+):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
-    xfail_dask_median(adata, metric)
+    xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
     if isinstance(adata.X, DaskArray):
@@ -156,13 +168,13 @@ def test_aggregate_vs_pandas(metric, array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_aggregate_axis(array_type, metric):
+def test_aggregate_axis(array_type, metric, request: pytest.FixtureRequest):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
-    xfail_dask_median(adata, metric)
+    xfail_dask_median(adata, metric, request)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
     actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
     actual = actual.T
@@ -442,19 +454,16 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-def xfail_dask_median(adata, metric):
-    if isinstance(adata.X, DaskArray) and metric == "median":
-        pytest.xfail("Median calculation not implemented for Dask")
-
-
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_aggregate_arraytype(array_type, metric):
+def test_aggregate_arraytype(
+    array_type, metric: AggType, request: pytest.FixtureRequest
+):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
-    xfail_dask_median(adata, metric)
+    xfail_dask_median(adata, metric, request)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
     assert isinstance(
         aggregate.layers[metric],

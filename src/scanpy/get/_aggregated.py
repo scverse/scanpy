@@ -10,7 +10,7 @@ from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase, CSRBase, DaskArray
+from scanpy._compat import CSBase, CSCBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
@@ -353,6 +353,9 @@ def aggregate_dask_mean_var(
     # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
     if isinstance(data._meta, CSRBase):
         sq_mean = sq_mean.compute()
+    elif isinstance(data._meta, CSCBase):  # pragma: no-cover
+        msg = "Cannot handle CSC matrices as dask meta."
+        raise ValueError(msg)
     var = sq_mean - fau_power(mean, 2)
     if dof != 0:
         group_counts = np.bincount(by.codes)
@@ -379,6 +382,8 @@ def aggregate_dask(
     def aggregate_chunk_sum_or_count_nonzero(
         chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
     ):
+        # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
+        # for what is contained in `block_info`.
         subset = slice(*block_info[0]["array-location"][0])
         by_subsetted = by[subset]
         mask_subsetted = mask[subset] if mask is not None else mask
