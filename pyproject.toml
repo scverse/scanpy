@@ -170,15 +170,17 @@ markers = [
     "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
-    "error",
+    'error',
     # Umap warns when tensorflow isn’t installed.
-    "ignore::ImportWarning:umap",
+    'ignore::ImportWarning:umap',
     # seaborn causes some matplotlib warnings
-    "ignore::PendingDeprecationWarning:seaborn",
+    'ignore::PendingDeprecationWarning:seaborn',
     # matplotlib<3.10.4 causes a Pillow warning
-    "ignore:.*Pillow:DeprecationWarning",
+    'ignore:.*Pillow:DeprecationWarning',
+    # networkx 2.x warns about scipy.sparse changes
+    'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # we want to see and eventually fix these
-    "default::numba.core.errors.NumbaPerformanceWarning",
+    'default::numba.core.errors.NumbaPerformanceWarning',
 ]
 
 [tool.coverage.run]
