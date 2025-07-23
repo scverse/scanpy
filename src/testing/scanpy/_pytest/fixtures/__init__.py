@@ -55,11 +55,7 @@ def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, N
             showwarning_orig(message, category, filename, lineno, file, line)
 
     # ignore plt.show() warning only in doctests.
-    warnings.filterwarnings(
-        "ignore",
-        r"FigureCanvasAgg is non-interactive, and thus cannot be shown",
-        UserWarning,
-    )
+    warnings.filterwarnings("ignore", r".*[aA]gg.*cannot.*show", UserWarning)
     # make errors visible and the rest ignored
     action_map = defaultdict(lambda: "ignore", error="default")
     warnings.filters = [

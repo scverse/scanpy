@@ -180,7 +180,7 @@ filterwarnings = [
     # networkx 2.x warns about scipy.sparse changes
     'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # h5py <3.9 uses deprecated np.product
-    'ignore:.*product.*deprecated.*NumPy:DeprecationWarning:h5py',
+    'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
