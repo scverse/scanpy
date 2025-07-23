@@ -181,6 +181,7 @@ filterwarnings = [
     'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
+    'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
 ]
 
 [tool.coverage.run]
