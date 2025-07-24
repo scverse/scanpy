@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,8 @@ if TYPE_CHECKING:
     Array = np.ndarray | CSBase | DaskArray
 
 # Used with get_literal_vals
-AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
+ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
@@ -404,8 +405,8 @@ def aggregate_dask(
             meta=np.array(
                 [],
                 dtype=np.float64
-                if func not in ["count_nonzero", "sum"]
-                else data.dtype,
+                if func not in get_args(ConstantDtypeAgg)
+                else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
             ),
         ).sum(axis=0)
         for f in funcs_no_var_or_mean
