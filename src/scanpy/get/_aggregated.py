@@ -396,6 +396,9 @@ def aggregate_dask(
         raise NotImplementedError(msg)
     has_mean, has_var = (v in funcs for v in ["mean", "var"])
     funcs_no_var_or_mean = funcs - {"var", "mean"}
+    # aggregate each row chunk individually,
+    # producing a #chunks × #categories × #features array,
+    # then aggregate the per-chunk results.
     aggregated = {
         f: data.map_blocks(
             partial(aggregate_chunk_sum_or_count_nonzero, func=func),
