@@ -13,8 +13,8 @@ from anndata import AnnData, ImplicitModificationWarning
 from anndata.tests.helpers import asarray, assert_equal
 from fast_array_utils import conv
 from numpy.testing import assert_allclose
+from packaging.version import Version
 from scipy import sparse
-from setuptools_scm import Version
 
 import scanpy as sc
 from scanpy._compat import CSBase, pkg_version
