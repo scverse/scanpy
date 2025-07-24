@@ -448,15 +448,16 @@ def _highly_variable_genes_batched(
                     inplace=False,
                 )
             )
-
-        adata_subset = adata_subset[:, filt]
+        n_removed = np.sum(~filt)
+        if n_removed > 0:
+            adata_subset = adata_subset[:, filt].copy()
 
         hvg = _highly_variable_genes_single_batch(
             adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
         hvg.reset_index(drop=False, inplace=True, names=["gene"])
 
-        if (n_removed := np.sum(~filt)) > 0:
+        if n_removed > 0:
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
                 np.zeros((n_removed, len(hvg.columns))),
