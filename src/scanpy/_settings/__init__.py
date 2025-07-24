@@ -335,7 +335,7 @@ class SettingsMeta(SingletonMeta):
     # --------------------------------------------------------------------------------
 
     def set_figure_params(cls, *args, **kwargs) -> None:
-        cls.set_figure_params(*args, **kwargs)
+        cls._set_figure_params(*args, **kwargs)
 
     @old_positionals(
         "scanpy",
