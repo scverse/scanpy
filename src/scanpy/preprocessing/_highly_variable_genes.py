@@ -9,7 +9,6 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from dask import compute, delayed
 from fast_array_utils import stats
 
 from .. import logging as logg
@@ -432,10 +431,6 @@ def _highly_variable_genes_batched(
     flavor: Literal["seurat", "cell_ranger"],
     cutoff: _Cutoffs | int,
 ) -> pd.DataFrame:
-    @delayed
-    def process_batch_delayed(**kwargs):
-        return process_batch(**kwargs)
-
     def process_batch(batch_mask, adata, layer, gene_list, **hvg_kwargs):
         adata_subset = adata[batch_mask].copy()
 
@@ -476,8 +471,10 @@ def _highly_variable_genes_batched(
 
     per_batch_func = process_batch
     if isinstance(X, DaskArray):
+        from dask import compute, delayed
+
+        per_batch_func = delayed(process_batch)
         _set_obs_rep(adata, X.persist(), layer=layer)
-        per_batch_func = process_batch_delayed
 
     dfs = [
         per_batch_func(
