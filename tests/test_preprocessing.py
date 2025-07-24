@@ -288,6 +288,7 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     warn_ctx = pytest.warns(UserWarning, match=r"zero-centering.*densifies")
     with warn_ctx if zero_center else nullcontext():
         sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
+        adata.X = conv.to_dense(adata.X)
     with (
         (
             warn_ctx
@@ -300,9 +301,7 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
         if is_dask := ("dask" in array_type.__name__):
             assert not isinstance(adata_casted.X._meta, np.matrix)
-            adata_casted.X.compute()  # make sure warning happens here
-    adata.X = conv.to_dense(adata.X)
-    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+        adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     assert_allclose(
         adata_casted.X,
         adata.X,
