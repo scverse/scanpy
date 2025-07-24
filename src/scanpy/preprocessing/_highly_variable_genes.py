@@ -494,7 +494,9 @@ def _highly_variable_genes_batched(
         )
         for batch in batches
     ]
-    if not isinstance(dfs[0], pd.DataFrame):
+    if isinstance(X, DaskArray):
+        from dask import compute
+
         dfs = compute(*dfs)
 
     df = pd.concat(dfs, axis=0)
