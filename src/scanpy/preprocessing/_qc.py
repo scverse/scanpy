@@ -416,6 +416,9 @@ def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
     if not isinstance(mtx._meta, CSRBase | np.ndarray):
         msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
         raise ValueError(msg)
+    if mtx.chunksize[1] != mtx.shape[1]:
+        msg = f"{mtx} must not be chunked along the feature axis"
+        raise ValueError(msg)
     return mtx.map_blocks(
         lambda x: top_segment_proportions(x, ns), meta=np.array([])
     ).compute()

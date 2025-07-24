@@ -84,7 +84,7 @@ def ensure_igraph() -> None:
     msg = (
         "Please install the igraph package: "
         "`conda install -c conda-forge python-igraph` or "
-        "`pip3 install igraph`."
+        "`pip install igraph`."
     )
     raise ImportError(msg)
 
@@ -127,6 +127,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            __tracebackhide__ = True
             if old_name in kwargs:
                 f_name = func.__name__
                 pos_str = (
@@ -832,8 +833,8 @@ def warn_with_traceback(  # noqa: PLR0917
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
-def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
-    warnings.warn(msg, category, stacklevel=stacklevel)
+def warn_once(msg: str, category: type[Warning], stacklevel: int = 0) -> None:
+    warnings.warn(msg, category, stacklevel=stacklevel + 1)
     # You'd think `'once'` works, but it doesn't at the repl and in notebooks
     warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 

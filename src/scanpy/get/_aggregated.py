@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from functools import partial, singledispatch
+from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
+from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase
+from scanpy._compat import CSBase, CSCBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
@@ -19,10 +20,11 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | CSBase
+    Array = np.ndarray | CSBase | DaskArray
 
 # Used with get_literal_vals
-AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
+ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
@@ -330,13 +332,106 @@ def _aggregate(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
-):
+) -> dict[AggType, np.ndarray | DaskArray]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
 
 
+class MeanVarDict(TypedDict):
+    mean: DaskArray
+    var: DaskArray
+
+
+def aggregate_dask_mean_var(
+    data: DaskArray,
+    by: pd.Categorical,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+) -> MeanVarDict:
+    mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
+    sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
+    # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
+    if isinstance(data._meta, CSRBase):
+        sq_mean = sq_mean.compute()
+    elif isinstance(data._meta, CSCBase):  # pragma: no-cover
+        msg = "Cannot handle CSC matrices as dask meta."
+        raise ValueError(msg)
+    var = sq_mean - fau_power(mean, 2)
+    if dof != 0:
+        group_counts = np.bincount(by.codes)
+        var *= (group_counts / (group_counts - dof))[:, np.newaxis]
+    return MeanVarDict(mean=mean, var=var)
+
+
+@_aggregate.register(DaskArray)
+def aggregate_dask(
+    data: DaskArray,
+    by: pd.Categorical,
+    func: AggType | Iterable[AggType],
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+) -> dict[AggType, DaskArray]:
+    if not isinstance(data._meta, CSRBase | np.ndarray):
+        msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
+        raise ValueError(msg)
+    if data.chunksize[1] != data.shape[1]:
+        msg = "Feature axis must be unchunked"
+        raise ValueError(msg)
+
+    def aggregate_chunk_sum_or_count_nonzero(
+        chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
+    ):
+        # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
+        # for what is contained in `block_info`.
+        subset = slice(*block_info[0]["array-location"][0])
+        by_subsetted = by[subset]
+        mask_subsetted = mask[subset] if mask is not None else mask
+        res = _aggregate(chunk, by_subsetted, func, mask=mask_subsetted, dof=dof)[func]
+        return res[None, :]
+
+    funcs = set([func] if isinstance(func, str) else func)
+    if "median" in funcs:
+        msg = "Dask median calculation not supported.  If you want a median-of-medians calculation, please open an issue."
+        raise NotImplementedError(msg)
+    has_mean, has_var = (v in funcs for v in ["mean", "var"])
+    funcs_no_var_or_mean = funcs - {"var", "mean"}
+    # aggregate each row chunk individually,
+    # producing a #chunks × #categories × #features array,
+    # then aggregate the per-chunk results.
+    aggregated = {
+        f: data.map_blocks(
+            partial(aggregate_chunk_sum_or_count_nonzero, func=func),
+            new_axis=(1,),
+            chunks=((1,) * data.blocks.size, (len(by.categories),), (data.shape[1],)),
+            meta=np.array(
+                [],
+                dtype=np.float64
+                if func not in get_args(ConstantDtypeAgg)
+                else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
+            ),
+        ).sum(axis=0)
+        for f in funcs_no_var_or_mean
+    }
+    if has_var:
+        aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
+        aggregated["var"] = aggredated_mean_var["var"]
+        if has_mean:
+            aggregated["mean"] = aggredated_mean_var["mean"]
+    # division must come after, not before, the summation for numerical precision
+    # i.e., we can't just call map blocks over the mean function.
+    elif has_mean:
+        group_counts = np.bincount(by.codes)
+        aggregated["mean"] = (
+            aggregate_dask(data, by, "sum", mask=mask, dof=dof)["sum"]
+            / group_counts[:, None]
+        )
+    return aggregated
+
+
 @_aggregate.register(pd.DataFrame)
-def aggregate_df(data, by, func, *, mask=None, dof=1):
+def aggregate_df(data, by, func, *, mask=None, dof=1) -> dict[AggType, np.ndarray]:
     return _aggregate(data.values, by, func, mask=mask, dof=dof)
 
 

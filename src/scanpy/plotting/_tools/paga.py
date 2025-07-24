@@ -1289,7 +1289,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
             ),
         )
         if show_yticks:
-            groups_axis.set_yticklabels(["", xlabel, ""], fontsize=ytick_fontsize)
+            groups_axis.set_yticks(range(3), [xlabel, "", ""], fontsize=ytick_fontsize)
         else:
             groups_axis.set_yticks([])
         groups_axis.set_frame_on(False)
@@ -1331,7 +1331,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 cmap=color_map_anno,
             )
             if show_yticks:
-                anno_axis.set_yticklabels(["", anno, ""], fontsize=ytick_fontsize)
+                anno_axis.set_yticks(range(3), [anno, "", ""], fontsize=ytick_fontsize)
                 anno_axis.tick_params(axis="both", which="both", length=0)
             else:
                 anno_axis.set_yticks([])

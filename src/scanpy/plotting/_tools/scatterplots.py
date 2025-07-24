@@ -24,6 +24,7 @@ from matplotlib.colors import (
     Normalize,
 )
 from matplotlib.figure import Figure  # noqa: TC002
+from matplotlib.markers import MarkerStyle
 from numpy.typing import NDArray  # noqa: TC002
 from packaging.version import Version
 
@@ -36,6 +37,7 @@ from ..._utils import (
     _empty,
     sanitize_anndata,
 )
+from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
@@ -404,12 +406,16 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                         **kwargs_outline,
                     )
 
+            edgecolor = kwargs_scatter.pop("edgecolor", None)
+            if not MarkerStyle(marker[count]).is_filled():
+                edgecolor = None
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
+                edgecolor=edgecolor,
                 **kwargs_scatter,
             )
 
@@ -923,6 +929,7 @@ def pca(
 
 
 @deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -993,8 +1000,12 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+        sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
     --------

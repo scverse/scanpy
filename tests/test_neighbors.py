@@ -12,7 +12,6 @@ from sklearn.neighbors import KNeighborsTransformer
 import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
-from testing.scanpy._helpers import anndata_v0_8_constructor_compat
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -117,7 +116,7 @@ transitions_gauss_noknn = [
 
 
 def get_neighbors() -> Neighbors:
-    return Neighbors(anndata_v0_8_constructor_compat(np.array(X)))
+    return Neighbors(AnnData(np.array(X)))
 
 
 @pytest.fixture

@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
 from ..readwrite import read, read_visium
-from ._utils import check_datasetdir_exists, filter_oldformatwarning
+from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -123,6 +123,8 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        utils.warn_names_duplicates("var")
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
 
@@ -196,6 +198,8 @@ def moignard15() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.moignard15()
+    UserWarning: Unknown extension is not supported and will be removed
+        warn(msg)
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
@@ -318,7 +322,6 @@ def toggleswitch() -> AnnData:
     return adata
 
 
-@filter_oldformatwarning
 def pbmc68k_reduced() -> AnnData:
     r"""Subsampled and processed 68k PBMCs.
 
@@ -354,12 +357,12 @@ def pbmc68k_reduced() -> AnnData:
     """
     filename = HERE / "10x_pbmc68k_reduced.h5ad"
     with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(filename)
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
     r"""3k PBMCs from 10x Genomics.
@@ -406,12 +409,13 @@ def pbmc3k() -> AnnData:
 
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
+        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
@@ -447,6 +451,7 @@ def pbmc3k_processed() -> AnnData:
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 
@@ -540,6 +545,10 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        utils.warn_names_duplicates("var")
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
@@ -552,4 +561,6 @@ def visium_sge(
         sample_id, spaceranger_version, download_image=include_hires_tiff
     )
     source_image_path = sample_dir / "image.tif" if include_hires_tiff else None
-    return read_visium(sample_dir, source_image_path=source_image_path)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*squidpy\.read", FutureWarning)
+        return read_visium(sample_dir, source_image_path=source_image_path)

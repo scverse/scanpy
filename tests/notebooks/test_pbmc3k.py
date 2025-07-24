@@ -11,11 +11,14 @@
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from pathlib import Path
 
 import numpy as np
+import pytest
 from matplotlib.testing import setup
+from sklearn.exceptions import ConvergenceWarning
 
 setup()
 
@@ -27,6 +30,8 @@ ROOT = HERE / "_images_pbmc3k"
 
 
 @needs.leidenalg
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     np.random.seed(0)
@@ -69,18 +74,21 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
-    filter_result = sc.pp.filter_genes_dispersion(
-        adata.X,
-        min_mean=0.0125,
-        max_mean=3,
-        min_disp=0.5,
-    )
-    sc.pl.filter_genes_dispersion(filter_result, show=False)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
+        filter_result = sc.pp.filter_genes_dispersion(
+            adata.X,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+        )
+    with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
+        sc.pl.filter_genes_dispersion(filter_result, show=False)
     save_and_compare_images("filter_genes_dispersion")
 
-    adata = adata[:, filter_result.gene_subset]
+    adata = adata[:, filter_result.gene_subset].copy()
     sc.pp.log1p(adata)
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)
@@ -151,7 +159,10 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_1")
 
-    sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
+    with warnings.catch_warnings():
+        # This seems to only happen with older versions of scipy for some reason
+        warnings.filterwarnings("always", category=ConvergenceWarning)
+        sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_2")
 

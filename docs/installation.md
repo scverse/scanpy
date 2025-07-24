@@ -24,7 +24,7 @@ After installing installing e.g. [Miniconda][], run:
 $ conda install -c conda-forge scanpy python-igraph leidenalg
 ```
 
-Pull Scanpy [from PyPI][] (consider using `pip3` to access Python 3):
+Pull Scanpy [from PyPI][]:
 
 ```console
 $ pip install scanpy
