@@ -12,6 +12,9 @@ env:
   FORCE_COLOR: "1"
   MPLBACKEND: agg
   UV_CONSTRAINT: ci/constraints.txt
+  # It’s impossible to ignore SyntaxWarnings for a single module,
+  # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
+  UV_COMPILE_BYTECODE: "1"
 
 defaults:
   run:

@@ -4,7 +4,6 @@ import warnings
 from typing import TYPE_CHECKING, Literal, overload
 from warnings import warn
 
-import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
@@ -240,19 +239,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     if is_backed_type(X) and layer is not None:
         msg = f"PCA is not implemented for matrices of type {type(X)} from layers"
         raise NotImplementedError(msg)
-    # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
-    if (
-        Version(ad.__version__) < Version("0.9")
-        and mask_var is not None
-        and isinstance(X, np.ndarray)
-    ):
-        warnings.warn(
-            "When using a mask parameter with anndata<0.9 on a dense array, the PCA"
-            "can have slightly different results due the array being column major "
-            "instead of row major.",
-            UserWarning,
-            stacklevel=2,
-        )
 
     # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state

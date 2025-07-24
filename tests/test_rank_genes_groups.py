@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
@@ -130,8 +132,10 @@ def test_results_layers(array_type):
 
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
+    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
     mask = np.random.randint(0, 2, adata.shape, dtype=bool)
-    adata.X[mask] = 0
+    x[mask] = 0
+    adata.X = array_type(x)
 
     _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
@@ -200,7 +204,7 @@ def test_rank_genes_groups_use_raw():
 def test_singlets():
     pbmc = pbmc68k_reduced()
     pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.add_categories(["11"])
-    pbmc.obs["louvain"][0] = "11"
+    pbmc.obs[0, "louvain"] = "11"
 
     with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
         rank_genes_groups(pbmc, groupby="louvain")
@@ -219,6 +223,7 @@ def test_log1p_save_restore(tmp_path):
     from anndata import read_h5ad
 
     pbmc = pbmc68k_reduced()
+    pbmc.X = pbmc.raw.X
     sc.pp.log1p(pbmc)
 
     path = tmp_path / "test.h5ad"
@@ -302,7 +307,12 @@ def test_wilcoxon_tie_correction(reference):
         groups = groups[:1]
 
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
-    test_obj.compute_statistics("wilcoxon", tie_correct=True)
+    with (
+        pytest.warns(RuntimeWarning, match=r"invalid value encountered")
+        if reference
+        else nullcontext()
+    ):
+        test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
 

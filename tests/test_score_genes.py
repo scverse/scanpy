@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pickle
 import string
+import warnings
 from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
@@ -58,7 +59,8 @@ def test_score_with_reference():
     and stored as a pickle object in `./data`.
     """
     adata = paul15()
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
@@ -73,7 +75,8 @@ def test_add_score():
     # TODO: write a test that costs less resources and is more meaningful
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
     sc.pp.log1p(adata)
 
     # the actual genes names are all 6 letters
@@ -113,9 +116,11 @@ def test_sparse_nanmean():
 
     # edge case of only NaNs per row
     A = np.full((10, 1), np.nan)
-
-    meanA = np.array(_sparse_nanmean(sparse.csr_matrix(A), 0)).flatten()  # noqa: TID251
-    np.testing.assert_allclose(np.nanmean(A, 0), meanA)
+    with pytest.warns(RuntimeWarning, match=r"invalid value encountered in divide"):
+        mean_a = np.array(_sparse_nanmean(sparse.csr_matrix(A), 0)).flatten()  # noqa: TID251
+    with pytest.warns(RuntimeWarning, match=r"Mean of empty slice"):
+        mean_a_expected = np.nanmean(A, 0)
+    np.testing.assert_allclose(mean_a_expected, mean_a)
 
 
 def test_sparse_nanmean_on_dense_matrix():
@@ -143,7 +148,8 @@ def test_score_genes_sparse_vs_dense():
     )
 
 
-def test_score_genes_deplete():
+@pytest.mark.parametrize("dense", [True, False], ids=["dense", "sparse"])
+def test_score_genes_deplete(*, dense: bool) -> None:
     """Deplete some cells from a set of genes.
 
     Their score should be <0 since the sum of markers is 0 and
@@ -151,23 +157,20 @@ def test_score_genes_deplete():
 
     Check that for both sparse and dense matrices.
     """
-    adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
+    adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
+    if dense:
+        adata.X = adata.X.toarray()
 
-    adata_dense = adata_sparse.copy()
-    adata_dense.X = adata_dense.X.toarray()
+    # deplete these genes in 50 cells,
+    ix_obs = np.random.choice(adata.shape[0], 50)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=sparse.SparseEfficiencyWarning)
+        adata.X[ix_obs, :10] = 0
 
-    # here's an arbitary gene set
-    gene_set = adata_dense.var_names[:10]
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:10], score_name="Test")
+    scores = adata.obs["Test"].values
 
-    for adata in [adata_sparse, adata_dense]:
-        # deplete these genes in 50 cells,
-        ix_obs = np.random.choice(adata.shape[0], 50)
-        adata[ix_obs][:, gene_set].X = 0
-
-        sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
-        scores = adata.obs["Test"].values
-
-        np.testing.assert_array_less(scores[ix_obs], 0)
+    np.testing.assert_array_less(scores[ix_obs], 0)
 
 
 def test_npnanmean_vs_sparsemean(monkeypatch):
@@ -222,7 +225,8 @@ def test_use_raw_None():
 def test_layer():
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
     sc.pp.log1p(adata)
 
     # score X

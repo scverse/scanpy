@@ -164,11 +164,14 @@ def test_confusion_matrix():
     assert np.all(mtx == 0.5)
 
 
-def test_confusion_matrix_randomized():
+@pytest.mark.flaky(reruns=5)  # possible that #classes > #samples÷2
+def test_confusion_matrix_randomized() -> None:
+    rng = np.random.default_rng()
+
     chars = np.array(list(ascii_letters))
-    pos = np.random.choice(len(chars), size=np.random.randint(50, 150))
+    pos = rng.choice(len(chars), size=rng.integers(50, 150))
     a = chars[pos]
-    b = np.random.permutation(chars)[pos]
+    b = rng.permutation(chars)[pos]
     df = pd.DataFrame({"a": a, "b": b})
 
     pd.testing.assert_frame_equal(

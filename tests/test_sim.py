@@ -6,7 +6,7 @@ import pytest
 import scanpy as sc
 
 
-def test_sim_toggleswitch():
+def test_sim_toggleswitch() -> None:
     with pytest.warns(UserWarning, match=r"Observation names are not unique"):
         adata_sim = sc.tl.sim("toggleswitch")
     with pytest.warns(UserWarning, match=r"Observation names are not unique"):
