@@ -9,13 +9,14 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from fast_array_utils.stats import mean_var
+from dask import compute, delayed
+from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
-from ..get import _get_obs_rep
+from ..get import _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -77,7 +78,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             stacklevel=3,
         )
 
-    df["means"], df["variances"] = mean_var(data, axis=0, correction=1)
+    df["means"], df["variances"] = stats.mean_var(data, axis=0, correction=1)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -88,7 +89,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
-        mean, var = mean_var(data_batch, axis=0, correction=1)
+        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -295,7 +296,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    mean, var = materialize_as_ndarray(stats.mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -431,14 +432,14 @@ def _highly_variable_genes_batched(
     flavor: Literal["seurat", "cell_ranger"],
     cutoff: _Cutoffs | int,
 ) -> pd.DataFrame:
-    sanitize_anndata(adata)
-    batches = adata.obs[batch_key].cat.categories
-    dfs = []
-    gene_list = adata.var_names
-    for batch in batches:
-        adata_subset = adata[adata.obs[batch_key] == batch]
+    @delayed
+    def process_batch_delayed(**kwargs):
+        return process_batch(**kwargs)
 
-        # Filter to genes that are in the dataset
+    def process_batch(batch_mask, adata, layer, gene_list, **hvg_kwargs):
+        adata_subset = adata[batch_mask].copy()
+
+        # Filter to genes that are in the batch
         with settings.verbosity.override(Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
             filt, _ = materialize_as_ndarray(
@@ -453,7 +454,7 @@ def _highly_variable_genes_batched(
             adata_subset = adata_subset[:, filt].copy()
 
         hvg = _highly_variable_genes_single_batch(
-            adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+            adata_subset, layer=layer, **hvg_kwargs
         )
         hvg.reset_index(drop=False, inplace=True, names=["gene"])
 
@@ -467,7 +468,31 @@ def _highly_variable_genes_batched(
             missing_hvg["gene"] = gene_list[~filt]
             hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
 
-        dfs.append(hvg)
+        return hvg
+
+    sanitize_anndata(adata)
+    batches = adata.obs[batch_key].cat.categories
+    X = _get_obs_rep(adata, layer=layer)
+
+    per_batch_func = process_batch
+    if isinstance(X, DaskArray):
+        _set_obs_rep(adata, X.persist(), layer=layer)
+        per_batch_func = process_batch_delayed
+
+    dfs = [
+        per_batch_func(
+            batch_mask=adata.obs[batch_key] == batch,
+            adata=adata,
+            layer=layer,
+            gene_list=adata.var_names,
+            cutoff=cutoff,
+            n_bins=n_bins,
+            flavor=flavor,
+        )
+        for batch in batches
+    ]
+    if not isinstance(dfs[0], pd.DataFrame):
+        dfs = compute(*dfs)
 
     df = pd.concat(dfs, axis=0)
 
