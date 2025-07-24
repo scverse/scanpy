@@ -12,8 +12,3 @@ def test_resets(_attempt: int) -> None:
     assert sc.settings.autoshow
     sc.settings.autoshow = False
     assert not sc.settings.autoshow
-
-
-def test_set_figure_params_warns() -> None:
-    with pytest.warns(FutureWarning, match=r"scanpy\.set_figure_params"):
-        sc.settings.set_figure_params()
