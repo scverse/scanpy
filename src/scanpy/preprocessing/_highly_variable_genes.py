@@ -15,7 +15,7 @@ from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -480,7 +480,6 @@ def _highly_variable_genes_batched(
         from dask import delayed
 
         per_batch_func = delayed(process_batch)
-        _set_obs_rep(adata, X.persist(), layer=layer)
 
     dfs = (
         per_batch_func(
