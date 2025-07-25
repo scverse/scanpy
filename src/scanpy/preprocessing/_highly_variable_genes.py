@@ -477,12 +477,12 @@ def _highly_variable_genes_batched(
 
     per_batch_func = process_batch
     if isinstance(X, DaskArray):
-        from dask import compute, delayed
+        from dask import delayed
 
         per_batch_func = delayed(process_batch)
         _set_obs_rep(adata, X.persist(), layer=layer)
 
-    dfs = [
+    dfs = (
         per_batch_func(
             batch_mask=adata.obs[batch_key] == batch,
             adata=adata,
@@ -493,11 +493,11 @@ def _highly_variable_genes_batched(
             flavor=flavor,
         )
         for batch in batches
-    ]
+    )
     if isinstance(X, DaskArray):
         from dask import compute
 
-        dfs = compute(*dfs)
+        dfs = (compute(df)[0] for df in dfs)
 
     df = pd.concat(dfs, axis=0)
 
