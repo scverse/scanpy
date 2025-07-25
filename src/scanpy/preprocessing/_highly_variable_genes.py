@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from inspect import signature
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numba
 import numpy as np
@@ -20,7 +20,7 @@ from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Literal, Unpack
 
     from numpy.typing import NDArray
 
@@ -263,13 +263,14 @@ class _Cutoffs:
         )
 
 
+class HvgArgs(TypedDict):
+    cutoff: _Cutoffs | int
+    n_bins: int
+    flavor: Literal["seurat", "cell_ranger"]
+
+
 def _highly_variable_genes_single_batch(
-    adata: AnnData,
-    *,
-    layer: str | None = None,
-    cutoff: _Cutoffs | int,
-    n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger"] = "seurat",
+    adata: AnnData, *, layer: str | None = None, **kwargs: Unpack[HvgArgs]
 ) -> pd.DataFrame:
     """See `highly_variable_genes`.
 
@@ -279,6 +280,10 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
 
     """
+    cutoff = kwargs["cutoff"]
+    flavor = kwargs.get("flavor", "seurat")
+    n_bins = kwargs.get("n_bins", 20)
+
     X = _get_obs_rep(adata, layer=layer)
 
     if hasattr(X, "_view_args"):  # AnnData array view
@@ -429,15 +434,15 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
 
 
 def _highly_variable_genes_batched(
-    adata: AnnData,
-    batch_key: str,
-    *,
-    layer: str | None,
-    n_bins: int,
-    flavor: Literal["seurat", "cell_ranger"],
-    cutoff: _Cutoffs | int,
+    adata: AnnData, batch_key: str, *, layer: str | None, **kwargs: Unpack[HvgArgs]
 ) -> pd.DataFrame:
-    def process_batch(batch_mask, adata, layer, gene_list, **hvg_kwargs):
+    def process_batch(
+        batch_mask: pd.Series | np.ndarray,
+        adata: AnnData,
+        layer: str | None,
+        gene_list: list,
+        **kwargs: Unpack[HvgArgs],
+    ):
         adata_subset = adata[batch_mask].copy()
 
         # Filter to genes that are in the batch
@@ -454,9 +459,7 @@ def _highly_variable_genes_batched(
         if n_removed > 0:
             adata_subset = adata_subset[:, filt].copy()
 
-        hvg = _highly_variable_genes_single_batch(
-            adata_subset, layer=layer, **hvg_kwargs
-        )
+        hvg = _highly_variable_genes_single_batch(adata_subset, layer=layer, **kwargs)
         hvg.reset_index(drop=False, inplace=True, names=["gene"])
 
         if n_removed > 0:
@@ -471,6 +474,7 @@ def _highly_variable_genes_batched(
 
         return hvg
 
+    cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
     X = _get_obs_rep(adata, layer=layer)
@@ -487,9 +491,7 @@ def _highly_variable_genes_batched(
             adata=adata,
             layer=layer,
             gene_list=adata.var_names,
-            cutoff=cutoff,
-            n_bins=n_bins,
-            flavor=flavor,
+            **kwargs,
         )
         for batch in batches
     )
