@@ -1787,7 +1787,7 @@ def test_umap_mask_mult_plots():
 
 
 def test_umap_categories_dont_change_when_rerun_with_fewer_categories():
-    """Check that altering the categories of interest does not cause a recalculation of colors."""
+    """Check that lowering the categories of interest does not cause a recalculation of colors."""
     pbmc = pbmc3k_processed()
     _ = sc.pl.umap(pbmc, color="louvain", show=False)
     assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
