@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 
+import pandas as pd
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -71,8 +72,8 @@ def test_leiden_random_state(adata_neighbors, flavor):
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
-    assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
 
 
 @needs.igraph
