@@ -1786,6 +1786,32 @@ def test_umap_mask_mult_plots():
     assert len(axes) == len(color)
 
 
+def test_umap_categories_dont_change_when_rerun_with_fewer_categories():
+    """Check that lowering the categories of interest does not cause a recalculation of colors."""
+    pbmc = pbmc3k_processed()
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+    old_colors = pbmc.uns["louvain_colors"].copy()
+    pbmc.obs.loc[pbmc.obs["louvain"] == "NK cells", "louvain"] = "B cells"
+    pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.remove_unused_categories()
+    # see https://github.com/scverse/scanpy/issues/3716 for why this used to fail
+    # Recalculation of the UMAP should not cause a re-calculation of colors
+    # when there are fewer categories.
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert (old_colors == pbmc.uns["louvain_colors"]).all()
+
+
+def test_umap_categories_change_when_rerun_with_more_categories():
+    """Check that growing the categories of interest causes a recalculation of colors."""
+    pbmc = pbmc3k_processed()
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+    pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.add_categories("New Category")
+    pbmc.obs.loc[pbmc.obs_names[:5], "louvain"] = "New Category"
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.obs["louvain"].cat.categories) == len(pbmc.uns["louvain_colors"])
+
+
 def test_umap_mask_no_modification():
     """Check that mask_obs argument doesn't affect the data being plotted."""
     pbmc = pbmc3k_processed()
