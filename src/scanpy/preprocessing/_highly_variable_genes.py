@@ -20,11 +20,15 @@ from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
-    from typing import Literal, Unpack
+    from collections.abc import Callable
+    from typing import Concatenate, Literal, ParamSpec, TypeVar, Unpack
 
     from numpy.typing import NDArray
 
     from .._types import HVGFlavor
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -463,11 +467,14 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
     return x[n - 1]
 
 
-def _per_batch_func(func, adata, batch_mask, **kwargs):
-    return func(
-        adata[batch_mask].copy(),
-        **kwargs,
-    )
+def _per_batch_func(
+    func: Callable[Concatenate[AnnData, P], R],
+    adata: AnnData,
+    batch_mask: pd.Series[bool],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> R:
+    return func(adata[batch_mask].copy(), *args, **kwargs)
 
 
 def _highly_variable_genes_batched(
