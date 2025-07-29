@@ -102,7 +102,7 @@ jobs:
           file: test-data/test-results.xml
 
       - name: Publish debug artifacts
-        if: matrix.env.test-type == 'coverage'
+        if: matrix.env.test-type == 'coverage' && !cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: debug-data-${{ matrix.env.name }}
