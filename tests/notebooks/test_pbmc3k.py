@@ -115,7 +115,7 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     sc.tl.leiden(
         adata,
         resolution=0.9,
-        random_state=0,
+        random_state=1,
         directed=False,
         n_iterations=2,
         flavor="igraph",
