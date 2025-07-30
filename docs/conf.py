@@ -31,6 +31,7 @@ nitpicky = True  # Warn about broken links. This is here for a reason: Do not ch
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
+    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
 ]
 
 # General information
