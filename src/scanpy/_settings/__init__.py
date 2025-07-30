@@ -460,7 +460,7 @@ class settings(metaclass=SettingsMeta):
         return cls
 
     # logging
-    _root_logger: ClassVar = _RootLogger(logging.INFO)
+    _root_logger: ClassVar = _RootLogger(logging.WARNING)
     _logfile: ClassVar = SettingsMeta._default_logfile()
     _logpath: ClassVar = None
     _verbosity: ClassVar = Verbosity.warning
@@ -487,4 +487,5 @@ class settings(metaclass=SettingsMeta):
     _previous_memory_usage: ClassVar = -1
 
 
+_set_log_level(settings, settings.verbosity.level)
 _set_log_file(settings)

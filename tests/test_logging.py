@@ -25,9 +25,14 @@ def test_defaults(
 ) -> None:
     assert s.logpath is original_settings["_logpath"] is None
     assert s.logfile is original_settings["_logfile"] is sys.stderr
+    # we override s.verbosity, so we only check the default here:
+    assert original_settings["_verbosity"] is Verbosity.warning
+
+    # check logging handler file and level
     [handler] = (h for h in s._root_logger.handlers if h is not caplog.handler)
     assert isinstance(handler, StreamHandler)
     assert handler.stream is s.logfile
+    assert s._root_logger.level == s.verbosity.level
 
 
 def test_records(caplog: pytest.LogCaptureFixture) -> None:
