@@ -487,5 +487,4 @@ class settings(metaclass=SettingsMeta):
     _previous_memory_usage: ClassVar = -1
 
 
-_set_log_level(settings, settings.verbosity.level)
 _set_log_file(settings)
