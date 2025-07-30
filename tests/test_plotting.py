@@ -27,6 +27,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
     from matplotlib.axes import Axes
 
@@ -57,71 +58,53 @@ def test_highest_expr_genes(image_comparer, col, layer):
 
 
 @needs.leidenalg
-def test_heatmap(image_comparer):
+@pytest.mark.parametrize(
+    ("params", "key"),
+    [
+        pytest.param({}, "heatmap", id="default"),
+        pytest.param(
+            dict(swap_axes=True, figsize=(10, 3), cmap="YlGnBu"),
+            "heatmap_swap_axes",
+            id="swap",
+        ),
+        pytest.param(
+            dict(
+                groupby="numeric_value",
+                num_categories=4,
+                figsize=(4.5, 5),
+                dendrogram=False,
+            ),
+            "heatmap2",
+            id="numeric",
+        ),
+        pytest.param(
+            dict(standard_scale="var", layer="test"),
+            "heatmap_std_scale_var",
+            id="std_scale=var",
+        ),
+        pytest.param(
+            dict(standard_scale="obs"),
+            "heatmap_std_scale_obs",
+            id="std_scale=obs",
+        ),
+    ],
+)
+def test_heatmap(image_comparer, params: dict[str, Any], key: str) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = krumsiek11()
-    sc.pl.heatmap(
-        adata, adata.var_names, "cell_type", use_raw=False, show=False, dendrogram=True
-    )
-    save_and_compare_images("heatmap")
-
-    # test swap axes
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        show=False,
-        dendrogram=True,
-        swap_axes=True,
-        figsize=(10, 3),
-        cmap="YlGnBu",
-    )
-    save_and_compare_images("heatmap_swap_axes")
-
-    # test heatmap numeric column():
-
-    # set as numeric column the vales for the first gene on the matrix
     adata.obs["numeric_value"] = adata.X[:, 0]
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "numeric_value",
-        use_raw=False,
-        num_categories=4,
-        figsize=(4.5, 5),
-        show=False,
-    )
-    save_and_compare_images("heatmap2")
-
-    # test var/obs standardization and layer
     adata.layers["test"] = -1 * adata.X.copy()
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale="var",
-        layer="test",
-    )
-    save_and_compare_images("heatmap_std_scale_var")
 
-    # test standard_scale_obs
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale="obs",
-    )
-    save_and_compare_images("heatmap_std_scale_obs")
+    params = dict(groupby="cell_type", dendrogram=True) | params
+    sc.pl.heatmap(adata, adata.var_names, **params, use_raw=False, show=False)
+    save_and_compare_images(key)
 
-    # test var_names as dict
+
+@needs.leidenalg
+def test_heatmap_var_as_dict(image_comparer) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
     pbmc = pbmc68k_reduced()
     sc.tl.leiden(
         pbmc,
@@ -152,8 +135,13 @@ def test_heatmap(image_comparer):
     )
     save_and_compare_images("heatmap_var_as_dict")
 
-    # test that plot elements are well aligned
-    # small
+
+@needs.leidenalg
+@pytest.mark.parametrize("swap_axes", [True, False])
+def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
+    """Test that plot elements are well aligned."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
     a = AnnData(
         np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
         obs={"foo": ["a", "b", "c"]},
@@ -161,14 +149,9 @@ def test_heatmap(image_comparer):
     )
     a.obs["foo"] = a.obs["foo"].astype("category")
     sc.pl.heatmap(
-        a, var_names=a.var_names, groupby="foo", swap_axes=True, figsize=(4, 4)
+        a, var_names=a.var_names, groupby="foo", swap_axes=swap_axes, figsize=(4, 4)
     )
-    save_and_compare_images("heatmap_small_swap_alignment")
-
-    sc.pl.heatmap(
-        a, var_names=a.var_names, groupby="foo", swap_axes=False, figsize=(4, 4)
-    )
-    save_and_compare_images("heatmap_small_alignment")
+    save_and_compare_images(f"heatmap_small{'_swap' if swap_axes else ''}_alignment")
 
 
 @pytest.mark.skipif(
