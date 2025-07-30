@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
 
 from .. import logging
 from .._compat import deprecated, old_positionals
-from .._singleton import SingletonMeta
+from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .verbosity import Verbosity
 
@@ -487,4 +487,6 @@ class settings(metaclass=SettingsMeta):
     _previous_memory_usage: ClassVar = -1
 
 
-_set_log_file(settings)
+if not documenting():  # finish initialization
+    _set_log_level(settings, settings.verbosity.level)
+    _set_log_file(settings)
