@@ -40,7 +40,7 @@ def original_settings(
     setup()
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
-    sc.settings.autoshow = False
+    sc.settings.autoshow = True
     # create directory for debug data
     cache.mkdir("debug")
     # reuse data files between test runs (unless overwritten in the test)
