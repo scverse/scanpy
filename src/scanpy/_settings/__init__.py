@@ -69,7 +69,7 @@ def _type_check_arg2(
 class SettingsMeta(SingletonMeta):
     # logging
     _root_logger: _RootLogger
-    _logfile: TextIO | None
+    _logfile: TextIO
     _verbosity: Verbosity
     # rest
     _n_pcs: int
@@ -288,7 +288,7 @@ class SettingsMeta(SingletonMeta):
     @_type_check_arg2(Path | str)
     def logpath(cls, logpath: Path | str | None) -> None:
         if logpath is None:
-            cls._logfile = None
+            cls.logfile = None
             cls._logpath = None
             return
         # set via “file object” branch of logfile.setter
@@ -296,7 +296,7 @@ class SettingsMeta(SingletonMeta):
         cls._logpath = Path(logpath)
 
     @property
-    def logfile(cls) -> TextIO | None:
+    def logfile(cls) -> TextIO:
         """The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
@@ -310,7 +310,7 @@ class SettingsMeta(SingletonMeta):
     @logfile.setter
     def logfile(cls, logfile: Path | str | TextIO | None) -> None:
         if not logfile:  # "" or None
-            logfile = sys.stdout if cls._is_run_from_ipython() else sys.stderr
+            logfile = cls._default_logfile()
         if isinstance(logfile, Path | str):
             cls.logpath = logfile
             return
@@ -441,6 +441,10 @@ class SettingsMeta(SingletonMeta):
 
         return getattr(builtins, "__IPYTHON__", False)
 
+    @classmethod
+    def _default_logfile(cls) -> TextIO:
+        return sys.stdout if cls._is_run_from_ipython() else sys.stderr
+
     def __str__(cls) -> str:
         return "\n".join(
             f"{k} = {v!r}"
@@ -457,7 +461,7 @@ class settings(metaclass=SettingsMeta):
 
     # logging
     _root_logger: ClassVar = _RootLogger(logging.INFO)
-    _logfile: ClassVar = None
+    _logfile: ClassVar = SettingsMeta._default_logfile()
     _logpath: ClassVar = None
     _verbosity: ClassVar = Verbosity.warning
     # rest
@@ -481,3 +485,6 @@ class settings(metaclass=SettingsMeta):
     _start: ClassVar = time()
     _previous_time: ClassVar = _start
     _previous_memory_usage: ClassVar = -1
+
+
+_set_log_file(settings)

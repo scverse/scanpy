@@ -5,6 +5,7 @@ import warnings
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
+from logging import StreamHandler
 from typing import TYPE_CHECKING
 
 import pytest
@@ -15,14 +16,21 @@ from scanpy import logging as log
 from scanpy import settings as s
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 
-def test_defaults():
-    assert s.logpath is None
+def test_defaults(
+    caplog: pytest.LogCaptureFixture, original_settings: Mapping[str, object]
+) -> None:
+    assert s.logpath is original_settings["_logpath"] is None
+    assert s.logfile is original_settings["_logfile"] is sys.stderr
+    [handler] = (h for h in s._root_logger.handlers if h is not caplog.handler)
+    assert isinstance(handler, StreamHandler)
+    assert handler.stream is s.logfile
 
 
-def test_records(caplog: pytest.LogCaptureFixture):
+def test_records(caplog: pytest.LogCaptureFixture) -> None:
     s.verbosity = Verbosity.debug
     log.error("0")
     log.warning("1")
