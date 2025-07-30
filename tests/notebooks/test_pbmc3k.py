@@ -130,22 +130,18 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # Due to incosistency with our test runner vs local, these clusters need to
     # be pre-annotated as the numbers for each cluster are not consistent.
     marker_genes = [
-        "RP11-18H21.1",
-        "GZMK",
-        "CD79A",
-        "FCGR3A",
-        "GNLY",
-        "S100A8",
-        "FCER1A",
-        "PPBP",
+        *["RP11-18H21.1", "GZMK", "CD79A", "FCGR3A"],
+        *["GNLY", "S100A8", "FCER1A", "PPBP"],
     ]
-    new_labels = ["0", "1", "2", "3", "4", "5", "6", "7"]
     data_df = adata[:, marker_genes].to_df()
     data_df["leiden"] = adata.obs["leiden"]
     max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
-    leiden_relabel = {}
-    for marker_gene, new_label in zip(marker_genes, new_labels, strict=True):
-        leiden_relabel[max_idxs[marker_gene]] = new_label
+    assert not max_idxs[marker_genes][
+        max_idxs[marker_genes].duplicated(keep=False)
+    ].tolist(), "Not all marker genes are unique per cluster"
+    leiden_relabel = {
+        max_idxs[marker_gene]: str(i) for i, marker_gene in enumerate(marker_genes)
+    }
     adata.obs["leiden_old"] = adata.obs["leiden"].copy()
     adata.rename_categories(
         "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
@@ -175,14 +171,8 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # save_and_compare_images('rank_genes_groups_4')
 
     new_cluster_names = [
-        "CD4 T cells",
-        "CD8 T cells",
-        "B cells",
-        "NK cells",
-        "FCGR3A+ Monocytes",
-        "CD14+ Monocytes",
-        "Dendritic cells",
-        "Megakaryocytes",
+        *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
+        *["FCGR3A+ Monocytes", "CD14+ Monocytes", "Dendritic cells", "Megakaryocytes"],
     ]
     adata.rename_categories("leiden", new_cluster_names)
 
