@@ -486,7 +486,7 @@ def _highly_variable_genes_batched(
     X = _get_obs_rep(adata, layer=layer)
 
     func = _per_batch_func
-    if isinstance(X, DaskArray):
+    if is_dask := isinstance(X, DaskArray):
         from dask import delayed
 
         func = delayed(_per_batch_func)
@@ -503,7 +503,7 @@ def _highly_variable_genes_batched(
         for batch in batches
     )
 
-    if isinstance(X, DaskArray):
+    if is_dask:
         from dask import compute
 
         dfs = (compute(df)[0] for df in dfs)
