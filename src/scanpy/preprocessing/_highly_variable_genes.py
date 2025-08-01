@@ -497,7 +497,6 @@ def _highly_variable_genes_batched(
             adata=adata,
             batch_mask=adata.obs[batch_key] == batch,
             layer=layer,
-            gene_list=adata.var_names,
             _filter_genes=True,
             **kwargs,
         )
