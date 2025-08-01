@@ -277,7 +277,7 @@ def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    _filter_genes: bool = False,
+    filter_unexpressed_genes: bool = False,
     **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     """See `highly_variable_genes`.
@@ -295,7 +295,7 @@ def _highly_variable_genes_single_batch(
     X = _get_obs_rep(adata, layer=layer)
 
     # Filter to genes that are expressed
-    if _filter_genes:
+    if filter_unexpressed_genes:
         with settings.verbosity.override(Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
             filt, _ = materialize_as_ndarray(
@@ -497,7 +497,7 @@ def _highly_variable_genes_batched(
             adata=adata,
             batch_mask=adata.obs[batch_key] == batch,
             layer=layer,
-            _filter_genes=True,
+            filter_unexpressed_genes=True,
             **kwargs,
         )
         for batch in batches
@@ -572,7 +572,7 @@ def highly_variable_genes(  # noqa: PLR0913
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
-    _filter_genes: bool = False,
+    filter_unexpressed_genes: bool = False,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
@@ -653,8 +653,8 @@ def highly_variable_genes(  # noqa: PLR0913
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. For `flavor = 'seurat_v3_paper'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
-    _filter_genes
-        If `True`, filter genes that are not expressed in at least one cell before computing highly variable genes.
+    filter_unexpressed_genes
+        If `True`, remove genes that are not expressed in at least one cell from highly variable genes computation (does NOT remove the gene in-place).
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
