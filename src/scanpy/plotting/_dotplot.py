@@ -9,15 +9,10 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params, _empty
+from ..get._aggregated import aggregate
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import (
-    _dk,
-    check_colornorm,
-    fix_kwds,
-    make_grid_spec,
-    savefig_or_show,
-)
+from ._utils import _dk, check_colornorm, fix_kwds, make_grid_spec, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -187,46 +182,26 @@ class DotPlot(BasePlot):
             norm=norm,
             **kwds,
         )
-
-        # for if category defined by groupby (if any) compute for each var_name
-        # 1. the fraction of cells in the category having a value >expression_cutoff
-        # 2. the mean value over the category
-
-        # 1. compute fraction of cells having value > expression_cutoff
-        # transform obs_tidy into boolean matrix using the expression_cutoff
-        obs_bool = self.obs_tidy > expression_cutoff
-
-        # compute the sum per group which in the boolean matrix this is the number
-        # of values >expression_cutoff, and divide the result by the total number of
-        # values in the group (given by `count()`)
         if dot_size_df is None:
-            dot_size_df = (
-                obs_bool.groupby(level=0, observed=True).sum()
-                / obs_bool.groupby(level=0, observed=True).count()
-            )
+            if expression_cutoff > 0:
+                mask = (self._view.X > expression_cutoff).astype(self._view.X.dtype)
+                dot_size_df = self._agg_df("mean", mask=mask)
+            else:
+                df_all = self._agg_df("count_nonzero")
+                # count_nonzero → raw counts, divide by group sizes
+                group_sizes = self._view.obs[self._group_key].value_counts().loc[self.categories].values
+                dot_size_df = df_all.div(group_sizes, axis=0)
 
         if dot_color_df is None:
-            # 2. compute mean expression value value
-            if mean_only_expressed:
-                dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool)
-                    .groupby(level=0, observed=True)
-                    .mean()
-                    .fillna(0)
-                )
+            if mean_only_expressed and expression_cutoff > 0:
+                mask = (self._view.X > expression_cutoff)
+                df_sum = self._agg_df("sum", mask=mask)
+                expr_counts = dot_size_df.values * group_sizes[:, None]
+                dot_color_df = df_sum.div(expr_counts).fillna(0)
             else:
-                dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
-
-            if standard_scale == "group":
-                dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
-                dot_color_df = dot_color_df.div(dot_color_df.max(1), axis=0).fillna(0)
-            elif standard_scale == "var":
-                dot_color_df -= dot_color_df.min(0)
-                dot_color_df = (dot_color_df / dot_color_df.max(0)).fillna(0)
-            elif standard_scale is None:
-                pass
-            else:
-                logg.warning("Unknown type for standard_scale, ignored")
+                dot_color_df = self._agg_df("mean")
+            
+            dot_color_df = self._scale_df(standard_scale, dot_color_df)
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:
@@ -255,12 +230,12 @@ class DotPlot(BasePlot):
             # using the order from the doc_size_df
             dot_color_df = dot_color_df.loc[dot_size_df.index][dot_size_df.columns]
 
-        self.dot_color_df, self.dot_size_df = (
-            df.loc[
-                categories_order if categories_order is not None else self.categories
-            ]
-            for df in (dot_color_df, dot_size_df)
-        )
+
+
+        # reorder rows
+        self.dot_size_df  = dot_size_df.loc[categories_order if categories_order is not None else self.categories]
+        self.dot_color_df = dot_color_df.loc[categories_order if categories_order is not None else self.categories]
+
         self.standard_scale = standard_scale
 
         # Set default style parameters

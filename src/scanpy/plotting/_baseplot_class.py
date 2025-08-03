@@ -13,13 +13,9 @@ from matplotlib import pyplot as plt
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
-from ._anndata import (
-    VarGroups,
-    _plot_dendrogram,
-    _plot_var_groups_brackets,
-    _prepare_dataframe,
-    _reorder_categories_after_dendrogram,
-)
+from ..get._aggregated import aggregate
+from ._anndata import (VarGroups, _plot_dendrogram, _plot_var_groups_brackets,
+                       _prepare_dataframe, _reorder_categories_after_dendrogram)
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
@@ -144,8 +140,9 @@ class BasePlot:
         del var_group_labels, var_group_positions
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
-
-        self.categories, self.obs_tidy = _prepare_dataframe(
+        
+        # still need this as pandas handles this procedure more optimally
+        self.categories, obs_tidy = _prepare_dataframe(
             adata,
             self.var_names,
             groupby,
@@ -155,6 +152,17 @@ class BasePlot:
             layer=layer,
             gene_symbols=gene_symbols,
         )
+        # we are going to save a view of adata as we still need it for filtering in dotplot by expression_cutoff and mean_only_expressed
+        # also AnnData is a little lighter than DataFrame
+        # and we can replace self.adata as it is used elsewhere
+        self._group_key = obs_tidy.index.name
+        self._view = AnnData(
+            X=obs_tidy.values,
+            obs=obs_tidy.index.to_frame(index=False),
+            var=pd.DataFrame(index=var_names),
+        )
+
+        
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -164,16 +172,16 @@ class BasePlot:
             )
 
         if categories_order is not None and (
-            set(self.obs_tidy.index.categories) != set(categories_order)
+            set(self.categories) != set(categories_order)
         ):
             logg.error(
                 "Please check that the categories given by "
                 "the `order` parameter match the categories that "
                 "want to be reordered.\n\n"
                 "Mismatch: "
-                f"{set(self.obs_tidy.index.categories).difference(categories_order)}\n\n"
+                f"{set(self.categories).difference(categories_order)}\n\n"
                 f"Given order categories: {categories_order}\n\n"
-                f"{groupby} categories: {list(self.obs_tidy.index.categories)}\n"
+                f"{groupby} categories: {list(self.categories)}\n"
             )
             return
 
@@ -397,11 +405,11 @@ class BasePlot:
 
         _sort = sort is not None
         _ascending = sort == "ascending"
-        counts_df = self.obs_tidy.index.value_counts(sort=_sort, ascending=_ascending)
+        counts_df = self._view.obs[self._group_key].value_counts(sort=_sort, ascending=_ascending)
 
         if _sort:
-            self.categories_order = counts_df.index
-
+            self.categories_order = list(counts_df.index)
+        
         self.plot_group_extra = {
             "kind": "group_totals",
             "width": size,
@@ -411,6 +419,61 @@ class BasePlot:
         }
         return self
 
+    
+    def _agg_df(self, func, mask: np.ndarray | None = None) -> pd.DataFrame:
+        """
+        Aggregate self._view by self._group_key, running `func`
+        (or list of funcs) on the X‐matrix. Returns a DataFrame
+        (or dict of DataFrames) with index=self.categories, columns=self.var_names.
+        If mask is provided, it should be shape (n_groups, n_vars) and will
+        overwrite view.X before aggregating (useful for dot‐cutoff logic).
+        """
+        # make a fresh copy so we never mutate the master view
+        view = self._view.copy()
+        if mask is not None:
+            view.X = mask.astype(view.X.dtype)
+
+        ag = aggregate(
+            view,
+            by=self._group_key,
+            func=func,
+            axis="obs",
+        )
+        # if single func, return one DataFrame
+        if isinstance(func, str):
+            arr = ag.layers[func]
+            return pd.DataFrame(arr, index=self.categories, columns=self.var_names)
+        # if multiple, return a dict of DataFrames
+        out = {}
+        for f in func:
+            arr = ag.layers[f]
+            out[f] = pd.DataFrame(arr, index=self.categories, columns=self.var_names)
+        return out
+    
+    def _scale_df(
+        self,
+        standard_scale: Literal["var", "group"] | None = None,
+        df : pd.DataFrame | None = None
+    ):
+        """
+        Performs scaling of `df` based on `standard_scale` parameter
+        """
+        if standard_scale == "obs":
+            standard_scale = "group"
+            msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+        if standard_scale == "group":
+            df = df.sub(df.min(1), axis=0)
+            df = df.div(df.max(1), axis=0).fillna(0)
+        elif standard_scale == "var":
+            df -= df.min(0)
+            df = (df / df.max(0)).fillna(0)
+        elif standard_scale is None:
+            pass
+        else:
+            logg.warning("Unknown type for standard_scale, ignored")
+        return df
+    
     @old_positionals("cmap")
     def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
         r"""Set visual style parameters.

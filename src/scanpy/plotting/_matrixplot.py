@@ -10,11 +10,7 @@ from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
-from ._docs import (
-    doc_common_plot_args,
-    doc_show_save_ax,
-    doc_vboundnorm,
-)
+from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import _dk, check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
@@ -167,29 +163,15 @@ class MatrixPlot(BasePlot):
         )
 
         if values_df is None:
-            # compute mean value
-            values_df = (
-                self.obs_tidy.groupby(level=0, observed=True)
-                .mean()
-                .loc[
-                    self.categories_order
-                    if self.categories_order is not None
-                    else self.categories
-                ]
-            )
+            values_df = self._agg_df("mean")
+        
+        values_df = self._scale_df(standard_scale, values_df)
 
-            if standard_scale == "group":
-                values_df = values_df.sub(values_df.min(1), axis=0)
-                values_df = values_df.div(values_df.max(1), axis=0).fillna(0)
-            elif standard_scale == "var":
-                values_df -= values_df.min(0)
-                values_df = (values_df / values_df.max(0)).fillna(0)
-            elif standard_scale is None:
-                pass
-            else:
-                logg.warning("Unknown type for standard_scale, ignored")
-
-        self.values_df = values_df
+        self.values_df = values_df.loc[
+            categories_order 
+            if categories_order is not None 
+            else self.categories
+        ]
 
         self.cmap = self.DEFAULT_COLORMAP
         self.edge_color = self.DEFAULT_EDGE_COLOR

@@ -15,13 +15,8 @@ from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import (
-    _deprecated_scale,
-    _dk,
-    check_colornorm,
-    make_grid_spec,
-    savefig_or_show,
-)
+from ._utils import (_deprecated_scale, _dk, check_colornorm, make_grid_spec,
+                     savefig_or_show)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -225,22 +220,11 @@ class StackedViolin(BasePlot):
             norm=norm,
             **kwds,
         )
-
-        if standard_scale == "obs":
-            standard_scale = "group"
-            msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-        if standard_scale == "group":
-            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
-            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
-        elif standard_scale == "var":
-            self.obs_tidy -= self.obs_tidy.min(0)
-            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
-        elif standard_scale is None:
-            pass
-        else:
-            logg.warning("Unknown type for standard_scale, ignored")
-
+        # scale before aggregation
+        X = self._view.X.astype(float)
+        X = self._scale_df(standard_scale, X)
+        # replace view.X with the scaled values (NaNs => 0)
+        self._view.X = np.nan_to_num(X)
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
         self.row_palette = self.DEFAULT_ROW_PALETTE
@@ -386,22 +370,23 @@ class StackedViolin(BasePlot):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # StackedViolin object, for example once with swap_axes and other without
-        _matrix = self.obs_tidy.copy()
-
+        _matrix = pd.DataFrame(
+            self._view.X,
+            index=self._view.obs[self._group_key],
+            columns=self.var_names
+        )
+        
         if self.var_names_idx_order is not None:
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
         # get mean values for color and transform to color values
         # using colormap
-        _color_df = (
-            _matrix.groupby(level=0, observed=True)
-            .median()
-            .loc[
-                self.categories_order
-                if self.categories_order is not None
-                else self.categories
-            ]
-        )
+        _color_df = self._agg_df("median").loc[
+            self.categories_order 
+            if self.categories_order is not None 
+            else self.categories
+         ]
+        
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
