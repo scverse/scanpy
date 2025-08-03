@@ -14,8 +14,13 @@ from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _empty
 from ..get._aggregated import aggregate
-from ._anndata import (VarGroups, _plot_dendrogram, _plot_var_groups_brackets,
-                       _prepare_dataframe, _reorder_categories_after_dendrogram)
+from ._anndata import (
+    VarGroups,
+    _plot_dendrogram,
+    _plot_var_groups_brackets,
+    _prepare_dataframe,
+    _reorder_categories_after_dendrogram,
+)
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
@@ -140,7 +145,7 @@ class BasePlot:
         del var_group_labels, var_group_positions
         self.var_group_rotation = var_group_rotation
         self.width, self.height = figsize if figsize is not None else (None, None)
-        
+
         # still need this as pandas handles this procedure more optimally
         self.categories, obs_tidy = _prepare_dataframe(
             adata,
@@ -162,7 +167,6 @@ class BasePlot:
             var=pd.DataFrame(index=var_names),
         )
 
-        
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
             warn(
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
@@ -405,11 +409,13 @@ class BasePlot:
 
         _sort = sort is not None
         _ascending = sort == "ascending"
-        counts_df = self._view.obs[self._group_key].value_counts(sort=_sort, ascending=_ascending)
+        counts_df = self._view.obs[self._group_key].value_counts(
+            sort=_sort, ascending=_ascending
+        )
 
         if _sort:
             self.categories_order = list(counts_df.index)
-        
+
         self.plot_group_extra = {
             "kind": "group_totals",
             "width": size,
@@ -419,7 +425,6 @@ class BasePlot:
         }
         return self
 
-    
     def _agg_df(self, func, mask: np.ndarray | None = None) -> pd.DataFrame:
         """
         Aggregate self._view by self._group_key, running `func`
@@ -449,11 +454,11 @@ class BasePlot:
             arr = ag.layers[f]
             out[f] = pd.DataFrame(arr, index=self.categories, columns=self.var_names)
         return out
-    
+
     def _scale_df(
         self,
         standard_scale: Literal["var", "group"] | None = None,
-        df : pd.DataFrame | None = None
+        df: pd.DataFrame | None = None,
     ):
         """
         Performs scaling of `df` based on `standard_scale` parameter
@@ -473,7 +478,7 @@ class BasePlot:
         else:
             logg.warning("Unknown type for standard_scale, ignored")
         return df
-    
+
     @old_positionals("cmap")
     def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
         r"""Set visual style parameters.

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from matplotlib import colormaps, rcParams
 
-from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params, _empty
@@ -164,13 +163,11 @@ class MatrixPlot(BasePlot):
 
         if values_df is None:
             values_df = self._agg_df("mean")
-        
+
         values_df = self._scale_df(standard_scale, values_df)
 
         self.values_df = values_df.loc[
-            categories_order 
-            if categories_order is not None 
-            else self.categories
+            categories_order if categories_order is not None else self.categories
         ]
 
         self.cmap = self.DEFAULT_COLORMAP

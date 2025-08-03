@@ -9,14 +9,18 @@ from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 from packaging.version import Version
 
-from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import (_deprecated_scale, _dk, check_colornorm, make_grid_spec,
-                     savefig_or_show)
+from ._utils import (
+    _deprecated_scale,
+    _dk,
+    check_colornorm,
+    make_grid_spec,
+    savefig_or_show,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -371,22 +375,20 @@ class StackedViolin(BasePlot):
         # on the original data frames after repetitive calls to the
         # StackedViolin object, for example once with swap_axes and other without
         _matrix = pd.DataFrame(
-            self._view.X,
-            index=self._view.obs[self._group_key],
-            columns=self.var_names
+            self._view.X, index=self._view.obs[self._group_key], columns=self.var_names
         )
-        
+
         if self.var_names_idx_order is not None:
             _matrix = _matrix.iloc[:, self.var_names_idx_order]
 
         # get mean values for color and transform to color values
         # using colormap
         _color_df = self._agg_df("median").loc[
-            self.categories_order 
-            if self.categories_order is not None 
+            self.categories_order
+            if self.categories_order is not None
             else self.categories
-         ]
-        
+        ]
+
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
