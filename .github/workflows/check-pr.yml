@@ -32,7 +32,7 @@ jobs:
       - name: Check if milestone or “no milestone” label is present
         uses: flying-sheep/check@v1
         with:
-          success: ${{ github.actor == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
+          success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
         uses: kaisugi/action-regex-match@v1.0.0
         id: checked-relnotes
@@ -47,7 +47,7 @@ jobs:
     name: Check for release notes
     runs-on: ubuntu-latest
     needs: check-milestone
-    if: ${{ github.actor != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
+    if: ${{ github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
     steps:
       - uses: actions/checkout@v4
         with:
