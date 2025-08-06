@@ -51,12 +51,12 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7.5",
     "pandas >=2.0.3",
-    "scipy>=1.11.1,<1.16.0",
+    "scipy>=1.11.1",
     "seaborn>=0.13.2",
     "h5py>=3.8.0",
     "tqdm",
     "scikit-learn>=1.1.3",
-    "statsmodels>=0.14.4",
+    "statsmodels>=0.14.5",
     "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
     "networkx>=2.8.8",
     "natsort",
@@ -143,7 +143,7 @@ scanorama = [ "scanorama" ]                            # Scanorama dataset integ
 scrublet = [ "scikit-image>=0.20.0" ]                  # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2023.5.1" ]                    # Use the Dask parallelization engine
+dask = [ "dask[array]>=2023.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
