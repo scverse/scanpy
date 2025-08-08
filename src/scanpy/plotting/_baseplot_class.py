@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, overload
 from warnings import warn
 
 import numpy as np
+import pandas as pd
+from anndata import AnnData
 from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 
@@ -24,15 +27,14 @@ from ._anndata import (
 from ._utils import check_colornorm, make_grid_spec
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
     from typing import Literal, Self
 
-    import pandas as pd
-    from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
     from .._utils import Empty
+    from ..get._aggregated import AggType
     from ._utils import ColorLike, _AxesSubplot
 
     _VarNames = str | Sequence[str]
@@ -425,13 +427,24 @@ class BasePlot:
         }
         return self
 
-    def _agg_df(self, func, mask: np.ndarray | None = None) -> pd.DataFrame:
-        """
-        Aggregate self._view by self._group_key, running `func`
-        (or list of funcs) on the X‐matrix. Returns a DataFrame
-        (or dict of DataFrames) with index=self.categories, columns=self.var_names.
-        If mask is provided, it should be shape (n_groups, n_vars) and will
-        overwrite view.X before aggregating (useful for dot‐cutoff logic).
+    @overload
+    def _agg_df(
+        self, func: AggType, mask: np.ndarray | None = None
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def _agg_df(
+        self, func: Iterable[AggType], mask: np.ndarray | None = None
+    ) -> dict[str, pd.DataFrame]: ...
+
+    def _agg_df(
+        self, func: AggType | Iterable[AggType], mask: np.ndarray | None = None
+    ) -> pd.DataFrame | dict[str, pd.DataFrame]:
+        """Aggregate `self._view` by `self._group_key`.
+
+        Run `func` on X and eturn a DataFrame (or dict of DataFrames) with `index=self.categories`, `columns=self.var_names`.
+        If `mask` is provided, it should be shape `(n_groups, n_vars)` and will
+        overwrite view.X before aggregating (useful for dot-cutoff logic).
         """
         # make a fresh copy so we never mutate the master view
         view = self._view.copy()
@@ -456,13 +469,9 @@ class BasePlot:
         return out
 
     def _scale_df(
-        self,
-        standard_scale: Literal["var", "group"] | None = None,
-        df: pd.DataFrame | None = None,
-    ):
-        """
-        Performs scaling of `df` based on `standard_scale` parameter
-        """
+        self, df: pd.DataFrame, standard_scale: Literal["var", "group", None] = None
+    ) -> pd.DataFrame:
+        """Scale `df` based on `standard_scale` parameter."""
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"

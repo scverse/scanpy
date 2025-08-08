@@ -205,7 +205,7 @@ class DotPlot(BasePlot):
             else:
                 dot_color_df = self._agg_df("mean")
 
-            dot_color_df = self._scale_df(standard_scale, dot_color_df)
+            dot_color_df = self._scale_df(dot_color_df, standard_scale)
         else:
             # check that both matrices have the same shape
             if dot_color_df.shape != dot_size_df.shape:

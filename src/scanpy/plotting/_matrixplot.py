@@ -164,7 +164,7 @@ class MatrixPlot(BasePlot):
         if values_df is None:
             values_df = self._agg_df("mean")
 
-        values_df = self._scale_df(standard_scale, values_df)
+        values_df = self._scale_df(values_df, standard_scale)
 
         self.values_df = values_df.loc[
             categories_order if categories_order is not None else self.categories

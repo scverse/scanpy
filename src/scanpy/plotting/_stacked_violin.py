@@ -226,7 +226,7 @@ class StackedViolin(BasePlot):
         )
         # scale before aggregation
         X = self._view.X.astype(float)
-        X = self._scale_df(standard_scale, X)
+        X = self._scale_df(X, standard_scale)
         # replace view.X with the scaled values (NaNs => 0)
         self._view.X = np.nan_to_num(X)
         # Set default style parameters
