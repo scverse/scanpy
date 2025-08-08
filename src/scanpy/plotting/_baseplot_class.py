@@ -165,7 +165,7 @@ class BasePlot:
         self._group_key = obs_tidy.index.name
         self._view = AnnData(
             X=obs_tidy.values,
-            obs=obs_tidy.index.to_frame(index=False),
+            obs={self._group_key: obs_tidy.index},
             var=pd.DataFrame(index=var_names),
         )
 
