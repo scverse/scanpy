@@ -48,9 +48,9 @@ These classes allow fine tuning of visual parameters.
    :nosignatures:
    :toctree: generated/classes
 
-    pl.DotPlot
-    pl.MatrixPlot
-    pl.StackedViolin
+   pl.DotPlot
+   pl.MatrixPlot
+   pl.StackedViolin
 
 ```
 
@@ -130,6 +130,16 @@ Visualize clusters using one of the embedding methods passing e.g. `color='leide
    pl.paga
    pl.paga_path
    pl.paga_compare
+```
+
+Visualize hierarchical clustering results as a heatmap.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.correlation_matrix
 ```
 
 #### Marker genes
