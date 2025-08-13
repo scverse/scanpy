@@ -277,7 +277,7 @@ def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    filter_unexpressed_genes: bool = False,
+    filter_unexpressed_genes: bool | None = False,
     **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     """See `highly_variable_genes`.
