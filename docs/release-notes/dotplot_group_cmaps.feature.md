@@ -1,0 +1,1 @@
+- Added `group_cmaps` parameter to `sc.pl.dotplot` for custom per-group coloring.

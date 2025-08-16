@@ -499,7 +499,7 @@ def test_multiple_plots(image_comparer):
         "myeloid": ["CST3", "LYZ"],
     }
     fig, (ax1, ax2, ax3) = plt.subplots(
-        1, 3, figsize=(20, 5), gridspec_kw={"wspace": 0.7}
+        1, 3, figsize=(25, 5), gridspec_kw={"wspace": 0.5}
     )
     _ = sc.pl.stacked_violin(
         adata,
@@ -1821,3 +1821,75 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+
+def test_dotplot_group_cmaps(image_comparer):
+    """Check group_cmaps parameter with custom color maps per group."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    # Use markers with a good range of expression values to check color gradients
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1", "IMP3", "UBALD2", "LTB", "CLPP"]
+
+    # Define a complete set of colormaps for all groups that will be plotted
+    group_cmaps = {
+        "CD14+ Monocyte": "Greys",
+        "Dendritic": "Purples",
+        "CD8+ Cytotoxic T": "Reds",
+        "CD8+/CD45RA+ Naive Cytotoxic": "Greens",
+        "CD4+/CD45RA+/CD25- Naive T": "Oranges",
+        "CD4+/CD25 T Reg": "Blues",
+        "CD4+/CD45RO+ Memory": "hot",
+        "CD19+ B": "cool",
+        "CD56+ NK": "winter",
+        "CD34+": "copper",
+    }
+
+    # Call dotplot with new parameter
+    sc.pl.dotplot(
+        adata,
+        markers,
+        groupby="bulk_labels",
+        group_cmaps=group_cmaps,  # Define custom color maps for each group from 'groupby'
+        dendrogram=True,  # Test with dendrogram reordering
+        show=False,
+    )
+
+    # This will try to save the plot and compare it to a reference
+    save_and_compare_images("dotplot_group_cmaps")
+
+
+def test_dotplot_group_cmaps_swap_axes(image_comparer):
+    """Check that group_cmaps works with swapped axes."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    # Use markers with a good range of expression values to check color gradients
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1", "IMP3", "UBALD2", "LTB", "CLPP"]
+
+    # Define a complete set of colormaps for all groups that will be plotted
+    group_cmaps = {
+        "CD14+ Monocyte": "Greys",
+        "Dendritic": "Purples",
+        "CD8+ Cytotoxic T": "Reds",
+        "CD8+/CD45RA+ Naive Cytotoxic": "Greens",
+        "CD4+/CD45RA+/CD25- Naive T": "Oranges",
+        "CD4+/CD25 T Reg": "Blues",
+        "CD4+/CD45RO+ Memory": "hot",
+        "CD19+ B": "cool",
+        "CD56+ NK": "winter",
+        "CD34+": "copper",
+    }
+
+    sc.pl.dotplot(
+        adata,
+        markers,
+        groupby="bulk_labels",
+        group_cmaps=group_cmaps,
+        dendrogram=True,
+        swap_axes=True,  # Check that group_cmaps works with swapped axes
+        show=False,
+    )
+    save_and_compare_images("dotplot_group_cmaps_swap_axes")
