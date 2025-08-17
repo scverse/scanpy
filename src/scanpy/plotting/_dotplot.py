@@ -6,12 +6,19 @@ import numpy as np
 from matplotlib import colormaps
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import _dk, check_colornorm, fix_kwds, make_grid_spec, savefig_or_show
+from ._utils import (
+    _create_white_to_color_gradient,
+    _dk,
+    check_colornorm,
+    fix_kwds,
+    make_grid_spec,
+    savefig_or_show,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -156,6 +163,7 @@ class DotPlot(BasePlot):
         vmax: float | None = None,
         vcenter: float | None = None,
         norm: Normalize | None = None,
+        group_colors: Mapping[str, ColorLike] | None = None,
         **kwds,
     ) -> None:
         BasePlot.__init__(
@@ -182,13 +190,70 @@ class DotPlot(BasePlot):
             **kwds,
         )
 
+        # Set default style parameters
+        self.cmap = self.DEFAULT_COLORMAP
+        self.dot_max = self.DEFAULT_DOT_MAX
+        self.dot_min = self.DEFAULT_DOT_MIN
+        self.smallest_dot = self.DEFAULT_SMALLEST_DOT
+        self.largest_dot = self.DEFAULT_LARGEST_DOT
+        self.color_on = self.DEFAULT_COLOR_ON
+        self.size_exponent = self.DEFAULT_SIZE_EXPONENT
+        self.grid = False
+        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
+        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
+
+        self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
+        self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
+
+        # set legend defaults
+        self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
+        self.size_title = self.DEFAULT_SIZE_LEGEND_TITLE
+        self.legends_width = self.DEFAULT_LEGENDS_WIDTH
+        self.show_size_legend = True
+        self.show_colorbar = True
+
+        # Store parameters needed by helper methods and prepare the dot data.
+        self.standard_scale = standard_scale
+        self.expression_cutoff = expression_cutoff
+        self.mean_only_expressed = mean_only_expressed
+        self.group_colors = group_colors
+        self.group_cmaps = None
+
+        self.dot_color_df, self.dot_size_df = self._prepare_dot_data(
+            dot_color_df, dot_size_df
+        )
+
+        if self.group_colors is not None:
+            self.group_cmaps = {}
+            plotted_groups = self.dot_color_df.index
+            missing_groups = []
+            for group in plotted_groups:
+                if group in self.group_colors:
+                    self.group_cmaps[group] = _create_white_to_color_gradient(
+                        self.group_colors[group]
+                    )
+                else:
+                    self.group_cmaps[group] = self.cmap
+                    missing_groups.append(group)
+            if missing_groups:
+                warn(
+                    f"The following groups will use the default colormap as no "
+                    f"specific colors were assigned: {missing_groups}",
+                    UserWarning,
+                )
+
+    def _prepare_dot_data(self, dot_color_df, dot_size_df):
+        """Calculate the dataframes for dot size and color.
+        
+        Refactored to helper to satisfy complexity checks.
+        """
         # for if category defined by groupby (if any) compute for each var_name
         # 1. the fraction of cells in the category having a value >expression_cutoff
         # 2. the mean value over the category
 
         # 1. compute fraction of cells having value > expression_cutoff
         # transform obs_tidy into boolean matrix using the expression_cutoff
-        obs_bool = self.obs_tidy > expression_cutoff
+        obs_bool = self.obs_tidy > self.expression_cutoff
 
         # compute the sum per group which in the boolean matrix this is the number
         # of values >expression_cutoff, and divide the result by the total number of
@@ -201,7 +266,7 @@ class DotPlot(BasePlot):
 
         if dot_color_df is None:
             # 2. compute mean expression value value
-            if mean_only_expressed:
+            if self.mean_only_expressed:
                 dot_color_df = (
                     self.obs_tidy
                     .mask(~obs_bool)
@@ -212,13 +277,13 @@ class DotPlot(BasePlot):
             else:
                 dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
 
-            if standard_scale == "group":
+            if self.standard_scale == "group":
                 dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
                 dot_color_df = dot_color_df.div(dot_color_df.max(1), axis=0).fillna(0)
-            elif standard_scale == "var":
+            elif self.standard_scale == "var":
                 dot_color_df -= dot_color_df.min(0)
                 dot_color_df = (dot_color_df / dot_color_df.max(0)).fillna(0)
-            elif standard_scale is None:
+            elif self.standard_scale is None:
                 pass
             else:
                 logg.warning("Unknown type for standard_scale, ignored")
@@ -250,35 +315,17 @@ class DotPlot(BasePlot):
             # using the order from the doc_size_df
             dot_color_df = dot_color_df.loc[dot_size_df.index][dot_size_df.columns]
 
-        self.dot_color_df, self.dot_size_df = (
-            df.loc[
-                categories_order if categories_order is not None else self.categories
-            ]
-            for df in (dot_color_df, dot_size_df)
+        # Use self.categories_order if set, else self.categories
+        order = (
+            self.categories_order
+            if self.categories_order is not None
+            else self.categories
         )
-        self.standard_scale = standard_scale
+        dot_color_df, dot_size_df = (
+            df.loc[order] for df in (dot_color_df, dot_size_df)
+        )
 
-        # Set default style parameters
-        self.cmap = self.DEFAULT_COLORMAP
-        self.dot_max = self.DEFAULT_DOT_MAX
-        self.dot_min = self.DEFAULT_DOT_MIN
-        self.smallest_dot = self.DEFAULT_SMALLEST_DOT
-        self.largest_dot = self.DEFAULT_LARGEST_DOT
-        self.color_on = self.DEFAULT_COLOR_ON
-        self.size_exponent = self.DEFAULT_SIZE_EXPONENT
-        self.grid = False
-        self.plot_x_padding = self.DEFAULT_PLOT_X_PADDING
-        self.plot_y_padding = self.DEFAULT_PLOT_Y_PADDING
-
-        self.dot_edge_color = self.DEFAULT_DOT_EDGECOLOR
-        self.dot_edge_lw = self.DEFAULT_DOT_EDGELW
-
-        # set legend defaults
-        self.color_legend_title = self.DEFAULT_COLOR_LEGEND_TITLE
-        self.size_title = self.DEFAULT_SIZE_LEGEND_TITLE
-        self.legends_width = self.DEFAULT_LEGENDS_WIDTH
-        self.show_size_legend = True
-        self.show_colorbar = True
+        return dot_color_df, dot_size_df
 
     @old_positionals(
         "cmap",
@@ -537,12 +584,28 @@ class DotPlot(BasePlot):
         # third row: spacer to avoid color and size legend titles to overlap
         # fourth row: colorbar
 
+        # Define base heights for legend components as a fraction of figure height
         cbar_legend_height = self.min_figure_height * 0.08
         size_legend_height = self.min_figure_height * 0.27
         spacer_height = self.min_figure_height * 0.3
 
+        # If group_colors is used, dynamically calculate the total height needed for all colorbars
+        if self.group_cmaps is not None:
+            per_cbar_height = (
+                self.min_figure_height * 0.12
+            )  # Use a slightly larger height for better spacing
+            n_cbars = len(self.dot_color_df.index)
+            cbar_legend_height = per_cbar_height * n_cbars
+
+        # Calculate the height of the top spacer to push content down
+        top_spacer_height = (
+            self.height - size_legend_height - cbar_legend_height - spacer_height
+        )
+        top_spacer_height = max(top_spacer_height, 0)  # prevent negative height
+
+        # Create the 4-row GridSpec for the legend area
         height_ratios = [
-            self.height - size_legend_height - cbar_legend_height - spacer_height,
+            top_spacer_height,
             size_legend_height,
             spacer_height,
             cbar_legend_height,
@@ -550,17 +613,79 @@ class DotPlot(BasePlot):
         fig, legend_gs = make_grid_spec(
             legend_ax, nrows=4, ncols=1, height_ratios=height_ratios
         )
+        # Hide the frame of the main legend container axis for a cleaner look
+        legend_ax.set_axis_off()
 
+        # Plot size legend into the second row of the grid
         if self.show_size_legend:
             size_legend_ax = fig.add_subplot(legend_gs[1])
             self._plot_size_legend(size_legend_ax)
             return_ax_dict["size_legend_ax"] = size_legend_ax
 
+        # Plot colorbar(s) into the fourth row of the grid
         if self.show_colorbar:
-            color_legend_ax = fig.add_subplot(legend_gs[3])
+            if self.group_cmaps is None:
+                color_legend_ax = fig.add_subplot(legend_gs[3])
+                self._plot_colorbar(color_legend_ax, normalize)
+                return_ax_dict["color_legend_ax"] = color_legend_ax
+            else:
+                self._plot_stacked_colorbars(fig, legend_gs[3], normalize)
+                return_ax_dict["color_legend_ax"] = legend_ax
 
-            self._plot_colorbar(color_legend_ax, normalize)
-            return_ax_dict["color_legend_ax"] = color_legend_ax
+    def _plot_stacked_colorbars(self, fig, colorbar_area_spec, normalize):
+        """Plot the stacked colorbars legend when using group_colors."""
+        import matplotlib as mpl
+        import matplotlib.colorbar
+        from matplotlib.cm import ScalarMappable
+
+        plotted_groups = self.dot_color_df.index
+        groups_to_plot = list(plotted_groups)
+        n_cbars = len(groups_to_plot)
+
+        # Create a sub-grid just for the colorbars
+        # Create an empty column to keep colorbars at 3/4 of legend width (1.5 like default with dp.legend_width = 2.0)
+        colorbar_gs = colorbar_area_spec.subgridspec(
+            n_cbars, 2, hspace=0.6, width_ratios=[3, 1]
+        )
+
+        # Create a dedicated normalizer for the legend
+        vmin = self.dot_color_df.values.min()
+        vmax = self.dot_color_df.values.max()
+        legend_norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+
+        for i, group_name in enumerate(groups_to_plot):
+            ax = fig.add_subplot(
+                colorbar_gs[i, 0]
+            )  # Place the colorbar Axes in the first, wider column
+            
+            # self.group_cmaps[group_name] is already a Colormap object (or string from fallback)
+            cmap = self.group_cmaps[group_name]
+            if isinstance(cmap, str):
+                cmap = colormaps.get_cmap(cmap)
+                
+            mappable = ScalarMappable(norm=legend_norm, cmap=cmap)
+
+            cb = matplotlib.colorbar.Colorbar(
+                ax, mappable=mappable, orientation="horizontal"
+            )
+            cb.ax.xaxis.set_tick_params(labelsize="small")
+
+            ax.text(
+                1.1,
+                0.5,
+                group_name,
+                ha="left",
+                va="center",
+                transform=ax.transAxes,
+                fontsize="small",
+            )
+
+            if i == 0:
+                cb.ax.set_title(self.color_legend_title, fontsize="small")
+
+            if i < n_cbars - 1:
+                cb.ax.xaxis.set_ticklabels([])
+                cb.ax.xaxis.set_ticks([])
 
     def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
@@ -587,6 +712,7 @@ class DotPlot(BasePlot):
             _color_df,
             ax,
             cmap=self.cmap,
+            group_cmaps=self.group_cmaps,
             color_on=self.color_on,
             dot_max=self.dot_max,
             dot_min=self.dot_min,
@@ -617,6 +743,7 @@ class DotPlot(BasePlot):
         dot_ax: Axes,
         *,
         cmap: Colormap | str | None,
+        group_cmaps: Mapping[str, str] | None,
         color_on: Literal["dot", "square"],
         dot_max: float | None,
         dot_min: float | None,
@@ -739,47 +866,85 @@ class DotPlot(BasePlot):
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
 
-        if color_on == "square":
-            if edge_color is None:
-                from seaborn.utils import relative_luminance
+        if group_cmaps is None:
+            # Plotting logic for single colormap
+            if color_on == "square":
+                if edge_color is None:
+                    from seaborn.utils import relative_luminance
 
-                # use either black or white for the edge color
-                # depending on the luminance of the background
-                # square color
-                edge_color = []
-                for color_value in cmap(normalize(mean_flat)):
-                    lum = relative_luminance(color_value)
-                    edge_color.append(".15" if lum > 0.408 else "w")
+                    # use either black or white for the edge color
+                    # depending on the luminance of the background
+                    # square color
+                    edge_color = []
+                    for color_value in cmap(normalize(mean_flat)):
+                        lum = relative_luminance(color_value)
+                        edge_color.append(".15" if lum > 0.408 else "w")
 
-            edge_lw = 1.5 if edge_lw is None else edge_lw
+                edge_lw = 1.5 if edge_lw is None else edge_lw
 
-            # first make a heatmap similar to `sc.pl.matrixplot`
-            # (squares with the asigned colormap). Circles will be plotted
-            # on top
-            dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
-            for axis in ["top", "bottom", "left", "right"]:
-                dot_ax.spines[axis].set_linewidth(1.5)
-            kwds = fix_kwds(
-                kwds,
-                s=size,
-                linewidth=edge_lw,
-                facecolor="none",
-                edgecolor=edge_color,
-            )
-            dot_ax.scatter(x, y, **kwds)
+                # first make a heatmap similar to `sc.pl.matrixplot`
+                # (squares with the asigned colormap). Circles will be plotted
+                # on top
+                dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
+                for axis in ["top", "bottom", "left", "right"]:
+                    dot_ax.spines[axis].set_linewidth(1.5)
+                # Create a temporary kwargs dict for this group's scatter call
+                # to avoid modifying the original kwds dictionary within the loop.
+                kwds_scatter = fix_kwds(
+                    kwds,
+                    s=size,
+                    linewidth=edge_lw,
+                    facecolor="none",
+                    edgecolor=edge_color,
+                )
+                dot_ax.scatter(x, y, **kwds_scatter)
+            else:
+                edge_color = "none" if edge_color is None else edge_color
+                edge_lw = 0.0 if edge_lw is None else edge_lw
+                color = cmap(normalize(mean_flat))
+                kwds_scatter = fix_kwds(
+                    kwds,
+                    s=size,
+                    color=color,
+                    linewidth=edge_lw,
+                    edgecolor=edge_color,
+                )
+                dot_ax.scatter(x, y, **kwds_scatter)
         else:
-            edge_color = "none" if edge_color is None else edge_color
-            edge_lw = 0.0 if edge_lw is None else edge_lw
+            # Plotting logic for group-specific colormaps
+            groups_iter = dot_color.columns if are_axes_swapped else dot_color.index
+            n_vars = dot_color.shape[0] if are_axes_swapped else dot_color.shape[1]
+            n_groups = len(groups_iter)
 
-            color = cmap(normalize(mean_flat))
-            kwds = fix_kwds(
-                kwds,
-                s=size,
-                color=color,
-                linewidth=edge_lw,
-                edgecolor=edge_color,
-            )
-            dot_ax.scatter(x, y, **kwds)
+            # Here we loop through each group and plot it with its own cmap
+            for group_idx, group_name in enumerate(groups_iter):
+                group_cmap = group_cmaps[group_name]
+                # Handle fallback case where group_cmap might be a string
+                if isinstance(group_cmap, str):
+                    group_cmap = colormaps.get_cmap(group_cmap)
+
+                # Slice the flattened data arrays correctly depending on orientation
+                if not are_axes_swapped:
+                    # Slicing data for a whole row
+                    indices = slice(group_idx * n_vars, (group_idx + 1) * n_vars)
+                else:
+                    # Slicing data for a whole column
+                    indices = slice(group_idx, None, n_groups)
+
+                x_group = x[indices]
+                y_group = y[indices]
+                size_group = size[indices]
+                mean_group = mean_flat[indices]
+
+                color = group_cmap(normalize(mean_group))
+                kwds_scatter = fix_kwds(
+                    kwds,
+                    s=size_group,
+                    color=color,
+                    linewidth=edge_lw,
+                    edgecolor=edge_color,
+                )
+                dot_ax.scatter(x_group, y_group, **kwds_scatter)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5
         dot_ax.set_yticks(y_ticks)
@@ -878,6 +1043,7 @@ def dotplot(  # noqa: PLR0913
     norm: Normalize | None = None,
     # Style parameters
     cmap: Colormap | str | None = DotPlot.DEFAULT_COLORMAP,
+    group_colors: Mapping[str, ColorLike] | None = None,
     dot_max: float | None = DotPlot.DEFAULT_DOT_MAX,
     dot_min: float | None = DotPlot.DEFAULT_DOT_MIN,
     smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
@@ -916,6 +1082,14 @@ def dotplot(  # noqa: PLR0913
     mean_only_expressed
         If True, gene expression is averaged only over the cells
         expressing the given genes.
+    group_colors
+        A mapping of group names to colors.
+        e.g. `{{'T-cell': 'blue', 'B-cell': '#aa40fc'}}`.
+        Colors can be specified as any valid matplotlib color.
+        If `group_colors` is used, a colormap is generated from white
+        to the given color for each group.
+        If a group is not present in the dictionary, the value of `cmap`
+        is used.
     dot_max
         If ``None``, the maximum dot size is set to the maximum fraction value found
         (e.g. 0.6). If given, the value should be a number between 0 and 1.
@@ -984,6 +1158,14 @@ def dotplot(  # noqa: PLR0913
     # instead of `cmap`
     cmap = kwds.pop("color_map", cmap)
 
+    # Warn if both cmap and group_colors are specified
+    if group_colors is not None and cmap != DotPlot.DEFAULT_COLORMAP:
+        warn(
+            "Both `cmap` and `group_colors` are specified. "
+            "`group_colors` takes precedence for the specified groups.",
+            UserWarning,
+        )
+
     dp = DotPlot(
         adata,
         var_names,
@@ -1003,6 +1185,7 @@ def dotplot(  # noqa: PLR0913
         var_group_rotation=var_group_rotation,
         layer=layer,
         dot_color_df=dot_color_df,
+        group_colors=group_colors,
         ax=ax,
         vmin=vmin,
         vmax=vmax,
@@ -1022,7 +1205,9 @@ def dotplot(  # noqa: PLR0913
         dot_min=dot_min,
         smallest_dot=smallest_dot,
         dot_edge_lw=kwds.pop("linewidth", _empty),
-    ).legend(colorbar_title=colorbar_title, size_title=size_title)
+    ).legend(
+        colorbar_title=colorbar_title, size_title=size_title, width=2.0
+    )  # Width 2.0 to avoid size legend circles to overlap
 
     if return_fig:
         return dp

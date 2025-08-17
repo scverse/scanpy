@@ -1856,3 +1856,56 @@ def test_violin_scale_warning(monkeypatch):
 def test_dogplot() -> None:
     """Test that the dogplot function runs without errors."""
     sc.pl.dogplot()
+
+
+params_dotplot_group_cmaps = [
+    pytest.param("dotplot_group_cmaps", False, id="default"),
+    pytest.param("dotplot_group_cmaps_swap_axes", True, id="swap_axes"),
+]
+
+
+@pytest.mark.parametrize(("name", "swap_axes"), params_dotplot_group_cmaps)
+def test_dotplot_group_cmaps(image_comparer, name, swap_axes):
+    """Check group_cmaps parameter with custom color maps per group."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1", "IMP3", "UBALD2", "LTB", "CLPP"]
+
+    group_cmaps = {
+        "CD14+ Monocyte": "Greys",
+        "Dendritic": "Purples",
+        "CD8+ Cytotoxic T": "Reds",
+        "CD8+/CD45RA+ Naive Cytotoxic": "Greens",
+        "CD4+/CD45RA+/CD25- Naive T": "Oranges",
+        "CD4+/CD25 T Reg": "Blues",
+        "CD4+/CD45RO+ Memory": "hot",
+        "CD19+ B": "cool",
+        "CD56+ NK": "winter",
+        "CD34+": "copper",
+    }
+
+    sc.pl.dotplot(
+        adata,
+        markers,
+        groupby="bulk_labels",
+        group_cmaps=group_cmaps,
+        dendrogram=True,
+        swap_axes=swap_axes,
+        show=False,
+    )
+    save_and_compare_images(name)
+
+
+def test_dotplot_group_cmaps_raises_error():
+    """Check that a ValueError is raised for missing groups in group_cmaps."""
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    # Intentionally incomplete dictionary to trigger the error
+    group_cmaps = {"CD19+ B": "Blues"}
+
+    with pytest.raises(ValueError, match="missing from the `group_cmaps` dictionary"):
+        sc.pl.dotplot(
+            adata, markers, groupby="bulk_labels", group_cmaps=group_cmaps, show=False
+        )
