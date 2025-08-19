@@ -289,8 +289,8 @@ def _highly_variable_genes_single_batch(
 
     """
     cutoff = kwargs["cutoff"]
-    flavor = kwargs.get("flavor", "seurat")
-    n_bins = kwargs.get("n_bins", 20)
+    flavor = kwargs["flavor"]
+    n_bins = kwargs["n_bins"]
 
     X = _get_obs_rep(adata, layer=layer)
 
