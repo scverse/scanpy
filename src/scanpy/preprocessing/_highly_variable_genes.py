@@ -3,13 +3,13 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from inspect import signature
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from fast_array_utils.stats import mean_var
+from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, old_positionals
@@ -20,11 +20,15 @@ from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable
+    from typing import Concatenate, Literal, ParamSpec, TypeVar, Unpack
 
     from numpy.typing import NDArray
 
     from .._types import HVGFlavor
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -77,7 +81,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             stacklevel=3,
         )
 
-    df["means"], df["variances"] = mean_var(data, axis=0, correction=1)
+    df["means"], df["variances"] = stats.mean_var(data, axis=0, correction=1)
 
     if batch_key is None:
         batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
@@ -88,7 +92,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
-        mean, var = mean_var(data_batch, axis=0, correction=1)
+        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -263,13 +267,18 @@ class _Cutoffs:
         )
 
 
+class HvgArgs(TypedDict):
+    cutoff: _Cutoffs | int
+    n_bins: int
+    flavor: Literal["seurat", "cell_ranger"]
+
+
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    cutoff: _Cutoffs | int,
-    n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger"] = "seurat",
+    filter_unexpressed_genes: bool = False,
+    **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     """See `highly_variable_genes`.
 
@@ -279,7 +288,25 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
 
     """
+    cutoff = kwargs["cutoff"]
+    flavor = kwargs["flavor"]
+    n_bins = kwargs["n_bins"]
+
     X = _get_obs_rep(adata, layer=layer)
+
+    # Filter to genes that are expressed
+    if filter_unexpressed_genes:
+        with settings.verbosity.override(Verbosity.error):
+            # TODO use groupby or so instead of materialize_as_ndarray
+            filt, _ = materialize_as_ndarray(
+                filter_genes(X, min_cells=1, inplace=False)
+            )
+    else:
+        filt = np.ones(X.shape[1], dtype=bool)
+
+    n_removed = np.sum(~filt)
+    if n_removed:
+        X = X[:, filt].copy()
 
     if hasattr(X, "_view_args"):  # AnnData array view
         # For compatibility with anndata<0.9
@@ -295,7 +322,7 @@ def _highly_variable_genes_single_batch(
         else:
             X = np.expm1(X)
 
-    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    mean, var = materialize_as_ndarray(stats.mean_var(X, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -314,13 +341,25 @@ def _highly_variable_genes_single_batch(
     # actually do the normalization
     df["dispersions_norm"] = (df["dispersions"] - disp_stats["avg"]) / disp_stats["dev"]
     df["highly_variable"] = _subset_genes(
-        adata,
+        adata[:, filt],
         mean=mean,
         dispersion_norm=df["dispersions_norm"].to_numpy(),
         cutoff=cutoff,
     )
 
-    df.index = adata.var_names
+    df.index = adata[:, filt].var_names
+
+    if n_removed > 0:
+        # df.reset_index(drop=False, inplace=True, names=["gene"])
+        # Add 0 values for genes that were filtered out
+        missing_hvg = pd.DataFrame(
+            np.zeros((n_removed, len(df.columns))),
+            columns=df.columns,
+        )
+        missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
+        missing_hvg.index = adata.var_names[~filt]
+        df = pd.concat([df, missing_hvg]).loc[adata.var_names]
+
     return df
 
 
@@ -428,56 +467,51 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
     return x[n - 1]
 
 
-def _highly_variable_genes_batched(
+def _per_batch_func(
+    func: Callable[Concatenate[AnnData, P], R],
     adata: AnnData,
-    batch_key: str,
-    *,
-    layer: str | None,
-    n_bins: int,
-    flavor: Literal["seurat", "cell_ranger"],
-    cutoff: _Cutoffs | int,
+    batch_mask: pd.Series[bool],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> R:
+    return func(adata[batch_mask].copy(), *args, **kwargs)
+
+
+def _highly_variable_genes_batched(
+    adata: AnnData, batch_key: str, *, layer: str | None, **kwargs: Unpack[HvgArgs]
 ) -> pd.DataFrame:
+    cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
-    dfs = []
-    gene_list = adata.var_names
-    for batch in batches:
-        adata_subset = adata[adata.obs[batch_key] == batch]
+    X = _get_obs_rep(adata, layer=layer)
 
-        # Filter to genes that are in the dataset
-        with settings.verbosity.override(Verbosity.error):
-            # TODO use groupby or so instead of materialize_as_ndarray
-            filt, _ = materialize_as_ndarray(
-                filter_genes(
-                    _get_obs_rep(adata_subset, layer=layer),
-                    min_cells=1,
-                    inplace=False,
-                )
-            )
+    func = _per_batch_func
+    if is_dask := isinstance(X, DaskArray):
+        from dask import delayed
 
-        adata_subset = adata_subset[:, filt]
+        func = delayed(_per_batch_func)
 
-        hvg = _highly_variable_genes_single_batch(
-            adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+    dfs = (
+        func(
+            _highly_variable_genes_single_batch,
+            adata=adata,
+            batch_mask=adata.obs[batch_key] == batch,
+            layer=layer,
+            filter_unexpressed_genes=True,
+            **kwargs,
         )
-        hvg.reset_index(drop=False, inplace=True, names=["gene"])
+        for batch in batches
+    )
 
-        if (n_removed := np.sum(~filt)) > 0:
-            # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(
-                np.zeros((n_removed, len(hvg.columns))),
-                columns=hvg.columns,
-            )
-            missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
-            missing_hvg["gene"] = gene_list[~filt]
-            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
+    if is_dask:
+        from dask import compute
 
-        dfs.append(hvg)
+        dfs = (compute(df)[0] for df in dfs)
 
     df = pd.concat(dfs, axis=0)
 
     df["highly_variable"] = df["highly_variable"].astype(int)
-    df = df.groupby("gene", observed=True).agg(
+    df = df.groupby(df.index, observed=True).agg(
         dict(
             means="mean",
             dispersions="mean",
@@ -686,9 +720,14 @@ def highly_variable_genes(  # noqa: PLR0913
     )
     del min_disp, max_disp, min_mean, max_mean, n_top_genes
 
-    if batch_key is None:
+    if not batch_key:
         df = _highly_variable_genes_single_batch(
-            adata, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+            adata,
+            layer=layer,
+            cutoff=cutoff,
+            n_bins=n_bins,
+            flavor=flavor,
+            filter_unexpressed_genes=False,
         )
     else:
         df = _highly_variable_genes_batched(
