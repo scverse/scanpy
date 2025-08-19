@@ -572,6 +572,7 @@ def highly_variable_genes(  # noqa: PLR0913
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
+    filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
@@ -652,6 +653,9 @@ def highly_variable_genes(  # noqa: PLR0913
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. For `flavor = 'seurat_v3_paper'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
+    filter_unexpressed_genes
+        If `True`, remove genes that are not expressed in at least one cell from highly variable genes computation (does NOT remove the gene in-place).
+        Disabled by default and ignored if `batch_key` is set, since filtering always enabled for batch-aware mode.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
@@ -727,9 +731,16 @@ def highly_variable_genes(  # noqa: PLR0913
             cutoff=cutoff,
             n_bins=n_bins,
             flavor=flavor,
-            filter_unexpressed_genes=False,
+            filter_unexpressed_genes=filter_unexpressed_genes or False,
         )
     else:
+        if filter_unexpressed_genes is False:
+            warnings.warn(
+                f"filter_unexpressed_genes is set to False, but will ignored for batch-aware {flavor=!r} HVG computation",
+                UserWarning,
+                stacklevel=3,
+            )
+        # filter_unexpressed_genes will not get passed to _highly_variable_genes_batched since it's always True for that function
         df = _highly_variable_genes_batched(
             adata, batch_key, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
