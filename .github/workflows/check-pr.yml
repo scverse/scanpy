@@ -38,7 +38,7 @@ jobs:
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
-          regex: '^\s*- \[x\] Release notes not necessary because:(.*)$'
+          regex: '^\s*- \[x\].*Release notes.*not necessary because:(.*)$'
           flags: m
     outputs:
       no-relnotes-reason: ${{ steps.checked-relnotes.outputs.group1 }}
