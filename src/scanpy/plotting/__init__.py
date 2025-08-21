@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .._compat import deprecated
 from . import palettes
 from ._anndata import (
     clustermap,
@@ -98,11 +99,12 @@ __all__ = [
     "sim",
     "spatial",
     "stacked_violin",
-    "timeseries",
-    "timeseries_as_heatmap",
-    "timeseries_subplot",
     "tracksplot",
     "tsne",
     "umap",
     "violin",
 ]
+
+timeseries = deprecated("Use `dpt_timeseries`.")(timeseries)
+timeseries_as_heatmap = deprecated("Use `dpt_timeseries`.")(timeseries_as_heatmap)
+timeseries_subplot = deprecated("Use `dpt_timeseries`.")(timeseries_subplot)
