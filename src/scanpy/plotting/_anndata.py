@@ -1868,7 +1868,7 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     norm: Normalize | None = None,
     **kwds,
 ) -> list[Axes] | None:
-    """Plot the correlation matrix computed as part of `sc.tl.dendrogram`.
+    """Plot the correlation matrix computed as part of :func:`scanpy.tl.dendrogram`.
 
     Parameters
     ----------
