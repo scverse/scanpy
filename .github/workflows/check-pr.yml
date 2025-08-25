@@ -30,7 +30,7 @@ jobs:
         with:
           success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
-        uses: kaisugi/action-regex-match@v1.0.0
+        uses: kaisugi/action-regex-match@v1.0.1
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
