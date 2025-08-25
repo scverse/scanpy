@@ -103,11 +103,26 @@ jobs:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.x"
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*
+
   check:
     if: always()
     needs:
       - get-environments
       - test
+      - build
     runs-on: ubuntu-latest
     steps:
       - uses: re-actors/alls-green@release/v1

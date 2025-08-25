@@ -3,7 +3,6 @@ name: Publish Python Package
 on:
   release:
     types: [published]
-  pull_request:
 
 env:
   FORCE_COLOR: "1"
@@ -26,4 +25,3 @@ jobs:
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
-        if: ${{ github.event_name == 'release' }}
