@@ -18,10 +18,10 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-python@v5
         with:
-          enable-cache: false
           python-version: "3.x"
+      - uses: astral-sh/setup-uv@v6
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1

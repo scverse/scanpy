@@ -110,10 +110,12 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
       - uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: false
-          python-version: "3.x"
+          enable-cache: true
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
 
