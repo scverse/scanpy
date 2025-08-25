@@ -3,13 +3,10 @@ name: Publish Python Package
 on:
   release:
     types: [published]
+  pull_request:
 
 env:
   FORCE_COLOR: "1"
-
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
 
 jobs:
   publish:
@@ -18,14 +15,15 @@ jobs:
     permissions:
       id-token: write # to authenticate as Trusted Publisher to pypi.org
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           filter: blob:none
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: false
           python-version: "3.x"
-          cache: "pip"
-      - run: pip install build
-      - run: python -m build
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
+        if: ${{ github.event_name == 'release' }}

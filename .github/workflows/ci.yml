@@ -15,21 +15,17 @@ env:
   # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
   UV_COMPILE_BYTECODE: "1"
 
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
-
 jobs:
   get-environments:
     runs-on: ubuntu-latest
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
       - id: get-envs
@@ -54,12 +50,12 @@ jobs:
     env:  # environment variable for use in codecov’s env_vars tagging
       ENV_NAME: ${{ matrix.env.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           filter: blob:none
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           python-version: ${{ matrix.env.python }}
@@ -107,30 +103,13 @@ jobs:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
 
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          filter: blob:none
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
-      - run: uvx --from build pyproject-build --sdist --wheel .
-      - run: uvx twine check dist/*
-
   check:
     if: always()
     needs:
       - get-environments
       - test
-      - build
     runs-on: ubuntu-latest
     steps:
-        - uses: re-actors/alls-green@release/v1
-          with:
-            jobs: ${{ toJSON(needs) }}
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
