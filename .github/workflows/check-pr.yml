@@ -18,15 +18,11 @@ on:
       # code change (e.g. this workflow)
       - synchronize
 
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
-
 jobs:
   # This job verifies that the milestone is present or not necessary
   # and determines if “check-relnotes” needs to be run.
   check-milestone:
-    name: Check Milestone
+    name: Check title, milestone, and labels
     runs-on: ubuntu-latest
     steps:
       - name: Check if milestone or “no milestone” label is present
@@ -40,6 +36,10 @@ jobs:
           text: ${{ github.event.pull_request.body }}
           regex: '^\s*- \[x\].*Release notes.*not necessary because:(.*)$'
           flags: m
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v6
+        env: # Needs repo options: “Squash and merge” with commit message set to “PR title”
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       no-relnotes-reason: ${{ steps.checked-relnotes.outputs.group1 }}
   # This job verifies that the relevant release notes file has been modified.
