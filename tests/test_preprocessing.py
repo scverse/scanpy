@@ -1,24 +1,64 @@
 from __future__ import annotations
 
-from itertools import product
+import warnings
+from contextlib import nullcontext
+from importlib.util import find_spec
+from pathlib import Path
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData
+from anndata import AnnData, ImplicitModificationWarning
 from anndata.tests.helpers import asarray, assert_equal
+from fast_array_utils import conv
 from numpy.testing import assert_allclose
-from scipy import sparse as sp
-from scipy.sparse import issparse
+from packaging.version import Version
+from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSBase, pkg_version
 from testing.scanpy._helpers import (
-    anndata_v0_8_constructor_compat,
     check_rep_mutation,
     check_rep_results,
+    maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any, Literal
+
+    from numpy.typing import DTypeLike, NDArray
+
+
+class _MatrixFormat(NamedTuple):
+    callback: Callable[[NDArray], CSBase | NDArray]
+    is_sparse: bool
+
+    def __call__(self, x: NDArray) -> CSBase | NDArray:
+        return self.callback(x)
+
+
+HERE = Path(__file__).parent
+DATA_PATH = HERE / "_data"
+
+
+@pytest.fixture(params=[np.asarray, sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
+def count_matrix_format(request: pytest.FixtureRequest) -> _MatrixFormat:
+    is_sparse = isinstance(request.param, type) and issubclass(request.param, CSBase)
+    return _MatrixFormat(request.param, is_sparse=is_sparse)
+
+
+@pytest.fixture(params=[np.int64, np.float32, np.float64])
+def dtype(request: pytest.FixtureRequest) -> DTypeLike:
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["zero_center", "no_zero_center"])
+def zero_center(request: pytest.FixtureRequest) -> bool:
+    return request.param
 
 
 def test_log1p(tmp_path):
@@ -52,147 +92,234 @@ def base(request):
     return request.param
 
 
-def test_log1p_rep(count_matrix_format, base, dtype):
+def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -> None:
     X = count_matrix_format(
-        np.abs(sp.random(100, 200, density=0.3, dtype=dtype)).toarray()
+        np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
     check_rep_mutation(sc.pp.log1p, X, base=base)
     check_rep_results(sc.pp.log1p, X, base=base)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_mean_var(array_type):
-    pbmc = pbmc3k()
-    pbmc.X = array_type(pbmc.X)
-
-    true_mean = np.mean(asarray(pbmc.X), axis=0)
-    true_var = np.var(asarray(pbmc.X), axis=0, dtype=np.float64, ddof=1)
-
-    means, variances = sc.pp._utils._get_mean_var(pbmc.X)
-
-    np.testing.assert_allclose(true_mean, means)
-    np.testing.assert_allclose(true_var, variances)
-
-
-def test_mean_var_sparse():
-    from sklearn.utils.sparsefuncs import mean_variance_axis
-
-    csr64 = sp.random(10000, 1000, format="csr", dtype=np.float64)
-    csc64 = csr64.tocsc()
-
-    # Test that we're equivalent for 64 bit
-    for mtx, ax in product((csr64, csc64), (0, 1)):
-        scm, scv = sc.pp._utils._get_mean_var(mtx, axis=ax)
-        skm, skv = mean_variance_axis(mtx, ax)
-        skv *= mtx.shape[ax] / (mtx.shape[ax] - 1)
-
-        assert np.allclose(scm, skm)
-        assert np.allclose(scv, skv)
-
-    csr32 = csr64.astype(np.float32)
-    csc32 = csc64.astype(np.float32)
-
-    # Test whether ours is more accurate for 32 bit
-    for mtx32, mtx64 in [(csc32, csc64), (csr32, csr64)]:
-        scm32, scv32 = sc.pp._utils._get_mean_var(mtx32)
-        scm64, scv64 = sc.pp._utils._get_mean_var(mtx64)
-        skm32, skv32 = mean_variance_axis(mtx32, 0)
-        skm64, skv64 = mean_variance_axis(mtx64, 0)
-        skv32 *= mtx.shape[0] / (mtx.shape[0] - 1)
-        skv64 *= mtx.shape[0] / (mtx.shape[0] - 1)
-
-        m_resid_sc = np.mean(np.abs(scm64 - scm32))
-        m_resid_sk = np.mean(np.abs(skm64 - skm32))
-        v_resid_sc = np.mean(np.abs(scv64 - scv32))
-        v_resid_sk = np.mean(np.abs(skv64 - skv32))
-
-        assert m_resid_sc < m_resid_sk
-        assert v_resid_sc < v_resid_sk
-
-
-def test_normalize_per_cell():
+def test_normalize_per_cell() -> None:
     A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
     adata = AnnData(A.copy())
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts="n_counts2")
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(
+            adata, counts_per_cell_after=1, key_n_counts="n_counts2"
+        )
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
     adata = AnnData(A.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
     adata = AnnData(A.copy())
-    adata_sparse = AnnData(sp.csr_matrix(A.copy()))
-    sc.pp.normalize_per_cell(adata)
-    sc.pp.normalize_per_cell(adata_sparse)
+    adata_sparse = AnnData(sparse.csr_matrix(A.copy()))  # noqa: TID251
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
 
 
-def test_subsample():
-    adata = AnnData(np.ones((200, 10)))
-    sc.pp.subsample(adata, n_obs=40)
-    assert adata.n_obs == 40
-    sc.pp.subsample(adata, fraction=0.1)
-    assert adata.n_obs == 4
-
-
-def test_subsample_copy():
-    adata = AnnData(np.ones((200, 10)))
-    assert sc.pp.subsample(adata, n_obs=40, copy=True).shape == (40, 10)
-    assert sc.pp.subsample(adata, fraction=0.1, copy=True).shape == (20, 10)
-
-
-def test_subsample_copy_backed(tmp_path):
-    A = np.random.rand(200, 10).astype(np.float32)
-    adata_m = AnnData(A.copy())
-    adata_d = AnnData(A.copy())
-    filename = tmp_path / "test.h5ad"
-    adata_d.filename = filename
-    # This should not throw an error
-    assert sc.pp.subsample(adata_d, n_obs=40, copy=True).shape == (40, 10)
-    np.testing.assert_array_equal(
-        sc.pp.subsample(adata_m, n_obs=40, copy=True).X,
-        sc.pp.subsample(adata_d, n_obs=40, copy=True).X,
-    )
-    with pytest.raises(NotImplementedError):
-        sc.pp.subsample(adata_d, n_obs=40, copy=False)
+def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
+    """Generate a random probability distribution of `n` values between 0 and 1."""
+    probs = np.random.randint(0, 10000, n).astype(np.float64)
+    probs[probs < np.quantile(probs, frac_zero)] = 0
+    probs /= probs.sum()
+    np.testing.assert_almost_equal(probs.sum(), 1)
+    return probs
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("zero_center", [True, False])
-@pytest.mark.parametrize("max_value", [None, 1.0])
+@pytest.mark.parametrize("which", ["copy", "inplace", "array"])
+@pytest.mark.parametrize(
+    ("axis", "f_or_n", "replace"),
+    [
+        pytest.param(0, 40, False, id="obs-40-no_replace"),
+        pytest.param(0, 0.1, False, id="obs-0.1-no_replace"),
+        pytest.param(0, 201, True, id="obs-201-replace"),
+        pytest.param(0, 1, True, id="obs-1-replace"),
+        pytest.param(1, 10, False, id="var-10-no_replace"),
+        pytest.param(1, 11, True, id="var-11-replace"),
+        pytest.param(1, 2.0, True, id="var-2.0-replace"),
+    ],
+)
+@pytest.mark.parametrize(
+    "ps",
+    [
+        dict(obs=None, var=None),
+        dict(obs=np.tile([True, False], 100), var=np.tile([True, False], 5)),
+        dict(obs=_random_probs(200, 0.3), var=_random_probs(10, 0.7)),
+    ],
+    ids=["all", "mask", "p"],
+)
+def test_sample(
+    *,
+    request: pytest.FixtureRequest,
+    array_type: Callable[[np.ndarray], np.ndarray | CSBase],
+    which: Literal["copy", "inplace", "array"],
+    axis: Literal[0, 1],
+    f_or_n: float | int,  # noqa: PYI041
+    replace: bool,
+    ps: dict[Literal["obs", "var"], NDArray[np.bool_] | None],
+):
+    adata = AnnData(array_type(np.ones((200, 10))))
+    p = ps["obs" if axis == 0 else "var"]
+    expected = int(adata.shape[axis] * f_or_n) if isinstance(f_or_n, float) else f_or_n
+    if p is not None and not replace and expected > (n_possible := (p != 0).sum()):
+        request.applymarker(pytest.xfail(f"Can’t draw {expected} out of {n_possible}"))
+
+    # ignoring this warning declaratively is a pain so do it here
+    if find_spec("dask"):
+        import dask.array as da
+
+        warnings.filterwarnings("ignore", category=da.PerformanceWarning)
+    # can’t guarantee that duplicates are drawn when `replace=True`,
+    # so we just ignore the warning instead using `with pytest.warns(...)`
+    warnings.filterwarnings(
+        "ignore" if replace else "error", r".*names are not unique", UserWarning
+    )
+    rv = sc.pp.sample(
+        adata.X if which == "array" else adata,
+        f_or_n if isinstance(f_or_n, float) else None,
+        n=f_or_n if isinstance(f_or_n, int) else None,
+        replace=replace,
+        axis=axis,
+        # `copy` only effects AnnData inputs
+        copy=dict(copy=True, inplace=False, array=False)[which],
+        p=p,
+    )
+
+    match which:
+        case "copy":
+            subset = rv
+            assert rv is not adata
+            assert adata.shape == (200, 10)
+        case "inplace":
+            subset = adata
+            assert rv is None
+        case "array":
+            subset, indices = rv
+            assert len(indices) == expected
+            assert adata.shape == (200, 10)
+        case _:
+            pytest.fail(f"Unknown `{which=}`")
+
+    assert subset.shape == ((expected, 10) if axis == 0 else (200, expected))
+
+
+@pytest.mark.parametrize(
+    ("args", "exc", "pattern"),
+    [
+        pytest.param(
+            dict(), TypeError, r"Either `fraction` or `n` must be set", id="empty"
+        ),
+        pytest.param(
+            dict(n=10, fraction=0.2),
+            TypeError,
+            r"Providing both `fraction` and `n` is not allowed",
+            id="both",
+        ),
+        pytest.param(
+            dict(fraction=2),
+            ValueError,
+            r"If `replace=False`, `fraction=2` needs to be",
+            id="frac>1",
+        ),
+        pytest.param(
+            dict(fraction=-0.3),
+            ValueError,
+            r"`fraction=-0\.3` needs to be nonnegative",
+            id="frac<0",
+        ),
+        pytest.param(
+            dict(n=3, p=np.ones(200, dtype=np.int32)),
+            ValueError,
+            r"mask/probabilities array must be boolean or floating point",
+            id="type(p)",
+        ),
+    ],
+)
+def test_sample_error(args: dict[str, Any], exc: type[Exception], pattern: str):
+    adata = AnnData(np.ones((200, 10)))
+    with pytest.raises(exc, match=pattern):
+        sc.pp.sample(adata, **args)
+
+
+def test_sample_backwards_compat():
+    expected = np.array(
+        [26, 86, 2, 55, 75, 93, 16, 73, 54, 95, 53, 92, 78, 13, 7, 30, 22, 24, 33, 8]
+    )
+    legacy_result, indices = sc.pp.subsample(np.arange(100), n_obs=20)
+    assert np.array_equal(indices, legacy_result), "arange choices should match indices"
+    assert np.array_equal(legacy_result, expected)
+
+
+def test_sample_copy_backed(tmp_path):
+    adata_m = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d = adata_m.copy()
+    adata_d.filename = tmp_path / "test.h5ad"
+
+    assert sc.pp.sample(adata_d, n=40, copy=True).shape == (40, 10)
+    np.testing.assert_array_equal(
+        sc.pp.sample(adata_m, n=40, copy=True, rng=0).X,
+        sc.pp.sample(adata_d, n=40, copy=True, rng=0).X,
+    )
+
+
+def test_sample_copy_backed_error(tmp_path):
+    adata_d = AnnData(np.random.rand(200, 10).astype(np.float32))
+    adata_d.filename = tmp_path / "test.h5ad"
+    with pytest.raises(NotImplementedError):
+        sc.pp.sample(adata_d, n=40, copy=False)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(array_type, zero_center, max_value):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
-    sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if issparse(X):
-        X = X.todense()
-    if issparse(adata.X):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    warn_ctx = pytest.warns(UserWarning, match=r"zero-centering.*densifies")
+    with warn_ctx if zero_center else nullcontext():
+        sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
+        adata.X = conv.to_dense(adata.X)
+    with (
+        (
+            warn_ctx
+            if zero_center
+            and any(pat in array_type.__name__ for pat in ("sparse", "csc", "csr"))
+            else nullcontext()
+        ),
+        maybe_dask_process_context(),
+    ):
+        sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
+        if is_dask := ("dask" in array_type.__name__):
+            assert not isinstance(adata_casted.X._meta, np.matrix)
+        adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    assert_allclose(
+        adata_casted.X,
+        adata.X,
+        rtol=1e-1 if is_dask else 1e-5,
+        atol=1e-1 if is_dask else 1e-5,
+    )
 
 
-ARRAY_TYPES_DASK_SPARSE = [
-    a for a in ARRAY_TYPES if "sparse" in a.id and "dask" in a.id
-]
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK_SPARSE)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
 def test_scale_zero_center_warns_dask_sparse(array_type):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    with pytest.warns(UserWarning, match="zero-center being used with `DaskArray`*"):
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
         sc.pp.scale(adata_casted)
-    sc.pp.scale(adata)
+    with pytest.warns(UserWarning, match=r"zero-center.*densifies"):
+        sc.pp.scale(adata)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
@@ -202,45 +329,60 @@ def test_scale():
     v = adata[:, 0 : adata.shape[1] // 2]
     # Should turn view to copy https://github.com/scverse/anndata/issues/171#issuecomment-508689965
     assert v.is_view
-    with pytest.warns(Warning, match="view"):
+    with (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies"),
+        pytest.warns(UserWarning, match=r"Received a view"),
+    ):
         sc.pp.scale(v)
     assert not v.is_view
     assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
     assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
-@pytest.fixture(params=[True, False])
-def zero_center(request):
-    return request.param
+def test_scale_rep(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
+    """Test that it doesn't matter where the array being scaled is in the anndata object."""
+    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
+        if zero_center and count_matrix_format.is_sparse
+        else nullcontext()
+    )
+    with ctx:
+        check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
+    with ctx:
+        check_rep_results(sc.pp.scale, X, zero_center=zero_center)
 
 
-def test_scale_rep(count_matrix_format, zero_center):
-    """
-    Test that it doesn't matter where the array being scaled is in the anndata object.
-    """
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
-    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
-    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -> None:
+    """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
+    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
+    adata = AnnData(X=X.copy())
 
-
-def test_scale_array(count_matrix_format, zero_center):
-    """
-    Test that running sc.pp.scale on an anndata object and an array returns the same results.
-    """
-    X = count_matrix_format(sp.random(100, 200, density=0.3).toarray())
-    adata = anndata_v0_8_constructor_compat(X=X.copy())
-
-    sc.pp.scale(adata, zero_center=zero_center)
-    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
+    ctx = (
+        pytest.warns(UserWarning, match=r"zero-center.*densifies")
+        if zero_center and count_matrix_format.is_sparse
+        else nullcontext()
+    )
+    with ctx:
+        sc.pp.scale(adata, zero_center=zero_center)
+    with ctx:
+        scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
     np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
 
 
-def test_recipe_plotting():
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
+def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
+    if pkg_version("pandas") < Version("2.2"):
+        # https://github.com/pandas-dev/pandas/issues/54661
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     # These shouldn't throw an error
-    sc.pp.recipe_seurat(adata.copy(), plot=True)
-    sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_seurat(adata.copy(), plot=True)
+    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+        sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():
@@ -264,13 +406,41 @@ def test_regress_out_ordinal():
     np.testing.assert_array_equal(single.X, multi.X)
 
 
-def test_regress_out_layer():
+@pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
+def test_regress_out_int(dtype):
+    adata = pbmc3k()[:200, :200].copy()
+    adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
+    dtype = adata.X.dtype
+    adata.obs["labels"] = pd.Categorical(
+        (["A"] * (adata.X.shape[0] - 100)) + (["B"] * 100)
+    )
+    adata_other = adata.copy()
+    adata_other.X = adata_other.X.astype(dtype)
+    # results using only one processor
+    sc.pp.regress_out(adata, keys=["labels"])
+    sc.pp.regress_out(adata_other, keys=["labels"])
+    assert_equal(adata_other, adata)
+    # This file was generated under scanpy 1.10.3
+    ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
+    np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
+def test_regress_out_layer(dtype):
     from scipy.sparse import random
 
-    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
+    adata = AnnData(
+        random(1000, 100, density=0.6, format="csr", dtype=np.uint16).astype(dtype)
+    )
     adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
-    adata.layers["counts"] = adata.X.copy()
+    if dtype == np.float64:
+        dtype_cast = dtype
+    if dtype == np.int64:
+        dtype_cast = np.float64
+    if dtype == np.int32:
+        dtype_cast = np.float32
+    adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
     single = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
@@ -281,7 +451,7 @@ def test_regress_out_layer():
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
-    np.testing.assert_array_equal(single.X, layer.layers["counts"])
+    np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():
@@ -292,8 +462,8 @@ def test_regress_out_view():
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
     subset_adata_copy = subset_adata.copy()
-
-    sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
     sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
@@ -321,6 +491,23 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
+@pytest.mark.parametrize(
+    ("keys", "test_file", "atol"),
+    [
+        (["n_counts", "percent_mito"], "regress_test_small.npy", 0.0),
+        (["bulk_labels"], "regress_test_small_cat.npy", 1e-6),
+    ],
+)
+def test_regress_out_reproducible(keys, test_file, atol):
+    adata = sc.datasets.pbmc68k_reduced()
+    adata = adata.raw.to_adata()[:200, :200].copy()
+    sc.pp.regress_out(adata, keys=keys)
+    # This file was generated from the original implementation in version 1.10.3
+    # Now we compare new implementation with the old one
+    tester = np.load(DATA_PATH / test_file)
+    np.testing.assert_allclose(adata.X, tester, atol=atol)
+
+
 def test_regress_out_constants_equivalent():
     # Tests that constant values don't change results
     # (since support for constant values is implemented by us)
@@ -336,38 +523,26 @@ def test_regress_out_constants_equivalent():
     np.testing.assert_equal(a[:, b.var_names].X, b.X)
 
 
-@pytest.fixture(params=[lambda x: x.copy(), sp.csr_matrix, sp.csc_matrix])
-def count_matrix_format(request):
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def replace(request):
-    return request.param
-
-
-@pytest.fixture(params=[np.int64, np.float32, np.float64])
-def dtype(request):
-    return request.param
-
-
-def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_counts_per_cell(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
-    with pytest.raises(ValueError):
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
+    with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
             adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     adata = sc.pp.downsample_counts(
         adata, counts_per_cell=TARGET, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -381,21 +556,22 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     assert X.dtype == adata.X.dtype
 
 
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
 def test_downsample_counts_per_cell_multiple_targets(
-    count_matrix_format, replace, dtype
-):
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    adata = AnnData(X=count_matrix_format(X).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
     adata = sc.pp.downsample_counts(
         adata, counts_per_cell=TARGETS, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -410,10 +586,13 @@ def test_downsample_counts_per_cell_multiple_targets(
     assert X.dtype == adata.X.dtype
 
 
-def test_downsample_total_counts(count_matrix_format, replace, dtype):
+@pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+def test_downsample_total_counts(
+    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+) -> None:
     X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
     X = X.astype(dtype)
-    adata_orig = anndata_v0_8_constructor_compat(X=count_matrix_format(X))
+    adata_orig = AnnData(X=count_matrix_format(X))
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
@@ -421,7 +600,7 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
         adata_orig, total_counts=target, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
-    if sp.issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         assert all(adata.X.toarray()[X == 0] == 0)
     else:
         assert all(adata.X[X == 0] == 0)
@@ -448,12 +627,12 @@ def test_recipe_weinreb():
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_cells,max_counts,min_cells,min_counts",
+    ("max_cells", "max_counts", "min_cells", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        (100, None, None, None),
+        (None, 100, None, None),
+        (None, None, 20, None),
+        (None, None, None, 20),
     ],
 )
 def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
@@ -475,24 +654,19 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
         min_cells=min_cells,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if issparse(X):
-        X = X.todense()
-    if issparse(adata.X):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    "max_genes,max_counts,min_genes,min_counts",
+    ("max_genes", "max_counts", "min_genes", "min_counts"),
     [
-        [100, None, None, None],
-        [None, 100, None, None],
-        [None, None, 20, None],
-        [None, None, None, 20],
+        pytest.param(100, None, None, None, id="max_genes"),
+        pytest.param(None, 100, None, None, id="max_counts"),
+        pytest.param(None, None, 20, None, id="min_genes"),
+        pytest.param(None, None, None, 20, id="min_counts"),
     ],
 )
 def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
@@ -500,6 +674,9 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
+    if pkg_version("pandas") < Version("2.2"):
+        # https://github.com/pandas-dev/pandas/issues/54661
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     sc.pp.filter_cells(
         adata,
         max_genes=max_genes,
@@ -514,11 +691,6 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
         min_genes=min_genes,
         min_counts=min_counts,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if issparse(X):
-        X = X.todense()
-    if issparse(adata.X):
-        adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    adata.X = conv.to_dense(adata.X)
+    assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)

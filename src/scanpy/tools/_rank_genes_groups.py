@@ -2,34 +2,37 @@
 
 from __future__ import annotations
 
-from math import floor
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal
 
+import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, vstack
+from fast_array_utils.stats import mean_var
+from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, njit, old_positionals
 from .._utils import (
     check_nonnegative_integers,
+    get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask
-from ..preprocessing._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     from anndata import AnnData
     from numpy.typing import NDArray
-    from scipy import sparse
 
     _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
-# Used with get_args
+
+# Used with get_literal_vals
 _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+
+_CONST_MAX_SIZE = 10000000
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -42,17 +45,54 @@ def _select_top_n(scores: NDArray, n_top: int):
     return global_indices
 
 
+@njit
+def rankdata(data: NDArray[np.number]) -> NDArray[np.float64]:
+    """Parallelized version of scipy.stats.rankdata."""
+    ranked = np.empty(data.shape, dtype=np.float64)
+    for j in numba.prange(data.shape[1]):
+        arr = np.ravel(data[:, j])
+        sorter = np.argsort(arr)
+
+        arr = arr[sorter]
+        obs = np.concatenate((np.array([True]), arr[1:] != arr[:-1]))
+
+        dense = np.empty(obs.size, dtype=np.int64)
+        dense[sorter] = obs.cumsum()
+
+        # cumulative counts of each unique value
+        count = np.concatenate((np.flatnonzero(obs), np.array([len(obs)])))
+        ranked[:, j] = 0.5 * (count[dense] + count[dense - 1] + 1)
+
+    return ranked
+
+
+@njit
+def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
+    """Parallelized version of scipy.stats.tiecorrect."""
+    tc = np.ones(rankvals.shape[1], dtype=np.float64)
+    for j in numba.prange(rankvals.shape[1]):
+        arr = np.sort(np.ravel(rankvals[:, j]))
+        idx = np.flatnonzero(
+            np.concatenate((np.array([True]), arr[1:] != arr[:-1], np.array([True])))
+        )
+        cnt = np.diff(idx).astype(np.float64)
+
+        size = np.float64(arr.size)
+        if size >= 2:
+            tc[j] = 1.0 - (cnt**3 - cnt).sum() / (size**3 - size)
+
+    return tc
+
+
 def _ranks(
-    X: np.ndarray | sparse.csr_matrix | sparse.csc_matrix,
+    X: NDArray[np.number] | CSBase,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
-):
-    CONST_MAX_SIZE = 10000000
-
+) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = X.shape[1]
 
-    if issparse(X):
-        merge = lambda tpl: vstack(tpl).toarray()
+    if isinstance(X, CSBase):
+        merge = lambda tpl: sparse.vstack(tpl).toarray()
         adapt = lambda X: X.toarray()
     else:
         merge = np.vstack
@@ -70,35 +110,20 @@ def _ranks(
         get_chunk = lambda X, left, right: adapt(X[:, left:right])
 
     # Calculate chunk frames
-    max_chunk = floor(CONST_MAX_SIZE / n_cells)
+    max_chunk = max(_CONST_MAX_SIZE // n_cells, 1)
 
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
 
-        df = pd.DataFrame(data=get_chunk(X, left, right))
-        ranks = df.rank()
+        ranks = rankdata(get_chunk(X, left, right))
         yield ranks, left, right
-
-
-def _tiecorrect(ranks):
-    size = np.float64(ranks.shape[0])
-    if size < 2:
-        return np.repeat(ranks.shape[1], 1.0)
-
-    arr = np.sort(ranks, axis=0)
-    tf = np.insert(arr[1:] != arr[:-1], (0, arr.shape[0] - 1), True, axis=0)
-    idx = np.where(tf, np.arange(tf.shape[0])[:, None], 0)
-    idx = np.sort(idx, axis=0)
-    cnt = np.diff(idx, axis=0).astype(np.float64)
-
-    return 1.0 - (cnt**3 - cnt).sum(axis=0) / (size**3 - size)
 
 
 class _RankGenes:
     def __init__(
         self,
         adata: AnnData,
-        groups: list[str] | Literal["all"],
+        groups: Iterable[str] | Literal["all"],
         groupby: str,
         *,
         mask_var: NDArray[np.bool_] | None = None,
@@ -123,15 +148,17 @@ class _RankGenes:
         )
 
         if len(invalid_groups_selected) > 0:
-            raise ValueError(
-                "Could not calculate statistics for groups {} since they only "
-                "contain one sample.".format(", ".join(invalid_groups_selected))
+            msg = (
+                f"Could not calculate statistics for groups {', '.join(invalid_groups_selected)} "
+                "since they only contain one sample."
             )
+            raise ValueError(msg)
 
         adata_comp = adata
         if layer is not None:
             if use_raw:
-                raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+                msg = "Cannot specify `layer` and have `use_raw=True`."
+                raise ValueError(msg)
             X = adata_comp.layers[layer]
         else:
             if use_raw and adata.raw is not None:
@@ -140,7 +167,7 @@ class _RankGenes:
         raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
 
         # for correct getnnz calculation
-        if issparse(X):
+        if isinstance(X, CSBase):
             X.eliminate_zeros()
 
         if self.mask_var is not None:
@@ -187,13 +214,13 @@ class _RankGenes:
         else:
             mask_rest = self.groups_masks_obs[self.ireference]
             X_rest = self.X[mask_rest]
-            self.means[self.ireference], self.vars[self.ireference] = _get_mean_var(
-                X_rest
+            self.means[self.ireference], self.vars[self.ireference] = mean_var(
+                X_rest, axis=0, correction=1
             )
             # deleting the next line causes a memory leak for some reason
             del X_rest
 
-        if issparse(self.X):
+        if isinstance(self.X, CSBase):
             get_nonzeros = lambda X: X.getnnz(axis=0)
         else:
             get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
@@ -207,7 +234,9 @@ class _RankGenes:
             if self.ireference is not None and group_index == self.ireference:
                 continue
 
-            self.means[group_index], self.vars[group_index] = _get_mean_var(X_mask)
+            self.means[group_index], self.vars[group_index] = mean_var(
+                X_mask, axis=0, correction=1
+            )
 
             if self.ireference is None:
                 mask_rest = ~mask_obs
@@ -215,7 +244,7 @@ class _RankGenes:
                 (
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
-                ) = _get_mean_var(X_rest)
+                ) = mean_var(X_rest, axis=0, correction=1)
                 # this can be costly for sparse data
                 if self.comp_pts:
                     self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]
@@ -230,7 +259,7 @@ class _RankGenes:
         self._basic_stats()
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
-            zip(self.groups_masks_obs, self.means, self.vars)
+            zip(self.groups_masks_obs, self.means, self.vars, strict=True)
         ):
             if self.ireference is not None and group_index == self.ireference:
                 continue
@@ -252,7 +281,8 @@ class _RankGenes:
                 # hack for overestimating the variance for small groups
                 ns_rest = ns_group
             else:
-                raise ValueError("Method does not exist.")
+                msg = "Method does not exist."
+                raise ValueError(msg)
 
             # TODO: Come up with better solution. Mask unexpressed genes?
             # See https://github.com/scipy/scipy/issues/10269
@@ -275,7 +305,7 @@ class _RankGenes:
             yield group_index, scores, pvals
 
     def wilcoxon(
-        self, tie_correct: bool
+        self, *, tie_correct: bool
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
 
@@ -287,10 +317,7 @@ class _RankGenes:
             # initialize space for z-scores
             scores = np.zeros(n_genes)
             # initialize space for tie correction coefficients
-            if tie_correct:
-                T = np.zeros(n_genes)
-            else:
-                T = 1
+            T = np.zeros(n_genes) if tie_correct else 1
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 if group_index == self.ireference:
@@ -309,7 +336,7 @@ class _RankGenes:
 
                 # Calculate rank sums for each chunk for the current mask
                 for ranks, left, right in _ranks(self.X, mask_obs, mask_obs_rest):
-                    scores[left:right] = ranks.iloc[0:n_active, :].sum(axis=0)
+                    scores[left:right] = ranks[0:n_active, :].sum(axis=0)
                     if tie_correct:
                         T[left:right] = _tiecorrect(ranks)
 
@@ -337,19 +364,14 @@ class _RankGenes:
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
-                    scores[group_index, left:right] = ranks.iloc[mask_obs, :].sum(
-                        axis=0
-                    )
+                    scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
                     if tie_correct:
                         T[group_index, left:right] = _tiecorrect(ranks)
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
 
-                if tie_correct:
-                    T_i = T[group_index]
-                else:
-                    T_i = 1
+                T_i = T[group_index] if tie_correct else 1
 
                 std_dev = np.sqrt(
                     T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
@@ -374,7 +396,8 @@ class _RankGenes:
         X = self.X[self.grouping_mask.values, :]
 
         if len(self.groups_order) == 1:
-            raise ValueError("Cannot perform logistic regression on a single cluster.")
+            msg = "Cannot perform logistic regression on a single cluster."
+            raise ValueError(msg)
 
         clf = LogisticRegression(**kwds)
         clf.fit(X, self.grouping.cat.codes)
@@ -395,7 +418,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: _Method,
         *,
@@ -408,7 +431,7 @@ class _RankGenes:
         if method in {"t-test", "t-test_overestim_var"}:
             generate_test_results = self.t_test(method)
         elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct)
+            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
@@ -481,7 +504,7 @@ class _RankGenes:
     "tie_correct",
     "layer",
 )
-def rank_genes_groups(
+def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
@@ -500,8 +523,7 @@ def rank_genes_groups(
     layer: str | None = None,
     **kwds,
 ) -> AnnData | None:
-    """\
-    Rank genes for characterizing groups.
+    """Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -514,7 +536,7 @@ def rank_genes_groups(
     mask_var
         Select subset of genes to use in statistical tests.
     use_raw
-        Use `raw` attribute of `adata` if present.
+        Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
     layer
         Key from `adata.layers` whose value will be used to perform tests on.
     groups
@@ -588,23 +610,24 @@ def rank_genes_groups(
     Notes
     -----
     There are slight inconsistencies depending on whether sparse
-    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/scanpy/tests/test_rank_genes_groups.py>`__.
+    or dense data are passed. See `here <https://github.com/scverse/scanpy/blob/main/tests/test_rank_genes_groups.py>`__.
 
     Examples
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
+    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
     >>> # to visualize the results
     >>> sc.pl.rank_genes_groups(adata)
+
     """
-    if mask_var is not None:
-        mask_var = _check_mask(adata, mask_var, "var")
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None
     elif use_raw is True and adata.raw is None:
-        raise ValueError("Received `use_raw=True`, but `adata.raw` is empty.")
+        msg = "Received `use_raw=True`, but `adata.raw` is empty."
+        raise ValueError(msg)
 
     if method is None:
         method = "t-test"
@@ -613,21 +636,23 @@ def rank_genes_groups(
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    avail_methods = set(get_args(_Method))
-    if method not in avail_methods:
-        raise ValueError(f"Method must be one of {avail_methods}.")
+    if method not in (avail_methods := get_literal_vals(_Method)):
+        msg = f"Method must be one of {avail_methods}."
+        raise ValueError(msg)
 
     avail_corr = {"benjamini-hochberg", "bonferroni"}
     if corr_method not in avail_corr:
-        raise ValueError(f"Correction method must be one of {avail_corr}.")
+        msg = f"Correction method must be one of {avail_corr}."
+        raise ValueError(msg)
 
     adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
     # for clarity, rename variable
     if groups == "all":
         groups_order = "all"
-    elif isinstance(groups, (str, int)):
-        raise ValueError("Specify a sequence of groups")
+    elif isinstance(groups, str | int):
+        msg = "Specify a sequence of groups"
+        raise ValueError(msg)
     else:
         groups_order = list(groups)
         if isinstance(groups_order[0], int):
@@ -636,9 +661,8 @@ def rank_genes_groups(
             groups_order += [reference]
     if reference != "rest" and reference not in adata.obs[groupby].cat.categories:
         cats = adata.obs[groupby].cat.categories.tolist()
-        raise ValueError(
-            f"reference = {reference} needs to be one of groupby = {cats}."
-        )
+        msg = f"reference = {reference} needs to be one of groupby = {cats}."
+        raise ValueError(msg)
 
     if key_added is None:
         key_added = "rank_genes_groups"
@@ -732,11 +756,10 @@ def rank_genes_groups(
     return adata if copy else None
 
 
-def _calc_frac(X):
-    if issparse(X):
-        n_nonzero = X.getnnz(axis=0)
-    else:
-        n_nonzero = np.count_nonzero(X, axis=0)
+def _calc_frac(X: NDArray[np.number] | CSBase) -> NDArray[np.float64]:
+    n_nonzero = (
+        X.getnnz(axis=0) if isinstance(X, CSBase) else np.count_nonzero(X, axis=0)
+    )
     return n_nonzero / X.shape[0]
 
 
@@ -750,7 +773,7 @@ def _calc_frac(X):
     "max_out_group_fraction",
     "compare_abs",
 )
-def filter_rank_genes_groups(
+def filter_rank_genes_groups(  # noqa: PLR0912
     adata: AnnData,
     *,
     key: str | None = None,
@@ -758,13 +781,15 @@ def filter_rank_genes_groups(
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
-    min_fold_change: int | float = 1,
+    min_fold_change: float = 1,
     max_out_group_fraction: float = 0.5,
     compare_abs: bool = False,
 ) -> None:
-    """\
-    Filters out genes based on log fold change and fraction of genes expressing the
-    gene within and outside the `groupby` categories.
+    """Filter out genes based on two criteria.
+
+    1. log fold change and
+    2. fraction of genes expressing the
+       gene within and outside the `groupby` categories.
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
@@ -796,12 +821,13 @@ def filter_rank_genes_groups(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
+    >>> sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
     >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
     >>> # visualize results
-    >>> sc.pl.rank_genes_groups(adata, key='rank_genes_groups_filtered')
+    >>> sc.pl.rank_genes_groups(adata, key="rank_genes_groups_filtered")
     >>> # visualize results using dotplot
-    >>> sc.pl.rank_genes_groups_dotplot(adata, key='rank_genes_groups_filtered')
+    >>> sc.pl.rank_genes_groups_dotplot(adata, key="rank_genes_groups_filtered")
+
     """
     if key is None:
         key = "rank_genes_groups"
@@ -862,7 +888,7 @@ def filter_rank_genes_groups(
 
         if not use_logfolds or not use_fraction:
             sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
-            in_group = adata.obs[groupby] == cluster
+            in_group = (adata.obs[groupby] == cluster).to_numpy()
             X_in = sub_X[in_group]
             X_out = sub_X[~in_group]
 

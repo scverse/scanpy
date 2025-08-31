@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import itertools
+import warnings
+from contextlib import nullcontext
 from pathlib import Path
 from string import ascii_letters
 from typing import TYPE_CHECKING
@@ -9,17 +11,19 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from fast_array_utils import stats
 from pandas.testing import assert_frame_equal, assert_index_equal
-from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
-    from typing import Callable, Literal
+    from collections.abc import Callable
+    from typing import Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -118,7 +122,7 @@ def test_keep_layer(base, flavor):
     sc.pp.filter_genes(adata, min_counts=1)
 
     sc.pp.log1p(adata, base=base)
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     X_orig = adata.X.copy()
 
     if flavor == "seurat":
@@ -126,9 +130,30 @@ def test_keep_layer(base, flavor):
     elif flavor == "cell_ranger":
         sc.pp.highly_variable_genes(adata, flavor=flavor)
     else:
-        assert False
+        pytest.fail(f"Unknown {flavor=}")
 
     assert np.allclose(X_orig.toarray(), adata.X.toarray())
+
+
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        pytest.param(
+            "cell_ranger",
+            marks=pytest.mark.xfail(reason="can’t deal with duplicate bin edges"),
+        ),
+    ],
+)
+def test_no_filter_genes(flavor):
+    """Test that even with columns containing all-zeros in the data, n_top_genes is respected."""
+    adata = sc.datasets.pbmc3k()
+    means = stats.mean(adata.X, axis=0)
+    assert (means == 0).any()
+    sc.pp.normalize_total(adata, target_sum=10000)
+    sc.pp.log1p(adata)
+    sc.pp.highly_variable_genes(adata, flavor=flavor, n_top_genes=10000)
+    assert adata.var["highly_variable"].sum() == 10000
 
 
 def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
@@ -233,7 +258,7 @@ def test_pearson_residuals_general(
         "residual_variances",
         "highly_variable_rank",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # check consistency with normalization method
     if subset:
@@ -302,7 +327,7 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
         "highly_variable_nbatches",
         "highly_variable_intersection",
     ]:
-        assert key in output_df.keys()
+        assert key in output_df.columns
 
     # general checks on ranks, hvg flag and residual variance
     _check_pearson_hvg_columns(output_df, n_top_genes)
@@ -343,7 +368,8 @@ def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes)
     ],
 )
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_compare_to_upstream(  # noqa: PLR0917
+def test_compare_to_upstream(
+    *,
     request: pytest.FixtureRequest,
     func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
@@ -367,11 +393,16 @@ def test_compare_to_upstream(  # noqa: PLR0917
         sc.pp.log1p(pbmc)
         sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
     elif func == "fgd":
-        sc.pp.filter_genes_dispersion(
-            pbmc, flavor=flavor, **params, log=True, subset=False
-        )
+        with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):  # noqa: PT031
+            # https://github.com/pandas-dev/pandas/issues/61928
+            warnings.filterwarnings(
+                "ignore", r"invalid value encountered in cast", RuntimeWarning
+            )
+            sc.pp.filter_genes_dispersion(
+                pbmc, flavor=flavor, **params, log=True, subset=False
+            )
     else:
-        raise AssertionError()
+        pytest.fail(f"Unknown func {func}")
 
     np.testing.assert_array_equal(
         hvg_info["highly_variable"], pbmc.var["highly_variable"]
@@ -481,7 +512,7 @@ def test_seurat_v3_warning():
 
 def test_batches():
     adata = pbmc68k_reduced()
-    adata[:100, :100].X = np.zeros((100, 100))
+    adata.X[:100, :100] = np.zeros((100, 100))
 
     adata.obs["batch"] = ["0" if i < 100 else "1" for i in range(adata.n_obs)]
     adata_1 = adata[adata.obs["batch"] == "0"].copy()
@@ -534,6 +565,15 @@ def test_batches():
     assert np.all(np.isin(colnames, hvg1.columns))
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
+def test_degenerate_batches():
+    adata = AnnData(
+        X=np.random.randn(10, 100),
+        obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
+    )
+    sc.pp.highly_variable_genes(adata, batch_key="batch")
+
+
 @needs.skmisc
 def test_seurat_v3_mean_var_output_with_batchkey():
     pbmc = pbmc3k()
@@ -543,9 +583,7 @@ def test_seurat_v3_mean_var_output_with_batchkey():
     batch[1500:] = 1
     pbmc.obs["batch"] = batch
 
-    # true_mean, true_var = _get_mean_var(pbmc.X)
-    true_mean = np.mean(pbmc.X.toarray(), axis=0)
-    true_var = np.var(pbmc.X.toarray(), axis=0, dtype=np.float64, ddof=1)
+    true_mean, true_var = stats.mean_var(pbmc.X, axis=0, correction=1)
 
     result_df = sc.pp.highly_variable_genes(
         pbmc, batch_key="batch", flavor="seurat_v3", n_top_genes=4000, inplace=False
@@ -562,7 +600,7 @@ def test_cellranger_n_top_genes_warning():
 
     with pytest.warns(
         UserWarning,
-        match="`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions.",
+        match="`n_top_genes`.*> number of normalized dispersions.*returning all genes with normalized dispersions.",
     ):
         sc.pp.highly_variable_genes(adata, n_top_genes=1000, flavor="cell_ranger")
 
@@ -579,8 +617,9 @@ def test_cutoff_info():
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(flavor, array_type, batch_key):
-    """Tests that, with `n_top_genes=n`
-    - `inplace` and `subset` interact correctly
+    """Tests `n_top_genes=n`.
+
+    - if `inplace` and `subset` interact correctly
     - for both the `seurat` and `cell_ranger` flavors
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
@@ -590,7 +629,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
-    if flavor == "seurat" or flavor == "cell_ranger":
+    if flavor in {"seurat", "cell_ranger"}:
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
@@ -598,7 +637,8 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
         pass
 
     else:
-        raise ValueError(f"Unknown flavor {flavor}")
+        msg = f"Unknown flavor {flavor}"
+        raise ValueError(msg)
 
     n_genes = adata.shape[1]
 
@@ -660,10 +700,17 @@ def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     adata_dask = adata.copy()
     adata_dask.X = to_dask(adata_dask.X)
 
-    output_mem, output_dask = (
-        sc.pp.highly_variable_genes(ad, flavor=flavor, n_top_genes=15, inplace=False)
-        for ad in [adata, adata_dask]
-    )
+    with (
+        pytest.warns(UserWarning, match="n_top_genes.*normalized dispersions")
+        if flavor == "cell_ranger"
+        else nullcontext()
+    ):
+        output_mem, output_dask = (
+            sc.pp.highly_variable_genes(
+                ad, flavor=flavor, n_top_genes=15, inplace=False
+            )
+            for ad in [adata, adata_dask]
+        )
 
     assert isinstance(output_mem, pd.DataFrame)
     assert isinstance(output_dask, pd.DataFrame)

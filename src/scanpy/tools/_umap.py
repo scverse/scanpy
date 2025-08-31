@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._utils import AnyRandom
+    from .._utils.random import _LegacyRandom
 
     _InitPos = Literal["paga", "spectral", "random"]
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     "method",
     "neighbors_key",
 )
-def umap(
+def umap(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     *,
     min_dist: float = 0.5,
@@ -49,15 +49,15 @@ def umap(
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: _InitPos | np.ndarray | None = "spectral",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     a: float | None = None,
     b: float | None = None,
-    copy: bool = False,
     method: Literal["umap", "rapids"] = "umap",
-    neighbors_key: str | None = None,
+    key_added: str | None = None,
+    neighbors_key: str = "neighbors",
+    copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
+    r"""Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
@@ -122,8 +122,6 @@ def umap(
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
         `spread`.
-    copy
-        Return a copy instead of writing to adata.
     method
         Chosen implementation.
 
@@ -134,32 +132,40 @@ def umap(
 
             .. deprecated:: 1.10.0
                 Use :func:`rapids_singlecell.tl.umap` instead.
+    key_added
+        If not specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\ `['X_umap']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['umap']`.
+        If specified, the embedding is stored as
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     neighbors_key
-        If not specified, umap looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'] for connectivities
-        (default storage places for pp.neighbors).
-        If specified, umap looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+        Umap looks in
+        :attr:`~anndata.AnnData.uns`\ ``[neighbors_key]`` for neighbors settings and
+        :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+    copy
+        Return a copy instead of writing to adata.
 
     Returns
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_umap']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_umap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
-    `adata.uns['umap']` : :class:`dict`
+    `adata.uns['umap' | key_added]` : :class:`dict`
         UMAP parameters.
 
     """
     adata = adata.copy() if copy else adata
 
-    if neighbors_key is None:
-        neighbors_key = "neighbors"
+    key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
 
+    if neighbors_key is None:  # backwards compat
+        neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError(
-            f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
-        )
+        msg = f"Did not find .uns[{neighbors_key!r}]. Run `sc.pp.neighbors` first."
+        raise ValueError(msg)
+
     start = logg.info("computing UMAP")
 
     neighbors = NeighborsView(adata, neighbors_key)
@@ -178,11 +184,8 @@ def umap(
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
-    else:
-        a = a
-        b = b
-    adata.uns["umap"] = {"params": {"a": a, "b": b}}
-    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
+    adata.uns[key_uns] = dict(params=dict(a=a, b=b))
+    if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(
@@ -194,7 +197,7 @@ def umap(
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     if random_state != 0:
-        adata.uns["umap"]["params"]["random_state"] = random_state
+        adata.uns[key_uns]["params"]["random_state"] = random_state
     random_state = check_random_state(random_state)
 
     neigh_params = neighbors["params"]
@@ -233,13 +236,14 @@ def umap(
             "`method='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         metric = neigh_params.get("metric", "euclidean")
         if metric != "euclidean":
-            raise ValueError(
+            msg = (
                 f"`sc.pp.neighbors` was called with `metric` {metric!r}, "
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
             )
+            raise ValueError(msg)
         from cuml import UMAP
 
         n_neighbors = neighbors["params"]["n_neighbors"]
@@ -262,10 +266,14 @@ def umap(
             random_state=random_state,
         )
         X_umap = umap.fit_transform(X_contiguous)
-    adata.obsm["X_umap"] = X_umap  # annotate samples with UMAP coordinates
+    adata.obsm[key_obsm] = X_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_umap', UMAP coordinates (adata.obsm)"),
+        deep=(
+            "added\n"
+            f"    {key_obsm!r}, UMAP coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, UMAP parameters (adata.uns)"
+        ),
     )
     return adata if copy else None

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._utils.random import _LegacyRandom
 
     _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     "return_info",
     "copy",
 )
-def dca(
+def dca(  # noqa: PLR0913
     adata: AnnData,
     mode: Literal["denoise", "latent"] = "denoise",
     *,
@@ -62,7 +62,7 @@ def dca(
     early_stop: int = 15,
     batch_size: int = 32,
     optimizer: str = "RMSprop",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     threads: int | None = None,
     learning_rate: float | None = None,
     verbose: bool = False,
@@ -71,8 +71,7 @@ def dca(
     return_info: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Deep count autoencoder :cite:p:`Eraslan2019`.
+    """Deep count autoencoder :cite:p:`Eraslan2019`.
 
     Fits a count autoencoder to the raw count data given in the anndata object
     in order to denoise the data and to capture hidden representation of
@@ -176,12 +175,13 @@ def dca(
     If `return_model` is given, trained model is returned.
     When both `copy` and `return_model` are true,
     a tuple of anndata and model is returned in that order.
-    """
 
+    """
     try:
         from dca.api import dca
-    except ImportError:
-        raise ImportError("Please install dca package (>= 0.2.1) via `pip install dca`")
+    except ImportError as e:
+        msg = "Please install dca package (>= 0.2.1) via `pip install dca`"
+        raise ImportError(msg) from e
 
     return dca(
         adata,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
@@ -16,7 +16,11 @@ if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
-    from anndata.experimental import sparse_dataset
+
+    if Version(anndata_version) >= Version("0.11.0rc2"):
+        from anndata.io import sparse_dataset
+    else:
+        from anndata.experimental import sparse_dataset
 
     def make_sparse(x):
         return sparse_dataset(x)
@@ -29,18 +33,21 @@ else:
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from numpy.typing import DTypeLike
+
+    from scanpy._compat import CSBase, CSRBase
 
 
 @pytest.fixture(
     scope="session",
     params=list(
-        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])
+        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])  # noqa: TID251
     ),
     ids=lambda x: f"{x[0].__name__}-{x[1]}",
 )
-def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
+def pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
     from ..._helpers.data import pbmc3k
 
     sparsity_func, dtype = request.param
@@ -51,29 +58,22 @@ def _pbmc3ks_parametrized_session(request) -> dict[bool, AnnData]:
 
 
 @pytest.fixture
-def pbmc3k_parametrized(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
-    return _pbmc3ks_parametrized_session[False].copy
+def pbmc3k_parametrized(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
+    return pbmc3ks_parametrized_session[False].copy
 
 
 @pytest.fixture
-def pbmc3k_parametrized_small(_pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
-    return _pbmc3ks_parametrized_session[True].copy
+def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnData]:
+    return pbmc3ks_parametrized_session[True].copy
 
 
-@pytest.fixture(
-    scope="session",
-    params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
-    ids=["sparse", "dense"],
-)
-# worker_id for xdist since we don't want to override open files
-def backed_adata(
-    request: pytest.FixtureRequest,
-    tmp_path_factory: pytest.TempPathFactory,
-    worker_id: str = "serial",
-) -> AnnData:
-    tmp_path = tmp_path_factory.mktemp("backed_adata")
-    rand_func = request.param
-    tmp_path = tmp_path / f"test_{rand_func.__name__}_{worker_id}.h5ad"
+def random_csr(m: int, n: int) -> CSRBase:
+    return sparse.random(m, n, format="csr")
+
+
+@pytest.fixture(params=[np.random.randn, random_csr], ids=["sparse", "dense"])
+def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
+    rand_func = cast("Callable[[int, int], np.ndarray | CSRBase]", request.param)
     X = rand_func(200, 10).astype(np.float32)
     cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
     adata = AnnData(X, obs={"cat": cat})
@@ -81,8 +81,8 @@ def backed_adata(
     adata.obs["n_counts"] = X.sum(axis=1)
     adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.layers["X_copy"] = adata.X[...]
-    adata.write_h5ad(tmp_path)
-    adata = read_h5ad(tmp_path, backed="r")
+    adata.write_h5ad(tmp_path / "test.h5ad")
+    adata = read_h5ad(tmp_path / "test.h5ad", backed="r")
     adata.layers["X_copy"] = (
         make_sparse(adata.file["X"])
         if isinstance(adata.X, SparseDataset)
@@ -93,14 +93,12 @@ def backed_adata(
 
 def _prepare_pbmc_testdata(
     adata: AnnData,
-    sparsity_func: Callable[
-        [np.ndarray | sparse.spmatrix], np.ndarray | sparse.spmatrix
-    ],
+    sparsity_func: Callable[[np.ndarray | CSBase], np.ndarray | CSBase],
     dtype: DTypeLike,
     *,
     small: bool,
 ) -> AnnData:
-    """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
+    """Prepare 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
     Params
     ------

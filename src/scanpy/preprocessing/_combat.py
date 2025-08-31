@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from numpy import linalg as la
-from scipy.sparse import issparse
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -20,11 +19,10 @@ if TYPE_CHECKING:
 def _design_matrix(
     model: pd.DataFrame, batch_key: str, batch_levels: Collection[str]
 ) -> pd.DataFrame:
-    """\
-    Computes a simple design matrix.
+    """Compute a simple design matrix.
 
     Parameters
-    --------
+    ----------
     model
         Contains the batch annotation
     batch_key
@@ -33,8 +31,9 @@ def _design_matrix(
         Levels of the batch annotation
 
     Returns
-    --------
+    -------
     The design matrix for the regression problem
+
     """
     import patsy
 
@@ -72,13 +71,12 @@ def _design_matrix(
 def _standardize_data(
     model: pd.DataFrame, data: pd.DataFrame, batch_key: str
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
-    """\
-    Standardizes the data per gene.
+    """Standardize the data per gene.
 
     The aim here is to make mean and variance be comparable across batches.
 
     Parameters
-    --------
+    ----------
     model
         Contains the batch annotation
     data
@@ -87,7 +85,7 @@ def _standardize_data(
         Name of the batch column in the model matrix
 
     Returns
-    --------
+    -------
     s_data
         Standardized Data
     design
@@ -96,11 +94,11 @@ def _standardize_data(
         Pooled variance per gene
     stand_mean
         Gene-wise mean
-    """
 
+    """
     # compute the design matrix
     batch_items = model.groupby(batch_key, observed=True).groups.items()
-    batch_levels, batch_info = zip(*batch_items)
+    batch_levels, batch_info = zip(*batch_items, strict=True)
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
@@ -136,15 +134,14 @@ def _standardize_data(
 
 
 @old_positionals("covariates", "inplace")
-def combat(
+def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",
     *,
     covariates: Collection[str] | None = None,
     inplace: bool = True,
 ) -> np.ndarray | None:
-    """\
-    ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
+    """ComBat function for batch effect correction :cite:p:`Johnson2006,Leek2012,Pedersen2012`.
 
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes.
@@ -171,35 +168,34 @@ def combat(
 
     Returns
     -------
-    Returns :class:`numpy.ndarray` if `inplace=True`, else returns `None` and sets the following field in the `adata` object:
+    Returns :class:`numpy.ndarray` if `inplace=False`, else returns `None` and sets the following field in the `adata` object:
 
     `adata.X` : :class:`numpy.ndarray` (dtype `float`)
         Corrected data matrix.
-    """
 
+    """
     # check the input
     if key not in adata.obs_keys():
-        raise ValueError(f"Could not find the key {key!r} in adata.obs")
+        msg = f"Could not find the key {key!r} in adata.obs"
+        raise ValueError(msg)
 
     if covariates is not None:
         cov_exist = np.isin(covariates, adata.obs_keys())
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
-            raise ValueError(
-                f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
-            )
+            msg = f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
+            raise ValueError(msg)
 
         if key in covariates:
-            raise ValueError("Batch key and covariates cannot overlap")
+            msg = "Batch key and covariates cannot overlap"
+            raise ValueError(msg)
 
         if len(covariates) != len(set(covariates)):
-            raise ValueError("Covariates must be unique")
+            msg = "Covariates must be unique"
+            raise ValueError(msg)
 
     # only works on dense matrices so far
-    if issparse(adata.X):
-        X = adata.X.toarray().T
-    else:
-        X = adata.X.T
+    X = adata.X.toarray().T if isinstance(adata.X, CSBase) else adata.X.T
     data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
 
     sanitize_anndata(adata)
@@ -222,11 +218,8 @@ def combat(
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
     ).values
-    delta_hat = []
-
     # first estimate for the multiplicative batch effect
-    for i, batch_idxs in enumerate(batch_info):
-        delta_hat.append(s_data.iloc[:, batch_idxs].var(axis=1))
+    delta_hat = [s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info]
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)
@@ -264,7 +257,7 @@ def combat(
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
     for j, batch_idxs in enumerate(batch_info):
-        # we basically substract the additive batch effect, rescale by the ratio
+        # we basically subtract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
         dsq = np.sqrt(delta_star[j, :])
@@ -297,8 +290,7 @@ def _it_sol(
     b: float,
     conv: float = 0.0001,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """\
-    Iteratively compute the conditional posterior means for gamma and delta.
+    """Iteratively compute the conditional posterior means for gamma and delta.
 
     gamma is an estimator for the additive batch effect, deltat is an estimator
     for the multiplicative batch effect. We use an EB framework to estimate these
@@ -306,7 +298,7 @@ def _it_sol(
     We therefore iteratively evalutate these two expressions until convergence is reached.
 
     Parameters
-    --------
+    ----------
     s_data
         Contains the standardized Data
     g_hat
@@ -318,14 +310,14 @@ def _it_sol(
     conv: float, optional (default: `0.0001`)
         convergence criterium
 
-    Returns:
-    --------
+    Returns
+    -------
     gamma
         estimated value for gamma
     delta
         estimated value for delta
-    """
 
+    """  # noqa: D401
     n = (1 - np.isnan(s_data)).sum(axis=1)
     g_old = g_hat.copy()
     d_old = d_hat.copy()

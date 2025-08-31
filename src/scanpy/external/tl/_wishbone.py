@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Collection
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -11,7 +11,7 @@ from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Iterable
 
     from anndata import AnnData
 
@@ -27,9 +27,7 @@ def wishbone(
     components: Iterable[int] = (1, 2, 3),
     num_waypoints: int | Collection = 250,
 ):
-    """\
-    Wishbone identifies bifurcating developmental trajectories from single-cell data
-    :cite:p:`Setty2016`.
+    """Identify bifurcating developmental trajectories from single-cell data :cite:p:`Setty2016`.
 
     Wishbone is an algorithm for positioning single cells along bifurcating
     developmental trajectories with high resolution. Wishbone uses multi-dimensional
@@ -100,22 +98,23 @@ def wishbone(
     For further demonstration of Wishbone methods and visualization please follow the
     notebooks in the package `Wishbone_for_single_cell_RNAseq.ipynb
     <https://github.com/dpeerlab/wishbone/tree/master/notebooks>`_.\
+
     """
     try:
         from wishbone.core import wishbone as c_wishbone
-    except ImportError:
-        raise ImportError(
-            "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
-        )
+    except ImportError as e:
+        msg = "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
+        raise ImportError(msg) from e
 
     # Start cell index
     s = np.where(adata.obs_names == start_cell)[0]
     if len(s) == 0:
-        raise RuntimeError(
+        msg = (
             f"Start cell {start_cell} not found in data. "
             "Please rerun with correct start cell."
         )
-    if isinstance(num_waypoints, cabc.Collection):
+        raise RuntimeError(msg)
+    if isinstance(num_waypoints, Collection):
         diff = np.setdiff1d(num_waypoints, adata.obs.index)
         if diff.size > 0:
             logging.warning(
@@ -124,10 +123,11 @@ def wishbone(
             )
             num_waypoints = diff.tolist()
     elif num_waypoints > adata.shape[0]:
-        raise RuntimeError(
+        msg = (
             "num_waypoints parameter is higher than the number of cells in the "
             "dataset. Please select a smaller number"
         )
+        raise RuntimeError(msg)
     s = s[0]
 
     # Run the algorithm

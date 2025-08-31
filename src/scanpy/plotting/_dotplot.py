@@ -3,15 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
+    _dk,
     check_colornorm,
     fix_kwds,
     make_grid_spec,
@@ -25,21 +26,19 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
-    from ._utils import (
-        ColorLike,
-        _AxesSubplot,
-    )
+    from ._utils import ColorLike, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class DotPlot(BasePlot):
-    """\
-    Allows the visualization of two values that are encoded as
-    dot size and color. The size usually represents the fraction
-    of cells (obs) that have a non-zero value for genes (var).
+    """Allows the visualization of two values that are encoded as dot size and color.
+
+    The size usually represents the fraction of cells (obs)
+    that have a non-zero value for genes (var).
 
     For each var_name and each `groupby` category a dot is plotted.
     Each dot represents two values: mean expression within each category
@@ -74,7 +73,7 @@ class DotPlot(BasePlot):
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pl.dotplot`: Simpler way to call DotPlot but with less options.
     :func:`~scanpy.pl.rank_genes_groups_dotplot`: to plot marker
@@ -82,22 +81,21 @@ class DotPlot(BasePlot):
 
     Examples
     --------
-
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+    >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+    >>> sc.pl.DotPlot(adata, markers, groupby="bulk_labels").show()
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels').show()
+    >>> markers = {{"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}}
+    >>> sc.pl.DotPlot(adata, markers, groupby="bulk_labels").show()
 
     """
 
     DEFAULT_SAVE_PREFIX = "dotplot_"
     # default style parameters
-    DEFAULT_COLORMAP = "winter"
+    DEFAULT_COLORMAP = "Reds"
     DEFAULT_COLOR_ON = "dot"
     DEFAULT_DOT_MAX = None
     DEFAULT_DOT_MIN = None
@@ -137,7 +135,7 @@ class DotPlot(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -263,6 +261,7 @@ class DotPlot(BasePlot):
             ]
             for df in (dot_color_df, dot_size_df)
         )
+        self.standard_scale = standard_scale
 
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
@@ -300,55 +299,53 @@ class DotPlot(BasePlot):
         "x_padding",
         "y_padding",
     )
-    def style(
+    def style(  # noqa: PLR0913
         self,
         *,
-        cmap: str = DEFAULT_COLORMAP,
-        color_on: Literal["dot", "square"] | None = DEFAULT_COLOR_ON,
-        dot_max: float | None = DEFAULT_DOT_MAX,
-        dot_min: float | None = DEFAULT_DOT_MIN,
-        smallest_dot: float | None = DEFAULT_SMALLEST_DOT,
-        largest_dot: float | None = DEFAULT_LARGEST_DOT,
-        dot_edge_color: ColorLike | None = DEFAULT_DOT_EDGECOLOR,
-        dot_edge_lw: float | None = DEFAULT_DOT_EDGELW,
-        size_exponent: float | None = DEFAULT_SIZE_EXPONENT,
-        grid: float | None = False,
-        x_padding: float | None = DEFAULT_PLOT_X_PADDING,
-        y_padding: float | None = DEFAULT_PLOT_Y_PADDING,
+        cmap: Colormap | str | None | Empty = _empty,
+        color_on: Literal["dot", "square"] | Empty = _empty,
+        dot_max: float | None | Empty = _empty,
+        dot_min: float | None | Empty = _empty,
+        smallest_dot: float | Empty = _empty,
+        largest_dot: float | Empty = _empty,
+        dot_edge_color: ColorLike | None | Empty = _empty,
+        dot_edge_lw: float | None | Empty = _empty,
+        size_exponent: float | Empty = _empty,
+        grid: bool | Empty = _empty,
+        x_padding: float | Empty = _empty,
+        y_padding: float | Empty = _empty,
     ) -> Self:
-        r"""\
-        Modifies plot visual parameters
+        r"""Modify plot visual parameters.
 
         Parameters
         ----------
         cmap
             String denoting matplotlib color map.
         color_on
-            Options are 'dot' or 'square'. Be default the colomap is applied to
-            the color of the dot. Optionally, the colormap can be applied to an
-            square behind the dot, in which case the dot is transparent and only
-            the edge is shown.
+            By default the color map is applied to the color of the ``"dot"``.
+            Optionally, the colormap can be applied to a ``"square"`` behind the dot,
+            in which case the dot is transparent and only the edge is shown.
         dot_max
-            If none, the maximum dot size is set to the maximum fraction value found
-            (e.g. 0.6). If given, the value should be a number between 0 and 1.
+            If ``None``, the maximum dot size is set to the maximum fraction value found (e.g. 0.6).
+            If given, the value should be a number between 0 and 1.
             All fractions larger than dot_max are clipped to this value.
         dot_min
-            If none, the minimum dot size is set to 0. If given,
-            the value should be a number between 0 and 1.
+            If ``None``, the minimum dot size is set to 0.
+            If given, the value should be a number between 0 and 1.
             All fractions smaller than dot_min are clipped to this value.
         smallest_dot
-            If none, the smallest dot has size 0.
             All expression fractions with `dot_min` are plotted with this size.
         largest_dot
-            If none, the largest dot has size 200.
             All expression fractions with `dot_max` are plotted with this size.
         dot_edge_color
-            Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white for darker colors and black
-            for lighter background square colors.
+            Dot edge color.
+            When `color_on='dot'`, ``None`` means no edge.
+            When `color_on='square'`, ``None`` means that
+            the edge color is white for darker colors and black for lighter background square colors.
         dot_edge_lw
-            Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5.
+            Dot edge line width.
+            When `color_on='dot'`, ``None`` means no edge.
+            When `color_on='square'`, ``None`` means a line width of 1.5.
         size_exponent
             Dot size is computed as:
             fraction  ** size exponent and afterwards scaled to match the
@@ -371,8 +368,7 @@ class DotPlot(BasePlot):
         :class:`~scanpy.pl.DotPlot`
 
         Examples
-        -------
-
+        --------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
@@ -387,32 +383,31 @@ class DotPlot(BasePlot):
         >>> sc.pl.DotPlot(adata, markers, groupby='bulk_labels') \
         ...     .style(dot_edge_color='black', dot_edge_lw=1, grid=True) \
         ...     .show()
-        """
 
-        # change only the values that had changed
-        if cmap != self.cmap:
-            self.cmap = cmap
-        if dot_max != self.dot_max:
+        """
+        super().style(cmap=cmap)
+
+        if dot_max is not _empty:
             self.dot_max = dot_max
-        if dot_min != self.dot_min:
+        if dot_min is not _empty:
             self.dot_min = dot_min
-        if smallest_dot != self.smallest_dot:
+        if smallest_dot is not _empty:
             self.smallest_dot = smallest_dot
-        if largest_dot != self.largest_dot:
+        if largest_dot is not _empty:
             self.largest_dot = largest_dot
-        if color_on != self.color_on:
+        if color_on is not _empty:
             self.color_on = color_on
-        if size_exponent != self.size_exponent:
+        if size_exponent is not _empty:
             self.size_exponent = size_exponent
-        if dot_edge_color != self.dot_edge_color:
+        if dot_edge_color is not _empty:
             self.dot_edge_color = dot_edge_color
-        if dot_edge_lw != self.dot_edge_lw:
+        if dot_edge_lw is not _empty:
             self.dot_edge_lw = dot_edge_lw
-        if grid != self.grid:
+        if grid is not _empty:
             self.grid = grid
-        if x_padding != self.plot_x_padding:
+        if x_padding is not _empty:
             self.plot_x_padding = x_padding
-        if y_padding != self.plot_y_padding:
+        if y_padding is not _empty:
             self.plot_y_padding = y_padding
 
         return self
@@ -435,8 +430,7 @@ class DotPlot(BasePlot):
         colorbar_title: str | None = DEFAULT_COLOR_LEGEND_TITLE,
         width: float | None = DEFAULT_LEGENDS_WIDTH,
     ) -> Self:
-        """\
-        Configures dot size and the colorbar legends
+        r"""Configure dot size and the colorbar legends.
 
         Parameters
         ----------
@@ -448,10 +442,10 @@ class DotPlot(BasePlot):
         show_colorbar
             Set to `False` to hide the colorbar legend
         size_title
-            Title for the dot size legend. Use '\\n' to add line breaks. Appears on top
+            Title for the dot size legend. Use ``\n`` to add line breaks. Appears on top
             of dot sizes
         colorbar_title
-            Title for the color bar. Use '\\n' to add line breaks. Appears on top of the
+            Title for the color bar. Use ``\n`` to add line breaks. Appears on top of the
             color bar
         width
             Width of the legends area. The unit is the same as in matplotlib (inches).
@@ -462,16 +456,15 @@ class DotPlot(BasePlot):
 
         Examples
         --------
-
         Set color bar title:
 
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
-        >>> markers = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
-        >>> dp = sc.pl.DotPlot(adata, markers, groupby='bulk_labels')
-        >>> dp.legend(colorbar_title='log(UMI counts + 1)').show()
-        """
+        >>> markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
+        >>> dp = sc.pl.DotPlot(adata, markers, groupby="bulk_labels")
+        >>> dp.legend(colorbar_title="log(UMI counts + 1)").show()
 
+        """
         if not show:
             # turn of legends by setting width to 0
             self.legends_width = 0
@@ -530,7 +523,7 @@ class DotPlot(BasePlot):
         size_legend_ax.spines["top"].set_visible(False)
         size_legend_ax.spines["left"].set_visible(False)
         size_legend_ax.spines["bottom"].set_visible(False)
-        size_legend_ax.grid(False)
+        size_legend_ax.grid(visible=False)
 
         ymax = size_legend_ax.get_ylim()[1]
         size_legend_ax.set_ylim(-1.05 - self.largest_dot * 0.003, 4)
@@ -574,7 +567,7 @@ class DotPlot(BasePlot):
             self._plot_colorbar(color_legend_ax, normalize)
             return_ax_dict["color_legend_ax"] = color_legend_ax
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # DotPlot object, for example once with swap_axes and other without
@@ -599,9 +592,10 @@ class DotPlot(BasePlot):
             _color_df,
             ax,
             cmap=self.cmap,
+            color_on=self.color_on,
             dot_max=self.dot_max,
             dot_min=self.dot_min,
-            color_on=self.color_on,
+            standard_scale=self.standard_scale,
             edge_color=self.dot_edge_color,
             edge_lw=self.dot_edge_lw,
             smallest_dot=self.smallest_dot,
@@ -621,82 +615,59 @@ class DotPlot(BasePlot):
         return normalize
 
     @staticmethod
-    def _dotplot(
+    def _dotplot(  # noqa: PLR0912, PLR0913, PLR0915
         dot_size: pd.DataFrame,
         dot_color: pd.DataFrame,
         dot_ax: Axes,
         *,
-        cmap: str = "Reds",
-        color_on: str | None = "dot",
-        y_label: str | None = None,
-        dot_max: float | None = None,
-        dot_min: float | None = None,
-        standard_scale: Literal["var", "group"] | None = None,
-        smallest_dot: float | None = 0.0,
-        largest_dot: float | None = 200,
-        size_exponent: float | None = 2,
-        edge_color: ColorLike | None = None,
-        edge_lw: float | None = None,
-        grid: bool | None = False,
-        x_padding: float | None = 0.8,
-        y_padding: float | None = 1.0,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        vcenter: float | None = None,
-        norm: Normalize | None = None,
+        cmap: Colormap | str | None,
+        color_on: Literal["dot", "square"],
+        dot_max: float | None,
+        dot_min: float | None,
+        standard_scale: Literal["var", "group"] | None,
+        smallest_dot: float,
+        largest_dot: float,
+        size_exponent: float,
+        edge_color: ColorLike | None,
+        edge_lw: float | None,
+        grid: bool,
+        x_padding: float,
+        y_padding: float,
+        vmin: float | None,
+        vmax: float | None,
+        vcenter: float | None,
+        norm: Normalize | None,
         **kwds,
     ):
-        """\
-        Makes a *dot plot* given two data frames, one containing
-        the doc size and other containing the dot color. The indices and
-        columns of the data frame are used to label the output image
+        """Make a *dot plot* given two data frames.
+
+        One containing the dot size and other containing the dot color.
+        The indices and columns of the data frame are used to label the output image.
 
         The dots are plotted using :func:`matplotlib.pyplot.scatter`. Thus, additional
         arguments can be passed.
 
         Parameters
         ----------
-        dot_size: Data frame containing the dot_size.
-        dot_color: Data frame containing the dot_color, should have the same,
-                shape, columns and indices as dot_size.
-        dot_ax: matplotlib axis
+        dot_size
+            Data frame containing the dot_size.
+        dot_color
+            Data frame containing the dot_color, should have the same,
+            shape, columns and indices as dot_size.
+        dot_ax
+            matplotlib axis
         cmap
-            String denoting matplotlib color map.
         color_on
-            Options are 'dot' or 'square'. Be default the colomap is applied to
-            the color of the dot. Optionally, the colormap can be applied to an
-            square behind the dot, in which case the dot is transparent and only
-            the edge is shown.
-        y_label: String. Label for y axis
         dot_max
-            If none, the maximum dot size is set to the maximum fraction value found
-            (e.g. 0.6). If given, the value should be a number between 0 and 1.
-            All fractions larger than dot_max are clipped to this value.
         dot_min
-            If none, the minimum dot size is set to 0. If given,
-            the value should be a number between 0 and 1.
-            All fractions smaller than dot_min are clipped to this value.
         standard_scale
-            Whether or not to standardize that dimension between 0 and 1,
-            meaning for each variable or group,
-            subtract the minimum and divide each by its maximum.
         smallest_dot
-            If none, the smallest dot has size 0.
-            All expression levels with `dot_min` are plotted with this size.
         edge_color
-            Dot edge color. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, edge color is white
         edge_lw
-            Dot edge line width. When `color_on='dot'` the default is no edge. When
-            `color_on='square'`, line width = 1.5
         grid
-            Adds a grid to the plot
-        x_paddding
-            Space between the plot left/right borders and the dots center. A unit
-            is the distance between the x ticks. Only applied when color_on = dot
-        y_paddding
-            Space between the plot top/bottom borders and the dots center. A unit is
-            the distance between the y ticks. Only applied when color_on = dot
+        x_padding
+        y_padding
+            See `style`
         kwds
             Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -706,11 +677,11 @@ class DotPlot(BasePlot):
 
         """
         assert dot_size.shape == dot_color.shape, (
-            "please check that dot_size " "and dot_color dataframes have the same shape"
+            "please check that dot_size and dot_color dataframes have the same shape"
         )
 
         assert list(dot_size.index) == list(dot_color.index), (
-            "please check that dot_size " "and dot_color dataframes have the same index"
+            "please check that dot_size and dot_color dataframes have the same index"
         )
 
         assert list(dot_size.columns) == list(dot_color.columns), (
@@ -741,17 +712,17 @@ class DotPlot(BasePlot):
         x = x.flatten() + 0.5
         frac = dot_size.values.flatten()
         mean_flat = dot_color.values.flatten()
-        cmap = plt.get_cmap(cmap)
+        cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
-        else:
-            if dot_max < 0 or dot_max > 1:
-                raise ValueError("`dot_max` value has to be between 0 and 1")
+        elif dot_max < 0 or dot_max > 1:
+            msg = "`dot_max` value has to be between 0 and 1"
+            raise ValueError(msg)
         if dot_min is None:
             dot_min = 0
-        else:
-            if dot_min < 0 or dot_min > 1:
-                raise ValueError("`dot_min` value has to be between 0 and 1")
+        elif dot_min < 0 or dot_min > 1:
+            msg = "`dot_min` value has to be between 0 and 1"
+            raise ValueError(msg)
 
         if dot_min != 0 or dot_max != 1:
             # clip frac between dot_min and  dot_max
@@ -805,7 +776,6 @@ class DotPlot(BasePlot):
                 linewidth=edge_lw,
                 edgecolor=edge_color,
             )
-
             dot_ax.scatter(x, y, **kwds)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5
@@ -823,8 +793,7 @@ class DotPlot(BasePlot):
             minor=False,
         )
         dot_ax.tick_params(axis="both", labelsize="small")
-        dot_ax.grid(False)
-        dot_ax.set_ylabel(y_label)
+        dot_ax.grid(visible=False)
 
         # to be consistent with the heatmap plot, is better to
         # invert the order of the y-axis, such that the first group is on
@@ -844,7 +813,7 @@ class DotPlot(BasePlot):
             dot_ax.set_xlim(-x_padding, dot_color.shape[1] + x_padding)
 
         if grid:
-            dot_ax.grid(True, color="gray", linewidth=0.1)
+            dot_ax.grid(visible=True, color="gray", linewidth=0.1)
             dot_ax.set_axisbelow(True)
 
         return normalize, dot_min, dot_max
@@ -872,7 +841,7 @@ class DotPlot(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def dotplot(
+def dotplot(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
@@ -880,13 +849,10 @@ def dotplot(
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
+    categories_order: Sequence[str] | None = None,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
-    cmap: str = "Reds",
-    dot_max: float | None = DotPlot.DEFAULT_DOT_MAX,
-    dot_min: float | None = DotPlot.DEFAULT_DOT_MIN,
     standard_scale: Literal["var", "group"] | None = None,
-    smallest_dot: float | None = DotPlot.DEFAULT_SMALLEST_DOT,
     title: str | None = None,
     colorbar_title: str | None = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
     size_title: str | None = DotPlot.DEFAULT_SIZE_LEGEND_TITLE,
@@ -907,10 +873,14 @@ def dotplot(
     vmax: float | None = None,
     vcenter: float | None = None,
     norm: Normalize | None = None,
+    # Style parameters
+    cmap: Colormap | str | None = DotPlot.DEFAULT_COLORMAP,
+    dot_max: float | None = DotPlot.DEFAULT_DOT_MAX,
+    dot_min: float | None = DotPlot.DEFAULT_DOT_MIN,
+    smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
     **kwds,
 ) -> DotPlot | dict | None:
-    """\
-    Makes a *dot plot* of the expression values of `var_names`.
+    r"""Make a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted.
     Each dot represents two values: mean expression within each category
@@ -935,7 +905,7 @@ def dotplot(
     {common_plot_args}
     {groupby_plots_args}
     size_title
-        Title for the size legend. New line character (\\n) can be used.
+        Title for the size legend. New line character (\n) can be used.
     expression_cutoff
         Expression cutoff that is used for binarizing the gene expression and
         determining the fraction of cells expressing given genes. A gene is
@@ -944,15 +914,14 @@ def dotplot(
         If True, gene expression is averaged only over the cells
         expressing the given genes.
     dot_max
-        If none, the maximum dot size is set to the maximum fraction value found
+        If ``None``, the maximum dot size is set to the maximum fraction value found
         (e.g. 0.6). If given, the value should be a number between 0 and 1.
         All fractions larger than dot_max are clipped to this value.
     dot_min
-        If none, the minimum dot size is set to 0. If given,
+        If ``None``, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1.
         All fractions smaller than dot_min are clipped to this value.
     smallest_dot
-        If none, the smallest dot has size 0.
         All expression levels with `dot_min` are plotted with this size.
     {show_save_ax}
     {vminmax}
@@ -964,7 +933,7 @@ def dotplot(
     If `return_fig` is `True`, returns a :class:`~scanpy.pl.DotPlot` object,
     else if `show` is false, return axes dict
 
-    See also
+    See Also
     --------
     :class:`~scanpy.pl.DotPlot`: The DotPlot class can be used to to control
         several visual parameters not available in this function.
@@ -973,7 +942,6 @@ def dotplot(
 
     Examples
     --------
-
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category 'bulk_labels'.
 
@@ -1009,12 +977,9 @@ def dotplot(
         print(axes_dict)
 
     """
-
     # backwards compatibility: previous version of dotplot used `color_map`
     # instead of `cmap`
-    cmap = kwds.get("color_map", cmap)
-    if "color_map" in kwds:
-        del kwds["color_map"]
+    cmap = kwds.pop("color_map", cmap)
 
     dp = DotPlot(
         adata,
@@ -1023,6 +988,7 @@ def dotplot(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         expression_cutoff=expression_cutoff,
         mean_only_expressed=mean_only_expressed,
         standard_scale=standard_scale,
@@ -1043,7 +1009,7 @@ def dotplot(
     )
 
     if dendrogram:
-        dp.add_dendrogram(dendrogram_key=dendrogram)
+        dp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         dp.swap_axes()
 
@@ -1052,7 +1018,7 @@ def dotplot(
         dot_max=dot_max,
         dot_min=dot_min,
         smallest_dot=smallest_dot,
-        dot_edge_lw=kwds.pop("linewidth", DotPlot.DEFAULT_DOT_EDGELW),
+        dot_edge_lw=kwds.pop("linewidth", _empty),
     ).legend(colorbar_title=colorbar_title, size_title=size_title)
 
     if return_fig:

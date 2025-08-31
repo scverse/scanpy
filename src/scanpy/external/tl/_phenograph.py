@@ -1,6 +1,4 @@
-"""\
-Perform clustering using PhenoGraph
-"""
+"""Perform clustering using PhenoGraph."""
 
 from __future__ import annotations
 
@@ -18,8 +16,8 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     import numpy as np
-    from scipy.sparse import spmatrix
 
+    from ..._compat import SpBase
     from ...tools._leiden import MutableVertexPartition
 
 
@@ -43,8 +41,8 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phenograph")
-def phenograph(
-    data: AnnData | np.ndarray | spmatrix,
+def phenograph(  # noqa: PLR0913
+    data: AnnData | np.ndarray | SpBase,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     *,
     k: int = 30,
@@ -69,9 +67,8 @@ def phenograph(
     seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
-    """\
-    PhenoGraph clustering :cite:p:`Levine2015`.
+) -> tuple[np.ndarray | None, SpBase, float | None] | None:
+    """PhenoGraph clustering :cite:p:`Levine2015`.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
     data. It works by creating a graph ("network") representing phenotypic similarities
@@ -201,23 +198,33 @@ def phenograph(
     Plot phenograph clusters on tSNE:
 
     >>> sc.pl.tsne(
-    ...     adata, color = ["pheno_louvain", "pheno_leiden"], s = 100,
-    ...     palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10
+    ...     adata,
+    ...     color=["pheno_louvain", "pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
 
     Cluster and cluster centroids for input Numpy ndarray
 
     >>> df = np.random.rand(1000, 40)
     >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
+    >>> dframe.index, dframe.columns = (
+    ...     map(str, dframe.index),
+    ...     map(str, dframe.columns),
+    ... )
     >>> adata = AnnData(dframe)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
-    ...     adata, color=['pheno_leiden'], s=100,
-    ...     palette=sc.pl.palettes.vega_20_scanpy, legend_fontsize=10
+    ...     adata,
+    ...     color=["pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
+
     """
     start = logg.info("PhenoGraph clustering")
 
@@ -225,18 +232,20 @@ def phenograph(
         import phenograph
 
         assert phenograph.__version__ >= "1.5.3"
-    except (ImportError, AssertionError, AttributeError):
-        raise ImportError(
+    except (ImportError, AssertionError, AttributeError) as e:
+        msg = (
             "please install the latest release of phenograph:\n\t"
             "pip install -U PhenoGraph"
         )
+        raise ImportError(msg) from e
 
     if isinstance(data, AnnData):
         adata = data
         try:
             data = data.obsm["X_pca"]
-        except KeyError:
-            raise KeyError("Please run `sc.pp.pca` on `data` and try again!")
+        except KeyError as e:
+            msg = "Please run `sc.pp.pca` on `data` and try again!"
+            raise KeyError(msg) from e
     else:
         adata = None
         copy = True
@@ -244,8 +253,8 @@ def phenograph(
     comm_key = (
         f"pheno_{clustering_algo}" if clustering_algo in ["louvain", "leiden"] else ""
     )
-    ig_key = "pheno_{}_ig".format("jaccard" if jaccard else "gaussian")
-    q_key = "pheno_{}_q".format("jaccard" if jaccard else "gaussian")
+    ig_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_ig"
+    q_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_q"
 
     communities, graph, Q = phenograph.cluster(
         data=data,

@@ -19,7 +19,8 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
 def doctest_skip(reason: str) -> Callable[[F], F]:
     """Mark function so doctest is skipped."""
     if not reason:
-        raise ValueError("reason must not be empty")
+        msg = "reason must not be empty"
+        raise ValueError(msg)
 
     def decorator(func: F) -> F:
         func._doctest_skip_reason = reason
@@ -30,6 +31,5 @@ def doctest_skip(reason: str) -> Callable[[F], F]:
 
 def doctest_internet(func: F) -> F:
     """Mark function so doctest gets the internet mark."""
-
     func._doctest_internet = True
     return func

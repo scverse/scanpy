@@ -1,23 +1,15 @@
 from __future__ import annotations
 
-import sys
-
-import pytest
-
 import scanpy as sc
 import scanpy.external as sce
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
-pytestmark = [
-    needs.scanorama,
-    pytest.mark.skipif(sys.version_info < (3, 10), reason="annoy is unstable on 3.9"),
-]
+pytestmark = [needs.scanorama]
 
 
 def test_scanorama_integrate():
-    """
-    Test that Scanorama integration works.
+    """Test that Scanorama integration works.
 
     This is a very simple test that just checks to see if the Scanorama
     integrate wrapper succesfully added a new field to ``adata.obsm``

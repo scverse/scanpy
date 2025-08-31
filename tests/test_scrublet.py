@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy.sparse as sparse
 from anndata import AnnData, concat
 from anndata.tests.helpers import assert_equal
 from numpy.testing import assert_allclose, assert_array_equal
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs
@@ -41,6 +41,7 @@ def paul500() -> AnnData:
 )
 @pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
+    *,
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
@@ -108,7 +109,8 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
         ),
         (n_sim, adata.n_obs),
     )
-    X = I @ adata.layers["raw"]
+    # maintain data type, just like the real scrublet function.
+    X = (I @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
         X,
         var=pd.DataFrame(index=adata.var_names),
@@ -117,9 +119,8 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     )
 
 
-def test_scrublet_data():
-    """
-    Test that Scrublet processing is arranged correctly.
+def test_scrublet_data(cache: pytest.Cache):
+    """Test that Scrublet processing is arranged correctly.
 
     Check that simulations run on raw data.
     """
@@ -167,7 +168,7 @@ def test_scrublet_data():
 
 
 @pytest.fixture(scope="module")
-def _scrub_small_sess() -> AnnData:
+def scrub_small_sess() -> AnnData:
     # Reduce size of input for faster test
     adata = pbmc200()
     sc.pp.filter_genes(adata, min_counts=100)
@@ -176,9 +177,9 @@ def _scrub_small_sess() -> AnnData:
     return adata
 
 
-@pytest.fixture()
-def scrub_small(_scrub_small_sess: AnnData):
-    return _scrub_small_sess.copy()
+@pytest.fixture
+def scrub_small(scrub_small_sess: AnnData):
+    return scrub_small_sess.copy()
 
 
 test_params = {
@@ -196,8 +197,7 @@ test_params = {
 
 @pytest.mark.parametrize(("param", "value"), test_params.items())
 def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
-    """
-    Test that Scrublet args are passed.
+    """Test that Scrublet args are passed.
 
     Check that changes to parameters change scrublet results.
     """

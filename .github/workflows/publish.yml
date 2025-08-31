@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+env:
+  FORCE_COLOR: "1"
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -11,14 +14,14 @@ jobs:
     permissions:
       id-token: write # to authenticate as Trusted Publisher to pypi.org
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           filter: blob:none
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-          cache: "pip"
-      - run: pip install build
-      - run: python -m build
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1

@@ -3,20 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import rcParams
+from matplotlib import colormaps, rcParams
 
 from .. import logging as logg
 from .._compat import old_positionals
 from .._settings import settings
-from .._utils import _doc_params
+from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
     doc_show_save_ax,
     doc_vboundnorm,
 )
-from ._utils import check_colornorm, fix_kwds, savefig_or_show
+from ._utils import _dk, check_colornorm, fix_kwds, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -25,16 +24,16 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
 
+    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class MatrixPlot(BasePlot):
-    """\
-    Allows the visualization of values using a color map.
+    """Allows the visualization of values using a color map.
 
     Parameters
     ----------
@@ -59,7 +58,7 @@ class MatrixPlot(BasePlot):
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pl.matrixplot`: Simpler way to call MatrixPlot but with less options.
     :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified
@@ -67,7 +66,6 @@ class MatrixPlot(BasePlot):
 
     Examples
     --------
-
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
 
@@ -87,6 +85,7 @@ class MatrixPlot(BasePlot):
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
+
     """
 
     DEFAULT_SAVE_PREFIX = "matrixplot_"
@@ -117,7 +116,7 @@ class MatrixPlot(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -134,7 +133,7 @@ class MatrixPlot(BasePlot):
         var_group_labels: Sequence[str] | None = None,
         var_group_rotation: float | None = None,
         layer: str | None = None,
-        standard_scale: Literal["var", "group"] = None,
+        standard_scale: Literal["var", "group"] | None = None,
         ax: _AxesSubplot | None = None,
         values_df: pd.DataFrame | None = None,
         vmin: float | None = None,
@@ -198,28 +197,30 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: str = DEFAULT_COLORMAP,
-        edge_color: ColorLike | None = DEFAULT_EDGE_COLOR,
-        edge_lw: float | None = DEFAULT_EDGE_LW,
+        cmap: Colormap | str | None | Empty = _empty,
+        edge_color: ColorLike | None | Empty = _empty,
+        edge_lw: float | None | Empty = _empty,
     ) -> Self:
-        """\
-        Modifies plot visual parameters.
+        r"""Modify plot visual parameters.
 
         Parameters
         ----------
         cmap
-            String denoting matplotlib color map.
+            Matplotlib color map, specified by name or directly.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["image.cmap"]``
         edge_color
-            Edge color between the squares of matrix plot. Default is gray
+            Edge color between the squares of matrix plot.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["patch.edgecolor"]``
         edge_lw
             Edge line width.
+            If ``None``, use :obj:`matplotlib.rcParams`\ ``["lines.linewidth"]``
 
         Returns
         -------
         :class:`~scanpy.pl.MatrixPlot`
 
         Examples
-        -------
+        --------
 
         .. plot::
             :context: close-figs
@@ -242,18 +243,16 @@ class MatrixPlot(BasePlot):
             )
 
         """
+        super().style(cmap=cmap)
 
-        # change only the values that had changed
-        if cmap != self.cmap:
-            self.cmap = cmap
-        if edge_color != self.edge_color:
+        if edge_color is not _empty:
             self.edge_color = edge_color
-        if edge_lw != self.edge_lw:
+        if edge_lw is not _empty:
             self.edge_lw = edge_lw
 
         return self
 
-    def _mainplot(self, ax):
+    def _mainplot(self, ax: Axes):
         # work on a copy of the dataframes. This is to avoid changes
         # on the original data frames after repetitive calls to the
         # MatrixPlot object, for example once with swap_axes and other without
@@ -267,7 +266,7 @@ class MatrixPlot(BasePlot):
 
         if self.are_axes_swapped:
             _color_df = _color_df.T
-        cmap = plt.get_cmap(self.kwds.get("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.get("cmap", self.cmap))
         if "cmap" in self.kwds:
             del self.kwds["cmap"]
         normalize = check_colornorm(
@@ -301,7 +300,7 @@ class MatrixPlot(BasePlot):
         ax.set_xticklabels(x_labels, rotation=90, ha="center", minor=False)
 
         ax.tick_params(axis="both", labelsize="small")
-        ax.grid(False)
+        ax.grid(visible=False)
 
         # to be consistent with the heatmap plot, is better to
         # invert the order of the y-axis, such that the first group is on
@@ -335,7 +334,7 @@ class MatrixPlot(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def matrixplot(
+def matrixplot(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
@@ -343,10 +342,11 @@ def matrixplot(
     use_raw: bool | None = None,
     log: bool = False,
     num_categories: int = 7,
+    categories_order: Sequence[str] | None = None,
     figsize: tuple[float, float] | None = None,
     dendrogram: bool | str = False,
     title: str | None = None,
-    cmap: str | None = MatrixPlot.DEFAULT_COLORMAP,
+    cmap: Colormap | str | None = MatrixPlot.DEFAULT_COLORMAP,
     colorbar_title: str | None = MatrixPlot.DEFAULT_COLOR_LEGEND_TITLE,
     gene_symbols: str | None = None,
     var_group_positions: Sequence[tuple[int, int]] | None = None,
@@ -366,8 +366,7 @@ def matrixplot(
     norm: Normalize | None = None,
     **kwds,
 ) -> MatrixPlot | dict[str, Axes] | None:
-    """\
-    Creates a heatmap of the mean expression values per group of each var_names.
+    """Create a heatmap of the mean expression values per group of each var_names.
 
     This function provides a convenient interface to the :class:`~scanpy.pl.MatrixPlot`
     class. If you need more flexibility, you should use :class:`~scanpy.pl.MatrixPlot`
@@ -387,7 +386,7 @@ def matrixplot(
     If `return_fig` is `True`, returns a :class:`~scanpy.pl.MatrixPlot` object,
     else if `show` is false, return axes dict
 
-    See also
+    See Also
     --------
     :class:`~scanpy.pl.MatrixPlot`: The MatrixPlot class can be used to to control
         several visual parameters not available in this function.
@@ -427,8 +426,8 @@ def matrixplot(
         :context: close-figs
 
         axes_dict = mp.get_axes()
-    """
 
+    """
     mp = MatrixPlot(
         adata,
         var_names,
@@ -436,6 +435,7 @@ def matrixplot(
         use_raw=use_raw,
         log=log,
         num_categories=num_categories,
+        categories_order=categories_order,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
@@ -454,7 +454,7 @@ def matrixplot(
     )
 
     if dendrogram:
-        mp.add_dendrogram(dendrogram_key=dendrogram)
+        mp.add_dendrogram(dendrogram_key=_dk(dendrogram))
     if swap_axes:
         mp.swap_axes()
 

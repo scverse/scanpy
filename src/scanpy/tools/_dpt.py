@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
-    start = logg.info(f"computing Diffusion Maps using n_comps={n_comps}(=n_dcs)")
+    start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, random_state=random_state)
@@ -48,12 +48,10 @@ def dpt(
     neighbors_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Infer progression of cells through geodesic distance along the graph
-    :cite:p:`Haghverdi2016,Wolf2019`.
+    """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
 
     Reconstruct the progression of a biological process from snapshot
-    data. `Diffusion Pseudotime` has been introduced by :cite:t:`Haghverdi2016` and
+    data. `Diffusion Pseudotime` was introduced by :cite:t:`Haghverdi2016` and
     implemented within Scanpy :cite:p:`Wolf2018`. Here, we use a further developed
     version, which is able to deal with disconnected graphs :cite:p:`Wolf2019` and can
     be run in a `hierarchical` mode by setting the parameter
@@ -62,11 +60,11 @@ def dpt(
     to detect branchings via :func:`~scanpy.tl.paga`. For pseudotime, you need
     to annotate your data with a root cell. For instance::
 
-        adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
+        adata.uns["iroot"] = np.flatnonzero(adata.obs["cell_types"] == "Stem")[0]
 
-    This requires to run :func:`~scanpy.pp.neighbors`, first. In order to
-    reproduce the original implementation of DPT, use `method=='gauss'` in
-    this. Using the default `method=='umap'` only leads to minor quantitative
+    This requires running :func:`~scanpy.pp.neighbors`, first. In order to
+    reproduce the original implementation of DPT, use `method=='gauss'`.
+    Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
 
     .. versionadded:: 1.1
@@ -96,12 +94,12 @@ def dpt(
         maximum correlation in Kendall tau criterion of :cite:t:`Haghverdi2016` to
         stabilize the splitting.
     neighbors_key
-        If not specified, dpt looks .uns['neighbors'] for neighbors settings
-        and .obsp['connectivities'], .obsp['distances'] for connectivities and
-        distances respectively (default storage places for pp.neighbors).
-        If specified, dpt looks .uns[neighbors_key] for neighbors settings and
-        .obsp[.uns[neighbors_key]['connectivities_key']],
-        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances
+        If not specified, dpt looks in .uns['neighbors'] for neighbors settings
+        and .obsp['connectivities'] and .obsp['distances'] for connectivities and
+        distances, respectively (default storage places for pp.neighbors).
+        If specified, dpt looks in .uns[neighbors_key] for neighbors settings and
+        .obsp[.uns[neighbors_key]['connectivities_key']] and
+        .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
     copy
         Copy instance before computation and return a copy.
@@ -122,6 +120,7 @@ def dpt(
     Notes
     -----
     The tool is similar to the R package `destiny` of :cite:t:`Angerer2015`.
+
     """
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata
@@ -129,7 +128,8 @@ def dpt(
     if neighbors_key is None:
         neighbors_key = "neighbors"
     if neighbors_key not in adata.uns:
-        raise ValueError("You need to run `pp.neighbors` and `tl.diffmap` first.")
+        msg = "You need to run `pp.neighbors` and `tl.diffmap` first."
+        raise ValueError(msg)
     if "iroot" not in adata.uns and "xroot" not in adata.var:
         logg.warning(
             "No root cell found. To compute pseudotime, pass the index or "
@@ -137,7 +137,7 @@ def dpt(
             "    adata.uns['iroot'] = root_cell_index\n"
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
-    if "X_diffmap" not in adata.obsm.keys():
+    if "X_diffmap" not in adata.obsm:
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
@@ -152,7 +152,7 @@ def dpt(
         allow_kendall_tau_shift=allow_kendall_tau_shift,
         neighbors_key=neighbors_key,
     )
-    start = logg.info(f"computing Diffusion Pseudotime using n_dcs={n_dcs}")
+    start = logg.info(f"computing Diffusion Pseudotime using {n_dcs=}")
     if n_branchings > 1:
         logg.info("    this uses a hierarchical implementation")
     if dpt.iroot is not None:
@@ -200,9 +200,7 @@ def dpt(
 
 
 class DPT(Neighbors):
-    """\
-    Hierarchical Diffusion Pseudotime.
-    """
+    """Hierarchical Diffusion Pseudotime."""
 
     def __init__(
         self,
@@ -227,8 +225,7 @@ class DPT(Neighbors):
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
-        """\
-        Detect branchings and partition the data into corresponding segments.
+        """Detect branchings and partition the data into corresponding segments.
 
         Detect all branchings up to `n_branchings`.
 
@@ -250,8 +247,7 @@ class DPT(Neighbors):
         self.order_pseudotime()
 
     def detect_branchings(self):
-        """\
-        Detect all branchings up to `n_branchings`.
+        """Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
@@ -262,7 +258,7 @@ class DPT(Neighbors):
         """
         logg.debug(
             f"    detect {self.n_branchings} "
-            f'branching{"" if self.n_branchings == 1 else "s"}',
+            f"branching{'' if self.n_branchings == 1 else 's'}",
         )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
@@ -380,10 +376,8 @@ class DPT(Neighbors):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:
-        """\
-        Out of a list of line segments, choose segment that has the most
-        distant second data point.
+    def select_segment(self, segs, segs_tips, segs_undecided) -> tuple[int, int]:  # noqa: PLR0912
+        """Out of a list of line segments, choose segment that has the most distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
         Compute all the distances.
@@ -394,6 +388,7 @@ class DPT(Neighbors):
             Index identifying the position within the list of line segments.
         tips3
             Positions of tips within chosen segment.
+
         """
         scores_tips = np.zeros((len(segs), 4))
         allindices = np.arange(self._adata.shape[0], dtype=int)
@@ -496,8 +491,7 @@ class DPT(Neighbors):
         self.segs_names = segs_names
 
     def order_pseudotime(self):
-        """\
-        Define indices that reflect segment and pseudotime order.
+        """Define indices that reflect segment and pseudotime order.
 
         Writes
         ------
@@ -524,7 +518,7 @@ class DPT(Neighbors):
         changepoints = np.arange(indices.size - 1)[np.diff(segs_names) == 1] + 1
         if self.iroot is not None:
             pseudotime = self.pseudotime[indices]
-            for iseg, seg in enumerate(self.segs):
+            for seg in self.segs:
                 # only consider one segment, it's already ordered by segment
                 seg_sorted = seg[indices]
                 # consider the pseudotime on this segment and sort them
@@ -535,7 +529,7 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(
+    def detect_branching(  # noqa: PLR0912, PLR0915
         self,
         *,
         segs: Sequence[np.ndarray],
@@ -546,8 +540,7 @@ class DPT(Neighbors):
         iseg: int,
         tips3: np.ndarray,
     ):
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Updates all list parameters inplace.
 
@@ -564,6 +557,7 @@ class DPT(Neighbors):
             Position of segment under study in segs.
         tips3
             The three tip points. They form a 'triangle' that contains the data.
+
         """
         seg = segs[iseg]
         # restrict distance matrix to points in segment
@@ -608,7 +602,7 @@ class DPT(Neighbors):
             ]
             # TODO Evaluate whether to assign the variable or not
             prev_connecting_points = segs_connects[iseg]  # noqa: F841
-            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
+            for jseg in prev_connecting_segments:
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
                     if iseg_new != trunk:
@@ -633,7 +627,7 @@ class DPT(Neighbors):
 
             segs_adjacency += [[] for i in range(n_add)]
             segs_connects += [[] for i in range(n_add)]
-            kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+            kseg_list = [iseg, *range(len(segs) - n_add, len(segs))]
             for jseg in prev_connecting_segments:
                 pos = segs_adjacency[jseg].index(iseg)
                 distances = []
@@ -751,7 +745,7 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(
+    def _detect_branching(  # noqa: PLR0915
         self,
         Dseg: np.ndarray,
         tips: np.ndarray,
@@ -763,8 +757,7 @@ class DPT(Neighbors):
         list[list[int]],
         int,
     ]:
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
         tips. Points that do not belong to the same segment in all three
@@ -791,24 +784,24 @@ class DPT(Neighbors):
             ?
         trunk
             ?
+
         """
         if self.flavor == "haghverdi16":
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
         elif self.flavor == "wolf17_tri":
             ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
-        elif self.flavor == "wolf17_bi" or self.flavor == "wolf17_bi_un":
+        elif self.flavor in {"wolf17_bi", "wolf17_bi_un"}:
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
-            raise ValueError(
-                '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
-            )
+            msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
+            raise ValueError(msg)
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
         ssegs = []
-        for iseg, mask in enumerate(masks):
+        for mask in masks:
             mask[nonunique] = False
             ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask])
         # compute new tips within new segments
@@ -910,19 +903,17 @@ class DPT(Neighbors):
 
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment."""
-        # compute branchings using different starting points the first index of
-        # tips is the starting point for the other two, the order does not
-        # matter
-        ssegs = []
         # permutations of tip cells
         ps = [
             [0, 1, 2],  # start by computing distances from the first tip
             [1, 2, 0],  #             -"-                       second tip
             [2, 0, 1],  #             -"-                       third tip
         ]
-        for i, p in enumerate(ps):
-            ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
-        return ssegs
+
+        # compute branchings using different starting points the first index of
+        # tips is the starting point for the other two, the order does not
+        # matter
+        return [self.__detect_branching_haghverdi16(Dseg, tips[p]) for p in ps]
 
     def _detect_branching_single_wolf17_tri(self, Dseg, tips):
         # all pairwise distances
@@ -957,8 +948,7 @@ class DPT(Neighbors):
     def __detect_branching_haghverdi16(
         self, Dseg: np.ndarray, tips: np.ndarray
     ) -> np.ndarray:
-        """\
-        Detect branching on given segment.
+        """Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -975,6 +965,7 @@ class DPT(Neighbors):
         Returns
         -------
         Segments obtained from "splitting away the first tip cell".
+
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
@@ -1037,11 +1028,14 @@ class DPT(Neighbors):
         Returns
         -------
         Splitting index according to above description.
+
         """
         if a.size != b.size:
-            raise ValueError("a and b need to have the same size")
+            msg = "a and b need to have the same size"
+            raise ValueError(msg)
         if a.ndim != b.ndim != 1:
-            raise ValueError("a and b need to be one-dimensional arrays")
+            msg = "a and b need to be one-dimensional arrays"
+            raise ValueError(msg)
         import scipy as sp
 
         min_length = 5
@@ -1094,6 +1088,7 @@ class DPT(Neighbors):
             Difference between concordant and non-concordant pairs.
         tau_old
             Kendall rank correlation of the old sequence.
+
         """
         return 2.0 / (len_old + 1) * (float(diff_pos) / len_old - tau_old)
 
@@ -1110,6 +1105,7 @@ class DPT(Neighbors):
             Difference between concordant and non-concordant pairs.
         tau_old
             Kendall rank correlation of the old sequence.
+
         """
         return 2.0 / (len_old - 2) * (-float(diff_neg) / (len_old - 1) + tau_old)
 
@@ -1131,6 +1127,7 @@ class DPT(Neighbors):
             Difference between concordant pairs for both subsequences.
         diff_neg
             Difference between non-concordant pairs for both subsequences.
+
         """
         # compute ordering relation of the single points a[i] and b[i]
         # with all previous points of the sequences a and b, respectively

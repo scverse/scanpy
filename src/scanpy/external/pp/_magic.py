@@ -1,9 +1,8 @@
-"""\
-Denoise high-dimensional data using MAGIC
-"""
+"""Denoise high-dimensional data using MAGIC."""
 
 from __future__ import annotations
 
+from types import NoneType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
@@ -18,13 +17,13 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._utils.random import _LegacyRandom
 
 MIN_VERSION = "2.0"
 
 
 @doctest_needs("magic")
-def magic(
+def magic(  # noqa: PLR0913
     adata: AnnData,
     name_list: Literal["all_genes", "pca_only"] | Sequence[str] | None = None,
     *,
@@ -35,14 +34,13 @@ def magic(
     n_pca: int | None = 100,
     solver: Literal["exact", "approximate"] = "exact",
     knn_dist: str = "euclidean",
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     n_jobs: int | None = None,
     verbose: bool = False,
     copy: bool | None = None,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Markov Affinity-based Graph Imputation of Cells (MAGIC) API :cite:p:`vanDijk2018`.
+    """Markov Affinity-based Graph Imputation of Cells (MAGIC) API :cite:p:`vanDijk2018`.
 
     MAGIC is an algorithm for denoising and transcript recover of single cells
     applied to single-cell sequencing data. MAGIC builds a graph from the data
@@ -127,48 +125,48 @@ def magic(
     >>> adata = sc.datasets.paul15()
     >>> sc.pp.normalize_per_cell(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
-    >>> adata_magic = sce.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], knn=5)
+    >>> adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
     >>> adata_magic.shape
     (2730, 3)
-    >>> sce.pp.magic(adata, name_list='pca_only', knn=5)
-    >>> adata.obsm['X_magic'].shape
+    >>> sce.pp.magic(adata, name_list="pca_only", knn=5)
+    >>> adata.obsm["X_magic"].shape
     (2730, 100)
-    >>> sce.pp.magic(adata, name_list='all_genes', knn=5)
+    >>> sce.pp.magic(adata, name_list="all_genes", knn=5)
     >>> adata.X.shape
     (2730, 3451)
-    """
 
+    """
     try:
         from magic import MAGIC, __version__
-    except ImportError:
-        raise ImportError(
-            "Please install magic package via `pip install --user "
-            "git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`"
-        )
+    except ImportError as e:
+        msg = "Please install magic package via `pip install magic-impute`"
+        raise ImportError(msg) from e
     else:
         if Version(__version__) < Version(MIN_VERSION):
-            raise ImportError(
+            msg = (
                 "scanpy requires magic-impute >= "
                 f"v{MIN_VERSION} (detected: v{__version__}). "
-                "Please update magic package via `pip install --user "
-                "--upgrade magic-impute`"
+                "Please update magic package via `pip install -U magic-impute`"
             )
+            raise ImportError(msg)
 
     start = logg.info("computing MAGIC")
-    all_or_pca = isinstance(name_list, (str, type(None)))
+    all_or_pca = isinstance(name_list, str | NoneType)
     if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
-        raise ValueError(
+        msg = (
             "Invalid string value for `name_list`: "
             "Only `'all_genes'` and `'pca_only'` are allowed."
         )
+        raise ValueError(msg)
     if copy is None:
         copy = not all_or_pca
     elif not all_or_pca and not copy:
-        raise ValueError(
+        msg = (
             "Can only perform MAGIC in-place with `name_list=='all_genes' or "
             f"`name_list=='pca_only'` (got {name_list}). Consider setting "
             "`copy=True`"
         )
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 

@@ -1,15 +1,11 @@
-"""\
-Embed high-dimensional data using TriMap
-"""
+"""Embed high-dimensional data using TriMap."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import scipy.sparse as scp
-
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import CSBase, old_positionals
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -31,7 +27,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("trimap")
-def trimap(
+def trimap(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,
@@ -45,8 +41,7 @@ def trimap(
     verbose: bool | int | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    TriMap: Large-scale Dimensionality Reduction Using Triplets :cite:p:`Amid2019`.
+    """TriMap: Large-scale Dimensionality Reduction Using Triplets :cite:p:`Amid2019`.
 
     TriMap is a dimensionality reduction method that uses triplet constraints
     to form a low-dimensional embedding of a set of points. The triplet
@@ -102,13 +97,14 @@ def trimap(
     >>> import scanpy.external as sce
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> pbmc = sce.tl.trimap(pbmc, copy=True)
-    >>> sce.pl.trimap(pbmc, color=['bulk_labels'], s=10)
-    """
+    >>> sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
 
+    """
     try:
         from trimap import TRIMAP
-    except ImportError:
-        raise ImportError("\nplease install trimap: \n\n\tsudo pip install trimap")
+    except ImportError as e:
+        msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
+        raise ImportError(msg) from e
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata
@@ -120,11 +116,12 @@ def trimap(
         X = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
     else:
         X = adata.X
-        if scp.issparse(X):
-            raise ValueError(
+        if isinstance(X, CSBase):
+            msg = (
                 "trimap currently does not support sparse matrices. Please"
                 "use a dense matrix or apply pca first."
             )
+            raise ValueError(msg)
         logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
     X_trimap = TRIMAP(
         n_dims=n_components,

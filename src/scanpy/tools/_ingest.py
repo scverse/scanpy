@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from packaging.version import Version
-from scipy.sparse import issparse
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import old_positionals, pkg_version
+from .._compat import CSBase, old_positionals, pkg_version
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
@@ -46,8 +45,7 @@ def ingest(
     inplace: bool = True,
     **kwargs,
 ):
-    """\
-    Map labels and embeddings from reference data to new data.
+    """Map labels and embeddings from reference data to new data.
 
     :doc:`/tutorials/basics/integrating-data-using-ingest`
 
@@ -91,10 +89,10 @@ def ingest(
         The method to map labels in `adata_ref.obs` to `adata.obs`.
         The only supported value is 'knn'.
     neighbors_key
-        If not specified, ingest looks adata_ref.uns['neighbors']
+        If not specified, ingest looks at adata_ref.uns['neighbors']
         for neighbors settings and adata_ref.obsp['distances'] for
         distances (default storage places for pp.neighbors).
-        If specified, ingest looks adata_ref.uns[neighbors_key] for
+        If specified, ingest looks at adata_ref.uns[neighbors_key] for
         neighbors settings and
         adata_ref.obsp[adata_ref.uns[neighbors_key]['distances_key']] for distances.
     inplace
@@ -118,16 +116,18 @@ def ingest(
     >>> import scanpy as sc
     >>> sc.pp.neighbors(adata_ref)
     >>> sc.tl.umap(adata_ref)
-    >>> sc.tl.ingest(adata, adata_ref, obs='cell_type')
+    >>> sc.tl.ingest(adata, adata_ref, obs="cell_type")
+
     """
     # anndata version check
     anndata_version = pkg_version("anndata")
     if anndata_version < ANNDATA_MIN_VERSION:
-        raise ValueError(
+        msg = (
             f"ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} "
             f"(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, "
             "`AnnData.concatenate` did not concatenate `.obsm`."
         )
+        raise ValueError(msg)
 
     start = logg.info("running ingest")
     obs = [obs] if isinstance(obs, str) else obs
@@ -153,7 +153,7 @@ def ingest(
             ing.map_labels(col, labeling_method[i])
 
     logg.info("    finished", time=start)
-    return ing.to_adata(inplace)
+    return ing.to_adata(inplace=inplace)
 
 
 def _rp_forest_generate(
@@ -187,12 +187,13 @@ class _DimDict(MutableMapping):
 
     def __setitem__(self, key, value):
         if value.shape[self._axis] != self._dim:
-            raise ValueError(
-                f"Value passed for key '{key}' is of incorrect shape. "
+            msg = (
+                f"Value passed for key {key!r} is of incorrect shape. "
                 f"Value has shape {value.shape[self._axis]} "
                 f"for dimension {self._axis} while "
                 f"it should have {self._dim}."
             )
+            raise ValueError(msg)
         self._data[key] = value
 
     def __getitem__(self, key):
@@ -212,8 +213,7 @@ class _DimDict(MutableMapping):
 
 
 class Ingest:
-    """\
-    Class to map labels and embeddings from existing data to new data.
+    """Class to map labels and embeddings from existing data to new data.
 
     You need to run :func:`~scanpy.pp.neighbors` on `adata` before
     initializing Ingest with it.
@@ -223,6 +223,7 @@ class Ingest:
     adata : :class:`~anndata.AnnData`
         The annotated data matrix of shape `n_obs` × `n_vars`
         with embeddings and labels.
+
     """
 
     def _init_umap(self, adata):
@@ -231,6 +232,7 @@ class Ingest:
         self._umap = UMAP(
             metric=self._metric,
             random_state=adata.uns["umap"]["params"].get("random_state", 0),
+            n_jobs=1,  # umap can’t be run in parallel with random_state != None
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
@@ -240,7 +242,7 @@ class Ingest:
         self._umap._validate_parameters()
 
         self._umap.embedding_ = adata.obsm["X_umap"]
-        self._umap._sparse_data = issparse(self._rep)
+        self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
 
@@ -296,16 +298,12 @@ class Ingest:
             self._use_rep = "X_pca"
             self._n_pcs = neighbors["params"]["n_pcs"]
             self._rep = adata.obsm["X_pca"][:, : self._n_pcs]
-        elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm.keys():
+        elif adata.n_vars > settings.N_PCS and "X_pca" in adata.obsm:
             self._use_rep = "X_pca"
             self._rep = adata.obsm["X_pca"][:, : settings.N_PCS]
             self._n_pcs = self._rep.shape[1]
 
-        if "metric_kwds" in neighbors["params"]:
-            self._metric_kwds = neighbors["params"]["metric_kwds"]
-        else:
-            self._metric_kwds = {}
-
+        self._metric_kwds = neighbors["params"].get("metric_kwds", {})
         self._metric = neighbors["params"]["metric"]
 
         self._neigh_random_state = neighbors["params"].get("random_state", 0)
@@ -316,7 +314,7 @@ class Ingest:
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
         mask = "highly_variable"
-        if self._pca_use_hvg and mask not in adata.var.keys():
+        if self._pca_use_hvg and mask not in adata.var.columns:
             msg = f"Did not find `adata.var[{mask!r}']`."
             raise ValueError(msg)
 
@@ -344,10 +342,11 @@ class Ingest:
         if neighbors_key in adata.uns:
             self._init_neighbors(adata, neighbors_key)
         else:
-            raise ValueError(
+            msg = (
                 f'There is no neighbors data in `adata.uns["{neighbors_key}"]`.\n'
                 "Please run pp.neighbors."
             )
+            raise ValueError(msg)
 
         if "X_umap" in adata.obsm:
             self._init_umap(adata)
@@ -361,7 +360,7 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         X = self._adata_new.X
-        X = X.toarray() if issparse(X) else X.copy()
+        X = X.toarray() if isinstance(X, CSBase) else X.copy()
         if self._pca_use_hvg:
             X = X[:, self._adata_ref.var["highly_variable"]]
         if self._pca_centered:
@@ -375,13 +374,12 @@ class Ingest:
             return self._pca(self._n_pcs)
         if self._use_rep == "X":
             return adata.X
-        if self._use_rep in adata.obsm.keys():
+        if self._use_rep in adata.obsm:
             return adata.obsm[self._use_rep]
         return adata.X
 
     def fit(self, adata_new):
-        """\
-        Map `adata_new` to the same representation as `adata`.
+        """Map `adata_new` to the same representation as `adata`.
 
         This function identifies the representation which was used to
         calculate neighbors in 'adata' and maps `adata_new` to
@@ -397,10 +395,11 @@ class Ingest:
         new_var_names = adata_new.var_names.str.upper()
 
         if not ref_var_names.equals(new_var_names):
-            raise ValueError(
+            msg = (
                 "Variables in the new adata are different "
                 "from variables in the reference adata"
             )
+            raise ValueError(msg)
 
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         self._obsm = _DimDict(adata_new.n_obs, axis=0)
@@ -409,8 +408,7 @@ class Ingest:
         self._obsm["rep"] = self._same_rep()
 
     def neighbors(self, k=None, queue_size=5, epsilon=0.1, random_state=0):
-        """\
-        Calculate neighbors of `adata_new` observations in `adata`.
+        """Calculate neighbors of `adata_new` observations in `adata`.
 
         This function calculates `k` neighbors in `adata` for
         each observation of `adata_new`.
@@ -432,8 +430,7 @@ class Ingest:
         return self._umap.transform(self._obsm["rep"])
 
     def map_embedding(self, method):
-        """\
-        Map embeddings of `adata` to `adata_new`.
+        """Map embeddings of `adata` to `adata_new`.
 
         This function infers embeddings, specified by `method`,
         for `adata_new` from existing embeddings in `adata`.
@@ -444,9 +441,8 @@ class Ingest:
         elif method == "pca":
             self._obsm["X_pca"] = self._pca()
         else:
-            raise NotImplementedError(
-                "Ingest supports only umap and pca embeddings for now."
-            )
+            msg = "Ingest supports only umap and pca embeddings for now."
+            raise NotImplementedError(msg)
 
     def _knn_classify(self, labels):
         # ensure it's categorical
@@ -455,8 +451,7 @@ class Ingest:
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
-        """\
-        Map labels of `adata` to `adata_new`.
+        """Map labels of `adata` to `adata_new`.
 
         This function infers `labels` for `adata_new.obs`
         from existing labels in `adata.obs`.
@@ -465,11 +460,12 @@ class Ingest:
         if method == "knn":
             self._obs[labels] = self._knn_classify(labels)
         else:
-            raise NotImplementedError("Ingest supports knn labeling for now.")
+            msg = "Ingest supports knn labeling for now."
+            raise NotImplementedError(msg)
 
-    def to_adata(self, inplace=False):
-        """\
-        Returns `adata_new` with mapped embeddings and labels.
+    @old_positionals("inplace")
+    def to_adata(self, *, inplace: bool = False) -> AnnData | None:
+        """Return `adata_new` with mapped embeddings and labels.
 
         If `inplace=False` returns a copy of `adata_new`
         with mapped embeddings and labels in `obsm` and `obs` correspondingly.
@@ -489,8 +485,7 @@ class Ingest:
     def to_adata_joint(
         self, batch_key="batch", batch_categories=None, index_unique="-"
     ):
-        """\
-        Returns concatenated object.
+        """Return concatenated object.
 
         This function returns the new :class:`~anndata.AnnData` object
         with concatenated existing embeddings and labels of 'adata'

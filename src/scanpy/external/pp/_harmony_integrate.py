@@ -1,9 +1,8 @@
-"""
-Use harmony to integrate cells from different experiments.
-"""
+"""Use harmony to integrate cells from different experiments."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,14 +18,13 @@ if TYPE_CHECKING:
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
-    key: str,
+    key: str | Sequence[str],
     *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
     **kwargs,
 ):
-    """\
-    Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
+    """Use harmonypy :cite:p:`Korsunsky2019` to integrate different experiments.
 
     Harmony :cite:p:`Korsunsky2019` is an algorithm for integrating single-cell
     data from multiple experiments. This function uses the python
@@ -42,7 +40,9 @@ def harmony_integrate(
         The annotated data matrix.
     key
         The name of the column in ``adata.obs`` that differentiates
-        among experiments/batches.
+        among experiments/batches. To integrate over two or more covariates,
+        you can pass multiple column names as a list. See ``vars_use``
+        parameter of the ``harmonypy`` package for more details.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is
         stored. Defaults to ``'X_pca'``, which is the default for
@@ -76,19 +76,21 @@ def harmony_integrate(
     be a column in ``adata.obs`` giving the experiment each cell came
     from.
 
-    >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
+    >>> adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
 
     Finally, run harmony. Afterwards, there will be a new table in
     ``adata.obsm`` containing the adjusted PC's.
 
-    >>> sce.pp.harmony_integrate(adata, 'batch')
-    >>> 'X_pca_harmony' in adata.obsm
+    >>> sce.pp.harmony_integrate(adata, "batch")
+    >>> "X_pca_harmony" in adata.obsm
     True
+
     """
     try:
         import harmonypy
-    except ImportError:
-        raise ImportError("\nplease install harmonypy:\n\n\tpip install harmonypy")
+    except ImportError as e:
+        msg = "\nplease install harmonypy:\n\n\tpip install harmonypy"
+        raise ImportError(msg) from e
 
     X = adata.obsm[basis].astype(np.float64)
 

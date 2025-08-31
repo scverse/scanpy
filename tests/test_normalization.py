@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
+from fast_array_utils import conv, stats
 from scipy import sparse
-from scipy.sparse import csr_matrix, issparse
 
 import scanpy as sc
-from scanpy._utils import axis_sum
+from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
@@ -18,11 +20,13 @@ from testing.scanpy._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
+
+to_ndarray = partial(conv.to_dense, to_cpu_memory=True)
 
 X_total = np.array([[1, 0], [3, 0], [5, 6]])
 X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
@@ -30,8 +34,10 @@ X_frac = np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]])
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-@pytest.mark.parametrize("target_sum", [None, 1.0])
-@pytest.mark.parametrize("exclude_highly_expressed", [True, False])
+@pytest.mark.parametrize("target_sum", [None, 1.0], ids=["no_target_sum", "target_sum"])
+@pytest.mark.parametrize(
+    "exclude_highly_expressed", [True, False], ids=["excl_hi", "no_excl_hi"]
+)
 def test_normalize_matrix_types(
     array_type, dtype, target_sum, exclude_highly_expressed
 ):
@@ -47,14 +53,9 @@ def test_normalize_matrix_types(
         target_sum=target_sum,
         exclude_highly_expressed=exclude_highly_expressed,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if issparse(X):
-        X = X.todense()
-    if issparse(adata.X):
-        adata.X = adata.X.todense()
-    np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata.X = conv.to_dense(adata.X)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    np.testing.assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -62,15 +63,16 @@ def test_normalize_matrix_types(
 def test_normalize_total(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     sc.pp.normalize_total(adata, key_added="n_counts")
-    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [3.0, 3.0, 3.0])
     sc.pp.normalize_total(adata, target_sum=1, key_added="n_counts2")
-    assert np.allclose(np.ravel(axis_sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X, axis=1)), [1.0, 1.0, 1.0])
 
     adata = AnnData(array_type(X_frac).astype(dtype))
     sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
-    assert np.allclose(np.ravel(axis_sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
+    assert np.allclose(to_ndarray(stats.sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
 
 
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
@@ -82,21 +84,12 @@ def test_normalize_total_rep(array_type, dtype):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
-def test_normalize_total_layers(array_type, dtype):
-    adata = AnnData(array_type(X_total).astype(dtype))
-    adata.layers["layer"] = adata.X.copy()
-    with pytest.warns(FutureWarning, match=r".*layers.*deprecated"):
-        sc.pp.normalize_total(adata, layers=["layer"])
-    assert np.allclose(axis_sum(adata.layers["layer"], axis=1), [3.0, 3.0, 3.0])
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     v = adata[:, :]
 
-    sc.pp.normalize_total(v)
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.normalize_total(v)
     sc.pp.normalize_total(adata)
 
     assert not v.is_view
@@ -141,7 +134,9 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
 
 
 @pytest.mark.parametrize(
-    "sparsity_func", [np.array, csr_matrix], ids=lambda x: x.__name__
+    "sparsity_func",
+    [np.array, sparse.csr_matrix],  # noqa: TID251
+    ids=lambda x: x.__name__,
 )
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 @pytest.mark.parametrize("theta", [0.01, 1, 100, np.inf])
@@ -198,12 +193,12 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
         "Missing `.uns` keys. Expected `['pearson_residuals_normalization', 'pca']`, "
         f"but only {list(ad.uns.keys())} were found"
     )
-    assert (
-        "X_pca" in ad.obsm
-    ), f"Missing `obsm` key `'X_pca'`, only {list(ad.obsm.keys())} were found"
-    assert (
-        "PCs" in ad.varm
-    ), f"Missing `varm` key `'PCs'`, only {list(ad.varm.keys())} were found"
+    assert "X_pca" in ad.obsm, (
+        f"Missing `obsm` key `'X_pca'`, only {list(ad.obsm.keys())} were found"
+    )
+    assert "PCs" in ad.varm, (
+        f"Missing `varm` key `'PCs'`, only {list(ad.varm.keys())} were found"
+    )
     assert ad.obsm["X_pca"].shape == (
         n_cells,
         n_comps,
@@ -236,24 +231,29 @@ def test_normalize_pearson_residuals_pca(
     n_cells, n_genes = adata.shape
     n_unmasked = n_genes - 5
     adata.var["test_mask"] = np.r_[
-        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)
+        np.repeat(True, n_unmasked), np.repeat(False, n_genes - n_unmasked)  # noqa: FBT003
     ]
     n_var_copy = locals()[n_var_copy_name]
-    assert isinstance(n_var_copy, (int, np.integer))
+    assert isinstance(n_var_copy, int | np.integer)
 
     if do_hvg:
         sc.experimental.pp.highly_variable_genes(
             adata, flavor="pearson_residuals", n_top_genes=n_hvgs
         )
 
-    # inplace=False
-    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata.copy(), inplace=False, n_comps=n_comps, **params
+    ctx = (
+        pytest.warns(FutureWarning, match=r"use_highly_variable.*deprecated")
+        if "use_highly_variable" in params
+        else nullcontext()
     )
-    # inplace=True modifies the input adata object
-    sc.experimental.pp.normalize_pearson_residuals_pca(
-        adata, inplace=True, n_comps=n_comps, **params
-    )
+    with ctx:  # inplace=False
+        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata.copy(), inplace=False, n_comps=n_comps, **params
+        )
+    with ctx:  # inplace=True modifies the input adata object
+        sc.experimental.pp.normalize_pearson_residuals_pca(
+            adata, inplace=True, n_comps=n_comps, **params
+        )
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),
@@ -323,3 +323,11 @@ def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n
     assert adata.varm["PCs"].shape == (n_genes, n_comps)
     # number of all-zero-colums should be number of non-hvgs
     assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == n_genes - n_hvgs
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_DENSE)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_compute_nnz_median(array_type, dtype):
+    data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
+    data = array_type(data)
+    np.testing.assert_allclose(_compute_nnz_median(data), 5)

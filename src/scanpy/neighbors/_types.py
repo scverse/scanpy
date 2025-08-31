@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, Protocol, Union
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
 
 if TYPE_CHECKING:
     from typing import Any, Self
 
-    from scipy.sparse import spmatrix
+    from .._compat import CSRBase
 
 
-# These two are used with get_args elsewhere
+# These two are used with get_literal_vals elsewhere
 _Method = Literal["umap", "gauss"]
 _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
@@ -42,18 +42,18 @@ _MetricScipySpatial = Literal[
     "sqeuclidean",
     "yule",
 ]
-_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
+_Metric = _MetricSparseCapable | _MetricScipySpatial
 
 
 class KnnTransformerLike(Protocol):
     """See :class:`~sklearn.neighbors.KNeighborsTransformer`."""
 
     def fit(self, X, y: None = None): ...
-    def transform(self, X) -> spmatrix: ...
+    def transform(self, X) -> CSRBase: ...
 
     # from TransformerMixin
-    def fit_transform(self, X, y: None = None) -> spmatrix: ...
+    def fit_transform(self, X, y: None = None) -> CSRBase: ...
 
     # from BaseEstimator
-    def get_params(self, deep: bool = True) -> dict[str, Any]: ...
+    def get_params(self, *, deep: bool = True) -> dict[str, Any]: ...
     def set_params(self, **params: Any) -> Self: ...

@@ -1,4 +1,4 @@
-"""Utility functions and classes
+"""Utility functions and classes.
 
 This file largely consists of the old _utils.py file. Over time, these functions
 should be moved of this file.
@@ -8,31 +8,34 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
-import random
 import re
 import sys
 import warnings
-from collections import namedtuple
-from contextlib import contextmanager
+from contextlib import suppress
 from enum import Enum
-from functools import partial, singledispatch, wraps
-from operator import mul, truediv
-from textwrap import dedent
-from types import MethodType, ModuleType
-from typing import TYPE_CHECKING, overload
+from functools import partial, reduce, singledispatch, wraps
+from operator import mul, or_, truediv
+from textwrap import indent
+from types import MethodType, ModuleType, UnionType
+from typing import (
+    TYPE_CHECKING,
+    Literal,
+    NamedTuple,
+    Union,
+    get_args,
+    get_origin,
+    overload,
+)
 from weakref import WeakSet
 
 import h5py
 import numpy as np
 from anndata import __version__ as anndata_version
 from packaging.version import Version
-from scipy import sparse
-from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import DaskArray
+from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
-from .compute.is_constant import is_constant  # noqa: F401
 
 if Version(anndata_version) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
@@ -41,17 +44,28 @@ if Version(anndata_version) >= Version("0.10.0"):
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
+
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
-    from typing import Any, Callable, Literal, TypeVar, Union
+    from typing import Any, TypeVar
 
     from anndata import AnnData
-    from numpy.typing import DTypeLike, NDArray
+    from igraph import Graph
+    from numpy.typing import ArrayLike, NDArray
 
-    # e.g. https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-    # maybe in the future random.Generator
-    AnyRandom = Union[int, np.random.RandomState, None]
+    from .._compat import CSRBase
+    from ..neighbors import NeighborsParams, RPForestDict
+
+    _MemoryArray = NDArray | CSBase
+    _SupportedArray = _MemoryArray | DaskArray
+
+    _SA = TypeVar("_SA", bound=_SupportedArray)
+
+    _ForT = TypeVar("_ForT", bound=Callable | type)
+
+
+LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
 class Empty(Enum):
@@ -64,53 +78,26 @@ class Empty(Enum):
 _empty = Empty.token
 
 
-class RNGIgraph:
-    """
-    Random number generator for ipgraph so global seed is not changed.
-    See :func:`igraph.set_random_number_generator` for the requirements.
-    """
-
-    def __init__(self, random_state: int = 0) -> None:
-        self._rng = check_random_state(random_state)
-
-    def __getattr__(self, attr: str):
-        return getattr(self._rng, "normal" if attr == "gauss" else attr)
-
-
 def ensure_igraph() -> None:
     if importlib.util.find_spec("igraph"):
         return
-    raise ImportError(
+    msg = (
         "Please install the igraph package: "
         "`conda install -c conda-forge python-igraph` or "
-        "`pip3 install igraph`."
+        "`pip install igraph`."
     )
-
-
-@contextmanager
-def set_igraph_random_state(random_state: int):
-    ensure_igraph()
-    import igraph
-
-    rng = RNGIgraph(random_state)
-    try:
-        igraph.set_random_number_generator(rng)
-        yield None
-    finally:
-        igraph.set_random_number_generator(random)
-
-
-EPS = 1e-15
+    raise ImportError(msg)
 
 
 def check_versions():
     if Version(anndata_version) < Version("0.6.10"):
         from .. import __version__
 
-        raise ImportError(
+        msg = (
             f"Scanpy {__version__} needs anndata version >=0.6.10, "
             f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
         )
+        raise ImportError(msg)
 
 
 def getdoc(c_or_f: Callable | type) -> str | None:
@@ -140,6 +127,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            __tracebackhide__ = True
             if old_name in kwargs:
                 f_name = func.__name__
                 pos_str = (
@@ -166,12 +154,13 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(name: str) -> Any:
+def _import_name(full_name: str) -> Any:
     from importlib import import_module
 
-    parts = name.split(".")
+    parts = full_name.split(".")
     obj = import_module(parts[0])
-    for i, name in enumerate(parts[1:]):
+    for _i, name in enumerate(parts[1:]):
+        i = _i
         try:
             obj = import_module(f"{obj.__name__}.{name}")
         except ModuleNotFoundError:
@@ -181,8 +170,9 @@ def _import_name(name: str) -> Any:
     for name in parts[i + 1 :]:
         try:
             obj = getattr(obj, name)
-        except AttributeError:
-            raise RuntimeError(f"{parts[:i]}, {parts[i + 1:]}, {obj} {name}")
+        except AttributeError as e:
+            msg = f"{parts[:i]}, {parts[i + 1 :]}, {obj} {name}"
+            raise RuntimeError(msg) from e
     return obj
 
 
@@ -218,40 +208,56 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
 
 def annotate_doc_types(mod: ModuleType, root: str):
     for c_or_f in descend_classes_and_funcs(mod, root):
-        c_or_f.getdoc = partial(getdoc, c_or_f)
+        with suppress(AttributeError):
+            c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def _doc_params(**kwds):
-    """\
-    Docstrings should start with ``\\`` in the first line for proper formatting.
-    """
+_leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)
 
-    def dec(obj):
-        obj.__orig_doc__ = obj.__doc__
-        obj.__doc__ = dedent(obj.__doc__).format_map(kwds)
+
+def _doc_params(**replacements: str):
+    def dec(obj: _ForT) -> _ForT:
+        assert obj.__doc__
+        assert "\t" not in obj.__doc__
+
+        # The first line of the docstring is unindented,
+        # so find indent size starting after it.
+        start_line_2 = obj.__doc__.find("\n") + 1
+        assert start_line_2 > 0, f"{obj.__name__} has single-line docstring."
+        n_spaces = min(
+            len(m.group(1))
+            for m in _leading_whitespace_re.finditer(obj.__doc__[start_line_2:])
+        )
+
+        # The placeholder is already indented, so only indent subsequent lines
+        indented_replacements = {
+            k: indent(v, " " * n_spaces)[n_spaces:] for k, v in replacements.items()
+        }
+        obj.__doc__ = obj.__doc__.format_map(indented_replacements)
         return obj
 
     return dec
 
 
 def _check_array_function_arguments(**kwargs):
-    """Checks for invalid arguments when an array is passed.
+    """Check for invalid arguments when an array is passed.
 
     Helper for functions that work on either AnnData objects or array-likes.
     """
     # TODO: Figure out a better solution for documenting dispatched functions
     invalid_args = [k for k, v in kwargs.items() if v is not None]
     if len(invalid_args) > 0:
-        raise TypeError(
-            f"Arguments {invalid_args} are only valid if an AnnData object is passed."
-        )
+        msg = f"Arguments {invalid_args} are only valid if an AnnData object is passed."
+        raise TypeError(msg)
 
 
 def _check_use_raw(
-    adata: AnnData, use_raw: None | bool, *, layer: str | None = None
+    adata: AnnData,
+    use_raw: None | bool,  # noqa: FBT001
+    *,
+    layer: str | None = None,
 ) -> bool:
-    """
-    Normalize checking `use_raw`.
+    """Normalize checking `use_raw`.
 
     My intentention here is to also provide a single place to throw a deprecation warning from in future.
     """
@@ -267,21 +273,17 @@ def _check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency, directed=None):
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
     sources, targets = adjacency.nonzero()
-    weights = adjacency[sources, targets]
-    if isinstance(weights, np.matrix):
-        weights = weights.A1
+    weights = dematrix(adjacency[sources, targets]).ravel()
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
-    g.add_edges(list(zip(sources, targets)))
-    try:
+    g.add_edges(list(zip(sources, targets, strict=True)))
+    with suppress(KeyError):
         g.es["weight"] = weights
-    except KeyError:
-        pass
     if g.vcount() != adjacency.shape[0]:
         logg.warning(
             f"The constructed graph has only {g.vcount()} nodes. "
@@ -295,6 +297,11 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 # --------------------------------------------------------------------------------
 
 
+class AssoResult(NamedTuple):
+    asso_names: list[str]
+    asso_matrix: NDArray[np.floating]
+
+
 def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
@@ -303,7 +310,7 @@ def compute_association_matrix_of_groups(
     normalization: Literal["prediction", "reference"] = "prediction",
     threshold: float = 0.01,
     max_n_names: int | None = 2,
-):
+) -> AssoResult:
     """Compute overlaps between groups.
 
     See ``identify_groups`` for identifying the groups.
@@ -332,24 +339,23 @@ def compute_association_matrix_of_groups(
     asso_matrix
         Matrix where rows correspond to the predicted labels and columns to the
         reference labels, entries are proportional to degree of association.
+
     """
     if normalization not in {"prediction", "reference"}:
-        raise ValueError(
-            '`normalization` needs to be either "prediction" or "reference".'
-        )
+        msg = '`normalization` needs to be either "prediction" or "reference".'
+        raise ValueError(msg)
     sanitize_anndata(adata)
     cats = adata.obs[reference].cat.categories
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info(
-                f"Ignoring category {cat!r} "
-                "as it’s in `settings.categories_to_ignore`."
+                f"Ignoring category {cat!r} as it’s in `settings.categories_to_ignore`."
             )
-    asso_names = []
-    asso_matrix = []
+    asso_names: list[str] = []
+    asso_matrix: list[list[float]] = []
     for ipred_group, pred_group in enumerate(adata.obs[prediction].cat.categories):
         if "?" in pred_group:
-            pred_group = str(ipred_group)
+            pred_group = str(ipred_group)  # noqa: PLW2901
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.obs[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
@@ -379,13 +385,12 @@ def compute_association_matrix_of_groups(
             if asso_matrix[-1][i] > threshold
         ]
         asso_names += ["\n".join(name_list_pred[:max_n_names])]
-    Result = namedtuple(
-        "compute_association_matrix_of_groups", ["asso_names", "asso_matrix"]
-    )
-    return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
+    return AssoResult(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-def get_associated_colors_of_groups(reference_colors, asso_matrix):
+def get_associated_colors_of_groups(
+    reference_colors: Mapping[int, str], asso_matrix: NDArray[np.floating]
+) -> list[dict[str, float]]:
     return [
         {
             reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
@@ -395,8 +400,8 @@ def get_associated_colors_of_groups(reference_colors, asso_matrix):
     ]
 
 
-def identify_groups(ref_labels, pred_labels, return_overlaps=False):
-    """Which predicted label explains which reference label?
+def identify_groups(ref_labels, pred_labels, *, return_overlaps: bool = False):
+    """Identify which predicted label explains which reference label.
 
     A predicted label explains the reference label which maximizes the minimum
     of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
@@ -411,11 +416,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     If ``return_overlaps`` is ``True``, this will in addition return the overlap
     of the reference group with the predicted group; normalized with respect to
     the reference group size and the predicted group size, respectively.
+
     """
     ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
-    ref_dict = dict(zip(ref_unique, ref_counts))
+    ref_dict = dict(zip(ref_unique, ref_counts, strict=True))
     pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
-    pred_dict = dict(zip(pred_unique, pred_counts))
+    pred_dict = dict(zip(pred_unique, pred_counts, strict=True))
     associated_predictions = {}
     associated_overlaps = {}
     for ref_label in ref_unique:
@@ -468,22 +474,17 @@ def moving_average(a: np.ndarray, n: int):
     a
         One-dimensional array.
     n
-        Number of entries to average over. n=2 means averaging over the currrent
+        Number of entries to average over. n=2 means averaging over the current
         the previous entry.
 
     Returns
     -------
     An array view storing the moving average.
-    """
+
+    """  # noqa: D401
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1 :] / n
-
-
-def get_random_state(seed: AnyRandom) -> np.random.RandomState:
-    if isinstance(seed, np.random.RandomState):
-        return seed
-    return np.random.RandomState(seed)
 
 
 # --------------------------------------------------------------------------------
@@ -494,15 +495,15 @@ def get_random_state(seed: AnyRandom) -> np.random.RandomState:
 def update_params(
     old_params: Mapping[str, Any],
     new_params: Mapping[str, Any],
-    check=False,
+    *,
+    check: bool = False,
 ) -> dict[str, Any]:
-    """\
-    Update old_params with new_params.
+    """Update `old_params` with `new_params`.
 
-    If check==False, this merely adds and overwrites the content of old_params.
+    If check==False, this merely adds and overwrites the content of `old_params`.
 
     If check==True, this only allows updating of parameters that are already
-    present in old_params.
+    present in `old_params`.
 
     Parameters
     ----------
@@ -513,6 +514,7 @@ def update_params(
     Returns
     -------
     updated_params
+
     """
     updated_params = dict(old_params)
     if new_params:  # allow for new_params to be None
@@ -530,36 +532,22 @@ def update_params(
     return updated_params
 
 
+# `get_args` returns `tuple[Any]` so I don’t think it’s possible to get the correct type here
+def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
+    """Get all literal values from a Literal or Union of … of Literal type."""
+    if isinstance(typ, UnionType | LegacyUnionType):
+        return reduce(
+            or_, (dict.fromkeys(get_literal_vals(t)) for t in get_args(typ))
+        ).keys()
+    if get_origin(typ) is Literal:
+        return dict.fromkeys(get_args(typ)).keys()
+    msg = f"{typ} is not a valid Literal"
+    raise TypeError(msg)
+
+
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
-
-
-if TYPE_CHECKING:
-    _SparseMatrix = Union[sparse.csr_matrix, sparse.csc_matrix]
-    _MemoryArray = Union[NDArray, _SparseMatrix]
-    _SupportedArray = Union[_MemoryArray, DaskArray]
-
-
-@singledispatch
-def elem_mul(x: _SupportedArray, y: _SupportedArray) -> _SupportedArray:
-    raise NotImplementedError
-
-
-@elem_mul.register(np.ndarray)
-@elem_mul.register(sparse.spmatrix)
-def _elem_mul_in_mem(x: _MemoryArray, y: _MemoryArray) -> _MemoryArray:
-    if isinstance(x, sparse.spmatrix):
-        # returns coo_matrix, so cast back to input type
-        return type(x)(x.multiply(y))
-    return x * y
-
-
-@elem_mul.register(DaskArray)
-def _elem_mul_dask(x: DaskArray, y: DaskArray) -> DaskArray:
-    import dask.array as da
-
-    return da.map_blocks(elem_mul, x, y)
 
 
 if TYPE_CHECKING:
@@ -575,18 +563,19 @@ def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
 
 def check_op(op):
     if op not in {truediv, mul}:
-        raise ValueError(f"{op} not one of truediv or mul")
+        msg = f"{op} not one of truediv or mul"
+        raise ValueError(msg)
 
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: np.ndarray,
+    X: ArrayLike,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: np.ndarray | None = None,
+    out: ArrayLike | None = None,
 ) -> np.ndarray:
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
@@ -597,23 +586,20 @@ def axis_mul_or_truediv(
     return np.true_divide(X, scaling_array, out=out)
 
 
-@axis_mul_or_truediv.register(sparse.csr_matrix)
-@axis_mul_or_truediv.register(sparse.csc_matrix)
+@axis_mul_or_truediv.register(CSBase)
 def _(
-    X: sparse.csr_matrix | sparse.csc_matrix,
-    scaling_array,
+    X: CSBase,
+    scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
-    out: sparse.csr_matrix | sparse.csc_matrix | None = None,
-) -> sparse.csr_matrix | sparse.csc_matrix:
+    out: CSBase | None = None,
+) -> CSBase:
     check_op(op)
-    if out is not None:
-        if X.data is not out.data:
-            raise ValueError(
-                "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
-            )
+    if out is not None and X.data is not out.data:
+        msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
+        raise ValueError(msg)
     if not allow_divide_by_zero and op is truediv:
         scaling_array = scaling_array.copy() + (scaling_array == 0)
 
@@ -635,9 +621,7 @@ def _(
         if out is not None:
             X.data = new_data_op(X)
             return X
-        return sparse.csr_matrix(
-            (new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape
-        )
+        return type(X)((new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape)
     transposed = X.T
     return axis_mul_or_truediv(
         transposed,
@@ -650,7 +634,7 @@ def _(
 
 
 def make_axis_chunks(
-    X: DaskArray, axis: Literal[0, 1], pad=True
+    X: DaskArray, axis: Literal[0, 1]
 ) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
         return (X.chunks[axis], (1,))
@@ -669,9 +653,8 @@ def _(
 ) -> DaskArray:
     check_op(op)
     if out is not None:
-        raise TypeError(
-            "`out` is not `None`. Do not do in-place modifications on dask arrays."
-        )
+        msg = "`out` is not `None`. Do not do in-place modifications on dask arrays."
+        raise TypeError(msg)
 
     import dask.array as da
 
@@ -680,7 +663,7 @@ def _(
     column_scale = axis == 1
 
     if isinstance(scaling_array, DaskArray):
-        if (row_scale and not X.chunksize[0] == scaling_array.chunksize[0]) or (
+        if (row_scale and X.chunksize[0] != scaling_array.chunksize[0]) or (
             column_scale
             and (
                 (
@@ -693,7 +676,9 @@ def _(
                 )
             )
         ):
-            warnings.warn("Rechunking scaling_array in user operation", UserWarning)
+            warnings.warn(
+                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
+            )
             scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
     else:
         scaling_array = da.from_array(
@@ -712,78 +697,45 @@ def _(
     )
 
 
-@overload
-def axis_sum(
-    X: sparse.spmatrix,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.matrix: ...
-
-
 @singledispatch
-def axis_sum(
-    X: np.ndarray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> np.ndarray:
-    return np.sum(X, axis=axis, dtype=dtype)
+def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
+    return np.count_nonzero(X, axis=axis)
 
 
-@axis_sum.register(DaskArray)
-def _(
-    X: DaskArray,
-    *,
-    axis: tuple[Literal[0, 1], ...] | Literal[0, 1] | None = None,
-    dtype: DTypeLike | None = None,
-) -> DaskArray:
-    import dask.array as da
+if pkg_version("scipy") >= Version("1.15"):
+    # newer scipy versions support the `axis` argument for count_nonzero
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        return X.count_nonzero(axis=axis)
+else:
+    # older scipy versions don’t have any way to get the nnz of a sparse array
+    @axis_nnz.register(CSBase)
+    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
+        if isinstance(X, _CSArray):
+            from scipy.sparse import csc_array, csr_array  # noqa: TID251
 
-    if dtype is None:
-        dtype = getattr(np.zeros(1, dtype=X.dtype).sum(), "dtype", object)
+            X = (csr_array if X.format == "csr" else csc_array)(X)
+        return X.getnnz(axis=axis)
 
-    if isinstance(X._meta, np.ndarray) and not isinstance(X._meta, np.matrix):
-        return X.sum(axis=axis, dtype=dtype)
 
-    def sum_drop_keepdims(*args, **kwargs):
-        kwargs.pop("computing_meta", None)
-        # masked operations on sparse produce which numpy matrices gives the same API issues handled here
-        if isinstance(X._meta, (sparse.spmatrix, np.matrix)) or isinstance(
-            args[0], (sparse.spmatrix, np.matrix)
-        ):
-            kwargs.pop("keepdims", None)
-            axis = kwargs["axis"]
-            if isinstance(axis, tuple):
-                if len(axis) != 1:
-                    raise ValueError(
-                        f"`axis_sum` can only sum over one axis when `axis` arg is provided but got {axis} instead"
-                    )
-                kwargs["axis"] = axis[0]
-        # returns a np.matrix normally, which is undesireable
-        return np.array(np.sum(*args, dtype=dtype, **kwargs))
-
-    def aggregate_sum(*args, **kwargs):
-        return np.sum(args[0], dtype=dtype, **kwargs)
-
-    return da.reduction(
-        X,
-        sum_drop_keepdims,
-        aggregate_sum,
-        axis=axis,
-        dtype=dtype,
-        meta=np.array([], dtype=dtype),
+@axis_nnz.register(DaskArray)
+def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
+    return X.map_blocks(
+        partial(axis_nnz, axis=axis),
+        dtype=np.int64,
+        meta=np.array([], dtype=np.int64),
+        drop_axis=axis,
     )
 
 
 @singledispatch
 def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
-    """Checks values of X to ensure it is count data"""
+    """Check values of X to ensure it is count data."""
     raise NotImplementedError
 
 
 @check_nonnegative_integers.register(np.ndarray)
-@check_nonnegative_integers.register(sparse.spmatrix)
+@check_nonnegative_integers.register(CSBase)
 def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
     from numbers import Integral
 
@@ -802,9 +754,17 @@ def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
     return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
 
 
+def dematrix(x: _SA | np.matrix) -> _SA:
+    if isinstance(x, np.matrix):
+        return x.A
+    if isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
+        return x.map_blocks(np.asarray, meta=np.array([], dtype=x.dtype))
+    return x
+
+
 def select_groups(
     adata: AnnData,
-    groups_order_subset: list[str] | Literal["all"] = "all",
+    groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
 ) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
@@ -817,8 +777,8 @@ def select_groups(
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
-                mask_obs = adata.obs[key].cat.categories[iname] == adata.obs[key].values
+            if name in adata.obs[key].values:
+                mask_obs = name == adata.obs[key].values
             else:
                 mask_obs = str(iname) == adata.obs[key].values
             groups_masks_obs[iname] = mask_obs
@@ -832,7 +792,7 @@ def select_groups(
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(
-                np.in1d(
+                np.isin(
                     np.arange(len(adata.obs[key].cat.categories)).astype(str),
                     np.array(groups_order_subset),
                 )
@@ -852,14 +812,17 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(message, category, filename, lineno, file=None, line=None):  # noqa: PLR0917
-    """Get full tracebacks when warning is raised by setting
+def warn_with_traceback(  # noqa: PLR0917
+    message, category, filename, lineno, file=None, line=None
+) -> None:
+    """Get full tracebacks when warning is raised by setting.
 
     warnings.showwarning = warn_with_traceback
 
-    See also
+    See Also
     --------
     https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
+
     """
     import traceback
 
@@ -870,82 +833,10 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
-def warn_once(msg: str, category: type[Warning], stacklevel: int = 1):
-    warnings.warn(msg, category, stacklevel=stacklevel)
+def warn_once(msg: str, category: type[Warning], stacklevel: int = 0) -> None:
+    warnings.warn(msg, category, stacklevel=stacklevel + 1)
     # You'd think `'once'` works, but it doesn't at the repl and in notebooks
     warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
-
-
-def subsample(
-    X: np.ndarray,
-    subsample: int = 1,
-    seed: int = 0,
-) -> tuple[np.ndarray, np.ndarray]:
-    """\
-    Subsample a fraction of 1/subsample samples from the rows of X.
-
-    Parameters
-    ----------
-    X
-        Data array.
-    subsample
-        1/subsample is the fraction of data sampled, n = X.shape[0]/subsample.
-    seed
-        Seed for sampling.
-
-    Returns
-    -------
-    Xsampled
-        Subsampled X.
-    rows
-        Indices of rows that are stored in Xsampled.
-    """
-    if subsample == 1 and seed == 0:
-        return X, np.arange(X.shape[0], dtype=int)
-    if seed == 0:
-        # this sequence is defined simply by skipping rows
-        # is faster than sampling
-        rows = np.arange(0, X.shape[0], subsample, dtype=int)
-        n = rows.size
-        Xsampled = np.array(X[rows])
-    else:
-        if seed < 0:
-            raise ValueError(f"Invalid seed value < 0: {seed}")
-        n = int(X.shape[0] / subsample)
-        np.random.seed(seed)
-        Xsampled, rows = subsample_n(X, n=n)
-    logg.debug(f"... subsampled to {n} of {X.shape[0]} data points")
-    return Xsampled, rows
-
-
-def subsample_n(
-    X: np.ndarray, n: int = 0, seed: int = 0
-) -> tuple[np.ndarray, np.ndarray]:
-    """Subsample n samples from rows of array.
-
-    Parameters
-    ----------
-    X
-        Data array.
-    n
-        Sample size.
-    seed
-        Seed for sampling.
-
-    Returns
-    -------
-    Xsampled
-        Subsampled X.
-    rows
-        Indices of rows that are stored in Xsampled.
-    """
-    if n < 0:
-        raise ValueError("n must be greater 0")
-    np.random.seed(seed)
-    n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
-    rows = np.random.choice(X.shape[0], size=n, replace=False)
-    Xsampled = X[rows]
-    return Xsampled, rows
 
 
 def check_presence_download(filename: Path, backup_url):
@@ -957,7 +848,7 @@ def check_presence_download(filename: Path, backup_url):
 
 
 def lazy_import(full_name):
-    """Imports a module in a way that it’s only executed on member access"""
+    """Import a module in a way that it’s only executed on member access."""
     try:
         return sys.modules[full_name]
     except KeyError:
@@ -991,7 +882,6 @@ class NeighborsView:
 
     Parameters
     ----------
-
     adata
         AnnData object.
     key
@@ -1012,21 +902,24 @@ class NeighborsView:
         adata.uns[key]['params']
         adata.uns[key]['connectivities_key'] in adata.obsp
         'params' in adata.uns[key]
+
     """
 
-    def __init__(self, adata, key=None):
+    def __init__(self, adata: AnnData, key=None):
         self._connectivities = None
         self._distances = None
 
         if key is None or key == "neighbors":
             if "neighbors" not in adata.uns:
-                raise KeyError('No "neighbors" in .uns')
+                msg = 'No "neighbors" in .uns'
+                raise KeyError(msg)
             self._neighbors_dict = adata.uns["neighbors"]
             self._conns_key = "connectivities"
             self._dists_key = "distances"
         else:
             if key not in adata.uns:
-                raise KeyError(f'No "{key}" in .uns')
+                msg = f"No {key!r} in .uns"
+                raise KeyError(msg)
             self._neighbors_dict = adata.uns[key]
             self._conns_key = self._neighbors_dict["connectivities_key"]
             self._dists_key = self._neighbors_dict["distances_key"]
@@ -1045,19 +938,32 @@ class NeighborsView:
             self._dists_key,
         )
 
-    def __getitem__(self, key):
+    @overload
+    def __getitem__(self, key: Literal["distances", "connectivities"]) -> CSRBase: ...
+    @overload
+    def __getitem__(self, key: Literal["params"]) -> NeighborsParams: ...
+    @overload
+    def __getitem__(self, key: Literal["rp_forest"]) -> RPForestDict: ...
+    @overload
+    def __getitem__(self, key: Literal["connectivities_key"]) -> str: ...
+
+    def __getitem__(self, key: str):
         if key == "distances":
             if "distances" not in self:
-                raise KeyError(f'No "{self._dists_key}" in .obsp')
+                msg = f"No {self._dists_key!r} in .obsp"
+                raise KeyError(msg)
             return self._distances
         elif key == "connectivities":
             if "connectivities" not in self:
-                raise KeyError(f'No "{self._conns_key}" in .obsp')
+                msg = f"No {self._conns_key!r} in .obsp"
+                raise KeyError(msg)
             return self._connectivities
+        elif key == "connectivities_key":
+            return self._conns_key
         else:
             return self._neighbors_dict[key]
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         if key == "distances":
             return self._distances is not None
         elif key == "connectivities":
@@ -1066,22 +972,23 @@ class NeighborsView:
             return key in self._neighbors_dict
 
 
-def _choose_graph(adata, obsp, neighbors_key):
-    """Choose connectivities from neighbbors or another obsp column"""
+def _choose_graph(
+    adata: AnnData, obsp: str | None, neighbors_key: str | None
+) -> CSBase:
+    """Choose connectivities from neighbors or another obsp entry."""
     if obsp is not None and neighbors_key is not None:
-        raise ValueError(
-            "You can't specify both obsp, neighbors_key. " "Please select only one."
-        )
+        msg = "You can't specify both obsp, neighbors_key. Please select only one."
+        raise ValueError(msg)
 
     if obsp is not None:
         return adata.obsp[obsp]
     else:
         neighbors = NeighborsView(adata, neighbors_key)
         if "connectivities" not in neighbors:
-            raise ValueError(
-                "You need to run `pp.neighbors` first "
-                "to compute a neighborhood graph."
+            msg = (
+                "You need to run `pp.neighbors` first to compute a neighborhood graph."
             )
+            raise ValueError(msg)
         return neighbors["connectivities"]
 
 
@@ -1092,15 +999,15 @@ def _resolve_axis(
         return (0, "obs")
     if axis in {1, "var"}:
         return (1, "var")
-    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}")
+    msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
+    raise ValueError(msg)
 
 
 def is_backed_type(X: object) -> bool:
-    return isinstance(X, (SparseDataset, h5py.File, h5py.Dataset))
+    return isinstance(X, SparseDataset | h5py.File | h5py.Dataset)
 
 
 def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
     if is_backed_type(X):
-        raise NotImplementedError(
-            f"{method_name} is not implemented for matrices of type {type(X)}"
-        )
+        msg = f"{method_name} is not implemented for matrices of type {type(X)}"
+        raise NotImplementedError(msg)

@@ -6,9 +6,9 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._settings import settings
-from . import _utils
+from ._utils import savefig_or_show
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
@@ -16,7 +16,7 @@ from . import _utils
 
 
 @old_positionals("log", "show", "save", "highly_variable_genes")
-def highly_variable_genes(
+def highly_variable_genes(  # noqa: PLR0912
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
     log: bool = False,
@@ -41,6 +41,7 @@ def highly_variable_genes(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
@@ -72,6 +73,7 @@ def highly_variable_genes(
             ["highly variable genes", "other genes"],
             ["black", "grey"],
             [gene_subset, ~gene_subset],
+            strict=True,
         ):
             if False:
                 means_, var_or_disps_ = np.log10(means[mask]), np.log10(d[mask])
@@ -96,21 +98,23 @@ def highly_variable_genes(
         )
 
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show("filter_genes_dispersion", show=show, save=save)
+    savefig_or_show("filter_genes_dispersion", show=show, save=save)
     if show:
         return None
     return plt.gca()
 
 
 # backwards compat
+@deprecated("Use sc.pl.highly_variable_genes instead")
+@old_positionals("log", "show", "save")
 def filter_genes_dispersion(
     result: np.recarray,
+    *,
     log: bool = False,
     show: bool | None = None,
     save: bool | str | None = None,
 ) -> None:
-    """\
-    Plot dispersions versus means for genes.
+    """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
@@ -126,6 +130,7 @@ def filter_genes_dispersion(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     """
     highly_variable_genes(
         result, log=log, show=show, save=save, highly_variable_genes=False

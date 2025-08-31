@@ -1,23 +1,25 @@
+"""Definition for scanpy’s CLI entry point to be used programmatically."""
+
 from __future__ import annotations
 
-import collections.abc as cabc
 import os
 import sys
 from argparse import ArgumentParser, Namespace, _SubParsersAction
-from functools import lru_cache, partial
+from collections.abc import MutableMapping
+from functools import cached_property, partial
 from pathlib import Path
 from shutil import which
 from subprocess import run
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
     from subprocess import CompletedProcess
     from typing import Any
 
 
 class _DelegatingSubparsersAction(_SubParsersAction):
-    """Like a normal subcommand action, but uses a delegator for more choices"""
+    """Like a normal subcommand action, but uses a delegator for more choices."""
 
     def __init__(self, *args, _command: str, _runargs: dict[str, Any], **kwargs):
         super().__init__(*args, **kwargs)
@@ -27,11 +29,8 @@ class _DelegatingSubparsersAction(_SubParsersAction):
         )
 
 
-class _CommandDelegator(cabc.MutableMapping):
-    """\
-    Provide the ability to delegate,
-    but don’t calculate the whole list until necessary
-    """
+class _CommandDelegator(MutableMapping):
+    """Provide the ability to delegate, but don’t calculate the whole list until necessary."""
 
     def __init__(self, command: str, action: _DelegatingSubparsersAction, **runargs):
         self.command = command
@@ -64,7 +63,7 @@ class _CommandDelegator(cabc.MutableMapping):
 
     # These methods retrieve the command list or help with doing it
 
-    def __iter__(self) -> Generator[str, None, None]:
+    def __iter__(self) -> Iterator[str]:
         yield from self.parser_map
         yield from self.commands
 
@@ -82,8 +81,7 @@ class _CommandDelegator(cabc.MutableMapping):
             )
         return self.parser_map == other
 
-    @property
-    @lru_cache
+    @cached_property
     def commands(self) -> frozenset[str]:
         return frozenset(
             binary.name[len(self.command) + 1 :]
@@ -94,7 +92,7 @@ class _CommandDelegator(cabc.MutableMapping):
 
 
 class _DelegatingParser(ArgumentParser):
-    """Just sets parse_args().func to run the subcommand"""
+    """Just sets parse_args().func to run the subcommand."""
 
     def __init__(self, cd: _CommandDelegator, subcmd: str):
         super().__init__(f"{cd.command}-{subcmd}", add_help=False)
@@ -106,9 +104,9 @@ class _DelegatingParser(ArgumentParser):
         args: Sequence[str] | None = None,
         namespace: Namespace | None = None,
     ) -> tuple[Namespace, list[str]]:
-        assert (
-            args is not None and namespace is None
-        ), "Only use DelegatingParser as subparser"
+        msg = "Only use DelegatingParser as subparser"
+        assert args is not None, msg
+        assert namespace is None, msg
         return Namespace(func=partial(run, [self.prog, *args], **self.cd.runargs)), []
 
 
@@ -121,8 +119,7 @@ def _cmd_settings() -> None:
 def main(
     argv: Sequence[str] | None = None, *, check: bool = True, **runargs
 ) -> CompletedProcess | None:
-    """\
-    Run a builtin scanpy command or a scanpy-* subcommand.
+    """Run a builtin scanpy command or a scanpy-* subcommand.
 
     Uses :func:`subcommand.run` for the latter:
     `~run(['scanpy', *argv], **runargs)`
@@ -149,10 +146,7 @@ def main(
 
 
 def console_main():
-    """\
-    This serves as CLI entry point and will not show a Python traceback
-    if a called command fails
-    """
+    """Serve as CLI entry point and don’t show a Python traceback if a called command fails."""
     cmd = main(check=False)
     if cmd is not None:
         sys.exit(cmd.returncode)

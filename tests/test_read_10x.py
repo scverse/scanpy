@@ -23,7 +23,7 @@ def assert_anndata_equal(a1, a2):
 
 
 @pytest.mark.parametrize(
-    ["mtx_path", "h5_path"],
+    ("mtx_path", "h5_path"),
     [
         pytest.param(
             ROOT / "1.2.0" / "filtered_gene_bc_matrices" / "hg19_chr21",
@@ -109,7 +109,7 @@ def test_error_10x_h5_legacy(tmp_path):
     with h5py.File(onepth, "r") as one, h5py.File(twopth, "w") as two:
         one.copy("hg19_chr21", two)
         one.copy("hg19_chr21", two, name="hg19_chr21_copy")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"contains more than one genome"):
         sc.read_10x_h5(twopth)
     sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
 
@@ -140,11 +140,12 @@ def visium_pth(request, tmp_path) -> Path:
         (orig.parent / "tissue_positions.csv").write_text(csv)
         return visium2_pth
     else:
-        assert False
+        pytest.fail("add branch for new visium version")
 
 
+@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
 def test_read_visium_counts(visium_pth):
-    """Test checking that read_visium reads the right genome"""
+    """Test checking that read_visium reads the right genome."""
     spec_genome_v3 = sc.read_visium(visium_pth, genome="GRCh38")
     nospec_genome_v3 = sc.read_visium(visium_pth)
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
@@ -174,3 +175,28 @@ def test_10x_probe_barcode_read():
     assert set(probe_anndata.obs.columns) == {"filtered_barcodes"}
     assert probe_anndata.shape == (4987, 1000)
     assert probe_anndata.X.nnz == 858
+
+
+def test_read_10x_compressed_parameter(tmp_path):
+    """Test that the compressed parameter works correctly."""
+    # Copy test data to temp directory
+    mtx_path_v3 = ROOT / "3.0.0" / "filtered_feature_bc_matrix"
+    test_path = tmp_path / "test_compressed"
+    test_path.mkdir()
+
+    # Create uncompressed copies of the compressed files
+    for file in mtx_path_v3.glob("*.gz"):
+        import gzip
+
+        with gzip.open(file, "rb") as f_in:
+            content = f_in.read()
+            dest_file = test_path / file.name[:-3]  # Removes .gz extension
+            with dest_file.open("wb") as f_out:
+                f_out.write(content)
+
+    # Read the uncompressed data
+    adata_uncompressed = sc.read_10x_mtx(test_path, compressed=False)
+    # Read the compressed data
+    adata_compressed = sc.read_10x_mtx(mtx_path_v3, compressed=True)
+    # Check that the two AnnData objects are equal
+    assert_anndata_equal(adata_uncompressed, adata_compressed)

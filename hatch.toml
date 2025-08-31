@@ -1,0 +1,41 @@
+[envs.default]
+installer = "uv"
+features = [ "dev" ]
+
+[envs.docs]
+features = [ "doc" ]
+scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
+scripts.clean = "git clean -fdX -- {args:docs}"
+
+[envs.towncrier]
+scripts.create = "towncrier create {args}"
+scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
+scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
+
+[envs.hatch-test]
+default-args = [  ]
+features = [ "dev", "test-min" ]
+extra-dependencies = [ "ipykernel" ]
+overrides.matrix.deps.env-vars = [
+    { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
+    { if = [ "low-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-low-vers.txt" },
+]
+overrides.matrix.deps.pre-install-commands = [
+    { if = [
+        "low-vers",
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
+]
+overrides.matrix.deps.python = [
+    { if = [ "low-vers" ], value = "3.11" },
+    { if = [ "stable", "pre", "few-extras" ], value = "3.13" },
+]
+overrides.matrix.deps.extra-dependencies = [
+    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
+]
+overrides.matrix.deps.features = [
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
+]
+
+[[envs.hatch-test.matrix]]
+deps = [ "stable", "pre", "low-vers", "few-extras" ]

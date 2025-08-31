@@ -19,7 +19,7 @@ pytestmark = [needs.igraph]
 
 
 @pytest.fixture(scope="module")
-def _pbmc_session():
+def pbmc_session():
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, groups="bulk_labels")
     pbmc.obs["cool_feature"] = pbmc[:, "CST3"].X.squeeze().copy()
@@ -28,12 +28,12 @@ def _pbmc_session():
 
 
 @pytest.fixture
-def pbmc(_pbmc_session):
-    return _pbmc_session.copy()
+def pbmc(pbmc_session):
+    return pbmc_session.copy()
 
 
 @pytest.mark.parametrize(
-    "test_id,func",
+    ("test_id", "func"),
     [
         ("", sc.pl.paga),
         ("continuous", partial(sc.pl.paga, color="CST3")),
@@ -60,7 +60,7 @@ def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images(f"paga_{test_id}" if test_id else "paga")
 
 
-def test_paga_pie(image_comparer, pbmc):
+def test_paga_pie(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     colors = {
@@ -69,11 +69,11 @@ def test_paga_pie(image_comparer, pbmc):
     }
     colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
 
-    sc.pl.paga(pbmc, color=colors, colorbar=False)
+    sc.pl.paga(pbmc, color=colors, colorbar=False, show=False)
     save_and_compare_images("paga_pie")
 
 
-def test_paga_path(image_comparer, pbmc):
+def test_paga_path(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc.uns["iroot"] = 0
@@ -100,7 +100,7 @@ def test_paga_compare(image_comparer):
 
 
 def test_paga_positions_reproducible():
-    """Check exact reproducibility and effect of random_state on paga positions"""
+    """Check exact reproducibility and effect of random_state on paga positions."""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")

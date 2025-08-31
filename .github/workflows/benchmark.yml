@@ -6,17 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_COLOR: "1"
+
 jobs:
   benchmark:
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -e {0} # -e to fail on error
 
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.12"]
+        python: ["3.13"]
         os: [ubuntu-latest]
 
     env:
@@ -25,10 +25,10 @@ jobs:
       ASV_DIR: "./benchmarks"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          filter: blob:none
+          # no blob:none so ASV can compare commits
 
       - name: Fetch main branch for `asv run`’s hash
         run: git fetch origin main:main
@@ -48,8 +48,7 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        # TODO: revert once this PR is merged: https://github.com/airspeed-velocity/asv/pull/1397
-        run: pip install 'asv @ git+https://github.com/ivirshup/asv@fix-conda-usage'
+        run: pip install 'asv>=0.6.4'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}

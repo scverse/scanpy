@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import importlib
 from collections import defaultdict
 from inspect import Parameter, signature
 from pathlib import Path
@@ -53,50 +53,17 @@ api_functions = [
 ]
 
 
-@pytest.fixture
-def in_project_dir():
-    wd_orig = Path.cwd()
-    os.chdir(proj_dir)
-    try:
-        yield proj_dir
-    finally:
-        os.chdir(wd_orig)
-
-
 @pytest.mark.xfail(reason="TODO: unclear if we want this to totally match, let’s see")
 def test_descend_classes_and_funcs():
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs
 
 
-@pytest.mark.parametrize(("f", "qualname"), api_functions)
-def test_function_headers(f, qualname):
-    filename = getsourcefile(f)
-    lines, lineno = getsourcelines(f)
-    if f.__doc__ is None:
-        msg = f"Function `{qualname}` has no docstring"
-        text = lines[0]
-    else:
-        lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
-        broken = [
-            i for i, l in enumerate(lines) if l.strip() and not l.startswith("    ")
-        ]
-        if not any(broken):
-            return
-        msg = f'''\
-Header of function `{qualname}`’s docstring should start with one-line description
-and be consistently indented like this:
+@pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")
+def test_import_future_anndata_import_warning():
+    import scanpy
 
-␣␣␣␣"""\\
-␣␣␣␣My one-line␣description.
-
-␣␣␣␣…
-␣␣␣␣"""
-
-The displayed line is under-indented.
-'''
-        text = f">{lines[broken[0]]}<"
-    raise SyntaxError(msg, (filename, lineno, 2, text))
+    importlib.reload(scanpy)
 
 
 def param_is_pos(p: Parameter) -> bool:
@@ -130,6 +97,7 @@ copy_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
 copy_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.subsample"] = None  # returns indices along matrix
+copy_sigs["sc.pp.sample"] = None  # returns indices along matrix
 # partial exceptions: “data” instead of “adata”
 copy_sigs["sc.pp.log1p"]["first_name"] = "data"
 copy_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
@@ -161,7 +129,7 @@ def test_sig_conventions(f, qualname):
     elif first_param.name == "data":
         assert first_param.annotation.startswith("AnnData |")
     elif first_param.name in {"filename", "path"}:
-        assert first_param.annotation == "Path | str"
+        assert first_param.annotation == "PathLike[str] | str"
 
     # Test if functions with `copy` follow conventions
     if (copy_param := sig.parameters.get("copy")) is not None and (
@@ -181,7 +149,7 @@ def test_sig_conventions(f, qualname):
 
 
 def getsourcefile(obj):
-    """inspect.getsourcefile, but supports singledispatch"""
+    """inspect.getsourcefile, but supports singledispatch."""
     from inspect import getsourcefile
 
     if wrapped := getattr(obj, "__wrapped__", None):
@@ -191,7 +159,7 @@ def getsourcefile(obj):
 
 
 def getsourcelines(obj):
-    """inspect.getsourcelines, but supports singledispatch"""
+    """inspect.getsourcelines, but supports singledispatch."""
     from inspect import getsourcelines
 
     if wrapped := getattr(obj, "__wrapped__", None):

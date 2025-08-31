@@ -1,10 +1,8 @@
-"""\
-Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
-"""
+"""Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries."""
 
 from __future__ import annotations
 
-import collections.abc as cabc
+from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -22,26 +20,21 @@ if TYPE_CHECKING:
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
-    """\
-    Calculate overlap count between the values of two dictionaries
+    """Calculate overlap count between the values of two dictionaries.
 
     Note: dict values must be sets
     """
     overlaps = np.zeros((len(markers1), len(markers2)))
 
     for j, marker_group in enumerate(markers1):
-        tmp = [
-            len(markers2[i].intersection(markers1[marker_group]))
-            for i in markers2.keys()
-        ]
+        tmp = [len(markers2[i].intersection(markers1[marker_group])) for i in markers2]
         overlaps[j, :] = tmp
 
     return overlaps
 
 
 def _calc_overlap_coef(markers1: dict, markers2: dict):
-    """\
-    Calculate overlap coefficient between the values of two dictionaries
+    """Calculate overlap coefficient between the values of two dictionaries.
 
     Note: dict values must be sets
     """
@@ -51,7 +44,7 @@ def _calc_overlap_coef(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / max(min(len(markers2[i]), len(markers1[marker_group])), 1)
-            for i in markers2.keys()
+            for i in markers2
         ]
         overlap_coef[j, :] = tmp
 
@@ -59,8 +52,7 @@ def _calc_overlap_coef(markers1: dict, markers2: dict):
 
 
 def _calc_jaccard(markers1: dict, markers2: dict):
-    """\
-    Calculate jaccard index between the values of two dictionaries
+    """Calculate jaccard index between the values of two dictionaries.
 
     Note: dict values must be sets
     """
@@ -70,7 +62,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
         tmp = [
             len(markers2[i].intersection(markers1[marker_group]))
             / len(markers2[i].union(markers1[marker_group]))
-            for i in markers2.keys()
+            for i in markers2
         ]
         jacc_results[j, :] = tmp
 
@@ -78,7 +70,7 @@ def _calc_jaccard(markers1: dict, markers2: dict):
 
 
 @doctest_needs("leidenalg")
-def marker_gene_overlap(
+def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     reference_markers: dict[str, set] | dict[str, list],
     *,
@@ -90,9 +82,7 @@ def marker_gene_overlap(
     key_added: str = "marker_gene_overlap",
     inplace: bool = False,
 ):
-    """\
-    Calculate an overlap score between data-deriven marker genes and
-    provided markers
+    """Calculate an overlap score between data-derived marker genes and provided markers.
 
     Marker gene overlap scores can be quoted as overlap counts, overlap
     coefficients, or jaccard indices. The method returns a pandas dataframe
@@ -138,7 +128,7 @@ def marker_gene_overlap(
 
     Returns
     -------
-    Returns :class:`pandas.DataFrame` if `inplace=True`, else returns an `AnnData` object where it sets the following field:
+    Returns :class:`pandas.DataFrame` if `inplace=False`, else returns an `AnnData` object where it sets the following field:
 
     `adata.uns[key_added]` : :class:`pandas.DataFrame` (dtype `float`)
         Marker gene overlap scores. Default for `key_added` is `'marker_gene_overlap'`.
@@ -147,67 +137,75 @@ def marker_gene_overlap(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pp.pca(adata, svd_solver='arpack')
+    >>> sc.pp.pca(adata, svd_solver="arpack")
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.leiden(adata)
-    >>> sc.tl.rank_genes_groups(adata, groupby='leiden')
+    >>> sc.tl.leiden(adata, flavor="igraph")
+    >>> sc.tl.rank_genes_groups(adata, groupby="leiden")
     >>> marker_genes = {
-    ...     'CD4 T cells': {'IL7R'},
-    ...     'CD14+ Monocytes': {'CD14', 'LYZ'},
-    ...     'B cells': {'MS4A1'},
-    ...     'CD8 T cells': {'CD8A'},
-    ...     'NK cells': {'GNLY', 'NKG7'},
-    ...     'FCGR3A+ Monocytes': {'FCGR3A', 'MS4A7'},
-    ...     'Dendritic Cells': {'FCER1A', 'CST3'},
-    ...     'Megakaryocytes': {'PPBP'}
+    ...     "CD4 T cells": {"IL7R"},
+    ...     "CD14+ Monocytes": {"CD14", "LYZ"},
+    ...     "B cells": {"MS4A1"},
+    ...     "CD8 T cells": {"CD8A"},
+    ...     "NK cells": {"GNLY", "NKG7"},
+    ...     "FCGR3A+ Monocytes": {"FCGR3A", "MS4A7"},
+    ...     "Dendritic Cells": {"FCER1A", "CST3"},
+    ...     "Megakaryocytes": {"PPBP"},
     ... }
     >>> marker_matches = sc.tl.marker_gene_overlap(adata, marker_genes)
+
     """
     # Test user inputs
     if inplace:
-        raise NotImplementedError(
+        msg = (
             "Writing Pandas dataframes to h5ad is currently under development."
             "\nPlease use `inplace=False`."
         )
+        raise NotImplementedError(msg)
 
     if key not in adata.uns:
-        raise ValueError(
+        msg = (
             "Could not find marker gene data. "
             "Please run `sc.tl.rank_genes_groups()` first."
         )
+        raise ValueError(msg)
 
     avail_methods = {"overlap_count", "overlap_coef", "jaccard", "enrich"}
     if method not in avail_methods:
-        raise ValueError(f"Method must be one of {avail_methods}.")
+        msg = f"Method must be one of {avail_methods}."
+        raise ValueError(msg)
 
     if normalize == "None":
         normalize = None
 
     avail_norm = {"reference", "data", None}
     if normalize not in avail_norm:
-        raise ValueError(f"Normalize must be one of {avail_norm}.")
+        msg = f"Normalize must be one of {avail_norm}."
+        raise ValueError(msg)
 
     if normalize is not None and method != "overlap_count":
-        raise ValueError("Can only normalize with method=`overlap_count`.")
+        msg = "Can only normalize with method=`overlap_count`."
+        raise ValueError(msg)
 
-    if not all(isinstance(val, cabc.Set) for val in reference_markers.values()):
+    if not all(isinstance(val, AbstractSet) for val in reference_markers.values()):
         try:
             reference_markers = {
                 key: set(val) for key, val in reference_markers.items()
             }
-        except Exception:
-            raise ValueError(
+        except Exception as e:
+            msg = (
                 "Please ensure that `reference_markers` contains "
                 "sets or lists of markers as values."
             )
+            raise ValueError(msg) from e
 
     if adj_pval_threshold is not None:
         if "pvals_adj" not in adata.uns[key]:
-            raise ValueError(
+            msg = (
                 "Could not find adjusted p-value data. "
                 "Please run `sc.tl.rank_genes_groups()` with a "
                 "method that outputs adjusted p-values."
             )
+            raise ValueError(msg)
 
         if adj_pval_threshold < 0:
             logg.warning(

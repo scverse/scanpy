@@ -11,8 +11,8 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
-from .._utils import _choose_graph
+from .._compat import deprecated, old_positionals
+from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -20,16 +20,16 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
-try:
-    from louvain.VertexPartition import MutableVertexPartition
-except ImportError:
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 
-    class MutableVertexPartition:
-        pass
-
-    MutableVertexPartition.__module__ = "louvain.VertexPartition"
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from louvain.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
 @old_positionals(
@@ -46,14 +46,15 @@ except ImportError:
     "obsp",
     "copy",
 )
-def louvain(
+@deprecated("Use `scanpy.tl.leiden` instead")
+def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
     *,
-    random_state: _utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
-    adjacency: spmatrix | None = None,
+    adjacency: CSBase | None = None,
     flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
@@ -63,14 +64,16 @@ def louvain(
     obsp: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
+    """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
+
+    .. deprecated:: 1.12.0
+       Use :func:`scanpy.tl.leiden` instead.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
-    of :cite:t:`Traag2017`. The Louvain algorithm has been proposed for single-cell
+    of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
     analysis by :cite:t:`Levine2015`.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or
+    This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
@@ -137,13 +140,13 @@ def louvain(
     `adata.uns['louvain' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
     partition_kwargs = dict(partition_kwargs)
     start = logg.info("running Louvain clustering")
     if (flavor != "vtraag") and (partition_type is not None):
-        raise ValueError(
-            "`partition_type` is only a valid argument " 'when `flavour` is "vtraag"'
-        )
+        msg = '`partition_type` is only a valid argument when `flavour` is "vtraag"'
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
@@ -163,10 +166,7 @@ def louvain(
         if not directed:
             logg.debug("    using the undirected graph")
         g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
-        if use_weights:
-            weights = np.array(g.es["weight"]).astype(np.float64)
-        else:
-            weights = None
+        weights = np.array(g.es["weight"]).astype(np.float64) if use_weights else None
         if flavor == "vtraag":
             import louvain
 
@@ -195,7 +195,7 @@ def louvain(
             "`flavor='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf
@@ -205,9 +205,7 @@ def louvain(
         indices = cudf.Series(adjacency.indices)
         if use_weights:
             sources, targets = adjacency.nonzero()
-            weights = adjacency[sources, targets]
-            if isinstance(weights, np.matrix):
-                weights = weights.A1
+            weights = dematrix(adjacency[sources, targets]).ravel()
             weights = cudf.Series(weights)
         else:
             weights = None
@@ -240,7 +238,8 @@ def louvain(
         for k, v in partition.items():
             groups[k] = v
     else:
-        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
+        msg = '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
+        raise ValueError(msg)
     if restrict_to is not None:
         if key_added == "louvain":
             key_added += "_R"

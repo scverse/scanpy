@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from functools import partial
+
+import pandas as pd
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -69,19 +72,19 @@ def test_leiden_random_state(adata_neighbors, flavor):
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
-    assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
 
 
 @needs.igraph
 def test_leiden_igraph_directed(adata_neighbors):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Cannot use igraph’s leiden.*directed"):
         sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
 
 
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):
         sc.tl.leiden(adata_neighbors, flavor="foo")
 
 
@@ -90,7 +93,7 @@ def test_leiden_wrong_flavor(adata_neighbors):
 def test_leiden_igraph_partition_type(adata_neighbors):
     import leidenalg
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Do not pass in partition_type"):
         sc.tl.leiden(
             adata_neighbors,
             flavor="igraph",
@@ -124,7 +127,7 @@ def test_leiden_equal_defaults(adata_neighbors):
         adata_neighbors, flavor="leidenalg", directed=True, copy=True
     )
     igraph_clustered = sc.tl.leiden(
-        adata_neighbors, copy=True, n_iterations=2, directed=False
+        adata_neighbors, flavor="igraph", copy=True, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
@@ -147,10 +150,14 @@ def test_leiden_objective_function(adata_neighbors):
 
 @needs.igraph
 @pytest.mark.parametrize(
-    "clustering,key",
+    ("clustering", "key"),
     [
-        pytest.param(sc.tl.louvain, "louvain", marks=needs.louvain),
-        pytest.param(sc.tl.leiden, "leiden", marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
@@ -180,45 +187,17 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         assert len(common_cat) == 0
 
 
-@needs.louvain
-@needs.igraph
-def test_louvain_basic(adata_neighbors):
-    sc.tl.louvain(adata_neighbors)
-    sc.tl.louvain(adata_neighbors, use_weights=True)
-    sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
-    sc.tl.louvain(adata_neighbors, flavor="igraph")
-
-
-@needs.louvain
-@pytest.mark.parametrize("random_state", [10, 999])
-@pytest.mark.parametrize("resolution", [0.9, 1.1])
-def test_louvain_custom_key(adata_neighbors, resolution, random_state):
-    sc.tl.louvain(
-        adata_neighbors,
-        key_added="louvain_custom",
-        random_state=random_state,
-        resolution=resolution,
-    )
-    assert (
-        adata_neighbors.uns["louvain_custom"]["params"]["random_state"] == random_state
-    )
-    assert adata_neighbors.uns["louvain_custom"]["params"]["resolution"] == resolution
-
-
-@needs.louvain
-@needs.igraph
-def test_partition_type(adata_neighbors):
-    import louvain
-
-    sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
-    sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
-
-
 @pytest.mark.parametrize(
-    "clustering,default_key,default_res,custom_resolutions",
+    ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
-        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
-        pytest.param(sc.tl.louvain, "louvain", 0.8, [0.9, 1.1], marks=needs.louvain),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            0.8,
+            [0.9, 1.1],
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_custom_key(
@@ -228,10 +207,10 @@ def test_clustering_custom_key(
 
     # Run clustering with default key, then custom keys
     clustering(adata_neighbors, resolution=default_res)
-    for key, res in zip(custom_keys, custom_resolutions):
+    for key, res in zip(custom_keys, custom_resolutions, strict=True):
         clustering(adata_neighbors, resolution=res, key_added=key)
 
     # ensure that all clustering parameters are added to user provided keys and not overwritten
     assert adata_neighbors.uns[default_key]["params"]["resolution"] == default_res
-    for key, res in zip(custom_keys, custom_resolutions):
+    for key, res in zip(custom_keys, custom_resolutions, strict=True):
         assert adata_neighbors.uns[key]["params"]["resolution"] == res

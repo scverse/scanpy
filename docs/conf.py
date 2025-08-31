@@ -1,11 +1,16 @@
+"""Configuration for Scanpy’s Sphinx documentation."""
+
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime
-from pathlib import Path
+from functools import partial
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
+from docutils import nodes
 from packaging.version import Version
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -13,7 +18,8 @@ matplotlib.use("agg")
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-import scanpy  # noqa
+os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
+import scanpy
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -25,13 +31,14 @@ nitpicky = True  # Warn about broken links. This is here for a reason: Do not ch
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
+    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
 ]
 
 # General information
 project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
-copyright = f"{datetime.now():%Y}, the Scanpy development team"
+copyright = f"{datetime.now():%Y}, scverse"
 version = scanpy.__version__.replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
@@ -50,7 +57,14 @@ bibtex_reference_style = "author_year"
 templates_path = ["_templates"]
 master_doc = "index"
 default_role = "literal"
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    # exclude all 0.x.y.md files, but not index.md
+    "release-notes/[!i]*.md",
+]
 
 extensions = [
     "myst_nb",
@@ -62,7 +76,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
     "sphinxcontrib.bibtex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
@@ -70,7 +83,8 @@ extensions = [
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
-    "sphinx_search.extension",
+    "sphinx_issues",
+    "sphinx_tabs.tabs",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -78,7 +92,12 @@ extensions = [
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
+autodoc_default_options = {
+    # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
+    "members": False,
+    # show “Bases: SomeClass” at the top of class docs
+    "show-inheritance": True,
+}
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
@@ -96,6 +115,7 @@ myst_enable_extensions = [
     "html_admonition",
 ]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
+myst_heading_anchors = 3
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
@@ -116,7 +136,12 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    fast_array_utils=(
+        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
+        None,
+    ),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
     leidenalg=("https://leidenalg.readthedocs.io/en/latest/", None),
@@ -131,6 +156,8 @@ intersphinx_mapping = dict(
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
+    session_info2=("https://session-info2.readthedocs.io/en/stable/", None),
+    squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
 )
 
@@ -151,6 +178,8 @@ html_title = "scanpy"
 
 def setup(app: Sphinx):
     """App setup hook."""
+    app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
+    app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
     app.add_config_value(
         "recommonmark_config",
         {
@@ -160,7 +189,7 @@ def setup(app: Sphinx):
             "enable_inline_math": False,
             "enable_eval_rst": True,
         },
-        True,
+        True,  # noqa: FBT003
     )
 
 
@@ -186,6 +215,7 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
+    "pathlib._local.Path": "pathlib.Path",
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
@@ -212,9 +242,6 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
-    # Will work once scipy 1.8 is released
-    ("py:class", "scipy.sparse.base.spmatrix"),
-    ("py:class", "scipy.sparse.csr.csr_matrix"),
 ]
 
 # Options for plot examples
@@ -225,8 +252,6 @@ plot_html_show_formats = False
 plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
-# extlinks config
-extlinks = {
-    "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
-    "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-}
+# link config
+issues_github_path = "scverse/scanpy"
+rtd_links_prefix = PurePosixPath("src")

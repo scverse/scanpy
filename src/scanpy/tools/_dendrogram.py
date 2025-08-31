@@ -1,6 +1,4 @@
-"""
-Computes a dendrogram based on a given categorical observation.
-"""
+"""Computes a dendrogram based on a given categorical observation."""
 
 from __future__ import annotations
 
@@ -34,7 +32,7 @@ if TYPE_CHECKING:
     "inplace",
 )
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def dendrogram(
+def dendrogram(  # noqa: PLR0913
     adata: AnnData,
     groupby: str | Sequence[str],
     *,
@@ -48,8 +46,7 @@ def dendrogram(
     key_added: str | None = None,
     inplace: bool = True,
 ) -> dict[str, Any] | None:
-    """\
-    Computes a hierarchical clustering for the given `groupby` categories.
+    """Compute a hierarchical clustering for the given `groupby` categories.
 
     By default, the PCA representation is used unless `.X`
     has less than 50 variables.
@@ -60,8 +57,8 @@ def dendrogram(
     to compute a correlation matrix.
 
     The hierarchical clustering can be visualized using
-    :func:`scanpy.pl.dendrogram` or multiple other visualizations that can
-    include a dendrogram: :func:`~scanpy.pl.matrixplot`,
+    :func:`scanpy.pl.dendrogram` or multiple other visualizations
+    that can include a dendrogram: :func:`~scanpy.pl.matrixplot`,
     :func:`~scanpy.pl.heatmap`, :func:`~scanpy.pl.dotplot`,
     and :func:`~scanpy.pl.stacked_violin`.
 
@@ -78,15 +75,15 @@ def dendrogram(
     {use_rep}
     var_names
         List of var_names to use for computing the hierarchical clustering.
-        If `var_names` is given, then `use_rep` and `n_pcs` is ignored.
+        If `var_names` is given, then `use_rep` and `n_pcs` are ignored.
     use_raw
         Only when `var_names` is not None.
         Use `raw` attribute of `adata` if present.
     cor_method
-        correlation method to use.
+        Correlation method to use.
         Options are 'pearson', 'kendall', and 'spearman'
     linkage_method
-        linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
+        Linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
     optimal_ordering
         Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
@@ -111,28 +108,30 @@ def dendrogram(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
-    >>> sc.pl.dendrogram(adata, groupby='bulk_labels')  # doctest: +SKIP
+    >>> sc.tl.dendrogram(adata, groupby="bulk_labels")
+    >>> sc.pl.dendrogram(adata, groupby="bulk_labels")  # doctest: +SKIP
     <Axes: >
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
-    """
+    >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+    >>> sc.pl.dotplot(adata, markers, groupby="bulk_labels", dendrogram=True)
 
+    """
     raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]
     for group in groupby:
         if group not in adata.obs_keys():
-            raise ValueError(
+            msg = (
                 "groupby has to be a valid observation. "
                 f"Given value: {group}, valid observations: {adata.obs_keys()}"
             )
+            raise ValueError(msg)
         if not isinstance(adata.obs[group].dtype, CategoricalDtype):
-            raise ValueError(
+            msg = (
                 "groupby has to be a categorical observation. "
                 f"Given value: {group}, Column type: {adata.obs[group].dtype}"
             )
+            raise ValueError(msg)
 
     if var_names is None:
         rep_df = pd.DataFrame(
@@ -188,7 +187,7 @@ def dendrogram(
 
     if inplace:
         if key_added is None:
-            key_added = f'dendrogram_{"_".join(groupby)}'
+            key_added = f"dendrogram_{'_'.join(groupby)}"
         logg.info(f"Storing dendrogram info using `.uns[{key_added!r}]`")
         adata.uns[key_added] = dat
     else:
