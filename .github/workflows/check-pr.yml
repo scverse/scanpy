@@ -5,6 +5,8 @@ on:
     branches:
       - main
     types:
+      # title changes
+      - edited
       # milestone changes
       - milestoned
       - demilestoned
