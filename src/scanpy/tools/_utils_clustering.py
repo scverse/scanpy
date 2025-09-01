@@ -24,7 +24,7 @@ def rename_groups(
 ) -> pd.Series[str]:
     key_added = f"{restrict_key}_R" if key_added is None else key_added
     all_groups = adata.obs[restrict_key].astype("U")
-    prefix = "-".join(restrict_categories) + ","
+    prefix = f"{'-'.join(restrict_categories)},"
     new_groups = [prefix + g for g in groups.astype("U")]
     all_groups.iloc[restrict_indices] = new_groups
     return all_groups

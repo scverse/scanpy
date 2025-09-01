@@ -87,16 +87,11 @@ def spring_project(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
 
     # check that requested 2-D embedding has been generated
-    if embedding_method not in adata.obsm_keys():
-        if "X_" + embedding_method in adata.obsm_keys():
-            embedding_method = "X_" + embedding_method
+    if embedding_method not in adata.obsm:
+        if f"X_{embedding_method}" in adata.obsm:
+            embedding_method = f"X_{embedding_method}"
         elif embedding_method in adata.uns:
-            embedding_method = (
-                "X_"
-                + embedding_method
-                + "_"
-                + adata.uns[embedding_method]["params"]["layout"]
-            )
+            embedding_method = f"X_{embedding_method}_{adata.uns[embedding_method]['params']['layout']}"
         else:
             msg = f"Run the specified embedding method `{embedding_method}` first."
             raise ValueError(msg)
@@ -155,7 +150,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
         write_sparse_npz(E, project_dir / "counts_norm.npz")
         with (project_dir / "genes.txt").open("w") as o:
             for g in gene_list:
-                o.write(g + "\n")
+                o.write(f"{g}\n")
         np.savetxt(project_dir / "total_counts.txt", total_counts)
 
     # Get categorical and continuous metadata
@@ -236,7 +231,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
     )
 
     # Write some useful intermediates, if they exist
-    if "X_pca" in adata.obsm_keys():
+    if "X_pca" in adata.obsm:
         np.savez_compressed(
             subplot_dir / "intermediates.npz",
             Epca=adata.obsm["X_pca"],
@@ -269,7 +264,7 @@ def _get_edges(adata, neighbors_key=None):
 
 
 def write_hdf5_genes(E, gene_list, filename):
-    """SPRING standard: filename = main_spring_dir + "counts_norm_sparse_genes.hdf5"."""
+    """SPRING standard: `filename = main_spring_dir / "counts_norm_sparse_genes.hdf5"`."""
     E = E.tocsc()
 
     hf = h5py.File(filename, "w")
@@ -290,7 +285,7 @@ def write_hdf5_genes(E, gene_list, filename):
 
 
 def write_hdf5_cells(E, filename):
-    """SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5"."""
+    """SPRING standard: `filename = main_spring_dir / "counts_norm_sparse_cells.hdf5"`."""
     E = E.tocsr()
 
     hf = h5py.File(filename, "w")
@@ -332,7 +327,7 @@ def _write_edges(filename, edges):
 def _write_color_tracks(ctracks, fname):
     out = []
     for name, score in ctracks.items():
-        line = f"{name}," + ",".join(f"{x:.3f}" for x in score)
+        line = ",".join([name, *(f"{x:.3f}" for x in score)])
         out += [line]
     out = sorted(out, key=lambda x: x.split(",")[0])
     Path(fname).write_text("\n".join(out))
@@ -407,21 +402,21 @@ def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     names = adata.obs[group_key].cat.categories
     coords = [list(xy) for xy in paga_coords]
 
-    sizes = list(adata.uns[group_key + "_sizes"])
+    sizes = list(adata.uns[f"{group_key}_sizes"])
     clus_labels = adata.obs[group_key].cat.codes.values
     cell_groups = [
         [int(j) for j in np.nonzero(clus_labels == i)[0]] for i in range(len(names))
     ]
 
-    if group_key + "_colors" in adata.uns:
-        colors = list(adata.uns[group_key + "_colors"])
+    if f"{group_key}_colors" in adata.uns:
+        colors = list(adata.uns[f"{group_key}_colors"])
     else:
         import scanpy.plotting.utils
 
         scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(
             adata, group_key
         )
-        colors = list(adata.uns[group_key + "_colors"])
+        colors = list(adata.uns[f"{group_key}_colors"])
 
     # retrieve edge level data
     sources, targets = adata.uns["paga"]["connectivities"].nonzero()

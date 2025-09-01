@@ -737,9 +737,7 @@ def regress_out(
 
     # regress on a single categorical variable
     variable_is_categorical = False
-    if keys[0] in adata.obs_keys() and isinstance(
-        adata.obs[keys[0]].dtype, CategoricalDtype
-    ):
+    if keys[0] in adata.obs and isinstance(adata.obs[keys[0]].dtype, CategoricalDtype):
         if len(keys) > 1:
             msg = (
                 "If providing categorical variable, "
