@@ -161,7 +161,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         print("Analyzing cluster ", c)
         cells_in_c = adata_neighbors.obs[key] == c
         ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
-        key_sub = str(key) + "_sub"
+        key_sub = f"{key}_sub"
         clustering(
             adata_neighbors,
             restrict_to=(key, [c]),

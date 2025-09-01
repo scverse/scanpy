@@ -156,7 +156,7 @@ def read(
         )
     # generate filename and read to dict
     filekey = str(filename)
-    filename = settings.writedir / (filekey + "." + settings.file_format_data)
+    filename = settings.writedir / f"{filekey}.{settings.file_format_data}"
     if not filename.exists():
         msg = (
             f"Reading with filekey {filekey!r} failed, "

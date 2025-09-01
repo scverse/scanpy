@@ -454,9 +454,8 @@ class DPT(Neighbors):
                 len(seg) if self.choose_largest_segment else score
             )  # simply the number of points
             logg.debug(
-                f"    group {iseg} score {score} n_points {len(seg)} " + "(too small)"
-                if len(seg) < self.min_group_size
-                else "",
+                f"    group {iseg} score {score} n_points {len(seg)}"
+                f"{' (too small)' if len(seg) < self.min_group_size else ''}"
             )
             if len(seg) <= self.min_group_size:
                 score = 0

@@ -56,11 +56,11 @@ def _design_matrix(
 
         design = pd.concat((design, factor_matrix), axis=1)
         logg.info(f"Found {len(other_cols)} categorical variables:")
-        logg.info("\t" + ", ".join(other_cols) + "\n")
+        logg.info(f"\t{', '.join(other_cols)}\n")
 
     if numerical_covariates is not None:
         logg.info(f"Found {len(numerical_covariates)} numerical variables:")
-        logg.info("\t" + ", ".join(numerical_covariates) + "\n")
+        logg.info(f"\t{', '.join(numerical_covariates)}\n")
 
         for nC in numerical_covariates:
             design[nC] = model[nC]
@@ -175,12 +175,12 @@ def combat(  # noqa: PLR0915
 
     """
     # check the input
-    if key not in adata.obs_keys():
+    if key not in adata.obs:
         msg = f"Could not find the key {key!r} in adata.obs"
         raise ValueError(msg)
 
     if covariates is not None:
-        cov_exist = np.isin(covariates, adata.obs_keys())
+        cov_exist = np.isin(covariates, adata.obs.columns)
         if np.any(~cov_exist):
             missing_cov = np.array(covariates)[~cov_exist].tolist()
             msg = f"Could not find the covariate(s) {missing_cov!r} in adata.obs"
