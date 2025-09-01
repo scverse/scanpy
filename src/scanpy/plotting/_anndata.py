@@ -394,7 +394,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         categorical = False  # by default, assume continuous or flat color
         colorbar = None
         # test whether we have categorial or continuous annotation
-        if key in adata.obs_keys():
+        if key in adata.obs:
             if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
@@ -410,7 +410,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         else:
             msg = (
                 f"key {key!r} is invalid! pass valid observation annotation, "
-                f"one of {adata.obs_keys()} or a gene name {adata.var_names}"
+                f"one of {adata.obs.columns.tolist()} or a gene name {adata.var_names}"
             )
             raise ValueError(msg)
         if colorbar is None:
@@ -1070,7 +1070,7 @@ def clustermap(
         _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
         # do this more efficiently... just a quick solution
         lut = dict(
-            zip(row_colors.cat.categories, adata.uns[obs_keys + "_colors"], strict=True)
+            zip(row_colors.cat.categories, adata.uns[f"{obs_keys}_colors"], strict=True)
         )
         row_colors = adata.obs[obs_keys].map(lut)
         g = sns.clustermap(df, row_colors=row_colors.values, **kwds)
@@ -1229,13 +1229,13 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
             # or when groupby is a list of columns the colors are assigned on the fly,
             # which may create inconsistencies in multiple runs that require sorting
             # of the categories (eg. when dendrogram is plotted).
-            if groupby + "_colors" not in adata.uns:
+            if f"{groupby}_colors" not in adata.uns:
                 # if colors are not found, assign a new palette
                 # and save it using the same code for embeddings
                 from ._tools.scatterplots import _get_palette
 
                 _get_palette(adata, groupby)
-            groupby_colors = adata.uns[groupby + "_colors"]
+            groupby_colors = adata.uns[f"{groupby}_colors"]
         else:
             # this case happen when adata.obs[groupby] is numeric
             # the values are converted into a category on the fly
@@ -1578,11 +1578,11 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     pl.rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     """
-    if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != "category":
+    if groupby not in adata.obs or adata.obs[groupby].dtype.name != "category":
         msg = (
             "groupby has to be a valid categorical observation. "
             f"Given value: {groupby}, valid categorical observations: "
-            f"{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']}"
+            f"{[x for x in adata.obs if adata.obs[x].dtype.name == 'category']}"
         )
         raise ValueError(msg)
 
@@ -1607,7 +1607,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
         from ._utils import _set_default_colors_for_categorical_obs
 
         _set_default_colors_for_categorical_obs(adata, groupby)
-    groupby_colors = adata.uns[groupby + "_colors"]
+    groupby_colors = adata.uns[f"{groupby}_colors"]
 
     if dendrogram:
         # compute dendrogram if needed and reorder
@@ -2071,15 +2071,17 @@ def _prepare_dataframe(  # noqa: PLR0912
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in [*adata.obs_keys(), adata.obs.index.name]:
+            if group not in [*adata.obs, adata.obs.index.name]:
                 if adata.obs.index.name is not None:
                     msg = f' or index name "{adata.obs.index.name}"'
                 else:
                     msg = ""
-                raise ValueError(
+                msg = (
                     "groupby has to be a valid observation. "
-                    f"Given {group}, is not in observations: {adata.obs_keys()}" + msg
+                    f"Given {group}, is not in observations: "
+                    f"{adata.obs.columns.tolist()} {msg}"
                 )
+                raise ValueError(msg)
             if group in adata.obs.columns and group == adata.obs.index.name:
                 msg = (
                     f"Given group {group} is both and index and a column level, "
@@ -2235,7 +2237,7 @@ def _plot_var_groups_brackets(
             group_y_center = top[idx] + float(diff) / 2
             # cut label to fit available space
             label = (
-                var_groups.labels[idx][: int(diff * 2)] + "."
+                f"{var_groups.labels[idx][: int(diff * 2)]}."
                 if diff * 2 < len(var_groups.labels[idx])
                 else var_groups.labels[idx]
             )
@@ -2568,7 +2570,7 @@ def _plot_categories_as_colorblocks(
     if colors is None:
         groupby_cmap = colormaps.get_cmap(cmap_name)
     else:
-        groupby_cmap = ListedColormap(colors, groupby + "_cmap")
+        groupby_cmap = ListedColormap(colors, f"{groupby}_cmap")
     norm = BoundaryNorm(np.arange(groupby_cmap.N + 1) - 0.5, groupby_cmap.N)
 
     # determine groupby label positions such that they appear

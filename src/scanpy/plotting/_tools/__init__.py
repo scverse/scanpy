@@ -1547,7 +1547,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is not None:
         key += f"_{groupby}"
 
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = (
             f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
