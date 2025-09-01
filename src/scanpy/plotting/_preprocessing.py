@@ -93,7 +93,7 @@ def highly_variable_genes(  # noqa: PLR0912
         data_type = "dispersions" if not seurat_v3_flavor else "variances"
         plt.ylabel(
             f"{'$log_{10}$ ' if False else ''}{data_type} "
-            "of genes ({'' if idx == 0 else 'not '}normalized)"
+            f"of genes ({'' if idx == 0 else 'not '}normalized)"
         )
 
     show = settings.autoshow if show is None else show
