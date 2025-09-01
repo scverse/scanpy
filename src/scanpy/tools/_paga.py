@@ -136,7 +136,7 @@ def paga(
         adata.uns["paga"]["connectivities"] = paga.connectivities
         adata.uns["paga"]["connectivities_tree"] = paga.connectivities_tree
         # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
-        adata.uns[groups + "_sizes"] = np.array(paga.ns)
+        adata.uns[f"{groups}_sizes"] = np.array(paga.ns)
     else:
         paga.compute_transitions()
         adata.uns["paga"]["transitions_confidence"] = paga.transitions_confidence
@@ -285,8 +285,8 @@ class PAGA:
             raise ValueError(msg)
         # restore this at some point
         # if 'expected_n_edges_random' not in self._adata.uns['paga']:
-        #     raise ValueError(
-        #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
+        #     msg = 'Before running PAGA with `use_rna_velocity=True`, run it with `False`.'
+        #     raise ValueError(msg)
         import igraph
 
         g = _utils.get_igraph_from_adjacency(

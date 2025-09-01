@@ -208,8 +208,8 @@ def neighbors(  # noqa: PLR0913
         conns_key = "connectivities"
         dists_key = "distances"
     else:
-        conns_key = key_added + "_connectivities"
-        dists_key = key_added + "_distances"
+        conns_key = f"{key_added}_connectivities"
+        dists_key = f"{key_added}_distances"
 
     adata.uns[key_added] = {}
 
@@ -427,7 +427,7 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm_keys():
+        if "X_diffmap" in adata.obsm:
             self._eigen_values = _backwards_compat_get_full_eval(adata)
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
             if n_dcs is not None:

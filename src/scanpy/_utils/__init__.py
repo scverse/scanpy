@@ -521,13 +521,11 @@ def update_params(
     if new_params:  # allow for new_params to be None
         for key, val in new_params.items():
             if key not in old_params and check:
-                raise ValueError(
-                    "'"
-                    + key
-                    + "' is not a valid parameter key, "
-                    + "consider one of \n"
-                    + str(list(old_params.keys()))
+                msg = (
+                    f"{key!r} is not a valid parameter key, "
+                    f"consider one of \n{list(old_params.keys())}"
                 )
+                raise ValueError(msg)
             if val is not None:
                 updated_params[key] = val
     return updated_params
@@ -854,8 +852,8 @@ def select_groups(
 ) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
-    if key + "_masks" in adata.uns:
-        groups_masks_obs = adata.uns[key + "_masks"]
+    if f"{key}_masks" in adata.uns:
+        groups_masks_obs = adata.uns[f"{key}_masks"]
     else:
         groups_masks_obs = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool

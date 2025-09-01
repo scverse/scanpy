@@ -311,7 +311,7 @@ def savefig(writekey, dpi=None, ext=None):
 
     The `filename` is generated as follows:
 
-        filename = settings.figdir / (writekey + settings.plot_suffix + '.' + settings.file_format_figs)
+        filename = settings.figdir / f"{writekey}{settings.plot_suffix}.{settings.file_format_figs}"
     """
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
@@ -479,7 +479,7 @@ def _set_colors_for_categorical_obs(
         cc = palette()
         colors_list = [to_hex(next(cc)["color"]) for x in range(len(categories))]
 
-    adata.uns[value_to_plot + "_colors"] = colors_list
+    adata.uns[f"{value_to_plot}_colors"] = colors_list
 
 
 def _set_default_colors_for_categorical_obs(adata, value_to_plot):
@@ -617,11 +617,11 @@ def scatter_group(
 ):
     """Scatter of group using representation of data Y."""
     mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].values
-    color = adata.uns[key + "_colors"][cat_code]
+    color = adata.uns[f"{key}_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
 
-        color = rgb2hex(adata.uns[key + "_colors"][cat_code])
+        color = rgb2hex(adata.uns[f"{key}_colors"][cat_code])
     if not is_color_like(color):
         msg = f"{color!r} is not a valid matplotlib color."
         raise ValueError(msg)
@@ -1051,7 +1051,7 @@ def hierarchy_sc(G, root, node_sets):
             neighbors.remove(parent)
         old_node = node
         for n in node_sets[int(node)]:
-            new_node = str(node) + "_" + str(n)
+            new_node = f"{node}_{n}"
             sc_G.add_node(new_node)
             sc_G.add_edge(old_node, new_node)
             old_node = new_node
