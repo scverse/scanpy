@@ -75,7 +75,9 @@ jobs:
         run: uvx hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov --cov --cov-report=xml
+        run: |
+          uvx hatch run ${{ matrix.env.name }}:run-cov
+          uvx hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
         uses: codecov/codecov-action@v5
