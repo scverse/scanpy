@@ -60,7 +60,7 @@ dependencies = [
     "networkx>=2.7.1",
     "natsort",
     "joblib",
-    "numba>=0.57.1",
+    "numba >=0.57.1, !=0.62.0rc1",                #https://github.com/numba/numba/issues/10202
     "umap-learn>=0.5.6",
     "pynndescent>=0.5.13",
     "packaging>=21.3",
@@ -86,7 +86,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=8.2.2",
     "pytest-mock",
-    "pytest-cov",
+    "pytest-cov",           # only for use from VS Code
     "pytest-xdist[psutil]",
     "pytest-randomly",
     "pytest-rerunfailures",
