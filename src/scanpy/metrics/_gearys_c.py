@@ -218,8 +218,8 @@ def _gearys_c_mtx(g: CSRBase, x: np.ndarray) -> np.ndarray:
     w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     for k in numba.prange(m):
-        x = x[k, :].astype(np.float64)
-        out[k] = _gearys_c_inner_sparse_x_densevec(g, x, w)
+        x_vec = x[k, :].astype(np.float64)
+        out[k] = _gearys_c_inner_sparse_x_densevec(g, x_vec, w)
     return out
 
 

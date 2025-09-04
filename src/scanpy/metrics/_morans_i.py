@@ -156,8 +156,8 @@ def _morans_i_mtx(g: CSRBase, x: np.ndarray) -> np.ndarray:
     w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     for k in numba.prange(m):
-        x = x[k, :]
-        out[k] = _morans_i_vec_w(g, x, w)
+        x_vec = x[k, :]
+        out[k] = _morans_i_vec_w(g, x_vec, w)
     return out
 
 
