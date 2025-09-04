@@ -201,7 +201,7 @@ def umap(  # noqa: PLR0913, PLR0915
     random_state = check_random_state(random_state)
 
     neigh_params = neighbors["params"]
-    X = _choose_representation(
+    x = _choose_representation(
         adata,
         use_rep=neigh_params.get("use_rep", None),
         n_pcs=neigh_params.get("n_pcs", None),
@@ -212,8 +212,8 @@ def umap(  # noqa: PLR0913, PLR0915
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
-        X_umap, _ = simplicial_set_embedding(
-            data=X,
+        x_umap, _ = simplicial_set_embedding(
+            data=x,
             graph=neighbors["connectivities"].tocoo(),
             n_components=n_components,
             initial_alpha=alpha,
@@ -250,7 +250,7 @@ def umap(  # noqa: PLR0913, PLR0915
         n_epochs = (
             500 if maxiter is None else maxiter
         )  # 0 is not a valid value for rapids, unlike original umap
-        X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+        x_contiguous = np.ascontiguousarray(x, dtype=np.float32)
         umap = UMAP(
             n_neighbors=n_neighbors,
             n_components=n_components,
@@ -265,8 +265,8 @@ def umap(  # noqa: PLR0913, PLR0915
             verbose=settings.verbosity > 3,
             random_state=random_state,
         )
-        X_umap = umap.fit_transform(X_contiguous)
-    adata.obsm[key_obsm] = X_umap  # annotate samples with UMAP coordinates
+        x_umap = umap.fit_transform(x_contiguous)
+    adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
         time=start,

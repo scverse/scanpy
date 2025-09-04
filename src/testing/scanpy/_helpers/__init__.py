@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 # These functions can be used to check that functions are correctly using arugments like `layers`, `obsm`, etc.
 
 
-def anndata_v0_8_constructor_compat(X, *args, **kwargs):
+def anndata_v0_8_constructor_compat(x, /, *args, **kwargs):
     """Construct AnnData that uses dtype of X for test compatibility with older AnnData versions.
 
     Once the minimum version of AnnData is 0.9, this function can be replaced with the default constructor.
@@ -40,22 +40,22 @@ def anndata_v0_8_constructor_compat(X, *args, **kwargs):
     from packaging.version import Version
 
     if Version(ad.__version__) < Version("0.9"):
-        return ad.AnnData(X, *args, **kwargs, dtype=X.dtype)
+        return ad.AnnData(x, *args, **kwargs, dtype=x.dtype)
     else:
-        return ad.AnnData(X, *args, **kwargs)
+        return ad.AnnData(x, *args, **kwargs)
 
 
-def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
+def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs):
     """Check that only the array meant to be modified is modified."""
-    adata = anndata_v0_8_constructor_compat(X.copy())
+    adata_in = anndata_v0_8_constructor_compat(x.copy())
 
     for field in fields:
-        sc.get._set_obs_rep(adata, X, **{field: field})
-    X_array = asarray(X)
+        sc.get._set_obs_rep(adata_in, x, **{field: field})
+    x_array = asarray(x)
 
-    adata_X = func(adata, copy=True, **kwargs)
+    adata_out = func(adata_in, copy=True, **kwargs)
     adatas_proc = {
-        field: func(adata, copy=True, **{field: field}, **kwargs) for field in fields
+        field: func(adata_in, copy=True, **{field: field}, **kwargs) for field in fields
     }
 
     # Modified fields
@@ -63,54 +63,53 @@ def check_rep_mutation(func, X, *, fields=("layer", "obsm"), **kwargs):
         result_array = asarray(
             sc.get._get_obs_rep(adatas_proc[field], **{field: field})
         )
-        np.testing.assert_array_equal(asarray(adata_X.X), result_array)
+        np.testing.assert_array_equal(asarray(adata_out.X), result_array)
 
     # Unmodified fields
     for field in fields:
-        np.testing.assert_array_equal(X_array, asarray(adatas_proc[field].X))
+        np.testing.assert_array_equal(x_array, asarray(adatas_proc[field].X))
         np.testing.assert_array_equal(
-            X_array, asarray(sc.get._get_obs_rep(adata_X, **{field: field}))
+            x_array, asarray(sc.get._get_obs_rep(adata_out, **{field: field}))
         )
     for field_a, field_b in permutations(fields, 2):
         result_array = asarray(
             sc.get._get_obs_rep(adatas_proc[field_a], **{field_b: field_b})
         )
-        np.testing.assert_array_equal(X_array, result_array)
+        np.testing.assert_array_equal(x_array, result_array)
 
 
-def check_rep_results(func, X, *, fields: Iterable[str] = ("layer", "obsm"), **kwargs):
+def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **kwargs):
     """Check that the results of a computation add values/ mutate the anndata object in a consistent way."""
     # Gen data
-    empty_X = np.zeros(shape=X.shape, dtype=X.dtype)
-    adata = sc.AnnData(
-        X=empty_X.copy(),
-        layers={"layer": empty_X.copy()},
-        obsm={"obsm": empty_X.copy()},
+    empty_x = np.zeros(shape=x.shape, dtype=x.dtype)
+    adata_empty = sc.AnnData(
+        X=empty_x.copy(),
+        layers={"layer": empty_x.copy()},
+        obsm={"obsm": empty_x.copy()},
     )
 
-    adata_X = adata.copy()
-    adata_X.X = X.copy()
+    adata = adata_empty.copy()
+    adata.X = x.copy()
 
     adatas_proc = {}
     for field in fields:
-        cur = adata.copy()
-        sc.get._set_obs_rep(cur, X.copy(), **{field: field})
+        cur = adata_empty.copy()
+        sc.get._set_obs_rep(cur, x.copy(), **{field: field})
         adatas_proc[field] = cur
 
     # Apply function
-    func(adata_X, **kwargs)
+    func(adata, **kwargs)
     for field in fields:
         func(adatas_proc[field], **{field: field}, **kwargs)
-
     # Reset X
-    adata_X.X = empty_X.copy()
+    adata.X = empty_x.copy()
     for field in fields:
-        sc.get._set_obs_rep(adatas_proc[field], empty_X.copy(), **{field: field})
+        sc.get._set_obs_rep(adatas_proc[field], empty_x.copy(), **{field: field})
 
     for field_a, field_b in permutations(fields, 2):
         assert_equal(adatas_proc[field_a], adatas_proc[field_b])
     for field in fields:
-        assert_equal(adata_X, adatas_proc[field])
+        assert_equal(adata, adatas_proc[field])
 
 
 def _check_check_values_warnings(

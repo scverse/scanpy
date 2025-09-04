@@ -62,8 +62,8 @@ def _design_matrix(
         logg.info(f"Found {len(numerical_covariates)} numerical variables:")
         logg.info(f"\t{', '.join(numerical_covariates)}\n")
 
-        for nC in numerical_covariates:
-            design[nC] = model[nC]
+        for n_c in numerical_covariates:
+            design[n_c] = model[n_c]
 
     return design
 
@@ -106,9 +106,9 @@ def _standardize_data(
     design = _design_matrix(model, batch_key, batch_levels)
 
     # compute pooled variance estimator
-    B_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
-    grand_mean = np.dot((n_batches / n_array).T, B_hat[:n_batch, :])
-    var_pooled = (data - np.dot(design, B_hat).T) ** 2
+    b_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
+    grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
+    var_pooled = (data - np.dot(design, b_hat).T) ** 2
     var_pooled = np.dot(var_pooled, np.ones((int(n_array), 1)) / int(n_array))
 
     # Compute the means
@@ -119,7 +119,7 @@ def _standardize_data(
     )
     tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
-    stand_mean += np.dot(tmp, B_hat).T
+    stand_mean += np.dot(tmp, b_hat).T
 
     # need to be a bit careful with the zero variance genes
     # just set the zero variance genes to zero in the standardized data
@@ -195,8 +195,8 @@ def combat(  # noqa: PLR0915
             raise ValueError(msg)
 
     # only works on dense matrices so far
-    X = adata.X.toarray().T if isinstance(adata.X, CSBase) else adata.X.T
-    data = pd.DataFrame(data=X, index=adata.var_names, columns=adata.obs_names)
+    x = adata.X.toarray().T if isinstance(adata.X, CSBase) else adata.X.T
+    data = pd.DataFrame(data=x, index=adata.var_names, columns=adata.obs_names)
 
     sanitize_anndata(adata)
 

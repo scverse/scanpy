@@ -77,7 +77,7 @@ else:
     from contextlib import AbstractContextManager
 
     @dataclass
-    class chdir(AbstractContextManager):
+    class chdir(AbstractContextManager):  # noqa: N801
         path: Path
         _old_cwd: list[Path] = field(default_factory=list)
 

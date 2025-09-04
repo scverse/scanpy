@@ -77,10 +77,10 @@ def pca(
         raise RuntimeError(msg)
     from sklearn.decomposition import PCA
 
-    X_obs = self._counts_obs_norm.toarray()
-    X_sim = self._counts_sim_norm.toarray()
+    x_obs = self._counts_obs_norm.toarray()
+    x_sim = self._counts_sim_norm.toarray()
 
     pca = PCA(
         n_components=n_prin_comps, random_state=random_state, svd_solver=svd_solver
-    ).fit(X_obs)
-    self.set_manifold(pca.transform(X_obs), pca.transform(X_sim))
+    ).fit(x_obs)
+    self.set_manifold(pca.transform(x_obs), pca.transform(x_sim))
