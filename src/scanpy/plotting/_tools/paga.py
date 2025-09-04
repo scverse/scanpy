@@ -1156,7 +1156,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
 
     ax = plt.gca() if ax is None else ax
 
-    x = []
+    xs = []
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
@@ -1222,7 +1222,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
-        x.append(x)
+        xs.append(x)
         if not as_heatmap:
             ax.plot(x[xlim[0] : xlim[1]], label=key)
         if ikey == 0:
@@ -1232,7 +1232,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 else:
                     label = group
                 x_tick_labels.append(label)
-    x = np.asarray(x).squeeze()
+    x = np.asarray(xs).squeeze()
     if as_heatmap:
         img = ax.imshow(x, aspect="auto", interpolation="nearest", cmap=color_map)
         if show_yticks:
