@@ -398,9 +398,9 @@ class DPT(Neighbors):
                 continue
             # restrict distance matrix to points in segment
             if not isinstance(self.distances_dpt, OnFlySymMatrix):
-                Dseg = self.distances_dpt[np.ix_(seg, seg)]
+                d_seg = self.distances_dpt[np.ix_(seg, seg)]
             else:
-                Dseg = self.distances_dpt.restrict(seg)
+                d_seg = self.distances_dpt.restrict(seg)
             third_maximizer = None
             if segs_undecided[iseg]:
                 # check that none of our tips "connects" with a tip of the
@@ -428,7 +428,7 @@ class DPT(Neighbors):
             tips = [np.where(allindices[seg] == tip)[0][0] for tip in segs_tips[iseg]]
             # find the third point on the segment that has maximal
             # added distance from the two tip points
-            dseg = Dseg[tips[0]] + Dseg[tips[1]]
+            dseg = d_seg[tips[0]] + d_seg[tips[1]]
             if not np.isfinite(dseg).any():
                 continue
             # add this point to tips, it's a third tip, we store it at the first
@@ -436,20 +436,20 @@ class DPT(Neighbors):
             third_tip = np.argmax(dseg)
             if third_maximizer is not None:
                 # find a fourth point that has maximal distance to all three
-                dseg += Dseg[third_tip]
+                dseg += d_seg[third_tip]
                 fourth_tip = np.argmax(dseg)
                 if fourth_tip != tips[0] and fourth_tip != third_tip:
                     tips[1] = fourth_tip
-                    dseg -= Dseg[tips[1]]
+                    dseg -= d_seg[tips[1]]
                 else:
-                    dseg -= Dseg[third_tip]
+                    dseg -= d_seg[third_tip]
             tips3 = np.append(tips, third_tip)
             # compute the score as ratio of the added distance to the third tip,
             # to what it would be if it were on the straight line between the
             # two first tips, given by Dseg[tips[:2]]
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
-            score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
+            score = dseg[tips3[2]] / d_seg[tips3[0], tips3[1]]
             score = (
                 len(seg) if self.choose_largest_segment else score
             )  # simply the number of points
@@ -561,13 +561,13 @@ class DPT(Neighbors):
         seg = segs[iseg]
         # restrict distance matrix to points in segment
         if not isinstance(self.distances_dpt, OnFlySymMatrix):
-            Dseg = self.distances_dpt[np.ix_(seg, seg)]
+            d_seg = self.distances_dpt[np.ix_(seg, seg)]
         else:
-            Dseg = self.distances_dpt.restrict(seg)
+            d_seg = self.distances_dpt.restrict(seg)
         # given the three tip points and the distance matrix detect the
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
-        result = self._detect_branching(Dseg, tips3, seg)
+        result = self._detect_branching(d_seg, tips3, seg)
         ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk = result
         # map back to global indices
         for iseg_new, seg_new in enumerate(ssegs):
@@ -715,8 +715,8 @@ class DPT(Neighbors):
                     )
                     for i, seg_adjacency in enumerate(segs_adjacency):
                         segs_adjacency_sparse[i, seg_adjacency] = 1
-                    G = nx.Graph(segs_adjacency_sparse)
-                    paths_all = nx.single_source_dijkstra_path(G, source=kseg)
+                    g = nx.Graph(segs_adjacency_sparse)
+                    paths_all = nx.single_source_dijkstra_path(g, source=kseg)
                     if jseg_min not in paths_all:
                         segs_adjacency[jseg_min].append(kseg)
                         segs_connects[jseg_min].append(closest_points_in_kseg[idx])
@@ -746,7 +746,7 @@ class DPT(Neighbors):
 
     def _detect_branching(  # noqa: PLR0915
         self,
-        Dseg: np.ndarray,
+        d_seg: np.ndarray,
         tips: np.ndarray,
         seg_reference=None,
     ) -> tuple[
@@ -786,31 +786,31 @@ class DPT(Neighbors):
 
         """
         if self.flavor == "haghverdi16":
-            ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
+            ssegs = self._detect_branching_single_haghverdi16(d_seg, tips)
         elif self.flavor == "wolf17_tri":
-            ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
+            ssegs = self._detect_branching_single_wolf17_tri(d_seg, tips)
         elif self.flavor in {"wolf17_bi", "wolf17_bi_un"}:
-            ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
+            ssegs = self._detect_branching_single_wolf17_bi(d_seg, tips)
         else:
             msg = '`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.'
             raise ValueError(msg)
         # make sure that each data point has a unique association with a segment
-        masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
+        masks = np.zeros((len(ssegs), d_seg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
         ssegs = []
         for mask in masks:
             mask[nonunique] = False
-            ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask])
+            ssegs.append(np.arange(d_seg.shape[0], dtype=int)[mask])
         # compute new tips within new segments
         ssegs_tips = []
         for inewseg, newseg in enumerate(ssegs):
             if len(np.flatnonzero(newseg)) <= 1:
                 logg.warning(f"detected group with only {np.flatnonzero(newseg)} cells")
-            secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
+            secondtip = newseg[np.argmax(d_seg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
-        undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
+        undecided_cells = np.arange(d_seg.shape[0], dtype=int)[nonunique]
         if len(undecided_cells) > 0:
             ssegs.append(undecided_cells)
             # establish the connecting points with the other segments
@@ -819,19 +819,19 @@ class DPT(Neighbors):
                 reference_point = newseg_tips[0]
                 # closest cell to the new segment within undecided cells
                 closest_cell = undecided_cells[
-                    np.argmin(Dseg[reference_point][undecided_cells])
+                    np.argmin(d_seg[reference_point][undecided_cells])
                 ]
                 ssegs_connects[inewseg].append(closest_cell)
                 # closest cell to the undecided cells within new segment
                 closest_cell = ssegs[inewseg][
-                    np.argmin(Dseg[closest_cell][ssegs[inewseg]])
+                    np.argmin(d_seg[closest_cell][ssegs[inewseg]])
                 ]
                 ssegs_connects[-1].append(closest_cell)
             # also compute tips for the undecided cells
             tip_0 = undecided_cells[
-                np.argmax(Dseg[undecided_cells[0]][undecided_cells])
+                np.argmax(d_seg[undecided_cells[0]][undecided_cells])
             ]
-            tip_1 = undecided_cells[np.argmax(Dseg[tip_0][undecided_cells])]
+            tip_1 = undecided_cells[np.argmax(d_seg[tip_0][undecided_cells])]
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
             trunk = 3
@@ -845,35 +845,35 @@ class DPT(Neighbors):
             # here it's possible to use the more symmetric procedure
             # shouldn't make much of a difference
             closest_points[0, 1] = ssegs[1][
-                np.argmin(Dseg[reference_point[0]][ssegs[1]])
+                np.argmin(d_seg[reference_point[0]][ssegs[1]])
             ]
             closest_points[1, 0] = ssegs[0][
-                np.argmin(Dseg[reference_point[1]][ssegs[0]])
+                np.argmin(d_seg[reference_point[1]][ssegs[0]])
             ]
             closest_points[0, 2] = ssegs[2][
-                np.argmin(Dseg[reference_point[0]][ssegs[2]])
+                np.argmin(d_seg[reference_point[0]][ssegs[2]])
             ]
             closest_points[2, 0] = ssegs[0][
-                np.argmin(Dseg[reference_point[2]][ssegs[0]])
+                np.argmin(d_seg[reference_point[2]][ssegs[0]])
             ]
             closest_points[1, 2] = ssegs[2][
-                np.argmin(Dseg[reference_point[1]][ssegs[2]])
+                np.argmin(d_seg[reference_point[1]][ssegs[2]])
             ]
             closest_points[2, 1] = ssegs[1][
-                np.argmin(Dseg[reference_point[2]][ssegs[1]])
+                np.argmin(d_seg[reference_point[2]][ssegs[1]])
             ]
             added_dist = np.zeros(3)
             added_dist[0] = (
-                Dseg[closest_points[1, 0], closest_points[0, 1]]
-                + Dseg[closest_points[2, 0], closest_points[0, 2]]
+                d_seg[closest_points[1, 0], closest_points[0, 1]]
+                + d_seg[closest_points[2, 0], closest_points[0, 2]]
             )
             added_dist[1] = (
-                Dseg[closest_points[0, 1], closest_points[1, 0]]
-                + Dseg[closest_points[2, 1], closest_points[1, 2]]
+                d_seg[closest_points[0, 1], closest_points[1, 0]]
+                + d_seg[closest_points[2, 1], closest_points[1, 2]]
             )
             added_dist[2] = (
-                Dseg[closest_points[1, 2], closest_points[2, 1]]
-                + Dseg[closest_points[0, 2], closest_points[2, 0]]
+                d_seg[closest_points[1, 2], closest_points[2, 1]]
+                + d_seg[closest_points[0, 2], closest_points[2, 0]]
             )
             trunk = np.argmin(added_dist)
             ssegs_adjacency = [
@@ -891,16 +891,16 @@ class DPT(Neighbors):
             ssegs_adjacency = [[1], [0]]
             reference_point_in_0 = ssegs_tips[0][0]
             closest_point_in_1 = ssegs[1][
-                np.argmin(Dseg[reference_point_in_0][ssegs[1]])
+                np.argmin(d_seg[reference_point_in_0][ssegs[1]])
             ]
             reference_point_in_1 = closest_point_in_1  # ssegs_tips[1][0]
             closest_point_in_0 = ssegs[0][
-                np.argmin(Dseg[reference_point_in_1][ssegs[0]])
+                np.argmin(d_seg[reference_point_in_1][ssegs[0]])
             ]
             ssegs_connects = [[closest_point_in_1], [closest_point_in_0]]
         return ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk
 
-    def _detect_branching_single_haghverdi16(self, Dseg, tips):
+    def _detect_branching_single_haghverdi16(self, d_seg, tips):
         """Detect branching on given segment."""
         # permutations of tip cells
         ps = [
@@ -912,40 +912,40 @@ class DPT(Neighbors):
         # compute branchings using different starting points the first index of
         # tips is the starting point for the other two, the order does not
         # matter
-        return [self.__detect_branching_haghverdi16(Dseg, tips[p]) for p in ps]
+        return [self.__detect_branching_haghverdi16(d_seg, tips[p]) for p in ps]
 
-    def _detect_branching_single_wolf17_tri(self, Dseg, tips):
+    def _detect_branching_single_wolf17_tri(self, d_seg, tips):
         # all pairwise distances
-        dist_from_0 = Dseg[tips[0]]
-        dist_from_1 = Dseg[tips[1]]
-        dist_from_2 = Dseg[tips[2]]
+        dist_from_0 = d_seg[tips[0]]
+        dist_from_1 = d_seg[tips[1]]
+        dist_from_2 = d_seg[tips[2]]
         closer_to_0_than_to_1 = dist_from_0 < dist_from_1
         closer_to_0_than_to_2 = dist_from_0 < dist_from_2
         closer_to_1_than_to_2 = dist_from_1 < dist_from_2
-        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks = np.zeros((2, d_seg.shape[0]), dtype=bool)
         masks[0] = closer_to_0_than_to_1
         masks[1] = closer_to_0_than_to_2
         segment_0 = np.sum(masks, axis=0) == 2
-        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks = np.zeros((2, d_seg.shape[0]), dtype=bool)
         masks[0] = ~closer_to_0_than_to_1
         masks[1] = closer_to_1_than_to_2
         segment_1 = np.sum(masks, axis=0) == 2
-        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks = np.zeros((2, d_seg.shape[0]), dtype=bool)
         masks[0] = ~closer_to_0_than_to_2
         masks[1] = ~closer_to_1_than_to_2
         segment_2 = np.sum(masks, axis=0) == 2
         ssegs = [segment_0, segment_1, segment_2]
         return ssegs
 
-    def _detect_branching_single_wolf17_bi(self, Dseg, tips):
-        dist_from_0 = Dseg[tips[0]]
-        dist_from_1 = Dseg[tips[1]]
+    def _detect_branching_single_wolf17_bi(self, d_seg: np.ndarray, tips: np.ndarray):
+        dist_from_0 = d_seg[tips[0]]
+        dist_from_1 = d_seg[tips[1]]
         closer_to_0_than_to_1 = dist_from_0 < dist_from_1
         ssegs = [closer_to_0_than_to_1, ~closer_to_0_than_to_1]
         return ssegs
 
     def __detect_branching_haghverdi16(
-        self, Dseg: np.ndarray, tips: np.ndarray
+        self, d_seg: np.ndarray, tips: np.ndarray
     ) -> np.ndarray:
         """Detect branching on given segment.
 
@@ -956,8 +956,8 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        Dseg
-            Dchosen distance matrix restricted to segment.
+        d_seg
+            Chosen distance matrix restricted to segment.
         tips
             The three tip points. They form a 'triangle' that contains the data.
 
@@ -968,15 +968,15 @@ class DPT(Neighbors):
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
-        idcs = np.argsort(Dseg[tips[0]])
+        idcs = np.argsort(d_seg[tips[0]])
         # consider now the sequence of distances from the other
         # two tip points, which only increase when being close to `tips[0]`
         # where they become correlated
         # at the point where this happens, we define a branching point
         if True:
             imax = self.kendall_tau_split(
-                Dseg[tips[1]][idcs],
-                Dseg[tips[2]][idcs],
+                d_seg[tips[1]][idcs],
+                d_seg[tips[2]][idcs],
             )
         if False:
             # if we were in euclidian space, the following should work
@@ -985,7 +985,7 @@ class DPT(Neighbors):
             # in terms of an ordering, such as exploited by the kendall
             # correlation method above
             imax = np.argmin(
-                Dseg[tips[0]][idcs] + Dseg[tips[1]][idcs] + Dseg[tips[2]][idcs]
+                d_seg[tips[0]][idcs] + d_seg[tips[1]][idcs] + d_seg[tips[2]][idcs]
             )
         # init list to store new segments
         ssegs = []  # noqa: F841  # TODO Look into this

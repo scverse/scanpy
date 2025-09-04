@@ -167,11 +167,11 @@ def filter_cells(
             adata.obs["n_genes"] = number
         adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
-    X = data  # proceed with processing the data matrix
+
     min_number = min_counts if min_genes is None else min_genes
     max_number = max_counts if max_genes is None else max_genes
     number_per_cell = stats.sum(
-        X if min_genes is None and max_genes is None else X > 0, axis=1
+        data if min_genes is None and max_genes is None else data > 0, axis=1
     )
     if min_number is not None:
         cell_subset = number_per_cell >= min_number
@@ -283,11 +283,10 @@ def filter_genes(
         adata._inplace_subset_var(gene_subset)
         return adata if copy else None
 
-    X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
     max_number = max_counts if max_cells is None else max_cells
     number_per_gene = stats.sum(
-        X if min_cells is None and max_cells is None else X > 0, axis=0
+        data if min_cells is None and max_cells is None else data > 0, axis=0
     )
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
@@ -360,26 +359,26 @@ def log1p(
 
 
 @log1p.register(CSBase)
-def log1p_sparse(X: CSBase, *, base: Number | None = None, copy: bool = False):
-    X = check_array(
-        X, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
+def log1p_sparse(x: CSBase, *, base: Number | None = None, copy: bool = False):
+    x = check_array(
+        x, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
-    X.data = log1p(X.data, copy=False, base=base)
-    return X
+    x.data = log1p(x.data, copy=False, base=base)
+    return x
 
 
 @log1p.register(np.ndarray)
-def log1p_array(X: np.ndarray, *, base: Number | None = None, copy: bool = False):
+def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
-        X = X.astype(float) if not np.issubdtype(X.dtype, np.floating) else X.copy()
-    elif not (np.issubdtype(X.dtype, np.floating) or np.issubdtype(X.dtype, complex)):
-        X = X.astype(float)
-    np.log1p(X, out=X)
+        x = x.astype(float) if not np.issubdtype(x.dtype, np.floating) else x.copy()
+    elif not (np.issubdtype(x.dtype, np.floating) or np.issubdtype(x.dtype, complex)):
+        x = x.astype(float)
+    np.log1p(x, out=x)
     if base is not None:
-        np.divide(X, np.log(base), out=X)
-    return X
+        np.divide(x, np.log(base), out=x)
+    return x
 
 
 @log1p.register(AnnData)
@@ -411,16 +410,16 @@ def log1p_anndata(
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-        if is_backed_type(X):
-            msg = f"log1p is not implemented for matrices of type {type(X)}"
+        x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        if is_backed_type(x):
+            msg = f"log1p is not implemented for matrices of type {type(x)}"
             if layer is not None:
                 msg = f"{msg} from layers"
                 raise NotImplementedError(msg)
             msg = f"{msg} without `chunked=True`"
             raise NotImplementedError(msg)
-        X = log1p(X, copy=False, base=base)
-        _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+        x = log1p(x, copy=False, base=base)
+        _set_obs_rep(adata, x, layer=layer, obsm=obsm)
 
     adata.uns["log1p"] = {"base": base}
     if copy:
@@ -466,8 +465,8 @@ def sqrt(
         else:
             adata.X = sqrt(data.X)
         return adata if copy else None
-    X = data  # proceed with data matrix
-    return X.sqrt() if isinstance(X, CSBase) else np.sqrt(X)
+    x = data  # proceed with data matrix
+    return x.sqrt() if isinstance(x, CSBase) else np.sqrt(x)
 
 
 @deprecated("Use `sc.pp.normalize_total` instead.")
@@ -612,13 +611,13 @@ def normalize_per_cell(
             )
             return adata if copy else None
         # proceed with data matrix
-        X = data.copy() if copy else data
+        x = data.copy() if copy else data
         if counts_per_cell is None:
             if not copy:
                 msg = "Can only be run with copy=True"
                 raise ValueError(msg)
-            cell_subset, counts_per_cell = filter_cells(X, min_counts=min_counts)
-            X = X[cell_subset]
+            cell_subset, counts_per_cell = filter_cells(x, min_counts=min_counts)
+            x = x[cell_subset]
             counts_per_cell = counts_per_cell[cell_subset]
         if counts_per_cell_after is None:
             counts_per_cell_after = np.median(counts_per_cell)
@@ -626,11 +625,11 @@ def normalize_per_cell(
         warnings.simplefilter("ignore")  # division by zero I guess
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
-        if not isinstance(X, CSBase):
-            X /= counts_per_cell[:, np.newaxis]
+        if not isinstance(x, CSBase):
+            x /= counts_per_cell[:, np.newaxis]
         else:
-            sparsefuncs.inplace_row_scale(X, 1 / counts_per_cell)
-    return X if copy else None
+            sparsefuncs.inplace_row_scale(x, 1 / counts_per_cell)
+    return x if copy else None
 
 
 DT = TypeVar("DT")
@@ -638,18 +637,18 @@ DT = TypeVar("DT")
 
 @njit
 def _create_regressor_categorical(
-    X: np.ndarray, number_categories: int, cat_array: np.ndarray
+    x: np.ndarray, /, number_categories: int, cat_array: np.ndarray
 ) -> np.ndarray:
     # create regressor matrix for categorical variables
     # would be best to use X dtype but this matches old behavior
-    regressors = np.zeros(X.shape, dtype=np.float32)
+    regressors = np.zeros(x.shape, dtype=np.float32)
     # iterate over categories
     for category in range(number_categories):
         # iterate over genes and calculate mean expression
         # for each gene per category
         mask = category == cat_array
-        for ix in numba.prange(X.T.shape[0]):
-            regressors[mask, ix] = X.T[ix, mask].mean()
+        for ix in numba.prange(x.T.shape[0]):
+            regressors[mask, ix] = x.T[ix, mask].mean()
     return regressors
 
 
@@ -727,10 +726,10 @@ def regress_out(
     if isinstance(keys, str):
         keys = [keys]
 
-    X = _get_obs_rep(adata, layer=layer)
-    raise_not_implemented_error_if_backed_type(X, "regress_out")
+    x = _get_obs_rep(adata, layer=layer)
+    raise_not_implemented_error_if_backed_type(x, "regress_out")
 
-    if isinstance(X, CSBase):
+    if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -750,11 +749,11 @@ def regress_out(
         cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
         number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
 
-        X = to_dense(X, order="F") if isinstance(X, CSBase) else X
-        if np.issubdtype(X.dtype, np.integer):
-            target_dtype = np.float32 if X.dtype.itemsize <= 4 else np.float64
-            X = X.astype(target_dtype)
-        regressors = _create_regressor_categorical(X, number_categories, cat_array)
+        x = to_dense(x, order="F") if isinstance(x, CSBase) else x
+        if np.issubdtype(x.dtype, np.integer):
+            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
+            x = x.astype(target_dtype)
+        regressors = _create_regressor_categorical(x, number_categories, cat_array)
         variable_is_categorical = True
     # regress on one or several ordinal variables
     else:
@@ -770,24 +769,24 @@ def regress_out(
     if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
         # Because we update `X` in `numpy_regress_out`, it needs to be floating point to match
         # the incoming values.
-        if np.issubdtype(X.dtype, np.integer):
-            target_dtype = np.float32 if X.dtype.itemsize <= 4 else np.float64
+        if np.issubdtype(x.dtype, np.integer):
+            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
             kwargs = {}
-            if isinstance(X, np.ndarray):
+            if isinstance(x, np.ndarray):
                 kwargs["order"] = "C"
-            X = X.astype(target_dtype, **kwargs)
-        X = to_dense(X, order="C") if isinstance(X, CSBase) else X
-        res = numpy_regress_out(X, regressors)
+            x = x.astype(target_dtype, **kwargs)
+        x = to_dense(x, order="C") if isinstance(x, CSBase) else x
+        res = numpy_regress_out(x, regressors)
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
     else:
         # split the adata.X matrix by columns in chunks of size n_chunk
         # (the last chunk could be of smaller size than the others)
-        len_chunk = int(np.ceil(min(1000, X.shape[1]) / n_jobs))
-        n_chunks = int(np.ceil(X.shape[1] / len_chunk))
-        X = to_dense(X, order="F") if isinstance(X, CSBase) else X
-        chunk_list = np.array_split(X, n_chunks, axis=1)
+        len_chunk = int(np.ceil(min(1000, x.shape[1]) / n_jobs))
+        n_chunks = int(np.ceil(x.shape[1] / len_chunk))
+        x = to_dense(x, order="F") if isinstance(x, CSBase) else x
+        chunk_list = np.array_split(x, n_chunks, axis=1)
         regressors_chunk = (
             np.array_split(regressors, n_chunks, axis=1)
             if variable_is_categorical
@@ -1057,13 +1056,14 @@ def downsample_counts(
 
 
 def _downsample_per_cell(
-    X: CSBase,
+    x: CSBase,
+    /,
     counts_per_cell: int,
     *,
     random_state: _LegacyRandom,
     replace: bool,
 ) -> CSBase:
-    n_obs = X.shape[0]
+    n_obs = x.shape[0]
     if isinstance(counts_per_cell, int):
         counts_per_cell = np.full(n_obs, counts_per_cell)
     else:
@@ -1077,13 +1077,13 @@ def _downsample_per_cell(
             " by `np.asarray(counts_per_cell)`."
         )
         raise ValueError(msg)
-    if isinstance(X, CSBase):
-        original_type = type(X)
-        if not isinstance(X, CSRBase):
-            X = X.tocsr()
-        totals = stats.sum(X, axis=1)  # Faster for csr matrix
+    if isinstance(x, CSBase):
+        original_type = type(x)
+        if not isinstance(x, CSRBase):
+            x = x.tocsr()
+        totals = stats.sum(x, axis=1)  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        rows = np.split(X.data, X.indptr[1:-1])
+        rows = np.split(x.data, x.indptr[1:-1])
         for rowidx in under_target:
             row = rows[rowidx]
             _downsample_array(
@@ -1093,14 +1093,14 @@ def _downsample_per_cell(
                 replace=replace,
                 inplace=True,
             )
-        X.eliminate_zeros()
+        x.eliminate_zeros()
         if not issubclass(original_type, CSRBase):  # Put it back
-            X = original_type(X)
+            x = original_type(x)
     else:
-        totals = stats.sum(X, axis=1)
+        totals = stats.sum(x, axis=1)
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
-            row = X[rowidx, :]
+            row = x[rowidx, :]
             _downsample_array(
                 row,
                 counts_per_cell[rowidx],
@@ -1108,40 +1108,41 @@ def _downsample_per_cell(
                 replace=replace,
                 inplace=True,
             )
-    return X
+    return x
 
 
 def _downsample_total_counts(
-    X: CSBase,
+    x: CSBase,
+    /,
     total_counts: int,
     *,
     random_state: _LegacyRandom,
     replace: bool,
 ) -> CSBase:
     total_counts = int(total_counts)
-    total = X.sum()
+    total = x.sum()
     if total < total_counts:
-        return X
-    if isinstance(X, CSBase):
-        original_type = type(X)
-        if not isinstance(X, CSRBase):
-            X = X.tocsr()
+        return x
+    if isinstance(x, CSBase):
+        original_type = type(x)
+        if not isinstance(x, CSRBase):
+            x = x.tocsr()
         _downsample_array(
-            X.data,
+            x.data,
             total_counts,
             random_state=random_state,
             replace=replace,
             inplace=True,
         )
-        X.eliminate_zeros()
+        x.eliminate_zeros()
         if not issubclass(original_type, CSRBase):
-            X = original_type(X)
+            x = original_type(x)
     else:
-        v = X.reshape(np.multiply(*X.shape))
+        v = x.reshape(np.multiply(*x.shape))
         _downsample_array(
             v, total_counts, random_state=random_state, replace=replace, inplace=True
         )
-    return X
+    return x
 
 
 # TODO: can/should this be parallelized?

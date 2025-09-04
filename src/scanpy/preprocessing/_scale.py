@@ -56,22 +56,22 @@ def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
 
 @njit
 def clip_array(
-    X: NDArray[np.floating], *, max_value: float, zero_center: bool
+    x: NDArray[np.floating], /, *, max_value: float, zero_center: bool
 ) -> NDArray[np.floating]:
     a_min, a_max = -max_value, max_value
-    if X.ndim > 1:
-        for r, c in numba.pndindex(X.shape):
-            if X[r, c] > a_max:
-                X[r, c] = a_max
-            elif X[r, c] < a_min and zero_center:
-                X[r, c] = a_min
+    if x.ndim > 1:
+        for r, c in numba.pndindex(x.shape):
+            if x[r, c] > a_max:
+                x[r, c] = a_max
+            elif x[r, c] < a_min and zero_center:
+                x[r, c] = a_min
     else:
-        for i in numba.prange(X.size):
-            if X[i] > a_max:
-                X[i] = a_max
-            elif X[i] < a_min and zero_center:
-                X[i] = a_min
-    return X
+        for i in numba.prange(x.size):
+            if x[i] > a_max:
+                x[i] = a_max
+            elif x[i] < a_min and zero_center:
+                x[i] = a_min
+    return x
 
 
 @renamed_arg("X", "data", pos_0=True)
@@ -305,15 +305,15 @@ def scale_anndata(
             str_mean_std = ("mean with mask", "std with mask")
         mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    raise_not_implemented_error_if_backed_type(X, "scale")
-    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
-        X,
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    raise_not_implemented_error_if_backed_type(x, "scale")
+    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
+        x,
         zero_center=zero_center,
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
         mask_obs=mask_obs,
     )
-    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+    _set_obs_rep(adata, x, layer=layer, obsm=obsm)
     return adata if copy else None

@@ -428,8 +428,8 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
     )
     entropies = []
     for mask in groups_masks:
-        X_mask = adata.X[mask].todense()
-        x_median = np.nanmedian(X_mask, axis=1, overwrite_input=True)
+        x_mask = adata.X[mask].todense()
+        x_median = np.nanmedian(x_mask, axis=1, overwrite_input=True)
         x_probs = (x_median - np.nanmin(x_median)) / (
             np.nanmax(x_median) - np.nanmin(x_median)
         )

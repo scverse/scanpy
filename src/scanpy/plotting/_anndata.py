@@ -325,7 +325,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             # ignore the '0th' diffusion component
             if basis == "diffmap":
                 components += 1
-            Y = adata.obsm["X_" + basis][:, components]
+            xy = adata.obsm["X_" + basis][:, components]
             # correct the component vector for use in labeling etc.
             if basis == "diffmap":
                 components -= 1
@@ -346,13 +346,13 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             x_arr = adata.obs_vector(x, layer=layers[0])
             y_arr = adata.obs_vector(y, layer=layers[1])
 
-        Y = np.c_[x_arr, y_arr]
+        xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
         raise ValueError(msg)
 
     if size is None:
-        n = Y.shape[0]
+        n = xy.shape[0]
         size = 120000 / n
 
     if legend_fontsize is None:
@@ -428,7 +428,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         ]
 
     axs: list[Axes] = scatter_base(
-        Y,
+        xy,
         title=title,
         alpha=alpha,
         component_name=component_name,
@@ -447,13 +447,13 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         ax=ax,
     )
 
-    def add_centroid(centroids, name, Y, mask):
-        Y_mask = Y[mask]
-        if Y_mask.shape[0] == 0:
+    def add_centroid(centroids, name, xy, mask) -> None:
+        xy_mask = xy[mask]
+        if xy_mask.shape[0] == 0:
             return
-        median = np.median(Y_mask, axis=0)
-        i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
-        centroids[name] = Y_mask[i]
+        median = np.median(xy_mask, axis=0)
+        i = np.argmin(np.sum(np.abs(xy_mask - median), axis=1))
+        centroids[name] = xy_mask[i]
 
     # loop over all categorical annotation and plot it
     for ikey, pal in zip(categoricals, palettes, strict=False):
@@ -462,7 +462,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             adata, key, palette=pal, force_update_colors=palette is not None
         )
         # actually plot the groups
-        mask_remaining = np.ones(Y.shape[0], dtype=bool)
+        mask_remaining = np.ones(xy.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
             for iname, name in enumerate(adata.obs[key].cat.categories):
@@ -472,7 +472,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                         key,
                         iname,
                         adata,
-                        Y,
+                        xy,
                         projection=projection,
                         size=size,
                         alpha=alpha,
@@ -480,7 +480,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     mask_remaining[mask] = False
                     if legend_loc.startswith("on data"):
-                        add_centroid(centroids, name, Y, mask)
+                        add_centroid(centroids, name, xy, mask)
         else:
             groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
@@ -499,19 +499,19 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                         key,
                         iname,
                         adata,
-                        Y,
+                        xy,
                         projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
                     )
                     if legend_loc.startswith("on data"):
-                        add_centroid(centroids, name, Y, mask)
+                        add_centroid(centroids, name, xy, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
-            data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
+            data = [xy[mask_remaining, 0], xy[mask_remaining, 1]]
             if projection == "3d":
-                data.append(Y[mask_remaining, 2])
+                data.append(xy[mask_remaining, 2])
             axs[ikey].scatter(
                 *data,
                 marker=marker,
@@ -1061,10 +1061,10 @@ def clustermap(
         raise ValueError(msg)
     sanitize_anndata(adata)
     use_raw = _check_use_raw(adata, use_raw)
-    X = adata.raw.X if use_raw else adata.X
-    if isinstance(X, CSBase):
-        X = X.toarray()
-    df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
+    x = adata.raw.X if use_raw else adata.X
+    if isinstance(x, CSBase):
+        x = x.toarray()
+    df = pd.DataFrame(x, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:
         row_colors = adata.obs[obs_keys]
         _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
