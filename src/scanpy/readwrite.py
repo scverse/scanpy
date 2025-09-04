@@ -972,8 +972,7 @@ def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:
             v = line.split("\t")
             # Extract the values that correspond to gene expression measures
             # and convert the strings to numbers
-            x = [float(v[i]) for i in indices]
-            x.append(x)
+            x.append([float(v[i]) for i in indices])
             gene_names.append(v[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
