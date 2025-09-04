@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
-from fast_array_utils import conv
+from anndata.utils import asarray
 from scipy import sparse
 
 import scanpy as sc
@@ -121,7 +121,7 @@ def test_sparse_nanmean(
     from scanpy.tools._score_genes import _sparse_nanmean
 
     arr_or_mat = mk_arr()
-    arr = conv.to_dense(arr_or_mat)
+    arr = asarray(arr_or_mat)
     mat = sparse.csr_matrix(arr) if not isinstance(arr, CSBase) else arr  # noqa: TID251
     np.testing.assert_allclose(
         np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
