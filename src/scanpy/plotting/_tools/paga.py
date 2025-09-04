@@ -1156,7 +1156,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
 
     ax = plt.gca() if ax is None else ax
 
-    X = []
+    x = []
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
@@ -1177,9 +1177,9 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         nodes_ints = nodes
         nodes_strs = [groups_names[node] for node in nodes]
 
-    adata_X = adata
+    adata_x = adata
     if use_raw and adata.raw is not None:
-        adata_X = adata.raw
+        adata_x = adata.raw
 
     for ikey, key in enumerate(keys):
         x = []
@@ -1201,7 +1201,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 ]
             )
             idcs = idcs[idcs_group]
-            values = (adata.obs[key].values if key in adata.obs else adata_X[:, key].X)[
+            values = (adata.obs[key].values if key in adata.obs else adata_x[:, key].X)[
                 idcs
             ]
             x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
@@ -1222,7 +1222,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
-        X.append(x)
+        x.append(x)
         if not as_heatmap:
             ax.plot(x[xlim[0] : xlim[1]], label=key)
         if ikey == 0:
@@ -1232,11 +1232,11 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 else:
                     label = group
                 x_tick_labels.append(label)
-    X = np.asarray(X).squeeze()
+    x = np.asarray(x).squeeze()
     if as_heatmap:
-        img = ax.imshow(X, aspect="auto", interpolation="nearest", cmap=color_map)
+        img = ax.imshow(x, aspect="auto", interpolation="nearest", cmap=color_map)
         if show_yticks:
-            ax.set_yticks(range(len(X)))
+            ax.set_yticks(range(len(x)))
             ax.set_yticklabels(keys, fontsize=ytick_fontsize)
         else:
             ax.set_yticks([])
@@ -1346,7 +1346,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         show = settings.autoshow if show is None else show
     _utils.savefig_or_show("paga_path", show=show, save=save)
     if return_data:
-        df = pd.DataFrame(data=X.T, columns=keys)
+        df = pd.DataFrame(data=x.T, columns=keys)
         df["groups"] = moving_average(groups)  # groups is without moving average, yet
         if "dpt_pseudotime" in anno_dict:
             df["distance"] = anno_dict["dpt_pseudotime"].T

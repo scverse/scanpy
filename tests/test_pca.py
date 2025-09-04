@@ -213,8 +213,8 @@ def test_pca_warnings(
     svd_solver: SVDSolver,
     warn_pat_expected: str | None,
 ):
-    A = array_type(A_list).astype("float32")
-    adata = AnnData(A)
+    a = array_type(A_list).astype("float32")
+    adata = AnnData(a)
 
     if warn_pat_expected is not None:
         with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):  # noqa: PT031
@@ -230,18 +230,18 @@ def test_pca_warnings(
 
 def test_pca_transform(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_pca_abs = np.abs(A_pca)
+    a_pca_abs = np.abs(A_pca)
 
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
     adata = to_memory(adata)
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(a_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_pca_abs = np.abs(A_pca)
+    a_pca_abs = np.abs(A_pca)
 
     warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
@@ -267,12 +267,12 @@ def test_pca_transform_randomized(array_type):
             random_state=14,
         )
 
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(a_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_svd_abs = np.abs(A_svd)
+    a_svd_abs = np.abs(A_svd)
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         reason = "TruncatedSVD is not supported for sparse Dask yet"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -280,7 +280,7 @@ def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
 
-    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(a_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
@@ -477,8 +477,8 @@ def test_mask_defaults(array_type, float_dtype):
     1. That it’s equal withwithout and with – but mask is None
     2. If pca takes highly variable as mask as default
     """
-    A = array_type(A_list).astype("float64")
-    adata = AnnData(A)
+    a = array_type(A_list).astype("float64")
+    adata = AnnData(a)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
@@ -498,26 +498,26 @@ def test_mask_defaults(array_type, float_dtype):
 
 def test_pca_layer():
     """Tests that layers works the same way as `X`."""
-    X_adata = pbmc3k_normalized()
+    adata = pbmc3k_normalized()
 
-    layer_adata = X_adata.copy()
-    layer_adata.layers["counts"] = X_adata.X.copy()
+    layer_adata = adata.copy()
+    layer_adata.layers["counts"] = adata.X.copy()
     del layer_adata.X
 
-    sc.pp.pca(X_adata)
+    sc.pp.pca(adata)
     sc.pp.pca(layer_adata, layer="counts")
 
     assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
-    assert "layer" not in X_adata.uns["pca"]["params"]
+    assert "layer" not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
-        X_adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+        adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
     )
     np.testing.assert_equal(
-        X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+        adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
     )
-    np.testing.assert_equal(X_adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
-    np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
+    np.testing.assert_equal(adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
+    np.testing.assert_equal(adata.varm["PCs"], layer_adata.varm["PCs"])
 
 
 # Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway

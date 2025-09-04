@@ -331,7 +331,7 @@ class Ingest:
         self._n_pcs = None
 
         self._adata_ref = adata
-        self._adata_new = None
+        self._adata_new: AnnData | None = None
 
         if "pca" in adata.uns:
             self._init_pca(adata)
@@ -359,14 +359,14 @@ class Ingest:
         self._distances = None
 
     def _pca(self, n_pcs=None):
-        X = self._adata_new.X
-        X = X.toarray() if isinstance(X, CSBase) else X.copy()
+        x = self._adata_new.X
+        x = x.toarray() if isinstance(x, CSBase) else x.copy()
         if self._pca_use_hvg:
-            X = X[:, self._adata_ref.var["highly_variable"]]
+            x = x[:, self._adata_ref.var["highly_variable"]]
         if self._pca_centered:
-            X -= X.mean(axis=0)
-        X_pca = np.dot(X, self._pca_basis[:, :n_pcs])
-        return X_pca
+            x -= x.mean(axis=0)
+        x_pca = np.dot(x, self._pca_basis[:, :n_pcs])
+        return x_pca
 
     def _same_rep(self):
         adata = self._adata_new

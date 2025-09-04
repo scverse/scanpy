@@ -224,6 +224,7 @@ select = [
     "I",      # Import sorting
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
+    "N",      # Naming conventions
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint
@@ -255,6 +256,8 @@ allowed-confusables = [ "×", "’", "–", "α" ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
+# Old and unmaintained
+"src/scanpy/tools/_sim.py" = [ "N" ]
 # No need for docstrings for all benchmarks
 "benchmarks/**/*.py" = [ "D102", "D103" ]
 # D*: No need for docstrings for all test modules and test functions

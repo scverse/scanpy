@@ -110,16 +110,16 @@ def test_qc_metrics(adata_prepared: AnnData):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], inplace=True
         )
-    X = (
+    x = (
         adata_prepared.X.compute()
         if isinstance(adata_prepared.X, DaskArray)
         else adata_prepared.X
     )
-    max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.coo_matrix | sparse.coo_array):
-        max_X = max_X.toarray()
-    elif isinstance(max_X, DaskArray):
-        max_X = max_X.compute()
+    max_x = x.max(axis=0)
+    if isinstance(max_x, sparse.coo_matrix | sparse.coo_array):
+        max_x = max_x.toarray()
+    elif isinstance(max_x, DaskArray):
+        max_x = max_x.compute()
     assert (adata_prepared.obs["n_genes_by_counts"] < adata_prepared.shape[1]).all()
     assert (
         adata_prepared.obs["n_genes_by_counts"]
@@ -148,7 +148,7 @@ def test_qc_metrics(adata_prepared: AnnData):
             assert (adata_prepared.obs[col] >= 0).all()
     for col in adata_prepared.var.columns:
         assert (adata_prepared.var[col] >= 0).all()
-    assert (adata_prepared.var["mean_counts"] < np.ravel(max_X)).all()
+    assert (adata_prepared.var["mean_counts"] < np.ravel(max_x)).all()
     assert (
         adata_prepared.var["mean_counts"] >= adata_prepared.var["log1p_mean_counts"]
     ).all()

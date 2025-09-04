@@ -96,14 +96,14 @@ def blobs(
     """
     import sklearn.datasets
 
-    X, y = sklearn.datasets.make_blobs(
+    x, y = sklearn.datasets.make_blobs(
         n_samples=n_observations,
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
         random_state=random_state,
     )
-    return AnnData(X, obs=dict(blobs=y.astype(str)))
+    return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
 @doctest_internet
@@ -266,13 +266,13 @@ def paul15() -> AnnData:
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
-        X = f["data.debatched"][()].astype(np.float32)
+        x = f["data.debatched"][()].astype(np.float32)
         gene_names = f["data.debatched_rownames"][()].astype(str)
         cell_names = f["data.debatched_colnames"][()].astype(str)
         clusters = f["cluster.id"][()].flatten().astype(int)
         infogenes_names = f["info.genes_strings"][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = AnnData(X.transpose())
+    adata = AnnData(x.transpose())
     adata.var_names = gene_names
     adata.obs_names = cell_names
     # names reflecting the cell type identifications from the paper

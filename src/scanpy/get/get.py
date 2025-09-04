@@ -193,7 +193,8 @@ def _check_indices(
 
 
 def _get_array_values(
-    X,
+    x,
+    /,
     dim_names: pd.Index,
     keys: Iterable[str],
     *,
@@ -210,10 +211,10 @@ def _get_array_values(
         rev_idxer = mutable_idxer.copy()
         mutable_idxer[axis] = idx[idx_order]
         rev_idxer[axis] = np.argsort(idx_order)
-        matrix = X[tuple(mutable_idxer)][tuple(rev_idxer)]
+        matrix = x[tuple(mutable_idxer)][tuple(rev_idxer)]
     else:
         mutable_idxer[axis] = idx
-        matrix = X[tuple(mutable_idxer)]
+        matrix = x[tuple(mutable_idxer)]
 
     if isinstance(matrix, CSBase):
         matrix = matrix.toarray()

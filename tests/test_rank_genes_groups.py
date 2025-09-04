@@ -278,24 +278,24 @@ def test_wilcoxon_tie_correction(reference):
 
     _, groups_masks = select_groups(pbmc, groups, groupby)
 
-    X = pbmc.raw.X[groups_masks[0]].toarray()
+    x = pbmc.raw.X[groups_masks[0]].toarray()
 
     mask_rest = groups_masks[1] if reference else ~groups_masks[0]
-    Y = pbmc.raw.X[mask_rest].toarray()
+    y = pbmc.raw.X[mask_rest].toarray()
 
     # Handle scipy versions
     if Version(scipy.__version__) >= Version("1.7.0"):
-        pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
+        pvals = mannwhitneyu(x, y, use_continuity=False, alternative="two-sided").pvalue
         pvals[np.isnan(pvals)] = 1.0
     else:
         # Backwards compat, to drop once we drop scipy < 1.7
-        n_genes = X.shape[1]
+        n_genes = x.shape[1]
         pvals = np.zeros(n_genes)
 
         for i in range(n_genes):
             try:
                 _, pvals[i] = mannwhitneyu(
-                    X[:, i], Y[:, i], use_continuity=False, alternative="two-sided"
+                    x[:, i], y[:, i], use_continuity=False, alternative="two-sided"
                 )
             except ValueError:
                 pvals[i] = 1

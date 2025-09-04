@@ -33,7 +33,7 @@ class QuietMarkDecorator(pytest.MarkDecorator):
         super().__init__(mark, _ispytest=True)
 
 
-class needs(QuietMarkDecorator, Enum):
+class needs(QuietMarkDecorator, Enum):  # noqa: N801
     """Pytest skip marker evaluated at module import.
 
     This allows us to see the amount of skipped tests at the start of a test run.
