@@ -62,17 +62,17 @@ def _get_sparse_matrix_from_indices_distances(
 
 
 def _get_indices_distances_from_dense_matrix(
-    D: NDArray[np.float32 | np.float64], n_neighbors: int
+    d: NDArray[np.float32 | np.float64], /, n_neighbors: int
 ):
-    sample_range = np.arange(D.shape[0])[:, None]
-    indices = np.argpartition(D, n_neighbors - 1, axis=1)[:, :n_neighbors]
-    indices = indices[sample_range, np.argsort(D[sample_range, indices])]
-    distances = D[sample_range, indices]
+    sample_range = np.arange(d.shape[0])[:, None]
+    indices = np.argpartition(d, n_neighbors - 1, axis=1)[:, :n_neighbors]
+    indices = indices[sample_range, np.argsort(d[sample_range, indices])]
+    distances = d[sample_range, indices]
     return indices, distances
 
 
 def _get_indices_distances_from_sparse_matrix(
-    D: CSRBase, n_neighbors: int
+    d: CSRBase, /, n_neighbors: int
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
     """Get indices and distances from a sparse matrix.
 
@@ -80,10 +80,10 @@ def _get_indices_distances_from_sparse_matrix(
     1. the first column corresponds to the cell itself as nearest neighbor.
     2. the number of neighbors (`.shape[1]`) is restricted to `n_neighbors`.
     """
-    if (shortcut := _ind_dist_shortcut(D)) is not None:
+    if (shortcut := _ind_dist_shortcut(d)) is not None:
         indices, distances = shortcut
     else:
-        indices, distances = _ind_dist_slow(D, n_neighbors)
+        indices, distances = _ind_dist_slow(d, n_neighbors)
 
     # handle RAPIDS style indices_distances lacking the self-column
     if not _has_self_column(indices, distances):
@@ -99,36 +99,36 @@ def _get_indices_distances_from_sparse_matrix(
 
 
 def _ind_dist_slow(
-    D: CSRBase, n_neighbors: int
+    d: CSRBase, /, n_neighbors: int
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
-    indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
+    indices = np.zeros((d.shape[0], n_neighbors), dtype=int)
+    distances = np.zeros((d.shape[0], n_neighbors), dtype=d.dtype)
     n_neighbors_m1 = n_neighbors - 1
     for i in range(indices.shape[0]):
-        neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
+        neighbors = d[i].nonzero()  # 'true' and 'spurious' zeros
         indices[i, 0] = i
         distances[i, 0] = 0
         # account for the fact that there might be more than n_neighbors
         # due to an approximate search
         # [the point itself was not detected as its own neighbor during the search]
         if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(D[i][neighbors].A1)[:n_neighbors_m1]
+            sorted_indices = np.argsort(d[i][neighbors].A1)[:n_neighbors_m1]
             indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = D[i][
+            distances[i, 1:] = d[i][
                 neighbors[0][sorted_indices], neighbors[1][sorted_indices]
             ]
         else:
             indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = D[i][neighbors]
+            distances[i, 1:] = d[i][neighbors]
     return indices, distances
 
 
 def _ind_dist_shortcut(
-    D: CSRBase,
+    d: CSRBase, /
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None:
     """Shortcut for scipy or RAPIDS style distance matrices."""
     # Check if each row has the correct number of entries
-    nnzs = D.getnnz(axis=1)
+    nnzs = d.getnnz(axis=1)
     if not is_constant(nnzs):
         msg = (
             "Sparse matrix has no constant number of neighbors per row. "
@@ -137,8 +137,8 @@ def _ind_dist_shortcut(
         # 4: caller -> 3: `Neighbors.compute_neighbors` -> 2: `_get_indices_distances_from_sparse_matrix` -> 1: here
         warn(msg, category=RuntimeWarning, stacklevel=4)
         return None
-    n_obs, n_neighbors = D.shape[0], int(nnzs[0])
+    n_obs, n_neighbors = d.shape[0], int(nnzs[0])
     return (
-        D.indices.reshape(n_obs, n_neighbors),
-        D.data.reshape(n_obs, n_neighbors),
+        d.indices.reshape(n_obs, n_neighbors),
+        d.data.reshape(n_obs, n_neighbors),
     )

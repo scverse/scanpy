@@ -41,7 +41,7 @@ def adata() -> AnnData:
     `adata.layers['double']` is sparse `np.ones((2,2)) * 2` to also test sparse matrices.
     """
     return anndata_v0_8_constructor_compat(
-        X=np.ones((2, 2), dtype=int),
+        np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
         ),
@@ -63,7 +63,7 @@ def test_obs_df(adata: AnnData):
 
     # make raw with different genes than adata
     adata.raw = anndata_v0_8_constructor_compat(
-        X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
+        np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", "raw3"]},
             index=["gene2", "gene3", "gene4"],
@@ -181,8 +181,8 @@ def test_backed_vs_memory():
     from pathlib import Path
 
     # get location test h5ad file in datasets
-    HERE = Path(sc.__file__).parent
-    adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
+    pkg_dir = Path(sc.__file__).parent
+    adata_file = pkg_dir / "datasets/10x_pbmc68k_reduced.h5ad"
     adata_backed = sc.read(adata_file, backed="r")
     adata = sc.read_h5ad(adata_file)
 
@@ -314,16 +314,16 @@ def test_just_mapping_keys(dim, transform, func):
 
 
 def test_non_unique_cols_value_error():
-    M, N = 5, 3
+    n_cells, n_genes = 5, 3
     adata = sc.AnnData(
-        X=np.zeros((M, N)),
+        X=np.zeros((n_cells, n_genes)),
         obs=pd.DataFrame(
-            np.arange(M * 2).reshape((M, 2)),
+            np.arange(n_cells * 2).reshape((n_cells, 2)),
             columns=["repeated_col", "repeated_col"],
-            index=[f"cell_{i}" for i in range(M)],
+            index=[f"cell_{i}" for i in range(n_cells)],
         ),
         var=pd.DataFrame(
-            index=[f"gene_{i}" for i in range(N)],
+            index=[f"gene_{i}" for i in range(n_genes)],
         ),
     )
     with pytest.raises(ValueError, match=r"adata\.obs contains duplicated columns"):
@@ -341,16 +341,16 @@ def test_non_unique_var_index_value_error():
 
 
 def test_keys_in_both_obs_and_var_index_value_error():
-    M, N = 5, 3
+    n_cells, n_genes = 5, 3
     adata = sc.AnnData(
-        X=np.zeros((M, N)),
+        X=np.zeros((n_cells, n_genes)),
         obs=pd.DataFrame(
-            np.arange(M),
+            np.arange(n_cells),
             columns=["var_id"],
-            index=[f"cell_{i}" for i in range(M)],
+            index=[f"cell_{i}" for i in range(n_cells)],
         ),
         var=pd.DataFrame(
-            index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
+            index=["var_id"] + [f"gene_{i}" for i in range(n_genes - 1)],
         ),
     )
     with pytest.raises(KeyError, match="var_id"):

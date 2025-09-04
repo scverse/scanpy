@@ -28,25 +28,25 @@ if TYPE_CHECKING:
     _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
+def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
-    if not isinstance(X, CSBase):
+    if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
     # count the number of nan elements per row/column (dep. on axis)
-    Z = X.copy()
-    Z.data = np.isnan(Z.data)
-    Z.eliminate_zeros()
-    n_elements = Z.shape[axis] - Z.sum(axis)
+    z = x.copy()
+    z.data = np.isnan(z.data)
+    z.eliminate_zeros()
+    n_elements = z.shape[axis] - z.sum(axis)
 
     # set the nans to 0, so that a normal .sum() works
-    Y = X.copy()
-    Y.data[np.isnan(Y.data)] = 0
-    Y.eliminate_zeros()
+    y = x.copy()
+    y.data[np.isnan(y.data)] = 0
+    y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
+    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
     m = s / n_elements
 
     return m

@@ -66,7 +66,8 @@ def _type_check_arg2(
     return decorator
 
 
-class SettingsMeta(SingletonMeta):
+# `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
+class SettingsMeta(SingletonMeta, type):
     # logging
     _root_logger: _RootLogger
     _logfile: TextIO
@@ -121,13 +122,13 @@ class SettingsMeta(SingletonMeta):
         _set_log_level(cls, cls._verbosity.level)
 
     @property
-    def N_PCS(cls) -> int:
+    def N_PCS(cls) -> int:  # noqa: N802
         """Default number of principal components to use."""
         return cls._n_pcs
 
     @N_PCS.setter
     @_type_check_arg2(int)
-    def N_PCS(cls, n_pcs: int) -> None:
+    def N_PCS(cls, n_pcs: int) -> None:  # noqa: N802
         cls._n_pcs = n_pcs
 
     @property
@@ -167,8 +168,8 @@ class SettingsMeta(SingletonMeta):
 
     @file_format_figs.setter
     @_type_check_arg2(str)
-    def file_format_figs(self, figure_format: str) -> None:
-        self._file_format_figs = figure_format
+    def file_format_figs(cls, figure_format: str) -> None:
+        cls._file_format_figs = figure_format
 
     @property
     def autosave(cls) -> bool:
@@ -452,7 +453,7 @@ class SettingsMeta(SingletonMeta):
         )
 
 
-class settings(metaclass=SettingsMeta):
+class settings(metaclass=SettingsMeta):  # noqa: N801
     """Settings for scanpy."""
 
     def __new__(cls) -> type[Self]:

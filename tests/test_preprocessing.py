@@ -37,29 +37,29 @@ DATA_PATH = HERE / "_data"
 
 
 def test_log1p(tmp_path):
-    A = np.random.rand(200, 10).astype(np.float32)
-    A_l = np.log1p(A)
-    ad = AnnData(A.copy())
-    ad2 = AnnData(A.copy())
-    ad3 = AnnData(A.copy())
+    a = np.random.rand(200, 10).astype(np.float32)
+    a_log = np.log1p(a)
+    ad = AnnData(a.copy())
+    ad2 = AnnData(a.copy())
+    ad3 = AnnData(a.copy())
     ad3.filename = tmp_path / "test.h5ad"
     sc.pp.log1p(ad)
-    assert np.allclose(ad.X, A_l)
+    assert np.allclose(ad.X, a_log)
     sc.pp.log1p(ad2, chunked=True)
     assert np.allclose(ad2.X, ad.X)
     sc.pp.log1p(ad3, chunked=True)
     assert np.allclose(ad3.X, ad.X)
 
     # Test base
-    ad4 = AnnData(A)
+    ad4 = AnnData(a)
     sc.pp.log1p(ad4, base=2)
-    assert np.allclose(ad4.X, A_l / np.log(2))
+    assert np.allclose(ad4.X, a_log / np.log(2))
 
 
 def test_log1p_deprecated_arg():
-    A = np.random.rand(200, 10).astype(np.float32)
+    a = np.random.rand(200, 10).astype(np.float32)
     with pytest.warns(FutureWarning, match=r".*`X` was renamed to `data`"):
-        sc.pp.log1p(X=A)
+        sc.pp.log1p(X=a)
 
 
 @pytest.fixture(params=[None, 2])
@@ -68,11 +68,11 @@ def base(request):
 
 
 def test_log1p_rep(count_matrix_format, base, dtype):
-    X = count_matrix_format(
+    x = count_matrix_format(
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
-    check_rep_mutation(sc.pp.log1p, X, base=base)
-    check_rep_results(sc.pp.log1p, X, base=base)
+    check_rep_mutation(sc.pp.log1p, x, base=base)
+    check_rep_results(sc.pp.log1p, x, base=base)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -126,19 +126,19 @@ def test_mean_var_sparse():
 
 
 def test_normalize_per_cell():
-    A = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
-    adata = AnnData(A.copy())
+    x = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
+    adata = AnnData(x.copy())
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts="n_counts2")
     assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now with copy option
-    adata = AnnData(A.copy())
+    adata = AnnData(x.copy())
     # note that sc.pp.normalize_per_cell is also used in
     # pl.highest_expr_genes with parameter counts_per_cell_after=100
     adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
     # now sparse
-    adata = AnnData(A.copy())
-    adata_sparse = AnnData(sparse.csr_matrix(A.copy()))  # noqa: TID251
+    adata = AnnData(x.copy())
+    adata_sparse = AnnData(sparse.csr_matrix(x.copy()))  # noqa: TID251
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
@@ -310,16 +310,16 @@ def test_scale_matrix_types(array_type, zero_center, max_value):
     sc.pp.scale(adata, zero_center=zero_center, max_value=max_value)
     with maybe_dask_process_context():
         sc.pp.scale(adata_casted, zero_center=zero_center, max_value=max_value)
-    X = adata_casted.X
+    x = adata_casted.X
     if is_dask := ("dask" in array_type.__name__):
-        assert not isinstance(X._meta, np.matrix)
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
+        assert not isinstance(x._meta, np.matrix)
+        x = x.compute()
+    if isinstance(x, CSBase):
+        x = x.todense()
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
     assert_allclose(
-        X,
+        x,
         adata.X,
         rtol=1e-1 if is_dask else 1e-5,
         atol=1e-1 if is_dask else 1e-5,
@@ -358,19 +358,19 @@ def zero_center(request):
 
 def test_scale_rep(count_matrix_format, zero_center):
     """Test that it doesn't matter where the array being scaled is in the anndata object."""
-    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    check_rep_mutation(sc.pp.scale, X, zero_center=zero_center)
-    check_rep_results(sc.pp.scale, X, zero_center=zero_center)
+    x = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
+    check_rep_mutation(sc.pp.scale, x, zero_center=zero_center)
+    check_rep_results(sc.pp.scale, x, zero_center=zero_center)
 
 
 def test_scale_array(count_matrix_format, zero_center):
     """Test that running sc.pp.scale on an anndata object and an array returns the same results."""
-    X = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
-    adata = anndata_v0_8_constructor_compat(X=X.copy())
+    x = count_matrix_format(sparse.random(100, 200, density=0.3).toarray())
+    adata = anndata_v0_8_constructor_compat(x.copy())
 
     sc.pp.scale(adata, zero_center=zero_center)
-    scaled_X = sc.pp.scale(X, zero_center=zero_center, copy=True)
-    np.testing.assert_equal(asarray(scaled_X), asarray(adata.X))
+    scaled_x = sc.pp.scale(x, zero_center=zero_center, copy=True)
+    np.testing.assert_equal(asarray(scaled_x), asarray(adata.X))
 
 
 def test_recipe_plotting():
@@ -509,9 +509,9 @@ def test_regress_out_constants_equivalent():
     # (since support for constant values is implemented by us)
     from sklearn.datasets import make_blobs
 
-    X, cat = make_blobs(100, 20)
-    a = sc.AnnData(np.hstack([X, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
-    b = sc.AnnData(X, obs={"cat": pd.Categorical(cat)})
+    x, cat = make_blobs(100, 20)
+    a = sc.AnnData(np.hstack([x, np.zeros((100, 5))]), obs={"cat": pd.Categorical(cat)})
+    b = sc.AnnData(x, obs={"cat": pd.Categorical(cat)})
 
     sc.pp.regress_out(a, "cat")
     sc.pp.regress_out(b, "cat")
@@ -535,69 +535,69 @@ def dtype(request):
 
 
 def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
-    TARGET = 1000
-    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
-    X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    target = 1000
+    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    x = x.astype(dtype)
+    adata = anndata_v0_8_constructor_compat(count_matrix_format(x).astype(dtype))
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
-            adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
+            adata, counts_per_cell=target, total_counts=target, replace=replace
         )
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=TARGET, replace=replace, copy=True
+        adata, counts_per_cell=target, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[X == 0] == 0)
+        assert all(adata.X.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[X == 0] == 0)
-    assert all(new_totals <= TARGET)
+        assert all(adata.X[x == 0] == 0)
+    assert all(new_totals <= target)
     assert all(initial_totals >= new_totals)
     assert all(
-        initial_totals[initial_totals <= TARGET] == new_totals[initial_totals <= TARGET]
+        initial_totals[initial_totals <= target] == new_totals[initial_totals <= target]
     )
     if not replace:
-        assert np.all(X >= adata.X)
-    assert X.dtype == adata.X.dtype
+        assert np.all(x >= adata.X)
+    assert x.dtype == adata.X.dtype
 
 
 def test_downsample_counts_per_cell_multiple_targets(
     count_matrix_format, replace, dtype
 ):
-    TARGETS = np.random.randint(500, 1500, 1000)
-    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
-    X = X.astype(dtype)
-    adata = anndata_v0_8_constructor_compat(X=count_matrix_format(X).astype(dtype))
+    targets = np.random.randint(500, 1500, 1000)
+    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    x = x.astype(dtype)
+    adata = anndata_v0_8_constructor_compat(count_matrix_format(x).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError, match=r"counts_per_cell.*length as number of obs"):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
     adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=TARGETS, replace=replace, copy=True
+        adata, counts_per_cell=targets, replace=replace, copy=True
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[X == 0] == 0)
+        assert all(adata.X.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[X == 0] == 0)
-    assert all(new_totals <= TARGETS)
+        assert all(adata.X[x == 0] == 0)
+    assert all(new_totals <= targets)
     assert all(initial_totals >= new_totals)
     assert all(
-        initial_totals[initial_totals <= TARGETS]
-        == new_totals[initial_totals <= TARGETS]
+        initial_totals[initial_totals <= targets]
+        == new_totals[initial_totals <= targets]
     )
     if not replace:
-        assert np.all(X >= adata.X)
-    assert X.dtype == adata.X.dtype
+        assert np.all(x >= adata.X)
+    assert x.dtype == adata.X.dtype
 
 
 def test_downsample_total_counts(count_matrix_format, replace, dtype):
-    X = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
-    X = X.astype(dtype)
-    adata_orig = anndata_v0_8_constructor_compat(X=count_matrix_format(X))
-    total = X.sum()
+    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    x = x.astype(dtype)
+    adata_orig = anndata_v0_8_constructor_compat(count_matrix_format(x))
+    total = x.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
     adata = sc.pp.downsample_counts(
@@ -605,18 +605,18 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if isinstance(adata.X, CSBase):
-        assert all(adata.X.toarray()[X == 0] == 0)
+        assert all(adata.X.toarray()[x == 0] == 0)
     else:
-        assert all(adata.X[X == 0] == 0)
+        assert all(adata.X[x == 0] == 0)
     assert adata.X.sum() == target
     assert all(initial_totals >= new_totals)
     if not replace:
-        assert np.all(X >= adata.X)
+        assert np.all(x >= adata.X)
         adata = sc.pp.downsample_counts(
             adata_orig, total_counts=total + 10, replace=False, copy=True
         )
-        assert (adata.X == X).all()
-    assert X.dtype == adata.X.dtype
+        assert (x == adata.X).all()
+    assert x.dtype == adata.X.dtype
 
 
 def test_recipe_weinreb():
@@ -658,14 +658,14 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
         min_cells=min_cells,
         min_counts=min_counts,
     )
-    X = adata_casted.X
+    x = adata_casted.X
     if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
+        x = x.compute()
+    if isinstance(x, CSBase):
+        x = x.todense()
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    assert_allclose(x, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -697,14 +697,14 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
         min_genes=min_genes,
         min_counts=min_counts,
     )
-    X = adata_casted.X
+    x = adata_casted.X
     if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
+        x = x.compute()
+    if isinstance(x, CSBase):
+        x = x.todense()
     if isinstance(adata.X, CSBase):
         adata.X = adata.X.todense()
-    assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    assert_allclose(x, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize(

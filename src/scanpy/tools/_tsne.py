@@ -112,8 +112,8 @@ def tsne(  # noqa: PLR0913
 
     start = logg.info("computing tSNE")
     adata = adata.copy() if copy else adata
-    X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
-    raise_not_implemented_error_if_backed_type(X, "tsne")
+    x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
@@ -149,12 +149,12 @@ def tsne(  # noqa: PLR0913
     # deal with different tSNE implementations
     if use_fast_tsne:
         try:
-            from MulticoreTSNE import MulticoreTSNE as TSNE
+            from MulticoreTSNE import MulticoreTSNE as TSNE  # noqa: N814
 
             tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
-            X_tsne = tsne.fit_transform(X.astype("float64"))
+            x_tsne = tsne.fit_transform(x.astype("float64"))
         except ImportError:
             use_fast_tsne = False
             warnings.warn(
@@ -169,7 +169,7 @@ def tsne(  # noqa: PLR0913
         # of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
         logg.info("    using sklearn.manifold.TSNE")
-        X_tsne = tsne.fit_transform(X)
+        x_tsne = tsne.fit_transform(x)
 
     # update AnnData instance
     params = dict(
@@ -181,7 +181,7 @@ def tsne(  # noqa: PLR0913
         use_rep=use_rep,
     )
     key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
-    adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
+    adata.obsm[key_obsm] = x_tsne  # annotate samples with tSNE coordinates
     adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
 
     logg.info(

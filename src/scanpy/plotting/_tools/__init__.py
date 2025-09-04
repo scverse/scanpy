@@ -1399,9 +1399,9 @@ def sim(
     else:  # shuffle data
         np.random.seed(1)
         rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
-        X = adata[rows].X
+        x = adata[rows].X
         timeseries(
-            X,
+            x,
             var_names=adata.var_names,
             xlim=[0, 1.25 * adata.n_obs],
             highlights_x=np.arange(tmax, n_realizations * tmax, tmax),

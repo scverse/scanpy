@@ -157,7 +157,7 @@ def phate(  # noqa: PLR0913
             "--user phate` in a terminal."
         )
         raise ImportError(msg) from e
-    X_phate = phate.PHATE(
+    x_phate = phate.PHATE(
         n_components=n_components,
         k=k,
         a=a,
@@ -174,7 +174,7 @@ def phate(  # noqa: PLR0913
         **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
-    adata.obsm["X_phate"] = X_phate  # annotate samples with PHATE coordinates
+    adata.obsm["X_phate"] = x_phate  # annotate samples with PHATE coordinates
     logg.info(
         "    finished",
         time=start,

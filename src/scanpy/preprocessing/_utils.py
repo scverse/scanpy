@@ -21,31 +21,31 @@ if TYPE_CHECKING:
 
 
 @singledispatch
-def axis_mean(X: DaskArray, *, axis: Literal[0, 1], dtype: DTypeLike) -> DaskArray:
-    total = axis_sum(X, axis=axis, dtype=dtype)
-    return total / X.shape[axis]
+def axis_mean(x: DaskArray, /, *, axis: Literal[0, 1], dtype: DTypeLike) -> DaskArray:
+    total = axis_sum(x, axis=axis, dtype=dtype)
+    return total / x.shape[axis]
 
 
 @axis_mean.register(np.ndarray)
-def _(X: np.ndarray, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
-    return X.mean(axis=axis, dtype=dtype)
+def _(x: np.ndarray, /, *, axis: Literal[0, 1], dtype: DTypeLike) -> np.ndarray:
+    return x.mean(axis=axis, dtype=dtype)
 
 
 def _get_mean_var(
-    X: _SupportedArray, *, axis: Literal[0, 1] = 0
+    x: _SupportedArray, /, *, axis: Literal[0, 1] = 0
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    if isinstance(X, CSBase):
-        mean, var = sparse_mean_variance_axis(X, axis=axis)
-    elif isinstance(X, SpBase):
-        msg = f"Unsupported type {type(X)}"
+    if isinstance(x, CSBase):
+        mean, var = sparse_mean_variance_axis(x, axis=axis)
+    elif isinstance(x, SpBase):
+        msg = f"Unsupported type {type(x)}"
         raise TypeError(msg)
     else:
-        mean = axis_mean(X, axis=axis, dtype=np.float64)
-        mean_sq = axis_mean(elem_mul(X, X), axis=axis, dtype=np.float64)
+        mean = axis_mean(x, axis=axis, dtype=np.float64)
+        mean_sq = axis_mean(elem_mul(x, x), axis=axis, dtype=np.float64)
         var = mean_sq - mean**2
     # enforce R convention (unbiased estimator) for variance
-    if X.shape[axis] != 1:
-        var *= X.shape[axis] / (X.shape[axis] - 1)
+    if x.shape[axis] != 1:
+        var *= x.shape[axis] / (x.shape[axis] - 1)
     return mean, var
 
 
@@ -166,15 +166,15 @@ def sample_comb(
     return np.vstack(np.unravel_index(idx, dims)).T
 
 
-def _to_dense(X: CSBase, order: Literal["C", "F"] = "C") -> NDArray:
+def _to_dense(x: CSBase, /, order: Literal["C", "F"] = "C") -> NDArray:
     """Numba kernel for np.toarray() function."""
-    out = np.zeros(X.shape, dtype=X.dtype, order=order)
-    if X.format == "csr":
-        _to_dense_csr_numba(X.indptr, X.indices, X.data, out, X.shape)
-    elif X.format == "csc":
-        _to_dense_csc_numba(X.indptr, X.indices, X.data, out, X.shape)
+    out = np.zeros(x.shape, dtype=x.dtype, order=order)
+    if x.format == "csr":
+        _to_dense_csr_numba(x.indptr, x.indices, x.data, out, x.shape)
+    elif x.format == "csc":
+        _to_dense_csc_numba(x.indptr, x.indices, x.data, out, x.shape)
     else:
-        out = X.toarray(order=order)
+        out = x.toarray(order=order)
     return out
 
 
@@ -183,12 +183,12 @@ def _to_dense_csc_numba(
     indptr: NDArray,
     indices: NDArray,
     data: NDArray,
-    X: NDArray,
+    x: NDArray,
     shape: tuple[int, int],
 ) -> None:
-    for c in numba.prange(X.shape[1]):
+    for c in numba.prange(x.shape[1]):
         for i in range(indptr[c], indptr[c + 1]):
-            X[indices[i], c] = data[i]
+            x[indices[i], c] = data[i]
 
 
 @njit
@@ -196,9 +196,9 @@ def _to_dense_csr_numba(
     indptr: NDArray,
     indices: NDArray,
     data: NDArray,
-    X: NDArray,
+    x: NDArray,
     shape: tuple[int, int],
 ) -> None:
     for r in numba.prange(shape[0]):
         for i in range(indptr[r], indptr[r + 1]):
-            X[r, indices[i]] = data[i]
+            x[r, indices[i]] = data[i]

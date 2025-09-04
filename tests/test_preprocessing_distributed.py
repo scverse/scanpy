@@ -52,17 +52,17 @@ def adata_dist(request: pytest.FixtureRequest) -> AnnData:
     a = read_zarr(input_file)
     a.var_names_make_unique()
     a.uns["dist-mode"] = request.param
-    input_file_X = f"{input_file}/X"
+    input_file_x = f"{input_file}/X"
     if request.param == "direct":
         import zappy.direct
 
-        a.X = zappy.direct.from_zarr(input_file_X)
+        a.X = zappy.direct.from_zarr(input_file_x)
         return a
 
     assert request.param == "dask"
     import dask.array as da
 
-    a.X = da.from_zarr(input_file_X)
+    a.X = da.from_zarr(input_file_x)
     return a
 
 

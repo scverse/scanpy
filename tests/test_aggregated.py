@@ -48,7 +48,7 @@ def df_groupby():
 
 
 @pytest.fixture
-def X():
+def x():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v
         *[[3, 12], [4, 2]],  # w
@@ -60,12 +60,12 @@ def X():
     return np.array(data, dtype=np.float32)
 
 
-def gen_adata(data_key, dim, df_base, df_groupby, X):
+def gen_adata(data_key, dim, df_base, df_groupby, x):
     if (data_key == "varm" and dim == "obs") or (data_key == "obsm" and dim == "var"):
         pytest.skip("invalid parameter combination")
 
     obs_df, var_df = (df_groupby, df_base) if dim == "obs" else (df_base, df_groupby)
-    data = X.T if dim == "var" and data_key != "varm" else X
+    data = x.T if dim == "var" and data_key != "varm" else x
     if data_key != "X":
         data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}  # noqa: TID251
         data_dict_dense = {data_key: {"test": data}}
@@ -156,7 +156,7 @@ def test_aggregate_entry():
     args = ("blobs", ["mean", "var", "count_nonzero"])
 
     adata = sc.datasets.blobs()
-    X_result = sc.get.aggregate(adata, *args)
+    x_result = sc.get.aggregate(adata, *args)
     # layer adata
     layer_adata = ad.AnnData(
         obs=adata.obs,
@@ -177,14 +177,14 @@ def test_aggregate_entry():
     )
     varm_result = sc.get.aggregate(varm_adata, *args, varm="test")
 
-    X_result_min = X_result.copy()
-    del X_result_min.var
-    X_result_min.var_names = [str(x) for x in np.arange(X_result_min.n_vars)]
+    x_result_min = x_result.copy()
+    del x_result_min.var
+    x_result_min.var_names = [str(x) for x in np.arange(x_result_min.n_vars)]
 
-    assert_equal(X_result, layer_result)
-    assert_equal(X_result_min, obsm_result)
-    assert_equal(X_result.layers, obsm_result.layers)
-    assert_equal(X_result.layers, varm_result.T.layers)
+    assert_equal(x_result, layer_result)
+    assert_equal(x_result_min, obsm_result)
+    assert_equal(x_result.layers, obsm_result.layers)
+    assert_equal(x_result.layers, varm_result.T.layers)
 
 
 def test_aggregate_incorrect_dim():

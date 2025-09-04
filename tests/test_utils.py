@@ -194,10 +194,10 @@ def test_axis_sum(array_type):
     ],
 )
 def test_check_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+    x = array_type(array_value)
 
-    received = check_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
@@ -212,21 +212,21 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED)
 def test_is_constant(array_type):
     constant_inds = [1, 3]
-    A = np.arange(20).reshape(5, 4)
-    A[constant_inds, :] = 10
-    A = array_type(A)
-    AT = array_type(A.T)
+    a = np.arange(20).reshape(5, 4)
+    a[constant_inds, :] = 10
+    a = array_type(a)
+    a_t = array_type(a.T)
 
-    assert not is_constant(A)
-    assert not np.any(is_constant(A, axis=0))
+    assert not is_constant(a)
+    assert not np.any(is_constant(a, axis=0))
     np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(A, axis=1)
+        [False, True, False, True, False], is_constant(a, axis=1)
     )
 
-    assert not is_constant(AT)
-    assert not np.any(is_constant(AT, axis=1))
+    assert not is_constant(a_t)
+    assert not np.any(is_constant(a_t, axis=1))
     np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(AT, axis=0)
+        [False, True, False, True, False], is_constant(a_t, axis=0)
     )
 
 

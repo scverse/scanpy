@@ -10,13 +10,16 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from fast_array_utils import conv
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Literal
 
     from scanpy._compat import CSRBase
@@ -31,21 +34,22 @@ _create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
 
 def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan) -> CSRBase:
     """Create a sparse matrix with certain amounts of NaN and Zeros."""
-    A = np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
+    arr = (
+        np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
+    )
     maskzero = np.random.rand(rows, cols) < percent_zero
     masknan = np.random.rand(rows, cols) < percent_nan
     if np.any(maskzero):
-        A[maskzero] = 0
+        arr[maskzero] = 0
     if np.any(masknan):
-        A[masknan] = np.nan
-    S = sparse.csr_matrix(A)  # noqa: TID251
-    return S
+        arr[masknan] = np.nan
+    return sparse.csr_matrix(arr)  # noqa: TID251
 
 
 def _create_adata(n_obs: int, n_var: int, p_zero: float, p_nan: float) -> AnnData:
     """Create an AnnData with random data, sparseness and some NaN values."""
-    X = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
-    adata = AnnData(X)
+    x = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
+    adata = AnnData(x)
     gene_names = _create_random_gene_names(n_var, length=6)
     adata.var_names = gene_names.reshape(n_var)  # can be unsized
     return adata
@@ -86,36 +90,42 @@ def test_add_score():
     assert adata.obs["Test"].dtype == "float64"
 
 
-def test_sparse_nanmean():
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize(
+    "mk_arr",
+    [
+        pytest.param(
+            lambda: _create_sparse_nan_matrix(60, 50, percent_zero=0.3, percent_nan=0),
+            id="sparse-no_nan",
+        ),
+        pytest.param(
+            lambda: _create_sparse_nan_matrix(
+                60, 50, percent_zero=0.3, percent_nan=0.3
+            ),
+            id="sparse-some_nan",
+        ),
+        pytest.param(
+            lambda: np.full((10, 1), np.nan),
+            marks=pytest.mark.filterwarnings(
+                "ignore:Mean of empty slice:RuntimeWarning",
+                "ignore:invalid value encountered in divide:RuntimeWarning",
+            ),
+            id="dense-all_nan",
+        ),
+    ],
+)
+def test_sparse_nanmean(
+    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1]
+) -> None:
     """Check that _sparse_nanmean() is equivalent to np.nanmean()."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
-    R, C = 60, 50
-
-    # sparse matrix, no NaN
-    S = _create_sparse_nan_matrix(R, C, percent_zero=0.3, percent_nan=0)
-    # col/col sum
+    arr_or_mat = mk_arr()
+    arr = conv.to_dense(arr_or_mat)
+    mat = sparse.csr_matrix(arr) if not isinstance(arr, CSBase) else arr  # noqa: TID251
     np.testing.assert_allclose(
-        S.toarray().mean(0), np.array(_sparse_nanmean(S, 0)).flatten()
+        np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
     )
-    np.testing.assert_allclose(
-        S.toarray().mean(1), np.array(_sparse_nanmean(S, 1)).flatten()
-    )
-
-    # sparse matrix with nan
-    S = _create_sparse_nan_matrix(R, C, percent_zero=0.3, percent_nan=0.3)
-    np.testing.assert_allclose(
-        np.nanmean(S.toarray(), 1), np.array(_sparse_nanmean(S, 1)).flatten()
-    )
-    np.testing.assert_allclose(
-        np.nanmean(S.toarray(), 0), np.array(_sparse_nanmean(S, 0)).flatten()
-    )
-
-    # edge case of only NaNs per row
-    A = np.full((10, 1), np.nan)
-
-    meanA = np.array(_sparse_nanmean(sparse.csr_matrix(A), 0)).flatten()  # noqa: TID251
-    np.testing.assert_allclose(np.nanmean(A, 0), meanA)
 
 
 def test_sparse_nanmean_on_dense_matrix():
@@ -210,7 +220,7 @@ def test_one_gene():
     sc.tl.score_genes(adata, [adata.var_names[0]])
 
 
-def test_use_raw_None():
+def test_use_raw_none() -> None:
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
     adata_raw = adata.copy()
     adata_raw.var_names = [str(i) for i in range(adata_raw.n_vars)]

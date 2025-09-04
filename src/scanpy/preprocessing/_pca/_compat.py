@@ -62,7 +62,7 @@ def _pca_compat_sparse(
     idx = np.argsort(-s)
     v = v[idx, :]
 
-    X_pca = (u * s)[:, idx]
+    x_pca = (u * s)[:, idx]
     ev = s[idx] ** 2 / (x.shape[0] - 1)
 
     total_var = _get_mean_var(x)[1].sum()
@@ -74,4 +74,4 @@ def _pca_compat_sparse(
     pca.explained_variance_ = ev
     pca.explained_variance_ratio_ = ev_ratio
     pca.components_ = v
-    return X_pca, pca
+    return x_pca, pca

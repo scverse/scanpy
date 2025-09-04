@@ -56,7 +56,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     adata.obs["louvain_anno"] = adata.obs["louvain"]
     sc.tl.paga(adata, groups="louvain_anno")
 
-    PAGA_CONNECTIVITIES = np.array(
+    paga_connectivities = np.array(
         [
             [0.0, 0.128553, 0.0, 0.07825, 0.0, 0.0, 0.238741, 0.0, 0.0, 0.657049],
             [
@@ -68,7 +68,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
 
     assert np.allclose(
         adata.uns["paga"]["connectivities"].toarray()[:2],
-        PAGA_CONNECTIVITIES,
+        paga_connectivities,
         atol=1e-4,
     )
 

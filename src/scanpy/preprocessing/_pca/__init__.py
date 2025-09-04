@@ -236,15 +236,15 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    X = _get_obs_rep(adata_comp, layer=layer)
-    if is_backed_type(X) and layer is not None:
-        msg = f"PCA is not implemented for matrices of type {type(X)} from layers"
+    x = _get_obs_rep(adata_comp, layer=layer)
+    if is_backed_type(x) and layer is not None:
+        msg = f"PCA is not implemented for matrices of type {type(x)} from layers"
         raise NotImplementedError(msg)
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
         Version(ad.__version__) < Version("0.9")
         and mask_var is not None
-        and isinstance(X, np.ndarray)
+        and isinstance(x, np.ndarray)
     ):
         warnings.warn(
             "When using a mask parameter with anndata<0.9 on a dense array, the PCA"
@@ -256,7 +256,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state
-    if not isinstance(X, DaskArray):
+    if not isinstance(x, DaskArray):
         random_state = check_random_state(random_state)
     elif not isinstance(random_state, int):
         msg = f"random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array"
@@ -271,7 +271,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             logg.debug("Ignoring zero_center, random_state, svd_solver")
 
         incremental_pca_kwargs = dict()
-        if isinstance(X, DaskArray):
+        if isinstance(x, DaskArray):
             from dask.array import zeros
             from dask_ml.decomposition import IncrementalPCA
 
@@ -282,7 +282,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             from numpy import zeros
             from sklearn.decomposition import IncrementalPCA
 
-        X_pca = zeros((X.shape[0], n_comps), X.dtype)
+        x_pca = zeros((x.shape[0], n_comps), x.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
@@ -292,9 +292,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            X_pca[start:end] = pca_.transform(chunk_dense)
+            x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(X, CSBase) and (
+        if isinstance(x, CSBase) and (
             pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
         ):
             if svd_solver not in (
@@ -313,22 +313,22 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                     "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
                 )
                 warnings.warn(msg, FutureWarning, stacklevel=2)
-            X_pca, pca_ = _pca_compat_sparse(
-                X, n_comps, solver=svd_solver, random_state=random_state
+            x_pca, pca_ = _pca_compat_sparse(
+                x, n_comps, solver=svd_solver, random_state=random_state
             )
         else:
-            if not isinstance(X, DaskArray):
+            if not isinstance(x, DaskArray):
                 from sklearn.decomposition import PCA
 
                 svd_solver = _handle_sklearn_args(
-                    svd_solver, PCA, sparse=isinstance(X, CSBase)
+                    svd_solver, PCA, sparse=isinstance(x, CSBase)
                 )
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            elif isinstance(X._meta, CSBase) or svd_solver == "covariance_eigh":
+            elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
                 if random_state != 0:
@@ -347,10 +347,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            X_pca = pca_.fit_transform(X)
+            x_pca = pca_.fit_transform(x)
     else:
-        if isinstance(X, DaskArray):
-            if isinstance(X._meta, CSBase):
+        if isinstance(x, DaskArray):
+            if isinstance(x._meta, CSBase):
                 msg = (
                     "`zero_center=False` is not supported for sparse Dask arrays (yet). "
                     "See <https://github.com/dask/dask-ml/issues/123>."
@@ -373,16 +373,16 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         pca_ = TruncatedSVD(
             n_components=n_comps, random_state=random_state, algorithm=svd_solver
         )
-        X_pca = pca_.fit_transform(X)
+        x_pca = pca_.fit_transform(x)
 
-    if X_pca.dtype.descr != np.dtype(dtype).descr:
-        X_pca = X_pca.astype(dtype)
+    if x_pca.dtype.descr != np.dtype(dtype).descr:
+        x_pca = x_pca.astype(dtype)
 
     if return_anndata:
         key_obsm, key_varm, key_uns = (
             ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
         )
-        adata.obsm[key_obsm] = X_pca
+        adata.obsm[key_obsm] = x_pca
 
         if mask_var is not None:
             adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
@@ -416,13 +416,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         logg.info("    finished", time=logg_start)
         if return_info:
             return (
-                X_pca,
+                x_pca,
                 pca_.components_,
                 pca_.explained_variance_ratio_,
                 pca_.explained_variance_,
             )
         else:
-            return X_pca
+            return x_pca
 
 
 def _handle_mask_var(
