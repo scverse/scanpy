@@ -536,7 +536,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names
         colorbars = [
             (
-                (c in adata.obs_keys() and adata.obs[c].dtype.name != "category")
+                (c in adata.obs and adata.obs[c].dtype.name != "category")
                 or (c in var_names)
             )
             for c in colors
@@ -709,11 +709,11 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         node_labels = adata.obs[groups_key].cat.categories
 
     if (colors is None or colors == groups_key) and groups_key is not None:
-        if groups_key + "_colors" not in adata.uns or len(
+        if f"{groups_key}_colors" not in adata.uns or len(
             adata.obs[groups_key].cat.categories
-        ) != len(adata.uns[groups_key + "_colors"]):
+        ) != len(adata.uns[f"{groups_key}_colors"]):
             _utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
-        colors = adata.uns[groups_key + "_colors"]
+        colors = adata.uns[f"{groups_key}_colors"]
         for iname, name in enumerate(adata.obs[groups_key].cat.categories):
             if name in settings.categories_to_ignore:
                 colors[iname] = "grey"
@@ -805,7 +805,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         )
         _utils.add_colors_for_categorical_sample_annotation(adata, colors)
         asso_colors = _sc_utils.get_associated_colors_of_groups(
-            adata.uns[colors + "_colors"], asso_matrix
+            adata.uns[f"{colors}_colors"], asso_matrix
         )
         colors = asso_colors
 
@@ -913,8 +913,8 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     ax.set_yticks([])
 
     # groups sizes
-    if groups_key is not None and groups_key + "_sizes" in adata.uns:
-        groups_sizes = adata.uns[groups_key + "_sizes"]
+    if groups_key is not None and f"{groups_key}_sizes" in adata.uns:
+        groups_sizes = adata.uns[f"{groups_key}_sizes"]
     else:
         groups_sizes = np.ones(len(node_labels))
     base_scale_scatter = 2000
@@ -1156,7 +1156,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
 
     ax = plt.gca() if ax is None else ax
 
-    X = []
+    xs = []
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
@@ -1177,9 +1177,9 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         nodes_ints = nodes
         nodes_strs = [groups_names[node] for node in nodes]
 
-    adata_X = adata
+    adata_x = adata
     if use_raw and adata.raw is not None:
-        adata_X = adata.raw
+        adata_x = adata.raw
 
     for ikey, key in enumerate(keys):
         x = []
@@ -1201,9 +1201,9 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 ]
             )
             idcs = idcs[idcs_group]
-            values = (
-                adata.obs[key].values if key in adata.obs_keys() else adata_X[:, key].X
-            )[idcs]
+            values = (adata.obs[key].values if key in adata.obs else adata_x[:, key].X)[
+                idcs
+            ]
             x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
@@ -1222,7 +1222,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
-        X.append(x)
+        xs.append(x)
         if not as_heatmap:
             ax.plot(x[xlim[0] : xlim[1]], label=key)
         if ikey == 0:
@@ -1232,11 +1232,11 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 else:
                     label = group
                 x_tick_labels.append(label)
-    X = np.asarray(X).squeeze()
+    x = np.asarray(xs).squeeze()
     if as_heatmap:
-        img = ax.imshow(X, aspect="auto", interpolation="nearest", cmap=color_map)
+        img = ax.imshow(x, aspect="auto", interpolation="nearest", cmap=color_map)
         if show_yticks:
-            ax.set_yticks(range(len(X)))
+            ax.set_yticks(range(len(x)))
             ax.set_yticklabels(keys, fontsize=ytick_fontsize)
         else:
             ax.set_yticks([])
@@ -1262,7 +1262,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         ax.set_xlabel(xlabel)
         plt.yticks([])
         if len(keys) == 1:
-            plt.ylabel(keys[0] + " (a.u.)")
+            plt.ylabel(f"{keys[0]} (a.u.)")
     else:
         import matplotlib.colors
 
@@ -1346,7 +1346,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         show = settings.autoshow if show is None else show
     _utils.savefig_or_show("paga_path", show=show, save=save)
     if return_data:
-        df = pd.DataFrame(data=X.T, columns=keys)
+        df = pd.DataFrame(data=x.T, columns=keys)
         df["groups"] = moving_average(groups)  # groups is without moving average, yet
         if "dpt_pseudotime" in anno_dict:
             df["distance"] = anno_dict["dpt_pseudotime"].T

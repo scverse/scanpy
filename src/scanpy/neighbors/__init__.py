@@ -208,8 +208,8 @@ def neighbors(  # noqa: PLR0913
         conns_key = "connectivities"
         dists_key = "distances"
     else:
-        conns_key = key_added + "_connectivities"
-        dists_key = key_added + "_distances"
+        conns_key = f"{key_added}_connectivities"
+        dists_key = f"{key_added}_distances"
 
     adata.uns[key_added] = {}
 
@@ -255,7 +255,7 @@ class FlatTree(NamedTuple):  # noqa: D101
     indices: None
 
 
-def _backwards_compat_get_full_X_diffmap(adata: AnnData) -> np.ndarray:
+def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
     if "X_diffmap0" in adata.obs:
         return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
     else:
@@ -302,15 +302,11 @@ class OnFlySymMatrix:
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
         *,
-        DC_start: int = 0,
-        DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,
         restrict_array: np.ndarray | None = None,
     ):
         self.get_row = get_row
         self.shape = shape
-        self.DC_start = DC_start
-        self.DC_end = DC_end
         self.rows = {} if rows is None else rows
         self.restrict_array = restrict_array  # restrict the array to a subset
 
@@ -342,12 +338,7 @@ class OnFlySymMatrix:
         """Generate a view restricted to a subset of indices."""
         new_shape = index_array.shape[0], index_array.shape[0]
         return OnFlySymMatrix(
-            self.get_row,
-            new_shape,
-            DC_start=self.DC_start,
-            DC_end=self.DC_end,
-            rows=self.rows,
-            restrict_array=index_array,
+            self.get_row, new_shape, rows=self.rows, restrict_array=index_array
         )
 
 
@@ -427,9 +418,9 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm_keys():
+        if "X_diffmap" in adata.obsm:
             self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
+            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (
@@ -479,12 +470,12 @@ class Neighbors:
         This has not been tested, in contrast to `transitions_sym`.
 
         """
-        Zinv = (
+        z_inv = (
             self.Z.power(-1)
             if isinstance(self.Z, SpBase)  # can be DIA matrix
             else np.diag(1.0 / np.diag(self.Z))
         )
-        return self.Z @ self.transitions_sym @ Zinv
+        return self.Z @ self.transitions_sym @ z_inv
 
     @property
     def transitions_sym(self) -> np.ndarray | CSRBase | None:
@@ -583,8 +574,8 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
-        self._distances = transformer.fit_transform(X)
+        x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors
         )
@@ -742,28 +733,28 @@ class Neighbors:
 
         """
         start = logg.info("computing transitions")
-        W = self._connectivities
+        conn = self._connectivities
         # density normalization as of Coifman et al. (2005)
         # ensures that kernel matrix is independent of sampling density
         if density_normalize:
-            # q[i] is an estimate for the sampling density at point i
+            # dens[i] is an estimate for the sampling density at point i
             # it's also the degree of the underlying graph
-            q = np.asarray(W.sum(axis=0))
-            if not isinstance(W, CSBase):
-                Q = np.diag(1.0 / q)
+            dens = np.asarray(conn.sum(axis=0))
+            if not isinstance(conn, CSBase):
+                dens = np.diag(1.0 / dens)
             else:
-                Q = sparse.spdiags(1.0 / q, 0, W.shape[0], W.shape[0])
-            K = Q @ W @ Q
+                dens = sparse.spdiags(1.0 / dens, 0, conn.shape[0], conn.shape[0])
+            conn_norm = dens @ conn @ dens
         else:
-            K = W
+            conn_norm = conn
 
-        # z[i] is the square root of the row sum of K
-        z = np.sqrt(np.asarray(K.sum(axis=0)))
-        if not isinstance(K, CSBase):
+        # z[i] is the square root of the row sum of conn_norm
+        z = np.sqrt(np.asarray(conn_norm.sum(axis=0)))
+        if not isinstance(conn_norm, CSBase):
             self.Z = np.diag(1.0 / z)
         else:
-            self.Z = sparse.spdiags(1.0 / z, 0, K.shape[0], K.shape[0])
-        self._transitions_sym = self.Z @ K @ self.Z
+            self.Z = sparse.spdiags(1.0 / z, 0, conn_norm.shape[0], conn_norm.shape[0])
+        self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
     def compute_eigen(

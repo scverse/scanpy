@@ -164,10 +164,10 @@ def test_scale_rechunk(array_type, axis, op):
     ],
 )
 def test_check_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+    x = array_type(array_value)
 
-    received = check_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()

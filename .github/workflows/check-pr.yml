@@ -5,6 +5,8 @@ on:
     branches:
       - main
     types:
+      # title changes
+      - edited
       # milestone changes
       - milestoned
       - demilestoned
@@ -37,17 +39,19 @@ jobs:
           regex: '^\s*- \[x\].*Release notes.*not necessary because:(.*)$'
           flags: m
       - name: Check PR title
+        id: check-title
         uses: amannn/action-semantic-pull-request@v6
         env: # Needs repo options: “Squash and merge” with commit message set to “PR title”
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       no-relnotes-reason: ${{ steps.checked-relnotes.outputs.group1 }}
+      type: ${{ steps.check-title.outputs.type }}
   # This job verifies that the relevant release notes file has been modified.
   check-relnotes:
     name: Check for release notes
     runs-on: ubuntu-latest
     needs: check-milestone
-    if: ${{ github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(github.event.pull_request.labels.*.name, 'Development Process 🚀') }}
+    if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","ci"]'), needs.check-milestone.outputs.type)
     steps:
       - uses: actions/checkout@v5
         with:

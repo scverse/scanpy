@@ -960,7 +960,7 @@ def test_plot_rank_genes_groups_gene_symbols(
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
     """Checks that once can pass a negative value for n_genes and var_names as a dict."""
-    N = 3
+    n = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
     pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
@@ -972,8 +972,8 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby(
         "group", observed=True
     ):
-        top_genes[g] = list(subdf["names"].head(N))
-        bottom_genes[g] = list(subdf["names"].tail(N))
+        top_genes[g] = list(subdf["names"].head(n))
+        bottom_genes[g] = list(subdf["names"].tail(n))
 
     positive_n_pth = tmp_path / f"{func.__name__}_positive_n.png"
     top_genes_pth = tmp_path / f"{func.__name__}_top_genes.png"
@@ -985,12 +985,12 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
         plt.savefig(pth)
         plt.close()
 
-    wrapped(positive_n_pth, n_genes=N)
+    wrapped(positive_n_pth, n_genes=n)
     wrapped(top_genes_pth, var_names=top_genes)
 
     check_same_image(positive_n_pth, top_genes_pth, tol=1, root=tmp_path)
 
-    wrapped(negative_n_pth, n_genes=-N)
+    wrapped(negative_n_pth, n_genes=-n)
     wrapped(bottom_genes_pth, var_names=bottom_genes)
 
     check_same_image(negative_n_pth, bottom_genes_pth, tol=1, root=tmp_path)
@@ -999,7 +999,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     with pytest.raises(
         ValueError, match="n_genes and var_names are mutually exclusive"
     ):
-        wrapped(tmp_path / "not_written.png", n_genes=N, var_names=top_genes)
+        wrapped(tmp_path / "not_written.png", n_genes=n, var_names=top_genes)
 
 
 @pytest.mark.parametrize(
@@ -1672,7 +1672,7 @@ def test_repeated_colors_w_missing_value():
     ],
 )
 def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
-    N_GENES = 4
+    n_genes = 4
 
     adata = pbmc68k_reduced()
 
@@ -1691,14 +1691,14 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     df = df.query(conditions)[["group", "names"]]
 
     var_names = {
-        k: v.head(N_GENES).tolist()
+        k: v.head(n_genes).tolist()
         for k, v in df.groupby("group", observed=True)["names"]
     }
 
     pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
     pth_b = tmp_path / f"{plot.__name__}_filter_b.png"
 
-    plot(adata, key="rank_genes_groups_filtered", n_genes=N_GENES, show=False)
+    plot(adata, key="rank_genes_groups_filtered", n_genes=n_genes, show=False)
     plt.savefig(pth_a)
     plt.close()
 

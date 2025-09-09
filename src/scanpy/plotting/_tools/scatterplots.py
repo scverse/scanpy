@@ -818,7 +818,7 @@ def draw_graph(
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
     basis = f"draw_graph_{layout}"
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
         raise ValueError(msg)
 

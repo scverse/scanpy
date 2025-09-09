@@ -61,7 +61,7 @@ dependencies = [
     "networkx>=2.8.8",
     "natsort",
     "joblib",
-    "numba>=0.58.1",
+    "numba >=0.58.1, !=0.62.0rc1",                #https://github.com/numba/numba/issues/10202
     "umap-learn>=0.5.7",
     "pynndescent>=0.5.13",
     "packaging>=21.3",
@@ -87,7 +87,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=8.2",
     "pytest-mock",
-    "pytest-cov",
+    "pytest-cov",           # only for use from VS Code
     "pytest-xdist[psutil]",
     "pytest-randomly",
     "pytest-rerunfailures",
@@ -224,6 +224,7 @@ select = [
     "I",      # Import sorting
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
+    "N",      # Naming conventions
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint
@@ -255,6 +256,8 @@ allowed-confusables = [ "×", "’", "–", "α" ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
+# Old and unmaintained
+"src/scanpy/tools/_sim.py" = [ "N" ]
 # No need for docstrings for all benchmarks
 "benchmarks/**/*.py" = [ "D102", "D103" ]
 # D*: No need for docstrings for all test modules and test functions

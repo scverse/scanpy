@@ -75,7 +75,10 @@ jobs:
         run: uvx hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov --cov --cov-report=xml
+        run: |
+          uvx hatch run ${{ matrix.env.name }}:run-cov
+          uvx hatch run ${{ matrix.env.name }}:coverage combine
+          uvx hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
         uses: codecov/codecov-action@v5
@@ -110,7 +113,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
       - uses: astral-sh/setup-uv@v6
