@@ -665,6 +665,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"reference = {reference} needs to be one of groupby = {cats}."
         raise ValueError(msg)
 
+    logg.warning(
+        "Comparing between cells leads to highly inflated p-values, "
+        "since cells are not independent observations (doi:10.1038/s41467-021-25960-2). "
+        "Consider using more appropriate methods such as pseudobulk+PyDESeq2 instead."
+    )
+
     if key_added is None:
         key_added = "rank_genes_groups"
     adata.uns[key_added] = {}
