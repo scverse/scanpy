@@ -64,9 +64,10 @@ def df_groupby():
 
     df_groupby = pd.DataFrame(index=pd.Index(ax_groupby, name="cell"))
     df_groupby["key"] = pd.Categorical([c[0] for c in ax_groupby])
-    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map(
-        {"v": "v", "w": "v", "a": "a", "b": "a", "c": "a", "d": "a"}
-    )
+    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map({
+        **{"v": "v", "w": "v"},  # noqa: PIE800
+        **{"a": "a", "b": "a", "c": "a", "d": "a"},  # noqa: PIE800
+    })
     df_groupby["key_subset"] = pd.Categorical([c[1] for c in ax_groupby])
     df_groupby["weight"] = 2.0
     return df_groupby
@@ -283,12 +284,10 @@ def test_aggregate_axis_specification(axis_name):
     ("matrix", "df", "keys", "metrics", "expected"),
     [
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -305,9 +304,11 @@ def test_aggregate_axis_specification(axis_name):
                 ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                     # "sum": np.array([[2, 0], [0, 2]]),
                     # "mean": np.array([[1, 0], [0, 1]]),
                 },
@@ -315,12 +316,10 @@ def test_aggregate_axis_specification(axis_name):
             id="count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -339,20 +338,20 @@ def test_aggregate_axis_specification(axis_name):
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                 },
             ),
             id="sum-mean-count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -502,9 +501,9 @@ def test_aggregate_obsm_labels():
 
     label_counts = [("a", 5), ("b", 3), ("c", 4)]
     blocks = [np.ones((n, 1)) for _, n in label_counts]
-    obs_names = pd.Index(
-        [f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))]
-    )
+    obs_names = pd.Index([
+        f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))
+    ])
     entry = pd.DataFrame(
         sparse.block_diag(blocks).toarray(),
         columns=[f"dim_{i}" for i in range(len(label_counts))],

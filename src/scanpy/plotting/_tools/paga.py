@@ -258,9 +258,10 @@ def _compute_pos(  # noqa: PLR0912
             # I don't know why this is necessary
             # np.random.seed(random_state)
             if init_pos is None:
-                init_coords = random_state.random_sample(
-                    (adjacency_solid.shape[0], 2)
-                ).tolist()
+                init_coords = random_state.random_sample((
+                    adjacency_solid.shape[0],
+                    2,
+                )).tolist()
             else:
                 init_pos = init_pos.copy()
                 # this is a super-weird hack that is necessary as igraph’s
@@ -1268,14 +1269,12 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
 
         # groups bar
         ax_bounds = ax.get_position().bounds
-        groups_axis = plt.axes(
-            (
-                ax_bounds[0],
-                ax_bounds[1] - ax_bounds[3] / len(keys),
-                ax_bounds[2],
-                ax_bounds[3] / len(keys),
-            )
-        )
+        groups_axis = plt.axes((
+            ax_bounds[0],
+            ax_bounds[1] - ax_bounds[3] / len(keys),
+            ax_bounds[2],
+            ax_bounds[3] / len(keys),
+        ))
         groups = np.array(groups)[None, :]
         groups_axis.imshow(
             groups,
@@ -1307,14 +1306,12 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         for ianno, anno in enumerate(annotations):
             if ianno > 0:
                 y_shift = ax_bounds[3] / len(keys) / 2
-            anno_axis = plt.axes(
-                (
-                    ax_bounds[0],
-                    ax_bounds[1] - (ianno + 2) * y_shift,
-                    ax_bounds[2],
-                    y_shift,
-                )
-            )
+            anno_axis = plt.axes((
+                ax_bounds[0],
+                ax_bounds[1] - (ianno + 2) * y_shift,
+                ax_bounds[2],
+                y_shift,
+            ))
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
                 color_map_anno = (

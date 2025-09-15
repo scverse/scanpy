@@ -2318,9 +2318,10 @@ def _reorder_categories_after_dendrogram(
             position = var_groups.positions[idx]
             _var_names = var_names[position[0] : position[1] + 1]
             var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-            positions_ordered.append(
-                (position_start, position_start + len(_var_names) - 1)
-            )
+            positions_ordered.append((
+                position_start,
+                position_start + len(_var_names) - 1,
+            ))
             position_start += len(_var_names)
             labels_ordered.append(var_groups.labels[idx])
         var_groups = VarGroups(labels_ordered, positions_ordered)

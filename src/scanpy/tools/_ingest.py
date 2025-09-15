@@ -504,14 +504,16 @@ class Ingest:
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
-                adata.obsm[key] = np.vstack(
-                    (self._adata_ref.obsm[key], self._obsm[key])
-                )
+                adata.obsm[key] = np.vstack((
+                    self._adata_ref.obsm[key],
+                    self._obsm[key],
+                ))
 
         if self._use_rep not in ("X_pca", "X"):
-            adata.obsm[self._use_rep] = np.vstack(
-                (self._adata_ref.obsm[self._use_rep], self._obsm["rep"])
-            )
+            adata.obsm[self._use_rep] = np.vstack((
+                self._adata_ref.obsm[self._use_rep],
+                self._obsm["rep"],
+            ))
 
         if "X_umap" in self._obsm:
             adata.uns["umap"] = self._adata_ref.uns["umap"]

@@ -708,6 +708,7 @@ if pkg_version("scipy") >= Version("1.15"):
     @axis_nnz.register(CSBase)
     def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
         return x.count_nonzero(axis=axis)
+
 else:
     # older scipy versions don’t have any way to get the nnz of a sparse array
     @axis_nnz.register(CSBase)

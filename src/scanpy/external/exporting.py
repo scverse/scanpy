@@ -440,24 +440,24 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     for i, name, xy, color, size, cells in zip(
         range(len(names)), names, coords, colors, sizes, cell_groups, strict=True
     ):
-        nodes.append(
-            {
-                "index": i,
-                "size": int(size),
-                "color": color,
-                "coordinates": xy,
-                "cells": cells,
-                "name": name,
-            }
-        )
+        nodes.append({
+            "index": i,
+            "size": int(size),
+            "color": color,
+            "coordinates": xy,
+            "cells": cells,
+            "name": name,
+        })
 
     # make link list, avoid redundant encoding (graph is undirected)
     links = []
     for source, target, weight in zip(sources, targets, weights, strict=True):
         if source < target and weight > min_edge_weight_save:
-            links.append(
-                {"source": int(source), "target": int(target), "weight": float(weight)}
-            )
+            links.append({
+                "source": int(source),
+                "target": int(target),
+                "weight": float(weight),
+            })
 
     # save data about edge weights
     edge_weight_meta = {

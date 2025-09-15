@@ -181,9 +181,9 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
             for restart in range(nrRealizations + maxRestarts):
                 # slightly break symmetry in initial conditions
                 if "toggleswitch" in model_key:
-                    X0 = np.array(
-                        [0.8 for i in range(grnsim.dim)]
-                    ) + 0.01 * np.random.randn(grnsim.dim)
+                    X0 = np.array([
+                        0.8 for i in range(grnsim.dim)
+                    ]) + 0.01 * np.random.randn(grnsim.dim)
                 X = grnsim.sim_model(tmax=tmax, X0=X0, noiseDyn=noiseDyn)
                 # check branching
                 check = True
