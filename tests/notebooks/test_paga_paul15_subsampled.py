@@ -117,7 +117,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     )
     plt.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
     for ipath, (descr, path) in enumerate(paths):
-        _, data = sc.pl.paga_path(
+        _, _data = sc.pl.paga_path(
             adata,
             path,
             gene_names,
