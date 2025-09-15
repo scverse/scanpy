@@ -83,8 +83,8 @@ jobs:
           uvx hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
+        if: ${{ !cancelled() }} && matrix.env.test-type == 'coverage'
         uses: codecov/codecov-action@v5
-        if: matrix.env.test-type == 'coverage'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           env_vars: ENV_NAME
@@ -92,7 +92,6 @@ jobs:
           files: test-data/coverage.xml
 
       - name: Upload test results
-        # yaml strings can’t start with “!”, so using explicit substitution
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
