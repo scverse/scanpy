@@ -228,14 +228,12 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce(
-            (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
-            )
-        )
+        gene_subset = np.logical_and.reduce((
+            mean > min_mean,
+            mean < max_mean,
+            dispersion_norm > min_disp,
+            dispersion_norm < max_disp,
+        ))
     logg.info("    finished", time=start)
     return np.rec.fromarrays(
         (

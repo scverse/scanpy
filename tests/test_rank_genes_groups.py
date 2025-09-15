@@ -191,7 +191,7 @@ def test_rank_genes_groups_use_raw():
     assert pbmc.raw is None
 
     with pytest.raises(
-        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+        ValueError, match=r"Received `use_raw=True`, but `adata\.raw` is empty"
     ):
         sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 

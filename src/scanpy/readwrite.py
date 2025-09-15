@@ -281,12 +281,10 @@ def _read_v3_10x_h5(f: h5py.File) -> AnnData:
         var_dict["gene_ids"] = dsets["id"].astype(str)
     else:
         # Read metadata specific to a probe-barcode matrix
-        var_dict.update(
-            {
-                "gene_ids": dsets["gene_id"].astype(str),
-                "probe_ids": dsets["id"].astype(str),
-            }
-        )
+        var_dict.update({
+            "gene_ids": dsets["gene_id"].astype(str),
+            "probe_ids": dsets["id"].astype(str),
+        })
     var_dict["feature_types"] = dsets["feature_type"].astype(str)
     if "filtered_barcodes" in f["matrix"]:
         obs_dict["filtered_barcodes"] = dsets["filtered_barcodes"].astype(bool)

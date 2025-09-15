@@ -568,7 +568,7 @@ class DPT(Neighbors):
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
         result = self._detect_branching(d_seg, tips3, seg)
-        ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk = result
+        ssegs, ssegs_tips, _ssegs_adjacency, ssegs_connects, trunk = result
         # map back to global indices
         for iseg_new, seg_new in enumerate(ssegs):
             ssegs[iseg_new] = seg[seg_new]

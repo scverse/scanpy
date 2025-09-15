@@ -255,16 +255,16 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         marker_match = _calc_overlap_count(reference_markers, data_markers)
         if normalize == "reference":
             # Ensure rows sum to 1
-            ref_lengths = np.array(
-                [len(reference_markers[m_group]) for m_group in reference_markers]
-            )
+            ref_lengths = np.array([
+                len(reference_markers[m_group]) for m_group in reference_markers
+            ])
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
         elif normalize == "data":
             # Ensure columns sum to 1
-            data_lengths = np.array(
-                [len(data_markers[dat_group]) for dat_group in data_markers]
-            )
+            data_lengths = np.array([
+                len(data_markers[dat_group]) for dat_group in data_markers
+            ])
             marker_match = marker_match / data_lengths
             marker_match = np.nan_to_num(marker_match)
     elif method == "overlap_coef":

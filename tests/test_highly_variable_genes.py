@@ -190,7 +190,7 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
             )
 
     with pytest.raises(
-        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
+        ValueError, match=r"Pearson residuals require `clip>=0` or `clip=None`\."
     ):
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), clip=-1, flavor="pearson_residuals", n_top_genes=100
