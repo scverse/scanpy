@@ -1344,14 +1344,10 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            (
-                label2code,
-                ticks,
-                labels,
-                groupby_cmap,
-                norm,
-            ) = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation="left"
+            label2code, ticks, _labels, groupby_cmap, norm = (
+                _plot_categories_as_colorblocks(
+                    groupby_ax, obs_tidy, colors=groupby_colors, orientation="left"
+                )
             )
 
             # add lines to main heatmap
@@ -1437,14 +1433,10 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            (
-                label2code,
-                ticks,
-                labels,
-                groupby_cmap,
-                norm,
-            ) = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation="bottom"
+            label2code, ticks, _labels, groupby_cmap, norm = (
+                _plot_categories_as_colorblocks(
+                    groupby_ax, obs_tidy, colors=groupby_colors, orientation="bottom"
+                )
             )
             # add lines to main heatmap
             line_positions = (
@@ -1701,7 +1693,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
         ax.spines["top"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
         ax.grid(visible=False)
-        ymin, ymax = ax.get_ylim()
+        _ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
         ax.set_yticklabels([str(ymax)], ha="left", va="top")
@@ -1730,7 +1722,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    _label2code, ticks, _labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation="bottom"
     )
     # add lines to plot
@@ -2662,7 +2654,7 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     color bar ax
 
     """
-    width, height = fig.get_size_inches()
+    _width, height = fig.get_size_inches()
     if height > max_cbar_height:
         # to make the colorbar shorter, the
         # ax is split and the lower portion is used.

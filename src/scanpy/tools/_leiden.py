@@ -43,7 +43,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph", None] = None,
+    flavor: Literal["leidenalg", "igraph"] | None = None,
     **clustering_args,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Traag2019`.

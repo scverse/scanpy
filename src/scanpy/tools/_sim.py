@@ -559,12 +559,12 @@ class GRNsim:
                 if line.startswith("#") and "modelType =" in line:
                     keyval = line
                     if "|" in line:
-                        keyval, type = line.split("|")[:2]
+                        keyval, _type = line.split("|")[:2]
                     self.modelType = keyval.split("=")[1].strip()
                 if line.startswith("#") and "invTimeStep =" in line:
                     keyval = line
                     if "|" in line:
-                        keyval, type = line.split("|")[:2]
+                        keyval, _type = line.split("|")[:2]
                     self.invTimeStep = float(keyval.split("=")[1].strip())
                 if not line.startswith("#"):
                     boolRules.append([s.strip() for s in line.split("=")])
@@ -1187,21 +1187,21 @@ def sample_static_data(model, dir, verbosity=0):
     if model != "combi":
         n_edges = np.zeros(n_Coupls)
         for icoupl in range(n_Coupls):
-            Coupl, Adj, Adj_signed, n_e = sample_coupling_matrix(dim, connectivity)
+            _coupl, adj, _adj_signed, n_e = sample_coupling_matrix(dim, connectivity)
             if verbosity > 1:
                 settings.m(0, icoupl)
-                settings.m(0, Adj)
+                settings.m(0, adj)
             n_edges[icoupl] = n_e
             # sample data
-            X = StaticCauseEffect().sim_givenAdj(Adj, model)
-            write_data(X, dir, Adj=Adj)
+            X = StaticCauseEffect().sim_givenAdj(adj, model)
+            write_data(X, dir, Adj=adj)
         settings.m(0, "mean edge number:", n_edges.mean())
 
     else:
         X = StaticCauseEffect().sim_combi()
-        Adj = np.zeros((3, 3))
-        Adj[2, 0] = Adj[2, 1] = 0
-        write_data(X, dir, Adj=Adj)
+        adj = np.zeros((3, 3))
+        adj[2, 0] = adj[2, 1] = 0
+        write_data(X, dir, Adj=adj)
 
 
 if __name__ == "__main__":

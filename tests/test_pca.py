@@ -102,7 +102,7 @@ SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
 def gen_pca_params(
     *,
     array_type: ArrayType,
-    svd_solver_type: Literal[None, "valid", "invalid"],
+    svd_solver_type: Literal["valid", "invalid"] | None,
     zero_center: bool,
     id: str,
 ) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:

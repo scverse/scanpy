@@ -423,7 +423,7 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
     """
     from scipy.stats import entropy
 
-    groups_order, groups_masks = _utils.select_groups(
+    _groups_order, groups_masks = _utils.select_groups(
         adata, key=adata.uns["paga"]["groups"]
     )
     entropies = []

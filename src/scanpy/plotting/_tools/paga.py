@@ -582,7 +582,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
     if plot:
-        axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
+        axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
             ax, panels=colors, colorbars=colorbars
         )
 
@@ -797,7 +797,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         and colors in adata.obs
         and isinstance(adata.obs[colors].dtype, CategoricalDtype)
     ):
-        asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
+        _asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
             adata,
             prediction=groups_key,
             reference=colors,

@@ -498,7 +498,7 @@ def test_multiple_plots(image_comparer):
         "B-cell": ["CD79A", "CD79B", "MS4A1"],
         "myeloid": ["CST3", "LYZ"],
     }
-    fig, (ax1, ax2, ax3) = plt.subplots(
+    _fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={"wspace": 0.7}
     )
     _ = sc.pl.stacked_violin(
@@ -856,7 +856,7 @@ def test_rank_genes_group_axes(image_comparer):
 
     pbmc.var["symbol"] = pbmc.var.index + "__"
 
-    fig, ax = plt.subplots(figsize=(12, 16))
+    _fig, ax = plt.subplots(figsize=(12, 16))
     ax.set_axis_off()
     with plt.rc_context({"axes.grid": True}):
         axes: list[Axes] = fn(pbmc, ax=ax, show=False)
@@ -1247,7 +1247,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
-        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+        ValueError, match=r"Passing both norm and vmin/vmax/vcenter is not allowed\."
     ):
         sc.pl.embedding(
             pbmc,
