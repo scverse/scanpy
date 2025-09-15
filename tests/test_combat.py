@@ -23,7 +23,7 @@ def test_norm():
     model = pd.DataFrame({"batch": batch})
 
     # standardize the data
-    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, "batch")
+    s_data, _design, _var_pooled, _stand_mean = _standardize_data(model, data, "batch")
 
     assert np.allclose(s_data.mean(axis=1), np.zeros(s_data.shape[0]))
 

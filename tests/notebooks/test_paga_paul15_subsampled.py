@@ -56,15 +56,13 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     adata.obs["louvain_anno"] = adata.obs["louvain"]
     sc.tl.paga(adata, groups="louvain_anno")
 
-    paga_connectivities = np.array(
+    paga_connectivities = np.array([
+        [0.0, 0.128553, 0.0, 0.07825, 0.0, 0.0, 0.238741, 0.0, 0.0, 0.657049],
         [
-            [0.0, 0.128553, 0.0, 0.07825, 0.0, 0.0, 0.238741, 0.0, 0.0, 0.657049],
-            [
-                *[0.128553, 0.0, 0.480676, 0.257505, 0.533036],
-                *[0.043871, 0.0, 0.032903, 0.0, 0.087743],
-            ],
-        ]
-    )
+            *[0.128553, 0.0, 0.480676, 0.257505, 0.533036],
+            *[0.043871, 0.0, 0.032903, 0.0, 0.087743],
+        ],
+    ])
 
     assert np.allclose(
         adata.uns["paga"]["connectivities"].toarray()[:2],
@@ -119,7 +117,7 @@ def test_paga_paul15_subsampled(image_comparer, plt):
     )
     plt.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
     for ipath, (descr, path) in enumerate(paths):
-        _, data = sc.pl.paga_path(
+        _, _data = sc.pl.paga_path(
             adata,
             path,
             gene_names,
