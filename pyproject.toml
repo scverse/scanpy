@@ -209,6 +209,7 @@ exclude_also = [
 src = [ "src" ]
 
 [tool.ruff.format]
+preview = true
 docstring-code-format = true
 
 [tool.ruff.lint]

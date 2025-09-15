@@ -83,7 +83,7 @@ class SettingsMeta(SingletonMeta, type):
     _cachedir: Path
     _datasetdir: Path
     _figdir: Path
-    _cache_compression: Literal["lzf", "gzip", None]
+    _cache_compression: Literal["lzf", "gzip"] | None
     _max_memory: float
     _n_jobs: int
     _categories_to_ignore: list[str]
@@ -238,12 +238,14 @@ class SettingsMeta(SingletonMeta, type):
         cls._figdir = Path(figdir)
 
     @property
-    def cache_compression(cls) -> Literal["lzf", "gzip", None]:
+    def cache_compression(cls) -> Literal["lzf", "gzip"] | None:
         """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
         return cls._cache_compression
 
     @cache_compression.setter
-    def cache_compression(cls, cache_compression: Literal["lzf", "gzip", None]) -> None:
+    def cache_compression(
+        cls, cache_compression: Literal["lzf", "gzip"] | None
+    ) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "

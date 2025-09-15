@@ -103,9 +103,10 @@ def _ranks(
 
     if masked:
         n_cells = np.count_nonzero(mask_obs) + np.count_nonzero(mask_obs_rest)
-        get_chunk = lambda x, left, right: merge(
-            (x[mask_obs, left:right], x[mask_obs_rest, left:right])
-        )
+        get_chunk = lambda x, left, right: merge((
+            x[mask_obs, left:right],
+            x[mask_obs_rest, left:right],
+        ))
     else:
         n_cells = x.shape[0]
         get_chunk = lambda x, left, right: adapt(x[:, left:right])
