@@ -194,15 +194,15 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-data_file = "test-data/coverage"
+data_file = "test-data/raw-coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
 concurrency = [ "multiprocessing" ]
-parallel = "true"
+parallel = true
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
-source = [ ".", "**/site-packages" ]
+source = [ "src", "**/site-packages" ]
 [tool.coverage.report]
 exclude_also = [
     "if __name__ == .__main__.:",
