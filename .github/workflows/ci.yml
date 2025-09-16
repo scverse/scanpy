@@ -83,7 +83,7 @@ jobs:
           uvx hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
-        if: ${{ !cancelled() }} && matrix.env.test-type == 'coverage'
+        if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
