@@ -1,3 +1,6 @@
+ci:
+  autoupdate_commit_msg: "ci: pre-commit autoupdate"
+
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
