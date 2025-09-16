@@ -100,7 +100,7 @@ def filter_cells(
         cell is kept. `False` means the cell is removed.
     number_per_cell
         Depending on what was thresholded (`counts` or `genes`),
-        the array stores `n_counts` or `n_cells` per gene.
+        the array stores `n_counts` or `n_genes` per cell.
 
     Examples
     --------
