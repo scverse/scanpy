@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
     pkg_version("umap-learn") <= Version("0.5.9.post2")
     and pkg_version("numba") >= Version("0.62.0rc1"),
-    reason="umap is broken with numba",
+    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
 )
 
 # the input data
