@@ -6,18 +6,26 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy._compat import CSBase
+from scanpy._compat import CSBase, pkg_version
 from testing.scanpy._helpers import anndata_v0_8_constructor_compat
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+# https://github.com/lmcinnes/umap/issues/1216
+SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
+    pkg_version("umap-learn") <= Version("0.5.9.post2")
+    and pkg_version("numba") >= Version("0.62.0rc1"),
+    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
+)
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -177,6 +185,7 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
+            marks=SKIPIF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
