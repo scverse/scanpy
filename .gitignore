@@ -45,3 +45,4 @@ Thumbs.db
 # asv benchmark files
 /benchmarks/.asv
 /benchmarks/data/
+venv/
