@@ -98,3 +98,37 @@ def test_ind_dist_shortcut_premade(
 
     assert (mat.nnz / n_obs) == n_neighbors + 1
     assert _ind_dist_shortcut(mat) is not None
+
+
+def mk_variable_knn_matrix(n_obs: int) -> CSRBase:
+    """Create matrix with variable neighbors per row."""
+    indices = np.array([[0, 1], [1, 0, 2], [2, 1], [3, 0, 1]])
+    distances = np.array([[0.0, 0.5], [0.0, 0.3, 0.4], [0.0, 0.7], [0.0, 0.8, 0.6]])
+
+    mat = _get_sparse_matrix_from_indices_distances(
+        indices[:n_obs], distances[:n_obs], keep_self=False
+    )
+    mat[2, 2] = 0
+    mat.eliminate_zeros()
+    return mat
+
+
+def test_variable_neighbors_uses_slow_path():
+    """Test variable neighbor counts trigger slow path with warning."""
+    import warnings
+
+    from scanpy.neighbors._common import _get_indices_distances_from_sparse_matrix
+
+    mat = mk_variable_knn_matrix(4)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        indices, distances = _get_indices_distances_from_sparse_matrix(
+            mat, n_neighbors=2
+        )
+        assert len(w) == 1
+        assert "variable neighbor counts" in str(w[0].message)
+
+    assert indices.shape == (4, 2)
+    assert np.array_equal(indices[:, 0], np.arange(4))
+    assert np.allclose(distances[:, 0], 0.0)

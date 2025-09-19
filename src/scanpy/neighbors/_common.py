@@ -102,6 +102,7 @@ def _ind_dist_slow(
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
     indices = np.zeros((d.shape[0], n_neighbors), dtype=int)
     distances = np.zeros((d.shape[0], n_neighbors), dtype=d.dtype)
+    mask = np.ones((d.shape[0], n_neighbors), dtype=bool)
     n_neighbors_m1 = n_neighbors - 1
     for i in range(indices.shape[0]):
         neighbors = d[i].nonzero()  # 'true' and 'spurious' zeros
@@ -117,8 +118,20 @@ def _ind_dist_slow(
                 neighbors[0][sorted_indices], neighbors[1][sorted_indices]
             ]
         else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = d[i][neighbors]
+            # Handle cases where the node has fewer neighbors than n_neighbors
+            n_actual = len(neighbors[1])
+            if n_actual > 0:
+                indices[i, 1 : n_actual + 1] = neighbors[1]
+                distances[i, 1 : n_actual + 1] = d[i][neighbors]
+
+            if n_actual < n_neighbors_m1:
+                mask[i, n_actual + 1 :] = False
+
+    valid_cols = mask.any(axis=0)
+    if not valid_cols.all():
+        indices = indices[:, valid_cols]
+        distances = distances[:, valid_cols]
+
     return indices, distances
 
 
