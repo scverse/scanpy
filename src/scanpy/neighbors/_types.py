@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 # These two are used with get_literal_vals elsewhere
-_Method = Literal["umap", "gauss"]
+_Method = Literal["umap", "gauss", "binary"]
 _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
 # sphinx-autodoc-typehints can’t transitively import types from if TYPE_CHECKING blocks,
