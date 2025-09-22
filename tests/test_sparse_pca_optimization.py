@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from scipy import sparse
 
 import scanpy as sc
@@ -38,7 +37,7 @@ class TestSparsePCAConfig:
             use_gpu=True,
             chunk_size=5000,
             memory_limit_gb=16.0,
-            use_randomized_svd=False
+            use_randomized_svd=False,
         )
 
         # GPU should still be False if CuPy not available
@@ -104,7 +103,7 @@ class TestMethodSelection:
 
     def test_method_selection_sparse_no_centering(self):
         """Test method selection for sparse matrix without centering."""
-        X = sparse.random(1000, 500, density=0.1, format='csr')
+        X = sparse.random(1000, 500, density=0.1, format="csr")
         config = SparsePCAConfig(memory_limit_gb=16.0)
 
         method, params = choose_optimal_pca_method(X, 50, config, zero_center=False)
@@ -114,7 +113,7 @@ class TestMethodSelection:
 
     def test_method_selection_sparse_with_centering(self):
         """Test method selection for sparse matrix with centering."""
-        X = sparse.random(1000, 500, density=0.1, format='csr')
+        X = sparse.random(1000, 500, density=0.1, format="csr")
         config = SparsePCAConfig(memory_limit_gb=16.0)
 
         method, params = choose_optimal_pca_method(X, 50, config, zero_center=True)
@@ -124,7 +123,7 @@ class TestMethodSelection:
 
     def test_method_selection_memory_constrained(self):
         """Test method selection under memory constraints."""
-        X = sparse.random(10000, 5000, density=0.1, format='csr')
+        X = sparse.random(10000, 5000, density=0.1, format="csr")
         config = SparsePCAConfig(memory_limit_gb=1.0)  # Very limited memory
 
         method, params = choose_optimal_pca_method(X, 50, config, zero_center=True)
@@ -218,6 +217,7 @@ class TestSparseCenteredPCA:
 
         # Standard PCA on dense data
         from sklearn.decomposition import PCA
+
         pca_standard = PCA(n_components=n_comps)
         pca_standard.fit(X_dense)
 
@@ -236,7 +236,7 @@ class TestOptimizedPCA:
     def test_optimized_pca_basic(self):
         """Test basic optimized PCA functionality."""
         # Create sparse test data
-        X = sparse.random(500, 100, density=0.2, format='csr')
+        X = sparse.random(500, 100, density=0.2, format="csr")
         n_comps = 10
 
         components, explained_var, explained_var_ratio = optimized_pca(
@@ -253,7 +253,7 @@ class TestOptimizedPCA:
 
     def test_optimized_pca_with_info(self):
         """Test optimized PCA with return_info=True."""
-        X = sparse.random(500, 100, density=0.2, format='csr')
+        X = sparse.random(500, 100, density=0.2, format="csr")
         n_comps = 10
 
         components, explained_var, explained_var_ratio, info = optimized_pca(
@@ -274,12 +274,12 @@ class TestOptimizedPCA:
 
     def test_optimized_pca_config(self):
         """Test optimized PCA with custom configuration."""
-        X = sparse.random(500, 100, density=0.2, format='csr')
+        X = sparse.random(500, 100, density=0.2, format="csr")
         n_comps = 10
 
         config = SparsePCAConfig(
             memory_limit_gb=1.0,  # Force chunked methods
-            use_randomized_svd=True
+            use_randomized_svd=True,
         )
 
         components, explained_var, explained_var_ratio = optimized_pca(
@@ -304,7 +304,7 @@ class TestScanpyIntegration:
             adata,
             n_comps=20,
             use_sparse_optimization=True,
-            zero_center=False  # Simpler case first
+            zero_center=False,  # Simpler case first
         )
 
         # Check results
@@ -330,7 +330,7 @@ class TestScanpyIntegration:
             adata,
             n_comps=10,
             use_sparse_optimization=True,
-            sparse_pca_config=SparsePCAConfig(memory_limit_gb=0.001)  # Very low limit
+            sparse_pca_config=SparsePCAConfig(memory_limit_gb=0.001),  # Very low limit
         )
 
         # Should still have PCA results

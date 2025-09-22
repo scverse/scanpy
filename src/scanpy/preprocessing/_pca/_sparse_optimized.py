@@ -15,25 +15,24 @@ hardware while maintaining numerical accuracy.
 
 from __future__ import annotations
 
-import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import sparse
 from sklearn.utils import check_random_state
 
-from ..._compat import CSBase
 from ..._settings import settings
-from ..._utils import _doc_params
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
     from ..._utils.random import _LegacyRandom
 
 # Try to import optional dependencies
 try:
     import cupy as cp
     import cupyx.scipy.sparse as cp_sparse
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -41,6 +40,7 @@ except ImportError:
 try:
     from sklearn.decomposition import TruncatedSVD
     from sklearn.utils.extmath import randomized_svd
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -70,11 +70,7 @@ class SparsePCAConfig:
 
 
 def estimate_memory_usage(
-    n_obs: int,
-    n_vars: int,
-    n_comps: int,
-    density: float = 0.1,
-    dtype=np.float32
+    n_obs: int, n_vars: int, n_comps: int, density: float = 0.1, dtype=np.float32
 ) -> dict[str, float]:
     """Estimate memory usage for different PCA approaches.
 
@@ -99,9 +95,11 @@ def estimate_memory_usage(
 
     # Sparse matrix storage (CSR format)
     nnz = int(n_obs * n_vars * density)
-    sparse_memory = (nnz * bytes_per_element +  # data array
-                    nnz * 4 +  # indices array (int32)
-                    (n_obs + 1) * 4) / (1024**3)  # indptr array (int32)
+    sparse_memory = (
+        nnz * bytes_per_element  # data array
+        + nnz * 4  # indices array (int32)
+        + (n_obs + 1) * 4
+    ) / (1024**3)  # indptr array (int32)
 
     # Dense matrix storage
     dense_memory = (n_obs * n_vars * bytes_per_element) / (1024**3)
@@ -110,8 +108,16 @@ def estimate_memory_usage(
     components_memory = (n_comps * n_vars * bytes_per_element) / (1024**3)
 
     # Working memory for different algorithms
-    standard_pca_memory = dense_memory + components_memory + (n_obs * n_comps * bytes_per_element) / (1024**3)
-    truncated_svd_memory = sparse_memory + components_memory + (n_obs * n_comps * bytes_per_element) / (1024**3)
+    standard_pca_memory = (
+        dense_memory
+        + components_memory
+        + (n_obs * n_comps * bytes_per_element) / (1024**3)
+    )
+    truncated_svd_memory = (
+        sparse_memory
+        + components_memory
+        + (n_obs * n_comps * bytes_per_element) / (1024**3)
+    )
     incremental_pca_memory = sparse_memory + components_memory * 2  # Double buffering
 
     return {
@@ -122,7 +128,7 @@ def estimate_memory_usage(
         "truncated_svd": truncated_svd_memory,
         "incremental_pca": incremental_pca_memory,
         "density": density,
-        "sparsity_ratio": sparse_memory / dense_memory if dense_memory > 0 else 0
+        "sparsity_ratio": sparse_memory / dense_memory if dense_memory > 0 else 0,
     }
 
 
@@ -130,7 +136,7 @@ def choose_optimal_pca_method(
     X: sparse.spmatrix | np.ndarray,
     n_comps: int,
     config: SparsePCAConfig,
-    zero_center: bool = True
+    zero_center: bool = True,
 ) -> tuple[str, dict]:
     """Choose optimal PCA method based on data characteristics and resources.
 
@@ -176,7 +182,7 @@ def choose_optimal_pca_method(
             if config.use_randomized_svd and n_comps < min(n_obs, n_vars) // 2:
                 return "randomized_truncated_svd", {
                     "n_oversamples": config.n_oversamples,
-                    "n_iter": config.n_iter
+                    "n_iter": config.n_iter,
                 }
             else:
                 return "truncated_svd", {}
@@ -188,14 +194,16 @@ def choose_optimal_pca_method(
         if memory_est["incremental_pca"] < available_memory_gb:
             return "sparse_centered_pca", {"chunked": False}
         else:
-            return "sparse_centered_pca", {"chunked": True, "chunk_size": config.chunk_size}
+            return "sparse_centered_pca", {
+                "chunked": True,
+                "chunk_size": config.chunk_size,
+            }
 
+    # Dense matrix - use standard approaches
+    elif memory_est["standard_pca"] < available_memory_gb:
+        return "standard_pca", {}
     else:
-        # Dense matrix - use standard approaches
-        if memory_est["standard_pca"] < available_memory_gb:
-            return "standard_pca", {}
-        else:
-            return "incremental_pca", {"chunk_size": config.chunk_size}
+        return "incremental_pca", {"chunk_size": config.chunk_size}
 
 
 def sparse_centered_pca(
@@ -204,7 +212,7 @@ def sparse_centered_pca(
     chunked: bool = False,
     chunk_size: int | None = None,
     random_state: _LegacyRandom = 0,
-    **kwargs
+    **kwargs,
 ) -> tuple[NDArray, NDArray, NDArray]:
     """Perform PCA on sparse matrix with centering without densification.
 
@@ -236,7 +244,9 @@ def sparse_centered_pca(
 
     if chunk_size is None:
         # Estimate optimal chunk size based on memory
-        chunk_size = min(n_obs, max(1000, int(8e9 / (n_vars * 8))))  # 8GB / (n_vars * 8 bytes)
+        chunk_size = min(
+            n_obs, max(1000, int(8e9 / (n_vars * 8)))
+        )  # 8GB / (n_vars * 8 bytes)
 
     # Compute mean efficiently for sparse matrix
     if chunked:
@@ -254,7 +264,9 @@ def sparse_centered_pca(
     from scipy.linalg import eigh
 
     # Get top eigenvalues and eigenvectors
-    eigenvals, eigenvecs = eigh(cov_matrix, subset_by_index=(n_vars - n_comps, n_vars - 1))
+    eigenvals, eigenvecs = eigh(
+        cov_matrix, subset_by_index=(n_vars - n_comps, n_vars - 1)
+    )
 
     # Sort in descending order
     idx = np.argsort(eigenvals)[::-1]
@@ -300,9 +312,7 @@ def _compute_sparse_covariance(X: sparse.spmatrix, mean: NDArray) -> NDArray:
 
 
 def _compute_sparse_covariance_chunked(
-    X: sparse.spmatrix,
-    mean: NDArray,
-    chunk_size: int
+    X: sparse.spmatrix, mean: NDArray, chunk_size: int
 ) -> NDArray:
     """Compute covariance matrix in chunks for memory efficiency."""
     n_obs, n_vars = X.shape
@@ -317,7 +327,7 @@ def _compute_sparse_covariance_chunked(
         cov += chunk_cov
 
     # Normalize and subtract mean contribution
-    cov /= (n_obs - 1)
+    cov /= n_obs - 1
     mean_outer = np.outer(mean, mean) * n_obs / (n_obs - 1)
     cov -= mean_outer
 
@@ -328,7 +338,7 @@ def gpu_truncated_svd(
     X: sparse.spmatrix | np.ndarray,
     n_comps: int,
     random_state: _LegacyRandom = 0,
-    **kwargs
+    **kwargs,
 ) -> tuple[NDArray, NDArray, NDArray]:
     """GPU-accelerated truncated SVD using CuPy.
 
@@ -369,7 +379,7 @@ def gpu_truncated_svd(
     singular_values = singular_values[idx]
 
     # Compute explained variance
-    explained_variance = (singular_values ** 2) / (X.shape[0] - 1)
+    explained_variance = (singular_values**2) / (X.shape[0] - 1)
     explained_variance_ratio = explained_variance / explained_variance.sum()
 
     return components, explained_variance, explained_variance_ratio
@@ -381,7 +391,7 @@ def randomized_truncated_svd(
     n_oversamples: int = 10,
     n_iter: int = 4,
     random_state: _LegacyRandom = 0,
-    **kwargs
+    **kwargs,
 ) -> tuple[NDArray, NDArray, NDArray]:
     """Randomized SVD for faster approximation of truncated SVD.
 
@@ -413,11 +423,11 @@ def randomized_truncated_svd(
         n_components=n_comps,
         n_oversamples=n_oversamples,
         n_iter=n_iter,
-        random_state=random_state
+        random_state=random_state,
     )
 
     # Compute explained variance
-    explained_variance = (s ** 2) / (X.shape[0] - 1)
+    explained_variance = (s**2) / (X.shape[0] - 1)
     explained_variance_ratio = explained_variance / explained_variance.sum()
 
     return Vt, explained_variance, explained_variance_ratio
@@ -470,12 +480,15 @@ def optimized_pca(
         config = SparsePCAConfig()
 
     # Choose optimal method
-    method_name, method_params = choose_optimal_pca_method(X, n_comps, config, zero_center)
+    method_name, method_params = choose_optimal_pca_method(
+        X, n_comps, config, zero_center
+    )
 
     # Execute the chosen method
     start_time = None
     if settings.verbosity >= 2:
         import time
+
         start_time = time.time()
         print(f"Using {method_name} for PCA computation...")
 
@@ -520,6 +533,7 @@ def optimized_pca(
 
     if start_time is not None:
         import time
+
         info["computation_time"] = time.time() - start_time
         if settings.verbosity >= 2:
             print(f"PCA computation completed in {info['computation_time']:.2f}s")
