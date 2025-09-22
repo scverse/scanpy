@@ -18,6 +18,7 @@ from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
+from ._hvg_optimized import HVGConfig, compute_highly_variable_genes_optimized
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -574,6 +575,8 @@ def highly_variable_genes(  # noqa: PLR0913
     batch_key: str | None = None,
     filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
+    use_hvg_optimization: bool = False,
+    hvg_config: HVGConfig | None = None,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
 
@@ -698,6 +701,44 @@ def highly_variable_genes(  # noqa: PLR0913
             "pass `inplace=False` if you want to return a `pd.DataFrame`."
         )
         raise ValueError(msg)
+
+    # Use optimized HVG computation if requested and applicable
+    if use_hvg_optimization and flavor in {"seurat_v3", "seurat_v3_paper"}:
+        if hvg_config is None:
+            hvg_config = HVGConfig()
+
+        try:
+            if n_top_genes is None:
+                n_top_genes = 2000  # Default for seurat_v3
+
+            df = compute_highly_variable_genes_optimized(
+                adata,
+                layer=layer,
+                n_top_genes=n_top_genes,
+                batch_key=batch_key,
+                span=span,
+                config=hvg_config,
+                flavor=flavor
+            )
+
+            if settings.verbosity >= 1:
+                logg.info("    used optimized HVG computation")
+
+            # Store results and return
+            if inplace:
+                adata.var = adata.var.join(df, how="left")
+                if subset:
+                    adata._inplace_subset_var(df["highly_variable"].values)
+                logg.info("    finished", time=start)
+                return None
+            else:
+                logg.info("    finished", time=start)
+                return df
+
+        except Exception as e:
+            if settings.verbosity >= 1:
+                logg.warning(f"Optimized HVG computation failed ({e}), falling back to standard method")
+            # Continue with standard implementation
 
     if flavor in {"seurat_v3", "seurat_v3_paper"}:
         if n_top_genes is None:
