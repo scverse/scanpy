@@ -30,7 +30,9 @@ except ImportError:
     OPTIMIZATION_AVAILABLE = False
 
 
-def generate_test_matrix(n_obs: int, n_vars: int, density: float = 0.1, seed: int = 42) -> sp.csr_matrix:
+def generate_test_matrix(
+    n_obs: int, n_vars: int, density: float = 0.1, seed: int = 42
+) -> sp.csr_matrix:
     """Generate a realistic sparse test matrix for benchmarking."""
     np.random.seed(seed)
     X = sp.random(n_obs, n_vars, density=density, format="csr", random_state=seed)
@@ -71,10 +73,16 @@ class ConfigurableNormalizationBenchmark:
         modes = ["disabled", "naive", "numba", "auto"]
 
         for config in test_configs:
-            print(f"\nTesting {config['name']} matrix: {config['n_obs']}x{config['n_vars']}")
+            print(
+                f"\nTesting {config['name']} matrix: {config['n_obs']}x{config['n_vars']}"
+            )
 
-            X = generate_test_matrix(config["n_obs"], config["n_vars"], config["density"])
-            print(f"Matrix: nnz={X.nnz}, density={X.nnz / (X.shape[0] * X.shape[1]):.4f}")
+            X = generate_test_matrix(
+                config["n_obs"], config["n_vars"], config["density"]
+            )
+            print(
+                f"Matrix: nnz={X.nnz}, density={X.nnz / (X.shape[0] * X.shape[1]):.4f}"
+            )
 
             baseline_time = None
 
@@ -97,7 +105,9 @@ class ConfigurableNormalizationBenchmark:
                         def baseline_normalization(mat):
                             return np.array(mat.sum(axis=1)).flatten()
 
-                        result, elapsed_time = time_function(baseline_normalization, X_test)
+                        result, elapsed_time = time_function(
+                            baseline_normalization, X_test
+                        )
                         baseline_time = elapsed_time
                         success = True
                         throughput = config["n_obs"] / elapsed_time
@@ -127,7 +137,11 @@ class ConfigurableNormalizationBenchmark:
                 mem_after = get_memory_usage()
 
                 # Calculate speedup relative to baseline
-                speedup = baseline_time / elapsed_time if baseline_time and elapsed_time > 0 else 1.0
+                speedup = (
+                    baseline_time / elapsed_time
+                    if baseline_time and elapsed_time > 0
+                    else 1.0
+                )
 
                 result_entry = {
                     "test_name": f"Mode_{mode}_{config['name']}",
@@ -144,7 +158,9 @@ class ConfigurableNormalizationBenchmark:
 
                 self.results.append(result_entry)
 
-                print(f"    Time: {elapsed_time:.4f}s, Speedup: {speedup:.2f}x, Throughput: {throughput:.0f} cells/s")
+                print(
+                    f"    Time: {elapsed_time:.4f}s, Speedup: {speedup:.2f}x, Throughput: {throughput:.0f} cells/s"
+                )
 
     def benchmark_automatic_selection(self):
         """Benchmark automatic implementation selection."""
@@ -168,9 +184,13 @@ class ConfigurableNormalizationBenchmark:
         set_optimization_mode("auto")
 
         for config in test_matrices:
-            print(f"\nTesting {config['n_obs']}x{config['n_vars']} (expected: {config['expected']})")
+            print(
+                f"\nTesting {config['n_obs']}x{config['n_vars']} (expected: {config['expected']})"
+            )
 
-            X = generate_test_matrix(config["n_obs"], config["n_vars"], config["density"])
+            X = generate_test_matrix(
+                config["n_obs"], config["n_vars"], config["density"]
+            )
 
             # Test auto mode
             X_auto = X.copy()
@@ -250,9 +270,13 @@ class ConfigurableNormalizationBenchmark:
         ]
 
         for config in test_configs:
-            print(f"\nTesting {config['name']} pipeline: {config['n_obs']}x{config['n_vars']}")
+            print(
+                f"\nTesting {config['name']} pipeline: {config['n_obs']}x{config['n_vars']}"
+            )
 
-            X = generate_test_matrix(config["n_obs"], config["n_vars"], config["density"])
+            X = generate_test_matrix(
+                config["n_obs"], config["n_vars"], config["density"]
+            )
 
             # Test different modes
             for mode in ["disabled", "auto"]:
@@ -314,7 +338,9 @@ class ConfigurableNormalizationBenchmark:
 
                 print(f"  Mode {mode}:")
                 print(f"    Time: {time_pipeline:.4f}s")
-                print(f"    Throughput: {config['n_obs'] / time_pipeline:.0f} cells/sec")
+                print(
+                    f"    Throughput: {config['n_obs'] / time_pipeline:.0f} cells/sec"
+                )
                 print(f"    Memory: {mem_after - mem_before:.1f}MB")
                 if not np.isnan(max_deviation):
                     print(f"    Max deviation: {max_deviation:.2e}")
@@ -343,10 +369,14 @@ class ConfigurableNormalizationBenchmark:
 
             # Test optimization functions return None when disabled
             result1 = _normalize_csr_optimized(X, rows=X.shape[0], columns=X.shape[1])
-            assert result1 is None, f"Matrix {i}: _normalize_csr_optimized should return None when disabled"
+            assert result1 is None, (
+                f"Matrix {i}: _normalize_csr_optimized should return None when disabled"
+            )
 
             result2 = apply_row_normalization_optimized(X)
-            assert result2 is None, f"Matrix {i}: apply_row_normalization_optimized should return None when disabled"
+            assert result2 is None, (
+                f"Matrix {i}: apply_row_normalization_optimized should return None when disabled"
+            )
 
             # Verify matrix is unchanged
             np.testing.assert_allclose(X.data, X_original.data, rtol=1e-15)
@@ -384,10 +414,14 @@ class ConfigurableNormalizationBenchmark:
                 mode_data = mode_results[mode_results["mode"] == mode]
                 if not mode_data.empty and "speedup" in mode_data.columns:
                     avg_speedup = mode_data["speedup"].mean()
-                    print(f"  {mode.capitalize()} mode - Average speedup: {avg_speedup:.2f}x")
+                    print(
+                        f"  {mode.capitalize()} mode - Average speedup: {avg_speedup:.2f}x"
+                    )
 
         # Automatic selection efficiency
-        auto_results = df[df.get("test_name", "").str.contains("Auto_selection", na=False)]
+        auto_results = df[
+            df.get("test_name", "").str.contains("Auto_selection", na=False)
+        ]
         if not auto_results.empty and "efficiency" in auto_results.columns:
             avg_efficiency = auto_results["efficiency"].mean()
             print("\nAUTOMATIC SELECTION:")
@@ -395,11 +429,15 @@ class ConfigurableNormalizationBenchmark:
             print("  (100% = perfect selection, >90% = good)")
 
         # Pipeline performance
-        pipeline_results = df[df.get("test_name", "").str.contains("Pipeline", na=False)]
+        pipeline_results = df[
+            df.get("test_name", "").str.contains("Pipeline", na=False)
+        ]
         if not pipeline_results.empty:
             print("\nPIPELINE PERFORMANCE:")
 
-            disabled_pipeline = pipeline_results[pipeline_results.get("mode") == "disabled"]
+            disabled_pipeline = pipeline_results[
+                pipeline_results.get("mode") == "disabled"
+            ]
             auto_pipeline = pipeline_results[pipeline_results.get("mode") == "auto"]
 
             if not disabled_pipeline.empty and not auto_pipeline.empty:
@@ -419,15 +457,23 @@ class ConfigurableNormalizationBenchmark:
         has_regressions = False
 
         if not mode_results.empty and "speedup" in mode_results.columns:
-            beneficial_results = mode_results[mode_results["speedup"] > 1.1]  # >10% improvement
-            regression_results = mode_results[mode_results["speedup"] < 0.9]  # >10% regression
+            beneficial_results = mode_results[
+                mode_results["speedup"] > 1.1
+            ]  # >10% improvement
+            regression_results = mode_results[
+                mode_results["speedup"] < 0.9
+            ]  # >10% regression
 
             has_benefits = len(beneficial_results) > 0
             has_regressions = len(regression_results) > 0
 
         if has_benefits and not has_regressions:
-            print("  ✅ RECOMMENDED: Optimizations provide clear benefits with no regressions")
-            print("  💡 Safe to enable 'auto' mode for users who want better performance")
+            print(
+                "  ✅ RECOMMENDED: Optimizations provide clear benefits with no regressions"
+            )
+            print(
+                "  💡 Safe to enable 'auto' mode for users who want better performance"
+            )
         elif has_benefits and has_regressions:
             print("  ⚠️  MIXED: Optimizations help some cases but may hurt others")
             print("  💡 Keep default 'disabled' but allow opt-in via 'auto' mode")

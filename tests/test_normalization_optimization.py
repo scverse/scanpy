@@ -74,7 +74,9 @@ class TestMatrixSizeDetection:
     def test_large_matrix_detection_by_nnz(self):
         """Test detection based on non-zero elements."""
         # Large matrix by non-zeros
-        X_dense = sp.random(200, 200, density=0.8, format="csr")  # ~32k nnz but 40k elements
+        X_dense = sp.random(
+            200, 200, density=0.8, format="csr"
+        )  # ~32k nnz but 40k elements
         # Ensure we have enough non-zeros
         if X_dense.nnz >= 50_000:
             assert _should_use_numba_optimization(X_dense)
@@ -134,11 +136,15 @@ class TestImplementationConsistency:
 
         # Test naive implementation
         X_naive = X_sparse.copy()
-        counts_naive, _ = _normalize_csr_naive(X_naive, rows=X_sparse.shape[0], columns=X_sparse.shape[1])
+        counts_naive, _ = _normalize_csr_naive(
+            X_naive, rows=X_sparse.shape[0], columns=X_sparse.shape[1]
+        )
 
         # Test Numba implementation
         X_numba = X_sparse.copy()
-        counts_numba, _ = _normalize_csr_numba(X_numba, rows=X_sparse.shape[0], columns=X_sparse.shape[1])
+        counts_numba, _ = _normalize_csr_numba(
+            X_numba, rows=X_sparse.shape[0], columns=X_sparse.shape[1]
+        )
 
         # Results should be identical
         assert_allclose(counts_naive, counts_numba, rtol=1e-10)
@@ -152,7 +158,9 @@ class TestImplementationConsistency:
         X_small.data = np.abs(X_small.data) * 1000
 
         X_test1 = X_small.copy()
-        counts_auto, _ = _normalize_csr_optimized(X_test1, rows=50, columns=30, mode="auto")
+        counts_auto, _ = _normalize_csr_optimized(
+            X_test1, rows=50, columns=30, mode="auto"
+        )
 
         X_test2 = X_small.copy()
         counts_naive, _ = _normalize_csr_naive(X_test2, rows=50, columns=30)
@@ -164,7 +172,9 @@ class TestImplementationConsistency:
         X_large.data = np.abs(X_large.data) * 1000
 
         X_test3 = X_large.copy()
-        counts_auto_large, _ = _normalize_csr_optimized(X_test3, rows=1000, columns=500, mode="auto")
+        counts_auto_large, _ = _normalize_csr_optimized(
+            X_test3, rows=1000, columns=500, mode="auto"
+        )
 
         X_test4 = X_large.copy()
         counts_numba_large, _ = _normalize_csr_numba(X_test4, rows=1000, columns=500)
@@ -204,7 +214,11 @@ class TestOptimizedFunctionality:
         X_sparse = sp.csr_matrix(X_dense)
 
         sums, sq_sums = _csr_sum_and_squared_sum_optimized(
-            X_sparse.data, X_sparse.indices, X_sparse.indptr, X_sparse.shape[0], X_sparse.shape[1]
+            X_sparse.data,
+            X_sparse.indices,
+            X_sparse.indptr,
+            X_sparse.shape[0],
+            X_sparse.shape[1],
         )
 
         expected_sums = np.array(X_dense.sum(axis=0)).flatten()
@@ -222,12 +236,16 @@ class TestOptimizedFunctionality:
 
         scaling_factors = np.random.uniform(0.5, 2.0, X_sparse.shape[0])
 
-        _csr_row_scaling_optimized(X_sparse.data, X_sparse.indptr, scaling_factors, X_sparse.shape[0])
+        _csr_row_scaling_optimized(
+            X_sparse.data, X_sparse.indptr, scaling_factors, X_sparse.shape[0]
+        )
 
         # Compare with reference implementation
         X_reference = X_copy.copy()
         for i in range(X_reference.shape[0]):
-            X_reference.data[X_reference.indptr[i] : X_reference.indptr[i + 1]] *= scaling_factors[i]
+            X_reference.data[X_reference.indptr[i] : X_reference.indptr[i + 1]] *= (
+                scaling_factors[i]
+            )
 
         assert_allclose(X_sparse.data, X_reference.data, rtol=1e-10)
 
@@ -238,7 +256,9 @@ class TestOptimizedFunctionality:
         X_sparse = sp.csr_matrix(X_dense, dtype=np.float64)
 
         target_sum = 10000.0
-        result = apply_row_normalization_optimized(X_sparse, target_sum=target_sum, mode="auto")
+        result = apply_row_normalization_optimized(
+            X_sparse, target_sum=target_sum, mode="auto"
+        )
 
         assert result is not None
         scaling_factors, counts_per_cell = result
@@ -275,7 +295,9 @@ class TestOptimizedFunctionality:
             assert cols_opt[0] > 0, "Gene 0 should be flagged as highly expressed"
 
             total_sums = np.array(X_sparse.sum(axis=1)).flatten()
-            assert np.all(counts_opt <= total_sums), "Counts should be <= total sums when excluding highly expressed"
+            assert np.all(counts_opt <= total_sums), (
+                "Counts should be <= total sums when excluding highly expressed"
+            )
 
 
 class TestEdgeCases:
@@ -315,8 +337,12 @@ class TestEdgeCases:
 
         if result is not None:
             scaling_factors, counts = result
-            assert not np.any(np.isnan(scaling_factors)), "No NaN values in scaling factors"
-            assert not np.any(np.isinf(scaling_factors)), "No inf values in scaling factors"
+            assert not np.any(np.isnan(scaling_factors)), (
+                "No NaN values in scaling factors"
+            )
+            assert not np.any(np.isinf(scaling_factors)), (
+                "No inf values in scaling factors"
+            )
 
 
 class TestPerformanceRegression:
@@ -348,18 +374,23 @@ class TestPerformanceRegression:
         # Time auto selection (should choose naive for small matrix)
         X_auto = X_sparse.copy()
         start_time = time.perf_counter()
-        result_auto = _normalize_csr_optimized(X_auto, rows=100, columns=50, mode="auto")
+        result_auto = _normalize_csr_optimized(
+            X_auto, rows=100, columns=50, mode="auto"
+        )
         auto_time = time.perf_counter() - start_time
 
         # Auto mode should not be significantly slower than direct naive call
         # Allow for some overhead but not more than 10x
-        assert auto_time < naive_time * 10, f"Auto mode too slow: {auto_time:.6f}s vs {naive_time:.6f}s"
+        assert auto_time < naive_time * 10, (
+            f"Auto mode too slow: {auto_time:.6f}s vs {naive_time:.6f}s"
+        )
 
         # Results should be identical
         assert_allclose(result_naive[0], result_auto[0], rtol=1e-10)
 
     @pytest.mark.parametrize(
-        "n_obs,n_vars,density", [(50, 30, 0.3), (200, 100, 0.1), (500, 200, 0.05), (1000, 500, 0.02)]
+        "n_obs,n_vars,density",
+        [(50, 30, 0.3), (200, 100, 0.1), (500, 200, 0.05), (1000, 500, 0.02)],
     )
     def test_scaling_performance(self, n_obs, n_vars, density):
         """Test performance across different matrix sizes."""
@@ -374,13 +405,17 @@ class TestPerformanceRegression:
 
         start_time = time.perf_counter()
 
-        result = _normalize_csr_optimized(X_sparse.copy(), rows=n_obs, columns=n_vars, mode="auto")
+        result = _normalize_csr_optimized(
+            X_sparse.copy(), rows=n_obs, columns=n_vars, mode="auto"
+        )
 
         elapsed_time = time.perf_counter() - start_time
 
         # Should complete within reasonable time (adjust threshold as needed)
         max_time = max(0.1, n_obs * n_vars / 100000)  # Scale with matrix size
-        assert elapsed_time < max_time, f"Optimization too slow for {n_obs}x{n_vars}: {elapsed_time:.3f}s"
+        assert elapsed_time < max_time, (
+            f"Optimization too slow for {n_obs}x{n_vars}: {elapsed_time:.3f}s"
+        )
 
         # Verify correctness
         if result is not None:

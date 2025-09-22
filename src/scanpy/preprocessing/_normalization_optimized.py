@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 ImplementationMode = Literal["disabled", "naive", "numba", "auto"]
 
 # Global configuration for optimization mode
-_OPTIMIZATION_MODE: ImplementationMode = "disabled"  # Safe default - no changes to existing behavior
+_OPTIMIZATION_MODE: ImplementationMode = (
+    "disabled"  # Safe default - no changes to existing behavior
+)
 
 # Performance thresholds for automatic implementation selection
 _NUMBA_THRESHOLD_ELEMENTS = 100_000  # Use Numba for matrices with >100k elements
@@ -51,17 +53,19 @@ def set_optimization_mode(mode: ImplementationMode) -> None:
     --------
     >>> import scanpy as sc
     >>> # Enable automatic optimization (recommended)
-    >>> sc.pp.set_optimization_mode('auto')
+    >>> sc.pp.set_optimization_mode("auto")
     >>>
     >>> # Force Numba optimization for all matrices
-    >>> sc.pp.set_optimization_mode('numba')
+    >>> sc.pp.set_optimization_mode("numba")
     >>>
     >>> # Disable optimizations (safe default)
-    >>> sc.pp.set_optimization_mode('disabled')
+    >>> sc.pp.set_optimization_mode("disabled")
     """
     global _OPTIMIZATION_MODE
     if mode not in ["disabled", "naive", "numba", "auto"]:
-        raise ValueError(f"Invalid optimization mode: {mode}. Must be one of: 'disabled', 'naive', 'numba', 'auto'")
+        raise ValueError(
+            f"Invalid optimization mode: {mode}. Must be one of: 'disabled', 'naive', 'numba', 'auto'"
+        )
     _OPTIMIZATION_MODE = mode
 
 
@@ -102,7 +106,11 @@ def _should_use_numba_optimization(mat: CSRBase) -> bool:
 
 @numba.njit(cache=True, parallel=False)
 def _csr_sum_and_squared_sum_optimized(
-    data: NDArray[np.floating], indices: NDArray[np.integer], indptr: NDArray[np.integer], n_rows: int, n_cols: int
+    data: NDArray[np.floating],
+    indices: NDArray[np.integer],
+    indptr: NDArray[np.integer],
+    n_rows: int,
+    n_cols: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Numba-accelerated sum and squared sum computation for CSR matrix.
 
@@ -146,7 +154,10 @@ def _csr_sum_and_squared_sum_optimized(
 
 @numba.njit(cache=True, parallel=True)
 def _csr_row_scaling_optimized(
-    data: NDArray[np.floating], indptr: NDArray[np.integer], scaling_factors: NDArray[np.floating], n_rows: int
+    data: NDArray[np.floating],
+    indptr: NDArray[np.integer],
+    scaling_factors: NDArray[np.floating],
+    n_rows: int,
 ) -> None:
     """Numba-accelerated in-place row scaling for CSR matrix.
 
@@ -367,7 +378,13 @@ def _normalize_csr_numba(
     if exclude_highly_expressed:
         # Count highly expressed genes using Numba
         counts_per_cols = _count_highly_expressed_optimized(
-            mat.data, mat.indices, mat.indptr, counts_per_cell, max_fraction, rows, columns
+            mat.data,
+            mat.indices,
+            mat.indptr,
+            counts_per_cell,
+            max_fraction,
+            rows,
+            columns,
         )
 
         # Recompute row sums excluding highly expressed genes
@@ -441,14 +458,14 @@ def _normalize_csr_optimized(
     >>> import scipy.sparse as sp
     >>> import numpy as np
     >>> # Use global mode (default: disabled)
-    >>> X = sp.random(1000, 500, density=0.1, format='csr')
+    >>> X = sp.random(1000, 500, density=0.1, format="csr")
     >>> result = _normalize_csr_optimized(X, rows=1000, columns=500)
     >>> if result is None:
     ...     # Use standard scanpy function
     ...     pass
     >>>
     >>> # Override mode for this call
-    >>> result = _normalize_csr_optimized(X, rows=1000, columns=500, mode='auto')
+    >>> result = _normalize_csr_optimized(X, rows=1000, columns=500, mode="auto")
     """
     # Use provided mode or global mode
     current_mode = mode if mode is not None else _OPTIMIZATION_MODE
@@ -551,14 +568,14 @@ def apply_row_normalization_optimized(
     >>> import scipy.sparse as sp
     >>> import numpy as np
     >>> # Default mode (disabled) - returns None
-    >>> X = sp.random(1000, 500, density=0.1, format='csr', dtype=np.float64)
+    >>> X = sp.random(1000, 500, density=0.1, format="csr", dtype=np.float64)
     >>> result = apply_row_normalization_optimized(X)
     >>> if result is None:
     ...     # Use standard scanpy normalization
     ...     pass
     >>>
     >>> # Enable optimization for this call
-    >>> result = apply_row_normalization_optimized(X, mode='auto')
+    >>> result = apply_row_normalization_optimized(X, mode="auto")
     >>> if result is not None:
     ...     scaling_factors, counts = result
     """
@@ -588,7 +605,9 @@ def apply_row_normalization_optimized(
     # Apply scaling in-place using appropriate method
     current_mode = mode if mode is not None else _OPTIMIZATION_MODE
 
-    if current_mode == "numba" or (current_mode == "auto" and _should_use_numba_optimization(mat)):
+    if current_mode == "numba" or (
+        current_mode == "auto" and _should_use_numba_optimization(mat)
+    ):
         # Use Numba-optimized scaling for large matrices or forced Numba mode
         _csr_row_scaling_optimized(mat.data, mat.indptr, scaling_factors, rows)
     else:
