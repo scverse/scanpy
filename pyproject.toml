@@ -125,8 +125,6 @@ doc = [
     "sam-algorithm",
 ]
 dev = [
-    "hatch-vcs",   # runtime dev version generation
-    "pre-commit",  # static checking
     "towncrier",   # release note management
     "scipy-stubs", # static typing and IDE support
 ]
