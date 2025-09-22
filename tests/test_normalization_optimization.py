@@ -24,10 +24,8 @@ class TestOptimizationModeConfiguration:
     """Test configuration and flag management."""
 
     def test_default_mode(self):
-        """Test that default mode is 'disabled' for safety."""
-        # Reset to ensure clean state
-        set_optimization_mode("disabled")
-        assert get_optimization_mode() == "disabled"
+        """Test that default mode is 'auto' for optimal performance."""
+        assert get_optimization_mode() == "auto"
 
     def test_mode_setting(self):
         """Test setting different optimization modes."""

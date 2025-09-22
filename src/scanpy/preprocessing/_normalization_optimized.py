@@ -5,10 +5,10 @@ and numerical stability. It includes multiple implementation strategies that can
 be controlled via configuration flags to ensure compatibility and optimal performance.
 
 Implementation Modes:
-- 'disabled': Use only standard scanpy functions (default, no breaking changes)
+- 'disabled': Use only standard scanpy functions (no optimizations)
 - 'naive': Use simple optimized functions without Numba
 - 'numba': Use Numba-optimized functions (best for large matrices)
-- 'auto': Automatically select best implementation based on matrix size
+- 'auto': Automatically select best implementation based on matrix size (default)
 """
 
 from __future__ import annotations
@@ -28,9 +28,7 @@ if TYPE_CHECKING:
 ImplementationMode = Literal["disabled", "naive", "numba", "auto"]
 
 # Global configuration for optimization mode
-_OPTIMIZATION_MODE: ImplementationMode = (
-    "disabled"  # Safe default - no changes to existing behavior
-)
+_OPTIMIZATION_MODE: ImplementationMode = "auto"  # Intelligent default - automatic selection
 
 # Performance thresholds for automatic implementation selection
 _NUMBA_THRESHOLD_ELEMENTS = 100_000  # Use Numba for matrices with >100k elements
