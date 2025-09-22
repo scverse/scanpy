@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
-from anndata import __version__ as anndata_version
 from packaging.version import Version
 from scipy import sparse
 
-if Version(anndata_version) >= Version("0.10.0"):
+if Version(version("anndata")) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
 
-    if Version(anndata_version) >= Version("0.11.0rc2"):
+    if Version(version("anndata")) >= Version("0.11.0rc2"):
         from anndata.io import sparse_dataset
     else:
         from anndata.experimental import sparse_dataset

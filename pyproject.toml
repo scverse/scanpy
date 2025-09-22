@@ -50,7 +50,7 @@ dependencies = [
     "numpy>=1.25.2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7.5",
-    "pandas >=2.0.3",
+    "pandas >=2.1",
     "scipy>=1.11.1",
     "seaborn>=0.13.2",
     "h5py>=3.8.0",
@@ -119,7 +119,6 @@ doc = [
     "sphinx-copybutton",
     "nbsphinx>=0.9",
     "ipython>=7.20",                    # for nbsphinx code highlighting
-    "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga,dask-ml]",

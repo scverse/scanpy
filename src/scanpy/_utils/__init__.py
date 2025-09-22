@@ -30,14 +30,13 @@ from weakref import WeakSet
 
 import h5py
 import numpy as np
-from anndata import __version__ as anndata_version
 from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
 
-if Version(anndata_version) >= Version("0.10.0"):
+if pkg_version("anndata") >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
@@ -87,17 +86,6 @@ def ensure_igraph() -> None:
         "`pip install igraph`."
     )
     raise ImportError(msg)
-
-
-def check_versions():
-    if Version(anndata_version) < Version("0.6.10"):
-        from .. import __version__
-
-        msg = (
-            f"Scanpy {__version__} needs anndata version >=0.6.10, "
-            f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
-        )
-        raise ImportError(msg)
 
 
 def getdoc(c_or_f: Callable | type) -> str | None:

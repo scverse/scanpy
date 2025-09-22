@@ -26,7 +26,6 @@ from matplotlib.colors import (
 from matplotlib.figure import Figure  # noqa: TC002
 from matplotlib.markers import MarkerStyle
 from numpy.typing import NDArray  # noqa: TC002
-from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import deprecated
@@ -1274,10 +1273,7 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    if Version(pd.__version__) < Version("2.1.0"):
-        color_vector = pd.Categorical(values.map(color_map))
-    else:
-        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
+    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])
