@@ -50,7 +50,7 @@ dependencies = [
     "numpy>=1.25.2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7.5",
-    "pandas >=2.1",
+    "pandas >=2.1.1",
     "scipy>=1.11.1",
     "seaborn>=0.13.2",
     "h5py>=3.8.0",
@@ -180,6 +180,8 @@ filterwarnings = [
     'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # h5py <3.9 uses deprecated np.product
     'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
+    # old anndata versions have this
+    'ignore:is_categorical_dtype is deprecated:FutureWarning',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
