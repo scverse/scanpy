@@ -17,8 +17,8 @@ from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
-from ._simple import filter_genes
 from ._hvg_optimized import HVGConfig, compute_highly_variable_genes_optimized
+from ._simple import filter_genes
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -718,7 +718,7 @@ def highly_variable_genes(  # noqa: PLR0913
                 batch_key=batch_key,
                 span=span,
                 config=hvg_config,
-                flavor=flavor
+                flavor=flavor,
             )
 
             if settings.verbosity >= 1:
@@ -737,7 +737,9 @@ def highly_variable_genes(  # noqa: PLR0913
 
         except Exception as e:
             if settings.verbosity >= 1:
-                logg.warning(f"Optimized HVG computation failed ({e}), falling back to standard method")
+                logg.warning(
+                    f"Optimized HVG computation failed ({e}), falling back to standard method"
+                )
             # Continue with standard implementation
 
     if flavor in {"seurat_v3", "seurat_v3_paper"}:

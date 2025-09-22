@@ -20,7 +20,6 @@ import numpy as np
 
 from .._compat import CSRBase
 
-
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
@@ -28,7 +27,9 @@ if TYPE_CHECKING:
 ImplementationMode = Literal["disabled", "naive", "numba", "auto"]
 
 # Global configuration for optimization mode
-_OPTIMIZATION_MODE: ImplementationMode = "auto"  # Intelligent default - automatic selection
+_OPTIMIZATION_MODE: ImplementationMode = (
+    "auto"  # Intelligent default - automatic selection
+)
 
 # Performance thresholds for automatic implementation selection
 _NUMBA_THRESHOLD_ELEMENTS = 100_000  # Use Numba for matrices with >100k elements

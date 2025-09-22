@@ -14,7 +14,6 @@ import pandas as pd
 import psutil
 import scipy.sparse as sp
 
-
 # Import optimization functions
 try:
     from scanpy.preprocessing._normalization_optimized import (

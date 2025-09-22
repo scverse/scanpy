@@ -23,13 +23,12 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from .._compat import CSBase
 from .._settings import settings
 from .._utils import check_nonnegative_integers
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
     from anndata import AnnData
+    from numpy.typing import NDArray
 
 
 class HVGConfig:
@@ -61,7 +60,7 @@ def _compute_mean_var_numba(
     indices: NDArray[np.int32],
     indptr: NDArray[np.int32],
     n_obs: int,
-    n_vars: int
+    n_vars: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Numba-optimized mean and variance computation for sparse CSR matrix.
 
@@ -138,7 +137,7 @@ def _compute_mean_var_numba(
 
 @numba.njit(cache=True, parallel=False)
 def _compute_mean_var_dense_numba(
-    data: NDArray[np.float64]
+    data: NDArray[np.float64],
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Numba-optimized mean and variance for dense matrices."""
     n_obs, n_vars = data.shape
@@ -165,8 +164,7 @@ def _compute_mean_var_dense_numba(
 
 
 def compute_mean_var_optimized(
-    X: sparse.spmatrix | NDArray,
-    config: HVGConfig | None = None
+    X: sparse.spmatrix | NDArray, config: HVGConfig | None = None
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Optimized mean and variance computation.
 
@@ -195,7 +193,7 @@ def compute_mean_var_optimized(
                 X.indices.astype(np.int32),
                 X.indptr.astype(np.int32),
                 X.shape[0],
-                X.shape[1]
+                X.shape[1],
             )
         else:
             # Fallback to standard sparse computation
@@ -222,9 +220,7 @@ def compute_mean_var_optimized(
 
 @numba.njit(cache=True)
 def _loess_fit_numba(
-    x: NDArray[np.float64],
-    y: NDArray[np.float64],
-    span: float = 0.3
+    x: NDArray[np.float64], y: NDArray[np.float64], span: float = 0.3
 ) -> NDArray[np.float64]:
     """Simplified LOESS fitting using Numba for performance.
 
@@ -264,7 +260,7 @@ def compute_highly_variable_genes_optimized(
     batch_key: str | None = None,
     span: float = 0.3,
     config: HVGConfig | None = None,
-    flavor: Literal["seurat_v3"] = "seurat_v3"
+    flavor: Literal["seurat_v3"] = "seurat_v3",
 ) -> pd.DataFrame:
     """Optimized highly variable genes computation.
 
@@ -310,7 +306,7 @@ def compute_highly_variable_genes_optimized(
         warnings.warn(
             "HVG computation expects count data, but non-integers found.",
             UserWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     df = pd.DataFrame(index=adata.var_names)
@@ -356,12 +352,13 @@ def compute_highly_variable_genes_optimized(
             # Fallback to scipy LOESS (slower but more accurate)
             try:
                 from skmisc.loess import loess
+
                 model = loess(x, y, span=span, degree=2)
                 model.fit()
                 fitted_values = model.outputs.fitted_values
             except ImportError:
                 # Simple smoothing fallback
-                fitted_values = np.convolve(y, np.ones(5)/5, mode='same')
+                fitted_values = np.convolve(y, np.ones(5) / 5, mode="same")
 
         # Compute normalized variance
         estimat_var = np.zeros(X_batch.shape[1], dtype=np.float64)
@@ -398,35 +395,54 @@ def compute_highly_variable_genes_optimized(
     norm_gene_vars = np.concatenate(norm_gene_vars, axis=0)
 
     # Compute final statistics
-    df['means'] = np.mean([compute_mean_var_optimized(X[batch_info == b], config)[0]
-                          for b in unique_batches], axis=0)
-    df['variances'] = np.mean([compute_mean_var_optimized(X[batch_info == b], config)[1]
-                              for b in unique_batches], axis=0)
+    df["means"] = np.mean(
+        [
+            compute_mean_var_optimized(X[batch_info == b], config)[0]
+            for b in unique_batches
+        ],
+        axis=0,
+    )
+    df["variances"] = np.mean(
+        [
+            compute_mean_var_optimized(X[batch_info == b], config)[1]
+            for b in unique_batches
+        ],
+        axis=0,
+    )
 
     # Rank genes by normalized variance
     if len(unique_batches) == 1:
-        df['variances_norm'] = norm_gene_vars[0]
+        df["variances_norm"] = norm_gene_vars[0]
         ranks = np.argsort(-norm_gene_vars[0])
     else:
         # Multi-batch processing
-        df['variances_norm'] = np.mean(norm_gene_vars, axis=0)
-        median_ranks = np.median([np.argsort(-batch_vars) for batch_vars in norm_gene_vars], axis=0)
+        df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
+        median_ranks = np.median(
+            [np.argsort(-batch_vars) for batch_vars in norm_gene_vars], axis=0
+        )
         ranks = np.argsort(median_ranks)
 
     # Select top genes
     top_gene_indices = ranks[:n_top_genes]
-    df['highly_variable'] = False
-    df.iloc[top_gene_indices, df.columns.get_loc('highly_variable')] = True
+    df["highly_variable"] = False
+    df.iloc[top_gene_indices, df.columns.get_loc("highly_variable")] = True
 
     # Add ranking information
-    df['highly_variable_rank'] = np.full(len(df), np.nan)
-    df.iloc[top_gene_indices, df.columns.get_loc('highly_variable_rank')] = np.arange(n_top_genes)
+    df["highly_variable_rank"] = np.full(len(df), np.nan)
+    df.iloc[top_gene_indices, df.columns.get_loc("highly_variable_rank")] = np.arange(
+        n_top_genes
+    )
 
     if len(unique_batches) > 1:
         # Add batch statistics
-        df['highly_variable_nbatches'] = np.sum(
-            [ranks_batch[:n_top_genes] for ranks_batch in
-             [np.argsort(-batch_vars) for batch_vars in norm_gene_vars]], axis=0
+        df["highly_variable_nbatches"] = np.sum(
+            [
+                ranks_batch[:n_top_genes]
+                for ranks_batch in [
+                    np.argsort(-batch_vars) for batch_vars in norm_gene_vars
+                ]
+            ],
+            axis=0,
         )
 
     return df
@@ -437,7 +453,7 @@ def _compute_normalized_variance_sparse(
     mean: NDArray[np.float64],
     reg_std: NDArray[np.float64],
     clip_val: NDArray[np.float64],
-    config: HVGConfig
+    config: HVGConfig,
 ) -> NDArray[np.float64]:
     """Compute normalized variance for sparse matrix with clipping."""
     n_obs = X_batch.shape[0]
@@ -452,7 +468,7 @@ def _compute_normalized_variance_sparse(
             reg_std,
             clip_val,
             n_obs,
-            n_vars
+            n_vars,
         )
     else:
         # Fallback implementation
@@ -462,13 +478,11 @@ def _compute_normalized_variance_sparse(
         for j in range(n_vars):
             col = X_batch[:, j].toarray().flatten()
             col_clipped = np.minimum(col, clip_val[j])
-            squared_sum[j] = np.sum(col_clipped ** 2)
+            squared_sum[j] = np.sum(col_clipped**2)
             sum_vals[j] = np.sum(col_clipped)
 
         norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
-            (n_obs * np.square(mean))
-            + squared_sum
-            - 2 * sum_vals * mean
+            (n_obs * np.square(mean)) + squared_sum - 2 * sum_vals * mean
         )
 
         return norm_gene_var
@@ -483,7 +497,7 @@ def _compute_normalized_variance_sparse_numba(
     reg_std: NDArray[np.float64],
     clip_val: NDArray[np.float64],
     n_obs: int,
-    n_vars: int
+    n_vars: int,
 ) -> NDArray[np.float64]:
     """Numba-optimized normalized variance computation for sparse matrix."""
     squared_sum = np.zeros(n_vars, dtype=np.float64)
@@ -509,7 +523,9 @@ def _compute_normalized_variance_sparse_numba(
     norm_gene_var = np.zeros(n_vars, dtype=np.float64)
     for var_idx in range(n_vars):
         if reg_std[var_idx] > 0:
-            norm_gene_var[var_idx] = (1.0 / ((n_obs - 1) * reg_std[var_idx] * reg_std[var_idx])) * (
+            norm_gene_var[var_idx] = (
+                1.0 / ((n_obs - 1) * reg_std[var_idx] * reg_std[var_idx])
+            ) * (
                 (n_obs * mean[var_idx] * mean[var_idx])
                 + squared_sum[var_idx]
                 - 2.0 * sum_vals[var_idx] * mean[var_idx]
@@ -523,7 +539,7 @@ def _compute_normalized_variance_dense(
     mean: NDArray[np.float64],
     reg_std: NDArray[np.float64],
     clip_val: NDArray[np.float64],
-    config: HVGConfig
+    config: HVGConfig,
 ) -> NDArray[np.float64]:
     """Compute normalized variance for dense matrix with clipping."""
     n_obs = X_batch.shape[0]
@@ -532,24 +548,19 @@ def _compute_normalized_variance_dense(
     X_clipped = np.minimum(X_batch, clip_val[np.newaxis, :])
 
     # Compute sums
-    squared_sum = np.sum(X_clipped ** 2, axis=0)
+    squared_sum = np.sum(X_clipped**2, axis=0)
     sum_vals = np.sum(X_clipped, axis=0)
 
     # Normalized variance
     norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
-        (n_obs * np.square(mean))
-        + squared_sum
-        - 2 * sum_vals * mean
+        (n_obs * np.square(mean)) + squared_sum - 2 * sum_vals * mean
     )
 
     return norm_gene_var
 
 
 def estimate_hvg_memory_usage(
-    n_obs: int,
-    n_vars: int,
-    n_batches: int = 1,
-    density: float = 0.1
+    n_obs: int, n_vars: int, n_batches: int = 1, density: float = 0.1
 ) -> dict[str, float]:
     """Estimate memory usage for HVG computation.
 
@@ -574,9 +585,11 @@ def estimate_hvg_memory_usage(
     if density < 0.5:
         # Sparse storage
         nnz = int(n_obs * n_vars * density)
-        data_memory = (nnz * bytes_per_element +  # data
-                      nnz * 4 +  # indices (int32)
-                      (n_obs + 1) * 4) / (1024**3)  # indptr (int32)
+        data_memory = (
+            nnz * bytes_per_element  # data
+            + nnz * 4  # indices (int32)
+            + (n_obs + 1) * 4
+        ) / (1024**3)  # indptr (int32)
     else:
         # Dense storage
         data_memory = (n_obs * n_vars * bytes_per_element) / (1024**3)
@@ -595,5 +608,5 @@ def estimate_hvg_memory_usage(
         "stats_memory": stats_memory,
         "batch_memory": batch_memory,
         "total_memory": total_memory,
-        "density": density
+        "density": density,
     }
