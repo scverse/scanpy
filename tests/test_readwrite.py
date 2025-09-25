@@ -4,7 +4,6 @@ from contextlib import nullcontext
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
-import anndata
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -12,6 +11,7 @@ from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from scanpy.readwrite import _slugify
 from testing.scanpy._pytest.marks import needs
 
@@ -99,7 +99,7 @@ def test_write(
 
 
 @pytest.mark.skipif(
-    Version(anndata.__version__) < Version("0.11.0rc2"),
+    pkg_version("anndata") < Version("0.11.0rc2"),
     reason="Older AnnData has no convert_strings_to_categoricals",
 )
 @pytest.mark.parametrize("fmt", ["h5ad", pytest.param("zarr", marks=needs.zarr)])

@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import old_positionals, pkg_version
 from ..._utils import renamed_arg
 from ..._utils._doctests import doctest_needs
 
@@ -231,7 +232,7 @@ def phenograph(  # noqa: PLR0913
     try:
         import phenograph
 
-        assert phenograph.__version__ >= "1.5.3"
+        assert pkg_version("phenograph") >= Version("1.5.3")
     except (ImportError, AssertionError, AttributeError) as e:
         msg = (
             "please install the latest release of phenograph:\n\t"

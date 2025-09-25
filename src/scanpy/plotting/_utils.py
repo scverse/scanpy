@@ -4,7 +4,6 @@ import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Literal, TypedDict, overload
 
-import matplotlib as mpl
 import numpy as np
 from cycler import Cycler, cycler
 from matplotlib import axes, colormaps, gridspec, rcParams, ticker
@@ -1031,13 +1030,6 @@ def check_projection(projection):
     if projection not in {"2d", "3d"}:
         msg = f"Projection must be '2d' or '3d', was '{projection}'."
         raise ValueError(msg)
-    if projection == "3d":
-        from packaging.version import parse
-
-        mpl_version = parse(mpl.__version__)
-        if mpl_version < parse("3.3.3"):
-            msg = f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
-            raise ImportError(msg)
 
 
 def circles(

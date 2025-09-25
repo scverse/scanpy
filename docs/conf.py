@@ -6,6 +6,7 @@ import os
 import sys
 from datetime import datetime
 from functools import partial
+from importlib.metadata import version as get_version
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -19,7 +20,6 @@ matplotlib.use("agg")
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
-import scanpy
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -39,7 +39,7 @@ project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
 copyright = f"{datetime.now():%Y}, scverse"
-version = scanpy.__version__.replace(".dirty", "")
+version = get_version("scanpy").replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
 if Version(version).is_devrelease:

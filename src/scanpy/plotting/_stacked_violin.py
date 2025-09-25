@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from matplotlib import colormaps
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import old_positionals
@@ -496,13 +495,8 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
-        if Version(pd.__version__) >= Version("2.1"):
-            stack_kwargs = {"future_stack": True}
-        else:
-            stack_kwargs = {"dropna": False}
-
         df = (
-            pd.DataFrame(_matrix.stack(**stack_kwargs))
+            pd.DataFrame(_matrix.stack(future_stack=True))
             .reset_index()
             .rename(
                 columns={

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._compat import pkg_version
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -137,15 +138,15 @@ def magic(  # noqa: PLR0913
 
     """
     try:
-        from magic import MAGIC, __version__
+        from magic import MAGIC
     except ImportError as e:
         msg = "Please install magic package via `pip install magic-impute`"
         raise ImportError(msg) from e
     else:
-        if Version(__version__) < Version(MIN_VERSION):
+        if pkg_version("magic-impute") < Version(MIN_VERSION):
             msg = (
                 "scanpy requires magic-impute >= "
-                f"v{MIN_VERSION} (detected: v{__version__}). "
+                f"v{MIN_VERSION} (detected: v{pkg_version('magic-impute')}). "
                 "Please update magic package via `pip install -U magic-impute`"
             )
             raise ImportError(msg)

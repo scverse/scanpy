@@ -11,7 +11,7 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated, old_positionals, pkg_version
 from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -176,7 +176,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if Version(louvain.__version__) < Version("0.7.0"):
+            if pkg_version("louvain") < Version("0.7.0"):
                 louvain.set_rng_seed(random_state)
             else:
                 partition_kwargs["seed"] = random_state

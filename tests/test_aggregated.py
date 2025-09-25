@@ -6,7 +6,6 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -157,13 +156,6 @@ def test_aggregate_vs_pandas(
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
-
-    if Version(pd.__version__) < Version("2"):
-        # Order of results returned by groupby changed in pandas 2
-        assert expected.shape == result_df.shape
-        assert expected.index.isin(result_df.index).all()
-
-        expected = expected.loc[result_df.index]
 
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
