@@ -6,22 +6,25 @@ This script runs all optimization benchmarks, aggregates results from CSV files,
 and creates comparison plots for different dataset sizes and optimization types.
 """
 
-import os
-import sys
+from __future__ import annotations
+
 import subprocess
+import sys
 import time
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional
 import warnings
-warnings.filterwarnings('ignore')
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+warnings.filterwarnings("ignore")
 
 # Set up plotting style
-plt.style.use('default')
+plt.style.use("default")
 sns.set_palette("husl")
+
 
 class BenchmarkRunner:
     """Runs and visualizes optimization benchmarks."""
@@ -36,23 +39,23 @@ class BenchmarkRunner:
             "hvg": {
                 "script": "hvg_benchmark.py",
                 "description": "HVG Optimization Benchmark",
-                "csv_pattern": "*hvg*.csv"
+                "csv_pattern": "*hvg*.csv",
             },
             "normalization": {
                 "script": "benchmarks/normalization_benchmark.py",
                 "description": "Normalization Optimization Benchmark",
-                "csv_pattern": "*normalization*.csv"
+                "csv_pattern": "*normalization*.csv",
             },
             "correctness": {
                 "script": "test_optimizations_correctness.py",
                 "description": "Correctness Verification",
-                "csv_pattern": None  # No CSV output
+                "csv_pattern": None,  # No CSV output
             },
             "performance": {
                 "script": "simple_hvg_performance_test.py",
                 "description": "HVG Performance Test",
-                "csv_pattern": None  # No CSV output
-            }
+                "csv_pattern": None,  # No CSV output
+            },
         }
 
     def run_benchmark(self, benchmark_name: str, timeout: int = 600) -> bool:
@@ -75,10 +78,11 @@ class BenchmarkRunner:
             # Run benchmark with timeout
             result = subprocess.run(
                 [sys.executable, str(script_path)],
+                check=False,
                 cwd=str(self.base_dir),
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
             )
 
             if result.returncode == 0:
@@ -87,7 +91,9 @@ class BenchmarkRunner:
                     print(f"   Output preview: {result.stdout[:200]}...")
                 return True
             else:
-                print(f"❌ {benchmark_name} failed with return code {result.returncode}")
+                print(
+                    f"❌ {benchmark_name} failed with return code {result.returncode}"
+                )
                 if result.stderr:
                     print(f"   Error: {result.stderr[:200]}...")
                 return False
@@ -99,7 +105,7 @@ class BenchmarkRunner:
             print(f"❌ {benchmark_name} failed with exception: {e}")
             return False
 
-    def run_all_benchmarks(self, skip_long: bool = False) -> Dict[str, bool]:
+    def run_all_benchmarks(self, skip_long: bool = False) -> dict[str, bool]:
         """Run all available benchmarks."""
         print("🔬 Running All Optimization Benchmarks")
         print("=" * 60)
@@ -126,7 +132,7 @@ class BenchmarkRunner:
 
         return results
 
-    def find_csv_files(self) -> Dict[str, List[Path]]:
+    def find_csv_files(self) -> dict[str, list[Path]]:
         """Find all benchmark CSV files."""
         csv_files = {}
 
@@ -156,7 +162,7 @@ class BenchmarkRunner:
 
         return csv_files
 
-    def load_and_aggregate_csv_data(self) -> Dict[str, pd.DataFrame]:
+    def load_and_aggregate_csv_data(self) -> dict[str, pd.DataFrame]:
         """Load and aggregate data from CSV files."""
         csv_files = self.find_csv_files()
         aggregated_data = {}
@@ -172,7 +178,7 @@ class BenchmarkRunner:
                 print(f"   📄 {file_path.name}")
                 try:
                     df = pd.read_csv(file_path)
-                    df['source_file'] = file_path.name
+                    df["source_file"] = file_path.name
                     category_data.append(df)
                     print(f"      ✅ Loaded {len(df)} rows, {len(df.columns)} columns")
                 except Exception as e:
@@ -186,7 +192,7 @@ class BenchmarkRunner:
 
         return aggregated_data
 
-    def create_hvg_performance_plots(self, hvg_data: pd.DataFrame) -> List[str]:
+    def create_hvg_performance_plots(self, hvg_data: pd.DataFrame) -> list[str]:
         """Create HVG performance comparison plots."""
         plots_created = []
 
@@ -201,89 +207,135 @@ class BenchmarkRunner:
 
         # Create figure with subplots
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('HVG Optimization Performance Analysis', fontsize=16, fontweight='bold')
+        fig.suptitle(
+            "HVG Optimization Performance Analysis", fontsize=16, fontweight="bold"
+        )
 
         # Plot 1: Speedup vs Dataset Size (if we have the data)
-        if 'dataset_size' in hvg_data.columns and 'speedup' in hvg_data.columns:
+        if "dataset_size" in hvg_data.columns and "speedup" in hvg_data.columns:
             ax1 = axes[0, 0]
-            scatter = ax1.scatter(hvg_data['dataset_size'], hvg_data['speedup'],
-                                alpha=0.7, s=60, c=hvg_data.index, cmap='viridis')
-            ax1.set_xlabel('Dataset Size (cells × genes)')
-            ax1.set_ylabel('Speedup (x)')
-            ax1.set_title('Speedup vs Dataset Size')
+            scatter = ax1.scatter(
+                hvg_data["dataset_size"],
+                hvg_data["speedup"],
+                alpha=0.7,
+                s=60,
+                c=hvg_data.index,
+                cmap="viridis",
+            )
+            ax1.set_xlabel("Dataset Size (cells × genes)")
+            ax1.set_ylabel("Speedup (x)")
+            ax1.set_title("Speedup vs Dataset Size")
             ax1.grid(True, alpha=0.3)
-            ax1.set_xscale('log')
-            ax1.set_yscale('log')
+            ax1.set_xscale("log")
+            ax1.set_yscale("log")
         else:
-            axes[0, 0].text(0.5, 0.5, 'Dataset size vs speedup\ndata not available',
-                           ha='center', va='center', transform=axes[0, 0].transAxes)
-            axes[0, 0].set_title('Speedup vs Dataset Size')
+            axes[0, 0].text(
+                0.5,
+                0.5,
+                "Dataset size vs speedup\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[0, 0].transAxes,
+            )
+            axes[0, 0].set_title("Speedup vs Dataset Size")
 
         # Plot 2: Execution Time Comparison (if we have timing data)
-        timing_cols = [col for col in hvg_data.columns if 'time' in col.lower()]
+        timing_cols = [col for col in hvg_data.columns if "time" in col.lower()]
         if len(timing_cols) >= 2:
             ax2 = axes[0, 1]
             # Create box plot of timing data
-            timing_data = hvg_data[timing_cols].melt(var_name='Method', value_name='Time (s)')
-            sns.boxplot(data=timing_data, x='Method', y='Time (s)', ax=ax2)
-            ax2.set_title('Execution Time Distribution')
-            ax2.tick_params(axis='x', rotation=45)
-            ax2.set_yscale('log')
+            timing_data = hvg_data[timing_cols].melt(
+                var_name="Method", value_name="Time (s)"
+            )
+            sns.boxplot(data=timing_data, x="Method", y="Time (s)", ax=ax2)
+            ax2.set_title("Execution Time Distribution")
+            ax2.tick_params(axis="x", rotation=45)
+            ax2.set_yscale("log")
         else:
-            axes[0, 1].text(0.5, 0.5, 'Timing comparison\ndata not available',
-                           ha='center', va='center', transform=axes[0, 1].transAxes)
-            axes[0, 1].set_title('Execution Time Comparison')
+            axes[0, 1].text(
+                0.5,
+                0.5,
+                "Timing comparison\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[0, 1].transAxes,
+            )
+            axes[0, 1].set_title("Execution Time Comparison")
 
         # Plot 3: Density vs Performance (if we have density data)
-        if 'density' in hvg_data.columns and 'speedup' in hvg_data.columns:
+        if "density" in hvg_data.columns and "speedup" in hvg_data.columns:
             ax3 = axes[1, 0]
-            scatter = ax3.scatter(hvg_data['density'], hvg_data['speedup'],
-                                alpha=0.7, s=60, c=hvg_data.index, cmap='plasma')
-            ax3.set_xlabel('Matrix Density')
-            ax3.set_ylabel('Speedup (x)')
-            ax3.set_title('Speedup vs Matrix Density')
+            scatter = ax3.scatter(
+                hvg_data["density"],
+                hvg_data["speedup"],
+                alpha=0.7,
+                s=60,
+                c=hvg_data.index,
+                cmap="plasma",
+            )
+            ax3.set_xlabel("Matrix Density")
+            ax3.set_ylabel("Speedup (x)")
+            ax3.set_title("Speedup vs Matrix Density")
             ax3.grid(True, alpha=0.3)
-            ax3.set_yscale('log')
+            ax3.set_yscale("log")
         else:
-            axes[1, 0].text(0.5, 0.5, 'Density vs speedup\ndata not available',
-                           ha='center', va='center', transform=axes[1, 0].transAxes)
-            axes[1, 0].set_title('Speedup vs Matrix Density')
+            axes[1, 0].text(
+                0.5,
+                0.5,
+                "Density vs speedup\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[1, 0].transAxes,
+            )
+            axes[1, 0].set_title("Speedup vs Matrix Density")
 
         # Plot 4: Summary Statistics
         ax4 = axes[1, 1]
-        if 'speedup' in hvg_data.columns:
+        if "speedup" in hvg_data.columns:
             # Create histogram of speedups
-            ax4.hist(hvg_data['speedup'], bins=20, alpha=0.7, edgecolor='black')
-            ax4.set_xlabel('Speedup (x)')
-            ax4.set_ylabel('Frequency')
-            ax4.set_title('Speedup Distribution')
-            ax4.axvline(hvg_data['speedup'].median(), color='red', linestyle='--',
-                       label=f'Median: {hvg_data["speedup"].median():.1f}x')
+            ax4.hist(hvg_data["speedup"], bins=20, alpha=0.7, edgecolor="black")
+            ax4.set_xlabel("Speedup (x)")
+            ax4.set_ylabel("Frequency")
+            ax4.set_title("Speedup Distribution")
+            ax4.axvline(
+                hvg_data["speedup"].median(),
+                color="red",
+                linestyle="--",
+                label=f"Median: {hvg_data['speedup'].median():.1f}x",
+            )
             ax4.legend()
         else:
             # Show summary statistics as text
-            summary_text = f"HVG Data Summary:\n"
+            summary_text = "HVG Data Summary:\n"
             summary_text += f"Total records: {len(hvg_data)}\n"
             summary_text += f"Columns: {len(hvg_data.columns)}\n"
-            if 'speedup' in hvg_data.columns:
+            if "speedup" in hvg_data.columns:
                 summary_text += f"Avg speedup: {hvg_data['speedup'].mean():.1f}x\n"
                 summary_text += f"Max speedup: {hvg_data['speedup'].max():.1f}x"
-            ax4.text(0.1, 0.5, summary_text, transform=ax4.transAxes, fontsize=12,
-                    verticalalignment='center')
-            ax4.set_title('Data Summary')
+            ax4.text(
+                0.1,
+                0.5,
+                summary_text,
+                transform=ax4.transAxes,
+                fontsize=12,
+                verticalalignment="center",
+            )
+            ax4.set_title("Data Summary")
 
         plt.tight_layout()
 
         # Save plot
         plot_path = self.results_dir / "hvg_performance_analysis.png"
-        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.savefig(plot_path, dpi=300, bbox_inches="tight")
         plots_created.append(str(plot_path))
         plt.close()
 
         print(f"   ✅ Saved: {plot_path}")
         return plots_created
 
-    def create_normalization_performance_plots(self, norm_data: pd.DataFrame) -> List[str]:
+    def create_normalization_performance_plots(
+        self, norm_data: pd.DataFrame
+    ) -> list[str]:
         """Create normalization performance comparison plots."""
         plots_created = []
 
@@ -295,101 +347,131 @@ class BenchmarkRunner:
 
         # Create figure
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('Normalization Optimization Performance Analysis', fontsize=16, fontweight='bold')
+        fig.suptitle(
+            "Normalization Optimization Performance Analysis",
+            fontsize=16,
+            fontweight="bold",
+        )
 
         print(f"   Available columns: {list(norm_data.columns)}")
 
         # Plot 1: Mode Comparison (if we have mode data)
-        if 'mode' in norm_data.columns and 'speedup' in norm_data.columns:
+        if "mode" in norm_data.columns and "speedup" in norm_data.columns:
             ax1 = axes[0, 0]
-            mode_speedups = norm_data.groupby('mode')['speedup'].mean().sort_values(ascending=True)
+            mode_speedups = (
+                norm_data.groupby("mode")["speedup"].mean().sort_values(ascending=True)
+            )
             bars = ax1.barh(range(len(mode_speedups)), mode_speedups.values)
             ax1.set_yticks(range(len(mode_speedups)))
             ax1.set_yticklabels(mode_speedups.index)
-            ax1.set_xlabel('Average Speedup (x)')
-            ax1.set_title('Performance by Optimization Mode')
+            ax1.set_xlabel("Average Speedup (x)")
+            ax1.set_title("Performance by Optimization Mode")
             ax1.grid(True, alpha=0.3)
 
             # Add value labels on bars
             for i, v in enumerate(mode_speedups.values):
-                ax1.text(v + 0.1, i, f'{v:.1f}x', va='center')
+                ax1.text(v + 0.1, i, f"{v:.1f}x", va="center")
         else:
-            axes[0, 0].text(0.5, 0.5, 'Mode comparison\ndata not available',
-                           ha='center', va='center', transform=axes[0, 0].transAxes)
-            axes[0, 0].set_title('Performance by Mode')
+            axes[0, 0].text(
+                0.5,
+                0.5,
+                "Mode comparison\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[0, 0].transAxes,
+            )
+            axes[0, 0].set_title("Performance by Mode")
 
         # Plot 2: Throughput vs Matrix Size
-        if 'matrix_size' in norm_data.columns and 'throughput' in norm_data.columns:
+        if "matrix_size" in norm_data.columns and "throughput" in norm_data.columns:
             ax2 = axes[0, 1]
-            ax2.scatter(norm_data['matrix_size'], norm_data['throughput'], alpha=0.7)
-            ax2.set_xlabel('Matrix Size')
-            ax2.set_ylabel('Throughput (cells/sec)')
-            ax2.set_title('Throughput vs Matrix Size')
-            ax2.set_xscale('log')
-            ax2.set_yscale('log')
+            ax2.scatter(norm_data["matrix_size"], norm_data["throughput"], alpha=0.7)
+            ax2.set_xlabel("Matrix Size")
+            ax2.set_ylabel("Throughput (cells/sec)")
+            ax2.set_title("Throughput vs Matrix Size")
+            ax2.set_xscale("log")
+            ax2.set_yscale("log")
             ax2.grid(True, alpha=0.3)
         else:
-            axes[0, 1].text(0.5, 0.5, 'Throughput vs size\ndata not available',
-                           ha='center', va='center', transform=axes[0, 1].transAxes)
-            axes[0, 1].set_title('Throughput vs Matrix Size')
+            axes[0, 1].text(
+                0.5,
+                0.5,
+                "Throughput vs size\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[0, 1].transAxes,
+            )
+            axes[0, 1].set_title("Throughput vs Matrix Size")
 
         # Plot 3: Time Distribution by Mode
-        time_cols = [col for col in norm_data.columns if 'time' in col.lower()]
-        if time_cols and 'mode' in norm_data.columns:
+        time_cols = [col for col in norm_data.columns if "time" in col.lower()]
+        if time_cols and "mode" in norm_data.columns:
             ax3 = axes[1, 0]
             # Melt the timing data for plotting
-            time_data = norm_data[['mode'] + time_cols].melt(id_vars=['mode'],
-                                                           var_name='Measurement',
-                                                           value_name='Time (s)')
-            sns.boxplot(data=time_data, x='mode', y='Time (s)', ax=ax3)
-            ax3.set_title('Execution Time by Mode')
-            ax3.tick_params(axis='x', rotation=45)
-            ax3.set_yscale('log')
+            time_data = norm_data[["mode"] + time_cols].melt(
+                id_vars=["mode"], var_name="Measurement", value_name="Time (s)"
+            )
+            sns.boxplot(data=time_data, x="mode", y="Time (s)", ax=ax3)
+            ax3.set_title("Execution Time by Mode")
+            ax3.tick_params(axis="x", rotation=45)
+            ax3.set_yscale("log")
         else:
-            axes[1, 0].text(0.5, 0.5, 'Time distribution\ndata not available',
-                           ha='center', va='center', transform=axes[1, 0].transAxes)
-            axes[1, 0].set_title('Time Distribution')
+            axes[1, 0].text(
+                0.5,
+                0.5,
+                "Time distribution\ndata not available",
+                ha="center",
+                va="center",
+                transform=axes[1, 0].transAxes,
+            )
+            axes[1, 0].set_title("Time Distribution")
 
         # Plot 4: Performance Summary
         ax4 = axes[1, 1]
         summary_stats = []
 
-        if 'speedup' in norm_data.columns:
+        if "speedup" in norm_data.columns:
             summary_stats.extend([
                 f"Average speedup: {norm_data['speedup'].mean():.1f}x",
                 f"Median speedup: {norm_data['speedup'].median():.1f}x",
-                f"Max speedup: {norm_data['speedup'].max():.1f}x"
+                f"Max speedup: {norm_data['speedup'].max():.1f}x",
             ])
 
-        if 'throughput' in norm_data.columns:
+        if "throughput" in norm_data.columns:
             summary_stats.extend([
                 f"Avg throughput: {norm_data['throughput'].mean():.0f} cells/s",
-                f"Max throughput: {norm_data['throughput'].max():.0f} cells/s"
+                f"Max throughput: {norm_data['throughput'].max():.0f} cells/s",
             ])
 
         summary_stats.extend([
             f"Total records: {len(norm_data)}",
-            f"Data columns: {len(norm_data.columns)}"
+            f"Data columns: {len(norm_data.columns)}",
         ])
 
         summary_text = "\n".join(summary_stats)
-        ax4.text(0.1, 0.5, summary_text, transform=ax4.transAxes, fontsize=12,
-                verticalalignment='center')
-        ax4.set_title('Performance Summary')
-        ax4.axis('off')
+        ax4.text(
+            0.1,
+            0.5,
+            summary_text,
+            transform=ax4.transAxes,
+            fontsize=12,
+            verticalalignment="center",
+        )
+        ax4.set_title("Performance Summary")
+        ax4.axis("off")
 
         plt.tight_layout()
 
         # Save plot
         plot_path = self.results_dir / "normalization_performance_analysis.png"
-        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.savefig(plot_path, dpi=300, bbox_inches="tight")
         plots_created.append(str(plot_path))
         plt.close()
 
         print(f"   ✅ Saved: {plot_path}")
         return plots_created
 
-    def create_comparison_plots(self, all_data: Dict[str, pd.DataFrame]) -> List[str]:
+    def create_comparison_plots(self, all_data: dict[str, pd.DataFrame]) -> list[str]:
         """Create overall comparison plots across all optimizations."""
         plots_created = []
 
@@ -397,13 +479,15 @@ class BenchmarkRunner:
 
         # Create combined performance comparison
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-        fig.suptitle('Scanpy Optimization Performance Overview', fontsize=16, fontweight='bold')
+        fig.suptitle(
+            "Scanpy Optimization Performance Overview", fontsize=16, fontweight="bold"
+        )
 
         # Collect speedup data from all sources
         all_speedups = {}
         for category, data in all_data.items():
-            if 'speedup' in data.columns:
-                all_speedups[category] = data['speedup'].dropna()
+            if "speedup" in data.columns:
+                all_speedups[category] = data["speedup"].dropna()
 
         # Plot 1: Speedup Comparison
         if all_speedups:
@@ -416,50 +500,67 @@ class BenchmarkRunner:
                 labels.append(f"{category.upper()}\n(n={len(speedups)})")
 
             bp = ax1.boxplot(speedup_data, labels=labels, patch_artist=True)
-            ax1.set_ylabel('Speedup (x)')
-            ax1.set_title('Speedup Distribution by Optimization Type')
-            ax1.set_yscale('log')
+            ax1.set_ylabel("Speedup (x)")
+            ax1.set_title("Speedup Distribution by Optimization Type")
+            ax1.set_yscale("log")
             ax1.grid(True, alpha=0.3)
 
             # Color the boxes
-            colors = ['lightblue', 'lightgreen', 'lightcoral', 'lightyellow']
-            for patch, color in zip(bp['boxes'], colors[:len(bp['boxes'])]):
+            colors = ["lightblue", "lightgreen", "lightcoral", "lightyellow"]
+            for patch, color in zip(
+                bp["boxes"], colors[: len(bp["boxes"])], strict=False
+            ):
                 patch.set_facecolor(color)
         else:
-            axes[0, 0].text(0.5, 0.5, 'No speedup data\navailable',
-                           ha='center', va='center', transform=axes[0, 0].transAxes)
-            axes[0, 0].set_title('Speedup Comparison')
+            axes[0, 0].text(
+                0.5,
+                0.5,
+                "No speedup data\navailable",
+                ha="center",
+                va="center",
+                transform=axes[0, 0].transAxes,
+            )
+            axes[0, 0].set_title("Speedup Comparison")
 
         # Plot 2: Data Coverage
         ax2 = axes[0, 1]
         categories = list(all_data.keys())
         record_counts = [len(df) for df in all_data.values()]
 
-        bars = ax2.bar(categories, record_counts, color=['skyblue', 'lightgreen', 'salmon', 'gold'][:len(categories)])
-        ax2.set_ylabel('Number of Records')
-        ax2.set_title('Benchmark Data Coverage')
-        ax2.tick_params(axis='x', rotation=45)
+        bars = ax2.bar(
+            categories,
+            record_counts,
+            color=["skyblue", "lightgreen", "salmon", "gold"][: len(categories)],
+        )
+        ax2.set_ylabel("Number of Records")
+        ax2.set_title("Benchmark Data Coverage")
+        ax2.tick_params(axis="x", rotation=45)
 
         # Add value labels on bars
-        for bar, count in zip(bars, record_counts):
+        for bar, count in zip(bars, record_counts, strict=False):
             height = bar.get_height()
-            ax2.text(bar.get_x() + bar.get_width()/2., height + max(record_counts)*0.01,
-                    f'{count}', ha='center', va='bottom')
+            ax2.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                height + max(record_counts) * 0.01,
+                f"{count}",
+                ha="center",
+                va="bottom",
+            )
 
         # Plot 3: Performance Summary Table
         ax3 = axes[1, 0]
-        ax3.axis('off')
+        ax3.axis("off")
 
         summary_data = []
         for category, data in all_data.items():
             row = [category.upper()]
 
-            if 'speedup' in data.columns and not data['speedup'].empty:
-                speedups = data['speedup'].dropna()
+            if "speedup" in data.columns and not data["speedup"].empty:
+                speedups = data["speedup"].dropna()
                 row.extend([
                     f"{speedups.mean():.1f}x",
                     f"{speedups.median():.1f}x",
-                    f"{speedups.max():.1f}x"
+                    f"{speedups.max():.1f}x",
                 ])
             else:
                 row.extend(["-", "-", "-"])
@@ -468,18 +569,26 @@ class BenchmarkRunner:
             summary_data.append(row)
 
         if summary_data:
-            table = ax3.table(cellText=summary_data,
-                             colLabels=['Optimization', 'Avg Speedup', 'Median Speedup', 'Max Speedup', 'Records'],
-                             cellLoc='center',
-                             loc='center')
+            table = ax3.table(
+                cellText=summary_data,
+                colLabels=[
+                    "Optimization",
+                    "Avg Speedup",
+                    "Median Speedup",
+                    "Max Speedup",
+                    "Records",
+                ],
+                cellLoc="center",
+                loc="center",
+            )
             table.auto_set_font_size(False)
             table.set_fontsize(10)
             table.scale(1.2, 1.5)
-            ax3.set_title('Performance Summary Table', pad=20)
+            ax3.set_title("Performance Summary Table", pad=20)
 
         # Plot 4: Key Insights
         ax4 = axes[1, 1]
-        ax4.axis('off')
+        ax4.axis("off")
 
         insights = [
             "🎯 Key Optimization Insights:",
@@ -498,50 +607,59 @@ class BenchmarkRunner:
             insights.extend([
                 "",
                 f"🚀 Overall median speedup: {np.median(all_values):.1f}x",
-                f"⚡ Maximum speedup achieved: {np.max(all_values):.1f}x"
+                f"⚡ Maximum speedup achieved: {np.max(all_values):.1f}x",
             ])
 
         insights_text = "\n".join(insights)
-        ax4.text(0.05, 0.95, insights_text, transform=ax4.transAxes, fontsize=11,
-                verticalalignment='top', fontfamily='monospace')
-        ax4.set_title('Analysis Summary')
+        ax4.text(
+            0.05,
+            0.95,
+            insights_text,
+            transform=ax4.transAxes,
+            fontsize=11,
+            verticalalignment="top",
+            fontfamily="monospace",
+        )
+        ax4.set_title("Analysis Summary")
 
         plt.tight_layout()
 
         # Save plot
         plot_path = self.results_dir / "optimization_overview.png"
-        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.savefig(plot_path, dpi=300, bbox_inches="tight")
         plots_created.append(str(plot_path))
         plt.close()
 
         print(f"   ✅ Saved: {plot_path}")
         return plots_created
 
-    def generate_html_report(self, all_data: Dict[str, pd.DataFrame], plots: List[str]) -> str:
+    def generate_html_report(
+        self, all_data: dict[str, pd.DataFrame], plots: list[str]
+    ) -> str:
         """Generate an HTML report with all results."""
         report_path = self.results_dir / "benchmark_report.html"
 
-        html_content = f"""
+        html_content = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Scanpy Optimization Benchmark Report</title>
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }}
-        h1 {{ color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }}
-        h2 {{ color: #34495e; border-left: 4px solid #3498db; padding-left: 15px; }}
-        .summary {{ background: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0; }}
-        .plot {{ text-align: center; margin: 30px 0; }}
-        .plot img {{ max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background-color: #3498db; color: white; }}
-        tr:hover {{ background-color: #f5f5f5; }}
-        .metric {{ display: inline-block; margin: 10px 20px; text-align: center; }}
-        .metric-value {{ font-size: 24px; font-weight: bold; color: #e74c3c; }}
-        .metric-label {{ font-size: 14px; color: #7f8c8d; }}
-        .timestamp {{ text-align: center; color: #7f8c8d; font-size: 12px; margin-top: 30px; }}
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; border-left: 4px solid #3498db; padding-left: 15px; }
+        .summary { background: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .plot { text-align: center; margin: 30px 0; }
+        .plot img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #3498db; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .metric { display: inline-block; margin: 10px 20px; text-align: center; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #e74c3c; }
+        .metric-label { font-size: 14px; color: #7f8c8d; }
+        .timestamp { text-align: center; color: #7f8c8d; font-size: 12px; margin-top: 30px; }
     </style>
 </head>
 <body>
@@ -575,8 +693,8 @@ class BenchmarkRunner:
         # Add speedup metrics if available
         all_speedups = []
         for data in all_data.values():
-            if 'speedup' in data.columns:
-                all_speedups.extend(data['speedup'].dropna().tolist())
+            if "speedup" in data.columns:
+                all_speedups.extend(data["speedup"].dropna().tolist())
 
         if all_speedups:
             html_content += f"""
@@ -597,7 +715,7 @@ class BenchmarkRunner:
 
         # Add plots
         for plot_path in plots:
-            plot_name = Path(plot_path).stem.replace('_', ' ').title()
+            plot_name = Path(plot_path).stem.replace("_", " ").title()
             html_content += f"""
         <h2>📈 {plot_name}</h2>
         <div class="plot">
@@ -618,7 +736,9 @@ class BenchmarkRunner:
 
             if len(data) > 0:
                 # Show first few rows as preview
-                preview_html = data.head(3).to_html(classes='table', table_id=f'{category}_table')
+                preview_html = data.head(3).to_html(
+                    classes="table", table_id=f"{category}_table"
+                )
                 html_content += f"""
         <details>
             <summary>Data Preview (first 3 rows)</summary>
@@ -628,7 +748,7 @@ class BenchmarkRunner:
 
         html_content += f"""
         <div class="timestamp">
-            <p>Report generated on {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <p>Report generated on {time.strftime("%Y-%m-%d %H:%M:%S")}</p>
         </div>
     </div>
 </body>
@@ -636,27 +756,24 @@ class BenchmarkRunner:
 """
 
         # Write HTML file
-        with open(report_path, 'w') as f:
+        with open(report_path, "w") as f:
             f.write(html_content)
 
         print(f"   ✅ Generated HTML report: {report_path}")
         return str(report_path)
 
-    def run_full_analysis(self, skip_long_benchmarks: bool = False) -> Dict:
+    def run_full_analysis(self, skip_long_benchmarks: bool = False) -> dict:
         """Run complete benchmark analysis pipeline."""
         print("🔬 Scanpy Optimization Benchmark Analysis")
         print("=" * 60)
 
-        results = {
-            "benchmark_results": {},
-            "csv_data": {},
-            "plots": [],
-            "report": None
-        }
+        results = {"benchmark_results": {}, "csv_data": {}, "plots": [], "report": None}
 
         # Step 1: Run benchmarks
         print("\n🚀 STEP 1: Running Benchmarks")
-        results["benchmark_results"] = self.run_all_benchmarks(skip_long=skip_long_benchmarks)
+        results["benchmark_results"] = self.run_all_benchmarks(
+            skip_long=skip_long_benchmarks
+        )
 
         # Step 2: Load CSV data
         print("\n📊 STEP 2: Loading and Aggregating CSV Data")
@@ -673,7 +790,9 @@ class BenchmarkRunner:
 
         # Normalization plots
         if "normalization" in results["csv_data"]:
-            norm_plots = self.create_normalization_performance_plots(results["csv_data"]["normalization"])
+            norm_plots = self.create_normalization_performance_plots(
+                results["csv_data"]["normalization"]
+            )
             all_plots.extend(norm_plots)
 
         # Overall comparison plots
@@ -686,7 +805,9 @@ class BenchmarkRunner:
         # Step 4: Generate report
         print("\n📝 STEP 4: Generating Report")
         if results["csv_data"] and results["plots"]:
-            results["report"] = self.generate_html_report(results["csv_data"], results["plots"])
+            results["report"] = self.generate_html_report(
+                results["csv_data"], results["plots"]
+            )
 
         # Final summary
         print("\n" + "=" * 60)
@@ -708,17 +829,27 @@ class BenchmarkRunner:
 
         return results
 
+
 def main():
     """Main execution function."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run Scanpy optimization benchmarks and create visualizations")
-    parser.add_argument("--skip-long", action="store_true",
-                       help="Skip long-running benchmarks (hvg, normalization)")
-    parser.add_argument("--plots-only", action="store_true",
-                       help="Only create plots from existing CSV data, skip running benchmarks")
-    parser.add_argument("--base-dir", default=".",
-                       help="Base directory containing benchmark scripts")
+    parser = argparse.ArgumentParser(
+        description="Run Scanpy optimization benchmarks and create visualizations"
+    )
+    parser.add_argument(
+        "--skip-long",
+        action="store_true",
+        help="Skip long-running benchmarks (hvg, normalization)",
+    )
+    parser.add_argument(
+        "--plots-only",
+        action="store_true",
+        help="Only create plots from existing CSV data, skip running benchmarks",
+    )
+    parser.add_argument(
+        "--base-dir", default=".", help="Base directory containing benchmark scripts"
+    )
 
     args = parser.parse_args()
 
@@ -733,7 +864,9 @@ def main():
         if "hvg" in csv_data:
             all_plots.extend(runner.create_hvg_performance_plots(csv_data["hvg"]))
         if "normalization" in csv_data:
-            all_plots.extend(runner.create_normalization_performance_plots(csv_data["normalization"]))
+            all_plots.extend(
+                runner.create_normalization_performance_plots(csv_data["normalization"])
+            )
         if csv_data:
             all_plots.extend(runner.create_comparison_plots(csv_data))
 
@@ -751,6 +884,7 @@ def main():
             return 1
 
     return 0
+
 
 if __name__ == "__main__":
     exit(main())

@@ -11,21 +11,22 @@ Key optimizations learned from scXpand:
 6. In-place operations to minimize memory allocations
 """
 
+from __future__ import annotations
+
 import time
-from pathlib import Path
-from typing import Optional, Tuple, Union
 
 import numba
 import numpy as np
 import pandas as pd
 from scipy import sparse
 from scipy.sparse import csr_matrix, spmatrix
-import scanpy as sc
 
+import scanpy as sc
 
 # ============================================================================
 # Numba-Accelerated Core Functions (inspired by scXpand)
 # ============================================================================
+
 
 @numba.njit(cache=True)
 def _compute_hvg_stats_sparse(data, indices, indptr, n_rows, n_cols):
@@ -127,7 +128,8 @@ def _compute_normalized_dispersion(means, variances, n_top_genes):
 # Batch Processing Functions (inspired by scXpand's batch processing)
 # ============================================================================
 
-def _process_hvg_batch(X_batch: Union[np.ndarray, spmatrix]) -> Tuple[np.ndarray, np.ndarray]:
+
+def _process_hvg_batch(X_batch: np.ndarray | spmatrix) -> tuple[np.ndarray, np.ndarray]:
     """Process a single batch for HVG computation."""
     if sparse.issparse(X_batch):
         # Ensure CSR format for efficient row-wise operations
@@ -136,8 +138,11 @@ def _process_hvg_batch(X_batch: Union[np.ndarray, spmatrix]) -> Tuple[np.ndarray
 
         # Use Numba-accelerated sparse computation
         means, variances = _compute_hvg_stats_sparse(
-            X_batch.data, X_batch.indices, X_batch.indptr,
-            X_batch.shape[0], X_batch.shape[1]
+            X_batch.data,
+            X_batch.indices,
+            X_batch.indptr,
+            X_batch.shape[0],
+            X_batch.shape[1],
         )
     else:
         # Use Numba-accelerated dense computation
@@ -148,9 +153,8 @@ def _process_hvg_batch(X_batch: Union[np.ndarray, spmatrix]) -> Tuple[np.ndarray
 
 
 def _compute_hvg_batch_processing(
-    X: Union[np.ndarray, spmatrix],
-    batch_size: int = 10000
-) -> Tuple[np.ndarray, np.ndarray]:
+    X: np.ndarray | spmatrix, batch_size: int = 10000
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute HVG statistics using batch processing for memory efficiency."""
     n_obs, n_vars = X.shape
 
@@ -188,23 +192,24 @@ def _compute_hvg_batch_processing(
 # Main Optimized HVG Function
 # ============================================================================
 
+
 def highly_variable_genes_optimized(
     adata,
-    layer: Optional[str] = None,
-    n_top_genes: Optional[int] = None,
-    min_disp: Optional[float] = 0.5,
-    max_disp: Optional[float] = np.inf,
-    min_mean: Optional[float] = 0.0125,
-    max_mean: Optional[float] = 3,
+    layer: str | None = None,
+    n_top_genes: int | None = None,
+    min_disp: float | None = 0.5,
+    max_disp: float | None = np.inf,
+    min_mean: float | None = 0.0125,
+    max_mean: float | None = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: str = 'seurat',
+    flavor: str = "seurat",
     subset: bool = False,
     inplace: bool = True,
-    batch_key: Optional[str] = None,
+    batch_key: str | None = None,
     check_values: bool = True,
     batch_size: int = 10000,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """
     Optimized highly variable genes identification with Numba acceleration.
 
@@ -278,13 +283,14 @@ def highly_variable_genes_optimized(
         if sparse.issparse(X):
             if np.any(X.data < 0):
                 raise ValueError("Expression matrix contains negative values")
-        else:
-            if np.any(X < 0):
-                raise ValueError("Expression matrix contains negative values")
+        elif np.any(X < 0):
+            raise ValueError("Expression matrix contains negative values")
 
     # Choose computation method based on data size and sparsity
     n_obs, n_vars = X.shape
-    use_batch_processing = n_obs > batch_size * 2  # Use batch processing for large datasets
+    use_batch_processing = (
+        n_obs > batch_size * 2
+    )  # Use batch processing for large datasets
 
     print(f"🚀 Computing HVG for {n_obs:,} cells × {n_vars:,} genes")
     print(f"   Sparse: {sparse.issparse(X)}, Batch processing: {use_batch_processing}")
@@ -303,7 +309,7 @@ def highly_variable_genes_optimized(
     )
 
     # Apply additional filters if specified
-    if flavor == 'seurat':
+    if flavor == "seurat":
         # Apply mean and dispersion filters
         mean_filter = (means >= min_mean) & (means <= max_mean)
         disp_filter = (dispersions >= min_disp) & (dispersions <= max_disp)
@@ -315,8 +321,10 @@ def highly_variable_genes_optimized(
             # Apply filters before selecting top genes
             filtered_genes = mean_filter & disp_filter
             if filtered_genes.sum() < n_top_genes:
-                print(f"⚠️  Warning: Only {filtered_genes.sum()} genes pass filters, "
-                      f"but {n_top_genes} requested")
+                print(
+                    f"⚠️  Warning: Only {filtered_genes.sum()} genes pass filters, "
+                    f"but {n_top_genes} requested"
+                )
 
             # Select top genes from filtered set
             filtered_dispersions = np.where(filtered_genes, dispersions_norm, -np.inf)
@@ -326,27 +334,31 @@ def highly_variable_genes_optimized(
 
     # Create results DataFrame
     df = pd.DataFrame(index=adata.var_names)
-    df['highly_variable'] = highly_variable
-    df['means'] = means
-    df['variances'] = variances  # Use 'variances' to match standard scanpy
-    df['variances_norm'] = dispersions_norm  # Use 'variances_norm' to match standard scanpy
-    df['dispersions'] = dispersions  # Keep dispersions for compatibility
-    df['dispersions_norm'] = dispersions_norm
+    df["highly_variable"] = highly_variable
+    df["means"] = means
+    df["variances"] = variances  # Use 'variances' to match standard scanpy
+    df["variances_norm"] = (
+        dispersions_norm  # Use 'variances_norm' to match standard scanpy
+    )
+    df["dispersions"] = dispersions  # Keep dispersions for compatibility
+    df["dispersions_norm"] = dispersions_norm
 
     # Performance reporting
     elapsed_time = time.time() - start_time
     n_hvg = highly_variable.sum()
     print(f"✅ HVG computation completed in {elapsed_time:.3f}s")
-    print(f"   Found {n_hvg:,} highly variable genes ({n_hvg/n_vars*100:.1f}%)")
+    print(f"   Found {n_hvg:,} highly variable genes ({n_hvg / n_vars * 100:.1f}%)")
 
     # Update adata or return results
     if inplace:
-        adata.var['highly_variable'] = highly_variable
-        adata.var['means'] = means
-        adata.var['variances'] = variances  # Use 'variances' to match standard scanpy
-        adata.var['variances_norm'] = dispersions_norm  # Use 'variances_norm' to match standard scanpy
-        adata.var['dispersions'] = dispersions  # Keep dispersions for compatibility
-        adata.var['dispersions_norm'] = dispersions_norm
+        adata.var["highly_variable"] = highly_variable
+        adata.var["means"] = means
+        adata.var["variances"] = variances  # Use 'variances' to match standard scanpy
+        adata.var["variances_norm"] = (
+            dispersions_norm  # Use 'variances_norm' to match standard scanpy
+        )
+        adata.var["dispersions"] = dispersions  # Keep dispersions for compatibility
+        adata.var["dispersions_norm"] = dispersions_norm
 
         if subset:
             adata._inplace_subset_var(highly_variable)
@@ -358,15 +370,16 @@ def highly_variable_genes_optimized(
 # Benchmark Function
 # ============================================================================
 
+
 def benchmark_hvg_optimization(
     n_obs: int = 20000,
     n_vars: int = 3000,
     density: float = 0.05,
     n_top_genes: int = 2000,
-    batch_size: int = 10000
+    batch_size: int = 10000,
 ):
     """Benchmark the optimized HVG implementation."""
-    print(f"🔬 Benchmarking HVG optimization")
+    print("🔬 Benchmarking HVG optimization")
     print(f"   Dataset: {n_obs:,} cells × {n_vars:,} genes, density={density:.3f}")
 
     # Create synthetic data with realistic count distribution
@@ -374,7 +387,7 @@ def benchmark_hvg_optimization(
     np.random.seed(42)
 
     # Create sparse matrix with realistic count distribution
-    X = sparse.random(n_obs, n_vars, density=density, format='csr', dtype=np.float32)
+    X = sparse.random(n_obs, n_vars, density=density, format="csr", dtype=np.float32)
     # Make it look like real count data
     X.data = np.random.poisson(X.data * 5 + 1).astype(np.float32)
 
@@ -390,10 +403,7 @@ def benchmark_hvg_optimization(
     start_time = time.time()
 
     df_optimized = highly_variable_genes_optimized(
-        adata,
-        n_top_genes=n_top_genes,
-        batch_size=batch_size,
-        inplace=False
+        adata, n_top_genes=n_top_genes, batch_size=batch_size, inplace=False
     )
 
     opt_time = time.time() - start_time
@@ -405,28 +415,28 @@ def benchmark_hvg_optimization(
         start_time = time.time()
 
         sc.pp.highly_variable_genes(
-            adata_copy,
-            n_top_genes=n_top_genes,
-            flavor='seurat'
+            adata_copy, n_top_genes=n_top_genes, flavor="seurat"
         )
 
         std_time = time.time() - start_time
 
-        print(f"\n📊 Results:")
+        print("\n📊 Results:")
         print(f"   Standard HVG:  {std_time:.3f}s")
         print(f"   Optimized HVG: {opt_time:.3f}s")
-        print(f"   Speedup:       {std_time/opt_time:.2f}x")
+        print(f"   Speedup:       {std_time / opt_time:.2f}x")
 
         # Validate results
-        n_hvg_std = adata_copy.var['highly_variable'].sum()
-        n_hvg_opt = df_optimized['highly_variable'].sum()
+        n_hvg_std = adata_copy.var["highly_variable"].sum()
+        n_hvg_opt = df_optimized["highly_variable"].sum()
         print(f"   HVG found (std): {n_hvg_std:,}")
         print(f"   HVG found (opt): {n_hvg_opt:,}")
 
         if n_hvg_std == n_hvg_opt:
             print("   ✅ Results match!")
         else:
-            print("   ⚠️  Results differ slightly (expected due to numerical differences)")
+            print(
+                "   ⚠️  Results differ slightly (expected due to numerical differences)"
+            )
 
     except Exception as e:
         print(f"   ⚠️  Standard HVG failed: {e}")
