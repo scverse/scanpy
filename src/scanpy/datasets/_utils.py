@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import anndata as ad
 from packaging.version import Version
 
+from .._compat import pkg_version
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ def filter_oldformatwarning(f: Callable[P, R]) -> Callable[P, R]:
     @wraps(f)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         with warnings.catch_warnings():
-            if Version(ad.__version__).release >= (0, 8):
+            if pkg_version("anndata") >= Version("0.8"):
                 warnings.filterwarnings(
                     "ignore", category=ad.OldFormatWarning, module="anndata"
                 )

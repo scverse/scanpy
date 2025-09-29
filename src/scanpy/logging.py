@@ -6,6 +6,7 @@ import logging
 import sys
 from datetime import datetime, timedelta, timezone
 from functools import partial, update_wrapper
+from importlib.metadata import version
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
 
@@ -175,12 +176,10 @@ def print_version_and_date(*, file=None):
         Optional path for output.
 
     """
-    from . import __version__
-
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {version('scanpy')}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 

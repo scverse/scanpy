@@ -15,11 +15,10 @@ SKIP_EXTRA: dict[str, Callable[[], str | None]] = {}
 
 
 def _skip_if_skmisc_too_old() -> str | None:
-    import numpy as np
-    import skmisc
+    from scanpy._compat import pkg_version
 
-    if Version(skmisc.__version__) <= Version("0.3.1") and Version(
-        np.__version__
+    if pkg_version("scikit-misc") <= Version("0.3.1") and pkg_version(
+        "numpy"
     ) >= Version("2"):
         return "scikit-misc≤0.3.1 requires numpy<2"
     return None

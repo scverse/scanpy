@@ -471,7 +471,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
-    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
+    if isinstance(adata.X, np.ndarray) and pkg_version("anndata") < Version("0.9"):
         reason = (
             "TODO: Previous version of anndata would return an F ordered array for one"
             " case here, which surprisingly considerably changes the results of PCA."
@@ -494,7 +494,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
 
 
 def test_mask_order_warning(request: pytest.FixtureRequest):
-    if Version(ad.__version__) >= Version("0.9"):
+    if pkg_version("anndata") >= Version("0.9"):
         reason = "Not expected to warn in later versions of anndata"
         request.applymarker(pytest.mark.xfail(reason=reason))
 

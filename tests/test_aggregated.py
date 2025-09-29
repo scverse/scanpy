@@ -8,6 +8,7 @@ from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -130,7 +131,7 @@ def test_aggregate_vs_pandas(metric, array_type):
     result_df.index.name = None
     result_df.columns.name = None
 
-    if Version(pd.__version__) < Version("2"):
+    if pkg_version("pandas") < Version("2"):
         # Order of results returned by groupby changed in pandas 2
         assert expected.shape == result_df.shape
         assert expected.index.isin(result_df.index).all()

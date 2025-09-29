@@ -10,7 +10,7 @@ from anndata import AnnData
 from numpy.typing import NDArray
 from packaging.version import Version
 
-from .._compat import CSBase
+from .._compat import CSBase, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -80,7 +80,7 @@ def rank_genes_groups_df(  # noqa: PLR0912
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    if Version(pd.__version__) >= Version("2.1"):
+    if pkg_version("pandas") >= Version("2.1"):
         d = d.stack(level=1, future_stack=True).reset_index()
     else:
         d = d.stack(level=1).reset_index()
