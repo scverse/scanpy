@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from functools import cache
+from importlib.metadata import version
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
@@ -14,12 +16,10 @@ if TYPE_CHECKING:
 SKIP_EXTRA: dict[str, Callable[[], str | None]] = {}
 
 
+@cache
 def _skip_if_skmisc_too_old() -> str | None:
-    import numpy as np
-    import skmisc
-
-    if Version(skmisc.__version__) <= Version("0.3.1") and Version(
-        np.__version__
+    if Version(version("scikit-misc")) <= Version("0.3.1") and Version(
+        version("numpy")
     ) >= Version("2"):
         return "scikit-misc≤0.3.1 requires numpy<2"
     return None

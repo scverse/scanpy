@@ -11,9 +11,16 @@ import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+from matplotlib.image import imread
 from packaging.version import Version
 
-if Version(anndata.__version__) >= Version("0.11.0rc2"):
+from . import logging as logg
+from ._compat import add_note, deprecated, old_positionals, pkg_version
+from ._settings import settings
+from ._utils import _empty
+
+if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
         read_csv,
         read_excel,
@@ -34,13 +41,6 @@ else:
         read_text,
     )
 
-from anndata import AnnData
-from matplotlib.image import imread
-
-from . import logging as logg
-from ._compat import add_note, deprecated, old_positionals
-from ._settings import settings
-from ._utils import _empty
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -118,27 +118,29 @@ doc = [
     "sphinx-copybutton",
     "nbsphinx>=0.9",
     "ipython>=7.20",                    # for nbsphinx code highlighting
-    "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga,dask-ml]",
     "sam-algorithm",
 ]
 dev = [
-    "hatch-vcs",  # runtime dev version generation
-    "pre-commit", # static checking
-    "towncrier",  # release note management
+    "towncrier",   # release note management
+    "scipy-stubs", # static typing and IDE support
 ]
 # Algorithms
 paga = [ "igraph" ]
-louvain = [ "igraph", "louvain>=0.8.2" ]          # Louvain community detection
+louvain = [ # Louvain community detection
+    "igraph",
+    "louvain>=0.8.2",
+    "setuptools<81",
+]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ] # Leiden community detection
-bbknn = [ "bbknn" ]                               # Batch balanced KNN (batch correction)
-magic = [ "magic-impute>=2.0.4" ]                 # MAGIC imputation method
-skmisc = [ "scikit-misc>=0.1.4" ]                 # highly_variable_genes method 'seurat_v3'
-harmony = [ "harmonypy" ]                         # Harmony dataset integration
-scanorama = [ "scanorama" ]                       # Scanorama dataset integration
-scrublet = [ "scikit-image" ]                     # Doublet detection with automatic thresholds
+bbknn = [ "bbknn" ] # Batch balanced KNN (batch correction)
+magic = [ "magic-impute>=2.0.4" ] # MAGIC imputation method
+skmisc = [ "scikit-misc>=0.1.4" ] # highly_variable_genes method 'seurat_v3'
+harmony = [ "harmonypy" ] # Harmony dataset integration
+scanorama = [ "scanorama" ] # Scanorama dataset integration
+scrublet = [ "scikit-image" ] # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2022.09.2", "anndata[dask]" ]  # Use the Dask parallelization engine

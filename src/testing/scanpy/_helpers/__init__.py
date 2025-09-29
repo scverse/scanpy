@@ -14,6 +14,7 @@ import numpy as np
 from anndata.tests.helpers import asarray, assert_equal
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableSequence
@@ -39,7 +40,7 @@ def anndata_v0_8_constructor_compat(x, /, *args, **kwargs):
     import anndata as ad
     from packaging.version import Version
 
-    if Version(ad.__version__) < Version("0.9"):
+    if pkg_version("anndata") < Version("0.9"):
         return ad.AnnData(x, *args, **kwargs, dtype=x.dtype)
     else:
         return ad.AnnData(x, *args, **kwargs)

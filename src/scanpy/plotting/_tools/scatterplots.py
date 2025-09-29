@@ -28,7 +28,7 @@ from numpy.typing import NDArray  # noqa: TC002
 from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import deprecated
+from ..._compat import deprecated, pkg_version
 from ..._settings import settings
 from ..._utils import (
     Empty,  # noqa: TC001
@@ -1263,7 +1263,7 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    if Version(pd.__version__) < Version("2.1.0"):
+    if pkg_version("pandas") < Version("2.1.0"):
         color_vector = pd.Categorical(values.map(color_map))
     else:
         color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
