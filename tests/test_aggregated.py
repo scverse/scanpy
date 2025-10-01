@@ -544,3 +544,32 @@ def test_factors():
 
     res = sc.get.aggregate(adata, by=["a", "b", "c", "d"], func="sum")
     np.testing.assert_equal(res.layers["sum"], adata.X)
+
+def test_aggregate_adds_n_obs_aggregated_single_key(pbmc_adata):
+    result = sc.get.aggregate(pbmc_adata, by="louvain", func="mean")
+    # Check column exists
+    assert "n_obs_aggregated" in result.obs
+    # Counts should be positive
+    assert (result.obs["n_obs_aggregated"] > 0).all()
+    # Total counts should equal original n_obs
+    assert result.obs["n_obs_aggregated"].sum() == pbmc_adata.n_obs
+
+
+def test_aggregate_adds_n_obs_aggregated_multiple_keys(pbmc_adata):
+    pbmc_adata.obs["percent_mito_binned"] = pd.cut(pbmc_adata.obs["percent_mito"], bins=5)
+    result = sc.get.aggregate(pbmc_adata, by=["louvain", "percent_mito_binned"], func="mean")
+    assert "n_obs_aggregated" in result.obs
+    # Still sums back to the total number of obs
+    assert result.obs["n_obs_aggregated"].sum() == pbmc_adata.n_obs
+
+
+def test_aggregate_n_obs_aggregated_no_empty_groups(pbmc_adata):
+    # Force a categorical with unused categories
+    pbmc_adata.obs["fake_group"] = pd.Categorical(["A"] * (pbmc_adata.n_obs - 1) + ["B"], categories=["A", "B", "C"])
+    result = sc.get.aggregate(pbmc_adata, by="fake_group", func="mean")
+    assert "n_obs_aggregated" in result.obs
+    # Only groups with data should appear
+    assert set(result.obs["fake_group"]) == {"A", "B"}
+    # Count check
+    assert result.obs["n_obs_aggregated"].sum() == pbmc_adata.n_obs
+
