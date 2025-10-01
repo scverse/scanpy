@@ -295,6 +295,10 @@ def aggregate(  # noqa: PLR0912
 
     dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
+
+    # Add number of obs aggregated into each group
+    group_sizes = pd.Series(categorical).value_counts().reindex(new_label_df.index)
+    new_label_df["n_obs_aggregated"] = group_sizes.values
     # Actual computation
     layers = _aggregate(
         data,
