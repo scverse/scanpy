@@ -193,6 +193,9 @@ filterwarnings = [
     "error:\\n*The `scale` parameter has been renamed and will be removed",
     "error:\\n*Passing `palette` without assigning `hue` is deprecated",
     "error:\\n*Setting a gradient palette using color= is deprecated",
+    # https://github.com/matplotlib/matplotlib/pull/30589
+    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
+    "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
 ]
 
 [tool.coverage.run]
