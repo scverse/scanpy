@@ -184,7 +184,7 @@ filterwarnings = [
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
     # https://github.com/matplotlib/matplotlib/pull/30589
-    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat)'.*'(one_of|parse_string|reset_cache|enable_packrat)':DeprecationWarning:matplotlib",
+    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace)':DeprecationWarning:matplotlib",
 
 ]
 
