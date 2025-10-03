@@ -50,7 +50,7 @@ dependencies = [
     "numpy>=1.25.2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.7.5",
-    "pandas >=2.0.3",
+    "pandas >=2.1.1",
     "scipy>=1.11.1",
     "seaborn>=0.13.2",
     "h5py>=3.8.0",
@@ -61,7 +61,7 @@ dependencies = [
     "networkx>=2.8.8",
     "natsort",
     "joblib",
-    "numba>=0.58.1",
+    "numba >=0.58.1, !=0.62.0rc1",                #https://github.com/numba/numba/issues/10202
     "umap-learn>=0.5.7",
     "pynndescent>=0.5.13",
     "packaging>=21.3",
@@ -87,7 +87,7 @@ scanpy = "scanpy.cli:console_main"
 test-min = [
     "pytest>=8.2",
     "pytest-mock",
-    "pytest-cov",
+    "pytest-cov",           # only for use from VS Code
     "pytest-xdist[psutil]",
     "pytest-randomly",
     "pytest-rerunfailures",
@@ -119,15 +119,12 @@ doc = [
     "sphinx-copybutton",
     "nbsphinx>=0.9",
     "ipython>=7.20",                    # for nbsphinx code highlighting
-    "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[paga,dask-ml]",
     "sam-algorithm",
 ]
 dev = [
-    "hatch-vcs",   # runtime dev version generation
-    "pre-commit",  # static checking
     "towncrier",   # release note management
     "scipy-stubs", # static typing and IDE support
 ]
@@ -181,21 +178,27 @@ filterwarnings = [
     'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # h5py <3.9 uses deprecated np.product
     'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
+    # old anndata versions have this
+    'ignore:is_categorical_dtype is deprecated:FutureWarning',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
+    # https://github.com/matplotlib/matplotlib/pull/30589
+    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
+    "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
+
 ]
 
 [tool.coverage.run]
-data_file = "test-data/coverage"
+data_file = "test-data/raw-coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
 concurrency = [ "multiprocessing" ]
-parallel = "true"
+parallel = true
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
-source = [ ".", "**/site-packages" ]
+source = [ "src", "**/site-packages" ]
 [tool.coverage.report]
 exclude_also = [
     "if __name__ == .__main__.:",
@@ -209,6 +212,7 @@ exclude_also = [
 src = [ "src" ]
 
 [tool.ruff.format]
+preview = true
 docstring-code-format = true
 
 [tool.ruff.lint]
@@ -224,6 +228,7 @@ select = [
     "I",      # Import sorting
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
+    "N",      # Naming conventions
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint
@@ -255,6 +260,8 @@ allowed-confusables = [ "×", "’", "–", "α" ]
 [tool.ruff.lint.per-file-ignores]
 # Do not assign a lambda expression, use a def
 "src/scanpy/tools/_rank_genes_groups.py" = [ "E731" ]
+# Old and unmaintained
+"src/scanpy/tools/_sim.py" = [ "N" ]
 # No need for docstrings for all benchmarks
 "benchmarks/**/*.py" = [ "D102", "D103" ]
 # D*: No need for docstrings for all test modules and test functions
@@ -296,10 +303,13 @@ single_file = false
 package_dir = "src"
 issue_format = "{{pr}}`{issue}`"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
-fragment.bugfix.name = "Bug fixes"
-fragment.doc.name = "Documentation"
-fragment.feature.name = "Features"
-fragment.misc.name = "Miscellaneous improvements"
-fragment.performance.name = "Performance"
-fragment.breaking.name = "Breaking changes"
-fragment.dev.name = "Development Process"
+# Valid fragments should be a subset of conventional commit types (except for `breaking`):
+# https://github.com/commitizen/conventional-commit-types/blob/master/index.json
+# style, refactor, test, build, ci: should not go into changelog
+fragment.feat.name = "Features"
+fragment.fix.name = "Bug fixes"
+fragment.docs.name = "Documentation"
+fragment.perf.name = "Performance"
+fragment.chore.name = "Miscellaneous changes"
+fragment.revert.name = "Revert"
+fragment.breaking.name = "Breaking changes"   # add `!` to commit type (e.g. “feature!:”)

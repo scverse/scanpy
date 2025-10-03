@@ -161,10 +161,6 @@ def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
     save_and_compare_images(f"heatmap_small{'_swap' if swap_axes else ''}_alignment")
 
 
-@pytest.mark.skipif(
-    pkg_version("matplotlib") < Version("3.1"),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
-)
 @pytest.mark.parametrize(
     ("obs_keys", "name"),
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
@@ -498,7 +494,7 @@ def test_multiple_plots(image_comparer):
         "B-cell": ["CD79A", "CD79B", "MS4A1"],
         "myeloid": ["CST3", "LYZ"],
     }
-    fig, (ax1, ax2, ax3) = plt.subplots(
+    _fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={"wspace": 0.7}
     )
     _ = sc.pl.stacked_violin(
@@ -856,7 +852,7 @@ def test_rank_genes_group_axes(image_comparer):
 
     pbmc.var["symbol"] = pbmc.var.index + "__"
 
-    fig, ax = plt.subplots(figsize=(12, 16))
+    _fig, ax = plt.subplots(figsize=(12, 16))
     ax.set_axis_off()
     with plt.rc_context({"axes.grid": True}):
         axes: list[Axes] = fn(pbmc, ax=ax, show=False)
@@ -960,7 +956,7 @@ def test_plot_rank_genes_groups_gene_symbols(
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
     """Checks that once can pass a negative value for n_genes and var_names as a dict."""
-    N = 3
+    n = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
     pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
@@ -972,8 +968,8 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby(
         "group", observed=True
     ):
-        top_genes[g] = list(subdf["names"].head(N))
-        bottom_genes[g] = list(subdf["names"].tail(N))
+        top_genes[g] = list(subdf["names"].head(n))
+        bottom_genes[g] = list(subdf["names"].tail(n))
 
     positive_n_pth = tmp_path / f"{func.__name__}_positive_n.png"
     top_genes_pth = tmp_path / f"{func.__name__}_top_genes.png"
@@ -985,12 +981,12 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
         plt.savefig(pth)
         plt.close()
 
-    wrapped(positive_n_pth, n_genes=N)
+    wrapped(positive_n_pth, n_genes=n)
     wrapped(top_genes_pth, var_names=top_genes)
 
     check_same_image(positive_n_pth, top_genes_pth, tol=1, root=tmp_path)
 
-    wrapped(negative_n_pth, n_genes=-N)
+    wrapped(negative_n_pth, n_genes=-n)
     wrapped(bottom_genes_pth, var_names=bottom_genes)
 
     check_same_image(negative_n_pth, bottom_genes_pth, tol=1, root=tmp_path)
@@ -999,7 +995,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     with pytest.raises(
         ValueError, match="n_genes and var_names are mutually exclusive"
     ):
-        wrapped(tmp_path / "not_written.png", n_genes=N, var_names=top_genes)
+        wrapped(tmp_path / "not_written.png", n_genes=n, var_names=top_genes)
 
 
 @pytest.mark.parametrize(
@@ -1247,7 +1243,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
-        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+        ValueError, match=r"Passing both norm and vmin/vmax/vcenter is not allowed\."
     ):
         sc.pl.embedding(
             pbmc,
@@ -1672,7 +1668,7 @@ def test_repeated_colors_w_missing_value():
     ],
 )
 def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
-    N_GENES = 4
+    n_genes = 4
 
     adata = pbmc68k_reduced()
 
@@ -1691,14 +1687,14 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     df = df.query(conditions)[["group", "names"]]
 
     var_names = {
-        k: v.head(N_GENES).tolist()
+        k: v.head(n_genes).tolist()
         for k, v in df.groupby("group", observed=True)["names"]
     }
 
     pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
     pth_b = tmp_path / f"{plot.__name__}_filter_b.png"
 
-    plot(adata, key="rank_genes_groups_filtered", n_genes=N_GENES, show=False)
+    plot(adata, key="rank_genes_groups_filtered", n_genes=n_genes, show=False)
     plt.savefig(pth_a)
     plt.close()
 

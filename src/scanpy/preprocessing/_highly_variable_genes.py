@@ -104,8 +104,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         reg_std = np.sqrt(10**estimat_var)
 
         # clip large values as in Seurat
-        N = data_batch.shape[0]
-        vmax = np.sqrt(N)
+        n_obs = data_batch.shape[0]
+        vmax = np.sqrt(n_obs)
         clip_val = reg_std * vmax + mean
         if isinstance(data_batch, CSBase):
             batch_counts = data_batch.tocsr()
@@ -128,8 +128,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
             batch_counts_sum = batch_counts.sum(axis=0)
 
-        norm_gene_var = (1 / ((N - 1) * np.square(reg_std))) * (
-            (N * np.square(mean))
+        norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
+            (n_obs * np.square(mean))
             + squared_batch_counts_sum
             - 2 * batch_counts_sum * mean
         )
@@ -292,37 +292,37 @@ def _highly_variable_genes_single_batch(
     flavor = kwargs["flavor"]
     n_bins = kwargs["n_bins"]
 
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_obs_rep(adata, layer=layer)
 
     # Filter to genes that are expressed
     if filter_unexpressed_genes:
         with settings.verbosity.override(Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
             filt, _ = materialize_as_ndarray(
-                filter_genes(X, min_cells=1, inplace=False)
+                filter_genes(x, min_cells=1, inplace=False)
             )
     else:
-        filt = np.ones(X.shape[1], dtype=bool)
+        filt = np.ones(x.shape[1], dtype=bool)
 
     n_removed = np.sum(~filt)
     if n_removed:
-        X = X[:, filt].copy()
+        x = x[:, filt].copy()
 
-    if hasattr(X, "_view_args"):  # AnnData array view
+    if hasattr(x, "_view_args"):  # AnnData array view
         # For compatibility with anndata<0.9
-        X = X.copy()  # Doesn't actually copy memory, just removes View class wrapper
+        x = x.copy()  # Doesn't actually copy memory, just removes View class wrapper
 
     if flavor == "seurat":
-        X = X.copy()
+        x = x.copy()
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            X *= np.log(base)
+            x *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
-        if isinstance(X, np.ndarray):
-            np.expm1(X, out=X)
+        if isinstance(x, np.ndarray):
+            np.expm1(x, out=x)
         else:
-            X = np.expm1(X)
+            x = np.expm1(x)
 
-    mean, var = materialize_as_ndarray(stats.mean_var(X, axis=0, correction=1))
+    mean, var = materialize_as_ndarray(stats.mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -483,10 +483,10 @@ def _highly_variable_genes_batched(
     cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_obs_rep(adata, layer=layer)
 
     func = _per_batch_func
-    if is_dask := isinstance(X, DaskArray):
+    if is_dask := isinstance(x, DaskArray):
         from dask import delayed
 
         func = delayed(_per_batch_func)

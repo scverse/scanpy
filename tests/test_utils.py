@@ -53,7 +53,7 @@ def test_descend_classes_and_funcs():
 def test_axis_mul_or_truediv_badop():
     dividend = np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]])
     divisor = np.array([0.1, 0.2])
-    with pytest.raises(ValueError, match=".*not one of truediv or mul"):
+    with pytest.raises(ValueError, match=r"not one of truediv or mul"):
         axis_mul_or_truediv(dividend, divisor, op=np.add, axis=0)
 
 
@@ -118,7 +118,7 @@ def test_scale_out_with_dask_or_sparse_raises(array_type):
     if isinstance(dividend, DaskArray):
         with pytest.raises(
             TypeError if "dask" in array_type.__name__ else ValueError,
-            match="`out`*",
+            match="`out`",
         ):
             axis_mul_or_truediv(dividend, divisor, op=truediv, axis=1, out=dividend)
 
@@ -164,10 +164,10 @@ def test_scale_rechunk(array_type, axis, op):
     ],
 )
 def test_check_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+    x = array_type(array_value)
 
-    received = check_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()

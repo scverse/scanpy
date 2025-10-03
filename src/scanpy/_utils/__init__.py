@@ -30,14 +30,13 @@ from weakref import WeakSet
 
 import h5py
 import numpy as np
-from anndata import __version__ as anndata_version
 from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
 
-if Version(anndata_version) >= Version("0.10.0"):
+if pkg_version("anndata") >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
@@ -87,17 +86,6 @@ def ensure_igraph() -> None:
         "`pip install igraph`."
     )
     raise ImportError(msg)
-
-
-def check_versions():
-    if Version(anndata_version) < Version("0.6.10"):
-        from .. import __version__
-
-        msg = (
-            f"Scanpy {__version__} needs anndata version >=0.6.10, "
-            f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
-        )
-        raise ImportError(msg)
 
 
 def getdoc(c_or_f: Callable | type) -> str | None:
@@ -520,13 +508,11 @@ def update_params(
     if new_params:  # allow for new_params to be None
         for key, val in new_params.items():
             if key not in old_params and check:
-                raise ValueError(
-                    "'"
-                    + key
-                    + "' is not a valid parameter key, "
-                    + "consider one of \n"
-                    + str(list(old_params.keys()))
+                msg = (
+                    f"{key!r} is not a valid parameter key, "
+                    f"consider one of \n{list(old_params.keys())}"
                 )
+                raise ValueError(msg)
             if val is not None:
                 updated_params[key] = val
     return updated_params
@@ -569,7 +555,8 @@ def check_op(op):
 
 @singledispatch
 def axis_mul_or_truediv(
-    X: ArrayLike,
+    x: ArrayLike,
+    /,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
@@ -580,15 +567,16 @@ def axis_mul_or_truediv(
     check_op(op)
     scaling_array = broadcast_axis(scaling_array, axis)
     if op is mul:
-        return np.multiply(X, scaling_array, out=out)
+        return np.multiply(x, scaling_array, out=out)
     if not allow_divide_by_zero:
         scaling_array = scaling_array.copy() + (scaling_array == 0)
-    return np.true_divide(X, scaling_array, out=out)
+    return np.true_divide(x, scaling_array, out=out)
 
 
 @axis_mul_or_truediv.register(CSBase)
 def _(
-    X: CSBase,
+    x: CSBase,
+    /,
     scaling_array: np.ndarray,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
@@ -597,7 +585,7 @@ def _(
     out: CSBase | None = None,
 ) -> CSBase:
     check_op(op)
-    if out is not None and X.data is not out.data:
+    if out is not None and x.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
         raise ValueError(msg)
     if not allow_divide_by_zero and op is truediv:
@@ -615,14 +603,14 @@ def _(
         def new_data_op(x):
             return op(x.data, scaling_array.take(x.indices, mode="clip"))
 
-    if X.format == "csr":
-        indices = X.indices
-        indptr = X.indptr
+    if x.format == "csr":
+        indices = x.indices
+        indptr = x.indptr
         if out is not None:
-            X.data = new_data_op(X)
-            return X
-        return type(X)((new_data_op(X), indices.copy(), indptr.copy()), shape=X.shape)
-    transposed = X.T
+            x.data = new_data_op(x)
+            return x
+        return type(x)((new_data_op(x), indices.copy(), indptr.copy()), shape=x.shape)
+    transposed = x.T
     return axis_mul_or_truediv(
         transposed,
         scaling_array,
@@ -634,16 +622,17 @@ def _(
 
 
 def make_axis_chunks(
-    X: DaskArray, axis: Literal[0, 1]
+    x: DaskArray, axis: Literal[0, 1]
 ) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
-        return (X.chunks[axis], (1,))
-    return ((1,), X.chunks[axis])
+        return (x.chunks[axis], (1,))
+    return ((1,), x.chunks[axis])
 
 
 @axis_mul_or_truediv.register(DaskArray)
 def _(
-    X: DaskArray,
+    x: DaskArray,
+    /,
     scaling_array: Scaling_T,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
@@ -663,64 +652,65 @@ def _(
     column_scale = axis == 1
 
     if isinstance(scaling_array, DaskArray):
-        if (row_scale and X.chunksize[0] != scaling_array.chunksize[0]) or (
+        if (row_scale and x.chunksize[0] != scaling_array.chunksize[0]) or (
             column_scale
             and (
                 (
                     len(scaling_array.chunksize) == 1
-                    and X.chunksize[1] != scaling_array.chunksize[0]
+                    and x.chunksize[1] != scaling_array.chunksize[0]
                 )
                 or (
                     len(scaling_array.chunksize) == 2
-                    and X.chunksize[1] != scaling_array.chunksize[1]
+                    and x.chunksize[1] != scaling_array.chunksize[1]
                 )
             )
         ):
             warnings.warn(
                 "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
             )
-            scaling_array = scaling_array.rechunk(make_axis_chunks(X, axis))
+            scaling_array = scaling_array.rechunk(make_axis_chunks(x, axis))
     else:
         scaling_array = da.from_array(
             scaling_array,
-            chunks=make_axis_chunks(X, axis),
+            chunks=make_axis_chunks(x, axis),
         )
     return da.map_blocks(
         axis_mul_or_truediv,
-        X,
+        x,
         scaling_array,
         axis,
         op,
-        meta=X._meta,
+        meta=x._meta,
         out=out,
         allow_divide_by_zero=allow_divide_by_zero,
     )
 
 
 @singledispatch
-def axis_nnz(X: ArrayLike, axis: Literal[0, 1]) -> np.ndarray:
-    return np.count_nonzero(X, axis=axis)
+def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
+    return np.count_nonzero(x, axis=axis)
 
 
 if pkg_version("scipy") >= Version("1.15"):
     # newer scipy versions support the `axis` argument for count_nonzero
     @axis_nnz.register(CSBase)
-    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
-        return X.count_nonzero(axis=axis)
+    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
+        return x.count_nonzero(axis=axis)
+
 else:
     # older scipy versions don’t have any way to get the nnz of a sparse array
     @axis_nnz.register(CSBase)
-    def _(X: CSBase, axis: Literal[0, 1]) -> np.ndarray:
-        if isinstance(X, _CSArray):
+    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
+        if isinstance(x, _CSArray):
             from scipy.sparse import csc_array, csr_array  # noqa: TID251
 
-            X = (csr_array if X.format == "csr" else csc_array)(X)
-        return X.getnnz(axis=axis)
+            x = (csr_array if x.format == "csr" else csc_array)(x)
+        return x.getnnz(axis=axis)
 
 
 @axis_nnz.register(DaskArray)
-def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
-    return X.map_blocks(
+def _(x: DaskArray, /, axis: Literal[0, 1]) -> DaskArray:
+    return x.map_blocks(
         partial(axis_nnz, axis=axis),
         dtype=np.int64,
         meta=np.array([], dtype=np.int64),
@@ -729,17 +719,17 @@ def _(X: DaskArray, axis: Literal[0, 1]) -> DaskArray:
 
 
 @singledispatch
-def check_nonnegative_integers(X: _SupportedArray) -> bool | DaskArray:
+def check_nonnegative_integers(x: _SupportedArray, /) -> bool | DaskArray:
     """Check values of X to ensure it is count data."""
     raise NotImplementedError
 
 
 @check_nonnegative_integers.register(np.ndarray)
 @check_nonnegative_integers.register(CSBase)
-def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
+def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
     from numbers import Integral
 
-    data = X if isinstance(X, np.ndarray) else X.data
+    data = x if isinstance(x, np.ndarray) else x.data
     # Check no negatives
     if np.signbit(data).any():
         return False
@@ -750,8 +740,8 @@ def _check_nonnegative_integers_in_mem(X: _MemoryArray) -> bool:
 
 
 @check_nonnegative_integers.register(DaskArray)
-def _check_nonnegative_integers_dask(X: DaskArray) -> DaskArray:
-    return X.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
+def _check_nonnegative_integers_dask(x: DaskArray, /) -> DaskArray:
+    return x.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
 
 
 def dematrix(x: _SA | np.matrix) -> _SA:
@@ -769,8 +759,8 @@ def select_groups(
 ) -> tuple[list[str], NDArray[np.bool_]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
-    if key + "_masks" in adata.uns:
-        groups_masks_obs = adata.uns[key + "_masks"]
+    if f"{key}_masks" in adata.uns:
+        groups_masks_obs = adata.uns[f"{key}_masks"]
     else:
         groups_masks_obs = np.zeros(
             (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
@@ -1003,11 +993,11 @@ def _resolve_axis(
     raise ValueError(msg)
 
 
-def is_backed_type(X: object) -> bool:
-    return isinstance(X, SparseDataset | h5py.File | h5py.Dataset)
+def is_backed_type(x: object, /) -> bool:
+    return isinstance(x, SparseDataset | h5py.File | h5py.Dataset)
 
 
-def raise_not_implemented_error_if_backed_type(X: object, method_name: str) -> None:
-    if is_backed_type(X):
-        msg = f"{method_name} is not implemented for matrices of type {type(X)}"
+def raise_not_implemented_error_if_backed_type(x: object, method_name: str, /) -> None:
+    if is_backed_type(x):
+        msg = f"{method_name} is not implemented for matrices of type {type(x)}"
         raise NotImplementedError(msg)

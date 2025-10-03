@@ -47,20 +47,14 @@ def download_experiment(accession: str):
     sniff_url(accession)
 
     base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
-    design_url = f"{base_url}/download?accessKey=&fileType="
-    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
+    design_url = f"{base_url}/download?accessKey=&fileType=experiment-design"
+    mtx_url = f"{base_url}/download/zip?accessKey=&fileType=quantification-raw"
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    _download(
-        design_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
-    )
-    _download(
-        mtx_url + "quantification-raw",
-        experiment_dir / "expression_archive.zip",
-    )
+    _download(design_url, experiment_dir / "experimental_design.tsv")
+    _download(mtx_url, experiment_dir / "expression_archive.zip")
 
 
 def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> CSRBase:

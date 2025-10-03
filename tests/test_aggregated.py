@@ -6,7 +6,6 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -64,16 +63,17 @@ def df_groupby():
 
     df_groupby = pd.DataFrame(index=pd.Index(ax_groupby, name="cell"))
     df_groupby["key"] = pd.Categorical([c[0] for c in ax_groupby])
-    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map(
-        {"v": "v", "w": "v", "a": "a", "b": "a", "c": "a", "d": "a"}
-    )
+    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map({
+        **{"v": "v", "w": "v"},  # noqa: PIE800
+        **{"a": "a", "b": "a", "c": "a", "d": "a"},  # noqa: PIE800
+    })
     df_groupby["key_subset"] = pd.Categorical([c[1] for c in ax_groupby])
     df_groupby["weight"] = 2.0
     return df_groupby
 
 
 @pytest.fixture
-def X():
+def x():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v
         *[[3, 12], [4, 2]],  # w
@@ -85,12 +85,12 @@ def X():
     return np.array(data, dtype=np.float32)
 
 
-def gen_adata(data_key, dim, df_base, df_groupby, X):
+def gen_adata(data_key, dim, df_base, df_groupby, x):
     if (data_key == "varm" and dim == "obs") or (data_key == "obsm" and dim == "var"):
         pytest.skip("invalid parameter combination")
 
     obs_df, var_df = (df_groupby, df_base) if dim == "obs" else (df_base, df_groupby)
-    data = X.T if dim == "var" and data_key != "varm" else X
+    data = x.T if dim == "var" and data_key != "varm" else x
     if data_key != "X":
         data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}  # noqa: TID251
         data_dict_dense = {data_key: {"test": data}}
@@ -157,13 +157,6 @@ def test_aggregate_vs_pandas(
     result_df.index.name = None
     result_df.columns.name = None
 
-    if Version(pd.__version__) < Version("2"):
-        # Order of results returned by groupby changed in pandas 2
-        assert expected.shape == result_df.shape
-        assert expected.index.isin(result_df.index).all()
-
-        expected = expected.loc[result_df.index]
-
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
@@ -185,7 +178,7 @@ def test_aggregate_entry():
     args = ("blobs", ["mean", "var", "count_nonzero"])
 
     adata = sc.datasets.blobs()
-    X_result = sc.get.aggregate(adata, *args)
+    x_result = sc.get.aggregate(adata, *args)
     # layer adata
     layer_adata = ad.AnnData(
         obs=adata.obs,
@@ -206,14 +199,14 @@ def test_aggregate_entry():
     )
     varm_result = sc.get.aggregate(varm_adata, *args, varm="test")
 
-    X_result_min = X_result.copy()
-    del X_result_min.var
-    X_result_min.var_names = [str(x) for x in np.arange(X_result_min.n_vars)]
+    x_result_min = x_result.copy()
+    del x_result_min.var
+    x_result_min.var_names = [str(x) for x in np.arange(x_result_min.n_vars)]
 
-    assert_equal(X_result, layer_result)
-    assert_equal(X_result_min, obsm_result)
-    assert_equal(X_result.layers, obsm_result.layers)
-    assert_equal(X_result.layers, varm_result.T.layers)
+    assert_equal(x_result, layer_result)
+    assert_equal(x_result_min, obsm_result)
+    assert_equal(x_result.layers, obsm_result.layers)
+    assert_equal(x_result.layers, varm_result.T.layers)
 
 
 def test_aggregate_incorrect_dim():
@@ -283,12 +276,10 @@ def test_aggregate_axis_specification(axis_name):
     ("matrix", "df", "keys", "metrics", "expected"),
     [
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -305,9 +296,11 @@ def test_aggregate_axis_specification(axis_name):
                 ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                     # "sum": np.array([[2, 0], [0, 2]]),
                     # "mean": np.array([[1, 0], [0, 1]]),
                 },
@@ -315,12 +308,10 @@ def test_aggregate_axis_specification(axis_name):
             id="count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -339,20 +330,20 @@ def test_aggregate_axis_specification(axis_name):
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                 },
             ),
             id="sum-mean-count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -502,9 +493,9 @@ def test_aggregate_obsm_labels():
 
     label_counts = [("a", 5), ("b", 3), ("c", 4)]
     blocks = [np.ones((n, 1)) for _, n in label_counts]
-    obs_names = pd.Index(
-        [f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))]
-    )
+    obs_names = pd.Index([
+        f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))
+    ])
     entry = pd.DataFrame(
         sparse.block_diag(blocks).toarray(),
         columns=[f"dim_{i}" for i in range(len(label_counts))],

@@ -120,10 +120,10 @@ def dendrogram(  # noqa: PLR0913
         # if not a list, turn into a list
         groupby = [groupby]
     for group in groupby:
-        if group not in adata.obs_keys():
+        if group not in adata.obs:
             msg = (
                 "groupby has to be a valid observation. "
-                f"Given value: {group}, valid observations: {adata.obs_keys()}"
+                f"Given value: {group}, valid observations: {adata.obs.columns.tolist()}"
             )
             raise ValueError(msg)
         if not isinstance(adata.obs[group].dtype, CategoricalDtype):

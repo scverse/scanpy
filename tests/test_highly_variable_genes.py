@@ -123,7 +123,7 @@ def test_keep_layer(base, flavor):
 
     sc.pp.log1p(adata, base=base)
     assert isinstance(adata.X, CSRBase)
-    X_orig = adata.X.copy()
+    x_orig = adata.X.copy()
 
     if flavor == "seurat":
         sc.pp.highly_variable_genes(adata, n_top_genes=50, flavor=flavor)
@@ -132,7 +132,7 @@ def test_keep_layer(base, flavor):
     else:
         pytest.fail(f"Unknown {flavor=}")
 
-    assert np.allclose(X_orig.toarray(), adata.X.toarray())
+    assert np.allclose(x_orig.toarray(), adata.X.toarray())
 
 
 @pytest.mark.parametrize(
@@ -192,7 +192,7 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
             )
 
     with pytest.raises(
-        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
+        ValueError, match=r"Pearson residuals require `clip>=0` or `clip=None`\."
     ):
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), clip=-1, flavor="pearson_residuals", n_top_genes=100
@@ -593,8 +593,8 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 
 def test_cellranger_n_top_genes_warning():
-    X = np.random.poisson(2, (100, 30))
-    adata = AnnData(X)
+    x = np.random.poisson(2, (100, 30))
+    adata = AnnData(x)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
 
