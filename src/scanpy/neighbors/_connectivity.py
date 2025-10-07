@@ -145,6 +145,7 @@ def jaccard(
     n_neighbors: int,
 ) -> CSRBase:
     """Derive Jaccard connectivities between data points from kNN indices.
+
     Re-implements the weighting method from Phenograph, :cite:p:`Levine2015`.
 
     Parameters
