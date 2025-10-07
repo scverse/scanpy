@@ -183,5 +183,6 @@ def jaccard(
         shape=(n_obs, n_obs),
     )
     connectivities = (connectivities + connectivities.T) / 2
+    connectivities.eliminate_zeros()
 
     return connectivities
