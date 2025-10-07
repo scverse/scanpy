@@ -155,6 +155,7 @@ def jaccard(
         Number of cells in the data-set.
     n_neighbors
         The number of nearest neighbors to consider.
+
     """
     # Exclude self (following PhenoGraph)
     knn_indices = knn_indices[:, 1:]
@@ -163,7 +164,7 @@ def jaccard(
     # Construct unweighted kNN adjacency matrix (diagonal is zero)
     i_idx = np.repeat(np.arange(n_obs), n_neighbors)
     j_idx = knn_indices.ravel()
-    adjacency = sparse.csr_matrix(
+    adjacency = sparse.csr_matrix(  # noqa: TID251
         (np.ones(n_obs * n_neighbors), (i_idx, j_idx)),
         shape=(n_obs, n_obs),
     )
@@ -178,7 +179,7 @@ def jaccard(
 
     # Build connectivity matrix, symmetrise by averaging (as
     # default in PhenoGraph)
-    connectivities = sparse.csr_matrix(
+    connectivities = sparse.csr_matrix(  # noqa: TID251
         (jaccard, (i_idx, j_idx)),
         shape=(n_obs, n_obs),
     )
