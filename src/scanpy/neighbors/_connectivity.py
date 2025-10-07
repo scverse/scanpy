@@ -176,7 +176,7 @@ def jaccard(
     # Jaccard index
     jaccard = shared / (2 * n_neighbors - shared)
 
-    # Build connectivity matrix, symmetrise by averaging (as 
+    # Build connectivity matrix, symmetrise by averaging (as
     # default in PhenoGraph)
     connectivities = sparse.csr_matrix(
         (jaccard, (i_idx, j_idx)),
