@@ -1,4 +1,5 @@
-# Biomart queries
+"""Biomart queries."""
+
 from __future__ import annotations
 
 from ._queries import (

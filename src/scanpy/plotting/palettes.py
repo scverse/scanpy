@@ -196,7 +196,7 @@ def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
     fig.subplots_adjust(top=0.95, bottom=0.01, left=0.3, right=0.99)
     axes[0].set_title("Color Maps/Cycles", fontsize=14)
 
-    for ax, (name, clist) in zip(axes, clists.items()):
+    for ax, (name, clist) in zip(axes, clists.items(), strict=True):
         n = len(clist)
         ax.imshow(
             np.arange(n)[None, :].repeat(2, 0),
@@ -216,6 +216,6 @@ def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
 
 
 if __name__ == "__main__":
-    _plot_color_cycle(
-        {name: colors for name, colors in globals().items() if isinstance(colors, list)}
-    )
+    _plot_color_cycle({
+        name: colors for name, colors in globals().items() if isinstance(colors, list)
+    })

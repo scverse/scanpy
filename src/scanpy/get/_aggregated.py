@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from functools import singledispatch
-from typing import TYPE_CHECKING, Literal
+from functools import partial, singledispatch
+from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData, utils
+from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
+
+from scanpy._compat import CSBase, CSCBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
 from .get import _check_mask
@@ -17,15 +20,15 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | sparse.csc_matrix | sparse.csr_matrix
+    Array = np.ndarray | CSBase | DaskArray
 
 # Used with get_literal_vals
-AggType = Literal["count_nonzero", "mean", "sum", "var", "median"]
+ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
-    """\
-    Functionality for generic grouping and aggregating.
+    """Functionality for generic grouping and aggregating.
 
     There is currently support for count_nonzero, sum, mean, and variance.
 
@@ -65,34 +68,34 @@ class Aggregate:
     data: Array
 
     def count_nonzero(self) -> NDArray[np.integer]:
-        """\
-        Count the number of observations in each group.
+        """Count the number of observations in each group.
 
         Returns
         -------
         Array of counts.
+
         """
         # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
         # return self.indicator_matrix @ pattern
         return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
     def sum(self) -> Array:
-        """\
-        Compute the sum per feature per group of observations.
+        """Compute the sum per feature per group of observations.
 
         Returns
         -------
         Array of sum.
+
         """
         return utils.asarray(self.indicator_matrix @ self.data)
 
     def mean(self) -> Array:
-        """\
-        Compute the mean per feature per group of observations.
+        """Compute the mean per feature per group of observations.
 
         Returns
         -------
         Array of mean.
+
         """
         return (
             utils.asarray(self.indicator_matrix @ self.data)
@@ -100,8 +103,7 @@ class Aggregate:
         )
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
-        """\
-        Compute the count, as well as mean and variance per feature, per group of observations.
+        """Compute the count, as well as mean and variance per feature, per group of observations.
 
         The formula `Var(X) = E(X^2) - E(X)^2` suffers loss of precision when the variance is a
         very small fraction of the squared mean. In particular, when X is constant, the formula may
@@ -117,6 +119,7 @@ class Aggregate:
         Returns
         -------
         Object with `count`, `mean`, and `var` attributes.
+
         """
         assert dof >= 0
 
@@ -139,19 +142,18 @@ class Aggregate:
         return mean_, var_
 
     def median(self) -> Array:
-        """\
-        Compute the median per feature per group of observations.
+        """Compute the median per feature per group of observations.
 
         Returns
         -------
         Array of median.
-        """
 
+        """
         medians = []
         for group in np.unique(self.groupby.codes):
             group_mask = self.groupby.codes == group
             group_data = self.data[group_mask]
-            if sparse.issparse(group_data):
+            if isinstance(group_data, CSBase):
                 if group_data.format != "csc":
                     group_data = group_data.tocsc()
                 medians.append(csc_median_axis_0(group_data))
@@ -160,9 +162,8 @@ class Aggregate:
         return np.array(medians)
 
 
-def _power(X: Array, power: float) -> Array:
-    """\
-    Generate elementwise power of a matrix.
+def _power(x: Array, power: float) -> Array:
+    """Generate elementwise power of a matrix.
 
     Needed for non-square sparse matrices because they do not support `**` so the `.power` function is used.
 
@@ -176,11 +177,12 @@ def _power(X: Array, power: float) -> Array:
     Returns
     -------
     Matrix whose power has been raised.
+
     """
-    return X**power if isinstance(X, np.ndarray) else X.power(power)
+    return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
-def aggregate(
+def aggregate(  # noqa: PLR0912
     adata: AnnData,
     by: str | Collection[str],
     func: AggType | Iterable[AggType],
@@ -192,8 +194,7 @@ def aggregate(
     obsm: str | None = None,
     varm: str | None = None,
 ) -> AnnData:
-    """\
-    Aggregate data matrix based on some categorical grouping.
+    """Aggregate data matrix based on some categorical grouping.
 
     This function is useful for pseudobulking as well as plotting.
 
@@ -230,14 +231,15 @@ def aggregate(
 
     Examples
     --------
-
     Calculating mean expression and number of nonzero entries per cluster:
 
     >>> import scanpy as sc, pandas as pd
     >>> pbmc = sc.datasets.pbmc3k_processed().raw.to_adata()
     >>> pbmc.shape
     (2638, 13714)
-    >>> aggregated = sc.get.aggregate(pbmc, by="louvain", func=["mean", "count_nonzero"])
+    >>> aggregated = sc.get.aggregate(
+    ...     pbmc, by="louvain", func=["mean", "count_nonzero"]
+    ... )
     >>> aggregated
     AnnData object with n_obs × n_vars = 8 × 13714
         obs: 'louvain'
@@ -247,13 +249,16 @@ def aggregate(
     We can group over multiple columns:
 
     >>> pbmc.obs["percent_mito_binned"] = pd.cut(pbmc.obs["percent_mito"], bins=5)
-    >>> sc.get.aggregate(pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"])
+    >>> sc.get.aggregate(
+    ...     pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"]
+    ... )
     AnnData object with n_obs × n_vars = 40 × 13714
         obs: 'louvain', 'percent_mito_binned'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
     Note that this filters out any combination of groups that wasn't present in the original data.
+
     """
     if not isinstance(adata, AnnData):
         msg = (
@@ -327,19 +332,111 @@ def _aggregate(
     *,
     mask: NDArray[np.bool_] | None = None,
     dof: int = 1,
-):
+) -> dict[AggType, np.ndarray | DaskArray]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
 
 
+class MeanVarDict(TypedDict):
+    mean: DaskArray
+    var: DaskArray
+
+
+def aggregate_dask_mean_var(
+    data: DaskArray,
+    by: pd.Categorical,
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+) -> MeanVarDict:
+    mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
+    sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
+    # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
+    if isinstance(data._meta, CSRBase):
+        sq_mean = sq_mean.compute()
+    elif isinstance(data._meta, CSCBase):  # pragma: no-cover
+        msg = "Cannot handle CSC matrices as dask meta."
+        raise ValueError(msg)
+    var = sq_mean - fau_power(mean, 2)
+    if dof != 0:
+        group_counts = np.bincount(by.codes)
+        var *= (group_counts / (group_counts - dof))[:, np.newaxis]
+    return MeanVarDict(mean=mean, var=var)
+
+
+@_aggregate.register(DaskArray)
+def aggregate_dask(
+    data: DaskArray,
+    by: pd.Categorical,
+    func: AggType | Iterable[AggType],
+    *,
+    mask: NDArray[np.bool_] | None = None,
+    dof: int = 1,
+) -> dict[AggType, DaskArray]:
+    if not isinstance(data._meta, CSRBase | np.ndarray):
+        msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
+        raise ValueError(msg)
+    if data.chunksize[1] != data.shape[1]:
+        msg = "Feature axis must be unchunked"
+        raise ValueError(msg)
+
+    def aggregate_chunk_sum_or_count_nonzero(
+        chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
+    ):
+        # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
+        # for what is contained in `block_info`.
+        subset = slice(*block_info[0]["array-location"][0])
+        by_subsetted = by[subset]
+        mask_subsetted = mask[subset] if mask is not None else mask
+        res = _aggregate(chunk, by_subsetted, func, mask=mask_subsetted, dof=dof)[func]
+        return res[None, :]
+
+    funcs = set([func] if isinstance(func, str) else func)
+    if "median" in funcs:
+        msg = "Dask median calculation not supported.  If you want a median-of-medians calculation, please open an issue."
+        raise NotImplementedError(msg)
+    has_mean, has_var = (v in funcs for v in ["mean", "var"])
+    funcs_no_var_or_mean = funcs - {"var", "mean"}
+    # aggregate each row chunk individually,
+    # producing a #chunks × #categories × #features array,
+    # then aggregate the per-chunk results.
+    aggregated = {
+        f: data.map_blocks(
+            partial(aggregate_chunk_sum_or_count_nonzero, func=func),
+            new_axis=(1,),
+            chunks=((1,) * data.blocks.size, (len(by.categories),), (data.shape[1],)),
+            meta=np.array(
+                [],
+                dtype=np.float64
+                if func not in get_args(ConstantDtypeAgg)
+                else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
+            ),
+        ).sum(axis=0)
+        for f in funcs_no_var_or_mean
+    }
+    if has_var:
+        aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
+        aggregated["var"] = aggredated_mean_var["var"]
+        if has_mean:
+            aggregated["mean"] = aggredated_mean_var["mean"]
+    # division must come after, not before, the summation for numerical precision
+    # i.e., we can't just call map blocks over the mean function.
+    elif has_mean:
+        group_counts = np.bincount(by.codes)
+        aggregated["mean"] = (
+            aggregate_dask(data, by, "sum", mask=mask, dof=dof)["sum"]
+            / group_counts[:, None]
+        )
+    return aggregated
+
+
 @_aggregate.register(pd.DataFrame)
-def aggregate_df(data, by, func, *, mask=None, dof=1):
+def aggregate_df(data, by, func, *, mask=None, dof=1) -> dict[AggType, np.ndarray]:
     return _aggregate(data.values, by, func, mask=mask, dof=dof)
 
 
 @_aggregate.register(np.ndarray)
-@_aggregate.register(sparse.csr_matrix)
-@_aggregate.register(sparse.csc_matrix)
+@_aggregate.register(CSBase)
 def aggregate_array(
     data: Array,
     by: pd.Categorical,
@@ -379,9 +476,7 @@ def aggregate_array(
 def _combine_categories(
     label_df: pd.DataFrame, cols: Collection[str] | str
 ) -> tuple[pd.Categorical, pd.DataFrame]:
-    """
-    Returns both the result categories and a dataframe labelling each row
-    """
+    """Return both the result categories and a dataframe labelling each row."""
     from itertools import product
 
     if isinstance(cols, str):
@@ -394,9 +489,9 @@ def _combine_categories(
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
-    result_categories = pd.Index(
-        ["_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])]
-    )
+    result_categories = pd.Index([
+        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
+    ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
@@ -440,8 +535,8 @@ def sparse_indicator(
         weight = mask * weight
     elif mask is None and weight is None:
         weight = np.broadcast_to(1.0, len(categorical))
-    A = sparse.coo_matrix(
+    a = sparse.coo_matrix(
         (weight, (categorical.codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
     )
-    return A
+    return a

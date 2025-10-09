@@ -6,17 +6,14 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from scipy.sparse import issparse
+from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import deprecated, old_positionals
+from ..._compat import CSBase, deprecated, old_positionals
 from .._distributed import materialize_as_ndarray
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
-
-    from .._utils import _CSMatrix
 
 
 @deprecated("Use sc.pp.highly_variable_genes instead")
@@ -32,8 +29,8 @@ if TYPE_CHECKING:
     "subset",
     "copy",
 )
-def filter_genes_dispersion(
-    data: AnnData | _CSMatrix | np.ndarray,
+def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
+    data: AnnData | CSBase | np.ndarray,
     *,
     flavor: Literal["seurat", "cell_ranger"] = "seurat",
     min_disp: float | None = None,
@@ -46,8 +43,7 @@ def filter_genes_dispersion(
     subset: bool = True,
     copy: bool = False,
 ) -> AnnData | np.recarray | None:
-    """\
-    Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
+    """Extract highly variable genes :cite:p:`Satija2015,Zheng2017`.
 
     .. deprecated:: 1.3.6
 
@@ -123,12 +119,13 @@ def filter_genes_dispersion(
 
     If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+
     """
     if n_top_genes is not None and not all(
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
         msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-        warnings.warn(msg, UserWarning)
+        warnings.warn(msg, UserWarning, stacklevel=2)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:
@@ -156,8 +153,8 @@ def filter_genes_dispersion(
             adata.var["highly_variable"] = result["gene_subset"]
         return adata if copy else None
     start = logg.info("extracting highly variable genes")
-    X = data  # no copy necessary, X remains unchanged in the following
-    mean, var = materialize_as_ndarray(_get_mean_var(X))
+    x = data  # no copy necessary, X remains unchanged in the following
+    mean, var = materialize_as_ndarray(mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -231,14 +228,12 @@ def filter_genes_dispersion(
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce(
-            (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
-            )
-        )
+        gene_subset = np.logical_and.reduce((
+            mean > min_mean,
+            mean < max_mean,
+            dispersion_norm > min_disp,
+            dispersion_norm < max_disp,
+        ))
     logg.info("    finished", time=start)
     return np.rec.fromarrays(
         (
@@ -256,22 +251,22 @@ def filter_genes_dispersion(
     )
 
 
-def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
+def filter_genes_cv_deprecated(x, /, e_cutoff, cv_filter):
     """Filter genes by coefficient of variance and mean."""
-    return _filter_genes(X, Ecutoff, cvFilter, np.std)
+    return _filter_genes(x, e_cutoff, cv_filter, np.std)
 
 
-def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
+def filter_genes_fano_deprecated(x, /, e_cutoff, v_cutoff):
     """Filter genes by fano factor and mean."""
-    return _filter_genes(X, Ecutoff, Vcutoff, np.var)
+    return _filter_genes(x, e_cutoff, v_cutoff, np.var)
 
 
-def _filter_genes(X, e_cutoff, v_cutoff, meth):
+def _filter_genes(x, /, e_cutoff, v_cutoff, meth):
     """See `filter_genes_dispersion` :cite:p:`Weinreb2017`."""
-    if issparse(X):
+    if isinstance(x, CSBase):
         msg = "Not defined for sparse input. See `filter_genes_dispersion`."
         raise ValueError(msg)
-    mean_filter = np.mean(X, axis=0) > e_cutoff
-    var_filter = meth(X, axis=0) / (np.mean(X, axis=0) + 0.0001) > v_cutoff
+    mean_filter = np.mean(x, axis=0) > e_cutoff
+    var_filter = meth(x, axis=0) / (np.mean(x, axis=0) + 0.0001) > v_cutoff
     gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_subset

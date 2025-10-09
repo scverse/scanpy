@@ -1,5 +1,8 @@
+"""Plotting functions and classes."""
+
 from __future__ import annotations
 
+from .._compat import deprecated
 from . import palettes
 from ._anndata import (
     clustermap,
@@ -53,30 +56,30 @@ from ._tools.scatterplots import (
 from ._utils import matrix, timeseries, timeseries_as_heatmap, timeseries_subplot
 
 __all__ = [
-    "palettes",
+    "DotPlot",
+    "MatrixPlot",
+    "StackedViolin",
     "clustermap",
     "correlation_matrix",
     "dendrogram",
-    "heatmap",
-    "ranking",
-    "scatter",
-    "tracksplot",
-    "violin",
-    "DotPlot",
+    "diffmap",
     "dotplot",
-    "MatrixPlot",
-    "matrixplot",
-    "filter_genes_dispersion",
-    "highly_variable_genes",
-    "highest_expr_genes",
-    "set_rcParams_defaults",
-    "set_rcParams_scanpy",
-    "StackedViolin",
-    "stacked_violin",
-    "scrublet_score_distribution",
     "dpt_groups_pseudotime",
     "dpt_timeseries",
+    "draw_graph",
+    "embedding",
     "embedding_density",
+    "filter_genes_dispersion",
+    "heatmap",
+    "highest_expr_genes",
+    "highly_variable_genes",
+    "matrix",
+    "matrixplot",
+    "paga",
+    "paga_compare",
+    "paga_path",
+    "palettes",
+    "pca",
     "pca_loadings",
     "pca_overview",
     "pca_scatter",
@@ -88,19 +91,20 @@ __all__ = [
     "rank_genes_groups_stacked_violin",
     "rank_genes_groups_tracksplot",
     "rank_genes_groups_violin",
+    "ranking",
+    "scatter",
+    "scrublet_score_distribution",
+    "set_rcParams_defaults",
+    "set_rcParams_scanpy",
     "sim",
-    "paga",
-    "paga_compare",
-    "paga_path",
-    "diffmap",
-    "draw_graph",
-    "embedding",
-    "pca",
     "spatial",
+    "stacked_violin",
+    "tracksplot",
     "tsne",
     "umap",
-    "matrix",
-    "timeseries",
-    "timeseries_as_heatmap",
-    "timeseries_subplot",
+    "violin",
 ]
+
+timeseries = deprecated("Use `dpt_timeseries`.")(timeseries)
+timeseries_as_heatmap = deprecated("Use `dpt_timeseries`.")(timeseries_as_heatmap)
+timeseries_subplot = deprecated("Use `dpt_timeseries`.")(timeseries_subplot)

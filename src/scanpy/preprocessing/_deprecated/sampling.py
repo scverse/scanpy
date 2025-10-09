@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..._compat import _legacy_numpy_gen, old_positionals
+from ..._compat import old_positionals
+from ..._utils.random import legacy_numpy_gen
 from .._simple import sample
 
 if TYPE_CHECKING:
@@ -10,21 +11,20 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from ..._compat import _LegacyRandom
-    from ..._utils import _CSMatrix
+    from ..._compat import CSBase
+    from ..._utils.random import _LegacyRandom
 
 
 @old_positionals("n_obs", "random_state", "copy")
 def subsample(
-    data: AnnData | np.ndarray | _CSMatrix,
+    data: AnnData | np.ndarray | CSBase,
     fraction: float | None = None,
     *,
     n_obs: int | None = None,
     random_state: _LegacyRandom = 0,
     copy: bool = False,
-) -> AnnData | tuple[np.ndarray | _CSMatrix, NDArray[np.int64]] | None:
-    """\
-    Subsample to a fraction of the number of observations.
+) -> AnnData | tuple[np.ndarray | CSBase, NDArray[np.int64]] | None:
+    """Subsample to a fraction of the number of observations.
 
     .. deprecated:: 1.11.0
 
@@ -50,9 +50,9 @@ def subsample(
     Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
     subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
-    """
 
-    rng = _legacy_numpy_gen(random_state)
+    """
+    rng = legacy_numpy_gen(random_state)
     return sample(
         data=data, fraction=fraction, n=n_obs, rng=rng, copy=copy, replace=False, axis=0
     )

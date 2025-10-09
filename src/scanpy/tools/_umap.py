@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from .._compat import _LegacyRandom
     from ._types import DensmapMethodKwds
+    from .._utils.random import _LegacyRandom
 
     _InitPos = Literal["paga", "spectral", "random"]
 
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     "method",
     "neighbors_key",
 )
-def umap(
+def umap(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     *,
     min_dist: float = 0.5,
@@ -59,8 +60,7 @@ def umap(
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
+    r"""Embed the neighborhood graph using UMAP :cite:p:`McInnes2018`.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
@@ -139,15 +139,15 @@ def umap(
                 Use :func:`rapids_singlecell.tl.umap` instead.
     key_added
         If not specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ `['X_umap']` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ `['umap']`.
+        :attr:`~anndata.AnnData.obsm`\ `['X_umap']` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ `['umap']`.
         If specified, the embedding is stored as
-        :attr:`~anndata.AnnData.obsm`\\ ``[key_added]`` and the the parameters in
-        :attr:`~anndata.AnnData.uns`\\ ``[key_added]``.
+        :attr:`~anndata.AnnData.obsm`\ ``[key_added]`` and the the parameters in
+        :attr:`~anndata.AnnData.uns`\ ``[key_added]``.
     neighbors_key
         Umap looks in
-        :attr:`~anndata.AnnData.uns`\\ ``[neighbors_key]`` for neighbors settings and
-        :attr:`~anndata.AnnData.obsp`\\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+        :attr:`~anndata.AnnData.uns`\ ``[neighbors_key]`` for neighbors settings and
+        :attr:`~anndata.AnnData.obsp`\ ``[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
     copy
         Return a copy instead of writing to adata.
 
@@ -239,7 +239,7 @@ def umap(
     random_state = check_random_state(random_state)
 
     neigh_params = neighbors["params"]
-    X = _choose_representation(
+    x = _choose_representation(
         adata,
         use_rep=neigh_params.get("use_rep", None),
         n_pcs=neigh_params.get("n_pcs", None),
@@ -278,9 +278,8 @@ def umap(
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
         n_epochs = default_epochs if maxiter is None else maxiter
-
-        X_umap, _ = simplicial_set_embedding(
-            data=X,
+        x_umap, _ = simplicial_set_embedding(
+            data=x,
             graph=neighbors["connectivities"].tocoo(),
             n_components=n_components,
             initial_alpha=alpha,
@@ -303,7 +302,7 @@ def umap(
             "`method='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning)
+        warnings.warn(msg, FutureWarning, stacklevel=2)
         metric = neigh_params.get("metric", "euclidean")
         if metric != "euclidean":
             msg = (
@@ -317,7 +316,7 @@ def umap(
         n_epochs = (
             500 if maxiter is None else maxiter
         )  # 0 is not a valid value for rapids, unlike original umap
-        X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+        x_contiguous = np.ascontiguousarray(x, dtype=np.float32)
         umap = UMAP(
             n_neighbors=n_neighbors,
             n_components=n_components,
@@ -332,12 +331,8 @@ def umap(
             verbose=settings.verbosity > 3,
             random_state=random_state,
         )
-        X_umap = umap.fit_transform(X_contiguous)
-    else:
-        message = f"umap method parameter invalid: {method} not supported."
-        raise ValueError(message)
-
-    adata.obsm[key_obsm] = X_umap  # annotate samples with UMAP coordinates
+        x_umap = umap.fit_transform(x_contiguous)
+    adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
         time=start,

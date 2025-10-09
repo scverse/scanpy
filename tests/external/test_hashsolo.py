@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+from anndata import AnnData, ImplicitModificationWarning
 
 import scanpy.external as sce
 
@@ -24,7 +26,11 @@ def test_cell_demultiplexing():
         col_pos = (idx % 10) - 1
         x[idx, col_pos] = signal_count
 
-    test_data = AnnData(np.random.randint(0, 100, size=x.shape), obs=x)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
+        test_data = AnnData(
+            np.random.randint(0, 100, size=x.shape), obs=pd.DataFrame(x)
+        )
     sce.pp.hashsolo(test_data, test_data.obs.columns)
 
     doublets = ["Doublet"] * 10

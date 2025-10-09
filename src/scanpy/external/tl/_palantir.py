@@ -1,6 +1,4 @@
-"""\
-Run Diffusion maps using the adaptive anisotropic kernel
-"""
+"""Run Diffusion maps using the adaptive anisotropic kernel."""
 
 from __future__ import annotations
 
@@ -41,8 +39,7 @@ def palantir(
     n_steps: int = 3,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Run Diffusion maps using the adaptive anisotropic kernel :cite:p:`Setty2019`.
+    """Run Diffusion maps using the adaptive anisotropic kernel :cite:p:`Setty2019`.
 
     Palantir is an algorithm to align cells along differentiation trajectories.
     Palantir models differentiation as a stochastic process where stem cells
@@ -168,7 +165,7 @@ def palantir(
     Palantir constructs the tSNE map in the embedded space since these maps better
     represent the differentiation trajectories.
 
-    >>> sc.tl.tsne(adata, n_pcs=2, use_rep='X_palantir_multiscale', perplexity=150)
+    >>> sc.tl.tsne(adata, n_pcs=2, use_rep="X_palantir_multiscale", perplexity=150)
 
     *tsne by cell size*
 
@@ -178,9 +175,9 @@ def palantir(
 
     >>> sc.pl.tsne(
     ...     adata,
-    ...     gene_symbols=['CD34', 'MPO', 'GATA1', 'IRF8'],
-    ...     layer='palantir_imp',
-    ...     color=['CD34', 'MPO', 'GATA1', 'IRF8']
+    ...     gene_symbols=["CD34", "MPO", "GATA1", "IRF8"],
+    ...     layer="palantir_imp",
+    ...     color=["CD34", "MPO", "GATA1", "IRF8"],
     ... )
 
     **Running Palantir**
@@ -189,11 +186,11 @@ def palantir(
     automatically determines the terminal states, they can also be specified using the
     `termine_states` parameter.
 
-    >>> start_cell = 'Run5_164698952452459'
+    >>> start_cell = "Run5_164698952452459"
     >>> pr_res = sce.tl.palantir_results(
     ...     adata,
     ...     early_cell=start_cell,
-    ...     ms_data='X_palantir_multiscale',
+    ...     ms_data="X_palantir_multiscale",
     ...     num_waypoints=500,
     ... )
 
@@ -207,8 +204,8 @@ def palantir(
     <https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*, amongst other
     things.
-    """
 
+    """
     _check_import()
     from palantir.utils import (
         determine_multiscale_space,
@@ -280,8 +277,7 @@ def palantir_results(
     use_early_cell_as_start: bool = False,
     max_iterations: int = 25,
 ) -> AnnData | None:
-    """\
-    **Running Palantir**
+    """Run Palantir.
 
     A convenience function that wraps `palantir.core.run_palantir` to compute branch
     probabilities and waypoints.
@@ -314,6 +310,7 @@ def palantir_results(
     Returns
     -------
     PResults object with pseudotime, entropy, branch probabilities and waypoints.
+
     """
     logg.info("Palantir computing waypoints..")
 
@@ -339,6 +336,6 @@ def palantir_results(
 def _check_import():
     try:
         import palantir  # noqa: F401
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install palantir:\n\tpip install palantir"
-        raise ImportError(msg)
+        raise ImportError(msg) from e

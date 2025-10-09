@@ -1,11 +1,12 @@
-"""Logging and Profiling"""
+"""Logging and Profiling."""
 
 from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial, update_wrapper
+from importlib.metadata import version
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
     from session_info2 import SessionInfo
 
-    from ._settings import ScanpyConfig
+    from ._settings import SettingsMeta
 
 
 # This is currently the only documented API
@@ -45,7 +46,7 @@ class _RootLogger(logging.RootLogger):
     ) -> datetime:
         from ._settings import settings
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
@@ -74,19 +75,20 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings: ScanpyConfig):
+def _set_log_file(settings: SettingsMeta) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
     root.addHandler(h)
 
 
-def _set_log_level(settings: ScanpyConfig, level: int):
+def _set_log_level(settings: SettingsMeta, level: int) -> None:
     root = settings._root_logger
     root.setLevel(level)
     for h in list(root.handlers):
@@ -135,14 +137,15 @@ def print_header(*, file: None = None) -> SessionInfo: ...
 @overload
 def print_header(*, file: IO[str]) -> None: ...
 def print_header(*, file: IO[str] | None = None):
-    """\
-    Versions that might influence the numerical results.
+    """Versions that might influence the numerical results.
+
     Matplotlib and Seaborn are excluded from this.
 
     Parameters
     ----------
     file
         Optional path for dependency output.
+
     """
     from session_info2 import session_info
 
@@ -157,8 +160,7 @@ def print_header(*, file: IO[str] | None = None):
 
 @deprecated("Use `print_header` instead")
 def print_versions() -> SessionInfo:
-    """\
-    Alias for `print_header`.
+    """Alias for `print_header`.
 
     .. deprecated:: 1.11.0
 
@@ -168,20 +170,20 @@ def print_versions() -> SessionInfo:
 
 
 def print_version_and_date(*, file=None):
-    """\
+    """Print small version and date header.
+
     Useful for starting a notebook so you see when you started working.
 
     Parameters
     ----------
     file
         Optional path for output.
-    """
-    from . import __version__
 
+    """
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {version('scanpy')}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 
@@ -197,8 +199,7 @@ def error(
     deep: str | None = None,
     extra: dict | None = None,
 ) -> datetime:
-    """\
-    Log message with specific level and return current time.
+    """Log message with specific level and return current time.
 
     Parameters
     ----------
@@ -214,6 +215,7 @@ def error(
         this gets displayed as well
     extra
         Additional values you can specify in `msg` like `{time_passed}`.
+
     """
     from ._settings import settings
 

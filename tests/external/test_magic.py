@@ -19,38 +19,38 @@ A_list = [
 
 
 def test_magic_default():
-    A = np.array(A_list, dtype="float32")
-    adata = AnnData(A)
+    a = np.array(A_list, dtype="float32")
+    adata = AnnData(a)
     sc.external.pp.magic(adata, knn=1)
     # check raw unchanged
-    np.testing.assert_array_equal(adata.raw.X, A)
+    np.testing.assert_array_equal(adata.raw.X, a)
     # check .X changed
-    assert not np.all(adata.X == A)
+    assert not np.all(a == adata.X)
     # check .X shape unchanged
-    assert adata.X.shape == A.shape
+    assert adata.X.shape == a.shape
 
 
 def test_magic_pca_only():
-    A = np.array(A_list, dtype="float32")
+    a = np.array(A_list, dtype="float32")
     # pca only
-    adata = AnnData(A)
+    adata = AnnData(a)
     n_pca = 3
     sc.external.pp.magic(adata, knn=1, name_list="pca_only", n_pca=n_pca)
     # check raw unchanged
-    np.testing.assert_array_equal(adata.X, A)
+    np.testing.assert_array_equal(adata.X, a)
     # check .X shape consistent with n_pca
-    assert adata.obsm["X_magic"].shape == (A.shape[0], n_pca)
+    assert adata.obsm["X_magic"].shape == (a.shape[0], n_pca)
 
 
 def test_magic_copy():
-    A = np.array(A_list, dtype="float32")
-    adata = AnnData(A)
+    a = np.array(A_list, dtype="float32")
+    adata = AnnData(a)
     adata_copy = sc.external.pp.magic(adata, knn=1, copy=True)
     # check adata unchanged
-    np.testing.assert_array_equal(adata.X, A)
+    np.testing.assert_array_equal(adata.X, a)
     # check copy raw unchanged
-    np.testing.assert_array_equal(adata_copy.raw.X, A)
+    np.testing.assert_array_equal(adata_copy.raw.X, a)
     # check .X changed
-    assert not np.all(adata_copy.X == A)
+    assert not np.all(a == adata_copy.X)
     # check .X shape unchanged
-    assert adata_copy.X.shape == A.shape
+    assert adata_copy.X.shape == a.shape

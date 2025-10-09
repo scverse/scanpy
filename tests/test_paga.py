@@ -60,7 +60,7 @@ def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images(f"paga_{test_id}" if test_id else "paga")
 
 
-def test_paga_pie(image_comparer, pbmc):
+def test_paga_pie(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     colors = {
@@ -69,11 +69,11 @@ def test_paga_pie(image_comparer, pbmc):
     }
     colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
 
-    sc.pl.paga(pbmc, color=colors, colorbar=False)
+    sc.pl.paga(pbmc, color=colors, colorbar=False, show=False)
     save_and_compare_images("paga_pie")
 
 
-def test_paga_path(image_comparer, pbmc):
+def test_paga_path(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc.uns["iroot"] = 0
@@ -100,7 +100,7 @@ def test_paga_compare(image_comparer):
 
 
 def test_paga_positions_reproducible():
-    """Check exact reproducibility and effect of random_state on paga positions"""
+    """Check exact reproducibility and effect of random_state on paga positions."""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")
