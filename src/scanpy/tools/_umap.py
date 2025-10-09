@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._compat import _LegacyRandom
-    from ._types import DensmapMethodKwds
     from .._utils.random import _LegacyRandom
+    from ._types import DensmapMethodKwds
 
     _InitPos = Literal["paga", "spectral", "random"]
 
@@ -265,13 +265,11 @@ def umap(  # noqa: PLR0913, PLR0915
         else {}
     )
     if method == "densmap":
-        adata.uns[key_uns]["params"].update(
-            {
-                "dens_lambda": densmap_kwds["lambda"],
-                "dens_frac": densmap_kwds["frac"],
-                "dens_var_shift": densmap_kwds["var_shift"],
-            }
-        )
+        adata.uns[key_uns]["params"].update({
+            "dens_lambda": densmap_kwds["lambda"],
+            "dens_frac": densmap_kwds["frac"],
+            "dens_var_shift": densmap_kwds["var_shift"],
+        })
 
     if method == "umap" or method == "densmap":
         # the data matrix X is really only used for determining the number of connected components
