@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
     from .._utils.random import _LegacyRandom
     from ._types import DensmapMethodKwds
 
