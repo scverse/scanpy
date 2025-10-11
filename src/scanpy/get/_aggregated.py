@@ -242,7 +242,7 @@ def aggregate(  # noqa: PLR0912
     ... )
     >>> aggregated
     AnnData object with n_obs × n_vars = 8 × 13714
-        obs: 'louvain'
+        obs: 'louvain', 'n_obs_aggregated'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
@@ -253,7 +253,7 @@ def aggregate(  # noqa: PLR0912
     ...     pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"]
     ... )
     AnnData object with n_obs × n_vars = 40 × 13714
-        obs: 'louvain', 'percent_mito_binned'
+        obs: 'louvain', 'percent_mito_binned', 'n_obs_aggregated'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
