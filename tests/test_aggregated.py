@@ -291,7 +291,11 @@ def test_aggregate_axis_specification(axis_name):
             ["count_nonzero"],  # , "sum", "mean"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": pd.Categorical(["a", "a", "b"]), "b": pd.Categorical(["c", "d", "d"]), "n_obs_aggregated": [1, 1, 2]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
                 ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
@@ -323,7 +327,11 @@ def test_aggregate_axis_specification(axis_name):
             ["sum", "mean", "count_nonzero"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": pd.Categorical(["a", "a", "b"]), "b": pd.Categorical(["c", "d", "d"]), "n_obs_aggregated": [1, 1, 2]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
                 ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
@@ -355,7 +363,11 @@ def test_aggregate_axis_specification(axis_name):
             ["mean"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": pd.Categorical(["a", "a", "b"]), "b": pd.Categorical(["c", "d", "d"]), "n_obs_aggregated": [1, 1, 2]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
                 ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
@@ -516,10 +528,10 @@ def test_aggregate_obsm_labels():
     )
 
     expected = ad.AnnData(
-        obs=pd.DataFrame({
-            "labels": pd.Categorical(list("abc")),
-            "n_obs_aggregated": [5, 3, 4]
-        }, index=list("abc")),
+        obs=pd.DataFrame(
+            {"labels": pd.Categorical(list("abc")), "n_obs_aggregated": [5, 3, 4]},
+            index=list("abc"),
+        ),
         var=pd.DataFrame(index=[f"dim_{i}" for i in range(3)]),
         layers={
             "sum": np.diag([n for _, n in label_counts]),
@@ -556,8 +568,8 @@ def test_aggregate_n_obs_aggregated_single_key():
         X=np.random.rand(10, 5),
         obs=pd.DataFrame(
             {"cluster": ["A", "A", "A", "B", "B", "B", "B", "C", "C", "C"]},
-            index=[f"cell_{i}" for i in range(10)]
-        )
+            index=[f"cell_{i}" for i in range(10)],
+        ),
     )
 
     result = sc.get.aggregate(adata, by="cluster", func="mean")
@@ -584,8 +596,8 @@ def test_aggregate_n_obs_aggregated_multiple_keys():
                 "cluster": ["A", "A", "A", "A", "B", "B", "B", "B", "C", "C", "C", "C"],
                 "batch": ["1", "1", "2", "2", "1", "1", "2", "2", "1", "1", "2", "2"],
             },
-            index=[f"cell_{i}" for i in range(12)]
-        )
+            index=[f"cell_{i}" for i in range(12)],
+        ),
     )
 
     result = sc.get.aggregate(adata, by=["cluster", "batch"], func="mean")
