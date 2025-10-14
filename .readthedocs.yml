@@ -1,25 +1,20 @@
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
 submodules:
   include: all
 build:
   os: ubuntu-24.04
-  tools:
-    python: '3.14'
-  jobs:
-    post_checkout:
-      # unshallow so version can be derived from tag
-      - git fetch --unshallow || true
-    pre_build:
-      # run towncrier to preview the next version’s release notes
-      - ( find docs/release-notes -regex '[^.]+[.][^.]+.md' | grep -q . ) && towncrier build --keep || true
-sphinx:
-  fail_on_warning: true # do not change or you will be fired
-  configuration: docs/conf.py
-python:
-  install:
-  - method: pip
-    path: .
-    extra_requirements:
-    - doc
-    - dev  # for towncrier
-    - leiden
+  commands:
+    # unshallow so version can be derived from tag
+    - git fetch --unshallow || true
+    # install tools
+    - asdf install python 3.14
+    - asdf global python 3.14
+    - asdf plugin add uv
+    - asdf install uv latest
+    - asdf global uv latest
+    # run towncrier to preview the next version’s release notes
+    - ( find docs/release-notes -regex '[^.]+[.][^.]+.md' | grep -q . ) && towncrier build --keep || true
+    # build
+    - uvx hatch run docs:build
+    - mv docs/_build $READTHEDOCS_OUTPUT
