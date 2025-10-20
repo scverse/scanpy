@@ -1,3 +1,4 @@
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
 submodules:
   include: all
