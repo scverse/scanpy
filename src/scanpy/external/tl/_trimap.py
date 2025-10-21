@@ -113,17 +113,17 @@ def trimap(  # noqa: PLR0913
 
     if "X_pca" in adata.obsm:
         n_dim_pca = adata.obsm["X_pca"].shape[1]
-        X = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
+        x = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
     else:
-        X = adata.X
-        if isinstance(X, CSBase):
+        x = adata.X
+        if isinstance(x, CSBase):
             msg = (
                 "trimap currently does not support sparse matrices. Please"
                 "use a dense matrix or apply pca first."
             )
             raise ValueError(msg)
         logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
-    X_trimap = TRIMAP(
+    x_trimap = TRIMAP(
         n_dims=n_components,
         n_inliers=n_inliers,
         n_outliers=n_outliers,
@@ -133,8 +133,8 @@ def trimap(  # noqa: PLR0913
         weight_adj=weight_adj,
         n_iters=n_iters,
         verbose=verbose,
-    ).fit_transform(X)
-    adata.obsm["X_trimap"] = X_trimap
+    ).fit_transform(x)
+    adata.obsm["X_trimap"] = x_trimap
     logg.info(
         "    finished",
         time=start,

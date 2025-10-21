@@ -13,9 +13,16 @@ import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+from matplotlib.image import imread
 from packaging.version import Version
 
-if Version(anndata.__version__) >= Version("0.11.0rc2"):
+from . import logging as logg
+from ._compat import deprecated, old_positionals, pkg_version
+from ._settings import AnnDataFileFormat, settings
+from ._utils import _empty
+
+if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
         read_csv,
         read_excel,
@@ -37,14 +44,6 @@ else:
         read_text,
         read_zarr,
     )
-
-from anndata import AnnData
-from matplotlib.image import imread
-
-from . import logging as logg
-from ._compat import deprecated, old_positionals
-from ._settings import AnnDataFileFormat, settings
-from ._utils import _empty
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -163,7 +162,7 @@ def read(
         )
     # generate filename and read to dict
     filekey = str(filename)
-    filename = settings.writedir / (filekey + "." + settings.file_format_data)
+    filename = settings.writedir / f"{filekey}.{settings.file_format_data}"
     if not filename.exists():
         msg = (
             f"Reading with filekey {filekey!r} failed, "
@@ -277,14 +276,14 @@ def _read_v3_10x_h5(f: h5py.File) -> AnnData:
 
     from scipy.sparse import csr_matrix  # noqa: TID251
 
-    M, N = dsets["shape"]
+    n_cols, n_rows = dsets["shape"]  # transposed
     data = dsets["data"]
     if dsets["data"].dtype == np.dtype("int32"):
         data = dsets["data"].view("float32")
         data[:] = dsets["data"]
     matrix = csr_matrix(
         (data, dsets["indices"], dsets["indptr"]),
-        shape=(N, M),
+        shape=(n_rows, n_cols),
     )
     obs_dict = {"obs_names": dsets["barcodes"].astype(str)}
     var_dict = {"var_names": dsets["name"].astype(str)}
@@ -294,12 +293,10 @@ def _read_v3_10x_h5(f: h5py.File) -> AnnData:
         var_dict["gene_ids"] = dsets["id"].astype(str)
     else:
         # Read metadata specific to a probe-barcode matrix
-        var_dict.update(
-            {
-                "gene_ids": dsets["gene_id"].astype(str),
-                "probe_ids": dsets["id"].astype(str),
-            }
-        )
+        var_dict.update({
+            "gene_ids": dsets["gene_id"].astype(str),
+            "probe_ids": dsets["id"].astype(str),
+        })
     var_dict["feature_types"] = dsets["feature_type"].astype(str)
     if "filtered_barcodes" in f["matrix"]:
         obs_dict["filtered_barcodes"] = dsets["filtered_barcodes"].astype(bool)
@@ -351,14 +348,14 @@ def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
     # 10x stores the transposed data, so we do the transposition right away
     from scipy.sparse import csr_matrix  # noqa: TID251
 
-    M, N = dsets["shape"]
+    n_cols, n_rows = dsets["shape"]
     data = dsets["data"]
     if dsets["data"].dtype == np.dtype("int32"):
         data = dsets["data"].view("float32")
         data[:] = dsets["data"]
     matrix = csr_matrix(
         (data, dsets["indices"], dsets["indptr"]),
-        shape=(N, M),
+        shape=(n_rows, n_cols),
     )
     # the csc matrix is automatically the transposed csr matrix
     # as scanpy expects it, so, no need for a further transpostion
@@ -714,7 +711,7 @@ def write(
         msg = f"Unknown file format: {ext} (not in {valid_exts})"
         raise ValueError(msg)
 
-    if Version(anndata.__version__) >= Version("0.11.0rc2"):
+    if pkg_version("anndata") >= Version("0.11.0rc2"):
         from anndata.io import write_h5ad, write_zarr
 
         extra_kw = dict(convert_strings_to_categoricals=convert_strings_to_categoricals)
@@ -963,24 +960,23 @@ def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:
         groups = [samples_info[k] for k in sample_names]
         # Read the gene expression data as a list of lists, also get the gene
         # identifiers
-        gene_names, X = [], []
+        gene_names, x = [], []
         for line in file:
             # This is what signals the end of the gene expression data
             # section in the file
             if line.startswith("!dataset_table_end"):
                 break
-            V = line.split("\t")
+            v = line.split("\t")
             # Extract the values that correspond to gene expression measures
             # and convert the strings to numbers
-            x = [float(V[i]) for i in indices]
-            X.append(x)
-            gene_names.append(V[1])
+            x.append([float(v[i]) for i in indices])
+            gene_names.append(v[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
-    X = np.array(X).T
+    x = np.array(x).T
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
-    return AnnData(X=X, obs=obs, var=var)
+    return AnnData(X=x, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------

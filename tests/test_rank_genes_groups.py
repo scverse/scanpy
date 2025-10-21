@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy
 from anndata import AnnData
 from numpy.random import binomial, negative_binomial, seed
-from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -196,7 +194,7 @@ def test_rank_genes_groups_use_raw():
     assert pbmc.raw is None
 
     with pytest.raises(
-        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+        ValueError, match=r"Received `use_raw=True`, but `adata\.raw` is empty"
     ):
         sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
@@ -278,27 +276,13 @@ def test_wilcoxon_tie_correction(reference):
 
     _, groups_masks = select_groups(pbmc, groups, groupby)
 
-    X = pbmc.raw.X[groups_masks[0]].toarray()
+    x = pbmc.raw.X[groups_masks[0]].toarray()
 
     mask_rest = groups_masks[1] if reference else ~groups_masks[0]
-    Y = pbmc.raw.X[mask_rest].toarray()
+    y = pbmc.raw.X[mask_rest].toarray()
 
-    # Handle scipy versions
-    if Version(scipy.__version__) >= Version("1.7.0"):
-        pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
-        pvals[np.isnan(pvals)] = 1.0
-    else:
-        # Backwards compat, to drop once we drop scipy < 1.7
-        n_genes = X.shape[1]
-        pvals = np.zeros(n_genes)
-
-        for i in range(n_genes):
-            try:
-                _, pvals[i] = mannwhitneyu(
-                    X[:, i], Y[:, i], use_continuity=False, alternative="two-sided"
-                )
-            except ValueError:
-                pvals[i] = 1
+    pvals = mannwhitneyu(x, y, use_continuity=False, alternative="two-sided").pvalue
+    pvals[np.isnan(pvals)] = 1.0
 
     if reference:
         ref = groups[1]

@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 
 
 def _pearson_residuals(
-    X: CSBase | np.ndarray, theta, clip, check_values, *, copy: bool = False
+    x: CSBase | np.ndarray, /, theta, clip, check_values, *, copy: bool = False
 ):
-    X = X.copy() if copy else X
+    x = x.copy() if copy else x
 
     # check theta
     if theta <= 0:
@@ -49,30 +49,30 @@ def _pearson_residuals(
         raise ValueError(msg)
     # prepare clipping
     if clip is None:
-        n = X.shape[0]
+        n = x.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
         msg = "Pearson residuals require `clip>=0` or `clip=None`."
         raise ValueError(msg)
 
-    if check_values and not check_nonnegative_integers(X):
+    if check_values and not check_nonnegative_integers(x):
         warn(
             "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
             UserWarning,
             stacklevel=3,
         )
 
-    if isinstance(X, CSBase):
-        sums_genes = np.sum(X, axis=0)
-        sums_cells = np.sum(X, axis=1)
+    if isinstance(x, CSBase):
+        sums_genes = np.sum(x, axis=0)
+        sums_cells = np.sum(x, axis=1)
         sum_total = np.sum(sums_genes).squeeze()
     else:
-        sums_genes = np.sum(X, axis=0, keepdims=True)
-        sums_cells = np.sum(X, axis=1, keepdims=True)
+        sums_genes = np.sum(x, axis=0, keepdims=True)
+        sums_cells = np.sum(x, axis=1, keepdims=True)
         sum_total = np.sum(sums_genes)
 
     mu = np.array(sums_cells @ sums_genes / sum_total)
-    diff = np.array(X - mu)
+    diff = np.array(x - mu)
     residuals = diff / np.sqrt(mu + mu**2 / theta)
 
     # clip
@@ -138,13 +138,13 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, check_values, copy=not inplace)
+    residuals = _pearson_residuals(x, theta, clip, check_values, copy=not inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:

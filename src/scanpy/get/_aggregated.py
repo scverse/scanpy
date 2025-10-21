@@ -162,7 +162,7 @@ class Aggregate:
         return np.array(medians)
 
 
-def _power(X: Array, power: float) -> Array:
+def _power(x: Array, power: float) -> Array:
     """Generate elementwise power of a matrix.
 
     Needed for non-square sparse matrices because they do not support `**` so the `.power` function is used.
@@ -179,7 +179,7 @@ def _power(X: Array, power: float) -> Array:
     Matrix whose power has been raised.
 
     """
-    return X**power if isinstance(X, np.ndarray) else X.power(power)
+    return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
 def aggregate(  # noqa: PLR0912
@@ -489,9 +489,9 @@ def _combine_categories(
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
-    result_categories = pd.Index(
-        ["_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])]
-    )
+    result_categories = pd.Index([
+        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
+    ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
@@ -535,8 +535,8 @@ def sparse_indicator(
         weight = mask * weight
     elif mask is None and weight is None:
         weight = np.broadcast_to(1.0, len(categorical))
-    A = sparse.coo_matrix(
+    a = sparse.coo_matrix(
         (weight, (categorical.codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
     )
-    return A
+    return a

@@ -31,50 +31,33 @@ if TYPE_CHECKING:
     ArrayType = Callable[[np.ndarray], ArrayDataStructureType]
 
 
-A_list = np.array(
-    [
-        [0, 0, 7, 0, 0],
-        [8, 5, 0, 2, 0],
-        [6, 0, 0, 2, 5],
-        [0, 0, 0, 1, 0],
-        [8, 8, 2, 1, 0],
-        [0, 0, 0, 4, 5],
-    ]
-)
+A_list = np.array([
+    [0, 0, 7, 0, 0],
+    [8, 5, 0, 2, 0],
+    [6, 0, 0, 2, 5],
+    [0, 0, 0, 1, 0],
+    [8, 8, 2, 1, 0],
+    [0, 0, 0, 4, 5],
+])
 
-A_pca = np.array(
-    [
-        [-4.4783009, 5.55508466, 1.73111572, -0.06029139, 0.17292555],
-        [5.4855141, -0.42651191, -0.74776055, -0.74532146, 0.74633582],
-        [0.01161428, -4.0156662, 2.37252748, -1.33122372, -0.29044446],
-        [-3.61934397, 0.48525412, -2.96861931, -1.16312545, -0.33230607],
-        [7.14050048, 1.86330409, -0.05786325, 1.25045782, -0.50213107],
-        [-4.53998399, -3.46146476, -0.32940009, 2.04950419, 0.20562023],
-    ]
-)
+A_pca = np.array([
+    [-4.4783009, 5.55508466, 1.73111572, -0.06029139, 0.17292555],
+    [5.4855141, -0.42651191, -0.74776055, -0.74532146, 0.74633582],
+    [0.01161428, -4.0156662, 2.37252748, -1.33122372, -0.29044446],
+    [-3.61934397, 0.48525412, -2.96861931, -1.16312545, -0.33230607],
+    [7.14050048, 1.86330409, -0.05786325, 1.25045782, -0.50213107],
+    [-4.53998399, -3.46146476, -0.32940009, 2.04950419, 0.20562023],
+])
 
-A_svd = np.array(
-    [
-        [-0.77034038, -2.00750922, 6.64603489, -0.39669256, -0.22212097],
-        [-9.47135856, -0.6326006, -1.33787112, -0.24894361, -1.02044665],
-        [-5.90007339, 4.99658727, 0.70712592, -2.15188849, 0.30430008],
-        [-0.19132409, 0.42172251, 0.11169531, 0.50977966, -0.71637566],
-        [-11.1286238, -2.73045559, 0.08040596, 1.06850585, 0.74173764],
-        [-1.50180389, 5.56886849, 1.64034442, 2.24476032, -0.05109001],
-    ]
-)
+A_svd = np.array([
+    [-0.77034038, -2.00750922, 6.64603489, -0.39669256, -0.22212097],
+    [-9.47135856, -0.6326006, -1.33787112, -0.24894361, -1.02044665],
+    [-5.90007339, 4.99658727, 0.70712592, -2.15188849, 0.30430008],
+    [-0.19132409, 0.42172251, 0.11169531, 0.50977966, -0.71637566],
+    [-11.1286238, -2.73045559, 0.08040596, 1.06850585, 0.74173764],
+    [-1.50180389, 5.56886849, 1.64034442, 2.24476032, -0.05109001],
+])
 
-
-if pkg_version("anndata") < Version("0.9"):
-
-    def to_memory(self: AnnData, *, copy: bool = False) -> AnnData:
-        """Compatibility version of AnnData.to_memory() that works with old AnnData versions."""
-        adata = self
-        if adata.isbacked:
-            adata = adata.to_memory()
-        return adata.copy() if copy else adata
-else:
-    to_memory = AnnData.to_memory
 
 ARRAY_TYPES = [
     param_with(
@@ -102,7 +85,7 @@ SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
 def gen_pca_params(
     *,
     array_type: ArrayType,
-    svd_solver_type: Literal[None, "valid", "invalid"],
+    svd_solver_type: Literal["valid", "invalid"] | None,
     zero_center: bool,
     id: str,
 ) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:
@@ -213,8 +196,8 @@ def test_pca_warnings(
     svd_solver: SVDSolver,
     warn_pat_expected: str | None,
 ):
-    A = array_type(A_list).astype("float32")
-    adata = AnnData(A)
+    a = array_type(A_list).astype("float32")
+    adata = AnnData(a)
 
     if warn_pat_expected is not None:
         with pytest.warns((UserWarning, FutureWarning), match=warn_pat_expected):  # noqa: PT031
@@ -230,18 +213,18 @@ def test_pca_warnings(
 
 def test_pca_transform(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_pca_abs = np.abs(A_pca)
+    a_pca_abs = np.abs(A_pca)
 
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
-    adata = to_memory(adata)
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    adata = adata.to_memory()
+    assert np.linalg.norm(a_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_pca_abs = np.abs(A_pca)
+    a_pca_abs = np.abs(A_pca)
 
     warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
@@ -267,12 +250,12 @@ def test_pca_transform_randomized(array_type):
             random_state=14,
         )
 
-    assert np.linalg.norm(A_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(a_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
-    A_svd_abs = np.abs(A_svd)
+    a_svd_abs = np.abs(A_svd)
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         reason = "TruncatedSVD is not supported for sparse Dask yet"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -280,7 +263,7 @@ def test_pca_transform_no_zero_center(request: pytest.FixtureRequest, array_type
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=False, dtype="float64", random_state=14)
 
-    assert np.linalg.norm(A_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
+    assert np.linalg.norm(a_svd_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
 def test_pca_shapes():
@@ -354,7 +337,7 @@ def test_pca_reproducible(array_type):
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
-        a, c = map(to_memory, [a, c])
+        a, c = map(AnnData.to_memory, [a, c])
         assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
@@ -439,7 +422,7 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     adata_w_mask.var["mask"] = mask_var
     sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
-    adata, adata_w_mask = map(to_memory, [adata, adata_w_mask])
+    adata, adata_w_mask = map(AnnData.to_memory, [adata, adata_w_mask])
     assert np.allclose(
         adata.X.toarray() if isinstance(adata.X, CSBase) else adata.X,
         adata_w_mask.X.toarray()
@@ -477,8 +460,8 @@ def test_mask_defaults(array_type, float_dtype):
     1. That it’s equal withwithout and with – but mask is None
     2. If pca takes highly variable as mask as default
     """
-    A = array_type(A_list).astype("float64")
-    adata = AnnData(A)
+    a = array_type(A_list).astype("float64")
+    adata = AnnData(a)
 
     without_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
 
@@ -488,36 +471,36 @@ def test_mask_defaults(array_type, float_dtype):
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None
     assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
-    without_var, with_var = map(to_memory, [without_var, with_var])
+    without_var, with_var = map(AnnData.to_memory, [without_var, with_var])
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
 
     with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
-    with_no_mask = to_memory(with_no_mask)
+    with_no_mask = with_no_mask.to_memory()
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
 def test_pca_layer():
     """Tests that layers works the same way as `X`."""
-    X_adata = pbmc3k_normalized()
+    adata = pbmc3k_normalized()
 
-    layer_adata = X_adata.copy()
-    layer_adata.layers["counts"] = X_adata.X.copy()
+    layer_adata = adata.copy()
+    layer_adata.layers["counts"] = adata.X.copy()
     del layer_adata.X
 
-    sc.pp.pca(X_adata)
+    sc.pp.pca(adata)
     sc.pp.pca(layer_adata, layer="counts")
 
     assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
-    assert "layer" not in X_adata.uns["pca"]["params"]
+    assert "layer" not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
-        X_adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+        adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
     )
     np.testing.assert_equal(
-        X_adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+        adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
     )
-    np.testing.assert_equal(X_adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
-    np.testing.assert_equal(X_adata.varm["PCs"], layer_adata.varm["PCs"])
+    np.testing.assert_equal(adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
+    np.testing.assert_equal(adata.varm["PCs"], layer_adata.varm["PCs"])
 
 
 # Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
@@ -547,7 +530,7 @@ def test_covariance_eigh_impls(other_array_type):
     sc.pp.pca(adata_sparse_mem, svd_solver="covariance_eigh")
     sc.pp.pca(adata_other, svd_solver="covariance_eigh")
 
-    to_memory(adata_other)
+    adata_other.to_memory()
     np.testing.assert_allclose(
         np.abs(adata_sparse_mem.obsm["X_pca"]), np.abs(adata_other.obsm["X_pca"])
     )
@@ -568,9 +551,10 @@ def test_covariance_eigh_impls(other_array_type):
         (r"Only dask arrays with chunking", lambda a: a.rechunk((a.shape[0], 100))),
         (
             r"Only dask arrays with chunking",
-            lambda a: a.map_blocks(np.array, meta=np.array([])).rechunk(
-                (a.shape[0], 100)
-            ),
+            lambda a: a.map_blocks(np.array, meta=np.array([])).rechunk((
+                a.shape[0],
+                100,
+            )),
         ),
     ],
     ids=["as-csc", "bad-chunking", "bad-chunking-dense"],
