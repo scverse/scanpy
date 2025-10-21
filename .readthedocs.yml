@@ -22,4 +22,3 @@ python:
     extra_requirements:
     - doc
     - dev  # for towncrier
-    - leiden
