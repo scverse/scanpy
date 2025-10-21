@@ -121,7 +121,7 @@ doc = [
     "ipython>=7.20",                    # for nbsphinx code highlighting
     "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml]",
+    "scanpy[paga,dask-ml,leiden]",
     "sam-algorithm",
 ]
 dev = [
