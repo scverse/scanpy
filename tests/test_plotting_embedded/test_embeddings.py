@@ -250,7 +250,7 @@ def test_embedding_colorbar_location(image_comparer):
 
     adata = pbmc3k_processed().raw.to_adata()
 
-    sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
+    sc.pl.pca(adata, color="LDHB", colorbar_loc=None, show=False)
 
     save_and_compare_images("no_colorbar")
 

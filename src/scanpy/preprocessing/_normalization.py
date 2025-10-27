@@ -125,10 +125,10 @@ def _normalize_total_helper(
 
     counts_per_cell = counts_per_cell / target_sum
     out = x if isinstance(x, np.ndarray | CSBase) else None
-    X = axis_mul_or_truediv(
+    x = axis_mul_or_truediv(
         x, counts_per_cell, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
-    return X, counts_per_cell, gene_subset
+    return x, counts_per_cell, gene_subset
 
 
 @old_positionals(
@@ -278,7 +278,7 @@ def normalize_total(  # noqa: PLR0912
 
     start = logg.info("normalizing counts per cell")
 
-    X, counts_per_cell, gene_subset = _normalize_total_helper(
+    x, counts_per_cell, gene_subset = _normalize_total_helper(
         x,
         exclude_highly_expressed=exclude_highly_expressed,
         max_fraction=max_fraction,
@@ -296,7 +296,7 @@ def normalize_total(  # noqa: PLR0912
         warn("Some cells have zero counts", UserWarning, stacklevel=2)
 
     dat = dict(
-        X=X,
+        X=x,
         norm_factor=counts_per_cell,
     )
     if inplace:

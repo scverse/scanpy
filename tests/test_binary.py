@@ -44,7 +44,7 @@ def test_help_displayed(args: list[str], capsys: CaptureFixture):
 
 @pytest.mark.usefixtures("_set_path")
 def test_help_output(capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match="^0$"):
+    with pytest.raises(SystemExit, match=r"^0$"):
         main(["-h"])
     captured = capsys.readouterr()
     assert re.search(
@@ -63,7 +63,7 @@ def test_external():
 
 
 def test_error_wrong_command(capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match="^2$"):
+    with pytest.raises(SystemExit, match=r"^2$"):
         main(["idonotexist--"])
     captured = capsys.readouterr()
     assert "invalid choice: 'idonotexist--' (choose from" in captured.err

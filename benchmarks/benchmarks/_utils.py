@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         def __call__(self, **skipped: AbstractSet) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
-    KeyX = Literal[None, "off-axis"]
+    KeyX = Literal["off-axis"] | None
     KeyCount = Literal["counts", "counts-off-axis"]
 
 

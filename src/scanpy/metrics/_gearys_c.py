@@ -116,8 +116,8 @@ class _GearysC(_SparseMetric):
         return _gearys_c_mtx_csr(self.graph, vals_het)
 
     def vec(self) -> np.float64:
-        W = self.graph.data.sum()
-        return _gearys_c_vec_W(self.graph, self._vals, W)
+        w = self.graph.data.sum()
+        return _gearys_c_vec_w(self.graph, self._vals, w)
 
 
 ###############################################################################
@@ -136,7 +136,7 @@ class _GearysC(_SparseMetric):
 
 
 @njit
-def _gearys_c_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
+def _gearys_c_vec_w(g: CSRBase, x: np.ndarray, w: np.float64) -> np.float64:
     n = len(g.indptr) - 1
     x = x.astype(np.float64)
     x_bar = x.mean()
@@ -149,7 +149,7 @@ def _gearys_c_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
         total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
 
     numer = (n - 1) * total
-    denom = 2 * W * ((x - x_bar) ** 2).sum()
+    denom = 2 * w * ((x - x_bar) ** 2).sum()
     return numer / denom
 
 
@@ -166,7 +166,7 @@ def _gearys_c_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _gearys_c_inner_sparse_x_densevec(
-    g: CSRBase, x: np.ndarray, W: np.float64
+    g: CSRBase, x: np.ndarray, w: np.float64
 ) -> np.float64:
     x_bar = x.mean()
     total = 0.0
@@ -177,13 +177,13 @@ def _gearys_c_inner_sparse_x_densevec(
         i_data = g.data[s]
         total += np.sum(i_data * ((x[i] - x[i_indices]) ** 2))
     numer = (n - 1) * total
-    denom = 2 * W * ((x - x_bar) ** 2).sum()
+    denom = 2 * w * ((x - x_bar) ** 2).sum()
     return numer / denom
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _gearys_c_inner_sparse_x_sparsevec(
-    g: CSRBase, x_data: np.ndarray, x_indices: np.ndarray, n: int, W: np.float64
+    g: CSRBase, x_data: np.ndarray, x_indices: np.ndarray, n: int, w: np.float64
 ) -> np.float64:
     x = np.zeros(n, dtype=np.float64)
     x[x_indices] = x_data
@@ -200,7 +200,7 @@ def _gearys_c_inner_sparse_x_sparsevec(
     # to skip some calculations
     # fmt: off
     denom = (
-        2 * W
+        2 * w
         * (
             np.sum(x_data ** 2)
             - np.sum(x_data * x_bar * 2)
@@ -212,26 +212,26 @@ def _gearys_c_inner_sparse_x_sparsevec(
 
 
 @njit
-def _gearys_c_mtx(g: CSRBase, X: np.ndarray) -> np.ndarray:
-    m, n = X.shape
+def _gearys_c_mtx(g: CSRBase, x: np.ndarray) -> np.ndarray:
+    m, n = x.shape
     assert n == len(g.indptr) - 1
-    W = g.data.sum()
+    w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     for k in numba.prange(m):
-        x = X[k, :].astype(np.float64)
-        out[k] = _gearys_c_inner_sparse_x_densevec(g, x, W)
+        x_vec = x[k, :].astype(np.float64)
+        out[k] = _gearys_c_inner_sparse_x_densevec(g, x_vec, w)
     return out
 
 
 @njit
 def _gearys_c_mtx_csr(g: CSRBase, x: CSRBase) -> np.ndarray:
     m, n = x.shape
-    W = g.data.sum()
+    w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     x_data_list = np.split(x.data, x.indptr[1:-1])
     x_indices_list = np.split(x.indices, x.indptr[1:-1])
     for k in numba.prange(m):
         out[k] = _gearys_c_inner_sparse_x_sparsevec(
-            g, x_data_list[k], x_indices_list[k], n, W
+            g, x_data_list[k], x_indices_list[k], n, w
         )
     return out

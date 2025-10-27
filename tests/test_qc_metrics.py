@@ -35,9 +35,10 @@ def adata() -> AnnData:
 def prepare_adata(adata: AnnData) -> AnnData:
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.rechunk((10, -1))
-    adata.var["mito"] = np.concatenate(
-        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
-    )
+    adata.var["mito"] = np.concatenate((
+        np.ones(100, dtype=bool),
+        np.zeros(900, dtype=bool),
+    ))
     adata.var["negative"] = False
     return adata
 
@@ -78,14 +79,27 @@ def test_segments_binary():
     "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_top_segments(request: pytest.FixtureRequest, array_type):
+    if "dask" in array_type.__name__ and "1d_chunked" not in array_type.__name__:
+        reason = "DaskArray with feature axis chunking not yet supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    a = array_type(np.ones((300, 100)))
+    with maybe_dask_process_context():
+        seg = top_segment_proportions(a, [50, 100])
+    assert (seg[:, 0] == 0.5).all()
+    assert (seg[:, 1] == 1.0).all()
+
+
+@pytest.mark.parametrize(
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
+)
+def test_top_proportions(request: pytest.FixtureRequest, array_type):
     if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(np.ones((300, 100)))
-    seg = top_segment_proportions(a, [50, 100])
-    assert (seg[:, 0] == 0.5).all()
-    assert (seg[:, 1] == 1.0).all()
-    segfull = top_segment_proportions(a, np.arange(100) + 1)
+    # while dask is xfailed, since this relies on numba, we need to run it in the threaded context.
+    with maybe_dask_process_context():
+        segfull = top_segment_proportions(a, np.arange(100) + 1)
     propfull = top_proportions(a, 100)
     assert (segfull == propfull).all()
 
@@ -97,16 +111,16 @@ def test_qc_metrics(adata_prepared: AnnData):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], inplace=True
         )
-    X = (
+    x = (
         adata_prepared.X.compute()
         if isinstance(adata_prepared.X, DaskArray)
         else adata_prepared.X
     )
-    max_X = X.max(axis=0)
-    if isinstance(max_X, sparse.coo_matrix | sparse.coo_array):
-        max_X = max_X.toarray()
-    elif isinstance(max_X, DaskArray):
-        max_X = max_X.compute()
+    max_x = x.max(axis=0)
+    if isinstance(max_x, sparse.coo_matrix | sparse.coo_array):
+        max_x = max_x.toarray()
+    elif isinstance(max_x, DaskArray):
+        max_x = max_x.compute()
     assert (adata_prepared.obs["n_genes_by_counts"] < adata_prepared.shape[1]).all()
     assert (
         adata_prepared.obs["n_genes_by_counts"]
@@ -135,7 +149,7 @@ def test_qc_metrics(adata_prepared: AnnData):
             assert (adata_prepared.obs[col] >= 0).all()
     for col in adata_prepared.var.columns:
         assert (adata_prepared.var[col] >= 0).all()
-    assert (adata_prepared.var["mean_counts"] < np.ravel(max_X)).all()
+    assert (adata_prepared.var["mean_counts"] < np.ravel(max_x)).all()
     assert (
         adata_prepared.var["mean_counts"] >= adata_prepared.var["log1p_mean_counts"]
     ).all()
@@ -188,47 +202,40 @@ def test_dask_against_in_memory(adata, log1p):
     assert_equal(adata, adata_as_dask)
 
 
-def adata_mito():
-    a = np.random.binomial(100, 0.005, (1000, 1000))
-    init_var = pd.DataFrame(
-        dict(mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool))))
+@pytest.fixture
+def adata_mito() -> AnnData:
+    return AnnData(
+        X=np.random.binomial(100, 0.005, (1000, 1000)),
+        var=dict(
+            mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
+        ),
     )
-    adata_dense = AnnData(X=a, var=init_var.copy())
-    return adata_dense, init_var
 
 
 @pytest.mark.parametrize("cls", ARRAY_TYPES_MEM)
-def test_qc_metrics_format(cls):
-    adata_dense, init_var = adata_mito()
-    sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], inplace=True)
-    adata = AnnData(X=cls(adata_dense.X), var=init_var.copy())
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], inplace=True)
-    assert np.allclose(adata.obs, adata_dense.obs)
+@pytest.mark.parametrize("qc_var_param", ["mito", ["mito"]], ids=["str", "list"])
+def test_qc_metrics_format(
+    cls, adata_mito: AnnData, qc_var_param: list[str] | str
+) -> None:
+    var = adata_mito.var.copy()
+    sc.pp.calculate_qc_metrics(adata_mito, qc_vars=qc_var_param, inplace=True)
+    adata = AnnData(X=cls(adata_mito.X), var=var)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=qc_var_param, inplace=True)
+    assert np.allclose(adata.obs, adata_mito.obs)
     for col in adata.var:  # np.allclose doesn't like mix of types
-        assert np.allclose(adata.var[col], adata_dense.var[col])
+        assert np.allclose(adata.var[col], adata_mito.var[col])
 
 
-def test_qc_metrics_format_str_qc_vars():
-    adata_dense, init_var = adata_mito()
-    sc.pp.calculate_qc_metrics(adata_dense, qc_vars="mito", inplace=True)
-    adata = AnnData(X=adata_dense.X, var=init_var.copy())
-    sc.pp.calculate_qc_metrics(adata, qc_vars="mito", inplace=True)
-    assert np.allclose(adata.obs, adata_dense.obs)
-    for col in adata.var:  # np.allclose doesn't like mix of types
-        assert np.allclose(adata.var[col], adata_dense.var[col])
-
-
-def test_qc_metrics_percentage():  # In response to #421
-    adata_dense, init_var = adata_mito()
-    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[])
-    sc.pp.calculate_qc_metrics(adata_dense, percent_top=())
-    sc.pp.calculate_qc_metrics(adata_dense, percent_top=None)
-    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, 10])
-    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1])
+def test_qc_metrics_percentage(adata_mito: AnnData) -> None:  # In response to #421
+    sc.pp.calculate_qc_metrics(adata_mito, percent_top=[])
+    sc.pp.calculate_qc_metrics(adata_mito, percent_top=())
+    sc.pp.calculate_qc_metrics(adata_mito, percent_top=None)
+    sc.pp.calculate_qc_metrics(adata_mito, percent_top=[1, 2, 3, 10])
+    sc.pp.calculate_qc_metrics(adata_mito, percent_top=[1])
     with pytest.raises(IndexError):
-        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
+        sc.pp.calculate_qc_metrics(adata_mito, percent_top=[1, 2, 3, -5])
     with pytest.raises(IndexError):
-        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])
+        sc.pp.calculate_qc_metrics(adata_mito, percent_top=[20, 30, 1001])
 
 
 def test_layer_raw(adata: AnnData):

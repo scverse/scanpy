@@ -28,7 +28,7 @@ def _choose_representation(
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
     if use_rep is None:
-        X = _get_pca_or_small_x(adata, n_pcs)
+        x = _get_pca_or_small_x(adata, n_pcs)
     elif use_rep in adata.obsm and n_pcs is not None:
         if n_pcs > adata.obsm[use_rep].shape[1]:
             msg = (
@@ -37,16 +37,16 @@ def _choose_representation(
                 "`n_pcs` or lower `n_pcs` "
             )
             raise ValueError(msg)
-        X = adata.obsm[use_rep][:, :n_pcs]
+        x = adata.obsm[use_rep][:, :n_pcs]
     elif use_rep in adata.obsm and n_pcs is None:
-        X = adata.obsm[use_rep]
+        x = adata.obsm[use_rep]
     elif use_rep == "X":
-        X = adata.X
+        x = adata.X
     else:
         msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
         raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
-    return X
+    return x
 
 
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
@@ -58,9 +58,9 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
         if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
             msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        X = adata.obsm["X_pca"][:, :n_pcs]
-        logg.info(f"    using 'X_pca' with n_pcs = {X.shape[1]}")
-        return X
+        x = adata.obsm["X_pca"][:, :n_pcs]
+        logg.info(f"    using 'X_pca' with n_pcs = {x.shape[1]}")
+        return x
 
     from ..preprocessing import pca
 

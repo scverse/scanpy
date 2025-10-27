@@ -24,8 +24,8 @@ from matplotlib.colors import (
     Normalize,
 )
 from matplotlib.figure import Figure  # noqa: TC002
+from matplotlib.markers import MarkerStyle
 from numpy.typing import NDArray  # noqa: TC002
-from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import deprecated
@@ -36,6 +36,7 @@ from ..._utils import (
     _empty,
     sanitize_anndata,
 )
+from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
@@ -404,12 +405,16 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                         **kwargs_outline,
                     )
 
+            edgecolor = kwargs_scatter.pop("edgecolor", None)
+            if not MarkerStyle(marker[count]).is_filled():
+                edgecolor = None
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
+                edgecolor=edgecolor,
                 **kwargs_scatter,
             )
 
@@ -812,7 +817,7 @@ def draw_graph(
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
     basis = f"draw_graph_{layout}"
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
         raise ValueError(msg)
 
@@ -923,6 +928,7 @@ def pca(
 
 
 @deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -993,8 +999,12 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+        sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
     --------
@@ -1217,11 +1227,17 @@ def _get_palette(adata, values_key: str, palette=None):
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
         values.categories
     ):
-        #  set a default palette in case that no colors or few colors are found
+        #  set a default palette in case that no colors or too few colors are found
         _utils._set_default_colors_for_categorical_obs(adata, values_key)
     else:
         _utils._validate_palette(adata, values_key)
-    return dict(zip(values.categories, adata.uns[color_key], strict=True))
+    return dict(
+        zip(
+            values.categories,
+            adata.uns[color_key][: len(values.categories)],
+            strict=True,
+        )
+    )
 
 
 def _color_vector(
@@ -1257,10 +1273,7 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    if Version(pd.__version__) < Version("2.1.0"):
-        color_vector = pd.Categorical(values.map(color_map))
-    else:
-        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
+    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])

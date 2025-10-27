@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -8,13 +9,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-import scipy
 from anndata import AnnData
 from numpy.random import binomial, negative_binomial, seed
-from packaging.version import Version
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
@@ -130,8 +130,10 @@ def test_results_layers(array_type):
 
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
+    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
     mask = np.random.randint(0, 2, adata.shape, dtype=bool)
-    adata.X[mask] = 0
+    x[mask] = 0
+    adata.X = array_type(x)
 
     _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
@@ -192,7 +194,7 @@ def test_rank_genes_groups_use_raw():
     assert pbmc.raw is None
 
     with pytest.raises(
-        ValueError, match="Received `use_raw=True`, but `adata.raw` is empty"
+        ValueError, match=r"Received `use_raw=True`, but `adata\.raw` is empty"
     ):
         sc.tl.rank_genes_groups(pbmc, groupby="bulk_labels", use_raw=True)
 
@@ -200,7 +202,7 @@ def test_rank_genes_groups_use_raw():
 def test_singlets():
     pbmc = pbmc68k_reduced()
     pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.add_categories(["11"])
-    pbmc.obs["louvain"][0] = "11"
+    pbmc.obs[0, "louvain"] = "11"
 
     with pytest.raises(ValueError, match=rf"Could not calculate statistics.*{'11'}"):
         rank_genes_groups(pbmc, groupby="louvain")
@@ -219,6 +221,7 @@ def test_log1p_save_restore(tmp_path):
     from anndata import read_h5ad
 
     pbmc = pbmc68k_reduced()
+    pbmc.X = pbmc.raw.X
     sc.pp.log1p(pbmc)
 
     path = tmp_path / "test.h5ad"
@@ -273,27 +276,13 @@ def test_wilcoxon_tie_correction(reference):
 
     _, groups_masks = select_groups(pbmc, groups, groupby)
 
-    X = pbmc.raw.X[groups_masks[0]].toarray()
+    x = pbmc.raw.X[groups_masks[0]].toarray()
 
     mask_rest = groups_masks[1] if reference else ~groups_masks[0]
-    Y = pbmc.raw.X[mask_rest].toarray()
+    y = pbmc.raw.X[mask_rest].toarray()
 
-    # Handle scipy versions
-    if Version(scipy.__version__) >= Version("1.7.0"):
-        pvals = mannwhitneyu(X, Y, use_continuity=False, alternative="two-sided").pvalue
-        pvals[np.isnan(pvals)] = 1.0
-    else:
-        # Backwards compat, to drop once we drop scipy < 1.7
-        n_genes = X.shape[1]
-        pvals = np.zeros(n_genes)
-
-        for i in range(n_genes):
-            try:
-                _, pvals[i] = mannwhitneyu(
-                    X[:, i], Y[:, i], use_continuity=False, alternative="two-sided"
-                )
-            except ValueError:
-                pvals[i] = 1
+    pvals = mannwhitneyu(x, y, use_continuity=False, alternative="two-sided").pvalue
+    pvals[np.isnan(pvals)] = 1.0
 
     if reference:
         ref = groups[1]
@@ -302,7 +291,12 @@ def test_wilcoxon_tie_correction(reference):
         groups = groups[:1]
 
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
-    test_obj.compute_statistics("wilcoxon", tie_correct=True)
+    with (
+        pytest.warns(RuntimeWarning, match=r"invalid value encountered")
+        if reference
+        else nullcontext()
+    ):
+        test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
 

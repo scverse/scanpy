@@ -1333,7 +1333,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
         _ax.set_title(f"{group_name} vs. {reference}")
         _ax.legend_.remove()
         _ax.set_ylabel("expression")
-        _ax.set_xticklabels(new_gene_names, rotation="vertical")
+        _ax.set_xticks(range(len(new_gene_names)), new_gene_names, rotation="vertical")
         writekey = (
             f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
         )
@@ -1408,9 +1408,9 @@ def sim(
     else:  # shuffle data
         np.random.seed(1)
         rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
-        X = adata[rows].X
+        x = adata[rows].X
         timeseries(
-            X,
+            x,
             var_names=adata.var_names,
             xlim=[0, 1.25 * adata.n_obs],
             highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
@@ -1556,7 +1556,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is not None:
         key += f"_{groupby}"
 
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = (
             f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."

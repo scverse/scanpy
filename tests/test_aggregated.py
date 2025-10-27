@@ -1,23 +1,47 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scanpy._compat import CSRBase
+
+ARRAY_TYPES = [
+    at
+    for at in ARRAY_TYPES_ALL
+    if at.id not in {"dask_array_dense", "dask_array_sparse"}
+]
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
 def metric(request: pytest.FixtureRequest) -> AggType:
     return request.param
+
+
+def xfail_dask_median(
+    adata: ad.AnnData,
+    metric: AggType,
+    request: pytest.FixtureRequest,
+):
+    if isinstance(adata.X, DaskArray) and metric == "median":
+        reason = "Median calculation not implemented for Dask"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
 
 @pytest.fixture
@@ -39,16 +63,17 @@ def df_groupby():
 
     df_groupby = pd.DataFrame(index=pd.Index(ax_groupby, name="cell"))
     df_groupby["key"] = pd.Categorical([c[0] for c in ax_groupby])
-    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map(
-        {"v": "v", "w": "v", "a": "a", "b": "a", "c": "a", "d": "a"}
-    )
+    df_groupby["key_superset"] = pd.Categorical([c[0] for c in ax_groupby]).map({
+        **{"v": "v", "w": "v"},  # noqa: PIE800
+        **{"a": "a", "b": "a", "c": "a", "d": "a"},  # noqa: PIE800
+    })
     df_groupby["key_subset"] = pd.Categorical([c[1] for c in ax_groupby])
     df_groupby["weight"] = 2.0
     return df_groupby
 
 
 @pytest.fixture
-def X():
+def x():
     data = [
         *[[0, -2], [1, 13], [2, 1]],  # v
         *[[3, 12], [4, 2]],  # w
@@ -60,12 +85,12 @@ def X():
     return np.array(data, dtype=np.float32)
 
 
-def gen_adata(data_key, dim, df_base, df_groupby, X):
+def gen_adata(data_key, dim, df_base, df_groupby, x):
     if (data_key == "varm" and dim == "obs") or (data_key == "obsm" and dim == "var"):
         pytest.skip("invalid parameter combination")
 
     obs_df, var_df = (df_groupby, df_base) if dim == "obs" else (df_base, df_groupby)
-    data = X.T if dim == "var" and data_key != "varm" else X
+    data = x.T if dim == "var" and data_key != "varm" else x
     if data_key != "X":
         data_dict_sparse = {data_key: {"test": sparse.csr_matrix(data)}}  # noqa: TID251
         data_dict_dense = {data_key: {"test": data}}
@@ -93,16 +118,20 @@ def test_mask(axis):
     assert np.all(by_name["0"].layers["sum"] == 0)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_aggregate_vs_pandas(metric, array_type):
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_aggregate_vs_pandas(
+    metric: AggType, array_type, request: pytest.FixtureRequest
+):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
     result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
-
+    if isinstance(adata.X, DaskArray):
+        adata.X = adata.X.compute()
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -119,36 +148,29 @@ def test_aggregate_vs_pandas(metric, array_type):
             .groupby(["louvain", "percent_mito_binned"], observed=True)
             .agg(metric)
         )
-    expected.index = expected.index.to_frame().apply(
-        lambda x: "_".join(map(str, x)), axis=1
-    )
+    expected.index = expected.index.to_frame().astype("string").agg("_".join, axis=1)
     expected.index.name = None
     expected.columns.name = None
-
+    if isinstance(result.layers[metric], DaskArray):
+        result.layers[metric] = result.layers[metric].compute()
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
 
-    if Version(pd.__version__) < Version("2"):
-        # Order of results returned by groupby changed in pandas 2
-        assert expected.shape == result_df.shape
-        assert expected.index.isin(result_df.index).all()
-
-        expected = expected.loc[result_df.index]
-
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_aggregate_axis(array_type, metric):
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_aggregate_axis(array_type, metric, request: pytest.FixtureRequest):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric, request)
     expected = sc.get.aggregate(adata, ["louvain"], metric)
-    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1).T
-
+    actual = sc.get.aggregate(adata.T, ["louvain"], metric, axis=1)
+    actual = actual.T
     assert_equal(expected, actual)
 
 
@@ -156,7 +178,7 @@ def test_aggregate_entry():
     args = ("blobs", ["mean", "var", "count_nonzero"])
 
     adata = sc.datasets.blobs()
-    X_result = sc.get.aggregate(adata, *args)
+    x_result = sc.get.aggregate(adata, *args)
     # layer adata
     layer_adata = ad.AnnData(
         obs=adata.obs,
@@ -177,14 +199,14 @@ def test_aggregate_entry():
     )
     varm_result = sc.get.aggregate(varm_adata, *args, varm="test")
 
-    X_result_min = X_result.copy()
-    del X_result_min.var
-    X_result_min.var_names = [str(x) for x in np.arange(X_result_min.n_vars)]
+    x_result_min = x_result.copy()
+    del x_result_min.var
+    x_result_min.var_names = [str(x) for x in np.arange(x_result_min.n_vars)]
 
-    assert_equal(X_result, layer_result)
-    assert_equal(X_result_min, obsm_result)
-    assert_equal(X_result.layers, obsm_result.layers)
-    assert_equal(X_result.layers, varm_result.T.layers)
+    assert_equal(x_result, layer_result)
+    assert_equal(x_result_min, obsm_result)
+    assert_equal(x_result.layers, obsm_result.layers)
+    assert_equal(x_result.layers, varm_result.T.layers)
 
 
 def test_aggregate_incorrect_dim():
@@ -192,6 +214,44 @@ def test_aggregate_incorrect_dim():
 
     with pytest.raises(ValueError, match="was 'foo'"):
         sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
+
+
+def to_bad_chunking(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x,
+        chunks=(x.shape[0] // 2, x.shape[1] // 2),
+        meta=sparse.csr_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+def to_csc(x: CSRBase):
+    import dask.array as da
+
+    return da.from_array(
+        x.tocsc(),
+        chunks=(x.shape[0] // 2, x.shape[1]),
+        meta=sparse.csc_matrix(np.array([])),  # noqa: TID251
+    )
+
+
+@needs.dask
+@pytest.mark.anndata_dask_support
+@pytest.mark.parametrize(
+    ("func", "error_msg"),
+    [
+        pytest.param(to_csc, r"only csr_matrix", id="csc"),
+        pytest.param(
+            to_bad_chunking, r"Feature axis must be unchunked", id="bad_chunking"
+        ),
+    ],
+)
+def test_aggregate_bad_dask_array(func: Callable[[CSRBase], DaskArray], error_msg: str):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata.X = func(adata.X)
+    with pytest.raises(ValueError, match=error_msg):
+        sc.get.aggregate(adata, ["louvain"], "sum")
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
@@ -216,12 +276,10 @@ def test_aggregate_axis_specification(axis_name):
     ("matrix", "df", "keys", "metrics", "expected"),
     [
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -238,9 +296,11 @@ def test_aggregate_axis_specification(axis_name):
                 ).astype("category"),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                     # "sum": np.array([[2, 0], [0, 2]]),
                     # "mean": np.array([[1, 0], [0, 1]]),
                 },
@@ -248,12 +308,10 @@ def test_aggregate_axis_specification(axis_name):
             id="count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -272,20 +330,20 @@ def test_aggregate_axis_specification(axis_name):
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
-                    "count_nonzero": np.array(
-                        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]
-                    ),
+                    "count_nonzero": np.array([
+                        [1, 1, 0, 0],
+                        [1, 1, 0, 0],
+                        [0, 0, 2, 2],
+                    ]),
                 },
             ),
             id="sum-mean-count_nonzero",
         ),
         pytest.param(
-            np.block(
-                [
-                    [np.ones((2, 2)), np.zeros((2, 2))],
-                    [np.zeros((2, 2)), np.ones((2, 2))],
-                ]
-            ),
+            np.block([
+                [np.ones((2, 2)), np.zeros((2, 2))],
+                [np.zeros((2, 2)), np.ones((2, 2))],
+            ]),
             pd.DataFrame(
                 {
                     "a": ["a", "a", "b", "b"],
@@ -387,15 +445,21 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_aggregate_arraytype(array_type, metric):
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_aggregate_arraytype(
+    array_type, metric: AggType, request: pytest.FixtureRequest
+):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric, request)
     aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(aggregate.layers[metric], np.ndarray)
+    assert isinstance(
+        aggregate.layers[metric],
+        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
+    )
 
 
 def test_aggregate_obsm_varm():
@@ -429,9 +493,9 @@ def test_aggregate_obsm_labels():
 
     label_counts = [("a", 5), ("b", 3), ("c", 4)]
     blocks = [np.ones((n, 1)) for _, n in label_counts]
-    obs_names = pd.Index(
-        [f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))]
-    )
+    obs_names = pd.Index([
+        f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))
+    ])
     entry = pd.DataFrame(
         sparse.block_diag(blocks).toarray(),
         columns=[f"dim_{i}" for i in range(len(label_counts))],

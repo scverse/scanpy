@@ -38,13 +38,19 @@ _LegacyRandom = int | np.random.RandomState | None
 
 
 class _RNGIgraph:
-    """Random number generator for ipgraph so global seed is not changed.
+    """Random number generator for igraph so global seed is not changed.
 
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
 
     def __init__(self, random_state: int | np.random.RandomState = 0) -> None:
         self._rng = check_random_state(random_state)
+
+    def getrandbits(self, k: int) -> int:
+        return self._rng.tomaxint() & ((1 << k) - 1)
+
+    def randint(self, a: int, b: int) -> int:
+        return self._rng.randint(a, b + 1)
 
     def __getattr__(self, attr: str):
         return getattr(self._rng, "normal" if attr == "gauss" else attr)

@@ -810,7 +810,8 @@ class BasePlot:
 
         self.ax_dict = return_ax_dict
 
-    def show(self, return_axes: bool | None = None) -> dict[str, Axes] | None:
+    @old_positionals("return_axes")
+    def show(self, *, return_axes: bool | None = None) -> dict[str, Axes] | None:
         """Show the figure.
 
         Parameters

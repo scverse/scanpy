@@ -111,8 +111,8 @@ def phate(  # noqa: PLR0913
     random_state
         Random seed. Defaults to the global `numpy` random number generator
     verbose
-        If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
-        If `None`, `sc.settings.verbosity` is used.
+        If `True` or an :class:`int`/:class:`~scanpy.Verbosity` ≥ 2/:attr:`~scanpy.Verbosity.hint`, print status messages.
+        If `None`, :attr:`scanpy.settings.verbosity` is used.
     copy
         Return a copy instead of writing to `adata`.
     kwargs
@@ -157,7 +157,7 @@ def phate(  # noqa: PLR0913
             "--user phate` in a terminal."
         )
         raise ImportError(msg) from e
-    X_phate = phate.PHATE(
+    x_phate = phate.PHATE(
         n_components=n_components,
         k=k,
         a=a,
@@ -174,7 +174,7 @@ def phate(  # noqa: PLR0913
         **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
-    adata.obsm["X_phate"] = X_phate  # annotate samples with PHATE coordinates
+    adata.obsm["X_phate"] = x_phate  # annotate samples with PHATE coordinates
     logg.info(
         "    finished",
         time=start,

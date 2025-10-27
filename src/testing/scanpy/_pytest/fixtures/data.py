@@ -2,28 +2,29 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
-from anndata import __version__ as anndata_version
 from packaging.version import Version
 from scipy import sparse
 
-if Version(anndata_version) >= Version("0.10.0"):
+if Version(version("anndata")) >= Version("0.10.0"):
     from anndata._core.sparse_dataset import (
         BaseCompressedSparseDataset as SparseDataset,
     )
 
-    if Version(anndata_version) >= Version("0.11.0rc2"):
+    if Version(version("anndata")) >= Version("0.11.0rc2"):
         from anndata.io import sparse_dataset
     else:
         from anndata.experimental import sparse_dataset
 
     def make_sparse(x):
         return sparse_dataset(x)
+
 else:
     from anndata._core.sparse_dataset import SparseDataset
 
@@ -74,11 +75,11 @@ def random_csr(m: int, n: int) -> CSRBase:
 @pytest.fixture(params=[np.random.randn, random_csr], ids=["sparse", "dense"])
 def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
     rand_func = cast("Callable[[int, int], np.ndarray | CSRBase]", request.param)
-    X = rand_func(200, 10).astype(np.float32)
-    cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
-    adata = AnnData(X, obs={"cat": cat})
-    adata.obs["percent_mito"] = np.random.rand(X.shape[0])
-    adata.obs["n_counts"] = X.sum(axis=1)
+    x = rand_func(200, 10).astype(np.float32)
+    cat = np.random.randint(0, 3, (x.shape[0],)).ravel()
+    adata = AnnData(x, obs={"cat": cat})
+    adata.obs["percent_mito"] = np.random.rand(x.shape[0])
+    adata.obs["n_counts"] = x.sum(axis=1)
     adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.layers["X_copy"] = adata.X[...]
     adata.write_h5ad(tmp_path / "test.h5ad")

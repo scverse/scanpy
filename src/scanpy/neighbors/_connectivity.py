@@ -31,15 +31,15 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:  # noqa: PLR0912
     """
     # init distances
     if isinstance(distances, CSRBase):
-        Dsq = distances.power(2)
+        d_sq = distances.power(2)
         indices, distances_sq = _get_indices_distances_from_sparse_matrix(
-            Dsq, n_neighbors
+            d_sq, n_neighbors
         )
     else:
         assert isinstance(distances, np.ndarray)
-        Dsq = np.power(distances, 2)
+        d_sq = np.power(distances, 2)
         indices, distances_sq = _get_indices_distances_from_dense_matrix(
-            Dsq, n_neighbors
+            d_sq, n_neighbors
         )
 
     # exclude the first point, the 0th neighbor
@@ -60,43 +60,44 @@ def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:  # noqa: PLR0912
 
     # compute the symmetric weight matrix
     if not isinstance(distances, CSRBase):
-        Num = 2 * np.multiply.outer(sigmas, sigmas)
-        Den = np.add.outer(sigmas_sq, sigmas_sq)
-        W = np.sqrt(Num / Den) * np.exp(-Dsq / Den)
+        num = 2 * np.multiply.outer(sigmas, sigmas)
+        den = np.add.outer(sigmas_sq, sigmas_sq)
+        w = np.sqrt(num / den) * np.exp(-d_sq / den)
         # make the weight matrix sparse
         if not knn:
-            mask = W > 1e-14
-            W[~mask] = 0
+            mask = w > 1e-14
+            w[~mask] = 0
         else:
             # restrict number of neighbors to ~k
             # build a symmetric mask
-            mask = np.zeros(Dsq.shape, dtype=bool)
+            mask = np.zeros(d_sq.shape, dtype=bool)
             for i, row in enumerate(indices):
                 mask[i, row] = True
                 for j in row:
                     if i not in set(indices[j]):
-                        W[j, i] = W[i, j]
+                        w[j, i] = w[i, j]
                         mask[j, i] = True
             # set all entries that are not nearest neighbors to zero
-            W[~mask] = 0
+            w[~mask] = 0
     else:
-        assert isinstance(Dsq, CSRBase)
-        W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
-        for i in range(len(Dsq.indptr[:-1])):
-            row = Dsq.indices[Dsq.indptr[i] : Dsq.indptr[i + 1]]
+        assert isinstance(d_sq, CSRBase)
+        # need to copy the distance matrix here; what follows is inplace
+        w = d_sq.copy()
+        for i in range(len(d_sq.indptr[:-1])):
+            row = d_sq.indices[d_sq.indptr[i] : d_sq.indptr[i + 1]]
             num = 2 * sigmas[i] * sigmas[row]
             den = sigmas_sq[i] + sigmas_sq[row]
-            W.data[Dsq.indptr[i] : Dsq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
-                -Dsq.data[Dsq.indptr[i] : Dsq.indptr[i + 1]] / den
+            w.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] = np.sqrt(num / den) * np.exp(
+                -d_sq.data[d_sq.indptr[i] : d_sq.indptr[i + 1]] / den
             )
-        W = W.tolil()
+        w = w.tolil()
         for i, row in enumerate(indices):
             for j in row:
                 if i not in set(indices[j]):
-                    W[j, i] = W[i, j]
-        W = W.tocsr()
+                    w[j, i] = w[i, j]
+        w = w.tocsr()
 
-    return W
+    return w
 
 
 def umap(
@@ -122,9 +123,9 @@ def umap(
         warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
         from umap.umap_ import fuzzy_simplicial_set
 
-    X = sparse.coo_matrix((n_obs, 1))
+    x = sparse.coo_matrix((n_obs, 1))
     connectivities, _sigmas, _rhos = fuzzy_simplicial_set(
-        X,
+        x,
         n_neighbors,
         None,
         None,
