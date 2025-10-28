@@ -69,13 +69,14 @@ def score_genes(  # noqa: PLR0913
     use_raw: bool | None = None,
     layer: str | None = None,
 ) -> AnnData | None:
-    """Score a set of genes :cite:p:`Satija2015`.
+    """Score a set of genes :cite:p:`Tirosh2016`.
 
     The score is the average expression of a set of genes after subtraction by
     the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
-    This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
+    This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
+    programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
 
     Parameters
