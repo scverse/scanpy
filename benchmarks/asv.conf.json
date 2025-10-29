@@ -78,7 +78,7 @@
         "natsort": [""],
         "pandas": [""],
         "memory_profiler": [""],
-        "zarr": ["2.18.4"],
+        "zarr": [""],
         "pytest": [""],
         "pip+igraph": [""], // https://github.com/airspeed-velocity/asv/issues/1554
         // "psutil": [""]
