@@ -33,8 +33,22 @@ body:
   id: code
   attributes:
     label: Minimal code sample
-    description: (that we can copy&paste without having any data)
+    description: Reproducible code sample. Must list dependencies in [inline script metadata](https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example). When put in a file named `issue.py` calling `uv run issue.py` should show the issue.
     render: python
+    value: |
+      ```python
+      # /// script
+      # requires-python = ">=3.12"
+      # dependencies = [
+      #   "scanpy@git+https://github.com/scverse/scanpy.git@main",
+      # ]
+      # ///
+      #
+      # This script automatically imports the development branch of scanpy to check for issues
+
+      import scanpy as sc
+      # your reproducer code
+        ```
   validations:
     required: true
 - type: textarea
