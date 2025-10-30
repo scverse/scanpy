@@ -63,6 +63,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     n_comps: int | None = None,
     *,
     layer: str | None = None,
+    obsm: str | None = None,
     zero_center: bool = True,
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
@@ -111,7 +112,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         Number of principal components to compute. Defaults to 50,
         or 1 - minimum dimension size of selected representation.
     layer
-        If provided, which element of layers to use for PCA.
+        If provided, which element of :attr:`~anndata.AnnData.layers` to use for PCA instead of `X`.
+    obsm
+        If provided, which element of :attr:`~anndata.AnnData.obsm` to use for PCA instead of `X`.
     zero_center
         If `True`, compute (or approximate) PCA from covariance matrix.
         If `False`, performa a truncated SVD instead of PCA.
@@ -235,9 +238,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_obs_rep(adata_comp, layer=layer)
-    if is_backed_type(x) and layer is not None:
-        msg = f"PCA is not implemented for matrices of type {type(x)} from layers"
+    x = _get_obs_rep(adata_comp, layer=layer, obsm=obsm)
+    if is_backed_type(x) and layer is not None and obsm is not None:
+        msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
     # check_random_state returns a numpy RandomState when passed an int but
@@ -383,6 +386,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         )
         if layer is not None:
             params["layer"] = layer
+        if obsm is not None:
+            params["obsm"] = obsm
         adata.uns[key_uns] = dict(
             params=params,
             variance=pca_.explained_variance_,
