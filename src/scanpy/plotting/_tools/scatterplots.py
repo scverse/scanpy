@@ -226,7 +226,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             size = np.array(size, dtype=float)
     else:
         # if the basis has NaNs, ignore the corresponding cells for size calcluation
-        size = 120000 / (~np.isnan(basis_values).any(axis=1)).sum()
+        size = (120000 / (~np.isnan(basis_values).any(axis=1)).sum()).item()
 
     ##########
     # Layout #
