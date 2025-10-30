@@ -13,30 +13,30 @@ from ._utils import pbmc68k_reduced
 
 
 class ToolsSuite:  # noqa: D101
-    def setup_cache(self):
+    def setup_cache(self) -> None:
         adata = pbmc68k_reduced()
         assert "X_pca" in adata.obsm
         adata.write_h5ad("adata.h5ad")
 
-    def setup(self):
+    def setup(self) -> None:
         self.adata = ad.read_h5ad("adata.h5ad")
 
-    def time_umap(self):
+    def time_umap(self) -> None:
         sc.tl.umap(self.adata)
 
-    def peakmem_umap(self):
+    def peakmem_umap(self) -> None:
         sc.tl.umap(self.adata)
 
-    def time_diffmap(self):
+    def time_diffmap(self) -> None:
         sc.tl.diffmap(self.adata)
 
-    def peakmem_diffmap(self):
+    def peakmem_diffmap(self) -> None:
         sc.tl.diffmap(self.adata)
 
-    def time_leiden(self):
+    def time_leiden(self) -> None:
         sc.tl.leiden(self.adata, flavor="igraph")
 
-    def peakmem_leiden(self):
+    def peakmem_leiden(self) -> None:
         sc.tl.leiden(self.adata, flavor="igraph")
 
     def time_rank_genes_groups(self) -> None:
