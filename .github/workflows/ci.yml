@@ -104,7 +104,7 @@ jobs:
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
