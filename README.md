@@ -11,18 +11,19 @@
 
 # Scanpy – Single-Cell Analysis in Python
 
-Scanpy is a scalable toolkit for analyzing single-cell gene expression data
-built jointly with [anndata][].  It includes
-preprocessing, visualization, clustering, trajectory inference and differential
-expression testing.  The Python-based implementation efficiently deals with
-datasets of more than one million cells.
+Scanpy is a scalable toolkit for analyzing single-cell gene expression data built jointly with [anndata][].
+It includes preprocessing, visualization, clustering, trajectory inference and differential expression testing.
+The Python-based implementation efficiently deals with datasets of more than one million cells.
+For datasets too large to fit into memory, [many scanpy functions][] are now compatible with [dask][] (**warning: experimental**).
 
 Discuss usage on the scverse [Discourse][]. Read the [documentation][].
 If you'd like to contribute by opening an issue or creating a pull request, please take a look at our [contribution guide][].
 
 [anndata]: https://anndata.readthedocs.io
+[dask]: https://docs.dask.org/en/stable/
 [discourse]: https://discourse.scverse.org/
 [documentation]: https://scanpy.readthedocs.io
+[many scanpy functions]: https://github.com/scverse/scanpy/issues/2578
 
 [//]: # (numfocus-fiscal-sponsor-attribution)
 
