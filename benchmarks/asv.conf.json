@@ -83,8 +83,8 @@
         "pip+igraph": [""], // https://github.com/airspeed-velocity/asv/issues/1554
         // "psutil": [""]
         "pooch": [""],
-        "scikit-image": [""],
-        "scikit-misc": [""],
+        "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
+        // "scikit-misc": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
