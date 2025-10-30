@@ -142,9 +142,9 @@ harmony = [ "harmonypy" ] # Harmony dataset integration
 scanorama = [ "scanorama" ] # Scanorama dataset integration
 scrublet = [ "scikit-image" ] # Doublet detection with automatic thresholds
 # Acceleration
-rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ]         # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2022.09.2, <2025.3", "anndata[dask]" ] # Use the Dask parallelization engine
-dask-ml = [ "dask-ml", "scanpy[dask]" ]                       # Dask-ML for sklearn-like API
+rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
+dask = [ "dask[array]>=2022.09.2", "anndata[dask]" ]  # Use the Dask parallelization engine
+dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
 packages = [ "src/testing", "src/scanpy" ]
