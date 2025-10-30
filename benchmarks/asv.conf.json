@@ -43,7 +43,7 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
-    "environment_type": "conda",
+    "environment_type": "rattler",
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
@@ -78,13 +78,12 @@
         "natsort": [""],
         "pandas": [""],
         "memory_profiler": [""],
-        "zarr": ["2.18.4"],
+        "zarr": [""],
         "pytest": [""],
-        "scanpy": [""],
-        "python-igraph": [""],
+        "pip+igraph": [""], // https://github.com/airspeed-velocity/asv/issues/1554
         // "psutil": [""]
         "pooch": [""],
-        "scikit-image": [""],
+        "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
         // "scikit-misc": [""],
     },
 
