@@ -55,17 +55,12 @@ class PreprocessingCountsSuite:  # noqa: D101
     def peakmem_scrublet(self, *_):
         sc.pp.scrublet(self.adata, batch_key=self.adata.uns["batch_key"])
 
+    def time_hvg_seurat_v3(self, *_):
+        # seurat v3 runs on counts
+        sc.pp.highly_variable_genes(self.adata, flavor="seurat_v3_paper")
 
-# Can’t do seurat v3 yet: https://github.com/conda-forge/scikit-misc-feedstock/issues/17
-"""
-def time_hvg_seurat_v3(self):
-    # seurat v3 runs on counts
-    sc.pp.highly_variable_genes(adata, flavor="seurat_v3_paper")
-
-
-def peakmem_hvg_seurat_v3(self):
-    sc.pp.highly_variable_genes(adata, flavor="seurat_v3_paper")
-"""
+    def peakmem_hvg_seurat_v3(self, *_):
+        sc.pp.highly_variable_genes(self.adata, flavor="seurat_v3_paper")
 
 
 class FastSuite:

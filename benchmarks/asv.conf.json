@@ -84,7 +84,7 @@
         // "psutil": [""]
         "pooch": [""],
         "scikit-image": [""],
-        // "scikit-misc": [""],
+        "scikit-misc": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
