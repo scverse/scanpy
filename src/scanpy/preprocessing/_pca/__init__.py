@@ -194,7 +194,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
     `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
-        The principal components containing the loadings.
+        The principal components containing the loadings *when `obsm=None`*.
+    `.uns['pca' | key_added]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm][obsm].shape[1], n_comps)`)
+        The principal components containing the loadings *when `obsm="..."`*.
     `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
     `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
@@ -226,7 +228,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     # Unify new mask argument and deprecated use_highly_varible argument
     mask_var_param, mask_var = _handle_mask_var(
-        adata, mask_var, use_highly_variable=use_highly_variable
+        adata, mask_var, obsm=obsm, use_highly_variable=use_highly_variable
     )
     del use_highly_variable
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
@@ -238,7 +240,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     logg.info(f"    with {n_comps=}")
 
     x = _get_obs_rep(adata_comp, layer=layer, obsm=obsm)
-    if is_backed_type(x) and layer is not None and obsm is not None:
+    if is_backed_type(x) and (layer is not None or obsm is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
@@ -372,25 +374,25 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         )
         adata.obsm[key_obsm] = x_pca
 
-        if mask_var is not None:
+        if obsm:
+            pass  # see below, components are stored in `uns`.
+        elif mask_var is not None:
             adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm[key_varm][mask_var] = pca_.components_.T
         else:
             adata.varm[key_varm] = pca_.components_.T
 
-        params = dict(
-            zero_center=zero_center,
-            use_highly_variable=mask_var_param == "highly_variable",
-            mask_var=mask_var_param,
-        )
-        if layer is not None:
-            params["layer"] = layer
-        if obsm is not None:
-            params["obsm"] = obsm
         adata.uns[key_uns] = dict(
-            params=params,
+            params=dict(
+                zero_center=zero_center,
+                use_highly_variable=mask_var_param == "highly_variable",
+                mask_var=mask_var_param,
+                **(dict(layer=layer) if layer is not None else {}),
+                **(dict(obsm=obsm) if obsm is not None else {}),
+            ),
             variance=pca_.explained_variance_,
             variance_ratio=pca_.explained_variance_ratio_,
+            **(dict(components=pca_.components_.T) if obsm is not None else {}),
         )
 
         logg.info("    finished", time=logg_start)
@@ -419,12 +421,19 @@ def _handle_mask_var(
     adata: AnnData,
     mask_var: NDArray[np.bool_] | str | Empty | None,
     *,
+    obsm: str | None = None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
     """Unify new mask argument and deprecated use_highly_varible argument.
 
     Returns both the normalized mask parameter and the validated mask array.
     """
+    if obsm:
+        if mask_var is not _empty and mask_var is not None:
+            msg = "Argument `mask_var` is incompatible with `obsm`."
+            raise ValueError(msg)
+        return None, None
+
     # First, verify and possibly warn
     if use_highly_variable is not None:
         hint = (
