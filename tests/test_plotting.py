@@ -27,7 +27,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any
+    from typing import Any, Literal
 
     from matplotlib.axes import Axes
 
@@ -340,8 +340,12 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images(id)
 
 
-def test_dotplot_obj(image_comparer):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+@pytest.mark.parametrize("swap_axes", [True, False])
+@pytest.mark.parametrize("standard_scale", ["var", "group", None])
+def test_dotplot_obj(
+    image_comparer, standard_scale: Literal["var", "group"] | None, *, swap_axes: bool
+):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = pbmc68k_reduced()
@@ -359,14 +363,17 @@ def test_dotplot_obj(image_comparer):
         layer="test",
         dendrogram=True,
         return_fig=True,
-        standard_scale="var",
+        standard_scale=standard_scale,
+        swap_axes=swap_axes,
         smallest_dot=40,
         colorbar_title="scaled column max",
         size_title="Fraction of cells",
     )
     plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").show()
 
-    save_and_compare_images("dotplot_std_scale_var")
+    save_and_compare_images(
+        f"dotplot_obj{f'_std_scale_{standard_scale}' if standard_scale is not None else ''}{'_swap_axes' if swap_axes else ''}"
+    )
 
 
 def test_dotplot_style_no_reset():
