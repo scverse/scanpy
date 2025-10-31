@@ -302,7 +302,7 @@ def normalize_total(  # noqa: PLR0912
     if inplace:
         if key_added is not None:
             adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer)
+        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
 
     logg.info(
         "    finished ({time_passed})",

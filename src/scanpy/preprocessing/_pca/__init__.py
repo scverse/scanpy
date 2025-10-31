@@ -203,9 +203,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     logg_start = logg.info("computing PCA")
-    if layer is not None and chunked:
+    if (layer is not None or obsm is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
-        msg = "Cannot use `layer` and `chunked` at the same time."
+        msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
 
     # chunked calculation is not randomized, anyways
@@ -216,12 +216,11 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducibility, choose `svd_solver='arpack'`."
         )
     if return_anndata := isinstance(data, AnnData):
-        if layer is None and not chunked and is_backed_type(data.X):
+        if not chunked and is_backed_type(data.X):
+            assert layer is None and obsm is None  # noqa: PT018
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
-    elif pkg_version("anndata") < Version("0.8.0rc1"):
-        adata = AnnData(data, dtype=data.dtype)
     else:
         adata = AnnData(data)
 
