@@ -141,10 +141,13 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     return as_dense_dask_array(*args, **kwargs)
 
 
-def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
-    from anndata.tests.helpers import as_sparse_dask_array
+def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
+    try:
+        from anndata.tests.helpers import as_sparse_dask_matrix
+    except ImportError:
+        from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
 
-    return as_sparse_dask_array(*args, **kwargs)
+    return as_sparse_dask_matrix(*args, **kwargs)
 
 
 @dataclass(init=False)
