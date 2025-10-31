@@ -76,10 +76,10 @@ def test_normalize_total(array_type, dtype):
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
-    # Test that layer kwarg works
+    """Test that layer/obsm kwargs work."""
     x = array_type(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
-    check_rep_mutation(sc.pp.normalize_total, x, fields=["layer"])
-    check_rep_results(sc.pp.normalize_total, x, fields=["layer"])
+    check_rep_mutation(sc.pp.normalize_total, x)
+    check_rep_results(sc.pp.normalize_total, x)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
