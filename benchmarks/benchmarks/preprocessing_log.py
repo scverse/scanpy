@@ -5,29 +5,17 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.ht
 
 from __future__ import annotations
 
+from itertools import product
 from typing import TYPE_CHECKING
 
+import anndata as ad
+
 import scanpy as sc
-from scanpy.preprocessing._utils import _get_mean_var
 
 from ._utils import get_dataset, param_skipper
 
 if TYPE_CHECKING:
-    from anndata import AnnData
-
     from ._utils import Dataset, KeyX
-
-# setup variables
-
-
-adata: AnnData
-batch_key: str | None
-
-
-def setup(dataset: Dataset, layer: KeyX, *_):
-    """Set up global variables before each benchmark."""
-    global adata, batch_key
-    adata, batch_key = get_dataset(dataset, layer=layer)
 
 
 # ASV suite
@@ -36,58 +24,51 @@ params: tuple[list[Dataset], list[KeyX]] = (
     ["pbmc68k_reduced", "pbmc3k"],
     [None, "off-axis"],
 )
-param_names = ["dataset", "layer"]
-
+param_names = ("dataset", "layer")
 skip_when = param_skipper(param_names, params)
 
 
-def time_pca(*_):
-    sc.pp.pca(adata, svd_solver="arpack")
+class PreprocessingSuite:  # noqa: D101
+    params = params
+    param_names = param_names
 
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        for dataset, layer in product(*self.params):
+            adata, _ = get_dataset(dataset, layer=layer)
+            adata.write_h5ad(f"{dataset}_{layer}.h5ad")
 
-def peakmem_pca(*_):
-    sc.pp.pca(adata, svd_solver="arpack")
+    def setup(self, dataset, layer) -> None:
+        self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
 
+    def time_pca(self, *_) -> None:
+        sc.pp.pca(self.adata, svd_solver="arpack")
 
-def time_highly_variable_genes(*_):
-    # the default flavor runs on log-transformed data
-    sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+    def peakmem_pca(self, *_) -> None:
+        sc.pp.pca(self.adata, svd_solver="arpack")
 
+    def time_highly_variable_genes(self, *_) -> None:
+        # the default flavor runs on log-transformed data
+        sc.pp.highly_variable_genes(
+            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
+        )
 
-def peakmem_highly_variable_genes(*_):
-    sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+    def peakmem_highly_variable_genes(self, *_) -> None:
+        sc.pp.highly_variable_genes(
+            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
+        )
 
+    # regress_out is very slow for this dataset
+    @skip_when(dataset={"pbmc3k"})
+    def time_regress_out(self, *_) -> None:
+        sc.pp.regress_out(self.adata, ["total_counts", "pct_counts_mt"])
 
-# regress_out is very slow for this dataset
-@skip_when(dataset={"pbmc3k"})
-def time_regress_out(*_):
-    sc.pp.regress_out(adata, ["total_counts", "pct_counts_mt"])
+    @skip_when(dataset={"pbmc3k"})
+    def peakmem_regress_out(self, *_) -> None:
+        sc.pp.regress_out(self.adata, ["total_counts", "pct_counts_mt"])
 
+    def time_scale(self, *_) -> None:
+        sc.pp.scale(self.adata, max_value=10)
 
-@skip_when(dataset={"pbmc3k"})
-def peakmem_regress_out(*_):
-    sc.pp.regress_out(adata, ["total_counts", "pct_counts_mt"])
-
-
-def time_scale(*_):
-    sc.pp.scale(adata, max_value=10)
-
-
-def peakmem_scale(*_):
-    sc.pp.scale(adata, max_value=10)
-
-
-class FastSuite:
-    """Suite for fast preprocessing operations."""
-
-    params: tuple[list[Dataset], list[KeyX]] = (
-        ["pbmc3k", "pbmc68k_reduced", "bmmc", "lung93k"],
-        [None, "off-axis"],
-    )
-    param_names = ("dataset", "layer")
-
-    def time_mean_var(self, *_):
-        _get_mean_var(adata.X)
-
-    def peakmem_mean_var(self, *_):
-        _get_mean_var(adata.X)
+    def peakmem_scale(self, *_) -> None:
+        sc.pp.scale(self.adata, max_value=10)

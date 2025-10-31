@@ -48,7 +48,7 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: pip install 'asv>=0.6.4'
+        run: pip install 'asv>=0.6.4' py-rattler
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}
