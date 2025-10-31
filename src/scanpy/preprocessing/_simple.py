@@ -22,8 +22,8 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
-    _check_array_function_arguments,
     _resolve_axis,
+    check_array_function_arguments,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
@@ -352,7 +352,7 @@ def log1p(
     Returns or updates `data`, depending on `copy`.
 
     """
-    _check_array_function_arguments(
+    check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
     return log1p_array(data, copy=copy, base=base)
