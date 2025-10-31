@@ -8,7 +8,6 @@ from anndata import read_h5ad
 import scanpy as sc
 
 
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 @pytest.mark.parametrize(
     ("name", "func", "msg"),
     [

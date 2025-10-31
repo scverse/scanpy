@@ -218,8 +218,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducibility, choose `svd_solver='arpack'`."
         )
     if return_anndata := isinstance(data, AnnData):
-        if not chunked and is_backed_type(data.X):
-            assert layer is None and obsm is None  # noqa: PT018
+        if (layer is None and obsm is None) and not chunked and is_backed_type(data.X):
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
