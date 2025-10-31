@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypedDict, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -10,11 +10,10 @@ from anndata import AnnData
 from numpy.typing import NDArray
 
 from .._compat import CSBase
-from .._utils import Empty, _empty
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Any, Literal
+    from typing import Any, Literal, Unpack
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
@@ -400,41 +399,42 @@ def var_df(
     return df
 
 
+class _ObsRep(TypedDict, total=False):
+    use_raw: bool
+    layer: str | None
+    obsm: str | None
+    obsp: str | None
+
+
 def _get_obs_rep(
-    adata: AnnData,
-    *,
-    use_raw: bool | Empty = _empty,
-    layer: str | None | Empty = _empty,
-    obsm: str | None | Empty = _empty,
-    obsp: str | None | Empty = _empty,
+    adata: AnnData, **choices: Unpack[_ObsRep]
 ) -> (
     np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
 ):
     """Choose array aligned with obs annotation."""
     # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw, bool | Empty):
+    if not isinstance(use_raw := choices.get("use_raw", False), bool):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."
         raise TypeError(msg)
+    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp"}
 
-    choices = dict(
-        layer=layer not in {_empty, None},
-        use_raw=use_raw not in {_empty, False},
-        obsm=obsm not in {_empty, None},
-        obsp=obsp not in {_empty, None},
-    )
-    match sum(choices.values()), next((k for k, v in choices.items() if v), None):
-        case 0, _:
+    # we do this here so the `case _` branch knows which ones are valid for the
+    # respective calling function. E.g. `_get_obs_rep(adata, layer="a", obsm="b")`
+    # will say that “Only one of `layer` or `obsm` can be specified.”
+    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+        case []:
             return adata.X
-        case 1, "layer":
+        # can’t use {"key": v} as match expression, since they allow additional entries
+        case [("layer", layer)]:
             return adata.layers[layer]
-        case 1, "use_raw":
+        case [("use_raw", True)]:
             return adata.raw.X
-        case 1, "obsm":
+        case [("obsm", obsm)]:
             return adata.obsm[obsm]
-        case 1, "obsp":
+        case [("obsp", obsp)]:
             return adata.obsp[obsp]
         case _:
-            valid = [k for k, v in choices.items() if v is not _empty]
+            valid = [f"`{k}`" for k in choices]
             valid[-1] = f"or {valid[-1]}"
             msg = f"Only one of {', '.join(valid)} can be specified."
             raise ValueError(msg)
