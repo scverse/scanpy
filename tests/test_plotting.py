@@ -1339,12 +1339,37 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         )
 
 
-def test_timeseries():
+@pytest.fixture(scope="session")
+def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.diffmap(adata)
-    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
-    sc.pl.dpt_timeseries(adata, as_heatmap=True, show=False)
+    sc.tl.leiden(adata, resolution=0.5, key_added="leiden_0_5", flavor="leidenalg")
+    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
+    sc.tl.diffmap(adata, n_comps=10)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", ".*invalid value encountered in scalar divide"
+        )
+        sc.tl.dpt(adata, n_branchings=3)
+    return adata
+
+
+@pytest.mark.parametrize(
+    "func",
+    [sc.pl.dpt_groups_pseudotime, sc.pl.dpt_timeseries],
+)
+def test_dpt_plots(
+    image_comparer, pbmc_68k_dpt_session: AnnData, func: Callable
+) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc_68k_dpt_session.copy()
+    func(
+        adata,
+        show=False,
+        **(dict(as_heatmap=True) if func is sc.pl.dpt_timeseries else {}),
+    )
+    save_and_compare_images(func.__name__)
 
 
 def test_scatter_raw(tmp_path):
