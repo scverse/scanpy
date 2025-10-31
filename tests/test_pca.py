@@ -410,6 +410,19 @@ def test_mask_length_error():
         sc.pp.pca(adata, mask_var=mask_var, copy=True)
 
 
+@pytest.mark.parametrize("mask_type", ["highly_variable", "array"])
+def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None:
+    """Check that trying to use mask_var with obsm raises an error."""
+    adata = AnnData(A_list)
+    mask_var = (
+        _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
+    )
+    with pytest.raises(
+        ValueError, match=r"Argument `mask_var` is incompatible with `obsm`."
+    ):
+        sc.pp.pca(adata, mask_var=mask_var, obsm="X_pca", copy=True)
+
+
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
