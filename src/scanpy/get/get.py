@@ -10,6 +10,7 @@ from anndata import AnnData
 from numpy.typing import NDArray
 
 from .._compat import CSBase
+from .._utils import Empty, _empty
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -402,40 +403,41 @@ def var_df(
 def _get_obs_rep(
     adata: AnnData,
     *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
+    use_raw: bool | Empty = _empty,
+    layer: str | None | Empty = _empty,
+    obsm: str | None | Empty = _empty,
+    obsp: str | None | Empty = _empty,
 ) -> (
     np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
 ):
     """Choose array aligned with obs annotation."""
     # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw, bool):
+    if not isinstance(use_raw, bool | Empty):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."
         raise TypeError(msg)
 
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made in {0, 1}
-    if choices_made == 0:
-        return adata.X
-    if is_layer:
-        return adata.layers[layer]
-    if use_raw:
-        return adata.raw.X
-    if is_obsm:
-        return adata.obsm[obsm]
-    if is_obsp:
-        return adata.obsp[obsp]
-    msg = (
-        "That was unexpected. Please report this bug at:\n\n\t"
-        "https://github.com/scverse/scanpy/issues"
+    choices = dict(
+        layer=layer not in {_empty, None},
+        use_raw=use_raw not in {_empty, False},
+        obsm=obsm not in {_empty, None},
+        obsp=obsp not in {_empty, None},
     )
-    raise AssertionError(msg)
+    match sum(choices.values()), next((k for k, v in choices.items() if v), None):
+        case 0, _:
+            return adata.X
+        case 1, "layer":
+            return adata.layers[layer]
+        case 1, "use_raw":
+            return adata.raw.X
+        case 1, "obsm":
+            return adata.obsm[obsm]
+        case 1, "obsp":
+            return adata.obsp[obsp]
+        case _:
+            valid = [k for k, v in choices.items() if v is not _empty]
+            valid[-1] = f"or {valid[-1]}"
+            msg = f"Only one of {', '.join(valid)} can be specified."
+            raise ValueError(msg)
 
 
 def _set_obs_rep(
