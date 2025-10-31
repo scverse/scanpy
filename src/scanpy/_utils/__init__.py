@@ -9,7 +9,6 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import re
-import sys
 import warnings
 from contextlib import suppress
 from enum import Enum
@@ -64,6 +63,37 @@ if TYPE_CHECKING:
     _ForT = TypeVar("_ForT", bound=Callable | type)
 
 
+__all__ = [
+    "AssoResult",
+    "Empty",
+    "NeighborsView",
+    "_choose_graph",
+    "_doc_params",
+    "_empty",
+    "_resolve_axis",
+    "annotate_doc_types",
+    "axis_mul_or_truediv",
+    "axis_nnz",
+    "check_array_function_arguments",
+    "check_nonnegative_integers",
+    "check_presence_download",
+    "check_use_raw",
+    "compute_association_matrix_of_groups",
+    "descend_classes_and_funcs",
+    "ensure_igraph",
+    "get_literal_vals",
+    "indent",
+    "is_backed_type",
+    "is_backed_type",
+    "raise_not_implemented_error_if_backed_type",
+    "renamed_arg",
+    "sanitize_anndata",
+    "select_groups",
+    "update_params",
+    "warn_once",
+]
+
+
 LegacyUnionType = type(Union[int, str])  # noqa: UP007
 
 
@@ -88,7 +118,7 @@ def ensure_igraph() -> None:
     raise ImportError(msg)
 
 
-def getdoc(c_or_f: Callable | type) -> str | None:
+def _getdoc(c_or_f: Callable | type) -> str | None:
     if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
@@ -142,7 +172,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(full_name: str) -> Any:
+def import_name(full_name: str) -> Any:
     from importlib import import_module
 
     parts = full_name.split(".")
@@ -197,7 +227,7 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
 def annotate_doc_types(mod: ModuleType, root: str):
     for c_or_f in descend_classes_and_funcs(mod, root):
         with suppress(AttributeError):
-            c_or_f.getdoc = partial(getdoc, c_or_f)
+            c_or_f.getdoc = partial(_getdoc, c_or_f)
 
 
 _leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)
@@ -227,7 +257,7 @@ def _doc_params(**replacements: str):
     return dec
 
 
-def _check_array_function_arguments(**kwargs):
+def check_array_function_arguments(**kwargs):
     """Check for invalid arguments when an array is passed.
 
     Helper for functions that work on either AnnData objects or array-likes.
@@ -239,7 +269,7 @@ def _check_array_function_arguments(**kwargs):
         raise TypeError(msg)
 
 
-def _check_use_raw(
+def check_use_raw(
     adata: AnnData,
     use_raw: None | bool,  # noqa: FBT001
     *,
@@ -540,14 +570,14 @@ if TYPE_CHECKING:
     Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
 
 
-def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
+def _broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
     divisor = np.ravel(divisor)
     if axis:
         return divisor[None, :]
     return divisor[:, None]
 
 
-def check_op(op):
+def _check_op(op) -> None:
     if op not in {truediv, mul}:
         msg = f"{op} not one of truediv or mul"
         raise ValueError(msg)
@@ -564,8 +594,8 @@ def axis_mul_or_truediv(
     allow_divide_by_zero: bool = True,
     out: ArrayLike | None = None,
 ) -> np.ndarray:
-    check_op(op)
-    scaling_array = broadcast_axis(scaling_array, axis)
+    _check_op(op)
+    scaling_array = _broadcast_axis(scaling_array, axis)
     if op is mul:
         return np.multiply(x, scaling_array, out=out)
     if not allow_divide_by_zero:
@@ -584,7 +614,7 @@ def _(
     allow_divide_by_zero: bool = True,
     out: CSBase | None = None,
 ) -> CSBase:
-    check_op(op)
+    _check_op(op)
     if out is not None and x.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
         raise ValueError(msg)
@@ -621,7 +651,7 @@ def _(
     ).T
 
 
-def make_axis_chunks(
+def _make_axis_chunks(
     x: DaskArray, axis: Literal[0, 1]
 ) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
@@ -640,14 +670,14 @@ def _(
     allow_divide_by_zero: bool = True,
     out: None = None,
 ) -> DaskArray:
-    check_op(op)
+    _check_op(op)
     if out is not None:
         msg = "`out` is not `None`. Do not do in-place modifications on dask arrays."
         raise TypeError(msg)
 
     import dask.array as da
 
-    scaling_array = broadcast_axis(scaling_array, axis)
+    scaling_array = _broadcast_axis(scaling_array, axis)
     row_scale = axis == 0
     column_scale = axis == 1
 
@@ -668,11 +698,11 @@ def _(
             warnings.warn(
                 "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
             )
-            scaling_array = scaling_array.rechunk(make_axis_chunks(x, axis))
+            scaling_array = scaling_array.rechunk(_make_axis_chunks(x, axis))
     else:
         scaling_array = da.from_array(
             scaling_array,
-            chunks=make_axis_chunks(x, axis),
+            chunks=_make_axis_chunks(x, axis),
         )
     return da.map_blocks(
         axis_mul_or_truediv,
@@ -802,27 +832,6 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(  # noqa: PLR0917
-    message, category, filename, lineno, file=None, line=None
-) -> None:
-    """Get full tracebacks when warning is raised by setting.
-
-    warnings.showwarning = warn_with_traceback
-
-    See Also
-    --------
-    https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
-
-    """
-    import traceback
-
-    traceback.print_stack()
-    log = (  # noqa: F841  # TODO Does this need fixing?
-        file if hasattr(file, "write") else sys.stderr
-    )
-    settings.write(warnings.formatwarning(message, category, filename, lineno, line))
-
-
 def warn_once(msg: str, category: type[Warning], stacklevel: int = 0) -> None:
     warnings.warn(msg, category, stacklevel=stacklevel + 1)
     # You'd think `'once'` works, but it doesn't at the repl and in notebooks
@@ -835,19 +844,6 @@ def check_presence_download(filename: Path, backup_url):
         from ..readwrite import _download
 
         _download(backup_url, filename)
-
-
-def lazy_import(full_name):
-    """Import a module in a way that it’s only executed on member access."""
-    try:
-        return sys.modules[full_name]
-    except KeyError:
-        spec = importlib.util.find_spec(full_name)
-        module = importlib.util.module_from_spec(spec)
-        loader = importlib.util.LazyLoader(spec.loader)
-        # Make module with proper locking and get it inserted into sys.modules.
-        loader.exec_module(module)
-        return module
 
 
 # --------------------------------------------------------------------------------

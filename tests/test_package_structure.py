@@ -11,7 +11,7 @@ from anndata import AnnData
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-from scanpy._utils import _import_name, descend_classes_and_funcs
+from scanpy._utils import descend_classes_and_funcs, import_name
 
 if TYPE_CHECKING:
     from types import FunctionType
@@ -39,7 +39,7 @@ api_module_names = [
     "sc.metrics",
 ]
 api_modules = {
-    mod_name: _import_name(f"scanpy{mod_name.removeprefix('sc')}")
+    mod_name: import_name(f"scanpy{mod_name.removeprefix('sc')}")
     for mod_name in api_module_names
 }
 
@@ -50,6 +50,7 @@ api_functions = [
     for mod_name, mod in api_modules.items()
     for name in sorted(mod.__all__)
     if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
+    if not (isinstance(func, type) and issubclass(func, dict))  # TypedDict
 ]
 
 

@@ -13,8 +13,8 @@ from fast_array_utils.stats import mean_var
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
 from .._utils import (
-    _check_array_function_arguments,
     axis_mul_or_truediv,
+    check_array_function_arguments,
     dematrix,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
@@ -131,7 +131,7 @@ def scale(
         Variances per gene before scaling.
 
     """
-    _check_array_function_arguments(layer=layer, obsm=obsm)
+    check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
         msg = f"`layer` argument inappropriate for value of type {type(data)}"
         raise ValueError(msg)
