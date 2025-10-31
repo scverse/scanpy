@@ -152,7 +152,11 @@ intersphinx_mapping = dict(
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
-    python=("https://docs.python.org/3", None),
+    python=(
+        # TODO: switch to `/3` once docs are built with Python 3.14
+        "https://docs.python.org/3.13",
+        None,
+    ),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
