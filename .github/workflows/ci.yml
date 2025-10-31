@@ -68,19 +68,21 @@ jobs:
           key: pytest
 
       - name: Install dependencies
-        run: uvx hatch -v env create ${{ matrix.env.name }}
+        run: |
+          uv tool install --with='click!=8.3.0' hatch
+          hatch -v env create ${{ matrix.env.name }}
 
       - name: Run tests
         if: matrix.env.test-type == null
-        run: uvx hatch run ${{ matrix.env.name }}:run
+        run: hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
         env:
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
         run: |
-          uvx hatch run ${{ matrix.env.name }}:run-cov
-          uvx hatch run ${{ matrix.env.name }}:cov-combine
-          uvx hatch run ${{ matrix.env.name }}:coverage xml
+          hatch run ${{ matrix.env.name }}:run-cov
+          hatch run ${{ matrix.env.name }}:cov-combine
+          hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
@@ -102,7 +104,7 @@ jobs:
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug

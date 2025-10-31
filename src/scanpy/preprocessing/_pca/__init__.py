@@ -4,7 +4,6 @@ import warnings
 from typing import TYPE_CHECKING, Literal, overload
 from warnings import warn
 
-import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
@@ -242,7 +241,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         raise NotImplementedError(msg)
     # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
     if (
-        Version(ad.__version__) < Version("0.9")
+        pkg_version("anndata") < Version("0.9")
         and mask_var is not None
         and isinstance(x, np.ndarray)
     ):

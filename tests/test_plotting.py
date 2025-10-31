@@ -154,10 +154,6 @@ def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
     save_and_compare_images(f"heatmap_small{'_swap' if swap_axes else ''}_alignment")
 
 
-@pytest.mark.skipif(
-    pkg_version("matplotlib") < Version("3.1"),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
-)
 @pytest.mark.parametrize(
     ("obs_keys", "name"),
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],

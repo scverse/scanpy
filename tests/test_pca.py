@@ -87,7 +87,7 @@ def _chunked_1d(
 
 DASK_CONVERTERS = {
     f: _chunked_1d(f)
-    for f in (_helpers.as_dense_dask_array, _helpers.as_sparse_dask_array)
+    for f in (_helpers.as_dense_dask_array, _helpers.as_sparse_dask_matrix)
 }
 
 
@@ -131,7 +131,10 @@ def gen_pca_params(
     svd_solver_type: Literal["valid", "invalid"] | None,
     zero_center: bool,
 ) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:
-    if array_type is DASK_CONVERTERS[_helpers.as_sparse_dask_array] and not zero_center:
+    if (
+        array_type is DASK_CONVERTERS[_helpers.as_sparse_dask_matrix]
+        and not zero_center
+    ):
         xfail_reason = "Sparse-in-dask with zero_center=False not implemented yet"
         yield None, None, xfail_reason
         return
@@ -171,7 +174,7 @@ def possible_solvers(
             svd_solvers = {"auto", "full", "tsqr", "randomized", "covariance_eigh"}
         case (dc, False) if dc is DASK_CONVERTERS[_helpers.as_dense_dask_array]:
             svd_solvers = {"tsqr", "randomized"}
-        case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_array]:
+        case (dc, True) if dc is DASK_CONVERTERS[_helpers.as_sparse_dask_matrix]:
             svd_solvers = {"covariance_eigh"}
         case (type() as dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
@@ -471,7 +474,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     adata = sc.datasets.blobs(n_variables=10, n_centers=3, n_observations=100)
     adata.X = array_type(adata.X)
 
-    if isinstance(adata.X, np.ndarray) and Version(ad.__version__) < Version("0.9"):
+    if isinstance(adata.X, np.ndarray) and pkg_version("anndata") < Version("0.9"):
         reason = (
             "TODO: Previous version of anndata would return an F ordered array for one"
             " case here, which surprisingly considerably changes the results of PCA."
@@ -494,7 +497,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
 
 
 def test_mask_order_warning(request: pytest.FixtureRequest):
-    if Version(ad.__version__) >= Version("0.9"):
+    if pkg_version("anndata") >= Version("0.9"):
         reason = "Not expected to warn in later versions of anndata"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -570,7 +573,7 @@ needs_anndata_dask = pytest.mark.skipif(
     "other_array_type",
     [
         lambda x: x.toarray(),
-        DASK_CONVERTERS[_helpers.as_sparse_dask_array],
+        DASK_CONVERTERS[_helpers.as_sparse_dask_matrix],
         DASK_CONVERTERS[_helpers.as_dense_dask_array],
     ],
     ids=["dense-mem", "sparse-dask", "dense-dask"],
@@ -616,7 +619,7 @@ def test_covariance_eigh_impls(other_array_type):
 )
 def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArray]):
     adata_sparse = pbmc3k_normalized()
-    adata_sparse.X = op(DASK_CONVERTERS[_helpers.as_sparse_dask_array](adata_sparse.X))
+    adata_sparse.X = op(DASK_CONVERTERS[_helpers.as_sparse_dask_matrix](adata_sparse.X))
 
     with pytest.raises(ValueError, match=msg_re):
         sc.pp.pca(adata_sparse, svd_solver="covariance_eigh")
@@ -635,7 +638,7 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
 )
 def test_cov_sparse_dask(dtype, dtype_arg, rtol):
     x_arr = A_list.astype(dtype)
-    x = DASK_CONVERTERS[_helpers.as_sparse_dask_array](x_arr)
+    x = DASK_CONVERTERS[_helpers.as_sparse_dask_matrix](x_arr)
     cov, gram, mean = _cov_sparse_dask(x, return_gram=True, dtype=dtype_arg)
     np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))
     np.testing.assert_allclose(gram, (x_arr.T @ x_arr) / x.shape[0])

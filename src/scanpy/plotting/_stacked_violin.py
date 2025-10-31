@@ -10,7 +10,7 @@ from matplotlib.colors import is_color_like
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -496,7 +496,7 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
-        if Version(pd.__version__) >= Version("2.1"):
+        if pkg_version("pandas") >= Version("2.1"):
             stack_kwargs = {"future_stack": True}
         else:
             stack_kwargs = {"dropna": False}
