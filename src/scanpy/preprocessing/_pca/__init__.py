@@ -195,7 +195,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         PCA representation of data.
     `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
         The principal components containing the loadings *when `obsm=None`*.
-    `.uns['pca' | key_added]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm][obsm].shape[1], n_comps)`)
+    `.uns['pca' | key_added]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[obsm].shape[1], n_comps)`)
         The principal components containing the loadings *when `obsm="..."`*.
     `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
