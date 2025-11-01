@@ -1354,6 +1354,8 @@ def pbmc_68k_dpt_session() -> AnnData:
     return adata
 
 
+@needs.leidenalg
+@needs.igraph
 @pytest.mark.parametrize(
     "func",
     [sc.pl.dpt_groups_pseudotime, sc.pl.dpt_timeseries],
