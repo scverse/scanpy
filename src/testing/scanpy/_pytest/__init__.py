@@ -107,13 +107,13 @@ def pytest_collection_modifyitems(
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
-    from scanpy._utils import _import_name
+    from scanpy._utils import import_name
 
     assert isinstance(request.node, pytest.DoctestItem)
 
     request.getfixturevalue("_doctest_env")
 
-    func = _import_name(request.node.name)
+    func = import_name(request.node.name)
     needs_mod: str | None
     skip_reason: str | None
     if (

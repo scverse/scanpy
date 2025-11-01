@@ -96,6 +96,7 @@ def normalize_pearson_residuals(
     clip: float | None = None,
     check_values: bool = True,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -138,8 +139,8 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else "adata.X"
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
@@ -148,7 +149,7 @@ def normalize_pearson_residuals(
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
-        _set_obs_rep(adata, residuals, layer=layer)
+        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
         adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)
