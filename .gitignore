@@ -1,6 +1,7 @@
 # Scanpy outfiles
 /data/
 /write/
+/figures/
 
 # Docs
 /docs/_build/
