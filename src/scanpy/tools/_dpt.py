@@ -450,9 +450,8 @@ class DPT(Neighbors):
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
             score = dseg[tips3[2]] / d_seg[tips3[0], tips3[1]]
-            score = (
-                len(seg) if self.choose_largest_segment else score
-            )  # simply the number of points
+            # simply the number of points
+            score = len(seg) if self.choose_largest_segment else score
             logg.debug(
                 f"    group {iseg} score {score} n_points {len(seg)}"
                 f"{' (too small)' if len(seg) < self.min_group_size else ''}"
