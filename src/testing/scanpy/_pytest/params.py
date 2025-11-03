@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import wraps
+from functools import partial, wraps
 from importlib.metadata import version
 from typing import TYPE_CHECKING
 
@@ -48,7 +48,11 @@ def _chunked_1d(
     @wraps(f)
     def wrapper(a: np.ndarray) -> DaskArray:
         da = f(a)
-        return da.rechunk((da.chunksize[0], -1))
+        return da.rechunk(
+            (da.chunksize[0], -1)
+            if not hasattr(da._meta, "format") or da._meta.format == "csr"
+            else (-1, da.chunksize[1])
+        )
 
     wrapper.__name__ = f"{wrapper.__name__}-1d_chunked"
     return wrapper
@@ -78,7 +82,23 @@ MAP_ARRAY_TYPES: dict[
             marks=[needs.dask, pytest.mark.anndata_dask_support],
             id=f"dask_array_sparse{suffix}",
         )
-        for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
+        for wrapper, suffix in [
+            (lambda x: x, ""),
+            *(
+                (
+                    lambda func,
+                    format=format,
+                    matrix_or_array=matrix_or_array: _chunked_1d(
+                        partial(
+                            func, typ=getattr(sparse, f"{format}_{matrix_or_array}")
+                        )
+                    ),
+                    f"-1d_chunked-{format}_{matrix_or_array}",
+                )
+                for format in ["csr", "csc"]
+                for matrix_or_array in ["matrix", "array"]
+            ),
+        ]
     ),
 }
 

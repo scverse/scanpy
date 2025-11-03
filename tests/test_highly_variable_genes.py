@@ -425,8 +425,8 @@ def test_compare_to_upstream(
     np.testing.assert_allclose(
         hvg_info["dispersions_norm"],
         pbmc.var["dispersions_norm"],
-        rtol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
-        atol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
+        rtol=2e-05 if "dask" not in request.node.name else 1e-4,
+        atol=2e-05 if "dask" not in request.node.name else 1e-4,
     )
 
 
@@ -687,9 +687,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
 
 @pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
-@pytest.mark.parametrize(
-    "to_dask", [p for p in ARRAY_TYPES if "dask" in p.values[0].__name__]
-)
+@pytest.mark.parametrize("to_dask", [p for p in ARRAY_TYPES if "dask" in p.id])
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     adata.X = np.abs(adata.X).astype(int)
     if batch_key is not None:

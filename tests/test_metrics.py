@@ -105,7 +105,7 @@ def test_correctness(metric, size, expected):
 def test_graph_metrics_w_constant_values(
     request: pytest.FixtureRequest, metric, array_type
 ):
-    if "dask" in array_type.__name__:
+    if "dask" in request.node.name:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 

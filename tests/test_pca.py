@@ -58,18 +58,24 @@ A_svd = np.array([
     [-1.50180389, 5.56886849, 1.64034442, 2.24476032, -0.05109001],
 ])
 
-
-ARRAY_TYPES = [
+# These are array types which are expected to work with the current PCA implementation.
+VALID_ARRAY_TYPES = [
     param_with(
         at,
         marks=[needs.dask_ml] if at.id == "dask_array_dense-1d_chunked" else [],
     )
     for at in ARRAY_TYPES_ALL
-    if at.id not in {"dask_array_dense", "dask_array_sparse"}
+    if at.id
+    not in {
+        "dask_array_dense",
+        "dask_array_sparse",
+        "dask_array_sparse-1d_chunked-csc_array",
+        "dask_array_sparse-1d_chunked-csc_matrix",
+    }
 ]
 
 
-@pytest.fixture(params=ARRAY_TYPES)
+@pytest.fixture(params=VALID_ARRAY_TYPES)
 def array_type(request: pytest.FixtureRequest) -> ArrayType:
     return request.param
 
@@ -93,8 +99,12 @@ def gen_pca_params(
         xfail_reason = "dask without 1d chunking scheme not supported"
         yield None, None, xfail_reason
         return
-    if id == "dask_array_sparse-1d_chunked" and not zero_center:
+    if "dask_array_sparse-1d_chunked" in id and not zero_center:
         xfail_reason = "Sparse-in-dask with zero_center=False not implemented yet"
+        yield None, None, xfail_reason
+        return
+    if "dask_array_sparse-1d_chunked-csc" in id:
+        xfail_reason = "Sparse-in-dask with csc blocks not implemented yet"
         yield None, None, xfail_reason
         return
     if svd_solver_type is None:
@@ -137,7 +147,7 @@ def possible_solvers(
             svd_solvers = {"auto", "full", "tsqr", "randomized", "covariance_eigh"}
         case (dc, False) if id == "dask_array_dense-1d_chunked":
             svd_solvers = {"tsqr", "randomized"}
-        case (dc, True) if id == "dask_array_sparse-1d_chunked":
+        case (dc, True) if "dask_array_sparse-1d_chunked-csr" in id:
             svd_solvers = {"covariance_eigh"}
         case (type() as dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
@@ -148,7 +158,7 @@ def possible_solvers(
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
-            pytest.fail(f"Unknown {array_type=} ({zero_center=})")
+            pytest.fail(f"Unknown {array_type=} ({zero_center=}) ({id=})")
 
     if svd_solver_type == "invalid":
         svd_solvers = all_svd_solvers - svd_solvers
@@ -178,7 +188,7 @@ def possible_solvers(
                 f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
             ),
         )
-        for array_type in ARRAY_TYPES
+        for array_type in VALID_ARRAY_TYPES
         for zero_center in [True, False]
         for svd_solver_type in [None, "valid", "invalid"]
         for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
@@ -515,10 +525,13 @@ needs_anndata_dask = pytest.mark.skipif(
 @pytest.mark.parametrize(
     "other_array_type",
     [
-        lambda x: x.toarray(),
-        *(at.values[0] for at in ARRAY_TYPES if "1d_chunked" in at.id),
+        pytest.param(lambda x: x.toarray(), id="dense"),
+        *(
+            pytest.param(at.values[0], id=at.id)
+            for at in VALID_ARRAY_TYPES
+            if "1d_chunked" in at.id
+        ),
     ],
-    ids=["dense-mem", "sparse-dask", "dense-dask"],
 )
 def test_covariance_eigh_impls(other_array_type):
     warnings.filterwarnings("error")
@@ -564,8 +577,8 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
     adata_sparse.X = op(
         next(
             at.values[0]
-            for at in ARRAY_TYPES
-            if at.id == "dask_array_sparse-1d_chunked"
+            for at in VALID_ARRAY_TYPES
+            if "dask_array_sparse-1d_chunked" in at.id
         )(adata_sparse.X)
     )
 
@@ -587,7 +600,9 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
 def test_cov_sparse_dask(dtype, dtype_arg, rtol):
     x_arr = A_list.astype(dtype)
     x = next(
-        at.values[0] for at in ARRAY_TYPES if at.id == "dask_array_sparse-1d_chunked"
+        at.values[0]
+        for at in VALID_ARRAY_TYPES
+        if "dask_array_sparse-1d_chunked" in at.id
     )(x_arr)
     cov, gram, mean = _cov_sparse_dask(x, return_gram=True, dtype=dtype_arg)
     np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))
