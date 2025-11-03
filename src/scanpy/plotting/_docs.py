@@ -186,7 +186,8 @@ show
 save
     If `True` or a `str`, save the figure.
     A string is appended to the default filename.
-    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.\
+    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+    (deprecated in favour of `sc.pl.plot(show=False).figure.savefig()`).\
 """
 
 doc_show_save_ax = f"""\

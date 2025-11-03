@@ -94,8 +94,9 @@ def matrix(  # noqa: PLR0913
     colorbar_shrink: float = 0.5,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
     """Plot a matrix."""
     if ax is None:
@@ -341,13 +342,17 @@ def savefig_or_show(
         # append it
         writekey += save
         save = True
-    save = settings.autosave if save is None else save
-    show = settings.autoshow if show is None else show
-    if save:
+    if do_save := settings.autosave if save is None else save:
+        if save:  # `save=True | "some-str"` argument has been used
+            msg = (
+                "Argument `save` is deprecated and will be removed in a future version. "
+                "Use `sc.pl.plot(show=False).figure.savefig()` instead."
+            )
+            warnings.warn(msg, category=FutureWarning, stacklevel=2)
         savefig(writekey, dpi=dpi, ext=ext)
-    if show:
+    if settings.autoshow if show is None else show:
         plt.show()
-    if save:
+    if do_save:
         plt.close()  # clear figure
 
 

@@ -341,8 +341,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     groups=None,  # backwards compat
     plot: bool = True,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> Axes | list[Axes] | None:
     r"""Plot the PAGA graph through thresholding low-connectivity edges.
 
@@ -1068,8 +1069,9 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     as_heatmap: bool = True,
     return_data: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
     r"""Gene expression and annotation changes along paths in the abstracted graph.
 
@@ -1360,6 +1362,7 @@ def paga_adjacency(
     as_heatmap: bool = True,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
+    # deprecated
     save: bool | str | None = None,
 ) -> None:
     """Plot connectivity of paga groups."""

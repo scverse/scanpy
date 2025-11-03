@@ -682,7 +682,6 @@ def stacked_violin(  # noqa: PLR0913
     categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     return_fig: bool | None = False,
     ax: _AxesSubplot | None = None,
     vmin: float | None = None,
@@ -700,6 +699,7 @@ def stacked_violin(  # noqa: PLR0913
     # deprecated
     order: Sequence[str] | None | Empty = _empty,
     scale: DensityNorm | Empty = _empty,
+    save: bool | str | None = None,
     **kwds,
 ) -> StackedViolin | dict | None:
     """Stacked violin plots.

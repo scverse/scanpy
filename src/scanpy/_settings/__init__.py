@@ -229,7 +229,7 @@ class SettingsMeta(SingletonMeta, type):
 
     @property
     def figdir(cls) -> Path:
-        """Directory for saving figures (default `'./figures/'`)."""
+        r"""Directory for `autosave`\ ing figures (default `'./figures/'`)."""
         return cls._figdir
 
     @figdir.setter
