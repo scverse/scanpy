@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from itertools import cycle, islice
 from typing import TYPE_CHECKING, Literal, TypedDict, overload
 
 import numpy as np
@@ -153,41 +154,42 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
         X with n columns, color is of length n.
 
     """
-    if color is not None:
-        use_color_map = isinstance(color[0], float | np.floating)
+    use_color_map = color is not None and isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
     if X.ndim == 1:
         X = X[:, None]  # noqa: N806
     if X.shape[1] > 1:
-        colors = palette[: X.shape[1]].by_key()["color"]
+        colors = islice(cycle(palette.by_key()["color"]), X.shape[1])
         subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
     elif use_color_map:
         colors = [color]
         subsets = [(x_range, X[:, 0])]
     else:
         levels, _ = np.unique(color, return_inverse=True)
-        colors = np.array(palette[: len(levels)].by_key()["color"])
+        colors = islice(cycle(palette.by_key()["color"]), len(levels))
         subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
     if isinstance(marker, str):
         marker = [marker]
     if len(marker) != len(subsets) and len(marker) == 1:
-        marker = [marker[0] for _ in range(len(subsets))]
+        marker = [marker[0]] * len(subsets)
+    if not (has_var_names := (len(var_names) > 0)):
+        var_names = [""] * len(subsets)
 
     if ax is None:
         ax = plt.subplot()
-    for i, (x, y) in enumerate(subsets):
+    for (x, y), m, c, var_name in zip(subsets, marker, colors, var_names, strict=True):
         ax.scatter(
             x,
             y,
-            marker=marker[i],
+            marker=m,
             edgecolor="face",
             s=rcParams["lines.markersize"],
-            c=colors[i],
-            label=var_names[i] if len(var_names) > 0 else "",
-            cmap=color_map,
+            c=c,
+            label=var_name,
             rasterized=settings._vector_friendly,
+            **(dict(cmap=color_map) if use_color_map else {}),
         )
     ylim = ax.get_ylim()
     for h in highlights_x:
@@ -199,7 +201,7 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
     ax.set_ylabel(ylabel)
     if yticks is not None:
         ax.set_yticks(yticks)
-    if len(var_names) > 0 and legend:
+    if has_var_names and legend:
         ax.legend(frameon=False)
 
 
