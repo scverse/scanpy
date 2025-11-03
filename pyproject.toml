@@ -46,7 +46,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "anndata>=0.9.2",
+    "anndata>=0.10.8",
     "numpy>=2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.9",
@@ -140,7 +140,7 @@ scanorama = [ "scanorama" ]                            # Scanorama dataset integ
 scrublet = [ "scikit-image>=0.22" ]                    # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2023.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
+dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
