@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from importlib.util import find_spec
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +18,8 @@ HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
 
 SKIP_IF_OLD_IGRAPH = pytest.mark.skipif(
-    pkg_version("igraph") < Version("1"), reason="igraph 0.x has different RNG behavior"
+    not find_spec("igraph") or pkg_version("igraph") < Version("1"),
+    reason="igraph 0.x has different RNG behavior",
 )
 
 
