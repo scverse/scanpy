@@ -64,10 +64,10 @@ def test_paga_pie(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     colors = {
-        c: {cm.Set1(_): 0.33 for _ in range(3)}
+        c: {cm.Set1(i): 0.33 for i in range(3)}
         for c in pbmc.obs["bulk_labels"].cat.categories
     }
-    colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
+    colors["Dendritic"] = {cm.Set2(i): 0.25 for i in range(4)}
 
     sc.pl.paga(pbmc, color=colors, colorbar=False, show=False)
     save_and_compare_images("paga_pie")
