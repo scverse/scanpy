@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import Literal
 
-    type _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
-    type _LoggingLevelName = Literal[
-        "CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"
-    ]
+type _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
+type _LoggingLevelName = Literal[
+    "CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"
+]
 
 
 _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {

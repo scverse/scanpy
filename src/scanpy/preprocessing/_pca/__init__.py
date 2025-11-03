@@ -281,25 +281,12 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(x, CSBase) and (
-            pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
-        ):
-            if svd_solver not in (
-                {"lobpcg"} | get_literal_vals(SvdSolvPCASparseSklearn)
-            ):
-                if svd_solver is not None:
-                    msg = (
-                        f"Ignoring {svd_solver=} and using 'arpack', "
-                        "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
-                    )
-                    warnings.warn(msg, UserWarning, stacklevel=2)
-                svd_solver = "arpack"
-            elif svd_solver == "lobpcg":
-                msg = (
-                    f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
-                    "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
-                )
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+        if isinstance(x, CSBase) and (svd_solver == "lobpcg"):
+            msg = (
+                f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
+                "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
             x_pca, pca_ = _pca_compat_sparse(
                 x, n_comps, solver=svd_solver, random_state=random_state
             )
