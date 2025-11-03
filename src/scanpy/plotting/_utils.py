@@ -16,7 +16,7 @@ from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import deprecated, old_positionals
+from .._compat import old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, _empty
 from . import palettes
@@ -292,9 +292,6 @@ additional_colors = {
 # -------------------------------------------------------------------------------
 
 
-@deprecated(
-    "Argument `save` is deprecated and will be removed in a future version. Use `sc.pl.plot(show=False).figure.savefig()` instead."
-)
 def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
@@ -345,13 +342,17 @@ def savefig_or_show(
         # append it
         writekey += save
         save = True
-    save = settings.autosave if save is None else save
-    show = settings.autoshow if show is None else show
-    if save:
+    if do_save := settings.autosave if save is None else save:
+        if save:  # `save=True | "some-str"` argument has been used
+            msg = (
+                "Argument `save` is deprecated and will be removed in a future version. "
+                "Use `sc.pl.plot(show=False).figure.savefig()` instead."
+            )
+            warnings.warn(msg, category=FutureWarning, stacklevel=2)
         savefig(writekey, dpi=dpi, ext=ext)
-    if show:
+    if settings.autoshow if show is None else show:
         plt.show()
-    if save:
+    if do_save:
         plt.close()  # clear figure
 
 
