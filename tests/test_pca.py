@@ -528,15 +528,7 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     np.testing.assert_equal(adata.varm["PCs"], pcs)
 
 
-# Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
-needs_anndata_dask = pytest.mark.skipif(
-    pkg_version("anndata") < Version("0.10"),
-    reason="Old AnnData doesn’t have dask test helpers",
-)
-
-
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     "other_array_type",
     [
@@ -562,7 +554,6 @@ def test_covariance_eigh_impls(other_array_type):
 
 
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     ("msg_re", "op"),
     [
@@ -599,7 +590,6 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
 
 
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [

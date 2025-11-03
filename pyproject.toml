@@ -164,7 +164,6 @@ junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
-    "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
     'error',

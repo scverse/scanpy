@@ -30,19 +30,12 @@ from weakref import WeakSet
 
 import h5py
 import numpy as np
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, _CSArray, pkg_version
 from .._settings import settings
-
-if pkg_version("anndata") >= Version("0.10.0"):
-    from anndata._core.sparse_dataset import (
-        BaseCompressedSparseDataset as SparseDataset,
-    )
-else:
-    from anndata._core.sparse_dataset import SparseDataset
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -988,7 +981,7 @@ def _resolve_axis(
 
 
 def is_backed_type(x: object, /) -> bool:
-    return isinstance(x, SparseDataset | h5py.File | h5py.Dataset)
+    return isinstance(x, BaseCompressedSparseDataset | h5py.File | h5py.Dataset)
 
 
 def raise_not_implemented_error_if_backed_type(x: object, method_name: str, /) -> None:

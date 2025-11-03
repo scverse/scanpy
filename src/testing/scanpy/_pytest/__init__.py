@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import os
 import sys
-from importlib.metadata import version
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import pytest
-from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
@@ -125,18 +123,6 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
         if not request.config.getoption("--internet-tests"):
             pytest.skip(reason="need --internet-tests option to run")
         request.applymarker(pytest.mark.flaky(reruns=5, reruns_delay=2))
-
-
-def pytest_itemcollected(item: pytest.Item) -> None:
-    # Dask AnnData tests require anndata > 0.10
-    requires_anndata_dask_support = (
-        len(list(item.iter_markers(name="anndata_dask_support"))) > 0
-    )
-
-    if requires_anndata_dask_support and Version(version("anndata")) < Version("0.10"):
-        item.add_marker(
-            pytest.mark.skip(reason="dask support requires anndata version > 0.10")
-        )
 
 
 assert "scanpy" not in sys.modules, (
