@@ -137,7 +137,7 @@ magic = [ "magic-impute>=2.0.4" ]                      # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                              # Harmony dataset integration
 scanorama = [ "scanorama" ]                            # Scanorama dataset integration
-scrublet = [ "scikit-image>=0.22" ]                    # Doublet detection with automatic thresholds
+scrublet = [ "scikit-image>=0.23" ]                    # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine

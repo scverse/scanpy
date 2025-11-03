@@ -528,6 +528,10 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     np.testing.assert_equal(adata.varm["PCs"], pcs)
 
 
+@pytest.mark.skipif(
+    pkg_version("scikit-learn") < Version("1.5"),
+    reason="covariance_eigh added in scikit-learn 1.5",
+)
 @needs.dask
 @pytest.mark.parametrize(
     "other_array_type",

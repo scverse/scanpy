@@ -281,7 +281,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(x, CSBase) and (svd_solver == "lobpcg"):
+        if isinstance(x, CSBase) and svd_solver == "lobpcg":
             msg = (
                 f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
                 "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
