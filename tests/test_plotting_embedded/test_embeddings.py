@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import tempfile
 import uuid
 from functools import partial, wraps
 from pathlib import Path
@@ -255,24 +254,18 @@ def test_embedding_colorbar_location(image_comparer):
     save_and_compare_images("no_colorbar")
 
 
-def test_raise_save_future_warning():
+def test_raise_save_future_warning(tmp_path: Path) -> None:
     adata = pbmc3k_processed()
 
     unique_id = str(uuid.uuid4())[:8]
     test_filename = f"test_violin_{unique_id}.png"
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        original_figdir = sc.settings.figdir
-        sc.settings.figdir = Path(temp_dir)
+    sc.settings.figdir, original_figdir = tmp_path, sc.settings.figdir
+    try:
+        with pytest.warns(FutureWarning, match=r"Argument `save` is deprecated"):
+            sc.pl.violin(adata, keys="louvain", save=test_filename, show=False)
 
-        try:
-            with pytest.warns(FutureWarning, match=r"Argument `save` is deprecated"):
-                sc.pl.violin(adata, keys="louvain", save=test_filename, show=False)
-
-            expected_file = Path(temp_dir) / f"violin{test_filename}"
-            assert expected_file.exists(), (
-                f"Expected file {expected_file} was not created"
-            )
-
-        finally:
-            sc.settings.figdir = original_figdir
+        expected_file = tmp_path / f"violin{test_filename}"
+        assert expected_file.exists(), f"Expected file {expected_file} was not created"
+    finally:
+        sc.settings.figdir = original_figdir
