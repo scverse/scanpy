@@ -279,7 +279,8 @@ def dpt_groups_pseudotime(
     show: bool | None = None,
     save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
-):
+    return_fig: bool = False,
+) -> Figure | None:
     """Plot groups and pseudotime.
 
     Parameters
@@ -292,9 +293,9 @@ def dpt_groups_pseudotime(
         Marker style. See :mod:`~matplotlib.markers` for details.
 
     """
-    _, (ax_grp, ax_ord) = plt.subplots(2, 1)
+    fig, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
-        adata.obs["dpt_groups"].cat.codes,
+        adata.obs["dpt_groups"].cat.codes.to_numpy(),
         time=adata.obs["dpt_order"].values,
         color=np.asarray(adata.obs["dpt_groups"]),
         highlights_x=adata.uns["dpt_changepoints"],
@@ -321,6 +322,8 @@ def dpt_groups_pseudotime(
         marker=marker,
     )
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
+    if return_fig:
+        return fig
 
 
 @old_positionals(
