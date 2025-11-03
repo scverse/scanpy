@@ -38,11 +38,11 @@ if TYPE_CHECKING:
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
+type RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
-N_DCS = 15  # default number of diffusion components
+N_DCS: int = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
-N_PCS = settings.N_PCS
+N_PCS: int = settings.N_PCS
 
 
 class KwdsForTransformer(TypedDict):

@@ -5,7 +5,7 @@ requires = [ "hatchling", "hatch-vcs" ]
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = "BSD-3-clause"
 authors = [
     { name = "Alex Wolf" },
@@ -39,9 +39,9 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]

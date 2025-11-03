@@ -22,12 +22,9 @@ jobs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          filter: blob:none
-          fetch-depth: 0
+        with: { filter: blob:none, fetch-depth: 0 }
       - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: false
+        with: { enable-cache: false }
       - id: get-envs
         run: |
           ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
@@ -36,7 +33,7 @@ jobs:
               | {
                 name: .key,
                 "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
-                python: .value.python | sub("3[.]13"; "3.13.3"),  # https://github.com/numba/numba/issues/10101
+                python: .value.python
               }
             )')
           echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
@@ -47,13 +44,9 @@ jobs:
     strategy:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
-    env:  # environment variable for use in codecov’s env_vars tagging
-      ENV_NAME: ${{ matrix.env.name }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+        with: { filter: blob:none, fetch-depth: 0 }
 
       - uses: astral-sh/setup-uv@v7
         with:
@@ -89,7 +82,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           files: test-data/coverage.xml
 
@@ -98,7 +91,7 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           file: test-data/test-results.xml
 
@@ -113,9 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+        with: { filter: blob:none, fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"

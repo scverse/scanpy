@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, overload
 
 import numba
 import numpy as np
@@ -33,11 +33,6 @@ from .._utils import (
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
-try:
-    import dask.array as da
-except ImportError:
-    da = None
-
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
@@ -47,9 +42,6 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike, _LegacyRandom
-
-
-A = TypeVar("A", bound=np.ndarray | CSBase | DaskArray)
 
 
 @old_positionals(
@@ -632,9 +624,6 @@ def normalize_per_cell(
     return x if copy else None
 
 
-DT = TypeVar("DT")
-
-
 @njit
 def _create_regressor_categorical(
     x: np.ndarray, /, number_categories: int, cat_array: np.ndarray
@@ -875,7 +864,7 @@ def sample(
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
-def sample(
+def sample[A: np.ndarray | CSBase | DaskArray](
     data: A,
     fraction: float | None = None,
     *,
