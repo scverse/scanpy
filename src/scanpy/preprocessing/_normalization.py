@@ -148,6 +148,7 @@ def normalize_total(  # noqa: PLR0912
     max_fraction: float = 0.05,
     key_added: str | None = None,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -194,7 +195,9 @@ def normalize_total(  # noqa: PLR0912
         Name of the field in `adata.obs` where the normalization factor is
         stored.
     layer
-        Layer to normalize instead of `X`. If `None`, `X` is normalized.
+        Layer to normalize instead of `X`.
+    obsm
+        Array to normalize instead of `X`.
     inplace
         Whether to update `adata` or return dictionary with normalized copies of
         `adata.X` and `adata.layers`.
@@ -265,10 +268,7 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer)
-    if x is None:
-        msg = f"Layer {layer!r} not found in adata."
-        raise ValueError(msg)
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:
@@ -302,7 +302,7 @@ def normalize_total(  # noqa: PLR0912
     if inplace:
         if key_added is not None:
             adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer)
+        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
 
     logg.info(
         "    finished ({time_passed})",

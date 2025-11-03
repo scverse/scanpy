@@ -20,9 +20,9 @@ from .. import logging as logg
 from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import (
-    _check_use_raw,
     _doc_params,
     _empty,
+    check_use_raw,
     get_literal_vals,
     sanitize_anndata,
 )
@@ -228,7 +228,7 @@ def _check_if_annotations(
     """
     annotations: pd.Index[str] = getattr(adata, axis_name).columns
     other_ax_obj = (
-        adata.raw if _check_use_raw(adata, use_raw) and axis_name == "obs" else adata
+        adata.raw if check_use_raw(adata, use_raw) and axis_name == "obs" else adata
     )
     names: pd.Index[str] = getattr(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
@@ -283,7 +283,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     """See docstring of scatter."""
     sanitize_anndata(adata)
 
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
 
     # Process layers
     if layers in ["X", None] or (isinstance(layers, str) and layers in adata.layers):
@@ -862,7 +862,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     import seaborn as sns  # Slow import, only import if called
 
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
@@ -1055,7 +1055,7 @@ def clustermap(
         msg = "Currently, only a single key is supported."
         raise ValueError(msg)
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
     x = adata.raw.X if use_raw else adata.X
     if isinstance(x, CSBase):
         x = x.toarray()
@@ -2048,7 +2048,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     """
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if isinstance(var_names, str):
         var_names = [var_names]
 

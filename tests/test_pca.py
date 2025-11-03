@@ -410,6 +410,19 @@ def test_mask_length_error():
         sc.pp.pca(adata, mask_var=mask_var, copy=True)
 
 
+@pytest.mark.parametrize("mask_type", ["highly_variable", "array"])
+def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None:
+    """Check that trying to use mask_var with obsm raises an error."""
+    adata = AnnData(A_list)
+    mask_var = (
+        _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
+    )
+    with pytest.raises(
+        ValueError, match=r"Argument `mask_var` is incompatible with `obsm`."
+    ):
+        sc.pp.pca(adata, mask_var=mask_var, obsm="X_pca", copy=True)
+
+
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
@@ -479,28 +492,40 @@ def test_mask_defaults(array_type, float_dtype):
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
-def test_pca_layer():
+@pytest.mark.parametrize("rep", ["layer", "obsm"])
+def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     """Tests that layers works the same way as `X`."""
-    adata = pbmc3k_normalized()
+    adata = pbmc3k_normalized()[:200].copy()
 
-    layer_adata = adata.copy()
-    layer_adata.layers["counts"] = adata.X.copy()
-    del layer_adata.X
+    rep_adata = adata.copy()
+    if rep == "layer":
+        rep_adata.layers["counts"] = adata.X.copy()
+    elif rep == "obsm":
+        # make sure `rep_adata.obsm` has a different shape from `rep_adata`,
+        # so code can’t accidentally use `.var{,m,p}`
+        rep_adata.obsm["counts"] = adata.X.copy()[:, :100]
+        adata = adata[:, :100].copy()
+    else:
+        pytest.fail(f"Unknown {rep=}")
+    del rep_adata.X
 
-    sc.pp.pca(adata)
-    sc.pp.pca(layer_adata, layer="counts")
+    sc.pp.pca(adata, mask_var=None)
+    sc.pp.pca(rep_adata, **{rep: "counts"}, mask_var=None)
 
-    assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
-    assert "layer" not in adata.uns["pca"]["params"]
+    assert rep_adata.uns["pca"]["params"][rep] == "counts"
+    assert rep not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
-        adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+        adata.uns["pca"]["variance"], rep_adata.uns["pca"]["variance"]
     )
     np.testing.assert_equal(
-        adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+        adata.uns["pca"]["variance_ratio"], rep_adata.uns["pca"]["variance_ratio"]
     )
-    np.testing.assert_equal(adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
-    np.testing.assert_equal(adata.varm["PCs"], layer_adata.varm["PCs"])
+    np.testing.assert_equal(adata.obsm["X_pca"], rep_adata.obsm["X_pca"])
+    pcs = (
+        rep_adata.varm["PCs"] if rep == "layer" else rep_adata.uns["pca"]["components"]
+    )
+    np.testing.assert_equal(adata.varm["PCs"], pcs)
 
 
 # Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway

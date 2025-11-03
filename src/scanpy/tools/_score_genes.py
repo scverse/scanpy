@@ -9,7 +9,7 @@ import pandas as pd
 
 from .. import logging as logg
 from .._compat import CSBase, old_positionals
-from .._utils import _check_use_raw, is_backed_type
+from .._utils import check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -69,13 +69,14 @@ def score_genes(  # noqa: PLR0913
     use_raw: bool | None = None,
     layer: str | None = None,
 ) -> AnnData | None:
-    """Score a set of genes :cite:p:`Satija2015`.
+    """Score a set of genes :cite:p:`Tirosh2016`.
 
     The score is the average expression of a set of genes after subtraction by
     the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
-    This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
+    This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
+    programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
 
     Parameters
@@ -122,7 +123,7 @@ def score_genes(  # noqa: PLR0913
     """
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
         raise NotImplementedError(msg)
