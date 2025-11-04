@@ -12,15 +12,12 @@ import pandas as pd
 from .._compat import CSRBase, DaskArray, SpBase, fullname
 
 if TYPE_CHECKING:
-    from typing import NoReturn, TypeVar
+    from typing import NoReturn
 
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    T_NonSparse = TypeVar("T_NonSparse", bound=NDArray | DaskArray)
-    V = TypeVar("V", bound=NDArray | CSRBase)
-
-    _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
+    type _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
 
 
 __all__ = ["_SparseMetric", "_get_graph"]
@@ -83,7 +80,7 @@ def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> CSRBase:
 
 
 @overload
-def _resolve_vals(val: T_NonSparse) -> T_NonSparse: ...
+def _resolve_vals[T: NDArray | DaskArray](val: T) -> T: ...
 @overload
 def _resolve_vals(val: SpBase) -> CSRBase: ...
 @overload
@@ -120,7 +117,7 @@ def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
 
 
-def _vals_heterogeneous(
+def _vals_heterogeneous[V: NDArray | CSRBase](
     vals: V,
 ) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
     """Check that values wont cause issues in computation.

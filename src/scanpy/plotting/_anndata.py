@@ -63,9 +63,9 @@ if TYPE_CHECKING:
         _LegendLoc,
     )
 
-    # TODO: is that all?
-    _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = str | Sequence[str]
+# TODO: is that all?
+type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
+type _VarNames = str | Sequence[str]
 
 
 class VarGroups(NamedTuple):
@@ -1591,9 +1591,9 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     # get categories colors:
     if f"{groupby}_colors" not in adata.uns:
-        from ._utils import _set_default_colors_for_categorical_obs
+        from ._utils import set_default_colors_for_categorical_obs
 
-        _set_default_colors_for_categorical_obs(adata, groupby)
+        set_default_colors_for_categorical_obs(adata, groupby)
     groupby_colors = adata.uns[f"{groupby}_colors"]
 
     if dendrogram:

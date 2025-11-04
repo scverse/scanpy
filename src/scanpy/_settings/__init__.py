@@ -5,7 +5,7 @@ import sys
 from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 from .. import logging
 from .._compat import deprecated, old_positionals
@@ -21,18 +21,11 @@ if TYPE_CHECKING:
     from .verbosity import _VerbosityName
 
     # Collected from the print_* functions in matplotlib.backends
-    _Format = (
+    type _Format = (
         Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
-
-
-S = TypeVar("S")
-T = TypeVar("T")
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
@@ -49,7 +42,7 @@ def _type_check(var: object, name: str, types: type | UnionType) -> None:
     raise TypeError(msg)
 
 
-def _type_check_arg2(
+def _type_check_arg2[S, T, R, **P](
     types: type | UnionType,
 ) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
     def decorator(

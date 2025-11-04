@@ -20,7 +20,7 @@ from ._compat import _pca_compat_sparse
 if TYPE_CHECKING:
     from collections.abc import Container
     from collections.abc import Set as AbstractSet
-    from typing import LiteralString, TypeVar
+    from typing import LiteralString
 
     import dask_ml.decomposition as dmld
     import sklearn.decomposition as skld
@@ -29,30 +29,28 @@ if TYPE_CHECKING:
     from ..._utils import Empty
     from ..._utils.random import _LegacyRandom
 
-    MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
-    MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
 
-    T = TypeVar("T", bound=LiteralString)
-    M = TypeVar("M", bound=LiteralString)
+type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
+type MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
 
-
-SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
-SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
-SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
+type SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
+type SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
+type SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
 if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
-    SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+    type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 else:
-    SvdSolvPCASparseSklearn = Literal["arpack"]
-SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
-SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
-SvdSolvSkearn = (
+    type SvdSolvPCASparseSklearn = Literal["arpack"]
+type SvdSolvPCADenseSklearn = (
+    Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
+)
+type SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
+type SvdSolvSkearn = (
     SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
 )
 
-SvdSolvPCACustom = Literal["covariance_eigh"]
-
-SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
+type SvdSolvPCACustom = Literal["covariance_eigh"]
+type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
 @_doc_params(
@@ -283,25 +281,12 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(x, CSBase) and (
-            pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
-        ):
-            if svd_solver not in (
-                {"lobpcg"} | get_literal_vals(SvdSolvPCASparseSklearn)
-            ):
-                if svd_solver is not None:
-                    msg = (
-                        f"Ignoring {svd_solver=} and using 'arpack', "
-                        "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
-                    )
-                    warnings.warn(msg, UserWarning, stacklevel=2)
-                svd_solver = "arpack"
-            elif svd_solver == "lobpcg":
-                msg = (
-                    f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
-                    "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
-                )
-                warnings.warn(msg, FutureWarning, stacklevel=2)
+        if isinstance(x, CSBase) and svd_solver == "lobpcg":
+            msg = (
+                f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
+                "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
             x_pca, pca_ = _pca_compat_sparse(
                 x, n_comps, solver=svd_solver, random_state=random_state
             )
@@ -523,7 +508,7 @@ def _handle_sklearn_args(
     return _handle_x_args(svd_solver, method, args, default, suffix=suffix)
 
 
-def _handle_x_args(
+def _handle_x_args[T: LiteralString](
     svd_solver: str | None,
     method: type,
     args: Container[T],

@@ -13,13 +13,6 @@ from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
-try:
-    import dask
-    import dask.array as da
-except ImportError:
-    da = None
-    dask = None
-
 if TYPE_CHECKING:
     from anndata import AnnData
 

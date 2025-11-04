@@ -21,11 +21,8 @@ if TYPE_CHECKING:
 
     from .._utils.random import _LegacyRandom
 
-    try:
-        _StrIdx = pd.Index[str]
-    except TypeError:  # Sphinx
-        _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
+type _StrIdx = pd.Index[str]
+type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
 def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:

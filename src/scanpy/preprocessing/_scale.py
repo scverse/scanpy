@@ -22,22 +22,16 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 
-# install dask if available
-try:
-    import dask.array as da
-except ImportError:
-    da = None
-
 if TYPE_CHECKING:
-    from typing import TypeVar
-
     from numpy.typing import ArrayLike, NDArray
 
-    _A = TypeVar("_A", bound=CSBase | np.ndarray | DaskArray)
+type _Array = CSBase | np.ndarray | DaskArray
 
 
 @singledispatch
-def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A:
+def clip[A: _Array](
+    x: ArrayLike | A, *, max_value: float, zero_center: bool = True
+) -> A:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -77,8 +71,8 @@ def clip_array(
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
-def scale(
-    data: AnnData | _A,
+def scale[A: _Array](
+    data: AnnData | A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +80,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | _A | None:
+) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
@@ -146,8 +140,8 @@ def scale(
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-def scale_array(
-    x: _A,
+def scale_array[A: _Array](
+    x: A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -155,9 +149,9 @@ def scale_array(
     return_mean_std: bool = False,
     mask_obs: NDArray[np.bool_] | None = None,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
@@ -222,17 +216,17 @@ def scale_array(
         return x
 
 
-def scale_array_masked(
-    x: _A,
+def scale_array_masked[A: _Array](
+    x: A,
     mask_obs: NDArray[np.bool_],
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     return_mean_std: bool = False,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
