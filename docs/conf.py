@@ -233,6 +233,32 @@ nitpick_ignore = [
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
+    # TODO: remove once https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    *(
+        ("py:class", f"scanpy.{submodule}.TypeAliasType")
+        for submodule in [
+            "tools._umap",
+            "tools._rank_genes_groups",
+            "tools._marker_gene_overlap",
+            "tools._draw_graph",
+            "preprocessing._scale",
+            "preprocessing._pca",
+            "plotting._utils",
+            "plotting._tools.paga",
+            "plotting._scrublet",
+            "plotting._baseplot_class",
+            "plotting._anndata",
+            "neighbors._types",
+            "metrics._common",
+            "get._aggregated",
+            "external.tl._pypairs",
+            "external.pp._dca",
+            "datasets._datasets",
+            "_utils.random",
+            "_types",
+            "_settings",
+        ]
+    ),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
