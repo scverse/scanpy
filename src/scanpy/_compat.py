@@ -100,13 +100,16 @@ old_positionals = partial(
 )
 
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated as _deprecated
+# we’re not using _FILE_PREFIXES here,
+# since a wholesale deprecated function shouldn’t be used internally anyway
+if TYPE_CHECKING:
+    from warnings import deprecated
 else:
-    from typing_extensions import deprecated as _deprecated
-
-
-deprecated = partial(_deprecated, category=FutureWarning)
+    if sys.version_info >= (3, 13):
+        from warnings import deprecated as _deprecated
+    else:
+        from typing_extensions import deprecated as _deprecated
+    deprecated = partial(_deprecated, category=FutureWarning)
 
 
 def warn(
