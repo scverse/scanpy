@@ -179,6 +179,8 @@ filterwarnings = [
     'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
     # old anndata versions have this
     'ignore:is_categorical_dtype is deprecated:FutureWarning',
+    # Ignore numba PEP 456 warning specific to ARM machines
+    'ignore:FNV hashing is not implemented in Numba.*:UserWarning',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
