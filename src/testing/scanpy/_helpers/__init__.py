@@ -128,10 +128,13 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
-    if pkg_version("anndata") < Version("0.11") and not isinstance(args[0], DaskArray):
+    if (
+        pkg_version("anndata") < Version("0.11")
+        and a.chunksize == a.shape
+        and not isinstance(args[0], DaskArray)  # keep chunksize intact
+    ):
         from anndata.tests.helpers import _half_chunk_size
 
-        assert a.chunksize == a.shape, "Unknown environment"
         a = a.rechunk(_half_chunk_size(a.shape))
     return a
 
