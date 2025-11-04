@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from operator import truediv
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numba
 import numpy as np
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -286,7 +285,7 @@ def normalize_total(  # noqa: PLR0912
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-        warn("Some cells have zero counts", UserWarning, stacklevel=2)
+        warn("Some cells have zero counts", UserWarning)
 
     dat = dict(
         X=x,

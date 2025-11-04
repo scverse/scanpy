@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numpy as np
 from anndata import AnnData
 
-from scanpy._compat import CSBase
-
 from ... import logging as logg
+from ..._compat import CSBase, warn
 from ..._utils import (
     _doc_params,
     _empty,
@@ -56,11 +54,8 @@ def _pearson_residuals(
         raise ValueError(msg)
 
     if check_values and not check_nonnegative_integers(x):
-        warn(
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
     if isinstance(x, CSBase):
         sums_genes = np.sum(x, axis=0)

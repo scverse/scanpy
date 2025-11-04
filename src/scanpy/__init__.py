@@ -90,11 +90,12 @@ sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]}
 
 def __getattr__(name: str) -> Any:
     if name == "__version__":
-        import warnings
         from importlib.metadata import version
 
+        from ._compat import warn
+
         msg = "`__version__` is deprecated, use `importlib.metadata.version('scanpy')` instead"
-        warnings.warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         return version("scanpy")
 
     raise AttributeError

@@ -12,7 +12,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, old_positionals
+from .._compat import CSBase, DaskArray, old_positionals, warn
 from .._settings import Verbosity, settings
 from .._utils import check_nonnegative_integers, sanitize_anndata
 from ..get import _get_obs_rep
@@ -72,11 +72,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     data = _get_obs_rep(adata, layer=layer)
 
     if check_values and not check_nonnegative_integers(data):
-        warnings.warn(
-            f"`{flavor=!r}` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = f"`{flavor=!r}` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
     df["means"], df["variances"] = stats.mean_var(data, axis=0, correction=1)
 
@@ -247,8 +244,7 @@ class _Cutoffs:
         }
         if {k: v for k, v in locals().items() if k in cutoffs} != defaults:
             msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-            # 3: caller -> 2: `highly_variable_genes` -> 1: here
-            warnings.warn(msg, UserWarning, stacklevel=3)
+            warn(msg, UserWarning)
         return n_top_genes
 
     def in_bounds(
@@ -454,8 +450,7 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
             f"`n_top_genes` (={n}) > number of normalized dispersions (={x.size}), "
             "returning all genes with normalized dispersions."
         )
-        # 5: caller -> 4: `highly_variable_genes` -> 3: `_…_single_batch` -> 2: `_subset_genes` -> 1: here
-        warnings.warn(msg, UserWarning, stacklevel=5)
+        warn(msg, UserWarning)
         n = x.size
     if isinstance(x, DaskArray):
         return x.topk(n)[-1]
@@ -732,11 +727,8 @@ def highly_variable_genes(  # noqa: PLR0913
         )
     else:
         if filter_unexpressed_genes is False:
-            warnings.warn(
-                f"filter_unexpressed_genes is set to False, but will ignored for batch-aware {flavor=!r} HVG computation",
-                UserWarning,
-                stacklevel=3,
-            )
+            msg = f"filter_unexpressed_genes is set to False, but will ignored for batch-aware {flavor=!r} HVG computation"
+            warn(msg, UserWarning)
         # filter_unexpressed_genes will not get passed to _highly_variable_genes_batched since it's always True for that function
         df = _highly_variable_genes_batched(
             adata, batch_key, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor

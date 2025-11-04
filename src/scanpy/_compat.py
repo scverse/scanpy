@@ -4,8 +4,10 @@ import sys
 import warnings
 from functools import cache, partial, wraps
 from importlib.util import find_spec
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, overload
 
+import legacy_api_wrap
 from packaging.version import Version
 from scipy import sparse
 
@@ -28,6 +30,7 @@ __all__ = [
     "old_positionals",
     "pkg_metadata",
     "pkg_version",
+    "warn",
 ]
 
 
@@ -83,24 +86,49 @@ def pkg_version(package: str) -> Version:
     return Version(version(package))
 
 
-if find_spec("legacy_api_wrap") or TYPE_CHECKING:
-    from legacy_api_wrap import legacy_api  # noqa: TID251
+# File prefixes for us and decorators we use
+_FILE_PREFIXES: tuple[str, ...] = (
+    str(Path(__file__).parent),
+    str(Path(legacy_api_wrap.__file__).parent),
+)
 
-    old_positionals = partial(legacy_api, category=FutureWarning)
+
+old_positionals = partial(
+    legacy_api_wrap.legacy_api,  # noqa: TID251
+    category=FutureWarning,
+    skip_file_prefixes=_FILE_PREFIXES,
+)
+
+
+# we’re not using _FILE_PREFIXES here,
+# since a wholesale deprecated function shouldn’t be used internally anyway
+if TYPE_CHECKING:
+    from warnings import deprecated
 else:
-    # legacy_api_wrap is currently a hard dependency,
-    # but this code makes it possible to run scanpy without it.
-    def old_positionals(*old_positionals: str):
-        return lambda func: func
+    if sys.version_info >= (3, 13):
+        from warnings import deprecated as _deprecated
+    else:
+        from typing_extensions import deprecated as _deprecated
+    deprecated = partial(_deprecated, category=FutureWarning)
 
 
-if sys.version_info >= (3, 13):
-    from warnings import deprecated as _deprecated
-else:
-    from typing_extensions import deprecated as _deprecated
-
-
-deprecated = partial(_deprecated, category=FutureWarning)
+def warn(
+    message: str,
+    category: type[Warning],
+    *,
+    source: str | None = None,
+    skip_file_prefixes: tuple[str, ...] = (),
+    more_file_prefixes: tuple[str, ...] = (),
+) -> None:
+    """Issue a warning, skipping frames from certain file prefixes."""
+    if not skip_file_prefixes:
+        skip_file_prefixes = (*_FILE_PREFIXES, *more_file_prefixes)
+    elif more_file_prefixes:
+        msg = "Cannot use both `skip_file_prefixes` and `more_file_prefixes`."
+        raise TypeError(msg)
+    warnings.warn(  # noqa: TID251
+        message, category, source=source, skip_file_prefixes=skip_file_prefixes
+    )
 
 
 @overload
@@ -135,7 +163,7 @@ def njit[**P, R](
                     f"Trying to run {f.__name__} in serial mode. "
                     "In case of problems, install `tbb`."
                 )
-                warnings.warn(msg, stacklevel=2)
+                warn(msg, UserWarning)
             return fns[parallel](*args, **kwargs)
 
         return wrapper

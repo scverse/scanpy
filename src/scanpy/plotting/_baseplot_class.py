@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, NamedTuple
-from warnings import warn
 
 import numpy as np
 from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._utils import _empty
 from ._anndata import (
     VarGroups,
@@ -156,12 +155,11 @@ class BasePlot:
             gene_symbols=gene_symbols,
         )
         if len(self.categories) > self.MAX_NUM_CATEGORIES:
-            warn(
+            msg = (
                 f"Over {self.MAX_NUM_CATEGORIES} categories found. "
-                "Plot would be very large.",
-                UserWarning,
-                stacklevel=2,
+                "Plot would be very large."
             )
+            warn(msg, UserWarning)
 
         if categories_order is not None and (
             set(self.obs_tidy.index.categories) != set(categories_order)

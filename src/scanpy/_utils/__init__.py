@@ -9,7 +9,6 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import re
-import warnings
 from contextlib import suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
@@ -34,7 +33,7 @@ from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, pkg_version
+from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -80,7 +79,6 @@ __all__ = [
     "sanitize_anndata",
     "select_groups",
     "update_params",
-    "warn_once",
 ]
 
 
@@ -150,7 +148,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
                     f"In function `{f_name}`, argument `{old_name}` "
                     f"was renamed to `{new_name}`{pos_str}."
                 )
-                warnings.warn(msg, FutureWarning, stacklevel=3)
+                warn(msg, FutureWarning)
                 if pos_0:
                     args = (kwargs.pop(old_name), *args)
                 else:
@@ -470,10 +468,8 @@ def sanitize_anndata(adata: AnnData) -> None:
 
 def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
-        warnings.warn(
-            "Received a view of an AnnData. Making a copy.",
-            stacklevel=2,
-        )
+        msg = "Received a view of an AnnData. Making a copy."
+        warn(msg, UserWarning)
         adata._init_as_actual(adata.copy())
 
 
@@ -686,9 +682,8 @@ def _[T: (DaskArray, np.ndarray)](
                 )
             )
         ):
-            warnings.warn(
-                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
-            )
+            msg = "Rechunking scaling_array in user operation"
+            warn(msg, UserWarning)
             scaling_array = scaling_array.rechunk(_make_axis_chunks(x, axis))
     else:
         scaling_array = da.from_array(
@@ -821,12 +816,6 @@ def select_groups(
     else:
         groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks_obs
-
-
-def warn_once(msg: str, category: type[Warning], stacklevel: int = 0) -> None:
-    warnings.warn(msg, category, stacklevel=stacklevel + 1)
-    # You'd think `'once'` works, but it doesn't at the repl and in notebooks
-    warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
 
 
 def check_presence_download(filename: Path, backup_url):

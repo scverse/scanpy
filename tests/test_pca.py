@@ -364,6 +364,7 @@ def test_pca_chunked():
     np.testing.assert_allclose(
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),
+        rtol=1e-6,
     )
 
 

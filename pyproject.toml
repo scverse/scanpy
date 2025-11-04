@@ -66,7 +66,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "packaging>=21.3",
     "session-info2",
-    "legacy-api-wrap>=1.4.1",                     # for positional API deprecations
+    "legacy-api-wrap>=1.5",                       # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
 ]
 dynamic = [ "version" ]
@@ -286,6 +286,7 @@ required-imports = [ "from __future__ import annotations" ]
 "numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
 "numba.jit".msg = "Use `scanpy._compat.njit` instead"
 "numba.njit".msg = "Use `scanpy._compat.njit` instead"
+"warnings.warn".msg = "Use `scanpy._compat.warn` instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = [  ]
 strict = true
