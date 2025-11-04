@@ -4,6 +4,7 @@ import sys
 import warnings
 from functools import cache, partial, wraps
 from importlib.util import find_spec
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
 
 from packaging.version import Version
@@ -105,6 +106,32 @@ else:
 
 
 deprecated = partial(_deprecated, category=FutureWarning)
+
+
+# File prefixes for us and decorators we use
+_FILE_PREFIXES: tuple[str, ...] = (
+    str(Path(__file__).parent),
+    str(Path(legacy_api.__file__).parent),
+)
+
+
+def warn(
+    message: str,
+    category: type[Warning] = UserWarning,
+    *,
+    source: str | None = None,
+    skip_file_prefixes: tuple[str, ...] = (),
+    more_file_prefixes: tuple[str, ...] = (),
+) -> None:
+    """Issue a warning, skipping frames from certain file prefixes."""
+    if not skip_file_prefixes:
+        skip_file_prefixes = (*_FILE_PREFIXES, *more_file_prefixes)
+    elif more_file_prefixes:
+        msg = "Cannot use both `skip_file_prefixes` and `more_file_prefixes`."
+        raise TypeError(msg)
+    warnings.warn(  # noqa: TID251
+        message, category, source=source, skip_file_prefixes=skip_file_prefixes
+    )
 
 
 @overload
