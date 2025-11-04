@@ -7,6 +7,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, overload
 
+import legacy_api_wrap
 from packaging.version import Version
 from scipy import sparse
 
@@ -85,15 +86,7 @@ def pkg_version(package: str) -> Version:
     return Version(version(package))
 
 
-if find_spec("legacy_api_wrap") or TYPE_CHECKING:
-    from legacy_api_wrap import legacy_api  # noqa: TID251
-
-    old_positionals = partial(legacy_api, category=FutureWarning)
-else:
-    # legacy_api_wrap is currently a hard dependency,
-    # but this code makes it possible to run scanpy without it.
-    def old_positionals(*old_positionals: str):
-        return lambda func: func
+old_positionals = partial(legacy_api_wrap.legacy_api, category=FutureWarning)  # noqa: TID251
 
 
 if sys.version_info >= (3, 13):
@@ -108,7 +101,7 @@ deprecated = partial(_deprecated, category=FutureWarning)
 # File prefixes for us and decorators we use
 _FILE_PREFIXES: tuple[str, ...] = (
     str(Path(__file__).parent),
-    str(Path(legacy_api.__file__).parent),
+    str(Path(legacy_api_wrap.__file__).parent),
 )
 
 
