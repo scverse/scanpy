@@ -5,7 +5,7 @@ import warnings
 from functools import cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 from packaging.version import Version
 from scipy import sparse
@@ -30,10 +30,6 @@ __all__ = [
     "pkg_metadata",
     "pkg_version",
 ]
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 
 SpBase = sparse.spmatrix | sparse.sparray  # noqa: TID251
@@ -135,10 +131,10 @@ def warn(
 
 
 @overload
-def njit(fn: Callable[P, R], /) -> Callable[P, R]: ...
+def njit[**P, R](fn: Callable[P, R], /) -> Callable[P, R]: ...
 @overload
-def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
-def njit(
+def njit[**P, R]() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def njit[**P, R](
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Jit-compile a function using numba.
@@ -174,8 +170,8 @@ def njit(
     return decorator if fn is None else decorator(fn)
 
 
-LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
-Layer = Literal["tbb", "omp", "workqueue"]
+type LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
+type Layer = Literal["tbb", "omp", "workqueue"]
 
 
 LAYERS: dict[LayerType, set[Layer]] = {

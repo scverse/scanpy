@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict, TypeVar
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -474,10 +474,7 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
-M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
-
-
-def _check_mask(
+def _check_mask[M: NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
     mask: str | M,
     dim: Literal["obs", "var"],

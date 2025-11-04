@@ -67,7 +67,7 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "dense"): tuple(
         pytest.param(
             wrapper(as_dense_dask_array),
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            marks=[needs.dask],
             id=f"dask_array_dense{suffix}",
         )
         for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
@@ -75,7 +75,7 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "sparse"): tuple(
         pytest.param(
             wrapper(as_sparse_dask_array),
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            marks=[needs.dask],
             id=f"dask_array_sparse{suffix}",
         )
         for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]

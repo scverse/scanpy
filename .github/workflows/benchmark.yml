@@ -26,9 +26,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          # no blob:none so ASV can compare commits
+        with: { fetch-depth: 0 } # no blob:none so ASV can compare commits
 
       - name: Fetch main branch for `asv run`’s hash
         run: git fetch origin main:main

@@ -185,7 +185,6 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
 
 
 @needs.dask
-@pytest.mark.anndata_dask_support
 @pytest.mark.parametrize("log1p", [True, False], ids=["log1p", "no_log1p"])
 def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = adata.copy()

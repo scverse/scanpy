@@ -26,13 +26,10 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
-
-# Used with get_literal_vals
-_Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-
-_CONST_MAX_SIZE = 10000000
+_CONST_MAX_SIZE: int = 10_000_000
 
 
 def _select_top_n(scores: NDArray, n_top: int):

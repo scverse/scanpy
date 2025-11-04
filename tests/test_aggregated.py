@@ -237,7 +237,6 @@ def to_csc(x: CSRBase):
 
 
 @needs.dask
-@pytest.mark.anndata_dask_support
 @pytest.mark.parametrize(
     ("func", "error_msg"),
     [

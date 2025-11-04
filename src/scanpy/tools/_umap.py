@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from .._utils.random import _LegacyRandom
 
-    _InitPos = Literal["paga", "spectral", "random"]
+type _InitPos = Literal["paga", "spectral", "random"]
 
 
 @old_positionals(
