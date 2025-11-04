@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -9,7 +8,7 @@ from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -153,7 +152,7 @@ class StackedViolin(BasePlot):
         # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
@@ -228,7 +227,7 @@ class StackedViolin(BasePlot):
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
         if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
@@ -800,7 +799,7 @@ def stacked_violin(  # noqa: PLR0913
             "`order` is deprecated (and never worked for `stacked_violin`), "
             "use categories_order instead"
         )
-        warnings.warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(

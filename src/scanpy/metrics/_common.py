@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
 from functools import singledispatch
@@ -9,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, overload
 import numpy as np
 import pandas as pd
 
-from .._compat import CSRBase, DaskArray, SpBase, fullname
+from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -135,9 +134,6 @@ def _vals_heterogeneous[V: NDArray | CSRBase](
     if idxer.all():
         idxer = slice(None)
     else:
-        warnings.warn(
-            f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these."
+        warn(msg, UserWarning)
     return vals[idxer], idxer, full_result

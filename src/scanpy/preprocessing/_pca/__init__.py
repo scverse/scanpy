@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING, Literal, overload
-from warnings import warn
 
 import numpy as np
 from anndata import AnnData
@@ -10,7 +8,7 @@ from packaging.version import Version
 from sklearn.utils import check_random_state
 
 from ... import logging as logg
-from ..._compat import CSBase, DaskArray, pkg_version
+from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ...get import _check_mask, _get_obs_rep
@@ -286,7 +284,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
                 "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
             )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
             x_pca, pca_ = _pca_compat_sparse(
                 x, n_comps, solver=svd_solver, random_state=random_state
             )
@@ -307,10 +305,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
                 if random_state != 0:
                     msg = f"Ignoring {random_state=} when using a sparse dask array"
-                    warnings.warn(msg, UserWarning, stacklevel=2)
+                    warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
-                    warnings.warn(msg, UserWarning, stacklevel=2)
+                    warn(msg, UserWarning)
                 pca_ = PCAEighDask(n_components=n_comps)
             else:
                 from dask_ml.decomposition import PCA
@@ -425,7 +423,7 @@ def _handle_mask_var(
             "Use_highly_variable=False can be called through mask_var=None"
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
-        warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         if mask_var is not _empty:
             msg = f"These arguments are incompatible. {hint}"
             raise ValueError(msg)
@@ -523,6 +521,5 @@ def _handle_x_args[T: LiteralString](
             f"Ignoring {svd_solver=} and using {default}, "
             f"{method.__module__}.{method.__qualname__}{suffix} only supports {args}."
         )
-        # (4: caller of `pca` -> 3: `pca` -> 2: `_handle_{sklearn,dask_ml}_args` -> 1: here)
-        warnings.warn(msg, UserWarning, stacklevel=4)
+        warn(msg, UserWarning)
     return default

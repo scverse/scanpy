@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import singledispatch
 from operator import truediv
 from typing import TYPE_CHECKING
@@ -11,7 +10,7 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._utils import (
     axis_mul_or_truediv,
     check_array_function_arguments,
@@ -195,7 +194,7 @@ def scale_array[A: _Array](
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             msg = "zero-centering a sparse array/matrix densifies it."
-            warnings.warn(msg, UserWarning, stacklevel=2)
+            warn(msg, UserWarning)
         x -= mean
         x = dematrix(x)
 

@@ -16,7 +16,7 @@ from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _empty
 from . import palettes
@@ -382,7 +382,7 @@ def savefig_or_show(
                 "Argument `save` is deprecated and will be removed in a future version. "
                 "Use `sc.pl.plot(show=False).figure.savefig()` instead."
             )
-            warnings.warn(msg, category=FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
         _savefig(writekey, dpi=dpi, ext=ext)
     if settings.autoshow if show is None else show:
         plt.show()
@@ -1098,7 +1098,7 @@ def _deprecated_scale(
         msg = "can’t specify both `scale` and `density_norm`"
         raise ValueError(msg)
     msg = "`scale` is deprecated, use `density_norm` instead"
-    warnings.warn(msg, FutureWarning, stacklevel=3)
+    warn(msg, FutureWarning)
     return scale
 
 

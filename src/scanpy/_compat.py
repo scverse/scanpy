@@ -29,6 +29,7 @@ __all__ = [
     "old_positionals",
     "pkg_metadata",
     "pkg_version",
+    "warn",
 ]
 
 
@@ -113,7 +114,7 @@ _FILE_PREFIXES: tuple[str, ...] = (
 
 def warn(
     message: str,
-    category: type[Warning] = UserWarning,
+    category: type[Warning],
     *,
     source: str | None = None,
     skip_file_prefixes: tuple[str, ...] = (),
@@ -162,7 +163,7 @@ def njit[**P, R](
                     f"Trying to run {f.__name__} in serial mode. "
                     "In case of problems, install `tbb`."
                 )
-                warnings.warn(msg, stacklevel=2)
+                warn(msg, UserWarning)
             return fns[parallel](*args, **kwargs)
 
         return wrapper

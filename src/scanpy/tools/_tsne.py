@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
@@ -128,21 +127,19 @@ def tsne(  # noqa: PLR0913
 
     # Backwards compat handling: Remove in scanpy 1.9.0
     if n_jobs != 1 and not use_fast_tsne:
-        warnings.warn(
+        msg = (
             "In previous versions of scanpy, calling tsne with `n_jobs` > 1 would use MulticoreTSNE. "
             "Now this uses the scikit-learn version of TSNE by default. "
             "If you’d like the old behaviour (which is deprecated), pass `use_fast_tsne=True`. "
-            "Note, MulticoreTSNE is not actually faster anymore.",
-            UserWarning,
-            stacklevel=2,
+            "Note, MulticoreTSNE is not actually faster anymore."
         )
+        warn(msg, UserWarning)
     if use_fast_tsne:
-        warnings.warn(
+        msg = (
             "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
-            "will be dropped in a future version of scanpy.",
-            FutureWarning,
-            stacklevel=2,
+            "will be dropped in a future version of scanpy."
         )
+        warn(msg, FutureWarning)
 
     # deal with different tSNE implementations
     if use_fast_tsne:
@@ -150,11 +147,8 @@ def tsne(  # noqa: PLR0913
             from MulticoreTSNE import MulticoreTSNE as TSNE  # noqa: N814
         except ImportError:
             use_fast_tsne = False
-            warnings.warn(
-                "Could not import 'MulticoreTSNE'. Falling back to scikit-learn.",
-                ImportWarning,
-                stacklevel=2,
-            )
+            msg = "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
+            warn(msg, ImportWarning)
         else:
             tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
