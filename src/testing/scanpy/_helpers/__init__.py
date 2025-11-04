@@ -124,15 +124,20 @@ def _check_check_values_warnings(
 
 # Delayed imports for case where we aren't using dask
 def as_dense_dask_array(*args, **kwargs) -> DaskArray:
-    from anndata.tests.helpers import as_dense_dask_array
+    from anndata.tests.helpers import _half_chunk_size, as_dense_dask_array
 
-    return as_dense_dask_array(*args, **kwargs)
+    a = as_dense_dask_array(*args, **kwargs)
+    if a.chunksize == a.shape:  # TODO: wtf? Why is this necessary?
+        a = a.rechunk(_half_chunk_size(a.shape))
+    return a
 
 
 def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_sparse_dask_array
 
-    return as_sparse_dask_array(*args, **kwargs)
+    a = as_sparse_dask_array(*args, **kwargs)
+    assert a.chunksize != a.shape, "Array is not chunked"
+    return a
 
 
 @dataclass(init=False)
