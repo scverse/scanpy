@@ -13,15 +13,16 @@ from typing import TYPE_CHECKING
 import numpy as np
 from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableSequence
 
     from numpy.typing import NDArray
 
-    from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -124,10 +125,13 @@ def _check_check_values_warnings(
 
 # Delayed imports for case where we aren't using dask
 def as_dense_dask_array(*args, **kwargs) -> DaskArray:
-    from anndata.tests.helpers import _half_chunk_size, as_dense_dask_array
+    from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
-    if a.chunksize == a.shape:  # TODO: wtf? Why is this necessary?
+    if pkg_version("anndata") < Version("0.11") and not isinstance(args[0], DaskArray):
+        from anndata.tests.helpers import _half_chunk_size
+
+        assert a.chunksize == a.shape, "Unknown environment"
         a = a.rechunk(_half_chunk_size(a.shape))
     return a
 
@@ -135,9 +139,7 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
 def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_sparse_dask_array
 
-    a = as_sparse_dask_array(*args, **kwargs)
-    assert a.chunksize != a.shape, "Array is not chunked"
-    return a
+    return as_sparse_dask_array(*args, **kwargs)
 
 
 @dataclass(init=False)
