@@ -4,21 +4,16 @@ from __future__ import annotations
 
 import os
 import sys
-from importlib.metadata import version
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import pytest
-from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
-
-
-NUMBA_0_63 = Version(version("numba")) >= Version("0.63b0")
 
 
 _original_settings: Mapping[str, object] | None = None
@@ -108,9 +103,6 @@ def pytest_collection_modifyitems(
         if "internet" in item.keywords:
             item.add_marker(skipif_not_run_internet)
             item.add_marker(pytest.mark.flaky(reruns=5, reruns_delay=2))
-        if NUMBA_0_63 and "normalize_pearson" in item.name:
-            # TODO: release once https://github.com/numba/numba/issues/10319 is fixed
-            item.add_marker(pytest.mark.xfail(reason="numba 0.63 bug"))
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
