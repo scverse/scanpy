@@ -85,18 +85,23 @@ MAP_ARRAY_TYPES: dict[
         for wrapper, suffix in [
             (lambda x: x, ""),
             *(
-                (
-                    lambda func,
-                    format=format,
-                    matrix_or_array=matrix_or_array: _chunked_1d(
-                        partial(
-                            func, typ=getattr(sparse, f"{format}_{matrix_or_array}")
-                        )
-                    ),
-                    f"-1d_chunked-{format}_{matrix_or_array}",
+                ((_chunked_1d, "-1d_chunked"),)
+                if Version(version("anndata")) < Version("0.12.5")
+                else (
+                    (
+                        lambda func,
+                        format=format,
+                        matrix_or_array=matrix_or_array: _chunked_1d(
+                            partial(
+                                func, typ=getattr(sparse, f"{format}_{matrix_or_array}")
+                            )
+                        ),
+                        f"-1d_chunked-{format}_{matrix_or_array}",
+                    )
+                    for format in ["csr", "csc"]
+                    # TODO: use `array` as well once anndata 0.13 drops
+                    for matrix_or_array in ["matrix"]
                 )
-                for format in ["csr", "csc"]
-                for matrix_or_array in ["matrix", "array"]
             ),
         ]
     ),

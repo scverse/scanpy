@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
+from importlib.metadata import version
 from importlib.util import find_spec
 from itertools import permutations
 from types import MappingProxyType
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
+from packaging.version import Version
 
 import scanpy as sc
 
@@ -130,7 +132,10 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
 
 
 def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
-    from anndata.tests.helpers import as_sparse_dask_array
+    if Version(version("anndata")) < Version("0.12.5"):
+        from anndata.tests.helpers import as_sparse_dask_array
+    else:
+        from anndata.tests.helpers import as_sparse_dask_matrix as as_sparse_dask_array
 
     return as_sparse_dask_array(*args, **kwargs)
 
