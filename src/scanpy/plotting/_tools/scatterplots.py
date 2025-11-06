@@ -26,7 +26,6 @@ from matplotlib.colors import (
 from matplotlib.figure import Figure  # noqa: TC002
 from matplotlib.markers import MarkerStyle
 from numpy.typing import NDArray  # noqa: TC002
-from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import deprecated
@@ -114,10 +113,10 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     wspace: float | None = None,
     title: str | Sequence[str] | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     return_fig: bool | None = None,
     marker: str | Sequence[str] = ".",
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot for user specified embedding basis (e.g. umap, pca, etc).
@@ -227,7 +226,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
         ):
             size = np.array(size, dtype=float)
     else:
-        size = 120000 / adata.shape[0]
+        # if the basis has NaNs, ignore the corresponding cells for size calcluation
+        size = 120000 / (~np.isnan(basis_values).any(axis=1)).sum()
 
     ##########
     # Layout #
@@ -837,7 +837,7 @@ def pca(
     annotate_var_explained: bool = False,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in PCA coordinates.
@@ -953,7 +953,7 @@ def spatial(  # noqa: PLR0913
     na_color: ColorLike | None = None,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in spatial coordinates.
@@ -1224,14 +1224,14 @@ def _get_palette(adata, values_key: str, palette=None):
     else:
         values = pd.Categorical(adata.obs[values_key])
     if palette:
-        _utils._set_colors_for_categorical_obs(adata, values_key, palette)
+        _utils.set_colors_for_categorical_obs(adata, values_key, palette)
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
         values.categories
     ):
         #  set a default palette in case that no colors or too few colors are found
-        _utils._set_default_colors_for_categorical_obs(adata, values_key)
+        _utils.set_default_colors_for_categorical_obs(adata, values_key)
     else:
-        _utils._validate_palette(adata, values_key)
+        _utils.validate_palette(adata, values_key)
     return dict(
         zip(
             values.categories,
@@ -1274,10 +1274,7 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    if Version(pd.__version__) < Version("2.1.0"):
-        color_vector = pd.Categorical(values.map(color_map))
-    else:
-        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
+    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])

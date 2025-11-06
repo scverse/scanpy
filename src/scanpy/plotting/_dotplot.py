@@ -11,13 +11,7 @@ from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
-from ._utils import (
-    _dk,
-    check_colornorm,
-    fix_kwds,
-    make_grid_spec,
-    savefig_or_show,
-)
+from ._utils import _dk, check_colornorm, fix_kwds, make_grid_spec, savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -608,6 +602,7 @@ class DotPlot(BasePlot):
             vmax=self.vboundnorm.vmax,
             vcenter=self.vboundnorm.vcenter,
             norm=self.vboundnorm.norm,
+            are_axes_swapped=self.are_axes_swapped,
             **self.kwds,
         )
 
@@ -637,6 +632,7 @@ class DotPlot(BasePlot):
         vmax: float | None,
         vcenter: float | None,
         norm: Normalize | None,
+        are_axes_swapped: bool | None,
         **kwds,
     ):
         """Make a *dot plot* given two data frames.
@@ -688,16 +684,22 @@ class DotPlot(BasePlot):
             "please check that the dot_size "
             "and dot_color dataframes have the same columns"
         )
-
-        if standard_scale == "group":
-            dot_color = dot_color.sub(dot_color.min(1), axis=0)
-            dot_color = dot_color.div(dot_color.max(1), axis=0).fillna(0)
-        elif standard_scale == "var":
-            dot_color -= dot_color.min(0)
-            dot_color = (dot_color / dot_color.max(0)).fillna(0)
-        elif standard_scale is None:
-            pass
-
+        match are_axes_swapped, standard_scale:
+            case True, "group":
+                group_axis = 1
+            case True, "var":
+                group_axis = 0
+            case _, "group":
+                group_axis = 0
+            case _, "var":
+                group_axis = 1
+        if standard_scale is not None:
+            dot_color = dot_color.sub(
+                dot_color.min((group_axis + 1) % 2), axis=group_axis
+            )
+            dot_color = dot_color.div(
+                dot_color.max((group_axis + 1) % 2), axis=group_axis
+            ).fillna(0)
         # make scatter plot in which
         # x = var_names
         # y = groupby category

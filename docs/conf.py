@@ -6,6 +6,7 @@ import os
 import sys
 from datetime import datetime
 from functools import partial
+from importlib.metadata import version as get_version
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -19,7 +20,6 @@ matplotlib.use("agg")
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
-import scanpy
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -39,7 +39,7 @@ project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
 copyright = f"{datetime.now():%Y}, scverse"
-version = scanpy.__version__.replace(".dirty", "")
+version = get_version("scanpy").replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
 if Version(version).is_devrelease:
@@ -152,7 +152,11 @@ intersphinx_mapping = dict(
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
-    python=("https://docs.python.org/3", None),
+    python=(
+        # TODO: switch to `/3` once docs are built with Python 3.14
+        "https://docs.python.org/3.13",
+        None,
+    ),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
@@ -229,6 +233,32 @@ nitpick_ignore = [
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
+    # TODO: remove once https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    *(
+        ("py:class", f"scanpy.{submodule}.TypeAliasType")
+        for submodule in [
+            "tools._umap",
+            "tools._rank_genes_groups",
+            "tools._marker_gene_overlap",
+            "tools._draw_graph",
+            "preprocessing._scale",
+            "preprocessing._pca",
+            "plotting._utils",
+            "plotting._tools.paga",
+            "plotting._scrublet",
+            "plotting._baseplot_class",
+            "plotting._anndata",
+            "neighbors._types",
+            "metrics._common",
+            "get._aggregated",
+            "external.tl._pypairs",
+            "external.pp._dca",
+            "datasets._datasets",
+            "_utils.random",
+            "_types",
+            "_settings",
+        ]
+    ),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),

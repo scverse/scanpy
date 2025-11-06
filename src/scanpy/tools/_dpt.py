@@ -450,9 +450,8 @@ class DPT(Neighbors):
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
             score = dseg[tips3[2]] / d_seg[tips3[0], tips3[1]]
-            score = (
-                len(seg) if self.choose_largest_segment else score
-            )  # simply the number of points
+            # simply the number of points
+            score = len(seg) if self.choose_largest_segment else score
             logg.debug(
                 f"    group {iseg} score {score} n_points {len(seg)}"
                 f"{' (too small)' if len(seg) < self.min_group_size else ''}"
@@ -568,7 +567,7 @@ class DPT(Neighbors):
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
         result = self._detect_branching(d_seg, tips3, seg)
-        ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk = result
+        ssegs, ssegs_tips, _ssegs_adjacency, ssegs_connects, trunk = result
         # map back to global indices
         for iseg_new, seg_new in enumerate(ssegs):
             ssegs[iseg_new] = seg[seg_new]

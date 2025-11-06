@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
-    _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
+type _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
 @old_positionals(
@@ -236,7 +236,7 @@ def _compute_pos(  # noqa: PLR0912
         pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     elif layout == "eq_tree":
         nx_g_tree = nx.Graph(adj_tree)
-        pos = _utils.hierarchy_pos(nx_g_tree, root)
+        pos = hierarchy_pos(nx_g_tree, root)
         if len(pos) < adjacency_solid.shape[0]:
             msg = (
                 "This is a forest and not a single tree. "
@@ -258,9 +258,10 @@ def _compute_pos(  # noqa: PLR0912
             # I don't know why this is necessary
             # np.random.seed(random_state)
             if init_pos is None:
-                init_coords = random_state.random_sample(
-                    (adjacency_solid.shape[0], 2)
-                ).tolist()
+                init_coords = random_state.random_sample((
+                    adjacency_solid.shape[0],
+                    2,
+                )).tolist()
             else:
                 init_pos = init_pos.copy()
                 # this is a super-weird hack that is necessary as igraph’s
@@ -278,6 +279,78 @@ def _compute_pos(  # noqa: PLR0912
         pos[0] = (0.5, 0.5)
     pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     return pos_array
+
+
+class _Level(TypedDict):
+    total: int
+    current: int
+
+
+def hierarchy_pos(
+    g, /, root: int, levels_: Mapping[int, int] | None = None, width=1.0, height=1.0
+) -> dict[int, tuple[float, float]]:
+    """Tree layout for networkx graph.
+
+    See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
+    answer by burubum.
+
+    If there is a cycle that is reachable from root, then this will see
+    infinite recursion.
+
+    Parameters
+    ----------
+    G: the graph
+    root: the root node
+    levels: a dictionary
+            key: level number (starting from 0)
+            value: number of nodes in this level
+    width: horizontal space allocated for drawing
+    height: vertical space allocated for drawing
+
+    """
+
+    def make_levels(
+        levels: dict[int, _Level],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+    ) -> dict[int, _Level]:
+        """Compute the number of nodes for each level."""
+        if current_level not in levels:
+            levels[current_level] = _Level(total=0, current=0)
+        levels[current_level]["total"] += 1
+        neighbors: list[int] = list(g.neighbors(node))
+        if parent is not None:
+            neighbors.remove(parent)
+        for neighbor in neighbors:
+            levels = make_levels(levels, neighbor, current_level + 1, node)
+        return levels
+
+    if levels_ is None:
+        levels = make_levels({})
+    else:
+        levels = {k: _Level(total=0, current=0) for k, v in levels_.items()}
+
+    def make_pos(
+        pos: dict[int, tuple[float, float]],
+        node: int = root,
+        current_level: int = 0,
+        parent: int | None = None,
+        vert_loc: float = 0.0,
+    ):
+        dx = 1 / levels[current_level]["total"]
+        left = dx / 2
+        pos[node] = ((left + dx * levels[current_level]["current"]) * width, vert_loc)
+        levels[current_level]["current"] += 1
+        neighbors: list[int] = list(g.neighbors(node))
+        if parent is not None:
+            neighbors.remove(parent)
+        for neighbor in neighbors:
+            pos = make_pos(pos, neighbor, current_level + 1, node, vert_loc - vert_gap)
+        return pos
+
+    vert_gap = height / (max(levels.keys()) + 1)
+    return make_pos({})
 
 
 @old_positionals(
@@ -340,8 +413,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     groups=None,  # backwards compat
     plot: bool = True,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> Axes | list[Axes] | None:
     r"""Plot the PAGA graph through thresholding low-connectivity edges.
 
@@ -582,7 +656,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
     if plot:
-        axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
+        axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
             ax, panels=colors, colorbars=colorbars
         )
 
@@ -797,7 +871,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         and colors in adata.obs
         and isinstance(adata.obs[colors].dtype, CategoricalDtype)
     ):
-        asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
+        _asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
             adata,
             prediction=groups_key,
             reference=colors,
@@ -1067,8 +1141,9 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     as_heatmap: bool = True,
     return_data: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> tuple[Axes, pd.DataFrame] | Axes | pd.DataFrame | None:
     r"""Gene expression and annotation changes along paths in the abstracted graph.
 
@@ -1268,14 +1343,12 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
 
         # groups bar
         ax_bounds = ax.get_position().bounds
-        groups_axis = plt.axes(
-            (
-                ax_bounds[0],
-                ax_bounds[1] - ax_bounds[3] / len(keys),
-                ax_bounds[2],
-                ax_bounds[3] / len(keys),
-            )
-        )
+        groups_axis = plt.axes((
+            ax_bounds[0],
+            ax_bounds[1] - ax_bounds[3] / len(keys),
+            ax_bounds[2],
+            ax_bounds[3] / len(keys),
+        ))
         groups = np.array(groups)[None, :]
         groups_axis.imshow(
             groups,
@@ -1307,14 +1380,12 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         for ianno, anno in enumerate(annotations):
             if ianno > 0:
                 y_shift = ax_bounds[3] / len(keys) / 2
-            anno_axis = plt.axes(
-                (
-                    ax_bounds[0],
-                    ax_bounds[1] - (ianno + 2) * y_shift,
-                    ax_bounds[2],
-                    y_shift,
-                )
-            )
+            anno_axis = plt.axes((
+                ax_bounds[0],
+                ax_bounds[1] - (ianno + 2) * y_shift,
+                ax_bounds[2],
+                y_shift,
+            ))
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
                 color_map_anno = (
@@ -1363,6 +1434,7 @@ def paga_adjacency(
     as_heatmap: bool = True,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
+    # deprecated
     save: bool | str | None = None,
 ) -> None:
     """Plot connectivity of paga groups."""

@@ -37,7 +37,7 @@ def sparse_zscore(
 ) -> CSBase:
     """z-score normalize each column of E."""
     if gene_mean is None or gene_stdev is None:
-        gene_means, gene_stdevs = mean_var(e, axis=0, correction=1)
+        _gene_means, gene_stdevs = mean_var(e, axis=0, correction=1)
         gene_stdevs = np.sqrt(gene_stdevs)
     return sparse_multiply(np.asarray((e - gene_mean).T), 1 / gene_stdev).T
 

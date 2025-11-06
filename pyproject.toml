@@ -5,7 +5,7 @@ requires = [ "hatchling", "hatch-vcs" ]
 [project]
 name = "scanpy"
 description = "Single-Cell Analysis in Python."
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = "BSD-3-clause"
 authors = [
     { name = "Alex Wolf" },
@@ -39,34 +39,34 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = [
-    "anndata>=0.9.2",
-    "numpy>=1.25.2",
+    "anndata>=0.10.8",
+    "numpy>=2",
     "fast-array-utils[accel,sparse]>=1.2.1",
-    "matplotlib>=3.7.5",
-    "pandas >=2.0.3",
-    "scipy>=1.11.1",
+    "matplotlib>=3.9",
+    "pandas >=2.2.2",
+    "scipy>=1.13",
     "seaborn>=0.13.2",
-    "h5py>=3.8.0",
+    "h5py>=3.11",
     "tqdm",
-    "scikit-learn>=1.1.3",
+    "scikit-learn>=1.4.2",
     "statsmodels>=0.14.5",
-    "patsy!=1.0.0",                               # https://github.com/pydata/patsy/issues/215
+    "patsy",
     "networkx>=2.8.8",
     "natsort",
     "joblib",
-    "numba >=0.58.1, !=0.62.0rc1",                #https://github.com/numba/numba/issues/10202
+    "numba >=0.60",
     "umap-learn>=0.5.7",
     "pynndescent>=0.5.13",
     "packaging>=21.3",
     "session-info2",
-    "legacy-api-wrap>=1.4.1",                     # for positional API deprecations
+    "legacy-api-wrap>=1.5",                       # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
 ]
 dynamic = [ "version" ]
@@ -119,31 +119,28 @@ doc = [
     "sphinx-copybutton",
     "nbsphinx>=0.9",
     "ipython>=7.20",                    # for nbsphinx code highlighting
-    "matplotlib!=3.6.1",
     "sphinxcontrib-bibtex",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml]",
+    "scanpy[paga,dask-ml,leiden]",
     "sam-algorithm",
 ]
 dev = [
-    "hatch-vcs",   # runtime dev version generation
-    "pre-commit",  # static checking
     "towncrier",   # release note management
     "scipy-stubs", # static typing and IDE support
 ]
 # Algorithms
 paga = [ "igraph" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ] # Louvain community detection
-leiden = [ "igraph>=0.10.8", "leidenalg>=0.9.0" ]      # Leiden community detection
+leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]     # Leiden community detection
 bbknn = [ "bbknn" ]                                    # Batch balanced KNN (batch correction)
 magic = [ "magic-impute>=2.0.4" ]                      # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                              # Harmony dataset integration
 scanorama = [ "scanorama" ]                            # Scanorama dataset integration
-scrublet = [ "scikit-image>=0.20.0" ]                  # Doublet detection with automatic thresholds
+scrublet = [ "scikit-image>=0.23" ]                    # Doublet detection with automatic thresholds
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
-dask = [ "dask[array]>=2023.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
+dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
 dask-ml = [ "dask-ml", "scanpy[dask]" ]               # Dask-ML for sklearn-like API
 
 [tool.hatch.build.targets.wheel]
@@ -167,7 +164,6 @@ junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
-    "anndata_dask_support: tests that require dask support in anndata",
 ]
 filterwarnings = [
     'error',
@@ -181,21 +177,29 @@ filterwarnings = [
     'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
     # h5py <3.9 uses deprecated np.product
     'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
+    # old anndata versions have this
+    'ignore:is_categorical_dtype is deprecated:FutureWarning',
+    # Ignore numba PEP 456 warning specific to ARM machines
+    'ignore:FNV hashing is not implemented in Numba.*:UserWarning',
     # we want to see and eventually fix these
     'default::numba.core.errors.NumbaPerformanceWarning',
     'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
+    # https://github.com/matplotlib/matplotlib/pull/30589
+    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
+    "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
+
 ]
 
 [tool.coverage.run]
-data_file = "test-data/coverage"
+data_file = "test-data/raw-coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
 concurrency = [ "multiprocessing" ]
-parallel = "true"
+parallel = true
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
-source = [ ".", "**/site-packages" ]
+source = [ "src", "**/site-packages" ]
 [tool.coverage.report]
 exclude_also = [
     "if __name__ == .__main__.:",
@@ -209,6 +213,7 @@ exclude_also = [
 src = [ "src" ]
 
 [tool.ruff.format]
+preview = true
 docstring-code-format = true
 
 [tool.ruff.lint]
@@ -281,6 +286,7 @@ required-imports = [ "from __future__ import annotations" ]
 "numpy.bool".msg = "Use `np.bool_` instead for numpy>=1.24<2 compatibility"
 "numba.jit".msg = "Use `scanpy._compat.njit` instead"
 "numba.njit".msg = "Use `scanpy._compat.njit` instead"
+"warnings.warn".msg = "Use `scanpy._compat.warn` instead"
 [tool.ruff.lint.flake8-type-checking]
 exempt-modules = [  ]
 strict = true

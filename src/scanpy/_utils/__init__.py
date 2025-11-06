@@ -9,8 +9,6 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import re
-import sys
-import warnings
 from contextlib import suppress
 from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
@@ -21,6 +19,7 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     NamedTuple,
+    TypeAliasType,
     Union,
     get_args,
     get_origin,
@@ -30,25 +29,17 @@ from weakref import WeakSet
 
 import h5py
 import numpy as np
-from anndata import __version__ as anndata_version
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, pkg_version
+from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
 from .._settings import settings
-
-if Version(anndata_version) >= Version("0.10.0"):
-    from anndata._core.sparse_dataset import (
-        BaseCompressedSparseDataset as SparseDataset,
-    )
-else:
-    from anndata._core.sparse_dataset import SparseDataset
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
-    from typing import Any, TypeVar
+    from typing import Any
 
     from anndata import AnnData
     from igraph import Graph
@@ -57,15 +48,41 @@ if TYPE_CHECKING:
     from .._compat import CSRBase
     from ..neighbors import NeighborsParams, RPForestDict
 
-    _MemoryArray = NDArray | CSBase
-    _SupportedArray = _MemoryArray | DaskArray
-
-    _SA = TypeVar("_SA", bound=_SupportedArray)
-
-    _ForT = TypeVar("_ForT", bound=Callable | type)
+    type _MemoryArray = NDArray | CSBase
+    type _SupportedArray = _MemoryArray | DaskArray
 
 
-LegacyUnionType = type(Union[int, str])  # noqa: UP007
+__all__ = [
+    "AssoResult",
+    "Empty",
+    "NeighborsView",
+    "_choose_graph",
+    "_doc_params",
+    "_empty",
+    "_resolve_axis",
+    "annotate_doc_types",
+    "axis_mul_or_truediv",
+    "axis_nnz",
+    "check_array_function_arguments",
+    "check_nonnegative_integers",
+    "check_presence_download",
+    "check_use_raw",
+    "compute_association_matrix_of_groups",
+    "descend_classes_and_funcs",
+    "ensure_igraph",
+    "get_literal_vals",
+    "indent",
+    "is_backed_type",
+    "is_backed_type",
+    "raise_not_implemented_error_if_backed_type",
+    "renamed_arg",
+    "sanitize_anndata",
+    "select_groups",
+    "update_params",
+]
+
+
+LegacyUnionType: type = type(Union[int, str])  # noqa: UP007
 
 
 class Empty(Enum):
@@ -89,18 +106,7 @@ def ensure_igraph() -> None:
     raise ImportError(msg)
 
 
-def check_versions():
-    if Version(anndata_version) < Version("0.6.10"):
-        from .. import __version__
-
-        msg = (
-            f"Scanpy {__version__} needs anndata version >=0.6.10, "
-            f"not {anndata_version}.\nRun `pip install anndata -U --no-deps`."
-        )
-        raise ImportError(msg)
-
-
-def getdoc(c_or_f: Callable | type) -> str | None:
+def _getdoc(c_or_f: Callable | type) -> str | None:
     if getattr(c_or_f, "__doc__", None) is None:
         return None
     doc = inspect.getdoc(c_or_f)
@@ -142,7 +148,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
                     f"In function `{f_name}`, argument `{old_name}` "
                     f"was renamed to `{new_name}`{pos_str}."
                 )
-                warnings.warn(msg, FutureWarning, stacklevel=3)
+                warn(msg, FutureWarning)
                 if pos_0:
                     args = (kwargs.pop(old_name), *args)
                 else:
@@ -154,7 +160,7 @@ def renamed_arg(old_name, new_name, *, pos_0: bool = False):
     return decorator
 
 
-def _import_name(full_name: str) -> Any:
+def import_name(full_name: str) -> Any:
     from importlib import import_module
 
     parts = full_name.split(".")
@@ -192,7 +198,10 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     for obj in vars(mod).values():
         if not _one_of_ours(obj, root) or obj in encountered:
             continue
-        encountered.add(obj)
+        try:
+            encountered.add(obj)
+        except TypeError:
+            continue  # TypeAliasTypes etc. are not weakref-able
         if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
@@ -209,14 +218,14 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
 def annotate_doc_types(mod: ModuleType, root: str):
     for c_or_f in descend_classes_and_funcs(mod, root):
         with suppress(AttributeError):
-            c_or_f.getdoc = partial(getdoc, c_or_f)
+            c_or_f.getdoc = partial(_getdoc, c_or_f)
 
 
 _leading_whitespace_re = re.compile("(^[ ]*)(?:[^ \n])", re.MULTILINE)
 
 
-def _doc_params(**replacements: str):
-    def dec(obj: _ForT) -> _ForT:
+def _doc_params[T: Callable | type](**replacements: str) -> Callable[[T], T]:
+    def dec(obj: T) -> T:
         assert obj.__doc__
         assert "\t" not in obj.__doc__
 
@@ -239,7 +248,7 @@ def _doc_params(**replacements: str):
     return dec
 
 
-def _check_array_function_arguments(**kwargs):
+def check_array_function_arguments(**kwargs):
     """Check for invalid arguments when an array is passed.
 
     Helper for functions that work on either AnnData objects or array-likes.
@@ -251,7 +260,7 @@ def _check_array_function_arguments(**kwargs):
         raise TypeError(msg)
 
 
-def _check_use_raw(
+def check_use_raw(
     adata: AnnData,
     use_raw: None | bool,  # noqa: FBT001
     *,
@@ -459,10 +468,8 @@ def sanitize_anndata(adata: AnnData) -> None:
 
 def view_to_actual(adata: AnnData) -> None:
     if adata.is_view:
-        warnings.warn(
-            "Received a view of an AnnData. Making a copy.",
-            stacklevel=2,
-        )
+        msg = "Received a view of an AnnData. Making a copy."
+        warn(msg, UserWarning)
         adata._init_as_actual(adata.copy())
 
 
@@ -531,15 +538,17 @@ def update_params(
 
 
 # `get_args` returns `tuple[Any]` so I don’t think it’s possible to get the correct type here
-def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
+def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
     """Get all literal values from a Literal or Union of … of Literal type."""
     if isinstance(typ, UnionType | LegacyUnionType):
         return reduce(
             or_, (dict.fromkeys(get_literal_vals(t)) for t in get_args(typ))
         ).keys()
+    if isinstance(typ, TypeAliasType):
+        return get_literal_vals(typ.__value__)
     if get_origin(typ) is Literal:
         return dict.fromkeys(get_args(typ)).keys()
-    msg = f"{typ} is not a valid Literal"
+    msg = f"{typ!r} ({type(typ).__name__}) is not a valid Literal"
     raise TypeError(msg)
 
 
@@ -548,18 +557,14 @@ def get_literal_vals(typ: UnionType | Any) -> KeysView[Any]:
 # --------------------------------------------------------------------------------
 
 
-if TYPE_CHECKING:
-    Scaling_T = TypeVar("Scaling_T", DaskArray, np.ndarray)
-
-
-def broadcast_axis(divisor: Scaling_T, axis: Literal[0, 1]) -> Scaling_T:
+def _broadcast_axis[T: (DaskArray, np.ndarray)](divisor: T, axis: Literal[0, 1]) -> T:
     divisor = np.ravel(divisor)
     if axis:
         return divisor[None, :]
     return divisor[:, None]
 
 
-def check_op(op):
+def _check_op(op) -> None:
     if op not in {truediv, mul}:
         msg = f"{op} not one of truediv or mul"
         raise ValueError(msg)
@@ -576,8 +581,8 @@ def axis_mul_or_truediv(
     allow_divide_by_zero: bool = True,
     out: ArrayLike | None = None,
 ) -> np.ndarray:
-    check_op(op)
-    scaling_array = broadcast_axis(scaling_array, axis)
+    _check_op(op)
+    scaling_array = _broadcast_axis(scaling_array, axis)
     if op is mul:
         return np.multiply(x, scaling_array, out=out)
     if not allow_divide_by_zero:
@@ -596,7 +601,7 @@ def _(
     allow_divide_by_zero: bool = True,
     out: CSBase | None = None,
 ) -> CSBase:
-    check_op(op)
+    _check_op(op)
     if out is not None and x.data is not out.data:
         msg = "`out` argument provided but not equal to X.  This behavior is not supported for sparse matrix scaling."
         raise ValueError(msg)
@@ -633,7 +638,7 @@ def _(
     ).T
 
 
-def make_axis_chunks(
+def _make_axis_chunks(
     x: DaskArray, axis: Literal[0, 1]
 ) -> tuple[tuple[int], tuple[int]]:
     if axis == 0:
@@ -642,24 +647,24 @@ def make_axis_chunks(
 
 
 @axis_mul_or_truediv.register(DaskArray)
-def _(
+def _[T: (DaskArray, np.ndarray)](
     x: DaskArray,
     /,
-    scaling_array: Scaling_T,
+    scaling_array: T,
     axis: Literal[0, 1],
     op: Callable[[Any, Any], Any],
     *,
     allow_divide_by_zero: bool = True,
     out: None = None,
 ) -> DaskArray:
-    check_op(op)
+    _check_op(op)
     if out is not None:
         msg = "`out` is not `None`. Do not do in-place modifications on dask arrays."
         raise TypeError(msg)
 
     import dask.array as da
 
-    scaling_array = broadcast_axis(scaling_array, axis)
+    scaling_array = _broadcast_axis(scaling_array, axis)
     row_scale = axis == 0
     column_scale = axis == 1
 
@@ -677,14 +682,13 @@ def _(
                 )
             )
         ):
-            warnings.warn(
-                "Rechunking scaling_array in user operation", UserWarning, stacklevel=3
-            )
-            scaling_array = scaling_array.rechunk(make_axis_chunks(x, axis))
+            msg = "Rechunking scaling_array in user operation"
+            warn(msg, UserWarning)
+            scaling_array = scaling_array.rechunk(_make_axis_chunks(x, axis))
     else:
         scaling_array = da.from_array(
             scaling_array,
-            chunks=make_axis_chunks(x, axis),
+            chunks=_make_axis_chunks(x, axis),
         )
     return da.map_blocks(
         axis_mul_or_truediv,
@@ -708,6 +712,7 @@ if pkg_version("scipy") >= Version("1.15"):
     @axis_nnz.register(CSBase)
     def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
         return x.count_nonzero(axis=axis)
+
 else:
     # older scipy versions don’t have any way to get the nnz of a sparse array
     @axis_nnz.register(CSBase)
@@ -755,7 +760,7 @@ def _check_nonnegative_integers_dask(x: DaskArray, /) -> DaskArray:
     return x.map_blocks(check_nonnegative_integers, dtype=bool, drop_axis=(0, 1))
 
 
-def dematrix(x: _SA | np.matrix) -> _SA:
+def dematrix[SA: _SupportedArray](x: SA | np.matrix) -> SA:
     if isinstance(x, np.matrix):
         return x.A
     if isinstance(x, DaskArray) and isinstance(x._meta, np.matrix):
@@ -813,52 +818,12 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def warn_with_traceback(  # noqa: PLR0917
-    message, category, filename, lineno, file=None, line=None
-) -> None:
-    """Get full tracebacks when warning is raised by setting.
-
-    warnings.showwarning = warn_with_traceback
-
-    See Also
-    --------
-    https://stackoverflow.com/questions/22373927/get-traceback-of-warnings
-
-    """
-    import traceback
-
-    traceback.print_stack()
-    log = (  # noqa: F841  # TODO Does this need fixing?
-        file if hasattr(file, "write") else sys.stderr
-    )
-    settings.write(warnings.formatwarning(message, category, filename, lineno, line))
-
-
-def warn_once(msg: str, category: type[Warning], stacklevel: int = 0) -> None:
-    warnings.warn(msg, category, stacklevel=stacklevel + 1)
-    # You'd think `'once'` works, but it doesn't at the repl and in notebooks
-    warnings.filterwarnings("ignore", category=category, message=re.escape(msg))
-
-
 def check_presence_download(filename: Path, backup_url):
     """Check if file is present otherwise download."""
     if not filename.is_file():
         from ..readwrite import _download
 
         _download(backup_url, filename)
-
-
-def lazy_import(full_name):
-    """Import a module in a way that it’s only executed on member access."""
-    try:
-        return sys.modules[full_name]
-    except KeyError:
-        spec = importlib.util.find_spec(full_name)
-        module = importlib.util.module_from_spec(spec)
-        loader = importlib.util.LazyLoader(spec.loader)
-        # Make module with proper locking and get it inserted into sys.modules.
-        loader.exec_module(module)
-        return module
 
 
 # --------------------------------------------------------------------------------
@@ -1005,7 +970,7 @@ def _resolve_axis(
 
 
 def is_backed_type(x: object, /) -> bool:
-    return isinstance(x, SparseDataset | h5py.File | h5py.Dataset)
+    return isinstance(x, BaseCompressedSparseDataset | h5py.File | h5py.Dataset)
 
 
 def raise_not_implemented_error_if_backed_type(x: object, method_name: str, /) -> None:

@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals, pkg_version
+from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
@@ -21,8 +20,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from ..neighbors import RPForestDict
-
-ANNDATA_MIN_VERSION = Version("0.7rc1")
 
 
 @old_positionals(
@@ -119,16 +116,6 @@ def ingest(
     >>> sc.tl.ingest(adata, adata_ref, obs="cell_type")
 
     """
-    # anndata version check
-    anndata_version = pkg_version("anndata")
-    if anndata_version < ANNDATA_MIN_VERSION:
-        msg = (
-            f"ingest only works correctly with anndata>={ANNDATA_MIN_VERSION} "
-            f"(you have {anndata_version}) as prior to {ANNDATA_MIN_VERSION}, "
-            "`AnnData.concatenate` did not concatenate `.obsm`."
-        )
-        raise ValueError(msg)
-
     start = logg.info("running ingest")
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = (
@@ -504,14 +491,16 @@ class Ingest:
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
-                adata.obsm[key] = np.vstack(
-                    (self._adata_ref.obsm[key], self._obsm[key])
-                )
+                adata.obsm[key] = np.vstack((
+                    self._adata_ref.obsm[key],
+                    self._obsm[key],
+                ))
 
         if self._use_rep not in ("X_pca", "X"):
-            adata.obsm[self._use_rep] = np.vstack(
-                (self._adata_ref.obsm[self._use_rep], self._obsm["rep"])
-            )
+            adata.obsm[self._use_rep] = np.vstack((
+                self._adata_ref.obsm[self._use_rep],
+                self._obsm["rep"],
+            ))
 
         if "X_umap" in self._obsm:
             adata.uns["umap"] = self._adata_ref.uns["umap"]

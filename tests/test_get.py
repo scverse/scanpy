@@ -512,3 +512,30 @@ def test_rank_genes_groups_df():
     assert "b" in dedf3["group"].unique()
     adata.var_names.name = "pr1388"
     sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+
+
+######################
+# _get_obs_rep tests #
+######################
+
+
+@pytest.mark.parametrize(
+    ("kw", "cls", "msg"),
+    [
+        pytest.param(
+            dict(layer="a", obsm="b"),
+            ValueError,
+            r"Only one of `layer`, or `obsm` can be specified.",
+            id="layer_and_obsm",
+        ),
+        pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
+    ],
+)
+def test_get_obs_rep_errors(kw: sc.get._ObsRep, cls: type[Exception], msg: str) -> None:
+    adata = AnnData(
+        np.zeros((10, 10)),
+        layers={"a": np.zeros((10, 10))},
+        obsm={"b": np.zeros((10, 5))},
+    )
+    with pytest.raises(cls, match=msg):
+        sc.get._get_obs_rep(adata, **kw)

@@ -9,7 +9,7 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, deprecated, old_positionals
+from ..._compat import CSBase, deprecated, old_positionals, warn
 from .._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -125,7 +125,7 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
         x is None for x in [min_disp, max_disp, min_mean, max_mean]
     ):
         msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-        warnings.warn(msg, UserWarning, stacklevel=2)
+        warn(msg, UserWarning)
     if min_disp is None:
         min_disp = 0.5
     if min_mean is None:
@@ -228,14 +228,12 @@ def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce(
-            (
-                mean > min_mean,
-                mean < max_mean,
-                dispersion_norm > min_disp,
-                dispersion_norm < max_disp,
-            )
-        )
+        gene_subset = np.logical_and.reduce((
+            mean > min_mean,
+            mean < max_mean,
+            dispersion_norm > min_disp,
+            dispersion_norm < max_disp,
+        ))
     logg.info("    finished", time=start)
     return np.rec.fromarrays(
         (

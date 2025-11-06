@@ -20,11 +20,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | CSBase | DaskArray
-
-# Used with get_literal_vals
-ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
-AggType = ConstantDtypeAgg | Literal["mean", "var"]
+type Array = np.ndarray | CSBase | DaskArray
+type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+type AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
@@ -489,9 +487,9 @@ def _combine_categories(
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
-    result_categories = pd.Index(
-        ["_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])]
-    )
+    result_categories = pd.Index([
+        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
+    ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(

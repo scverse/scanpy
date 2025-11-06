@@ -2,33 +2,21 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
-from anndata import __version__ as anndata_version
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 from scipy import sparse
 
-if Version(anndata_version) >= Version("0.10.0"):
-    from anndata._core.sparse_dataset import (
-        BaseCompressedSparseDataset as SparseDataset,
-    )
-
-    if Version(anndata_version) >= Version("0.11.0rc2"):
-        from anndata.io import sparse_dataset
-    else:
-        from anndata.experimental import sparse_dataset
-
-    def make_sparse(x):
-        return sparse_dataset(x)
+if Version(version("anndata")) >= Version("0.11.0rc2"):
+    from anndata.io import sparse_dataset
 else:
-    from anndata._core.sparse_dataset import SparseDataset
-
-    def make_sparse(x):
-        return SparseDataset(x)
+    from anndata.experimental import sparse_dataset
 
 
 if TYPE_CHECKING:
@@ -84,8 +72,8 @@ def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
     adata.write_h5ad(tmp_path / "test.h5ad")
     adata = read_h5ad(tmp_path / "test.h5ad", backed="r")
     adata.layers["X_copy"] = (
-        make_sparse(adata.file["X"])
-        if isinstance(adata.X, SparseDataset)
+        sparse_dataset(adata.file["X"])
+        if isinstance(adata.X, BaseCompressedSparseDataset)
         else adata.file["X"]
     )
     return adata

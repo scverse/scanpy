@@ -15,13 +15,11 @@ jobs:
       id-token: write # to authenticate as Trusted Publisher to pypi.org
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+        with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1

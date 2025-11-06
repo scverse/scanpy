@@ -35,9 +35,10 @@ def adata() -> AnnData:
 def prepare_adata(adata: AnnData) -> AnnData:
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.rechunk((10, -1))
-    adata.var["mito"] = np.concatenate(
-        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool))
-    )
+    adata.var["mito"] = np.concatenate((
+        np.ones(100, dtype=bool),
+        np.zeros(900, dtype=bool),
+    ))
     adata.var["negative"] = False
     return adata
 
@@ -184,7 +185,6 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
 
 
 @needs.dask
-@pytest.mark.anndata_dask_support
 @pytest.mark.parametrize("log1p", [True, False], ids=["log1p", "no_log1p"])
 def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = adata.copy()

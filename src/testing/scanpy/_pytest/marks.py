@@ -1,31 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from importlib.metadata import version
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
 
 import pytest
 from packaging.version import Version
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-
-SKIP_EXTRA: dict[str, Callable[[], str | None]] = {}
-
-
-def _skip_if_skmisc_too_old() -> str | None:
-    import numpy as np
-    import skmisc
-
-    if Version(skmisc.__version__) <= Version("0.3.1") and Version(
-        np.__version__
-    ) >= Version("2"):
-        return "scikit-misc≤0.3.1 requires numpy<2"
-    return None
-
-
-SKIP_EXTRA["skmisc"] = _skip_if_skmisc_too_old
 
 
 class QuietMarkDecorator(pytest.MarkDecorator):
@@ -86,10 +66,14 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     @property
     def skip_reason(self) -> str | None:
         if find_spec(self._name_):
-            if skip_extra := SKIP_EXTRA.get(self._name_):
-                return skip_extra()
             return None
         reason = f"needs module `{self._name_}`"
         if self._name_.casefold() != self.mod.casefold().replace("-", "_"):
             reason = f"{reason} (`pip install {self.mod}`)"
         return reason
+
+
+# TODO: remove once https://github.com/numba/numba/issues/10319 is fixed
+skip_numba_0_63 = pytest.mark.skipif(
+    Version(version=version("numba")) >= Version("0.63b0"), reason="numba 0.63 bug"
+)

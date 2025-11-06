@@ -332,9 +332,10 @@ def _it_sol(
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
         g_new = (t2 * n * g_hat + d_old * g_bar) / (t2 * n + d_old)
-        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones(
-            (1, s_data.shape[1])
-        )
+        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones((
+            1,
+            s_data.shape[1],
+        ))
         sum2 = sum2**2
         sum2 = sum2.sum(axis=1)
         d_new = (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)

@@ -5,7 +5,7 @@ import sys
 from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 from .. import logging
 from .._compat import deprecated, old_positionals
@@ -21,18 +21,11 @@ if TYPE_CHECKING:
     from .verbosity import _VerbosityName
 
     # Collected from the print_* functions in matplotlib.backends
-    _Format = (
+    type _Format = (
         Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
-
-
-S = TypeVar("S")
-T = TypeVar("T")
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
@@ -49,7 +42,7 @@ def _type_check(var: object, name: str, types: type | UnionType) -> None:
     raise TypeError(msg)
 
 
-def _type_check_arg2(
+def _type_check_arg2[S, T, R, **P](
     types: type | UnionType,
 ) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
     def decorator(
@@ -83,7 +76,7 @@ class SettingsMeta(SingletonMeta, type):
     _cachedir: Path
     _datasetdir: Path
     _figdir: Path
-    _cache_compression: Literal["lzf", "gzip", None]
+    _cache_compression: Literal["lzf", "gzip"] | None
     _max_memory: float
     _n_jobs: int
     _categories_to_ignore: list[str]
@@ -229,7 +222,7 @@ class SettingsMeta(SingletonMeta, type):
 
     @property
     def figdir(cls) -> Path:
-        """Directory for saving figures (default `'./figures/'`)."""
+        r"""Directory for `autosave`\ ing figures (default `'./figures/'`)."""
         return cls._figdir
 
     @figdir.setter
@@ -238,12 +231,14 @@ class SettingsMeta(SingletonMeta, type):
         cls._figdir = Path(figdir)
 
     @property
-    def cache_compression(cls) -> Literal["lzf", "gzip", None]:
+    def cache_compression(cls) -> Literal["lzf", "gzip"] | None:
         """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
         return cls._cache_compression
 
     @cache_compression.setter
-    def cache_compression(cls, cache_compression: Literal["lzf", "gzip", None]) -> None:
+    def cache_compression(
+        cls, cache_compression: Literal["lzf", "gzip"] | None
+    ) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "

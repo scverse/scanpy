@@ -18,7 +18,7 @@ import scanpy as sc
 from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.marks import needs, skip_numba_0_63
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
@@ -165,7 +165,10 @@ def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
     assert np.nanmax(output_df["highly_variable_rank"].to_numpy()) <= n_top_genes - 1
 
 
-def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
+@skip_numba_0_63
+def test_pearson_residuals_inputchecks(
+    pbmc3k_parametrized_small: Callable[[], AnnData],
+) -> None:
     adata = pbmc3k_parametrized_small()
 
     # depending on check_values, warnings should be raised for non-integer data
@@ -192,13 +195,14 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
             )
 
     with pytest.raises(
-        ValueError, match="Pearson residuals require `clip>=0` or `clip=None`."
+        ValueError, match=r"Pearson residuals require `clip>=0` or `clip=None`\."
     ):
         sc.experimental.pp.highly_variable_genes(
             adata.copy(), clip=-1, flavor="pearson_residuals", n_top_genes=100
         )
 
 
+@skip_numba_0_63
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize(
     "clip", [None, np.inf, 30], ids=["noclip", "infclip", "30clip"]
@@ -206,7 +210,12 @@ def test_pearson_residuals_inputchecks(pbmc3k_parametrized_small):
 @pytest.mark.parametrize("theta", [100, np.inf], ids=["100theta", "inftheta"])
 @pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_pearson_residuals_general(
-    pbmc3k_parametrized_small, subset, clip, theta, n_top_genes
+    *,
+    pbmc3k_parametrized_small: Callable[[], AnnData],
+    subset: bool,
+    clip: float | None,
+    theta: float,
+    n_top_genes: int,
 ):
     adata = pbmc3k_parametrized_small()
     # cleanup var
@@ -287,9 +296,12 @@ def test_pearson_residuals_general(
     _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
+@skip_numba_0_63
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
-def test_pearson_residuals_batch(pbmc3k_parametrized_small, subset, n_top_genes):
+def test_pearson_residuals_batch(
+    *, pbmc3k_parametrized_small: Callable[[], AnnData], subset: bool, n_top_genes: int
+) -> None:
     adata = pbmc3k_parametrized_small()
     # cleanup var
     del adata.var

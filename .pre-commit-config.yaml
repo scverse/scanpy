@@ -1,6 +1,9 @@
+ci:
+  autoupdate_commit_msg: "ci: pre-commit autoupdate"
+
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.14.3
     hooks:
     -   id: ruff-check
         args: ["--fix"]
@@ -17,7 +20,7 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v2.2.3
+    rev: v2.3.2
     hooks:
     -   id: biome-format
 -   repo: https://github.com/ComPWA/taplo-pre-commit
