@@ -128,9 +128,11 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
+    # Backwards compat means we rechunk anything that isn't halved on each axis.
+    # So we simply check for equality of chunks and shape.
     if (
         pkg_version("anndata") < Version("0.11")
-        and a.chunksize == a.shape
+        and any(a.chunksize[axis] == a.shape[axis] for axis in [0, 1])
         and not isinstance(args[0], DaskArray)  # keep chunksize intact
     ):
         from anndata.tests.helpers import _half_chunk_size
