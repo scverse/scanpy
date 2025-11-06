@@ -529,8 +529,8 @@ def test_aggregate_obsm_labels():
 
     expected = ad.AnnData(
         obs=pd.DataFrame(
-            {"labels": pd.Categorical(list("abc")), "n_obs_aggregated": [5, 3, 4]},
-            index=list("abc"),
+            {"labels": pd.Categorical([lc[0] for lc in label_counts]), "n_obs_aggregated": [lc[1] for lc in label_counts]},
+            index=[lc[0] for lc in label_counts],
         ),
         var=pd.DataFrame(index=[f"dim_{i}" for i in range(3)]),
         layers={
