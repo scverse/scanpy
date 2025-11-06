@@ -37,9 +37,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from scanpy._utils import check_nonnegative_integers
-
 from ..._compat import old_positionals
+from ..._utils import check_nonnegative_integers
 from ..._utils._doctests import doctest_skip
 
 if TYPE_CHECKING:
