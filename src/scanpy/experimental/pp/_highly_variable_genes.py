@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
@@ -12,7 +11,7 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, njit
+from ..._compat import CSBase, njit, warn
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
@@ -145,11 +144,8 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
 
     # Check for raw counts
     if check_values and not check_nonnegative_integers(x):
-        warnings.warn(
-            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
     # check theta
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?

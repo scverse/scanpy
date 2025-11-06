@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import singledispatch
 from operator import truediv
 from typing import TYPE_CHECKING
@@ -11,10 +10,10 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._utils import (
-    _check_array_function_arguments,
     axis_mul_or_truediv,
+    check_array_function_arguments,
     dematrix,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
@@ -22,22 +21,16 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 
-# install dask if available
-try:
-    import dask.array as da
-except ImportError:
-    da = None
-
 if TYPE_CHECKING:
-    from typing import TypeVar
-
     from numpy.typing import ArrayLike, NDArray
 
-    _A = TypeVar("_A", bound=CSBase | np.ndarray | DaskArray)
+type _Array = CSBase | np.ndarray | DaskArray
 
 
 @singledispatch
-def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A:
+def clip[A: _Array](
+    x: ArrayLike | A, *, max_value: float, zero_center: bool = True
+) -> A:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -77,8 +70,8 @@ def clip_array(
 @renamed_arg("X", "data", pos_0=True)
 @old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
-def scale(
-    data: AnnData | _A,
+def scale[A: _Array](
+    data: AnnData | A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -86,7 +79,7 @@ def scale(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | _A | None:
+) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
@@ -131,7 +124,7 @@ def scale(
         Variances per gene before scaling.
 
     """
-    _check_array_function_arguments(layer=layer, obsm=obsm)
+    check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
         msg = f"`layer` argument inappropriate for value of type {type(data)}"
         raise ValueError(msg)
@@ -146,8 +139,8 @@ def scale(
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-def scale_array(
-    x: _A,
+def scale_array[A: _Array](
+    x: A,
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -155,9 +148,9 @@ def scale_array(
     return_mean_std: bool = False,
     mask_obs: NDArray[np.bool_] | None = None,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
@@ -201,7 +194,7 @@ def scale_array(
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             msg = "zero-centering a sparse array/matrix densifies it."
-            warnings.warn(msg, UserWarning, stacklevel=2)
+            warn(msg, UserWarning)
         x -= mean
         x = dematrix(x)
 
@@ -222,17 +215,17 @@ def scale_array(
         return x
 
 
-def scale_array_masked(
-    x: _A,
+def scale_array_masked[A: _Array](
+    x: A,
     mask_obs: NDArray[np.bool_],
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     return_mean_std: bool = False,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]

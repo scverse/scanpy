@@ -9,15 +9,14 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData, ImplicitModificationWarning
+from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
 from fast_array_utils import conv
 from numpy.testing import assert_allclose
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase, pkg_version
+from scanpy._compat import CSBase
 from testing.scanpy._helpers import (
     check_rep_mutation,
     check_rep_results,
@@ -376,9 +375,6 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
 def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
-    if pkg_version("pandas") < Version("2.2"):
-        # https://github.com/pandas-dev/pandas/issues/54661
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     # These shouldn't throw an error
     with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
         sc.pp.recipe_seurat(adata.copy(), plot=True)
@@ -675,9 +671,6 @@ def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    if pkg_version("pandas") < Version("2.2"):
-        # https://github.com/pandas-dev/pandas/issues/54661
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
     sc.pp.filter_cells(
         adata,
         max_genes=max_genes,

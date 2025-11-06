@@ -20,11 +20,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | CSBase | DaskArray
-
-# Used with get_literal_vals
-ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
-AggType = ConstantDtypeAgg | Literal["mean", "var"]
+type Array = np.ndarray | CSBase | DaskArray
+type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+type AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
