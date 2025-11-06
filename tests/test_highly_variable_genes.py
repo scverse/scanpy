@@ -718,8 +718,6 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     assert adatas[True].var_names.equals(dfs[True].index)
 
 
-@needs.skmisc
-@needs.dask
 @pytest.mark.parametrize(
     "flavor",
     [
