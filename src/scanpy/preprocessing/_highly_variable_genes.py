@@ -15,7 +15,11 @@ from fast_array_utils import stats
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
 from .._settings import Verbosity, settings
-from .._utils import check_nonnegative_integers, sanitize_anndata
+from .._utils import (
+    check_nonnegative_integers,
+    raise_if_dask_feature_axis_chunked,
+    sanitize_anndata,
+)
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -122,6 +126,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         raise ImportError(msg) from e
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
+    raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
         msg = f"`{flavor=!r}` expects raw count data, but non-integers were found."
