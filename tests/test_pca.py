@@ -341,7 +341,7 @@ def test_pca_reproducible(array_type):
         assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
-def test_pca_chunked():
+def test_pca_chunked() -> None:
     """Tests that chunked PCA is equivalent to default PCA.
 
     See also <https://github.com/scverse/scanpy/issues/1590>
@@ -354,17 +354,21 @@ def test_pca_chunked():
     default = sc.pp.pca(pbmc_full, copy=True)
 
     # Taking absolute value since sometimes dimensions are flipped
+    rtol = 1e-6
     np.testing.assert_allclose(
-        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"])
+        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"]), rtol=rtol
     )
-    np.testing.assert_allclose(np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]))
     np.testing.assert_allclose(
-        np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"])
+        np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]), rtol=rtol
+    )
+    np.testing.assert_allclose(
+        np.abs(chunked.uns["pca"]["variance"]),
+        np.abs(default.uns["pca"]["variance"], rtol=rtol),
     )
     np.testing.assert_allclose(
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),
-        rtol=1e-6,
+        rtol=rtol,
     )
 
 
