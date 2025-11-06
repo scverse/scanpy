@@ -136,6 +136,7 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
     fast_array_utils=(
         "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
         None,
@@ -150,6 +151,7 @@ intersphinx_mapping = dict(
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
+    pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
     python=(
