@@ -640,7 +640,13 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
 
 
 @pytest.mark.parametrize(
-    "flavor", ["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
 )
 @pytest.mark.parametrize(
     "array_type", [p for p in ARRAY_TYPES if "dask" not in p.id or "1d_chunked" in p.id]
@@ -715,7 +721,13 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
 @needs.skmisc
 @needs.dask
 @pytest.mark.parametrize(
-    "flavor", ["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize("to_dask", [p for p in ARRAY_TYPES if "1d_chunked" in p.id])
