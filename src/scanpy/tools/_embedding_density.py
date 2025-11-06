@@ -1,6 +1,4 @@
-"""\
-Calculate density of cells in embeddings
-"""
+"""Calculate density of cells in embeddings."""
 
 from __future__ import annotations
 
@@ -19,9 +17,7 @@ if TYPE_CHECKING:
 
 
 def _calc_density(x: np.ndarray, y: np.ndarray):
-    """\
-    Calculates the density of points in 2 dimensions.
-    """
+    """Calculate the density of points in 2 dimensions."""
     from scipy.stats import gaussian_kde
 
     # Calculate the point density
@@ -38,7 +34,7 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
 
 
 @old_positionals("groupby", "key_added", "components")
-def embedding_density(
+def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",
     *,
@@ -46,8 +42,7 @@ def embedding_density(
     key_added: str | None = None,
     components: str | Sequence[str] | None = None,
 ) -> None:
-    """\
-    Calculate the density of cells in an embedding (per condition).
+    """Calculate the density of cells in an embedding (per condition).
 
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
@@ -70,7 +65,7 @@ def embedding_density(
         The annotated data matrix.
     basis
         The embedding over which the density will be calculated. This embedded
-        representation should be found in `adata.obsm['X_[basis]']``.
+        representation is found in `adata.obsm['X_[basis]']``.
     groupby
         Key for categorical observation/cell annotation for which densities
         are calculated per category.
@@ -113,9 +108,10 @@ def embedding_density(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pl.embedding_density
+
     """
     # to ensure that newly created covariates are categorical
     # to test for category numbers
@@ -129,11 +125,12 @@ def embedding_density(
     if basis == "fa":
         basis = "draw_graph_fa"
 
-    if f"X_{basis}" not in adata.obsm_keys():
-        raise ValueError(
+    if f"X_{basis}" not in adata.obsm:
+        msg = (
             "Cannot find the embedded representation "
             f"`adata.obsm['X_{basis}']`. Compute the embedding first."
         )
+        raise ValueError(msg)
 
     if components is None:
         components = "1,2"
@@ -142,17 +139,20 @@ def embedding_density(
     components = np.array(components).astype(int) - 1
 
     if len(components) != 2:
-        raise ValueError("Please specify exactly 2 components, or `None`.")
+        msg = "Please specify exactly 2 components, or `None`."
+        raise ValueError(msg)
 
     if basis == "diffmap":
         components += 1
 
     if groupby is not None:
         if groupby not in adata.obs:
-            raise ValueError(f"Could not find {groupby!r} `.obs` column.")
+            msg = f"Could not find {groupby!r} `.obs` column."
+            raise ValueError(msg)
 
         if adata.obs[groupby].dtype.name != "category":
-            raise ValueError(f"{groupby!r} column does not contain categorical data")
+            msg = f"{groupby!r} column does not contain categorical data"
+            raise ValueError(msg)
 
     # Define new covariate name
     if key_added is not None:

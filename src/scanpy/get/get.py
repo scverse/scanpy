@@ -1,22 +1,25 @@
-"""This module contains helper functions for accessing data."""
+"""Helper functions for accessing data."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from packaging.version import Version
-from scipy.sparse import spmatrix
+from numpy.typing import NDArray
+
+from .._compat import CSBase
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Any, Literal
+    from typing import Any, Literal, Unpack
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
-    from numpy.typing import NDArray
+
+    from .._compat import DaskArray
+
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -34,9 +37,7 @@ def rank_genes_groups_df(
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
 ) -> pd.DataFrame:
-    """\
-    :func:`scanpy.tl.rank_genes_groups` results in the form of a
-    :class:`~pandas.DataFrame`.
+    """Get :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`~pandas.DataFrame`.
 
     Params
     ------
@@ -64,6 +65,7 @@ def rank_genes_groups_df(
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
+
     """
     if isinstance(group, str):
         group = [group]
@@ -77,10 +79,7 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    if Version(pd.__version__) >= Version("2.1"):
-        d = d.stack(level=1, future_stack=True).reset_index()
-    else:
-        d = d.stack(level=1).reset_index()
+    d = d.stack(level=1, future_stack=True).reset_index()
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -120,7 +119,7 @@ def _check_indices(
     alias_index: pd.Index | None = None,
     use_raw: bool = False,
 ) -> tuple[list[str], list[str], list[str]]:
-    """Common logic for checking indices for obs_df and var_df."""
+    """Check indices for `obs_df` and `var_df`."""
     alt_repr = "adata.raw" if use_raw else "adata"
 
     alt_dim = ("obs", "var")[dim == "obs"]
@@ -144,18 +143,20 @@ def _check_indices(
     # be further duplicated when selecting them.
     if not dim_df.columns.is_unique:
         dup_cols = dim_df.columns[dim_df.columns.duplicated()].tolist()
-        raise ValueError(
+        msg = (
             f"adata.{dim} contains duplicated columns. Please rename or remove "
             "these columns first.\n`"
             f"Duplicated columns {dup_cols}"
         )
+        raise ValueError(msg)
 
     if not alt_index.is_unique:
-        raise ValueError(
+        msg = (
             f"{alt_repr}.{alt_dim}_names contains duplicated items\n"
             f"Please rename these {alt_dim} names first for example using "
             f"`adata.{alt_dim}_names_make_unique()`"
         )
+        raise ValueError(msg)
 
     # use only unique keys, otherwise duplicated keys will
     # further duplicate when reordering the keys later in the function
@@ -163,33 +164,33 @@ def _check_indices(
         if key in dim_df.columns:
             col_keys.append(key)
             if key in alt_names.index:
-                raise KeyError(
-                    f"The key '{key}' is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"The key {key!r} is found in both adata.{dim} and {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
         elif key in alt_names.index:
             val = alt_names[key]
             if isinstance(val, pd.Series):
                 # while var_names must be unique, adata.var[gene_symbols] does not
                 # It's still ambiguous to refer to a duplicated entry though.
                 assert alias_index is not None
-                raise KeyError(
-                    f"Found duplicate entries for '{key}' in {alt_repr}.{alt_search_repr}."
-                )
+                msg = f"Found duplicate entries for {key!r} in {alt_repr}.{alt_search_repr}."
+                raise KeyError(msg)
             index_keys.append(val)
             index_aliases.append(key)
         else:
             not_found.append(key)
     if len(not_found) > 0:
-        raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.{dim}` or in"
+        msg = (
+            f"Could not find keys {not_found!r} in columns of `adata.{dim}` or in"
             f" {alt_repr}.{alt_search_repr}."
         )
+        raise KeyError(msg)
 
     return col_keys, index_keys, index_aliases
 
 
 def _get_array_values(
-    X,
+    x,
+    /,
     dim_names: pd.Index,
     keys: Iterable[str],
     *,
@@ -206,14 +207,12 @@ def _get_array_values(
         rev_idxer = mutable_idxer.copy()
         mutable_idxer[axis] = idx[idx_order]
         rev_idxer[axis] = np.argsort(idx_order)
-        matrix = X[tuple(mutable_idxer)][tuple(rev_idxer)]
+        matrix = x[tuple(mutable_idxer)][tuple(rev_idxer)]
     else:
         mutable_idxer[axis] = idx
-        matrix = X[tuple(mutable_idxer)]
+        matrix = x[tuple(mutable_idxer)]
 
-    from scipy.sparse import issparse
-
-    if issparse(matrix):
+    if isinstance(matrix, CSBase):
         matrix = matrix.toarray()
 
     return matrix
@@ -228,8 +227,7 @@ def obs_df(
     gene_symbols: str | None = None,
     use_raw: bool = False,
 ) -> pd.DataFrame:
-    """\
-    Return values for observations in adata.
+    """Return values for observations in adata.
 
     Params
     ------
@@ -258,9 +256,7 @@ def obs_df(
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> plotdf = sc.get.obs_df(
-    ...     pbmc,
-    ...     keys=["CD8B", "n_genes"],
-    ...     obsm_keys=[("X_umap", 0), ("X_umap", 1)]
+    ...     pbmc, keys=["CD8B", "n_genes"], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
     >>> plotdf.columns
     Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
@@ -270,20 +266,18 @@ def obs_df(
     Calculating mean expression for marker genes by cluster:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
-    >>> genedf = sc.get.obs_df(
-    ...     pbmc,
-    ...     keys=["louvain", *marker_genes]
-    ... )
+    >>> marker_genes = ["CD79A", "MS4A1", "CD8A", "CD8B", "LYZ"]
+    >>> genedf = sc.get.obs_df(pbmc, keys=["louvain", *marker_genes])
     >>> grouped = genedf.groupby("louvain", observed=True)
     >>> mean, var = grouped.mean(), grouped.var()
+
     """
     if isinstance(keys, str):
         keys = [keys]
     if use_raw:
-        assert (
-            layer is None
-        ), "Cannot specify use_raw=True and a layer at the same time."
+        assert layer is None, (
+            "Cannot specify use_raw=True and a layer at the same time."
+        )
         var = adata.raw.var
     else:
         var = adata.var
@@ -328,7 +322,7 @@ def obs_df(
         val = adata.obsm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, CSBase):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
@@ -343,8 +337,7 @@ def var_df(
     *,
     layer: str | None = None,
 ) -> pd.DataFrame:
-    """\
-    Return values for observations in adata.
+    """Return values for observations in adata.
 
     Params
     ------
@@ -361,6 +354,7 @@ def var_df(
     -------
     A dataframe with `adata.var_names` as index, and values specified by `keys`
     and `varm_keys`.
+
     """
     # Argument handling
     if isinstance(keys, str):
@@ -398,55 +392,52 @@ def var_df(
         val = adata.varm[k]
         if isinstance(val, np.ndarray):
             df[added_k] = np.ravel(val[:, idx])
-        elif isinstance(val, spmatrix):
+        elif isinstance(val, CSBase):
             df[added_k] = np.ravel(val[:, idx].toarray())
         elif isinstance(val, pd.DataFrame):
             df[added_k] = val.loc[:, idx]
     return df
 
 
-def _get_obs_rep(
-    adata: AnnData,
-    *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
-) -> (
-    np.ndarray
-    | spmatrix
-    | pd.DataFrame
-    | ArrayView
-    | BaseCompressedSparseDataset
-    | None
-):
-    """
-    Choose array aligned with obs annotation.
-    """
-    # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw, bool):
-        raise TypeError(f"use_raw expected to be bool, was {type(use_raw)}.")
+class _ObsRep(TypedDict, total=False):
+    use_raw: bool
+    layer: str | None
+    obsm: str | None
+    obsp: str | None
 
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made in {0, 1}
-    if choices_made == 0:
-        return adata.X
-    if is_layer:
-        return adata.layers[layer]
-    if use_raw:
-        return adata.raw.X
-    if is_obsm:
-        return adata.obsm[obsm]
-    if is_obsp:
-        return adata.obsp[obsp]
-    raise AssertionError(
-        "That was unexpected. Please report this bug at:\n\n\t"
-        "https://github.com/scverse/scanpy/issues"
-    )
+
+def _get_obs_rep(
+    adata: AnnData, **choices: Unpack[_ObsRep]
+) -> (
+    np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
+):
+    """Choose array aligned with obs annotation."""
+    # https://github.com/scverse/scanpy/issues/1546
+    if not isinstance(use_raw := choices.get("use_raw", False), bool):
+        msg = f"use_raw expected to be bool, was {type(use_raw)}."
+        raise TypeError(msg)
+    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp"}
+
+    # we do this here so the `case _` branch knows which ones are valid for the
+    # respective calling function. E.g. `_get_obs_rep(adata, layer="a", obsm="b")`
+    # will say that “Only one of `layer` or `obsm` can be specified.”
+    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+        case []:
+            return adata.X
+        # can’t use {"key": v} as match expression, since they allow additional entries
+        case [("layer", layer)]:
+            return adata.layers[layer]
+        case [("use_raw", True)]:
+            return adata.raw.X
+        case [("obsm", obsm)]:
+            return adata.obsm[obsm]
+        case [("obsp", obsp)]:
+            return adata.obsp[obsp]
+        case _:
+            valid = [f"`{k}`" for k in choices]
+            valid[-1] = f"or {valid[-1]}"
+            msg = f"Only one of {', '.join(valid)} can be specified."
+            raise ValueError(msg)
 
 
 def _set_obs_rep(
@@ -458,9 +449,7 @@ def _set_obs_rep(
     obsm: str | None = None,
     obsp: str | None = None,
 ):
-    """
-    Set value for observation rep.
-    """
+    """Set value for observation rep."""
     is_layer = layer is not None
     is_raw = use_raw is not False
     is_obsm = obsm is not None
@@ -485,42 +474,59 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
-def _check_mask(
-    data: AnnData | np.ndarray,
-    mask: NDArray[np.bool_] | str,
+def _check_mask[M: NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None](
+    data: AnnData | np.ndarray | CSBase | DaskArray,
+    mask: str | M,
     dim: Literal["obs", "var"],
-) -> NDArray[np.bool_]:  # Could also be a series, but should be one or the other
-    """
-    Validate mask argument
+    *,
+    allow_probabilities: bool = False,
+) -> M:  # Could also be a series, but should be one or the other
+    """Validate mask argument.
+
     Params
     ------
     data
         Annotated data matrix or numpy array.
     mask
-        The mask. Either an appropriatley sized boolean array, or name of a column which will be used to mask.
+        Mask (or probabilities if `allow_probabilities=True`).
+        Either an appropriatley sized array, or name of a column.
     dim
         The dimension being masked.
+    allow_probabilities
+        Whether to allow probabilities as `mask`
     """
+    if mask is None:
+        return mask
+    desc = "mask/probabilities" if allow_probabilities else "mask"
+
     if isinstance(mask, str):
         if not isinstance(data, AnnData):
-            msg = "Cannot refer to mask with string without providing anndata object as argument"
+            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
             raise ValueError(msg)
 
         annot: pd.DataFrame = getattr(data, dim)
         if mask not in annot.columns:
             msg = (
                 f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the mask first to `adata.{dim}`"
-                "or consider using the mask argument with a boolean array."
+                f"Either add the {desc} first to `adata.{dim}`"
+                f"or consider using the {desc} argument with an array."
             )
             raise ValueError(msg)
         mask_array = annot[mask].to_numpy()
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
-            raise ValueError("The shape of the mask do not match the data.")
+            msg = f"The shape of the {desc} do not match the data."
+            raise ValueError(msg)
         mask_array = mask
 
-    if not pd.api.types.is_bool_dtype(mask_array.dtype):
-        raise ValueError("Mask array must be boolean.")
+    is_bool = pd.api.types.is_bool_dtype(mask_array.dtype)
+    if not allow_probabilities and not is_bool:
+        msg = "Mask array must be boolean."
+        raise ValueError(msg)
+    elif allow_probabilities and not (
+        is_bool or pd.api.types.is_float_dtype(mask_array.dtype)
+    ):
+        msg = f"{desc} array must be boolean or floating point."
+        raise ValueError(msg)
 
     return mask_array

@@ -1,9 +1,9 @@
 [envs.default]
 installer = "uv"
-features = ["dev"]
+features = [ "dev" ]
 
 [envs.docs]
-features = ["doc"]
+features = [ "doc" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -14,20 +14,31 @@ scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
 scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
 
 [envs.hatch-test]
-default-args = []
-features = ["test", "dask-ml"]
-extra-dependencies = ["ipykernel"]
+default-args = [  ]
+features = [ "dev", "test-min" ]
+extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
-    { if = ["pre"], key = "UV_PRERELEASE", value = "allow" },
-    { if = ["min"], key = "UV_RESOLUTION", value = "lowest-direct" },
+    { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
+    { if = [ "low-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-low-vers.txt" },
+]
+overrides.matrix.deps.pre-install-commands = [
+    { if = [
+        "low-vers",
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = ["min"] , value = "3.10" },
-    { if = ["stable", "full", "pre"], value = "3.12" },
+    { if = [ "low-vers" ], value = "3.12" },
+    { if = [ "stable", "few-extras" ], value = "3.13" },
+    # numba doesn’t support 3.14 in a stable release yet:
+    # https://github.com/numba/numba/issues/9957
+    { if = [ "pre" ], value = "3.14" },
+]
+overrides.matrix.deps.extra-dependencies = [
+    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
 ]
 overrides.matrix.deps.features = [
-    { if = ["full"] , value = "test-full" },
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
 ]
 
 [[envs.hatch-test.matrix]]
-deps = ["stable", "full", "pre", "min"]
+deps = [ "stable", "pre", "low-vers", "few-extras" ]

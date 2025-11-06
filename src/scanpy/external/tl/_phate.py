@@ -1,6 +1,4 @@
-"""\
-Embed high-dimensional data using PHATE
-"""
+"""Embed high-dimensional data using PHATE."""
 
 from __future__ import annotations
 
@@ -16,7 +14,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from ..._utils import AnyRandom
+    from ..._utils.random import _LegacyRandom
 
 
 @old_positionals(
@@ -35,7 +33,7 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phate")
-def phate(
+def phate(  # noqa: PLR0913
     adata: AnnData,
     n_components: int = 2,
     *,
@@ -49,13 +47,12 @@ def phate(
     mds_dist: str = "euclidean",
     mds: Literal["classic", "metric", "nonmetric"] = "metric",
     n_jobs: int | None = None,
-    random_state: AnyRandom = None,
+    random_state: _LegacyRandom = None,
     verbose: bool | int | None = None,
     copy: bool = False,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    PHATE :cite:p:`Moon2019`.
+    """PHATE :cite:p:`Moon2019`.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for
@@ -114,8 +111,8 @@ def phate(
     random_state
         Random seed. Defaults to the global `numpy` random number generator
     verbose
-        If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
-        If `None`, `sc.settings.verbosity` is used.
+        If `True` or an :class:`int`/:class:`~scanpy.Verbosity` ≥ 2/:attr:`~scanpy.Verbosity.hint`, print status messages.
+        If `None`, :attr:`scanpy.settings.verbosity` is used.
     copy
         Return a copy instead of writing to `adata`.
     kwargs
@@ -142,9 +139,10 @@ def phate(
     (2000, 100)
     >>> adata = AnnData(tree_data)
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
-    >>> adata.obsm['X_phate'].shape
+    >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(adata)
+
     """
     start = logg.info("computing PHATE")
     adata = adata.copy() if copy else adata
@@ -153,12 +151,13 @@ def phate(
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
-    except ImportError:
-        raise ImportError(
+    except ImportError as e:
+        msg = (
             "You need to install the package `phate`: please run `pip install "
             "--user phate` in a terminal."
         )
-    X_phate = phate.PHATE(
+        raise ImportError(msg) from e
+    x_phate = phate.PHATE(
         n_components=n_components,
         k=k,
         a=a,
@@ -175,10 +174,10 @@ def phate(
         **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
-    adata.obsm["X_phate"] = X_phate  # annotate samples with PHATE coordinates
+    adata.obsm["X_phate"] = x_phate  # annotate samples with PHATE coordinates
     logg.info(
         "    finished",
         time=start,
-        deep=("added\n" "    'X_phate', PHATE coordinates (adata.obsm)"),
+        deep=("added\n    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
-def bbknn(
+def bbknn(  # noqa: PLR0913
     adata: AnnData,
     *,
     batch_key: str = "batch",
@@ -34,8 +34,7 @@ def bbknn(
     local_connectivity: int = 1,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Batch balanced kNN :cite:p:`Polanski2019`.
+    """Batch balanced kNN :cite:p:`Polanski2019`.
 
     Batch balanced kNN alters the kNN procedure to identify each cell's top neighbours in
     each batch separately instead of the entire cell pool with no accounting for batch.
@@ -129,11 +128,13 @@ def bbknn(
     Returns
     -------
     The `adata` with the batch-corrected graph.
+
     """
     try:
         from bbknn import bbknn
-    except ImportError:
-        raise ImportError("Please install bbknn: `pip install bbknn`.")
+    except ImportError as e:
+        msg = "Please install bbknn: `pip install bbknn`."
+        raise ImportError(msg) from e
     return bbknn(
         adata=adata,
         batch_key=batch_key,

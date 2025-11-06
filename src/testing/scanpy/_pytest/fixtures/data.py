@@ -2,45 +2,36 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 from anndata import AnnData, read_h5ad
-from anndata import __version__ as anndata_version
+from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 from scipy import sparse
 
-if Version(anndata_version) >= Version("0.10.0"):
-    from anndata._core.sparse_dataset import (
-        BaseCompressedSparseDataset as SparseDataset,
-    )
-
-    if Version(anndata_version) >= Version("0.11.0rc2"):
-        from anndata.io import sparse_dataset
-    else:
-        from anndata.experimental import sparse_dataset
-
-    def make_sparse(x):
-        return sparse_dataset(x)
+if Version(version("anndata")) >= Version("0.11.0rc2"):
+    from anndata.io import sparse_dataset
 else:
-    from anndata._core.sparse_dataset import SparseDataset
-
-    def make_sparse(x):
-        return SparseDataset(x)
+    from anndata.experimental import sparse_dataset
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from numpy.typing import DTypeLike
+
+    from scanpy._compat import CSBase, CSRBase
 
 
 @pytest.fixture(
     scope="session",
     params=list(
-        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])
+        product([sparse.csr_matrix.toarray, sparse.csr_matrix], ["float32", "int64"])  # noqa: TID251
     ),
     ids=lambda x: f"{x[0].__name__}-{x[1]}",
 )
@@ -64,32 +55,25 @@ def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnD
     return pbmc3ks_parametrized_session[True].copy
 
 
-@pytest.fixture(
-    scope="session",
-    params=[np.random.randn, lambda *x: sparse.random(*x, format="csr")],
-    ids=["sparse", "dense"],
-)
-# worker_id for xdist since we don't want to override open files
-def backed_adata(
-    request: pytest.FixtureRequest,
-    tmp_path_factory: pytest.TempPathFactory,
-    worker_id: str = "serial",
-) -> AnnData:
-    tmp_path = tmp_path_factory.mktemp("backed_adata")
-    rand_func = request.param
-    tmp_path = tmp_path / f"test_{rand_func.__name__}_{worker_id}.h5ad"
-    X = rand_func(200, 10).astype(np.float32)
-    cat = np.random.randint(0, 3, (X.shape[0],)).ravel()
-    adata = AnnData(X, obs={"cat": cat})
-    adata.obs["percent_mito"] = np.random.rand(X.shape[0])
-    adata.obs["n_counts"] = X.sum(axis=1)
+def random_csr(m: int, n: int) -> CSRBase:
+    return sparse.random(m, n, format="csr")
+
+
+@pytest.fixture(params=[np.random.randn, random_csr], ids=["sparse", "dense"])
+def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
+    rand_func = cast("Callable[[int, int], np.ndarray | CSRBase]", request.param)
+    x = rand_func(200, 10).astype(np.float32)
+    cat = np.random.randint(0, 3, (x.shape[0],)).ravel()
+    adata = AnnData(x, obs={"cat": cat})
+    adata.obs["percent_mito"] = np.random.rand(x.shape[0])
+    adata.obs["n_counts"] = x.sum(axis=1)
     adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.layers["X_copy"] = adata.X[...]
-    adata.write_h5ad(tmp_path)
-    adata = read_h5ad(tmp_path, backed="r")
+    adata.write_h5ad(tmp_path / "test.h5ad")
+    adata = read_h5ad(tmp_path / "test.h5ad", backed="r")
     adata.layers["X_copy"] = (
-        make_sparse(adata.file["X"])
-        if isinstance(adata.X, SparseDataset)
+        sparse_dataset(adata.file["X"])
+        if isinstance(adata.X, BaseCompressedSparseDataset)
         else adata.file["X"]
     )
     return adata
@@ -97,14 +81,12 @@ def backed_adata(
 
 def _prepare_pbmc_testdata(
     adata: AnnData,
-    sparsity_func: Callable[
-        [np.ndarray | sparse.spmatrix], np.ndarray | sparse.spmatrix
-    ],
+    sparsity_func: Callable[[np.ndarray | CSBase], np.ndarray | CSBase],
     dtype: DTypeLike,
     *,
     small: bool,
 ) -> AnnData:
-    """Prepares 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
+    """Prepare 3k PBMC dataset with batch key `batch` and defined datatype/sparsity.
 
     Params
     ------

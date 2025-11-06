@@ -22,6 +22,6 @@ def test_run_wishbone():
         components=[2, 3],
         num_waypoints=150,
     )
-    assert all(
-        [k in adata.obs for k in ["trajectory_wishbone", "branch_wishbone"]]
-    ), "Run Wishbone Error!"
+    assert all(k in adata.obs for k in ["trajectory_wishbone", "branch_wishbone"]), (
+        "Run Wishbone Error!"
+    )

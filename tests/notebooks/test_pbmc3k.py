@@ -11,11 +11,14 @@
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from pathlib import Path
 
 import numpy as np
+import pytest
 from matplotlib.testing import setup
+from sklearn.exceptions import ConvergenceWarning
 
 setup()
 
@@ -27,7 +30,9 @@ ROOT = HERE / "_images_pbmc3k"
 
 
 @needs.leidenalg
-def test_pbmc3k(image_comparer):
+# https://github.com/pandas-dev/pandas/issues/61928
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
+def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     np.random.seed(0)
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
@@ -69,18 +74,21 @@ def test_pbmc3k(image_comparer):
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
-    filter_result = sc.pp.filter_genes_dispersion(
-        adata.X,
-        min_mean=0.0125,
-        max_mean=3,
-        min_disp=0.5,
-    )
-    sc.pl.filter_genes_dispersion(filter_result, show=False)
+    with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
+        filter_result = sc.pp.filter_genes_dispersion(
+            adata.X,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+        )
+    with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
+        sc.pl.filter_genes_dispersion(filter_result, show=False)
     save_and_compare_images("filter_genes_dispersion")
 
-    adata = adata[:, filter_result.gene_subset]
+    adata = adata[:, filter_result.gene_subset].copy()
     sc.pp.log1p(adata)
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)
@@ -107,7 +115,7 @@ def test_pbmc3k(image_comparer):
     sc.tl.leiden(
         adata,
         resolution=0.9,
-        random_state=0,
+        random_state=1,
         directed=False,
         n_iterations=2,
         flavor="igraph",
@@ -122,22 +130,18 @@ def test_pbmc3k(image_comparer):
     # Due to incosistency with our test runner vs local, these clusters need to
     # be pre-annotated as the numbers for each cluster are not consistent.
     marker_genes = [
-        "RP11-18H21.1",
-        "GZMK",
-        "CD79A",
-        "FCGR3A",
-        "GNLY",
-        "S100A8",
-        "FCER1A",
-        "PPBP",
+        *["RP11-18H21.1", "GZMK", "CD79A", "FCGR3A"],
+        *["GNLY", "S100A8", "FCER1A", "PPBP"],
     ]
-    new_labels = ["0", "1", "2", "3", "4", "5", "6", "7"]
     data_df = adata[:, marker_genes].to_df()
     data_df["leiden"] = adata.obs["leiden"]
     max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
-    leiden_relabel = {}
-    for marker_gene, new_label in zip(marker_genes, new_labels):
-        leiden_relabel[max_idxs[marker_gene]] = new_label
+    assert not max_idxs[marker_genes][
+        max_idxs[marker_genes].duplicated(keep=False)
+    ].tolist(), "Not all marker genes are unique per cluster"
+    leiden_relabel = {
+        max_idxs[marker_gene]: str(i) for i, marker_gene in enumerate(marker_genes)
+    }
     adata.obs["leiden_old"] = adata.obs["leiden"].copy()
     adata.rename_categories(
         "leiden", [leiden_relabel[key] for key in sorted(leiden_relabel.keys())]
@@ -151,7 +155,10 @@ def test_pbmc3k(image_comparer):
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_1")
 
-    sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
+    with warnings.catch_warnings():
+        # This seems to only happen with older versions of scipy for some reason
+        warnings.filterwarnings("always", category=ConvergenceWarning)
+        sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
     sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images("rank_genes_groups_2")
 
@@ -164,14 +171,8 @@ def test_pbmc3k(image_comparer):
     # save_and_compare_images('rank_genes_groups_4')
 
     new_cluster_names = [
-        "CD4 T cells",
-        "CD8 T cells",
-        "B cells",
-        "NK cells",
-        "FCGR3A+ Monocytes",
-        "CD14+ Monocytes",
-        "Dendritic cells",
-        "Megakaryocytes",
+        *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
+        *["FCGR3A+ Monocytes", "CD14+ Monocytes", "Dendritic cells", "Megakaryocytes"],
     ]
     adata.rename_categories("leiden", new_cluster_names)
 

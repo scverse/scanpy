@@ -6,17 +6,25 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
-from scipy.sparse import csr_matrix, issparse
+from packaging.version import Version
+from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
-from testing.scanpy._helpers import anndata_v0_8_constructor_compat
+from scanpy._compat import CSBase, pkg_version
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+# https://github.com/lmcinnes/umap/issues/1216
+SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
+    pkg_version("umap-learn") <= Version("0.5.9.post2")
+    and pkg_version("numba") >= Version("0.62.0rc1"),
+    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
+)
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -116,7 +124,7 @@ transitions_gauss_noknn = [
 
 
 def get_neighbors() -> Neighbors:
-    return Neighbors(anndata_v0_8_constructor_compat(np.array(X)))
+    return Neighbors(AnnData(np.array(X)))
 
 
 @pytest.fixture
@@ -128,7 +136,7 @@ def neigh() -> Neighbors:
 def test_distances_euclidean(
     mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
 ):
-    """umap and gauss behave the same for distances.
+    """Umap and gauss behave the same for distances.
 
     They call pynndescent for large data.
     """
@@ -160,7 +168,11 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
     neigh.compute_neighbors(
         n_neighbors, transformer=transformer, method="gauss", knn=knn
     )
-    dists = neigh.distances.toarray() if issparse(neigh.distances) else neigh.distances
+    dists = (
+        neigh.distances.toarray()
+        if isinstance(neigh.distances, CSBase)
+        else neigh.distances
+    )
     np.testing.assert_allclose(dists, distances_euclidean_all)
 
 
@@ -172,6 +184,7 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
+            marks=SKIPIF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
@@ -225,7 +238,7 @@ def test_use_rep_argument():
     )
 
 
-@pytest.mark.parametrize("conv", [csr_matrix.toarray, csr_matrix])
+@pytest.mark.parametrize("conv", [sparse.csr_matrix.toarray, sparse.csr_matrix])  # noqa: TID251
 def test_restore_n_neighbors(neigh, conv):
     neigh.compute_neighbors(n_neighbors, method="gauss")
 

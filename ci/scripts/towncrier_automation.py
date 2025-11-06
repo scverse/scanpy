@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [ "towncrier", "packaging" ]
+# ///
+"""Script to automate towncrier release note PRs."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,11 +17,14 @@ if TYPE_CHECKING:
 
 
 class Args(argparse.Namespace):
+    """Command line arguments."""
+
     version: str
     dry_run: bool
 
 
 def parse_args(argv: Sequence[str] | None = None) -> Args:
+    """Construct a CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="towncrier-automation",
         description=(
@@ -48,6 +56,7 @@ def parse_args(argv: Sequence[str] | None = None) -> Args:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Run main entry point."""
     args = parse_args(argv)
 
     # Run towncrier
@@ -62,9 +71,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    pr_description = (
-        "" if base_branch == "main" else "@meeseeksmachine backport to main"
-    )
+    pr_description = "" if base_branch == "main" else "@meeseeksdev backport to main"
     branch_name = f"release_notes_{args.version}"
 
     # Create a new branch + commit
@@ -90,7 +97,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             f"--base={base_branch}",
             f"--title={pr_title}",
             f"--body={pr_description}",
-            *(["--label=no milestone"] if base_branch == "main" else []),
+            *(
+                ["--label=no milestone", "--label=Development Process 🚀"]
+                if base_branch == "main"
+                else []
+            ),
             *(["--dry-run"] if args.dry_run else []),
         ],
         check=True,

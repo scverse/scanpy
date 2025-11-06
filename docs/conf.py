@@ -1,8 +1,12 @@
+"""Configuration for Scanpy’s Sphinx documentation."""
+
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime
 from functools import partial
+from importlib.metadata import version as get_version
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -15,7 +19,7 @@ matplotlib.use("agg")
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-import scanpy  # noqa
+os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -27,14 +31,15 @@ nitpicky = True  # Warn about broken links. This is here for a reason: Do not ch
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
+    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
 ]
 
 # General information
 project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
-copyright = f"{datetime.now():%Y}, the Scanpy development team"
-version = scanpy.__version__.replace(".dirty", "")
+copyright = f"{datetime.now():%Y}, scverse"
+version = get_version("scanpy").replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
 if Version(version).is_devrelease:
@@ -71,7 +76,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
     "sphinxcontrib.bibtex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
@@ -79,8 +83,8 @@ extensions = [
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
+    "sphinx_issues",
     "sphinx_tabs.tabs",
-    "sphinx_search.extension",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -88,7 +92,12 @@ extensions = [
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
+autodoc_default_options = {
+    # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
+    "members": False,
+    # show “Bases: SomeClass” at the top of class docs
+    "show-inheritance": True,
+}
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
@@ -127,7 +136,12 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    fast_array_utils=(
+        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
+        None,
+    ),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
     leidenalg=("https://leidenalg.readthedocs.io/en/latest/", None),
@@ -138,10 +152,16 @@ intersphinx_mapping = dict(
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
-    python=("https://docs.python.org/3", None),
+    python=(
+        # TODO: switch to `/3` once docs are built with Python 3.14
+        "https://docs.python.org/3.13",
+        None,
+    ),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
+    session_info2=("https://session-info2.readthedocs.io/en/stable/", None),
+    squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
 )
 
@@ -199,6 +219,7 @@ texinfo_documents = [
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
+    "pathlib._local.Path": "pathlib.Path",
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
@@ -212,6 +233,32 @@ nitpick_ignore = [
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
+    # TODO: remove once https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    *(
+        ("py:class", f"scanpy.{submodule}.TypeAliasType")
+        for submodule in [
+            "tools._umap",
+            "tools._rank_genes_groups",
+            "tools._marker_gene_overlap",
+            "tools._draw_graph",
+            "preprocessing._scale",
+            "preprocessing._pca",
+            "plotting._utils",
+            "plotting._tools.paga",
+            "plotting._scrublet",
+            "plotting._baseplot_class",
+            "plotting._anndata",
+            "neighbors._types",
+            "metrics._common",
+            "get._aggregated",
+            "external.tl._pypairs",
+            "external.pp._dca",
+            "datasets._datasets",
+            "_utils.random",
+            "_types",
+            "_settings",
+        ]
+    ),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
@@ -225,9 +272,6 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
-    # Will work once scipy 1.8 is released
-    ("py:class", "scipy.sparse.base.spmatrix"),
-    ("py:class", "scipy.sparse.csr.csr_matrix"),
 ]
 
 # Options for plot examples
@@ -239,8 +283,5 @@ plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
 # link config
-extlinks = {
-    "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
-    "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-}
+issues_github_path = "scverse/scanpy"
 rtd_links_prefix = PurePosixPath("src")

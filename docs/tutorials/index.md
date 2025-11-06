@@ -1,7 +1,7 @@
 # Tutorials
 
 :::{seealso}
-For more tutorials featureing scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [scverse.org/learn](https://scverse.org/learn)
+For more tutorials featuring scanpy and other [scverse](https://scverse.org) ecosystem tools, check out the curated set of tutorials at [scverse.org/learn](https://scverse.org/learn)
 :::
 
 ## Basic workflows
@@ -37,19 +37,6 @@ trajectories/index
 
 ## Spatial data
 
-```{seealso}
-For more up-to-date tutorials on working with spatial data, see:
-
-* [SquidPy tutorials](https://squidpy.readthedocs.io/en/stable/notebooks/tutorials/index.html)
-* [SpatialData tutorials](https://spatialdata.scverse.org/en/latest/tutorials/notebooks/notebooks.html)
-* [Scverse ecosystem spatial tutorials](https://scverse.org/learn/)
-```
-
-```{toctree}
-:maxdepth: 2
-
-spatial/index
-```
 
 ## Experimental
 
@@ -64,3 +51,12 @@ experimental/index
 A number of older tutorials can be found at:
 
 * The [`scanpy_usage`](https://github.com/scverse/scanpy_usage) repository
+
+```{seealso}
+Scanpy used to have tutorials for its (now deprecated) spatial data functionality.x
+For up-to-date tutorials on working with spatial data, see:
+
+* SquidPy {doc}`squidpy:notebooks/tutorials/index`
+* [SpatialData tutorials](https://spatialdata.scverse.org/en/latest/tutorials/notebooks/notebooks.html)
+* [Scverse ecosystem spatial tutorials](https://scverse.org/learn/)
+```

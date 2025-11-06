@@ -69,7 +69,7 @@ def test_backed_error(backed_adata, name, func, msg):
 def test_log1p_backed_errors(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="log1p is not implemented for backed AnnData with backed mode not r+",
+        match=r"log1p is not implemented for backed AnnData with backed mode not r\+",
     ):
         sc.pp.log1p(backed_adata, chunked=True)
     backed_adata.file.close()
@@ -91,8 +91,8 @@ def test_log1p_backed_errors(backed_adata):
 
 def test_scatter_backed(backed_adata):
     sc.pp.pca(backed_adata, chunked=True)
-    sc.pl.scatter(backed_adata, color="0", basis="pca")
+    sc.pl.scatter(backed_adata, color="0", basis="pca", show=False)
 
 
 def test_dotplot_backed(backed_adata):
-    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat")
+    sc.pl.dotplot(backed_adata, ["0", "1", "2", "3"], groupby="cat", show=False)

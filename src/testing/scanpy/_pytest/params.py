@@ -1,24 +1,33 @@
-"""Like fixtures, but more flexible"""
+"""Like fixtures, but more flexible."""
 
 from __future__ import annotations
 
+from functools import wraps
+from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 import pytest
 from anndata.tests.helpers import asarray
+from packaging.version import Version
 from scipy import sparse
 
-from .._helpers import (
-    as_dense_dask_array,
-    as_sparse_dask_array,
-)
+from .._helpers import as_dense_dask_array, as_sparse_dask_array
 from .._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from typing import Any, Literal
 
+    import numpy as np
     from _pytest.mark.structures import ParameterSet
+
+    from ....scanpy._compat import DaskArray
+
+
+skipif_no_sparray = pytest.mark.skipif(
+    Version(version("anndata")) < Version("0.11"),
+    reason="scipy cs{rc}_array not supported in anndata<0.11",
+)
 
 
 def param_with(
@@ -33,29 +42,43 @@ def param_with(
     )
 
 
+def _chunked_1d(
+    f: Callable[[np.ndarray], DaskArray],
+) -> Callable[[np.ndarray], DaskArray]:
+    @wraps(f)
+    def wrapper(a: np.ndarray) -> DaskArray:
+        da = f(a)
+        return da.rechunk((da.chunksize[0], -1))
+
+    wrapper.__name__ = f"{wrapper.__name__}-1d_chunked"
+    return wrapper
+
+
 MAP_ARRAY_TYPES: dict[
     tuple[Literal["mem", "dask"], Literal["dense", "sparse"]],
     tuple[ParameterSet, ...],
 ] = {
     ("mem", "dense"): (pytest.param(asarray, id="numpy_ndarray"),),
     ("mem", "sparse"): (
-        pytest.param(sparse.csr_matrix, id="scipy_csr"),
-        pytest.param(sparse.csc_matrix, id="scipy_csc"),
+        pytest.param(sparse.csr_matrix, id="scipy_csr_mat"),  # noqa: TID251
+        pytest.param(sparse.csc_matrix, id="scipy_csc_mat"),  # noqa: TID251
+        pytest.param(sparse.csr_array, id="scipy_csr_arr", marks=[skipif_no_sparray]),  # noqa: TID251
     ),
-    ("dask", "dense"): (
+    ("dask", "dense"): tuple(
         pytest.param(
-            as_dense_dask_array,
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
-            id="dask_array_dense",
-        ),
+            wrapper(as_dense_dask_array),
+            marks=[needs.dask],
+            id=f"dask_array_dense{suffix}",
+        )
+        for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
     ),
-    ("dask", "sparse"): (
+    ("dask", "sparse"): tuple(
         pytest.param(
-            as_sparse_dask_array,
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
-            id="dask_array_sparse",
-        ),
-        # probably not necessary to also do csc
+            wrapper(as_sparse_dask_array),
+            marks=[needs.dask],
+            id=f"dask_array_sparse{suffix}",
+        )
+        for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
     ),
 }
 

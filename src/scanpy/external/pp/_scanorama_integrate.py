@@ -1,6 +1,4 @@
-"""
-Use Scanorama to integrate cells from different experiments.
-"""
+"""Use Scanorama to integrate cells from different experiments."""
 
 from __future__ import annotations
 
@@ -32,8 +30,7 @@ def scanorama_integrate(
     batch_size: int = 5000,
     **kwargs,
 ) -> None:
-    """\
-    Use Scanorama :cite:p:`Hie2019` to integrate different experiments.
+    """Use Scanorama :cite:p:`Hie2019` to integrate different experiments.
 
     Scanorama :cite:p:`Hie2019` is an algorithm for integrating single-cell
     data from multiple experiments stored in an AnnData object. This
@@ -98,20 +95,22 @@ def scanorama_integrate(
     be a column in ``adata.obs`` giving the experiment each cell came
     from.
 
-    >>> adata.obs['batch'] = 1350*['a'] + 1350*['b']
+    >>> adata.obs["batch"] = 1350 * ["a"] + 1350 * ["b"]
 
     Finally, run Scanorama. Afterwards, there will be a new table in
     ``adata.obsm`` containing the Scanorama embeddings.
 
-    >>> sce.pp.scanorama_integrate(adata, 'batch', verbose=1)
+    >>> sce.pp.scanorama_integrate(adata, "batch", verbose=1)
     Processing datasets a <=> b
-    >>> 'X_scanorama' in adata.obsm
+    >>> "X_scanorama" in adata.obsm
     True
+
     """
     try:
         import scanorama
-    except ImportError:
-        raise ImportError("\nplease install Scanorama:\n\n\tpip install scanorama")
+    except ImportError as e:
+        msg = "\nplease install Scanorama:\n\n\tpip install scanorama"
+        raise ImportError(msg) from e
 
     # Get batch indices in linear time.
     curr_batch = None
@@ -123,7 +122,8 @@ def scanorama_integrate(
             curr_batch = batch_name
             if batch_name in batch_names:
                 # Contiguous batches important for preserving cell order.
-                raise ValueError("Detected non-contiguous batches.")
+                msg = "Detected non-contiguous batches."
+                raise ValueError(msg)
             batch_names.append(batch_name)  # Preserve name order.
             name2idx[batch_name] = []
         name2idx[batch_name].append(idx)

@@ -1,3 +1,5 @@
+"""External preprocessing functions."""
+
 from __future__ import annotations
 
 from sklearn.utils import deprecated

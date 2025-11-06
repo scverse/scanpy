@@ -1,3 +1,5 @@
+"""Extension for a stub ``canonical-tutorial`` directive."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -16,9 +18,10 @@ class CanonicalTutorial(SphinxDirective):
 
     required_arguments: ClassVar = 1
 
-    def run(self) -> list[nodes.Node]:
+    def run(self) -> list[nodes.Node]:  # noqa: D102
         return []
 
 
 def setup(app: Sphinx) -> None:
+    """App setup hook."""
     app.add_directive("canonical-tutorial", CanonicalTutorial)

@@ -1,21 +1,25 @@
-"""Logging and Profiling"""
+"""Logging and Profiling."""
 
 from __future__ import annotations
 
 import logging
 import sys
-import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial, update_wrapper
+from importlib.metadata import version
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import anndata.logging
+
+from ._compat import deprecated
 
 if TYPE_CHECKING:
     from typing import IO
 
-    from ._settings import ScanpyConfig
+    from session_info2 import SessionInfo
+
+    from ._settings import SettingsMeta
 
 
 # This is currently the only documented API
@@ -42,7 +46,7 @@ class _RootLogger(logging.RootLogger):
     ) -> datetime:
         from ._settings import settings
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
@@ -71,19 +75,20 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings: ScanpyConfig):
+def _set_log_file(settings: SettingsMeta) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
     root.addHandler(h)
 
 
-def _set_log_level(settings: ScanpyConfig, level: int):
+def _set_log_level(settings: SettingsMeta, level: int) -> None:
     root = settings._root_logger
     root.setLevel(level)
     for h in list(root.handlers):
@@ -127,103 +132,58 @@ print_memory_usage = anndata.logging.print_memory_usage
 get_memory_usage = anndata.logging.get_memory_usage
 
 
-_DEPENDENCIES_NUMERICS = [
-    "anndata",  # anndata actually shouldn't, but as long as it's in development
-    "umap",
-    "numpy",
-    "scipy",
-    "pandas",
-    ("sklearn", "scikit-learn"),
-    "statsmodels",
-    "igraph",
-    "louvain",
-    "leidenalg",
-    "pynndescent",
-]
+@overload
+def print_header(*, file: None = None) -> SessionInfo: ...
+@overload
+def print_header(*, file: IO[str]) -> None: ...
+def print_header(*, file: IO[str] | None = None):
+    """Versions that might influence the numerical results.
 
-
-def _versions_dependencies(dependencies):
-    # this is not the same as the requirements!
-    for mod in dependencies:
-        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
-        try:
-            imp = __import__(mod_name)
-            yield dist_name, imp.__version__
-        except (ImportError, AttributeError):
-            pass
-
-
-def print_header(*, file=None):
-    """\
-    Versions that might influence the numerical results.
     Matplotlib and Seaborn are excluded from this.
 
     Parameters
     ----------
     file
         Optional path for dependency output.
+
     """
+    from session_info2 import session_info
 
-    modules = ["scanpy"] + _DEPENDENCIES_NUMERICS
-    print(
-        " ".join(f"{mod}=={ver}" for mod, ver in _versions_dependencies(modules)),
-        file=file or sys.stdout,
-    )
-
-
-def print_versions(*, file: IO[str] | None = None):
-    """\
-    Print versions of imported packages, OS, and jupyter environment.
-
-    For more options (including rich output) use `session_info.show` directly.
-
-    Parameters
-    ----------
-    file
-        Optional path for output.
-    """
-    import session_info
+    sinfo = session_info(os=True, cpu=True, gpu=True, dependencies=True)
 
     if file is not None:
-        from contextlib import redirect_stdout
+        print(sinfo, file=file)
+        return
 
-        warnings.warn(
-            "Passing argument 'file' to print_versions is deprecated, and will be "
-            "removed in a future version.",
-            FutureWarning,
-        )
-        with redirect_stdout(file):
-            print_versions()
-    else:
-        session_info.show(
-            dependencies=True,
-            html=False,
-            excludes=[
-                "builtins",
-                "stdlib_list",
-                "importlib_metadata",
-                # Special module present if test coverage being calculated
-                # https://gitlab.com/joelostblom/session_info/-/issues/10
-                "$coverage",
-            ],
-        )
+    return sinfo
+
+
+@deprecated("Use `print_header` instead")
+def print_versions() -> SessionInfo:
+    """Alias for `print_header`.
+
+    .. deprecated:: 1.11.0
+
+       Use :func:`print_header` instead.
+    """
+    return print_header()
 
 
 def print_version_and_date(*, file=None):
-    """\
+    """Print small version and date header.
+
     Useful for starting a notebook so you see when you started working.
 
     Parameters
     ----------
     file
         Optional path for output.
-    """
-    from . import __version__
 
+    """
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {version('scanpy')}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 
@@ -235,12 +195,11 @@ def _copy_docs_and_signature(fn):
 def error(
     msg: str,
     *,
-    time: datetime = None,
+    time: datetime | None = None,
     deep: str | None = None,
     extra: dict | None = None,
 ) -> datetime:
-    """\
-    Log message with specific level and return current time.
+    """Log message with specific level and return current time.
 
     Parameters
     ----------
@@ -256,6 +215,7 @@ def error(
         this gets displayed as well
     extra
         Additional values you can specify in `msg` like `{time_passed}`.
+
     """
     from ._settings import settings
 

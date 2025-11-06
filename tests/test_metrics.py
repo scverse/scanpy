@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from operator import eq
 from string import ascii_letters
+from typing import TYPE_CHECKING
 
-import numba
 import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
-mark_flaky = pytest.mark.xfail(
-    strict=False,
-    reason="This used to work reliably, but doesn’t anymore",
-)
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 @pytest.fixture(scope="session", params=[sc.metrics.gearys_c, sc.metrics.morans_i])
@@ -29,28 +24,17 @@ def metric(request: pytest.FixtureRequest):
     return request.param
 
 
-@pytest.fixture(
-    scope="session",
-    params=[
-        # pytest.param(eq, marks=[mark_flaky]),
-        pytest.param(eq),
-        pytest.param(partial(np.testing.assert_allclose, rtol=1e-14), id="allclose"),
-    ],
-)
-def assert_equal(request: pytest.FixtureRequest):
-    return request.param
-
-
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
-def threading(request):
+def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     if request.param == "single-threaded":
         with threadpoolctl.threadpool_limits(limits=1):
-            yield None
+            yield
     elif request.param == "multi-threaded":
-        yield None
+        yield
 
 
-def test_consistency(metric, threading):
+@pytest.mark.usefixtures("_threading")
+def test_consistency(metric) -> None:
     pbmc = pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
@@ -79,10 +63,7 @@ def test_consistency(metric, threading):
     all_genes = metric(pbmc, layer="raw")
     first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
 
-    if Version(numba.__version__) < Version("0.57"):
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-5)
-    else:
-        np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
+    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
@@ -105,54 +86,62 @@ def test_correctness(metric, size, expected):
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
-    graph = sparse.csr_matrix(graph)
+    graph = sparse.csr_matrix(graph)  # noqa: TID251
 
     np.testing.assert_equal(metric(graph, connected), expected)
     np.testing.assert_equal(
         metric(graph, connected),
-        metric(graph, sparse.csr_matrix(connected)),
+        metric(graph, sparse.csr_matrix(connected)),  # noqa: TID251
     )
     # Checking that obsp works
-    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})
+    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})  # noqa: TID251
     np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_graph_metrics_w_constant_values(metric, array_type, threading):
+@pytest.mark.usefixtures("_threading")
+@pytest.mark.parametrize(
+    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
+)
+def test_graph_metrics_w_constant_values(
+    request: pytest.FixtureRequest, metric, array_type
+):
+    if "dask" in array_type.__name__:
+        reason = "DaskArray not yet supported"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
-    XT = array_type(pbmc.raw.X.T.copy())
+    x_t = pbmc.raw.X.T.copy()
     g = pbmc.obsp["connectivities"].copy()
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
-    if isinstance(XT, DaskArray):
-        pytest.skip("DaskArray yet not supported")
-
-    const_inds = np.random.choice(XT.shape[0], 10, replace=False)
+    const_inds = np.random.choice(x_t.shape[0], 10, replace=False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
-        XT_zero_vals = XT.copy()
-        XT_zero_vals[const_inds, :] = 0
-        XT_const_vals = XT.copy()
-        XT_const_vals[const_inds, :] = 42
+        x_t_zero_vals = x_t.copy()
+        x_t_zero_vals[const_inds, :] = 0
+        x_t_zero_vals = array_type(x_t_zero_vals)
+        x_t_const_vals = x_t.copy()
+        x_t_const_vals[const_inds, :] = 42
+        x_t_const_vals = array_type(x_t_const_vals)
 
-    results_full = metric(g, XT)
+    results_full = metric(g, array_type(x_t))
     # TODO: Check for warnings
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_zeros = metric(g, XT_zero_vals)
+        results_const_zeros = metric(g, x_t_zero_vals)
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_vals = metric(g, XT_const_vals)
+        results_const_vals = metric(g, x_t_const_vals)
 
     assert not np.isnan(results_full).any()
     equality_check(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
-    non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
+    non_const_mask = ~np.isin(np.arange(x_t.shape[0]), const_inds)
     equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
@@ -175,11 +164,14 @@ def test_confusion_matrix():
     assert np.all(mtx == 0.5)
 
 
-def test_confusion_matrix_randomized():
+@pytest.mark.flaky(reruns=5)  # possible that #classes > #samples÷2
+def test_confusion_matrix_randomized() -> None:
+    rng = np.random.default_rng()
+
     chars = np.array(list(ascii_letters))
-    pos = np.random.choice(len(chars), size=np.random.randint(50, 150))
+    pos = rng.choice(len(chars), size=rng.integers(50, 150))
     a = chars[pos]
-    b = np.random.permutation(chars)[pos]
+    b = rng.permutation(chars)[pos]
     df = pd.DataFrame({"a": a, "b": b})
 
     pd.testing.assert_frame_equal(
@@ -193,9 +185,10 @@ def test_confusion_matrix_randomized():
 
 
 def test_confusion_matrix_api():
-    data = pd.DataFrame(
-        {"a": np.random.randint(5, size=100), "b": np.random.randint(5, size=100)}
-    )
+    data = pd.DataFrame({
+        "a": np.random.randint(5, size=100),
+        "b": np.random.randint(5, size=100),
+    })
     expected = sc.metrics.confusion_matrix(data["a"], data["b"])
 
     pd.testing.assert_frame_equal(expected, sc.metrics.confusion_matrix("a", "b", data))

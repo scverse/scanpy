@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def mnn_correct(
+def mnn_correct(  # noqa: PLR0913
     *datas: AnnData | np.ndarray,
     var_index: Collection[str] | None = None,
     var_subset: Collection[str] | None = None,
@@ -38,8 +38,7 @@ def mnn_correct(
     list[pd.DataFrame],
     list[tuple[float | None, int]] | None,
 ]:
-    """\
-    Correct batch effects by matching mutual nearest neighbors :cite:p:`Haghverdi2018` :cite:p:`Kang2018`.
+    """Correct batch effects by matching mutual nearest neighbors :cite:p:`Haghverdi2018` :cite:p:`Kang2018`.
 
     This uses the implementation of mnnpy_ :cite:p:`Kang2018`.
 
@@ -112,7 +111,7 @@ def mnn_correct(
         :attr:`~anndata.AnnData.raw` attribute.
     n_jobs
         The number of jobs. When set to `None`, automatically uses
-        :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+        :attr:`scanpy.settings.n_jobs`.
     kwargs
         optional keyword arguments for irlb.
 
@@ -125,6 +124,7 @@ def mnn_correct(
         A list containing MNN pairing information as DataFrames in each iteration step.
     angle_list
         A list containing angles of each batch.
+
     """
     if len(datas) < 2:
         return datas, [], []
@@ -132,11 +132,9 @@ def mnn_correct(
     try:
         import mnnpy
         from mnnpy import mnn_correct
-    except ImportError:
-        raise ImportError(
-            "Please install the package mnnpy "
-            "(https://github.com/chriscainx/mnnpy). "
-        )
+    except ImportError as e:
+        msg = "Please install the package mnnpy (https://github.com/chriscainx/mnnpy). "
+        raise ImportError(msg) from e
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 

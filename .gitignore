@@ -1,6 +1,7 @@
 # Scanpy outfiles
 /data/
 /write/
+/figures/
 
 # Docs
 /docs/_build/
@@ -27,7 +28,7 @@
 
 # Python build files
 __pycache__/
-/src/scanpy/_version.py
+/ci/scanpy-low-vers.txt
 /dist/
 /*-env/
 /env-*/
@@ -41,7 +42,6 @@ Thumbs.db
 
 # IDEs and editors
 /.idea/
-/.vscode/
 
 # asv benchmark files
 /benchmarks/.asv

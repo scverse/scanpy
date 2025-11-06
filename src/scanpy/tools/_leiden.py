@@ -8,6 +8,8 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import warn
+from .._utils.random import set_igraph_random_state
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -15,26 +17,26 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from scipy import sparse
 
-try:
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
+    from .._compat import CSBase
+    from .._utils.random import _LegacyRandom
 
-    class MutableVertexPartition:
-        pass
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from leidenalg.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
-    MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
-
-def leiden(
+def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
-    random_state: _utils.AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     key_added: str = "leiden",
-    adjacency: sparse.spmatrix | None = None,
+    adjacency: CSBase | None = None,
     directed: bool | None = None,
     use_weights: bool = True,
     n_iterations: int = -1,
@@ -42,17 +44,16 @@ def leiden(
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph"] | None = None,
     **clustering_args,
 ) -> AnnData | None:
-    """\
-    Cluster cells into subgroups :cite:p:`Traag2019`.
+    """Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
-    It has been proposed for single-cell analysis by :cite:t:`Levine2015`.
+    It was proposed for single-cell analysis by :cite:t:`Levine2015`.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or
+    This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
 
     Parameters
@@ -90,9 +91,9 @@ def leiden(
         :func:`~leidenalg.find_partition`.
     neighbors_key
         Use neighbors connectivities as adjacency.
-        If not specified, leiden looks .obsp['connectivities'] for connectivities
+        If not specified, leiden looks at .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
-        If specified, leiden looks
+        If specified, leiden looks at
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both
@@ -116,31 +117,35 @@ def leiden(
     `adata.uns['leiden' | key_added]['params']` : :class:`dict`
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
+
     """
-    if flavor not in {"igraph", "leidenalg"}:
-        raise ValueError(
-            f"flavor must be either 'igraph' or 'leidenalg', but '{flavor}' was passed"
+    if flavor is None:
+        flavor = "leidenalg"
+        msg = (
+            "In the future, the default backend for leiden will be igraph instead of leidenalg. "
+            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+            "`directed` must also be `False` to work with igraph’s implementation."
         )
+        warn(msg, FutureWarning)
+    if flavor not in {"igraph", "leidenalg"}:
+        msg = (
+            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
+        )
+        raise ValueError(msg)
     _utils.ensure_igraph()
     if flavor == "igraph":
         if directed:
-            raise ValueError(
-                "Cannot use igraph’s leiden implementation with a directed graph."
-            )
+            msg = "Cannot use igraph’s leiden implementation with a directed graph."
+            raise ValueError(msg)
         if partition_type is not None:
-            raise ValueError(
-                "Do not pass in partition_type argument when using igraph."
-            )
+            msg = "Do not pass in partition_type argument when using igraph."
+            raise ValueError(msg)
     else:
         try:
             import leidenalg
-
-            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
-            _utils.warn_once(msg, FutureWarning, stacklevel=3)
-        except ImportError:
-            raise ImportError(
-                "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-            )
+        except ImportError as e:
+            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
+            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
@@ -179,7 +184,7 @@ def leiden(
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
-        with _utils.set_igraph_random_state(random_state):
+        with set_igraph_random_state(random_state):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)

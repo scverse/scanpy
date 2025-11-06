@@ -1,13 +1,13 @@
-"""\
-Calculate scores based on relative expression change of maker pairs
-"""
+"""Calculate scores based on relative expression change of maker pairs."""
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
 
+from ..._compat import pkg_version
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
 
-    Genes = Collection[str | int | bool]
+    type Genes = Collection[str | int | bool]
 
 
 @doctest_needs("pypairs")
@@ -29,8 +29,7 @@ def sandbag(
     filter_genes: Genes | None = None,
     filter_samples: Genes | None = None,
 ) -> dict[str, list[tuple[str, str]]]:
-    """\
-    Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
+    """Calculate marker pairs of genes :cite:p:`Scialdone2015,Fechtner2018`.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
@@ -66,8 +65,9 @@ def sandbag(
     >>> from pypairs import datasets
     >>> adata = datasets.leng15()
     >>> marker_pairs = sandbag(adata, fraction=0.5)
+
     """
-    _check_import()
+    _check_available()
     from pypairs import settings as pp_settings
     from pypairs.pairs import sandbag
 
@@ -94,8 +94,7 @@ def cyclone(
     min_iter: int = 100,
     min_pairs: int = 50,
 ) -> pd.DataFrame:
-    """\
-    Assigns scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
+    """Assign scores and predicted class to observations :cite:p:`Scialdone2015` :cite:p:`Fechtner2018`.
 
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
@@ -129,8 +128,9 @@ def cyclone(
     If `marker_pairs` contains only the cell cycle categories G1, S and G2M an
     additional column `pypairs_cc_prediction` will be added.
     Where category S is assigned to samples where G1 and G2M score are < 0.5.
+
     """
-    _check_import()
+    _check_available()
     from pypairs import settings as pp_settings
     from pypairs.pairs import cyclone
 
@@ -149,12 +149,12 @@ def cyclone(
     )
 
 
-def _check_import():
-    try:
-        import pypairs
-    except ImportError:
-        raise ImportError("You need to install the package `pypairs`.")
+def _check_available() -> None:
+    if not find_spec("pypairs"):
+        msg = "You need to install the package `pypairs`."
+        raise ImportError(msg)
 
     min_version = Version("3.0.9")
-    if Version(pypairs.__version__) < min_version:
-        raise ImportError(f"Please only use `pypairs` >= {min_version}")
+    if pkg_version("pypairs") < min_version:
+        msg = f"Please only use `pypairs` >= {min_version}"
+        raise ImportError(msg)

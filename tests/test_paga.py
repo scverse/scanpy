@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 from functools import partial
+from importlib.util import find_spec
 from pathlib import Path
 
 import numpy as np
 import pytest
 from matplotlib import cm
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from testing.scanpy._helpers.data import pbmc3k_processed, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
+
+SKIP_IF_OLD_IGRAPH = pytest.mark.skipif(
+    not find_spec("igraph") or pkg_version("igraph") < Version("1"),
+    reason="igraph 0.x has different RNG behavior",
+)
 
 
 pytestmark = [needs.igraph]
@@ -32,6 +40,7 @@ def pbmc(pbmc_session):
     return pbmc_session.copy()
 
 
+@SKIP_IF_OLD_IGRAPH
 @pytest.mark.parametrize(
     ("test_id", "func"),
     [
@@ -60,20 +69,21 @@ def test_paga_plots(image_comparer, pbmc, test_id, func):
     save_and_compare_images(f"paga_{test_id}" if test_id else "paga")
 
 
-def test_paga_pie(image_comparer, pbmc):
+@SKIP_IF_OLD_IGRAPH
+def test_paga_pie(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     colors = {
-        c: {cm.Set1(_): 0.33 for _ in range(3)}
+        c: {cm.Set1(i): 0.33 for i in range(3)}
         for c in pbmc.obs["bulk_labels"].cat.categories
     }
-    colors["Dendritic"] = {cm.Set2(_): 0.25 for _ in range(4)}
+    colors["Dendritic"] = {cm.Set2(i): 0.25 for i in range(4)}
 
-    sc.pl.paga(pbmc, color=colors, colorbar=False)
+    sc.pl.paga(pbmc, color=colors, colorbar=False, show=False)
     save_and_compare_images("paga_pie")
 
 
-def test_paga_path(image_comparer, pbmc):
+def test_paga_path(image_comparer, pbmc) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc.uns["iroot"] = 0
@@ -100,7 +110,7 @@ def test_paga_compare(image_comparer):
 
 
 def test_paga_positions_reproducible():
-    """Check exact reproducibility and effect of random_state on paga positions"""
+    """Check exact reproducibility and effect of random_state on paga positions."""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
     sc.tl.paga(pbmc, "bulk_labels")

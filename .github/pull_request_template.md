@@ -5,6 +5,9 @@ Please be sure to follow the guidelines in our contribution guide (https://scanp
 
 <!-- Please check (“- [x]”) and fill in the following boxes -->
 - [ ] Closes #
-- [ ] Tests included or not required because:
+- [ ] [Tests][] included or not required because:
 <!-- Only check the following box if you did not include release notes -->
-- [ ] Release notes not necessary because:
+- [ ] [Release notes][] not necessary because:
+
+[tests]: https://scanpy.readthedocs.io/en/stable/dev/testing.html#writing-tests
+[release notes]: https://scanpy.readthedocs.io/en/stable/dev/documentation.html#adding-to-the-docs

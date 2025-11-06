@@ -1,6 +1,4 @@
-"""
-Tests to make sure the example datasets load.
-"""
+"""Tests to make sure the example datasets load."""
 
 from __future__ import annotations
 
@@ -16,6 +14,7 @@ import pytest
 from anndata.tests.helpers import assert_adata_equal
 
 import scanpy as sc
+from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -43,16 +42,9 @@ def test_burczynski06():
 
 @pytest.mark.internet
 @needs.openpyxl
+@pytest.mark.filterwarnings("ignore:Unknown extension is not supported:UserWarning")
 def test_moignard15():
-    with warnings.catch_warnings():
-        # https://foss.heptapod.net/openpyxl/openpyxl/-/issues/2051
-        warnings.filterwarnings(
-            "ignore",
-            r"datetime\.datetime\.utcnow\(\) is deprecated",
-            category=DeprecationWarning,
-            module="openpyxl",
-        )
-        adata = sc.datasets.moignard15()
+    adata = sc.datasets.moignard15()
     assert adata.shape == (3934, 42)
 
 
@@ -79,7 +71,14 @@ def test_pbmc3k_processed():
 
 
 @pytest.mark.internet
-def test_ebi_expression_atlas():
+def test_ebi_expression_atlas(monkeypatch: pytest.MonkeyPatch):
+    from scanpy.datasets import _ebi_expression_atlas as ea_mod
+
+    # make sure we use chunks when testing.
+    # This dataset has <8M entries, so 4M entries/chunk = 2 chunks
+    assert hasattr(ea_mod, "CHUNK_SIZE")
+    monkeypatch.setattr(ea_mod, "CHUNK_SIZE", int(4e6))
+
     adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     # The shape changes sometimes
     assert 2261 <= adata.shape[0] <= 2315
@@ -111,6 +110,7 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
+@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets():
     """Tests that reading/ downloading works and is does not have global effects."""
@@ -121,6 +121,7 @@ def test_visium_datasets():
     assert_adata_equal(hheart, hheart_again)
 
 
+@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_dir_change(tmp_path: Path):
     """Test that changing the dataset dir doesn't break reading."""
@@ -132,10 +133,10 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     assert_adata_equal(mbrain, mbrain_again)
 
 
+@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
-
     # Test that downloading tissue image works
     with pytest.warns(UserWarning, match=r"Variable names are not unique"):
         mbrain = sc.datasets.visium_sge("V1_Adult_Mouse_Brain", include_hires_tiff=True)
@@ -150,17 +151,18 @@ def test_visium_datasets_images():
 
     # Test that tissue image is a tif image file (using `file`)
     process = subprocess.run(
-        ["file", "--mime-type", image_path], stdout=subprocess.PIPE
+        ["file", "--mime-type", image_path], stdout=subprocess.PIPE, check=True
     )
     output = process.stdout.strip().decode()  # make process output string
-    assert output == str(image_path) + ": image/tiff"
+    assert output == f"{image_path}: image/tiff"
 
 
-def test_download_failure():
+def test_download_failure() -> None:
     from urllib.error import HTTPError
 
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPError) as excinfo:
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
+    excinfo.value.close()
 
 
 # These are tested via doctest
@@ -188,12 +190,16 @@ DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 def test_doc_shape(ds_name):
     dataset_fn: Callable[[], AnnData] = getattr(sc.datasets, ds_name)
     assert dataset_fn.__doc__, "No docstring"
-    docstring = dedent(dataset_fn.__doc__)
+    start_line_2 = dataset_fn.__doc__.find("\n") + 1
+    docstring = dedent(dataset_fn.__doc__[start_line_2:])
+    cached_fn = getattr(data, ds_name, dataset_fn)
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore",
-            r"(Observation|Variable) names are not unique",
-            category=UserWarning,
+            "ignore", r"(Observation|Variable) names are not unique", UserWarning
         )
-        dataset = dataset_fn()
+        warnings.filterwarnings(  # openpyxl complaining about MS Excel stuff
+            "ignore", r"Unknown extension is not supported", UserWarning
+        )
+        warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
+        dataset = cached_fn()
     assert repr(dataset) in docstring

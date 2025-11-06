@@ -1,7 +1,4 @@
-"""\
-Harmony time series for data visualization with augmented affinity matrix at
-discrete time points
-"""
+"""Harmony time series for data visualization with augmented affinity matrix at discrete time points."""
 
 from __future__ import annotations
 
@@ -29,9 +26,7 @@ def harmony_timeseries(
     n_jobs: int = -2,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Harmony time series for data visualization with augmented affinity matrix
-    at discrete time points :cite:p:`Nowotschin2019`.
+    """Harmony time series for data visualization with augmented affinity matrix at discrete time points :cite:p:`Nowotschin2019`.
 
     Harmony time series is a framework for data visualization, trajectory
     detection and interpretation for scRNA-seq data measured at discrete
@@ -76,9 +71,9 @@ def harmony_timeseries(
 
     **X_harmony** - :class:`~numpy.ndarray` (:attr:`~anndata.AnnData.obsm`, dtype `float`)
         force directed layout
-    **harmony_aff** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         affinity matrix
-    **harmony_aff_aug** - :class:`~scipy.sparse.spmatrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
+    **harmony_aff_aug** - :class:`~scipy.sparse.csr_matrix` (:attr:`~anndata.AnnData.obsp`, dtype `float`)
         augmented affinity matrix
     **harmony_timepoint_var** - `str` (:attr:`~anndata.AnnData.uns`)
         The name of the variable passed as `tp`
@@ -112,7 +107,7 @@ def harmony_timeseries(
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
-    ...     time_points, categories=['sa1', 'sa2', 'sa3']
+    ...     time_points, categories=["sa1", "sa2", "sa3"]
     ... )
 
     Normalize and filter for highly expressed genes
@@ -135,18 +130,20 @@ def harmony_timeseries(
     Harmony_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*,
     amongst other things.
-    """
 
+    """
     try:
         import harmony
-    except ImportError:
-        raise ImportError("\nplease install harmony:\n\n\tpip install harmonyTS")
+    except ImportError as e:
+        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
+        raise ImportError(msg) from e
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")
 
     if adata.obs[tp].dtype.name != "category":
-        raise ValueError(f"{tp!r} column does not contain Categorical data")
+        msg = f"{tp!r} column does not contain Categorical data"
+        raise ValueError(msg)
     timepoints = adata.obs[tp].cat.categories.tolist()
     timepoint_connections = pd.DataFrame(np.array([timepoints[:-1], timepoints[1:]]).T)
 

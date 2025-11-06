@@ -6,12 +6,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
-
-from scanpy._utils import _check_use_raw, is_backed_type
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
+from .._utils import check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -20,39 +18,32 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
-    from scipy.sparse import csc_matrix, csr_matrix
 
-    from .._utils import AnyRandom
+    from .._utils.random import _LegacyRandom
 
-    try:
-        _StrIdx = pd.Index[str]
-    except TypeError:  # Sphinx
-        _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | csr_matrix | csc_matrix]
+type _StrIdx = pd.Index[str]
+type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _sparse_nanmean(
-    X: csr_matrix | csc_matrix, axis: Literal[0, 1]
-) -> NDArray[np.float64]:
-    """
-    np.nanmean equivalent for sparse matrices
-    """
-    if not issparse(X):
-        raise TypeError("X must be a sparse matrix")
+def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
+    """np.nanmean equivalent for sparse matrices."""
+    if not isinstance(x, CSBase):
+        msg = "X must be a compressed sparse matrix"
+        raise TypeError(msg)
 
     # count the number of nan elements per row/column (dep. on axis)
-    Z = X.copy()
-    Z.data = np.isnan(Z.data)
-    Z.eliminate_zeros()
-    n_elements = Z.shape[axis] - Z.sum(axis)
+    z = x.copy()
+    z.data = np.isnan(z.data)
+    z.eliminate_zeros()
+    n_elements = z.shape[axis] - z.sum(axis)
 
     # set the nans to 0, so that a normal .sum() works
-    Y = X.copy()
-    Y.data[np.isnan(Y.data)] = 0
-    Y.eliminate_zeros()
+    y = x.copy()
+    y.data[np.isnan(y.data)] = 0
+    y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
+    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
     m = s / n_elements
 
     return m
@@ -61,7 +52,7 @@ def _sparse_nanmean(
 @old_positionals(
     "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
 )
-def score_genes(
+def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
@@ -70,19 +61,19 @@ def score_genes(
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     copy: bool = False,
     use_raw: bool | None = None,
     layer: str | None = None,
 ) -> AnnData | None:
-    """\
-    Score a set of genes :cite:p:`Satija2015`.
+    """Score a set of genes :cite:p:`Tirosh2016`.
 
-    The score is the average expression of a set of genes subtracted with the
-    average expression of a reference set of genes. The reference set is
+    The score is the average expression of a set of genes after subtraction by
+    the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
-    This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
+    This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
+    programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
 
     Parameters
@@ -125,14 +116,14 @@ def score_genes(
     Examples
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
+
     """
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
-        raise NotImplementedError(
-            f"score_genes is not implemented for matrices of type {type(adata.X)}"
-        )
+        msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
+        raise NotImplementedError(msg)
 
     if random_state is not None:
         np.random.seed(random_state)
@@ -204,14 +195,16 @@ def _check_score_genes_args(
     if len(genes_to_ignore) > 0:
         logg.warning(f"genes are not in var_names and ignored: {genes_to_ignore}")
     if len(gene_list) == 0:
-        raise ValueError("No valid genes were passed for scoring.")
+        msg = "No valid genes were passed for scoring."
+        raise ValueError(msg)
 
     if gene_pool is None:
         gene_pool = var_names.astype("string")
     else:
         gene_pool = pd.Index(gene_pool, dtype="string").intersection(var_names)
     if len(gene_pool) == 0:
-        raise ValueError("No valid genes were passed for reference set.")
+        msg = "No valid genes were passed for reference set."
+        raise ValueError(msg)
 
     def get_subset(genes: pd.Index[str]):
         x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
@@ -239,7 +232,7 @@ def _score_genes_bins(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
+    keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
     for cut in np.unique(obs_cut.loc[gene_list]):
@@ -258,9 +251,9 @@ def _score_genes_bins(
 
 
 def _nan_means(
-    x, *, axis: Literal[0, 1], dtype: DTypeLike | None = None
+    x: np.ndarray | CSBase, *, axis: Literal[0, 1], dtype: DTypeLike | None = None
 ) -> NDArray[np.float64]:
-    if issparse(x):
+    if isinstance(x, CSBase):
         return np.array(_sparse_nanmean(x, axis=axis)).flatten()
     return np.nanmean(x, axis=axis, dtype=dtype)
 
@@ -274,8 +267,7 @@ def score_genes_cell_cycle(
     copy: bool = False,
     **kwargs,
 ) -> AnnData | None:
-    """\
-    Score cell cycle genes :cite:p:`Satija2015`.
+    """Score cell cycle genes :cite:p:`Satija2015`.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
@@ -306,13 +298,14 @@ def score_genes_cell_cycle(
     `adata.obs['phase']` : :class:`pandas.Series` (dtype `object`)
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
-    See also
+    See Also
     --------
     score_genes
 
     Examples
     --------
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
+
     """
     logg.info("calculating cell cycle phase")
 

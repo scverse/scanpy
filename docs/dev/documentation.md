@@ -12,10 +12,12 @@ Sometimes these caches are not invalidated when you've updated the docs.
 If docs are not updating the way you expect, first try "force reloading" your browser page – e.g. reload the page without using the cache.
 Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and try building them again.
 
+(adding-to-the-docs)=
+
 ## Adding to the docs
 
 For any user-visible changes, please make sure a note has been added to the release notes using [`hatch run towncrier:create`][towncrier create].
-We recommend waiting on this until your PR is close to done since this can often causes merge conflicts.
+When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
@@ -43,10 +45,11 @@ Some key points:
 - When docs exist in the same file as code, line length restrictions still apply. In files which are just docs, go with a sentence per line (for easier `git diff`s).
 - Check that the docs look like what you expect them too! It's easy to forget to add a reference to function, be sure it got added and looks right.
 
-Look at [sc.tl.louvain](https://github.com/scverse/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90) as an example for everything mentioned here.
+Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned here.
 
 [napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
 [sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+[`sc.tl.leiden`’s docstring]: https://github.com/scverse/scanpy/blob/350c3424d2f96c4a3a7bb3b7d0428d38d842ebe8/src/scanpy/tools/_leiden.py#L49-L120
 
 ### Plots in docstrings
 

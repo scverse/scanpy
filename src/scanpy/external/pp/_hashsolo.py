@@ -1,18 +1,31 @@
-"""
-HashSolo script provides a probabilistic cell hashing demultiplexing method
-which generates a noise distribution and signal distribution for
-each hashing barcode from empirically observed counts. These distributions
-are updates from the global signal and noise barcode distributions, which
-helps in the setting where not many cells are observed. Signal distributions
-for a hashing barcode are estimated from samples where that hashing barcode
-has the highest count. Noise distributions for a hashing barcode are estimated
-from samples where that hashing barcode is one the k-2 lowest barcodes, where
-k is the number of barcodes. A doublet should then have its two highest
-barcode counts most likely coming from a signal distribution for those barcodes.
-A singlet should have its highest barcode from a signal distribution, and its
-second highest barcode from a noise distribution. A negative two highest
-barcodes should come from noise distributions. We test each of these
-hypotheses in a bayesian fashion, and select the most probable hypothesis.
+"""A probabilistic cell hashing demultiplexing method.
+
+HashSolo generates a noise distribution and signal distribution
+for each hashing barcode from empirically observed counts.
+These distributions are updates from the global signal and noise barcode distributions,
+which helps in the setting where not many cells are observed.
+For a hashing barcode:
+
+Signal distributions
+    are estimated from samples where that hashing barcode has the highest count.
+
+Noise distributions
+    are estimated from samples where that hashing barcode is one the k-2 lowest barcodes,
+    where k is the number of barcodes.
+
+We test each of the following hypotheses in a bayesian fashion,
+and select the most probable hypothesis.
+
+A doublet
+    should have its two highest barcode counts most likely
+    coming from a signal distribution for those barcodes.
+
+A singlet
+    should have its highest barcode from a signal distribution,
+    and its second highest barcode from a noise distribution.
+
+A negative two highest barcodes
+    should come from noise distributions.
 """
 
 from __future__ import annotations
@@ -24,8 +37,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from scanpy._utils import check_nonnegative_integers
+
 from ..._compat import old_positionals
-from ..._utils import has_only_nonnegative_integers
 from ..._utils._doctests import doctest_skip
 
 if TYPE_CHECKING:
@@ -35,10 +49,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
-def _calculate_log_likelihoods(
+def _calculate_log_likelihoods(  # noqa: PLR0915
     data: np.ndarray, number_of_noise_barcodes: int
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], dict[int, str]]:
-    """Calculate log likelihoods for each hypothesis, negative, singlet, doublet
+    """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.
 
     Parameters
     ----------
@@ -53,13 +67,15 @@ def _calculate_log_likelihoods(
         a 2d np.array log likelihood of each hypothesis
     all_indices
     counter_to_barcode_combo
+
     """
 
     def gaussian_updates(
         data: np.ndarray, mu_o: float, std_o: float
     ) -> tuple[float, float]:
-        """Update parameters of your gaussian
-        https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+        """Update parameters of your gaussian.
+
+        See <https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf>.
 
         Parameters
         ----------
@@ -76,6 +92,7 @@ def _calculate_log_likelihoods(
             of gaussian
         std
             of gaussian
+
         """
         lam_o = 1 / (std_o**2)
         n = len(data)
@@ -227,8 +244,7 @@ def _calculate_log_likelihoods(
 def _calculate_bayes_rule(
     data: np.ndarray, priors: ArrayLike, number_of_noise_barcodes: int
 ) -> dict[str, np.ndarray]:
-    """
-    Calculate bayes rule from log likelihoods
+    """Calculate bayes rule from log likelihoods.
 
     Parameters
     ----------
@@ -255,6 +271,7 @@ def _calculate_bayes_rule(
         A 2d np.array probability of each hypothesis
     `"log_likelihoods_for_each_hypothesis"`
         A 2d np.array log likelihood of each hypothesis
+
     """
     priors = np.array(priors)
     log_likelihoods_for_each_hypothesis, _, _ = _calculate_log_likelihoods(
@@ -339,28 +356,29 @@ def hashsolo(
         `"Negative"`, or `"Doublet"`.
 
     Examples
-    -------
+    --------
     >>> import anndata
     >>> import scanpy.external as sce
     >>> adata = anndata.read_h5ad("data.h5ad")
     >>> sce.pp.hashsolo(adata, ["Hash1", "Hash2", "Hash3"])
     >>> adata.obs.head()
+
     """
     print(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
     adata = adata.copy() if not inplace else adata
     data = adata.obs[cell_hashing_columns].values
-    if not has_only_nonnegative_integers(data):
-        raise ValueError("Cell hashing counts must be non-negative")
+    if not check_nonnegative_integers(data):
+        msg = "Cell hashing counts must be non-negative"
+        raise ValueError(msg)
     if (number_of_noise_barcodes is not None) and (
         number_of_noise_barcodes >= len(cell_hashing_columns)
     ):
-        raise ValueError(
-            "number_of_noise_barcodes must be at least one less \
+        msg = "number_of_noise_barcodes must be at least one less \
         than the number of samples you have as determined by the number of \
         cell_hashing_columns you've given as input  "
-        )
+        raise ValueError(msg)
     num_of_cells = adata.shape[0]
     results = pd.DataFrame(
         np.zeros((num_of_cells, 6)),

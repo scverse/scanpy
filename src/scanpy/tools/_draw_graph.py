@@ -13,17 +13,15 @@ from .._utils import _choose_graph, get_literal_vals
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
-    from typing import LiteralString, TypeVar
+    from typing import LiteralString
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
-    from .._utils import AnyRandom
-
-    S = TypeVar("S", bound=LiteralString)
+    from .._compat import SpBase
+    from .._utils.random import _LegacyRandom
 
 
-_Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
+type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
 @old_positionals(
@@ -37,33 +35,32 @@ _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"
     "obsp",
     "copy",
 )
-def draw_graph(
+def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
     init_pos: str | bool | None = None,
     root: int | None = None,
-    random_state: AnyRandom = 0,
+    random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
-    adjacency: spmatrix | None = None,
+    adjacency: SpBase | None = None,
     key_added_ext: str | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
     **kwds,
 ) -> AnnData | None:
-    """\
-    Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
+    """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. This requires to run :func:`~scanpy.pp.neighbors`, first.
+    better. This requires running :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`, :cite:t:`Jacomy2014`) uses the package |fa2-modified|_
     :cite:p:`Chippada2018`, which can be installed via `pip install fa2-modified`.
 
     `Force-directed graph drawing`_ describes a class of long-established
     algorithms for visualizing graphs.
-    It has been suggested for visualizing single-cell data by :cite:t:`Islam2011`.
+    It was suggested for visualizing single-cell data by :cite:t:`Islam2011`.
     Many other layouts as implemented in igraph :cite:p:`Csardi2006` are available.
     Similar approaches have been used by :cite:t:`Zunder2015` or :cite:t:`Weinreb2017`.
 
@@ -98,9 +95,9 @@ def draw_graph(
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
     neighbors_key
-        If not specified, draw_graph looks .obsp['connectivities'] for connectivities
+        If not specified, draw_graph looks at .obsp['connectivities'] for connectivities
         (default storage place for pp.neighbors).
-        If specified, draw_graph looks
+        If specified, draw_graph looks at
         .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
     obsp
         Use .obsp[obsp] as adjacency. You can't specify both
@@ -121,10 +118,12 @@ def draw_graph(
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
         `draw_graph` parameters.
+
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in (layouts := get_literal_vals(_Layout)):
-        raise ValueError(f"Provide a valid layout, one of {layouts}.")
+        msg = f"Provide a valid layout, one of {layouts}."
+        raise ValueError(msg)
     adata = adata.copy() if copy else adata
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
@@ -173,7 +172,7 @@ def draw_graph(
 
 
 def fa2_positions(
-    adjacency: spmatrix | np.ndarray, init_coords: np.ndarray, **kwds
+    adjacency: SpBase | np.ndarray, init_coords: np.ndarray, **kwds
 ) -> list[tuple[float, float]]:
     from fa2_modified import ForceAtlas2
 
@@ -204,7 +203,7 @@ def fa2_positions(
     return forceatlas2.forceatlas2(adjacency, pos=init_coords, iterations=iterations)
 
 
-def coerce_fa2_layout(layout: S) -> S | Literal["fa", "fr"]:
+def coerce_fa2_layout[S: LiteralString](layout: S) -> S | Literal["fa", "fr"]:
     # see whether fa2 is installed
     if layout != "fa":
         return layout

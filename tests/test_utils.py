@@ -1,29 +1,36 @@
 from __future__ import annotations
 
+import itertools
+import string
 from operator import mul, truediv
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
-from scipy.sparse import csr_matrix, issparse
+from scipy import sparse
 
-from scanpy._compat import DaskArray
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
     axis_mul_or_truediv,
-    axis_sum,
+    check_nonnegative_integers,
     descend_classes_and_funcs,
-    elem_mul,
-    has_only_nonnegative_integers,
-    is_constant,
 )
-from testing.scanpy._pytest.marks import needs
+from scanpy._utils.random import (
+    ith_k_tuple,
+    legacy_numpy_gen,
+    random_k_tuples,
+    random_str,
+)
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
     ARRAY_TYPES_SPARSE,
-    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 def test_descend_classes_and_funcs():
@@ -46,12 +53,12 @@ def test_descend_classes_and_funcs():
 def test_axis_mul_or_truediv_badop():
     dividend = np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]])
     divisor = np.array([0.1, 0.2])
-    with pytest.raises(ValueError, match=".*not one of truediv or mul"):
+    with pytest.raises(ValueError, match=r"not one of truediv or mul"):
         axis_mul_or_truediv(dividend, divisor, op=np.add, axis=0)
 
 
 def test_axis_mul_or_truediv_bad_out():
-    dividend = csr_matrix(np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]]))
+    dividend = sparse.csr_matrix(np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]]))  # noqa: TID251
     divisor = np.array([0.1, 0.2])
     with pytest.raises(ValueError, match="`out` argument provided but not equal to X"):
         axis_mul_or_truediv(dividend, divisor, op=truediv, out=dividend.copy(), axis=0)
@@ -65,7 +72,7 @@ def test_scale_row(array_type, op):
     if op is mul:
         divisor = 1 / divisor
     expd = np.array([[0, 10.0, 10.0], [5.0, 0, 5.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=0, out=out))
     np.testing.assert_array_equal(res, expd)
 
@@ -78,11 +85,12 @@ def test_scale_column(array_type, op):
     if op is mul:
         divisor = 1 / divisor
     expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=1, out=out))
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero encountered:RuntimeWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_divide_by_zero(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
@@ -110,7 +118,7 @@ def test_scale_out_with_dask_or_sparse_raises(array_type):
     if isinstance(dividend, DaskArray):
         with pytest.raises(
             TypeError if "dask" in array_type.__name__ else ValueError,
-            match="`out`*",
+            match="`out`",
         ):
             axis_mul_or_truediv(dividend, divisor, op=truediv, axis=1, out=dividend)
 
@@ -131,33 +139,10 @@ def test_scale_rechunk(array_type, axis, op):
         expd = np.array([[0, 5.0, 4.0], [30.0, 0, 8.0], [30.0, 0, 8.0]])
     else:
         expd = np.array([[0, 10.0, 20.0], [15.0, 0, 20.0], [6.0, 0, 8.0]])
-    out = dividend if issparse(dividend) or isinstance(dividend, np.ndarray) else None
+    out = dividend if isinstance(dividend, CSBase | np.ndarray) else None
     with pytest.warns(UserWarning, match="Rechunking scaling_array*"):
         res = asarray(axis_mul_or_truediv(dividend, divisor, op=op, axis=axis, out=out))
     np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_elem_mul(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    m2 = array_type(asarray([[2, 2, 1], [3, 2, 0]]))
-    expd = np.array([[0, 2, 1], [3, 0, 0]])
-    res = asarray(elem_mul(m1, m2))
-    np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_axis_sum(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    expd_0 = np.array([1, 1, 2])
-    expd_1 = np.array([2, 2])
-    res_0 = asarray(axis_sum(m1, axis=0))
-    res_1 = asarray(axis_sum(m1, axis=1))
-    if "matrix" in array_type.__name__:  # for sparse since dimension is kept
-        res_0 = res_0.ravel()
-        res_1 = res_1.ravel()
-    np.testing.assert_array_equal(res_0, expd_0)
-    np.testing.assert_array_equal(res_1, expd_1)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -178,11 +163,11 @@ def test_axis_sum(array_type):
         pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"),
     ],
 )
-def test_has_only_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+def test_check_nonnegative_integers(array_type, array_value, expected):
+    x = array_type(array_value)
 
-    received = has_only_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
@@ -193,52 +178,69 @@ def test_has_only_nonnegative_integers(array_type, array_value, expected):
     assert received is expected
 
 
-# TODO: Make it work for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED)
-def test_is_constant(array_type):
-    constant_inds = [1, 3]
-    A = np.arange(20).reshape(5, 4)
-    A[constant_inds, :] = 10
-    A = array_type(A)
-    AT = array_type(A.T)
+@pytest.mark.parametrize("seed", [0, 1, 1256712675])
+@pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
+@pytest.mark.parametrize("func", ["choice"])
+def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
+    np.random.seed(seed)
+    state_before = np.random.get_state(legacy=False)
 
-    assert not is_constant(A)
-    assert not np.any(is_constant(A, axis=0))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(A, axis=1)
+    arrs: dict[bool, np.ndarray] = {}
+    states_after: dict[bool, dict[str, Any]] = {}
+    for direct in [True, False]:
+        if not pass_seed:
+            np.random.seed(seed)
+        arrs[direct] = _mk_random(func, direct=direct, seed=seed if pass_seed else None)
+        states_after[direct] = np.random.get_state(legacy=False)
+
+    np.testing.assert_array_equal(arrs[True], arrs[False])
+    np.testing.assert_equal(
+        *states_after.values(), err_msg="both should affect global state the same"
+    )
+    # they should affect the global state
+    with pytest.raises(AssertionError):
+        np.testing.assert_equal(states_after[True], state_before)
+
+
+def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
+    if direct and seed is not None:
+        np.random.seed(seed)
+    gen = np.random if direct else legacy_numpy_gen(seed)
+    match func:
+        case "choice":
+            arr = np.arange(1000)
+            return gen.choice(arr, size=(100, 100))
+        case _:
+            pytest.fail(f"Unknown {func=}")
+
+
+def test_ith_k_tuple() -> None:
+    """Test that the k-tuples appear in the expected order."""
+    np.testing.assert_equal(
+        ith_k_tuple(np.arange(2**3), n=2, k=3),
+        list(itertools.product(range(2), repeat=3)),
     )
 
-    assert not is_constant(AT)
-    assert not np.any(is_constant(AT, axis=1))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(AT, axis=0)
-    )
+
+def test_random_k_tuples() -> None:
+    """Test that random k-tuples are unique."""
+    tups = random_k_tuples(n=26, k=6, size=10_000)
+    assert tups.shape == (10_000, 6)
+    assert tups.dtype == np.int64
+    unique = np.unique(tups, axis=0)
+    assert len(unique) == len(tups)
 
 
-@needs.dask
-@pytest.mark.parametrize(
-    ("axis", "expected"),
-    [
-        pytest.param(None, False, id="None"),
-        pytest.param(0, [True, True, False, False], id="0"),
-        pytest.param(1, [False, False, True, True, False, True], id="1"),
-    ],
-)
-@pytest.mark.parametrize("block_type", [np.array, csr_matrix])
-def test_is_constant_dask(axis, expected, block_type):
-    import dask.array as da
+def test_random_str_0d() -> None:
+    string = random_str(length=3, alphabet="01")
+    assert string.shape == ()
+    assert string.dtype == np.dtype("U3")
+    assert str(string) in {"000", "001", "010", "011", "100", "101", "110", "111"}
 
-    if (axis is None) and block_type is csr_matrix:
-        pytest.skip("Dask has weak support for scipy sparse matrices")
 
-    x_data = [
-        [0, 0, 1, 1],
-        [0, 0, 1, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 0],
-    ]
-    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-    result = is_constant(x, axis=axis).compute()
-    np.testing.assert_array_equal(expected, result)
+def test_random_str() -> None:
+    strings = random_str(size=26**2, length=2, alphabet=string.ascii_lowercase)
+    assert strings.shape == (26**2,)
+    assert strings.dtype == np.dtype("U2")
+    unique = np.unique(strings, axis=0)
+    assert len(unique) == len(strings)

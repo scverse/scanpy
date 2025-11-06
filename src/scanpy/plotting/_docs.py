@@ -1,6 +1,4 @@
-"""\
-Shared docstrings for plotting function parameters.
-"""
+"""Shared docstrings for plotting function parameters."""
 
 from __future__ import annotations
 
@@ -47,7 +45,7 @@ doc_cm_palette = """\
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
-    or `mpl.cm.cividis`), see :func:`~matplotlib.pyplot.get_cmap`.
+    or `mpl.cm.cividis`), see :meth:`~matplotlib.cm.ColormapRegistry.get_cmap`.
     If `None`, the value of `mpl.rcParams["image.cmap"]` is used.
     The default `color_map` can be set using :func:`~scanpy.set_figure_params`.
 palette
@@ -130,7 +128,7 @@ vmax
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
-    Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
+    Example: ``sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')``\
 """
 
 doc_vboundnorm = """\
@@ -143,8 +141,7 @@ vmax
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
 norm
-    Custom color normalization object from matplotlib. See
-    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html` for details.\
+    Custom color normalization object from matplotlib. See :ref:`colormapnorms` for details.\
 """
 
 doc_outline = """\
@@ -189,7 +186,8 @@ show
 save
     If `True` or a `str`, save the figure.
     A string is appended to the default filename.
-    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.\
+    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+    (deprecated in favour of `sc.pl.plot(show=False).figure.savefig()`).\
 """
 
 doc_show_save_ax = f"""\
