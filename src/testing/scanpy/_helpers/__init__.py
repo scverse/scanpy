@@ -132,7 +132,7 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     # So we simply check for equality of chunks and shape.
     if (
         pkg_version("anndata") < Version("0.11")
-        and any(a.chunksize[axis] == a.shape[axis] for axis in [0, 1])
+        and any(c == s for c, s in zip(a.chunksize, a.shape, strict=True))
         and not isinstance(args[0], DaskArray)  # keep chunksize intact
     ):
         from anndata.tests.helpers import _half_chunk_size
