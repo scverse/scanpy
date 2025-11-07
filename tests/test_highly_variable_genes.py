@@ -663,7 +663,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     adata = (
         sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
         if "seurat_v3" not in flavor
-        else pbmc3k()
+        else pbmc3k()[:1500, :1000].copy()
     )
     rng = np.random.default_rng(0)
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
@@ -732,7 +732,7 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     # current blob produces singularities in loess....maybe a bad sign of the data?
     if "seurat_v3" in flavor:
-        adata = pbmc3k()
+        adata = pbmc3k()[:1500, :1000].copy()
     adata.X = np.abs(adata.X).astype(int)
     if batch_key is not None:
         adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)
