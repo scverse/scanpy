@@ -406,7 +406,7 @@ def pbmc3k() -> AnnData:
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
         adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
