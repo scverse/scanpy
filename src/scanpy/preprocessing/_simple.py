@@ -99,7 +99,7 @@ def filter_cells(
     >>> import scanpy as sc
     >>> adata = sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        adata = read_text(...)
+        ...
     >>> adata.obs_names_make_unique()
     >>> adata.n_obs
     640
