@@ -145,22 +145,27 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
 
 
 @pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning")
-def test_write_zarr(adata: AnnData, adata_dist: AnnData):
-    import zarr
+def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path: Path) -> None:
+    try:
+        from zarr.storage import LocalStore
+    except ImportError:
+        from zarr.storage import DirectoryStore as LocalStore
 
     log1p(adata_dist)
     assert isinstance(adata_dist.X, DIST_TYPES)
-    temp_store = zarr.TempStore()
+    root = tmp_path / "test.zarr"
+    temp_store = LocalStore(root)
     chunks = adata_dist.X.chunks
     if isinstance(chunks[0], tuple):
         chunks = (chunks[0][0],) + chunks[1]
 
     # write metadata using regular anndata
     adata.write_zarr(temp_store, chunks=chunks)
+    x_store = LocalStore(root / "X")
     if adata_dist.uns["dist-mode"] == "dask":
-        adata_dist.X.to_zarr(temp_store.dir_path("X"), overwrite=True)
+        adata_dist.X.to_zarr(x_store, overwrite=True)
     elif adata_dist.uns["dist-mode"] == "direct":
-        adata_dist.X.to_zarr(temp_store.dir_path("X"), chunks=chunks)
+        adata_dist.X.to_zarr(x_store, chunks=chunks)
     else:
         pytest.fail("add branch for new dist-mode")
 
