@@ -185,22 +185,12 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
-    for k, v in zip(
-        [
-            "gene_name",
-            "highly_variable_nbatches",
-            "highly_variable_rank",
-            "variances_norm",
-        ],
-        [
-            df.index,
-            num_batches_high_var,
-            median_ranked,
-            np.mean(norm_gene_vars, axis=0),
-        ],
-        strict=True,
-    ):
-        df[k] = v
+    df = df.assign(
+        gene_name=df.index,
+        highly_variable_nbatches=num_batches_high_var,
+        highly_variable_rank=median_ranked,
+        variances_norm=np.mean(norm_gene_vars, axis=0),
+    )
     if flavor == "seurat_v3":
         sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
         sort_ascending = [True, False]
