@@ -124,7 +124,7 @@ def burczynski06() -> AnnData:
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-        utils.warn_names_duplicates("var")
+        ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
 
@@ -544,7 +544,7 @@ def visium_sge(
     FutureWarning: Use `squidpy.datasets.visium` instead.
         sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-        utils.warn_names_duplicates("var")
+        ...
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
