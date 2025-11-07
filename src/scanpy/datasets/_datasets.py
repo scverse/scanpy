@@ -352,7 +352,7 @@ def pbmc68k_reduced() -> AnnData:
         uns: 'bulk_labels_colors', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
-        obsp: 'distances', 'connectivities'
+        obsp: 'connectivities', 'distances'
 
     """
     return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
