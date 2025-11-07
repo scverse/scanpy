@@ -153,9 +153,9 @@ def krumsiek11() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.krumsiek11()
+    >>> sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        adata = read_text(...)
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
@@ -309,9 +309,9 @@ def toggleswitch() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.toggleswitch()
+    >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        adata = read_text(...)
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
 
