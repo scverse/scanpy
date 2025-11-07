@@ -37,6 +37,19 @@ if TYPE_CHECKING:
 def clip_square_sum(
     data_batch: np.ndarray, clip_val: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Clip data_batch by clip_val.
+
+    Parameters
+    ----------
+    data_batch
+        The data to be clipped
+    clip_val
+        Clip by these values (must be broadcastable to the input data)
+
+    Returns
+    -------
+        The clipeed data
+    """
     batch_counts = data_batch.astype(np.float64).copy()
     clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
     np.putmask(
@@ -82,6 +95,27 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
         clip_val=clip_val,
         nnz=batch_counts.nnz,
     )
+
+
+# parallel=False needed for accuracy
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
+def _sum_and_sum_squares_clipped(
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    n_cols: int,
+    clip_val: NDArray[np.float64],
+    nnz: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    for i in numba.prange(nnz):
+        idx = indices[i]
+        element = min(np.float64(data[i]), clip_val[idx])
+        squared_batch_counts_sum[idx] += element**2
+        batch_counts_sum[idx] += element
+
+    return squared_batch_counts_sum, batch_counts_sum
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -242,27 +276,6 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
         return df
     return None
-
-
-# parallel=False needed for accuracy
-@numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _sum_and_sum_squares_clipped(
-    indices: NDArray[np.integer],
-    data: NDArray[np.floating],
-    *,
-    n_cols: int,
-    clip_val: NDArray[np.float64],
-    nnz: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    for i in numba.prange(nnz):
-        idx = indices[i]
-        element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[idx] += element**2
-        batch_counts_sum[idx] += element
-
-    return squared_batch_counts_sum, batch_counts_sum
 
 
 @dataclass
