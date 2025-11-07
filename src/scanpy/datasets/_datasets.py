@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from .._utils.random import _LegacyRandom
 
-    VisiumSampleID = Literal[
+    type VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
         "V1_Breast_Cancer_Block_A_Section_2",
         "V1_Human_Heart",

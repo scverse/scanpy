@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numpy as np
 from fast_array_utils.stats import is_constant
 from scipy import sparse
+
+from .._compat import warn
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -133,8 +134,7 @@ def _ind_dist_shortcut(
             "Sparse matrix has no constant number of neighbors per row. "
             "Cannot efficiently get indices and distances."
         )
-        # 4: caller -> 3: `Neighbors.compute_neighbors` -> 2: `_get_indices_distances_from_sparse_matrix` -> 1: here
-        warn(msg, category=RuntimeWarning, stacklevel=4)
+        warn(msg, RuntimeWarning)
         return None
     n_obs, n_neighbors = d.shape[0], int(nnzs[0])
     return (

@@ -17,13 +17,13 @@ from anndata.tests.helpers import asarray, assert_equal
 from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableSequence
 
     from numpy.typing import NDArray
 
-    from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -128,7 +128,16 @@ def _check_check_values_warnings(
 def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
-    return as_dense_dask_array(*args, **kwargs)
+    a = as_dense_dask_array(*args, **kwargs)
+    if (
+        pkg_version("anndata") < Version("0.11")
+        and a.chunksize == a.shape
+        and not isinstance(args[0], DaskArray)  # keep chunksize intact
+    ):
+        from anndata.tests.helpers import _half_chunk_size
+
+        a = a.rechunk(_half_chunk_size(a.shape))
+    return a
 
 
 def as_sparse_dask_array(*args, **kwargs) -> DaskArray:

@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import os
 import sys
-from importlib.metadata import version
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import pytest
-from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+
 
 _original_settings: Mapping[str, object] | None = None
 
@@ -107,13 +106,13 @@ def pytest_collection_modifyitems(
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
-    from scanpy._utils import _import_name
+    from scanpy._utils import import_name
 
     assert isinstance(request.node, pytest.DoctestItem)
 
     request.getfixturevalue("_doctest_env")
 
-    func = _import_name(request.node.name)
+    func = import_name(request.node.name)
     needs_mod: str | None
     skip_reason: str | None
     if (
@@ -125,18 +124,6 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
         if not request.config.getoption("--internet-tests"):
             pytest.skip(reason="need --internet-tests option to run")
         request.applymarker(pytest.mark.flaky(reruns=5, reruns_delay=2))
-
-
-def pytest_itemcollected(item: pytest.Item) -> None:
-    # Dask AnnData tests require anndata > 0.10
-    requires_anndata_dask_support = (
-        len(list(item.iter_markers(name="anndata_dask_support"))) > 0
-    )
-
-    if requires_anndata_dask_support and Version(version("anndata")) < Version("0.10"):
-        item.add_marker(
-            pytest.mark.skip(reason="dask support requires anndata version > 0.10")
-        )
 
 
 assert "scanpy" not in sys.modules, (

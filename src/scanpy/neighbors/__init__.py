@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
-from warnings import warn
 
 import numpy as np
 import scipy
@@ -16,7 +14,7 @@ from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, old_positionals
+from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
@@ -28,8 +26,8 @@ from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, MutableMapping
-    from typing import Any, Literal, NotRequired
+    from collections.abc import Callable, Mapping, MutableMapping
+    from typing import Any, Literal, NotRequired, TypeAlias
 
     from anndata import AnnData
     from igraph import Graph
@@ -37,12 +35,12 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
+    # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
-
-N_DCS = 15  # default number of diffusion components
+N_DCS: int = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
-N_PCS = settings.N_PCS
+N_PCS: int = settings.N_PCS
 
 
 class KwdsForTransformer(TypedDict):
@@ -704,7 +702,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning, stacklevel=3)
+            warn(msg, FutureWarning)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)

@@ -9,7 +9,7 @@ from anndata import AnnData
 from matplotlib import colormaps
 
 from scanpy.plotting._anndata import _check_if_annotations
-from scanpy.plotting._utils import _validate_palette
+from scanpy.plotting._utils import validate_palette
 
 if TYPE_CHECKING:
     from typing import Any, Literal
@@ -32,7 +32,7 @@ viridis = cast("ListedColormap", colormaps["viridis"])
 def test_validate_palette_no_mod(palette, typ):
     palette = typ(palette)
     adata = AnnData(uns=dict(test_colors=palette))
-    _validate_palette(adata, "test")
+    validate_palette(adata, "test")
     assert palette is adata.uns["test_colors"], "Palette should not be modified"
 
 
