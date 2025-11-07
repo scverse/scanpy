@@ -768,6 +768,15 @@ def dematrix[SA: _SupportedArray](x: SA | np.matrix) -> SA:
     return x
 
 
+def raise_if_dask_feature_axis_chunked(x: Any):
+    if isinstance(x, DaskArray) and x.chunksize[1] != x.shape[1]:
+        msg = (
+            "Only dask arrays with chunking along the first axis are supported. "
+            f"Got chunksize {x.chunksize} with shape {x.shape}. "
+        )
+        raise ValueError(msg)
+
+
 def select_groups(
     adata: AnnData,
     groups_order_subset: Iterable[str] | Literal["all"] = "all",

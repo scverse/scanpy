@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from functools import singledispatch
 from inspect import signature
 from typing import TYPE_CHECKING, TypedDict, cast
 
@@ -12,9 +13,13 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, old_positionals, warn
+from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
 from .._settings import Verbosity, settings
-from .._utils import check_nonnegative_integers, sanitize_anndata
+from .._utils import (
+    check_nonnegative_integers,
+    raise_if_dask_feature_axis_chunked,
+    sanitize_anndata,
+)
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -26,6 +31,91 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._types import HVGFlavor
+
+
+@singledispatch
+def clip_square_sum(
+    data_batch: np.ndarray, clip_val: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Clip data_batch by clip_val.
+
+    Parameters
+    ----------
+    data_batch
+        The data to be clipped
+    clip_val
+        Clip by these values (must be broadcastable to the input data)
+
+    Returns
+    -------
+        The clipeed data
+    """
+    batch_counts = data_batch.astype(np.float64).copy()
+    clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
+    np.putmask(
+        batch_counts,
+        batch_counts > clip_val_broad,
+        clip_val_broad,
+    )
+
+    squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
+    batch_counts_sum = batch_counts.sum(axis=0)
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(DaskArray)
+def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    n_blocks = data_batch.blocks.size
+
+    def sum_and_sum_squares_clipped_from_block(block):
+        return np.vstack(clip_square_sum(block, clip_val))[None, ...]
+
+    squared_batch_counts_sum, batch_counts_sum = (
+        data_batch.map_blocks(
+            sum_and_sum_squares_clipped_from_block,
+            new_axis=(1,),
+            chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
+            meta=np.array([]),
+            dtype=np.float64,
+        )
+        .sum(axis=0)
+        .compute()
+    )
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(CSBase)
+def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    batch_counts = data_batch if isinstance(data_batch, CSRBase) else data_batch.tocsr()
+
+    return _sum_and_sum_squares_clipped(
+        batch_counts.indices,
+        batch_counts.data,
+        n_cols=batch_counts.shape[1],
+        clip_val=clip_val,
+        nnz=batch_counts.nnz,
+    )
+
+
+# parallel=False needed for accuracy
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
+def _sum_and_sum_squares_clipped(
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    n_cols: int,
+    clip_val: NDArray[np.float64],
+    nnz: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    for i in numba.prange(nnz):
+        idx = indices[i]
+        element = min(np.float64(data[i]), clip_val[idx])
+        squared_batch_counts_sum[idx] += element**2
+        batch_counts_sum[idx] += element
+
+    return squared_batch_counts_sum, batch_counts_sum
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -70,6 +160,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         raise ImportError(msg) from e
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
+    raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
         msg = f"`{flavor=!r}` expects raw count data, but non-integers were found."
@@ -77,16 +168,20 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
     df["means"], df["variances"] = stats.mean_var(data, axis=0, correction=1)
 
-    if batch_key is None:
-        batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
-    else:
-        batch_info = adata.obs[batch_key].to_numpy()
+    batch_info = (
+        pd.Categorical(np.zeros(adata.shape[0], dtype=int))
+        if batch_key is None
+        else adata.obs[batch_key].to_numpy()
+    )
 
     norm_gene_vars = []
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
         mean, var = stats.mean_var(data_batch, axis=0, correction=1)
+        # These get computed anyway for loess
+        if isinstance(mean, DaskArray):
+            mean, var = mean.compute(), var.compute()
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -99,28 +194,10 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
 
         # clip large values as in Seurat
         n_obs = data_batch.shape[0]
-        vmax = np.sqrt(n_obs)
-        clip_val = reg_std * vmax + mean
-        if isinstance(data_batch, CSBase):
-            batch_counts = data_batch.tocsr()
-            squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
-                batch_counts.indices,
-                batch_counts.data,
-                n_cols=batch_counts.shape[1],
-                clip_val=clip_val,
-                nnz=batch_counts.nnz,
-            )
-        else:
-            batch_counts = data_batch.astype(np.float64).copy()
-            clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
-            np.putmask(
-                batch_counts,
-                batch_counts > clip_val_broad,
-                clip_val_broad,
-            )
-
-            squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
-            batch_counts_sum = batch_counts.sum(axis=0)
+        clip_val = reg_std * np.sqrt(n_obs) + mean
+        squared_batch_counts_sum, batch_counts_sum = clip_square_sum(
+            data_batch, clip_val
+        )
 
         norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
             (n_obs * np.square(mean))
@@ -142,10 +219,12 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
-    df["gene_name"] = df.index
-    df["highly_variable_nbatches"] = num_batches_high_var
-    df["highly_variable_rank"] = median_ranked
-    df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
+    df = df.assign(
+        gene_name=df.index,
+        highly_variable_nbatches=num_batches_high_var,
+        highly_variable_rank=median_ranked,
+        variances_norm=np.mean(norm_gene_vars, axis=0),
+    )
     if flavor == "seurat_v3":
         sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
         sort_ascending = [True, False]
@@ -173,10 +252,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'variances_norm', float vector (adata.var)"
         )
-        adata.var["highly_variable"] = df["highly_variable"].to_numpy()
-        adata.var["highly_variable_rank"] = df["highly_variable_rank"].to_numpy()
-        adata.var["means"] = df["means"].to_numpy()
-        adata.var["variances"] = df["variances"].to_numpy()
+        for to_numpy_key in [
+            "highly_variable",
+            "highly_variable_rank",
+            "means",
+            "variances",
+        ]:
+            adata.var[to_numpy_key] = df[to_numpy_key].to_numpy()
         adata.var["variances_norm"] = (
             df["variances_norm"].to_numpy().astype("float64", copy=False)
         )
@@ -193,27 +275,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             df = df.iloc[df["highly_variable"].to_numpy(), :]
 
         return df
-
-
-# parallel=False needed for accuracy
-@numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _sum_and_sum_squares_clipped(
-    indices: NDArray[np.integer],
-    data: NDArray[np.floating],
-    *,
-    n_cols: int,
-    clip_val: NDArray[np.float64],
-    nnz: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    for i in numba.prange(nnz):
-        idx = indices[i]
-        element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[idx] += element**2
-        batch_counts_sum[idx] += element
-
-    return squared_batch_counts_sum, batch_counts_sum
+    return None
 
 
 @dataclass

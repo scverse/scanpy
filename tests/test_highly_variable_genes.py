@@ -625,8 +625,32 @@ def test_cutoff_info():
         sc.pp.highly_variable_genes(adata, n_top_genes=10, max_mean=3.1)
 
 
-@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize(
+    "array_type",
+    [p for p in ARRAY_TYPES if "dask" in p.id and "1d_chunked" not in p.id],
+)
+@pytest.mark.parametrize("flavor", ["seurat_v3", "seurat_v3_paper"])
+def test_seurat_v3_bad_chunking(adata, array_type, flavor):
+    adata.X = array_type(adata.X)
+    with pytest.raises(
+        ValueError,
+        match=r"Only dask arrays with chunking along the first axis are supported",
+    ):
+        sc.pp.highly_variable_genes(adata, flavor=flavor)
+
+
+@pytest.mark.parametrize(
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
+)
+@pytest.mark.parametrize(
+    "array_type", [p for p in ARRAY_TYPES if "dask" not in p.id or "1d_chunked" in p.id]
+)
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(flavor, array_type, batch_key):
     """Tests `n_top_genes=n`.
@@ -636,7 +660,11 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
-    adata = sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+    adata = (
+        sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+        if "seurat_v3" not in flavor
+        else pbmc3k()[:1500, :1000].copy()
+    )
     rng = np.random.default_rng(0)
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
@@ -644,13 +672,6 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     if flavor in {"seurat", "cell_ranger"}:
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
-
-    elif flavor == "seurat_v3":
-        pass
-
-    else:
-        msg = f"Unknown flavor {flavor}"
-        raise ValueError(msg)
 
     n_genes = adata.shape[1]
 
@@ -697,18 +718,28 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     assert adatas[True].var_names.equals(dfs[True].index)
 
 
-@pytest.mark.parametrize("flavor", ["seurat", "cell_ranger"])
-@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
 @pytest.mark.parametrize(
-    "to_dask", [p for p in ARRAY_TYPES if "dask" in p.values[0].__name__]
+    "flavor",
+    [
+        "seurat",
+        "cell_ranger",
+        pytest.param("seurat_v3", marks=needs.skmisc),
+        pytest.param("seurat_v3_paper", marks=needs.skmisc),
+    ],
 )
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
+@pytest.mark.parametrize("to_dask", [p for p in ARRAY_TYPES if "1d_chunked" in p.id])
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
+    # current blob produces singularities in loess....maybe a bad sign of the data?
+    if "seurat_v3" in flavor:
+        adata = pbmc3k()[:1500, :1000].copy()
     adata.X = np.abs(adata.X).astype(int)
     if batch_key is not None:
         adata.obs[batch_key] = np.tile(["a", "b"], adata.shape[0] // 2)
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
-
+    # seurat_v3 expects counts
+    if "seurat_v3" not in flavor:
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
     adata_dask = adata.copy()
     adata_dask.X = to_dask(adata_dask.X)
 

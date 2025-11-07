@@ -129,9 +129,9 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
+    # Newer versions of as_dense_dask_array chunk all axes by halve when the input is not a dask array.
     if (
         pkg_version("anndata") < Version("0.11")
-        and a.chunksize == a.shape
         and not isinstance(args[0], DaskArray)  # keep chunksize intact
     ):
         from anndata.tests.helpers import _half_chunk_size
