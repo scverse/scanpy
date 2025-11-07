@@ -45,7 +45,7 @@ def adata(request: pytest.FixtureRequest) -> AnnData:
 @pytest.fixture(
     params=[
         pytest.param("direct", marks=[needs.zappy]),
-        pytest.param("dask", marks=[needs.dask, pytest.mark.anndata_dask_support]),
+        pytest.param("dask", marks=[needs.dask]),
     ]
 )
 def adata_dist(request: pytest.FixtureRequest) -> AnnData:

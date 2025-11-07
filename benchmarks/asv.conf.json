@@ -72,7 +72,6 @@
     //
     "matrix": {
         "numpy": [""],
-        // "scipy": ["1.2", ""],
         "scipy": [""],
         "h5py": [""],
         "natsort": [""],

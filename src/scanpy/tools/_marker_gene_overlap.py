@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
+type _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):

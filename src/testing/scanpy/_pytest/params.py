@@ -71,7 +71,7 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "dense"): tuple(
         pytest.param(
             wrapper(as_dense_dask_array),
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            marks=[needs.dask],
             id=f"dask_array_dense{suffix}",
         )
         for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
@@ -79,24 +79,29 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "sparse"): tuple(
         pytest.param(
             wrapper(as_sparse_dask_array),
-            marks=[needs.dask, pytest.mark.anndata_dask_support],
+            marks=[needs.dask],
             id=f"dask_array_sparse{suffix}",
         )
         for wrapper, suffix in [
             (lambda x: x, ""),
             *(
-                (
-                    lambda func,
-                    format=format,
-                    matrix_or_array=matrix_or_array: _chunked_1d(
-                        partial(
-                            func, typ=getattr(sparse, f"{format}_{matrix_or_array}")
-                        )
-                    ),
-                    f"-1d_chunked-{format}_{matrix_or_array}",
+                ((_chunked_1d, "-1d_chunked"),)
+                if Version(version("anndata")) < Version("0.12.5")
+                else (
+                    (
+                        lambda func,
+                        format=format,
+                        matrix_or_array=matrix_or_array: _chunked_1d(
+                            partial(
+                                func, typ=getattr(sparse, f"{format}_{matrix_or_array}")
+                            )
+                        ),
+                        f"-1d_chunked-{format}_{matrix_or_array}",
+                    )
+                    for format in ["csr", "csc"]
+                    # TODO: use `array` as well once anndata 0.13 drops
+                    for matrix_or_array in ["matrix"]
                 )
-                for format in ["csr", "csc"]
-                for matrix_or_array in ["matrix", "array"]
             ),
         ]
     ),

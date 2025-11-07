@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .. import logging as logg
+from .._compat import warn
 from .._settings import settings
 from .._utils import _choose_graph
 
@@ -64,12 +64,12 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
 
     from ..preprocessing import pca
 
-    warnings.warn(
+    msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
         "if you really want this, set `use_rep='X'`.\n         "
-        "Falling back to preprocessing with `sc.pp.pca` and default params.",
-        stacklevel=3,
+        "Falling back to preprocessing with `sc.pp.pca` and default params."
     )
+    warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
     return adata.obsm["X_pca"]

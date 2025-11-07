@@ -136,6 +136,7 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
     fast_array_utils=(
         "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
         None,
@@ -150,6 +151,7 @@ intersphinx_mapping = dict(
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
+    pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
     python=(
@@ -233,6 +235,32 @@ nitpick_ignore = [
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
+    # TODO: remove once https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    *(
+        ("py:class", f"scanpy.{submodule}.TypeAliasType")
+        for submodule in [
+            "tools._umap",
+            "tools._rank_genes_groups",
+            "tools._marker_gene_overlap",
+            "tools._draw_graph",
+            "preprocessing._scale",
+            "preprocessing._pca",
+            "plotting._utils",
+            "plotting._tools.paga",
+            "plotting._scrublet",
+            "plotting._baseplot_class",
+            "plotting._anndata",
+            "neighbors._types",
+            "metrics._common",
+            "get._aggregated",
+            "external.tl._pypairs",
+            "external.pp._dca",
+            "datasets._datasets",
+            "_utils.random",
+            "_types",
+            "_settings",
+        ]
+    ),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
