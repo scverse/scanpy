@@ -12,7 +12,7 @@ from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
-from ..readwrite import read, read_visium
+from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -124,7 +124,7 @@ def burczynski06() -> AnnData:
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-        utils.warn_names_duplicates("var")
+        ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
 
@@ -153,9 +153,9 @@ def krumsiek11() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.krumsiek11()
+    >>> sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
@@ -309,9 +309,9 @@ def toggleswitch() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.toggleswitch()
+    >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
 
@@ -352,14 +352,10 @@ def pbmc68k_reduced() -> AnnData:
         uns: 'bulk_labels_colors', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
-        obsp: 'distances', 'connectivities'
+        obsp: 'connectivities', 'distances'
 
     """
-    filename = HERE / "10x_pbmc68k_reduced.h5ad"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        return read(filename)
+    return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
 
 
 @doctest_internet
@@ -410,7 +406,7 @@ def pbmc3k() -> AnnData:
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
         adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
@@ -451,8 +447,8 @@ def pbmc3k_processed() -> AnnData:
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 
 
@@ -548,7 +544,7 @@ def visium_sge(
     FutureWarning: Use `squidpy.datasets.visium` instead.
         sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
-        utils.warn_names_duplicates("var")
+        ...
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'

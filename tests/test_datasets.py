@@ -202,4 +202,6 @@ def test_doc_shape(ds_name):
         )
         warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
         dataset = cached_fn()
-    assert repr(dataset) in docstring
+
+    repr_ = repr(dataset)
+    assert repr_ in docstring
