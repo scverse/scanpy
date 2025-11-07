@@ -447,8 +447,8 @@ def pbmc3k_processed() -> AnnData:
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 
 
