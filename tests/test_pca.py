@@ -147,7 +147,10 @@ def possible_solvers(
             svd_solvers = {"auto", "full", "tsqr", "randomized", "covariance_eigh"}
         case (dc, False) if id == "dask_array_dense-1d_chunked":
             svd_solvers = {"tsqr", "randomized"}
-        case (dc, True) if "dask_array_sparse-1d_chunked-csr" in id:
+        case (dc, True) if (
+            "dask_array_sparse-1d_chunked-csr" in id
+            or id == "dask_array_sparse-1d_chunked"
+        ):
             svd_solvers = {"covariance_eigh"}
         case (type() as dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
