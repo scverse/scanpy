@@ -16,7 +16,7 @@ from scanpy.preprocessing._qc import (
     top_proportions,
     top_segment_proportions,
 )
-from testing.scanpy._helpers import as_sparse_dask_array, maybe_dask_process_context
+from testing.scanpy._helpers import as_sparse_dask_matrix, maybe_dask_process_context
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
@@ -188,7 +188,7 @@ def test_qc_metrics_no_log1p(adata_prepared: AnnData):
 @pytest.mark.parametrize("log1p", [True, False], ids=["log1p", "no_log1p"])
 def test_dask_against_in_memory(adata, log1p):
     adata_as_dask = adata.copy()
-    adata_as_dask.X = as_sparse_dask_array(adata.X)
+    adata_as_dask.X = as_sparse_dask_matrix(adata.X)
     adata = prepare_adata(adata)
     adata_as_dask = prepare_adata(adata_as_dask)
     with maybe_dask_process_context():
