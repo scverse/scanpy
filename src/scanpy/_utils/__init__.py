@@ -773,7 +773,6 @@ def raise_if_dask_feature_axis_chunked(x: Any):
         msg = (
             "Only dask arrays with chunking along the first axis are supported. "
             f"Got chunksize {x.chunksize} with shape {x.shape}. "
-            "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
         )
         raise ValueError(msg)
 
