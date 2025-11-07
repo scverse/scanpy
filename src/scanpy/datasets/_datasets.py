@@ -12,7 +12,7 @@ from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
-from ..readwrite import read, read_visium
+from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -355,11 +355,7 @@ def pbmc68k_reduced() -> AnnData:
         obsp: 'distances', 'connectivities'
 
     """
-    filename = HERE / "10x_pbmc68k_reduced.h5ad"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        return read(filename)
+    return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
 
 
 @doctest_internet
@@ -411,7 +407,7 @@ def pbmc3k() -> AnnData:
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning, module="anndata")
-        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
+        adata = read_h5ad(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
