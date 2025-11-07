@@ -141,10 +141,10 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
 
 
 def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
-    if Version(version("anndata")) < Version("0.12.6"):
-        from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
-    else:
+    if Version(version("anndata")) >= Version("0.12.6"):
         from anndata.tests.helpers import as_sparse_dask_matrix
+    else:
+        from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
 
     return as_sparse_dask_matrix(*args, **kwargs)
 
