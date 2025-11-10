@@ -10,6 +10,7 @@ from .._compat import CSRBase
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
+    _get_sparse_matrix_from_indices_distances,
 )
 
 
@@ -135,3 +136,51 @@ def umap(
     )
 
     return connectivities.tocsr()
+
+
+def jaccard(
+    knn_indices: NDArray[np.int32 | np.int64],
+    *,
+    n_obs: int,
+    n_neighbors: int,
+) -> CSRBase:
+    """Derive Jaccard connectivities between data points from kNN indices.
+
+    Re-implements the weighting method from Phenograph, :cite:p:`Levine2015`.
+
+    Parameters
+    ----------
+    knn_indices
+        The input matrix of nearest neighbor indices for each cell.
+    n_obs
+        Number of cells in the data-set.
+    n_neighbors
+        The number of nearest neighbors to consider.
+
+    """
+    # Construct unweighted kNN adjacency matrix (self excluded, as in PhenoGraph)
+    adjacency = _get_sparse_matrix_from_indices_distances(
+        knn_indices, np.ones_like(knn_indices), keep_self=False
+    )
+
+    # Compute |N(i) ∩ N(j)|
+    i_idx = np.repeat(np.arange(n_obs), n_neighbors - 1)
+    j_idx = knn_indices[:, 1:].ravel()
+    rows_i = adjacency[i_idx, :]
+    rows_j = adjacency[j_idx, :]
+    shared = np.asarray(rows_i.multiply(rows_j).sum(axis=1)).ravel()
+
+    # Jaccard index
+    jaccard = shared / (2 * (n_neighbors - 1) - shared)
+
+    # Build connectivity matrix, filtering out zeros
+    mask = jaccard != 0
+    connectivities = sparse.csr_matrix(  # noqa: TID251
+        (jaccard[mask], (i_idx[mask], j_idx[mask])),
+        shape=(n_obs, n_obs),
+    )
+
+    # Symmetrize by averaging (as default in PhenoGraph)
+    connectivities = (connectivities + connectivities.T) / 2
+
+    return connectivities

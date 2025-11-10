@@ -86,9 +86,10 @@ def neighbors(  # noqa: PLR0913
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
-    :cite:t:`Haghverdi2016`.
+    the connectivity of the manifold (`method=='umap'`).
+    If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
+    in the adaption of :cite:t:`Haghverdi2016`.
+    If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
 
     Parameters
     ----------
@@ -112,8 +113,10 @@ def neighbors(  # noqa: PLR0913
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' :cite:p:`McInnes2018` or 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
-        with adaptive width :cite:t:`Haghverdi2016`) for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018`,
+        'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
+        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`)
+        for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -607,6 +610,12 @@ class Neighbors:
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
+        elif method == "jaccard":
+            self._connectivities = _connectivity.jaccard(
+                knn_indices,
+                n_obs=self._adata.shape[0],
+                n_neighbors=self.n_neighbors,
+            )
         elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
@@ -629,7 +638,7 @@ class Neighbors:
     ) -> tuple[_Method | None, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
-        `method` will be coerced to `'gauss'` or `'umap'`.
+        `method` will be coerced to `'gauss'`, `'umap'`, or `'jaccard'`.
         `transformer` is coerced from a str or instance to an instance class.
 
         If `transformer` is `None` and there are few data points,
@@ -648,7 +657,7 @@ class Neighbors:
             transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
-        # Coerce `method` to 'gauss' or 'umap'
+        # Coerce `method` to 'gauss', 'umap', or 'jaccard'
         if method == "rapids":
             if transformer is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer`."
@@ -662,7 +671,7 @@ class Neighbors:
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = method if method in {"gauss", None} else "umap"
+        conn_method = method if method in {"gauss", "jaccard", None} else "umap"
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
