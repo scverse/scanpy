@@ -81,7 +81,7 @@ def test_segments_binary():
     "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_top_segments(request: pytest.FixtureRequest, array_type):
-    if "dask" in request.node.name and "1d_chunked" not in request.node.name:
+    if "dask" in array_type.__name__ and "1d_chunked" not in array_type.__name__:
         reason = "DaskArray with feature axis chunking not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(np.ones((300, 100)))
@@ -103,7 +103,7 @@ def test_top_segments(request: pytest.FixtureRequest, array_type):
     "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
 )
 def test_top_proportions(request: pytest.FixtureRequest, array_type):
-    if "dask" in request.node.name:
+    if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(np.ones((300, 100)))

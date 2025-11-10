@@ -22,7 +22,6 @@ __all__ = [
     "CSRBase",
     "DaskArray",
     "SpBase",
-    "ZappyArray",
     "_numba_threading_layer",
     "deprecated",
     "fullname",
@@ -56,13 +55,6 @@ elif find_spec("dask"):
 else:
     DaskArray = type("Array", (), {})
     DaskArray.__module__ = "dask.array"
-
-
-if find_spec("zappy") or TYPE_CHECKING:
-    from zappy.base import ZappyArray
-else:
-    ZappyArray = type("ZappyArray", (), {})
-    ZappyArray.__module__ = "zappy.base"
 
 
 def fullname(typ: type) -> str:

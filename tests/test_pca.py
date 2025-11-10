@@ -148,6 +148,8 @@ def possible_solvers(
         case (dc, False) if id == "dask_array_dense-1d_chunked":
             svd_solvers = {"tsqr", "randomized"}
         case (dc, True) if (
+            # See https://github.com/scverse/scanpy/blob/216b21d91312b899e939db9636d9ab20e7c29d77/src/testing/scanpy/_pytest/params.py#L88-L103
+            # for why we need two checks (i.e., before and after allowing CSC matrices)
             "dask_array_sparse-1d_chunked-csr" in id
             or id == "dask_array_sparse-1d_chunked"
         ):
