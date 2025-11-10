@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import wraps
+from functools import partial, wraps
 from importlib.metadata import version
 from typing import TYPE_CHECKING
 
@@ -29,6 +29,24 @@ skipif_no_sparray = pytest.mark.skipif(
     reason="scipy cs{rc}_array not supported in anndata<0.11",
 )
 
+anndata_test_utils_supports_typ_kwarg = Version(version("anndata")) >= Version("0.12.6")
+
+
+def gen_csr_csc_params_wrapper(
+    func: Callable,
+    format: Literal["csr", "csc"],
+    matrix_or_array: Literal["matrix", "array"],
+):
+    def wrapper(arr):
+        if anndata_test_utils_supports_typ_kwarg:
+            return _chunked_1d(
+                partial(func, typ=getattr(sparse, f"{format}_{matrix_or_array}"))
+            )(arr)
+        return _chunked_1d(func)(arr)
+
+    wrapper.__name__ = f"{func.__name__}-1d_chunked-{format}_{matrix_or_array}"
+    return wrapper
+
 
 def param_with(
     at: ParameterSet,
@@ -48,7 +66,11 @@ def _chunked_1d(
     @wraps(f)
     def wrapper(a: np.ndarray) -> DaskArray:
         da = f(a)
-        return da.rechunk((da.chunksize[0], -1))
+        return da.rechunk(
+            (da.chunksize[0], -1)
+            if not hasattr(da._meta, "format") or da._meta.format == "csr"
+            else (-1, da.chunksize[1])
+        )
 
     wrapper.__name__ = f"{wrapper.__name__}-1d_chunked"
     return wrapper
@@ -75,10 +97,31 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "sparse"): tuple(
         pytest.param(
             wrapper(as_sparse_dask_matrix),
-            marks=[needs.dask],
+            marks=[needs.dask, skip_csc_mark]
+            if skip_csc_mark is not None
+            else [needs.dask],
             id=f"dask_array_sparse{suffix}",
         )
-        for wrapper, suffix in [(lambda x: x, ""), (_chunked_1d, "-1d_chunked")]
+        for wrapper, suffix, skip_csc_mark in [
+            (lambda x: x, "", None),
+            *(
+                (
+                    partial(
+                        gen_csr_csc_params_wrapper,
+                        format=format,
+                        matrix_or_array=matrix_or_array,
+                    ),
+                    f"-1d_chunked-{format}_{matrix_or_array}",
+                    pytest.mark.skipif(
+                        not anndata_test_utils_supports_typ_kwarg and format == "csc",
+                        reason="anndata < 0.12.6 lacked the required kwargs to enable csc matrix test utils.",
+                    ),
+                )
+                for format in ["csr", "csc"]
+                # TODO: use `array` as well once anndata 0.13 drops
+                for matrix_or_array in ["matrix"]
+            ),
+        ]
     ),
 }
 
