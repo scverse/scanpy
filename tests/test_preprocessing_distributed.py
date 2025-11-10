@@ -26,7 +26,7 @@ HERE = Path(__file__).parent / Path("_data/")
 input_file = Path(HERE, "10x-10k-subset.zarr")
 
 
-pytestmark = [needs.zarr]
+pytestmark = [needs.zarr, needs.dask]
 
 
 @pytest.fixture
