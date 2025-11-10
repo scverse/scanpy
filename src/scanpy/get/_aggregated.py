@@ -376,9 +376,7 @@ def aggregate_dask(
     if not isinstance(data._meta, CSBase | np.ndarray):
         msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
         raise ValueError(msg)
-    # i.e., if  data._meta is CSR/np.ndarray, this is 1 because we use row-chunking, but otherwise 0 and column chunking
-    unchunked_axis = int(isinstance(data._meta, CSRBase | np.ndarray))
-    chunked_axis = (unchunked_axis - 1) % 2
+    chunked_axis, unchunked_axis = (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
     if data.chunksize[unchunked_axis] != data.shape[unchunked_axis]:
         msg = "Feature axis must be unchunked"
         raise ValueError(msg)
