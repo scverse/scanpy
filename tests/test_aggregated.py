@@ -29,8 +29,6 @@ VALID_ARRAY_TYPES = [
     not in {
         "dask_array_dense",
         "dask_array_sparse",
-        "dask_array_sparse-1d_chunked-csc_array",
-        "dask_array_sparse-1d_chunked-csc_matrix",
     }
 ]
 
@@ -246,7 +244,6 @@ def to_csc(x: CSRBase):
 @pytest.mark.parametrize(
     ("func", "error_msg"),
     [
-        pytest.param(to_csc, r"only csr_matrix", id="csc"),
         pytest.param(
             to_bad_chunking, r"Feature axis must be unchunked", id="bad_chunking"
         ),
