@@ -77,7 +77,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     # Create a new branch + commit
     subprocess.run(["git", "switch", "-c", branch_name], check=True)
     subprocess.run(["git", "add", "docs/release-notes"], check=True)
-    pr_title = f"chore: generate {args.version} release notes"
+    pr_title = f"docs: generate {args.version} release notes"
     subprocess.run(["git", "commit", "-m", pr_title], check=True)
 
     # push
