@@ -32,7 +32,7 @@ pytestmark = [needs.zarr]
 
 
 @pytest.fixture
-def adata(request: pytest.FixtureRequest) -> AnnData:
+def adata() -> AnnData:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Variable names are not unique", UserWarning)
@@ -42,29 +42,16 @@ def adata(request: pytest.FixtureRequest) -> AnnData:
     return a
 
 
-@pytest.fixture(
-    params=[
-        pytest.param("direct", marks=[needs.zappy]),
-        pytest.param("dask", marks=[needs.dask]),
-    ]
-)
-def adata_dist(request: pytest.FixtureRequest) -> AnnData:
+def adata_dist() -> AnnData:
+    import dask.array as da
+
     # regular anndata except for X, which we replace farther down
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Variable names are not unique", UserWarning)
         a = read_zarr(input_file)
     a.var_names_make_unique()
-    a.uns["dist-mode"] = request.param
     input_file_x = f"{input_file}/X"
-    if request.param == "direct":
-        import zappy.direct
-
-        a.X = zappy.direct.from_zarr(input_file_x)
-        return a
-
-    assert request.param == "dask"
-    import dask.array as da
 
     a.X = da.from_zarr(input_file_x)
     return a
@@ -155,15 +142,8 @@ def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path: Path) -> None
     # write metadata using regular anndata
     root = tmp_path / "test.zarr"
     adata.write_zarr(root, chunks=chunks)
-
     # overwrite X
-    if adata_dist.uns["dist-mode"] == "dask":
-        adata_dist.X.to_zarr(root / "X", overwrite=True)
-    elif adata_dist.uns["dist-mode"] == "direct":
-        adata_dist.X.to_zarr(root / "X", chunks=chunks)
-    else:
-        pytest.fail("add branch for new dist-mode")
-
+    adata_dist.X.to_zarr(root / "X", overwrite=True)
     # read back as zarr directly and check it is the same as adata.X
     adata_log1p = read_zarr(root)
 
