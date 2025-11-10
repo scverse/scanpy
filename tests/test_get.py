@@ -173,8 +173,6 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
-@pytest.mark.filterwarnings("ignore::FutureWarning:anndata")
 def test_backed_vs_memory():
     """Compares backed vs. memory."""
     from pathlib import Path

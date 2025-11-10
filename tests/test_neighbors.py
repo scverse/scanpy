@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -244,8 +243,6 @@ def test_restore_n_neighbors(neigh, conv):
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
+    ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
