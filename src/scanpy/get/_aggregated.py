@@ -427,8 +427,8 @@ def aggregate_dask(
         )
         for f in funcs_no_var_or_mean
     }
-    # If we have row chunking, we need to handle the extra axis by summing over all category x feature matrices.
-    # Otherwise, dask internally concatenates the #categories x #chunks arrays i.e., the column chunks are concatenated together toget a #categories x #features matrix.
+    # If we have row chunking, we need to handle the extra axis by summing over all category × feature matrices.
+    # Otherwise, dask internally concatenates the #categories × #chunks arrays i.e., the column chunks are concatenated together to get a #categories × #features matrix.
     if unchunked_axis == 1:
         for k, v in aggregated.items():
             aggregated[k] = v.sum(axis=chunked_axis)
