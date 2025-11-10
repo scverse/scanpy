@@ -406,7 +406,7 @@ def aggregate_dask(
     has_mean, has_var = (v in funcs for v in ["mean", "var"])
     funcs_no_var_or_mean = funcs - {"var", "mean"}
     # aggregate each row chunk or column chunk individually,
-    # producing a #chunks × #categories × #features or a #categories x #chunks array,
+    # producing a #chunks × #categories × #features or a #categories × #chunks array,
     # then aggregate the per-chunk results.
     chunks = (
         ((1,) * data.blocks.size, (len(by.categories),), data.shape[1])
