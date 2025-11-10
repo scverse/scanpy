@@ -89,7 +89,7 @@ def neighbors(  # noqa: PLR0913
     the connectivity of the manifold (`method=='umap'`).
     If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
     in the adaption of :cite:t:`Haghverdi2016`.
-    If `method=='jaccard'`, connectivities are computed as in PhenoGraph (:cite:p:`Levine2015`).
+    If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
 
     Parameters
     ----------
