@@ -649,7 +649,12 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
     ],
 )
 @pytest.mark.parametrize(
-    "array_type", [p for p in ARRAY_TYPES if "dask" not in p.id or "1d_chunked" in p.id]
+    "array_type",
+    [
+        p
+        for p in ARRAY_TYPES
+        if "dask" not in p.id or ("1d_chunked" in p.id and "csr" in p.id)
+    ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(flavor, array_type, batch_key):
@@ -728,7 +733,9 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"], ids=["single", "batched"])
-@pytest.mark.parametrize("to_dask", [p for p in ARRAY_TYPES if "1d_chunked" in p.id])
+@pytest.mark.parametrize(
+    "to_dask", [p for p in ARRAY_TYPES if "1d_chunked" in p.id and "csr" in p.id]
+)
 def test_dask_consistency(adata: AnnData, flavor, batch_key, to_dask):
     # current blob produces singularities in loess....maybe a bad sign of the data?
     if "seurat_v3" in flavor:

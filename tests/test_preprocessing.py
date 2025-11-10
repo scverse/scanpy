@@ -280,7 +280,12 @@ def test_sample_copy_backed_error(tmp_path):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
-def test_scale_matrix_types(array_type, zero_center, max_value):
+def test_scale_matrix_types(
+    *,
+    array_type: Callable,
+    zero_center: bool,
+    max_value: float | None,
+):
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()

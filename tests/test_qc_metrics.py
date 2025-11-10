@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,7 +11,7 @@ from fast_array_utils import stats
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import CSCBase, DaskArray
 from scanpy.preprocessing._qc import (
     describe_obs,
     describe_var,
@@ -83,8 +85,16 @@ def test_top_segments(request: pytest.FixtureRequest, array_type):
         reason = "DaskArray with feature axis chunking not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(np.ones((300, 100)))
-    with maybe_dask_process_context():
+    is_csc_dask = isinstance(a, DaskArray) and isinstance(a._meta, CSCBase)
+    with (
+        maybe_dask_process_context(),
+        pytest.raises(ValueError, match=r"DaskArray must have csr")
+        if is_csc_dask
+        else nullcontext(),
+    ):
         seg = top_segment_proportions(a, [50, 100])
+    if is_csc_dask:
+        return
     assert (seg[:, 0] == 0.5).all()
     assert (seg[:, 1] == 1.0).all()
 
@@ -107,10 +117,22 @@ def test_top_proportions(request: pytest.FixtureRequest, array_type):
 # While many of these are trivial,
 # they’re also just making sure the metrics are there
 def test_qc_metrics(adata_prepared: AnnData):
-    with maybe_dask_process_context():
+    is_csc_dask = isinstance(adata_prepared.X, DaskArray) and isinstance(
+        adata_prepared.X._meta, CSCBase
+    )
+    with (
+        maybe_dask_process_context(),
+        (
+            pytest.raises(ValueError, match=r"DaskArray must have csr")
+            if is_csc_dask
+            else nullcontext()
+        ),
+    ):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], inplace=True
         )
+    if is_csc_dask:
+        return
     x = (
         adata_prepared.X.compute()
         if isinstance(adata_prepared.X, DaskArray)
@@ -159,7 +181,17 @@ def test_qc_metrics(adata_prepared: AnnData):
 
 
 def test_qc_metrics_idempotent(adata_prepared: AnnData):
-    with maybe_dask_process_context():
+    is_csc_dask = isinstance(adata_prepared.X, DaskArray) and isinstance(
+        adata_prepared.X._meta, CSCBase
+    )
+    with (
+        maybe_dask_process_context(),
+        (
+            pytest.raises(ValueError, match=r"DaskArray must have csr")
+            if is_csc_dask
+            else nullcontext()
+        ),
+    ):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], inplace=True
         )
@@ -167,6 +199,8 @@ def test_qc_metrics_idempotent(adata_prepared: AnnData):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], inplace=True
         )
+    if is_csc_dask:
+        return
     assert set(adata_prepared.obs.columns) == set(old_obs.columns)
     assert set(adata_prepared.var.columns) == set(old_var.columns)
     for col in adata_prepared.obs:
@@ -176,7 +210,15 @@ def test_qc_metrics_idempotent(adata_prepared: AnnData):
 
 
 def test_qc_metrics_no_log1p(adata_prepared: AnnData):
-    with maybe_dask_process_context():
+    with (
+        maybe_dask_process_context(),
+        (
+            pytest.raises(ValueError, match=r"DaskArray must have csr")
+            if isinstance(adata_prepared.X, DaskArray)
+            and isinstance(adata_prepared.X._meta, CSCBase)
+            else nullcontext()
+        ),
+    ):
         sc.pp.calculate_qc_metrics(
             adata_prepared, qc_vars=["mito", "negative"], log1p=False, inplace=True
         )

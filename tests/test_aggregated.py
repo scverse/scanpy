@@ -22,10 +22,14 @@ if TYPE_CHECKING:
 
     from scanpy._compat import CSRBase
 
-ARRAY_TYPES = [
+VALID_ARRAY_TYPES = [
     at
     for at in ARRAY_TYPES_ALL
-    if at.id not in {"dask_array_dense", "dask_array_sparse"}
+    if at.id
+    not in {
+        "dask_array_dense",
+        "dask_array_sparse",
+    }
 ]
 
 
@@ -118,7 +122,7 @@ def test_mask(axis):
     assert np.all(by_name["0"].layers["sum"] == 0)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 def test_aggregate_vs_pandas(
     metric: AggType, array_type, request: pytest.FixtureRequest
 ):
@@ -160,7 +164,7 @@ def test_aggregate_vs_pandas(
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 def test_aggregate_axis(array_type, metric, request: pytest.FixtureRequest):
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -240,7 +244,6 @@ def to_csc(x: CSRBase):
 @pytest.mark.parametrize(
     ("func", "error_msg"),
     [
-        pytest.param(to_csc, r"only csr_matrix", id="csc"),
         pytest.param(
             to_bad_chunking, r"Feature axis must be unchunked", id="bad_chunking"
         ),
@@ -456,7 +459,7 @@ def test_combine_categories(label_cols, cols, expected):
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 def test_aggregate_arraytype(
     array_type, metric: AggType, request: pytest.FixtureRequest
 ):

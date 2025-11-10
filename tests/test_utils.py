@@ -30,6 +30,7 @@ from testing.scanpy._pytest.params import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
 
@@ -112,7 +113,7 @@ def test_divide_by_zero(array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
-def test_scale_out_with_dask_or_sparse_raises(array_type):
+def test_scale_out_with_dask_or_sparse_raises(array_type: Callable):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
     divisor = np.array([0.1, 0.2, 0.5])
     if isinstance(dividend, DaskArray):
