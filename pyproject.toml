@@ -97,8 +97,7 @@ test = [
     "scanpy[test-min]",
     # optional storage and processing modes
     "scanpy[dask]",
-    "zappy",
-    "zarr<3",
+    "zarr>=2.18.7",
     # additional tested algorithms
     "scanpy[scrublet]",
     "scanpy[leiden]",
