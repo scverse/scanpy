@@ -158,8 +158,7 @@ def jaccard(
         The number of nearest neighbors to consider.
 
     """
-    # Construct unweighted kNN adjacency matrix (self excluded,
-    # as in PhenoGraph)
+    # Construct unweighted kNN adjacency matrix (self excluded, as in PhenoGraph)
     adjacency = _get_sparse_matrix_from_indices_distances(
         knn_indices, np.ones_like(knn_indices), keep_self=False
     )
@@ -181,7 +180,7 @@ def jaccard(
         shape=(n_obs, n_obs),
     )
 
-    # Symmetrise by averaging (as default in PhenoGraph)
+    # Symmetrize by averaging (as default in PhenoGraph)
     connectivities = (connectivities + connectivities.T) / 2
 
     return connectivities

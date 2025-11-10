@@ -86,10 +86,10 @@ def neighbors(  # noqa: PLR0913
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
-    :cite:t:`Haghverdi2016`. If `method=='jaccard'`, connectivities are computed as
-    in PhenoGraph (:cite:p:`Levine2015`).
+    the connectivity of the manifold (`method=='umap'`).
+    If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
+    in the adaption of :cite:t:`Haghverdi2016`.
+    If `method=='jaccard'`, connectivities are computed as in PhenoGraph (:cite:p:`Levine2015`).
 
     Parameters
     ----------
@@ -113,9 +113,10 @@ def neighbors(  # noqa: PLR0913
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' :cite:p:`McInnes2018`, 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
-        with adaptive width :cite:t:`Haghverdi2016`), or 'jaccard' (Jaccard kernel as in
-        PhenoGraph, :cite:p:`Levine2015`) for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018`,
+        'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
+        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`)
+        for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
