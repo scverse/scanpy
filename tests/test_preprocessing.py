@@ -282,7 +282,6 @@ def test_sample_copy_backed_error(tmp_path):
 @pytest.mark.parametrize("max_value", [None, 1.0], ids=["no_clip", "clip"])
 def test_scale_matrix_types(
     *,
-    request: pytest.FixtureRequest,
     array_type: Callable,
     zero_center: bool,
     max_value: float | None,
@@ -299,7 +298,7 @@ def test_scale_matrix_types(
         (
             warn_ctx
             if zero_center
-            and any(pat in request.node.name for pat in ("sparse", "csc", "csr"))
+            and any(pat in array_type.__name__ for pat in ("sparse", "csc", "csr"))
             else nullcontext()
         ),
         maybe_dask_process_context(),

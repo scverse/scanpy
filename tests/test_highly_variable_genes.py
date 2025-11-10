@@ -437,8 +437,8 @@ def test_compare_to_upstream(
     np.testing.assert_allclose(
         hvg_info["dispersions_norm"],
         pbmc.var["dispersions_norm"],
-        rtol=2e-05 if "dask" not in request.node.name else 1e-4,
-        atol=2e-05 if "dask" not in request.node.name else 1e-4,
+        rtol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
+        atol=2e-05 if "dask" not in array_type.__name__ else 1e-4,
     )
 
 
