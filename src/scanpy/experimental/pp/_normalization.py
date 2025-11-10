@@ -2,20 +2,13 @@ from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numpy as np
 from anndata import AnnData
 
-from scanpy._compat import CSBase
-
 from ... import logging as logg
-from ..._utils import (
-    _doc_params,
-    _empty,
-    check_nonnegative_integers,
-    view_to_actual,
-)
+from ..._compat import CSBase, warn
+from ..._utils import _doc_params, _empty, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -56,11 +49,8 @@ def _pearson_residuals(
         raise ValueError(msg)
 
     if check_values and not check_nonnegative_integers(x):
-        warn(
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
     if isinstance(x, CSBase):
         sums_genes = np.sum(x, axis=0)
@@ -96,6 +86,7 @@ def normalize_pearson_residuals(
     clip: float | None = None,
     check_values: bool = True,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -138,8 +129,8 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else "adata.X"
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
@@ -148,7 +139,7 @@ def normalize_pearson_residuals(
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
-        _set_obs_rep(adata, residuals, layer=layer)
+        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
         adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)

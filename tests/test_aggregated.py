@@ -243,7 +243,6 @@ def to_csc(x: CSRBase):
 
 
 @needs.dask
-@pytest.mark.anndata_dask_support
 @pytest.mark.parametrize(
     ("func", "error_msg"),
     [
@@ -297,9 +296,13 @@ def test_aggregate_axis_specification(axis_name):
             ["count_nonzero"],  # , "sum", "mean"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
-                ).astype("category"),
+                ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "count_nonzero": np.array([
@@ -329,9 +332,13 @@ def test_aggregate_axis_specification(axis_name):
             ["sum", "mean", "count_nonzero"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
-                ).astype("category"),
+                ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "sum": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 2, 2]]),
@@ -361,9 +368,13 @@ def test_aggregate_axis_specification(axis_name):
             ["mean"],
             ad.AnnData(
                 obs=pd.DataFrame(
-                    {"a": ["a", "a", "b"], "b": ["c", "d", "d"]},
+                    {
+                        "a": pd.Categorical(["a", "a", "b"]),
+                        "b": pd.Categorical(["c", "d", "d"]),
+                        "n_obs_aggregated": [1, 1, 2],
+                    },
                     index=["a_c", "a_d", "b_d"],
-                ).astype("category"),
+                ),
                 var=pd.DataFrame(index=[f"gene_{i}" for i in range(4)]),
                 layers={
                     "mean": np.array([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1]]),
@@ -522,7 +533,13 @@ def test_aggregate_obsm_labels():
     )
 
     expected = ad.AnnData(
-        obs=pd.DataFrame({"labels": pd.Categorical(list("abc"))}, index=list("abc")),
+        obs=pd.DataFrame(
+            {
+                "labels": pd.Categorical([lc[0] for lc in label_counts]),
+                "n_obs_aggregated": [lc[1] for lc in label_counts],
+            },
+            index=[lc[0] for lc in label_counts],
+        ),
         var=pd.DataFrame(index=[f"dim_{i}" for i in range(3)]),
         layers={
             "sum": np.diag([n for _, n in label_counts]),

@@ -17,13 +17,13 @@ from anndata.tests.helpers import asarray, assert_equal
 from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableSequence
 
     from numpy.typing import NDArray
 
-    from scanpy._compat import DaskArray
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
@@ -128,16 +128,25 @@ def _check_check_values_warnings(
 def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
-    return as_dense_dask_array(*args, **kwargs)
+    a = as_dense_dask_array(*args, **kwargs)
+    # Newer versions of as_dense_dask_array chunk all axes by halve when the input is not a dask array.
+    if (
+        pkg_version("anndata") < Version("0.11")
+        and not isinstance(args[0], DaskArray)  # keep chunksize intact
+    ):
+        from anndata.tests.helpers import _half_chunk_size
+
+        a = a.rechunk(_half_chunk_size(a.shape))
+    return a
 
 
-def as_sparse_dask_array(*args, **kwargs) -> DaskArray:
-    if Version(version("anndata")) < Version("0.12.5"):
-        from anndata.tests.helpers import as_sparse_dask_array
+def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
+    if Version(version("anndata")) >= Version("0.12.6"):
+        from anndata.tests.helpers import as_sparse_dask_matrix
     else:
-        from anndata.tests.helpers import as_sparse_dask_matrix as as_sparse_dask_array
+        from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
 
-    return as_sparse_dask_array(*args, **kwargs)
+    return as_sparse_dask_matrix(*args, **kwargs)
 
 
 @dataclass(init=False)

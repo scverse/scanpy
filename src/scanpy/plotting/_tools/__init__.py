@@ -188,6 +188,7 @@ def pca_variance_ratio(
     *,
     log: bool = False,
     show: bool | None = None,
+    # deprecated
     save: bool | str | None = None,
 ):
     """Plot the variance ratio.
@@ -230,9 +231,10 @@ def dpt_timeseries(
     *,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     as_heatmap: bool = True,
     marker: str | Sequence[str] = ".",
+    # deprecated
+    save: bool | None = None,
 ):
     """Heatmap of pseudotime series.
 
@@ -277,9 +279,11 @@ def dpt_groups_pseudotime(
     color_map: str | Colormap | None = None,
     palette: Sequence[str] | Cycler | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
-):
+    return_fig: bool = False,
+    # deprecated
+    save: bool | str | None = None,
+) -> Figure | None:
     """Plot groups and pseudotime.
 
     Parameters
@@ -292,9 +296,9 @@ def dpt_groups_pseudotime(
         Marker style. See :mod:`~matplotlib.markers` for details.
 
     """
-    _, (ax_grp, ax_ord) = plt.subplots(2, 1)
+    fig, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
-        adata.obs["dpt_groups"].cat.codes,
+        adata.obs["dpt_groups"].cat.codes.to_numpy(),
         time=adata.obs["dpt_order"].values,
         color=np.asarray(adata.obs["dpt_groups"]),
         highlights_x=adata.uns["dpt_changepoints"],
@@ -321,6 +325,8 @@ def dpt_groups_pseudotime(
         marker=marker,
     )
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
+    if return_fig:
+        return fig
 
 
 @old_positionals(
@@ -346,8 +352,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     ncols: int = 4,
     sharey: bool = True,
     show: bool | None = None,
-    save: bool | None = None,
     ax: Axes | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ) -> list[Axes] | None:
     """Plot ranking of genes.
@@ -500,7 +506,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
 
 def _fig_show_save_or_axes(
-    plot_obj: BasePlot, *, return_fig: bool, show: bool | None, save: bool | None
+    plot_obj: BasePlot,
+    *,
+    return_fig: bool,
+    show: bool | None,
+    # deprecated
+    save: bool | None,
 ):
     """Decides what to return."""
     if return_fig:
@@ -525,9 +536,9 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
     gene_symbols: str | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Call the different `rank_genes_groups_*` plots."""
@@ -700,7 +711,7 @@ def rank_genes_groups_heatmap(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`).
@@ -783,7 +794,7 @@ def rank_genes_groups_tracksplot(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`).
@@ -860,8 +871,8 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`).
@@ -999,8 +1010,8 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Plot ranking of genes using stacked_violin plot.
@@ -1087,8 +1098,8 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
     """Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`).
@@ -1227,8 +1238,8 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     size: int = 1,
     ax: Axes | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     # deprecated
+    save: bool | None = None,
     scale: DensityNorm | Empty = _empty,
 ):
     """Plot ranking of genes for all tested comparisons.
@@ -1345,8 +1356,9 @@ def sim(
     as_heatmap: bool = False,
     shuffle: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
     """Plot results of simulation.
 
@@ -1453,9 +1465,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     wspace: None = None,
     title: str | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     return_fig: bool | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | None:
     """Plot the density of cells in an embedding (per condition).

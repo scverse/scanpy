@@ -67,7 +67,7 @@ def test_leiden_random_state(adata_neighbors, flavor):
     adata_2 = sc.tl.leiden(
         adata_neighbors,
         flavor=flavor,
-        random_state=2,
+        random_state=3,
         copy=True,
         directed=is_leiden_alg,
         n_iterations=n_iterations,

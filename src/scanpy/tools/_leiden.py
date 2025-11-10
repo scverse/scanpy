@@ -8,6 +8,7 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import warn
 from .._utils.random import set_igraph_random_state
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -125,7 +126,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
             "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
             "`directed` must also be `False` to work with igraph’s implementation."
         )
-        _utils.warn_once(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
     if flavor not in {"igraph", "leidenalg"}:
         msg = (
             f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
