@@ -71,7 +71,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    pr_description = "" if base_branch == "main" else "@meeseeksdev backport to main"
+    pr_description = "- [x] Release notes not necessary because: compiles release notes"
+    if base_branch != "main":
+        pr_description += "\n\n@meeseeksdev backport to main"
     branch_name = f"release_notes_{args.version}"
 
     # Create a new branch + commit
