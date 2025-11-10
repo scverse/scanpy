@@ -8,7 +8,7 @@ import numpy.testing as npt
 import pytest
 from anndata import OldFormatWarning, read_zarr
 
-from scanpy._compat import DaskArray, ZappyArray
+from scanpy._compat import DaskArray
 from scanpy.preprocessing import (
     filter_cells,
     filter_genes,
@@ -25,8 +25,6 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent / Path("_data/")
 input_file = Path(HERE, "10x-10k-subset.zarr")
 
-DIST_TYPES = (DaskArray, ZappyArray)
-
 
 pytestmark = [needs.zarr]
 
@@ -42,6 +40,7 @@ def adata() -> AnnData:
     return a
 
 
+@pytest.fixture
 def adata_dist() -> AnnData:
     import dask.array as da
 
@@ -59,7 +58,7 @@ def adata_dist() -> AnnData:
 
 def test_log1p(adata: AnnData, adata_dist: AnnData):
     log1p(adata_dist)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
     assert result.shape == adata.shape
@@ -74,7 +73,7 @@ def test_normalize_per_cell(
         reason = "normalize_per_cell deprecated and broken for Dask"
         request.applymarker(pytest.mark.xfail(reason=reason))
     normalize_per_cell(adata_dist)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_per_cell(adata)
     assert result.shape == adata.shape
@@ -84,7 +83,7 @@ def test_normalize_per_cell(
 @pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
 def test_normalize_total(adata: AnnData, adata_dist: AnnData) -> None:
     normalize_total(adata_dist)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     normalize_total(adata)
     assert result.shape == adata.shape
@@ -93,8 +92,8 @@ def test_normalize_total(adata: AnnData, adata_dist: AnnData) -> None:
 
 def test_filter_cells_array(adata: AnnData, adata_dist: AnnData):
     cell_subset_dist, number_per_cell_dist = filter_cells(adata_dist.X, min_genes=3)
-    assert isinstance(cell_subset_dist, DIST_TYPES)
-    assert isinstance(number_per_cell_dist, DIST_TYPES)
+    assert isinstance(cell_subset_dist, DaskArray)
+    assert isinstance(number_per_cell_dist, DaskArray)
 
     cell_subset, number_per_cell = filter_cells(adata.X, min_genes=3)
     npt.assert_allclose(materialize_as_ndarray(cell_subset_dist), cell_subset)
@@ -103,7 +102,7 @@ def test_filter_cells_array(adata: AnnData, adata_dist: AnnData):
 
 def test_filter_cells(adata: AnnData, adata_dist: AnnData):
     filter_cells(adata_dist, min_genes=3)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     filter_cells(adata, min_genes=3)
 
@@ -114,8 +113,8 @@ def test_filter_cells(adata: AnnData, adata_dist: AnnData):
 
 def test_filter_genes_array(adata: AnnData, adata_dist: AnnData):
     gene_subset_dist, number_per_gene_dist = filter_genes(adata_dist.X, min_cells=2)
-    assert isinstance(gene_subset_dist, DIST_TYPES)
-    assert isinstance(number_per_gene_dist, DIST_TYPES)
+    assert isinstance(gene_subset_dist, DaskArray)
+    assert isinstance(number_per_gene_dist, DaskArray)
 
     gene_subset, number_per_gene = filter_genes(adata.X, min_cells=2)
     npt.assert_allclose(materialize_as_ndarray(gene_subset_dist), gene_subset)
@@ -124,7 +123,7 @@ def test_filter_genes_array(adata: AnnData, adata_dist: AnnData):
 
 def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     filter_genes(adata_dist, min_cells=2)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     filter_genes(adata, min_cells=2)
     assert result.shape == adata.shape
@@ -134,7 +133,7 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
 @pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning")
 def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path: Path) -> None:
     log1p(adata_dist)
-    assert isinstance(adata_dist.X, DIST_TYPES)
+    assert isinstance(adata_dist.X, DaskArray)
     chunks = adata_dist.X.chunks
     if isinstance(chunks[0], tuple):
         chunks = (chunks[0][0],) + chunks[1]
