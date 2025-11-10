@@ -50,9 +50,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
           python-version: ${{ matrix.env.python }}
-          cache-dependency-glob: pyproject.toml
 
       - name: Cache downloaded data
         uses: actions/cache@v4
@@ -70,8 +68,6 @@ jobs:
         run: hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        env:
-          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
         run: |
           hatch run ${{ matrix.env.name }}:run-cov
           hatch run ${{ matrix.env.name }}:cov-combine

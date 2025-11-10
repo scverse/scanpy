@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
-type _VarNames = str | Sequence[str]
+    type _VarNames = str | Sequence[str]
 
 
 class VBoundNorm(NamedTuple):

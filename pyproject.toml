@@ -107,7 +107,7 @@ test = [
 doc = [
     "sphinx>=8.2.3",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.15.3",
+    "scanpydoc>=0.16",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-issues>=5.0.1",
     "myst-parser>=2",
@@ -194,7 +194,7 @@ data_file = "test-data/raw-coverage"
 source_pkgs = [ "scanpy" ]
 omit = [ "tests/*", "src/testing/*" ]
 concurrency = [ "multiprocessing" ]
-parallel = true
+patch = [ "subprocess" ]
 [tool.coverage.xml]
 output = "test-data/coverage.xml"
 [tool.coverage.paths]
