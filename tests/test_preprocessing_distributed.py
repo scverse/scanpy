@@ -130,21 +130,11 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
-@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning")
 def test_write_zarr(adata: AnnData, adata_dist: AnnData, tmp_path: Path) -> None:
     log1p(adata_dist)
     assert isinstance(adata_dist.X, DaskArray)
-    chunks = adata_dist.X.chunks
-    if isinstance(chunks[0], tuple):
-        chunks = (chunks[0][0],) + chunks[1]
-
-    # write metadata using regular anndata
-    root = tmp_path / "test.zarr"
-    adata.write_zarr(root, chunks=chunks)
-    # overwrite X
-    adata_dist.X.to_zarr(root / "X", overwrite=True)
-    # read back as zarr directly and check it is the same as adata.X
-    adata_log1p = read_zarr(root)
+    adata_dist.write_zarr(tmp_path / "test.zarr")
+    adata_log1p = read_zarr(tmp_path / "test.zarr")
 
     log1p(adata)
     npt.assert_allclose(adata_log1p.X, adata.X)
