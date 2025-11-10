@@ -7,7 +7,6 @@ import warnings
 from functools import partial
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, cast, get_args, overload
-from warnings import warn
 
 import anndata.utils
 import h5py
@@ -18,7 +17,7 @@ from matplotlib.image import imread
 from packaging.version import Version
 
 from . import logging as logg
-from ._compat import deprecated, old_positionals, pkg_version
+from ._compat import deprecated, old_positionals, pkg_version, warn
 from ._settings import AnnDataFileFormat, settings
 from ._utils import _empty
 
@@ -704,7 +703,7 @@ def write(
             "'csv' is not a good choice for anything, especially storing AnnData, "
             "and will be removed from this function. Use 'h5ad' or 'zarr' instead."
         )
-        warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         adata.write_csvs(filename)
         return
     elif ext not in {"h5ad", "h5", "zarr"}:

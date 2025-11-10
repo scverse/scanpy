@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import singledispatch, wraps
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numba
 import numpy as np
@@ -13,7 +12,7 @@ from scipy import sparse
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
-from .._compat import CSBase, CSRBase, DaskArray, njit
+from .._compat import CSBase, CSRBase, DaskArray, njit, warn
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -82,11 +81,8 @@ def describe_obs(  # noqa: PLR0913
 
     """
     if parallel is not None:
-        warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning,
-            stacklevel=2,
-        )
+        msg = "Argument `parallel` is deprecated, and currently has no effect."
+        warn(msg, FutureWarning)
     # Handle whether X is passed
     if x is None:
         x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
@@ -276,11 +272,8 @@ def calculate_qc_metrics(
 
     """
     if parallel is not None:
-        warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning,
-            stacklevel=2,
-        )
+        msg = "Argument `parallel` is deprecated, and currently has no effect."
+        warn(msg, FutureWarning)
     # Pass X so I only have to do it once
     x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):

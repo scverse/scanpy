@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from importlib.metadata import version
 from importlib.util import find_spec
 
 import pytest
+from packaging.version import Version
 
 
 class QuietMarkDecorator(pytest.MarkDecorator):
@@ -40,7 +42,6 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     skimage = "scikit-image"
     skmisc = "scikit-misc"
     zarr = auto()
-    zappy = auto()
     # external
     bbknn = auto()
     harmony = "harmonyTS"
@@ -69,3 +70,9 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
         if self._name_.casefold() != self.mod.casefold().replace("-", "_"):
             reason = f"{reason} (`pip install {self.mod}`)"
         return reason
+
+
+# TODO: remove once https://github.com/numba/numba/issues/10319 is fixed
+skip_numba_0_63 = pytest.mark.skipif(
+    Version(version=version("numba")) >= Version("0.63b0"), reason="numba 0.63 bug"
+)

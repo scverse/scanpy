@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
 
-    Genes = Collection[str | int | bool]
+    type Genes = Collection[str | int | bool]
 
 
 @doctest_needs("pypairs")

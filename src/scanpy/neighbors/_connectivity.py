@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from typing import TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,10 +13,10 @@ from ._common import (
     _get_sparse_matrix_from_indices_distances,
 )
 
-D = TypeVar("D", NDArray[np.float32], CSRBase)
 
-
-def gauss(distances: D, n_neighbors: int, *, knn: bool) -> D:  # noqa: PLR0912
+def gauss[D: (NDArray[np.float32], CSRBase)](  # noqa: PLR0912
+    distances: D, n_neighbors: int, *, knn: bool
+) -> D:
     """Derive gaussian connectivities between data points from their distances.
 
     Parameters

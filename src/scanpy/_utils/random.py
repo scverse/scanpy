@@ -27,9 +27,9 @@ __all__ = [
     "random_str",
 ]
 
-SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
-RNGLike = np.random.Generator | np.random.BitGenerator
-_LegacyRandom = int | np.random.RandomState | None
+type SeedLike = int | np.integer | Sequence[int] | np.random.SeedSequence
+type RNGLike = np.random.Generator | np.random.BitGenerator
+type _LegacyRandom = int | np.random.RandomState | None
 
 
 ###################################

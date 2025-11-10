@@ -20,11 +20,9 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    Array = np.ndarray | CSBase | DaskArray
-
-# Used with get_literal_vals
-ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
-AggType = ConstantDtypeAgg | Literal["mean", "var"]
+type Array = np.ndarray | CSBase | DaskArray
+type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
+type AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
 class Aggregate:
@@ -242,7 +240,7 @@ def aggregate(  # noqa: PLR0912
     ... )
     >>> aggregated
     AnnData object with n_obs × n_vars = 8 × 13714
-        obs: 'louvain'
+        obs: 'louvain', 'n_obs_aggregated'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
@@ -253,7 +251,7 @@ def aggregate(  # noqa: PLR0912
     ...     pbmc, by=["louvain", "percent_mito_binned"], func=["mean", "count_nonzero"]
     ... )
     AnnData object with n_obs × n_vars = 40 × 13714
-        obs: 'louvain', 'percent_mito_binned'
+        obs: 'louvain', 'percent_mito_binned', 'n_obs_aggregated'
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
@@ -295,6 +293,11 @@ def aggregate(  # noqa: PLR0912
 
     dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
+
+    # Add number of obs aggregated into each group
+    new_label_df["n_obs_aggregated"] = (
+        pd.Series(categorical).value_counts().reindex(new_label_df.index)
+    )
     # Actual computation
     layers = _aggregate(
         data,
