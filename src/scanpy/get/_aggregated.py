@@ -386,10 +386,11 @@ def aggregate_dask(
     def aggregate_chunk_sum_or_count_nonzero(
         chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
     ):
-        # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
-        # for what is contained in `block_info`.
+        # only subset the mask and by if we need to i.e.,
+        # there is chunking along the same axis as by and mask
         if chunked_axis == 0:
-            # only subset the mask and by if we need to i.e., there is chunking along the same axis as by and mask
+            # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
+            # for what is contained in `block_info`.
             subset = slice(*block_info[0]["array-location"][0])
             by_subsetted = by[subset]
             mask_subsetted = mask[subset] if mask is not None else mask
