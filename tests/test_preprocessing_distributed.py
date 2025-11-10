@@ -144,7 +144,7 @@ def test_filter_genes(adata: AnnData, adata_dist: AnnData):
     npt.assert_allclose(result, adata.X)
 
 
-@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning:anndata")
+@pytest.mark.filterwarnings("ignore::anndata.OldFormatWarning")
 def test_write_zarr(adata: AnnData, adata_dist: AnnData):
     import zarr
 
