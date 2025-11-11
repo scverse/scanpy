@@ -18,12 +18,8 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
-from testing.scanpy._helpers.data import (
-    krumsiek11,
-    pbmc3k,
-    pbmc3k_processed,
-    pbmc68k_reduced,
-)
+from testing.scanpy._helpers.data import (krumsiek11, pbmc3k, pbmc3k_processed,
+                                          pbmc68k_reduced)
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
@@ -1851,3 +1847,9 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+def test_dogplot():
+    # Test that the dogplot function runs without errors
+    sc.pl.dogplot()
+    # Test that parameters are ignored
+    sc.pl.dogplot("Good boy", woof=False)
