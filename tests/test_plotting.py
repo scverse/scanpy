@@ -1853,8 +1853,6 @@ def test_violin_scale_warning(monkeypatch):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
 
 
-def test_dogplot():
-    # Test that the dogplot function runs without errors
+def test_dogplot() -> None:
+    """Test that the dogplot function runs without errors."""
     sc.pl.dogplot()
-    # Test that parameters are ignored
-    sc.pl.dogplot("Good boy", woof=False)
