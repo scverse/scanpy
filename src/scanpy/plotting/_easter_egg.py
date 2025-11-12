@@ -8,7 +8,7 @@ from PIL import Image
 
 
 def dogplot(*_, **__) -> None:
-    """Shows who's a good boy"""
+    """Show who's a good boy."""
     pic = np.random.randint(1, 4)
     img_path = files("scanpy.plotting").joinpath(f"dogplot_images/doggo_{pic}.webp")
 
