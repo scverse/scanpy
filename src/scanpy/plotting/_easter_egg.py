@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.image import imread
 
 
-def dogplot(n: int | None = None, *, show: bool = False) -> None:
+def dogplot(*_, **__) -> None:
     """Show who’s a good boy."""
     rng = np.random.default_rng()
     n = int(rng.integers(1, 4))
