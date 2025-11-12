@@ -1851,3 +1851,8 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+
+def test_dogplot() -> None:
+    """Test that the dogplot function runs without errors."""
+    sc.pl.dogplot()
