@@ -90,9 +90,6 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
-colorbar_loc
-    Where to place the colorbar for continous variables. If `None`, no colorbar
-    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
@@ -166,6 +163,9 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
 na_color
     Color to use for null or masked values. Can be anything matplotlib accepts as a
     color. Used for all points if `color=None`.

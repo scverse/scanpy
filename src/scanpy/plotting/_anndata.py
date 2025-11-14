@@ -137,7 +137,6 @@ def scatter(  # noqa: PLR0913
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
     color_map: str | Colormap | None = None,
-    colorbar_loc: Literal["right", "left", "top", "bottom"] | None = None,
     palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] | None = None,
     frameon: bool | None = None,
     right_margin: float | None = None,
