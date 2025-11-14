@@ -952,7 +952,7 @@ def circles(
     --------
     a = np.arange(11)
     circles(a, a, s=a*0.2, c=a, alpha=0.5, ec='none')
-    pl.colorbar()
+    plt.colorbar()
     License
     --------
     This code is under [The BSD 3-Clause License]
