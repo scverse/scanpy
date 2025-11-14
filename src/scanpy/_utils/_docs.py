@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import product
 from typing import TYPE_CHECKING, overload
@@ -15,20 +16,30 @@ if TYPE_CHECKING:
 __all__ = ["ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
 
 
-@dataclass(unsafe_hash=True, frozen=True)
-class ArrayType:
-    pass
+class ArrayType(ABC):
+    def rst(self) -> str:
+        return f":class:`{self}`"
+
+    @abstractmethod
+    def __hash__(self) -> int: ...
 
 
 @dataclass(unsafe_hash=True, frozen=True)
 class Numpy(ArrayType):
-    pass
+    def __str__(self) -> str:
+        return "numpy.ndarray"
+
+    def rst(self) -> str:
+        return f":class:`{self}`"
 
 
 @dataclass(unsafe_hash=True, frozen=True)
 class ScipySparse(ArrayType):
     format: Literal["csr", "csc"]
     container: Literal["array", "matrix"]
+
+    def __str__(self) -> str:
+        return f"scipy.sparse.{self.format}_{self.container}"
 
 
 type Inner = Numpy | ScipySparse
@@ -37,6 +48,12 @@ type Inner = Numpy | ScipySparse
 @dataclass(unsafe_hash=True, frozen=True)
 class DaskArray(ArrayType):
     chunk: Inner
+
+    def __str__(self) -> str:
+        return f"dask.array.Array[{self.chunk}]"
+
+    def rst(self) -> str:
+        return rf":class:`dask.array.Array`\ \[{self.chunk.rst()}\]"
 
 
 @overload
