@@ -98,12 +98,6 @@ size
     Can be a sequence containing the size for each cell. The order should be
     the same as in adata.obs.
 {doc_cm_palette}
-na_color
-    Color to use for null or masked values. Can be anything matplotlib accepts as a
-    color. Used for all points if `color=None`.
-na_in_legend
-    If there are missing values, whether they get an entry in the legend. Currently
-    only implemented for categorical legends.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
@@ -172,6 +166,12 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
+na_color
+    Color to use for null or masked values. Can be anything matplotlib accepts as a
+    color. Used for all points if `color=None`.
+na_in_legend
+    If there are missing values, whether they get an entry in the legend. Currently
+    only implemented for categorical legends.
 {doc_vbound_percentile}
 {doc_outline}
 {doc_panels}

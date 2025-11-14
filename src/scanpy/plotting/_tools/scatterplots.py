@@ -100,7 +100,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     legend_fontweight: int | _FontWeight = "bold",
     legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,
-    colorbar_loc: str | None = "right",
+    colorbar_loc: Literal["right", "left", "top", "bottom"] | None = "right",
     vmax: VBound | Sequence[VBound] | None = None,
     vmin: VBound | Sequence[VBound] | None = None,
     vcenter: VBound | Sequence[VBound] | None = None,

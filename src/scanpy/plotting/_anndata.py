@@ -137,6 +137,7 @@ def scatter(  # noqa: PLR0913
     legend_fontweight: int | _FontWeight | None = None,
     legend_fontoutline: float | None = None,
     color_map: str | Colormap | None = None,
+    colorbar_loc: Literal["right", "left", "top", "bottom"] | None = None,
     palette: Cycler | ListedColormap | ColorLike | Sequence[ColorLike] | None = None,
     frameon: bool | None = None,
     right_margin: float | None = None,
@@ -426,24 +427,27 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
         ]
 
-    axs: list[Axes] = scatter_base(
-        xy,
-        title=title,
-        alpha=alpha,
-        component_name=component_name,
-        axis_labels=axis_labels,
-        component_indexnames=components + 1,
-        projection=projection,
-        colors=color_ids,
-        highlights=highlights,
-        colorbars=colorbars,
-        right_margin=right_margin,
-        left_margin=left_margin,
-        sizes=[size for _ in keys],
-        markers=marker,
-        color_map=color_map,
-        show_ticks=show_ticks,
-        ax=ax,
+    axs = cast(
+        "list[Axes]",
+        scatter_base(
+            xy,
+            title=title,
+            alpha=alpha,
+            component_name=component_name,
+            axis_labels=axis_labels,
+            component_indexnames=components + 1,
+            projection=projection,
+            colors=color_ids,
+            highlights=highlights,
+            colorbars=colorbars,
+            right_margin=right_margin,
+            left_margin=left_margin,
+            sizes=[size for _ in keys],
+            markers=marker,
+            color_map=color_map,
+            show_ticks=show_ticks,
+            ax=ax,
+        ),
     )
 
     def add_centroid(centroids, name, xy, mask) -> None:
