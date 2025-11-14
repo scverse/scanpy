@@ -90,20 +90,11 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
-colorbar_loc
-    Where to place the colorbar for continous variables. If `None`, no colorbar
-    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
     the same as in adata.obs.
 {doc_cm_palette}
-na_color
-    Color to use for null or masked values. Can be anything matplotlib accepts as a
-    color. Used for all points if `color=None`.
-na_in_legend
-    If there are missing values, whether they get an entry in the legend. Currently
-    only implemented for categorical legends.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
@@ -172,6 +163,15 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
+na_color
+    Color to use for null or masked values. Can be anything matplotlib accepts as a
+    color. Used for all points if `color=None`.
+na_in_legend
+    If there are missing values, whether they get an entry in the legend. Currently
+    only implemented for categorical legends.
 {doc_vbound_percentile}
 {doc_outline}
 {doc_panels}
