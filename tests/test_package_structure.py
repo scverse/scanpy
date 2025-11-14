@@ -11,7 +11,7 @@ from anndata import AnnData
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-from scanpy._utils import descend_classes_and_funcs, import_name
+from scanpy._utils import _docs, descend_classes_and_funcs, import_name
 
 if TYPE_CHECKING:
     from types import FunctionType
@@ -167,3 +167,57 @@ def getsourcelines(obj):
         return getsourcelines(wrapped)
 
     return getsourcelines(obj)
+
+
+ALL_SPS = [
+    _docs.ScipySparse(fmt, c) for fmt in ("csr", "csc") for c in ("array", "matrix")
+]
+
+
+@pytest.mark.parametrize(
+    ("include", "exclude", "expected"),
+    [
+        pytest.param("np", "", [_docs.Numpy()], id="np"),
+        pytest.param("np", "np", [], id="remove_identical"),
+        pytest.param(
+            "np da",
+            "",
+            [_docs.Numpy(), _docs.DaskArray(_docs.Numpy())],
+            id="dask_inherits",
+        ),
+        pytest.param(
+            "sp da[sp[csr]]",
+            [],
+            [
+                *ALL_SPS,
+                *(
+                    _docs.DaskArray(_docs.ScipySparse("csr", c))
+                    for c in ("array", "matrix")
+                ),
+            ],
+            id="include_fewer_nested",
+        ),
+        pytest.param(
+            "da[sp[csc]]",
+            [],
+            [_docs.DaskArray(_docs.ScipySparse("csc", c)) for c in ("array", "matrix")],
+            id="include_only_nested",
+        ),
+        pytest.param("da[sp[csc]]", "sp da", [], id="remove_more"),
+        pytest.param(
+            "sp da",
+            "sp da[sp[matrix]]",
+            [
+                _docs.DaskArray(_docs.ScipySparse(fmt, "array"))
+                for fmt in ("csr", "csc")
+            ],
+            id="only_dask_subset",
+        ),
+    ],
+)
+def test_array_type_selector(
+    include: str, exclude: str, expected: list[_docs.ArrayType]
+) -> None:
+    inc, exc = (i.split(" ") if i else [] for i in (include, exclude))
+    received = list(_docs.parse(inc, exc))
+    assert received == expected

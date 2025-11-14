@@ -206,6 +206,8 @@ def aggregate(  # noqa: PLR0912
     ------
     adata
         :class:`~anndata.AnnData` to be aggregated.
+
+        .. array-support:: np sp da
     by
         Key of the column to be grouped-by.
     func
