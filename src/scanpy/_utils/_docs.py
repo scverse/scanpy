@@ -17,7 +17,7 @@ __all__ = ["ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
 
 
 class ArrayType(ABC):
-    def rst(self) -> str:
+    def rst(self) -> str:  # pragma: no cover
         return f":class:`{self}`"
 
     @abstractmethod
@@ -26,10 +26,10 @@ class ArrayType(ABC):
 
 @dataclass(unsafe_hash=True, frozen=True)
 class Numpy(ArrayType):
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover
         return "numpy.ndarray"
 
-    def rst(self) -> str:
+    def rst(self) -> str:  # pragma: no cover
         return f":class:`{self}`"
 
 
@@ -38,7 +38,7 @@ class ScipySparse(ArrayType):
     format: Literal["csr", "csc"]
     container: Literal["array", "matrix"]
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover
         return f"scipy.sparse.{self.format}_{self.container}"
 
 
@@ -49,10 +49,10 @@ type Inner = Numpy | ScipySparse
 class DaskArray(ArrayType):
     chunk: Inner
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover
         return f"dask.array.Array[{self.chunk}]"
 
-    def rst(self) -> str:
+    def rst(self) -> str:  # pragma: no cover
         return rf":class:`dask.array.Array`\ \[{self.chunk.rst()}\]"
 
 
@@ -77,11 +77,13 @@ def parse(
 
     inner_includes = [i for i in include if not i.startswith("da")]
     for t in include:
-        if (match := re.fullmatch(r"([^\[]+)(?:\[(.+)\])?", t)) is None:
+        if (
+            match := re.fullmatch(r"([^\[]+)(?:\[(.+)\])?", t)
+        ) is None:  # pragma: no cover
             msg = f"invalid {t!r}"
             raise ValueError(msg)
         mod, tags = match.groups("")
-        if mod == "da" and inner:
+        if mod == "da" and inner:  # pragma: no cover
             msg = "Can’t nest dask arrays"
             raise ValueError(msg)
         tags = set(re.split(r",(?![^\[]+\])", tags)) if tags else set()
@@ -93,12 +95,12 @@ def _parse_mod(
 ) -> Generator[ArrayType]:
     match mod:
         case "np":
-            if tags:
+            if tags:  # pragma: no cover
                 msg = f"`np` takes no tags {tags!r}"
                 raise ValueError(msg)
             yield Numpy()
         case "sp":
-            if tags - {"csr", "csc", "array", "matrix"}:
+            if tags - {"csr", "csc", "array", "matrix"}:  # pragma: no cover
                 msg = f"invalid tags {tags!r}"
                 raise ValueError(msg)
             for format, container in product(("csr", "csc"), ("array", "matrix")):
@@ -110,6 +112,6 @@ def _parse_mod(
         case "da":
             for chunk in parse(tags if tags else inner_includes, inner=True):
                 yield DaskArray(chunk=chunk)
-        case _:
+        case _:  # pragma: no cover
             msg = f"invalid module {mod!r}"
             raise ValueError(msg)
