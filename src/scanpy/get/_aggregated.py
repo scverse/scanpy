@@ -202,12 +202,12 @@ def aggregate(  # noqa: PLR0912
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
+    .. array-support:: np sp da
+
     Params
     ------
     adata
         :class:`~anndata.AnnData` to be aggregated.
-
-        .. array-support:: np sp da
     by
         Key of the column to be grouped-by.
     func

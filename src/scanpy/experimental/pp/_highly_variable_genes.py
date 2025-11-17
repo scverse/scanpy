@@ -320,6 +320,8 @@ def highly_variable_genes(  # noqa: PLR0913
 
     Expects raw count input.
 
+    .. array-support:: np sp
+
     Parameters
     ----------
     {adata}

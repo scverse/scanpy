@@ -662,6 +662,8 @@ def highly_variable_genes(  # noqa: PLR0913
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
 
+    .. array-support:: np sp da
+
     Parameters
     ----------
     adata
