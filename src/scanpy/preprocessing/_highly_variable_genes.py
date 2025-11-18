@@ -363,10 +363,6 @@ def _highly_variable_genes_single_batch(
     if n_removed:
         x = x[:, filt].copy()
 
-    if hasattr(x, "_view_args"):  # AnnData array view
-        # For compatibility with anndata<0.9
-        x = x.copy()  # Doesn't actually copy memory, just removes View class wrapper
-
     if flavor == "seurat":
         x = x.copy()
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
