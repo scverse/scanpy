@@ -663,6 +663,7 @@ def highly_variable_genes(  # noqa: PLR0913
     (e.g. Pearson residuals).
 
     .. array-support:: np sp da
+       :except: da[sp[csc]]
 
     Parameters
     ----------
