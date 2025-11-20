@@ -14,17 +14,21 @@ authors = [
     { name = "Isaac Virshup" },
     { name = "Sergei Rybakov" },
     { name = "Gokcen Eraslan" },
+    { name = "Ilan Gold" },
     { name = "Tom White" },
     { name = "Malte Luecken" },
     { name = "Davide Cittaro" },
     { name = "Tobias Callies" },
     { name = "Marius Lange" },
     { name = "Andrés R. Muñoz-Rojas" },
+    { name = "Giovanni Palla" },
+    { name = "Adam Gayoso" },
+    { name = "Lukas Heumos" },
 ]
 maintainers = [
-    { name = "Philipp Angerer", email = "phil.angerer@gmail.com" },
+    { name = "Philipp Angerer", email = "phil.angerer@helmholtz-munich.de" },
     { name = "Ilan Gold", email = "ilan.gold@helmholtz-munich.de" },
-    { name = "Severin Dicks" },
+    { name = "Severin Dicks", email = "severin.dicks@scverse.org" },
 ]
 readme = "README.md"
 classifiers = [
