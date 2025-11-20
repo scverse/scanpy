@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from datetime import datetime
 from functools import partial
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING
 import matplotlib  # noqa
 from docutils import nodes
 from packaging.version import Version
+from sphinxcontrib.katex import NODEJS_BINARY
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use("agg")
@@ -52,7 +54,6 @@ release = version
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 
-
 # default settings
 templates_path = ["_templates"]
 master_doc = "index"
@@ -77,6 +78,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinxcontrib.bibtex",
+    "sphinxcontrib.katex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
@@ -128,6 +130,8 @@ typehints_defaults = "braces"
 
 pygments_style = "default"
 pygments_dark_style = "native"
+
+katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
     anndata=("https://anndata.readthedocs.io/en/stable/", None),

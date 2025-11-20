@@ -242,7 +242,11 @@ def _doc_params[T: Callable | type](**replacements: str) -> Callable[[T], T]:
         indented_replacements = {
             k: indent(v, " " * n_spaces)[n_spaces:] for k, v in replacements.items()
         }
-        obj.__doc__ = obj.__doc__.format_map(indented_replacements)
+        try:
+            obj.__doc__ = obj.__doc__.format_map(indented_replacements)
+        except ValueError as e:
+            e.add_note(", ".join(indented_replacements.keys()))
+            raise
         return obj
 
     return dec

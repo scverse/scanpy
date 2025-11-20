@@ -44,11 +44,11 @@ def morans_i(
     .. math::
 
         I =
-            \frac{
-                N \sum_{i, j} w_{i, j} z_{i} z_{j}
-            }{
-                S_{0} \sum_{i} z_{i}^{2}
-            }
+            \frac{{
+                N \sum_{{i,j}} w_{{i,j}} z_{{i}} z_{{j}}
+            }}{{
+                S_{{0}} \sum_{{i}} z_{{i}}^{{2}}
+            }}
 
     Params
     ------

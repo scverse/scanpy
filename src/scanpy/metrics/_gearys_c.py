@@ -46,11 +46,11 @@ def gearys_c(
     .. math::
 
         C =
-        \frac{
-            (N - 1)\sum_{i,j} w_{i,j} (x_i - x_j)^2
-        }{
-            2W \sum_i (x_i - \bar{x})^2
-        }
+        \frac{{
+            (N - 1)\sum_{{i,j}} w_{{i,j}} (x_i - x_j)^2
+        }}{{
+            2W \sum_i (x_i - \bar{{x}})^2
+        }}
 
     Params
     ------
