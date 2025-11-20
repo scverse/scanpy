@@ -73,6 +73,9 @@ def _get_graph(
     neighbors_key: str | None = None,
 ) -> CSRBase:
     if use_graph is not None:
+        if neighbors_key is not None:
+            msg = "Cannot specify both `use_graph` and `neighbors_key`."
+            raise TypeError(msg)
         return adata.obsp[use_graph]
     nv = NeighborsView(adata, neighbors_key)
     if "connectivities" not in nv:
