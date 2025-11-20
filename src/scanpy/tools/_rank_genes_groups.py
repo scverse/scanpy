@@ -526,10 +526,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     Expects logarithmized data.
 
+    .. array-support:: np sp
+
     ..  warning::
 
         Comparing between cells leads to highly inflated p-values,
-        since cells are not independent observations :cite:p`Squair2021`.
+        since cells are not independent observations :cite:p:`Squair2021`.
         Especially in single-cell data, consider instead to use more appropriate methods such as combining pseudobulking with :doc:`pydeseq2:index`.
 
         :func:`decoupler.pp.pseudobulk` or :func:`scanpy.get.aggregate` can be used to aggregate samples for pseudobulking.

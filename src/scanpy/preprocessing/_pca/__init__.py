@@ -99,6 +99,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     .. [#dense-only] This implementation can not handle sparse chunks, try manually densifying them.
     .. [#densifies] This implementation densifies sparse chunks and therefore has increased memory usage.
 
+    .. array-support:: np sp da
+       :except: da[sp[csc]]
+
     Parameters
     ----------
     data

@@ -76,6 +76,8 @@ def dpt(
     you need to pass ``n_comps=10`` in :func:`~scanpy.tl.diffmap` in order
     to exactly reproduce previous :func:`~scanpy.tl.dpt` results.
 
+    .. array-support:: np sp
+
     Parameters
     ----------
     adata

@@ -94,6 +94,8 @@ def filter_cells(
         Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_genes` per cell.
 
+    .. array-support:: np sp da
+
     Examples
     --------
     >>> import scanpy as sc
@@ -213,6 +215,8 @@ def filter_genes(
     Only provide one of the optional parameters `min_counts`, `min_cells`,
     `max_counts`, `max_cells` per call.
 
+    .. array-support:: np sp da
+
     Parameters
     ----------
     data
@@ -318,6 +322,8 @@ def log1p(
 
     Computes :math:`X = \log(X + 1)`,
     where :math:`log` denotes the natural logarithm unless a different base is given.
+
+    .. array-support:: np sp da
 
     Parameters
     ----------
@@ -681,6 +687,8 @@ def regress_out(
     function in R :cite:p:`Satija2015`. Note that this function tends to overcorrect
     in certain circumstances as described in :issue:`526`.
 
+    .. array-support:: np
+
     Parameters
     ----------
     adata
@@ -888,6 +896,8 @@ def sample(  # noqa: PLR0912
 ) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 
+    .. array-support:: np sp da
+
     Parameters
     ----------
     data
@@ -996,6 +1006,8 @@ def downsample_counts(
     If `total_counts` is specified, expression matrix will be downsampled to
     contain at most `total_counts`.
 
+    .. array-support:: np sp[csr]
+
     Parameters
     ----------
     adata
@@ -1045,7 +1057,7 @@ def downsample_counts(
 
 
 def _downsample_per_cell(
-    x: CSBase,
+    x: np.ndarray | CSBase,
     /,
     counts_per_cell: int,
     *,
@@ -1101,7 +1113,7 @@ def _downsample_per_cell(
 
 
 def _downsample_total_counts(
-    x: CSBase,
+    x: np.ndarray | CSBase,
     /,
     total_counts: int,
     *,
