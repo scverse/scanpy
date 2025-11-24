@@ -25,7 +25,7 @@ jobs:
       ASV_DIR: "./benchmarks"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 } # no blob:none so ASV can compare commits
 
       - name: Fetch main branch for `asv run`’s hash
