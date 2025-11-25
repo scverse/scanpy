@@ -53,7 +53,7 @@ jobs:
     needs: check-milestone
     if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","ci"]'), needs.check-milestone.outputs.type)
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
       - name: Find out if a relevant release fragment is added
         uses: dorny/paths-filter@v3

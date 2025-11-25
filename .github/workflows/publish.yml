@@ -14,7 +14,7 @@ jobs:
     permissions:
       id-token: write # to authenticate as Trusted Publisher to pypi.org
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
