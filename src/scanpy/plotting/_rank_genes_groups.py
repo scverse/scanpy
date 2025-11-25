@@ -165,4 +165,3 @@ def rank_genes_groups_dotplot(
         dot_color_df=values_df,
         **kwargs,
     )
-
