@@ -68,7 +68,7 @@ dependencies = [
     "numba >=0.60",
     "umap-learn>=0.5.7",
     "pynndescent>=0.5.13",
-    "packaging>=21.3",
+    "packaging>=25",
     "session-info2",
     "legacy-api-wrap>=1.5",                       # for positional API deprecations
     "typing-extensions; python_version < '3.13'",
@@ -89,7 +89,7 @@ scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 test-min = [
-    "pytest>=8.2",
+    "pytest",
     "pytest-mock",
     "pytest-cov",           # only for use from VS Code
     "pytest-xdist[psutil]",
