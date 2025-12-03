@@ -110,3 +110,9 @@ __all__ = [
 timeseries = deprecated("Use `dpt_timeseries`.")(timeseries)
 timeseries_as_heatmap = deprecated("Use `dpt_timeseries`.")(timeseries_as_heatmap)
 timeseries_subplot = deprecated("Use `dpt_timeseries`.")(timeseries_subplot)
+
+from ._rank_genes_groups import (
+    rank_genes_groups_dotplot,
+    rank_genes_groups_heatmap,
+    rank_genes_groups_matrixplot,
+)
