@@ -17,8 +17,8 @@ __all__ = ["ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
 
 
 class ArrayType(ABC):
-    def rst(self) -> str:  # pragma: no cover
-        return f":class:`{self}`"
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        return f":class:`{'~' if short else ''}{self}`"
 
     @abstractmethod
     def __hash__(self) -> int: ...
@@ -29,8 +29,8 @@ class Numpy(ArrayType):
     def __str__(self) -> str:  # pragma: no cover
         return "numpy.ndarray"
 
-    def rst(self) -> str:  # pragma: no cover
-        return f":class:`{self}`"
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        return f":class:`{'~' if short else ''}{self}`"
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -52,8 +52,8 @@ class DaskArray(ArrayType):
     def __str__(self) -> str:  # pragma: no cover
         return f"dask.array.Array[{self.chunk}]"
 
-    def rst(self) -> str:  # pragma: no cover
-        return rf":class:`dask.array.Array`\ \[{self.chunk.rst()}\]"
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        return rf":class:`{'~' if short else ''}dask.array.Array`\ \[{self.chunk.rst(short=short)}\]"
 
 
 @overload

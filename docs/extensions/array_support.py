@@ -52,7 +52,7 @@ class ArraySupport(SphinxDirective):
         return self._render_table(headers, rows)
 
     def _render_overview(self) -> list[nodes.Node]:
-        headers = ["Function", *(at.rst() for at in ALL_INNER)]
+        headers = ["Function", *(at.rst(short=True) for at in ALL_INNER)]
         rows: list[nodes.row] = []
         for fn, (include, exclude) in self._array_support.items():
             row_header, _ = self.parse_inline(f":func:`scanpy.{fn}`")
