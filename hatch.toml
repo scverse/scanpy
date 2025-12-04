@@ -24,7 +24,7 @@ overrides.matrix.deps.env-vars = [
 overrides.matrix.deps.pre-install-commands = [
     { if = [
         "low-vers",
-    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --all-groups -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
