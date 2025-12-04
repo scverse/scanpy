@@ -36,8 +36,9 @@ overrides.matrix.deps.python = [
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
 ]
-# Should be `value = "test"`: https://github.com/pypa/hatch/issues/2114
-overrides.matrix.deps.dependency-groups = { if = [ "stable", "pre", "low-vers" ], value = [ "dev", "test" ] }
+overrides.matrix.deps.dependency-groups = [
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
+]
 
 [[envs.hatch-test.matrix]]
 deps = [ "stable", "pre", "low-vers", "few-extras" ]
