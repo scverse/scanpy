@@ -68,8 +68,7 @@ def draw_graph(  # noqa: PLR0913
     .. _fa2-modified: https://github.com/AminAlam/fa2_modified
     .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
-    .. only uses graph in obsp
-    .. array-support:: np sp
+    .. array-support:: tl.draw_graph
 
     Parameters
     ----------

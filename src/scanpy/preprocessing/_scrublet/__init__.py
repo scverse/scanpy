@@ -73,7 +73,7 @@ def scrublet(  # noqa: PLR0913
     :func:`~scanpy.pp.scrublet_simulate_doublets`, and run the core scrublet
     function :func:`~scanpy.pp.scrublet` with ``adata_sim`` set.
 
-    .. array-support:: np sp
+    .. array-support:: pp.scrublet
 
     Parameters
     ----------
@@ -325,8 +325,6 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     Predict cell doublets using a nearest-neighbor classifier of observed
     transcriptomes and simulated doublets.
 
-    .. array-support:: np sp
-
     Parameters
     ----------
     adata_obs
@@ -515,6 +513,8 @@ def scrublet_simulate_doublets(
     random_seed: _LegacyRandom = 0,
 ) -> AnnData:
     """Simulate doublets by adding the counts of random observed transcriptome pairs.
+
+    .. array-support:: pp.scrublet_simulate_doublets
 
     Parameters
     ----------

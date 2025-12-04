@@ -76,8 +76,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
-    .. only uses graph in obsp
-    .. array-support:: np sp
+    .. array-support:: tl.louvain
 
     Parameters
     ----------

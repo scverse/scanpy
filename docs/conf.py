@@ -168,6 +168,39 @@ intersphinx_mapping = dict(
 )
 
 
+array_support: dict[str, tuple[list[str], list[str]]] = {
+    "experimental.pp.highly_variable_genes": (["np", "sp"], []),
+    "get.aggregated": (["np", "sp", "da"], []),
+    "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
+    "pp.combat": (["np"], []),
+    "pp.downsample_counts": (["np", "sp[csr]"], []),
+    "pp.filter_cells": (["np", "sp", "da"], []),
+    "pp.filter_genes": (["np", "sp", "da"], []),
+    "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.log1p": (["np", "sp", "da"], []),
+    "pp.neighbors": (["np", "sp"], []),
+    "pp.normalize_total": (["np", "sp[csr]", "da"], []),
+    "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.regress_out": (["np"], []),
+    "pp.sample": (["np", "sp", "da"], []),
+    "pp.scale": (["np", "sp", "da"], []),
+    "pp.scrublet": (["np", "sp"], []),
+    "pp.scrublet_simulate_doublets": (["np", "sp"], []),
+    "tl.dendrogram": (["np", "sp"], []),
+    "tl.diffmap": (["np", "sp"], []),
+    "tl.dpt": (["np", "sp"], []),
+    "tl.draw_graph": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.embedding_density": (["np"], []),
+    "tl.ingest": (["np", "sp"], []),
+    "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.paga": (["np", "sp"], []),
+    "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.tsne": (["np", "sp"], []),
+    "tl.umap": (["np", "sp"], []),
+}
+
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
@@ -183,7 +216,7 @@ html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))

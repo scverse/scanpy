@@ -63,7 +63,7 @@ def ingest(
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
     passing it.
 
-    .. array-support:: np sp
+    .. array-support:: tl.ingest
 
     Parameters
     ----------

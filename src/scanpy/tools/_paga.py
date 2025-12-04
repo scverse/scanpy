@@ -52,7 +52,7 @@ def paga(
         `init_pos='paga'` to get single-cell embeddings that are typically more
         faithful to the global topology.
 
-    .. array-support:: np sp
+    .. array-support:: tl.paga
 
     Parameters
     ----------

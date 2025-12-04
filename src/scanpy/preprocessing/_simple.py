@@ -94,7 +94,7 @@ def filter_cells(
         Depending on what was thresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_genes` per cell.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.filter_cells
 
     Examples
     --------
@@ -215,7 +215,7 @@ def filter_genes(
     Only provide one of the optional parameters `min_counts`, `min_cells`,
     `max_counts`, `max_cells` per call.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.filter_genes
 
     Parameters
     ----------
@@ -323,7 +323,7 @@ def log1p(
     Computes :math:`X = \log(X + 1)`,
     where :math:`log` denotes the natural logarithm unless a different base is given.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.log1p
 
     Parameters
     ----------
@@ -687,7 +687,7 @@ def regress_out(
     function in R :cite:p:`Satija2015`. Note that this function tends to overcorrect
     in certain circumstances as described in :issue:`526`.
 
-    .. array-support:: np
+    .. array-support:: pp.regress_out
 
     Parameters
     ----------
@@ -896,7 +896,7 @@ def sample(  # noqa: PLR0912
 ) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.sample
 
     Parameters
     ----------
@@ -1006,7 +1006,7 @@ def downsample_counts(
     If `total_counts` is specified, expression matrix will be downsampled to
     contain at most `total_counts`.
 
-    .. array-support:: np sp[csr]
+    .. array-support:: pp.downsample_counts
 
     Parameters
     ----------

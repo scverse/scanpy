@@ -526,7 +526,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     Expects logarithmized data.
 
-    .. array-support:: np sp
+    .. array-support:: tl.rank_genes_groups
 
     ..  warning::
 

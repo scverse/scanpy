@@ -149,7 +149,7 @@ def combat(  # noqa: PLR0915
 
     .. _combat.py: https://github.com/brentp/combat.py
 
-    .. array-support:: np
+    .. array-support:: pp.combat
 
     Parameters
     ----------

@@ -87,7 +87,7 @@ def scale[A: _Array](
         all observations) are retained and (for zero_center==True) set to 0
         during this operation. In the future, they might be set to NaNs.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.scale
 
     Parameters
     ----------

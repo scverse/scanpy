@@ -56,8 +56,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
 
-    .. only uses graph in obsp
-    .. array-support:: np sp
+    .. array-support:: tl.leiden
 
     Parameters
     ----------

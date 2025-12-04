@@ -71,7 +71,7 @@ def umap(  # noqa: PLR0913, PLR0915
 
     .. _umap-learn: https://github.com/lmcinnes/umap
 
-    .. array-support:: np sp
+    .. array-support:: tl.umap
 
     Parameters
     ----------

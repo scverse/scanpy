@@ -52,7 +52,7 @@ def tsne(  # noqa: PLR0913
 
     .. _multicore-tsne: https://github.com/DmitryUlyanov/Multicore-TSNE
 
-    .. array-support:: np sp
+    .. array-support:: tl.tsne
 
     Parameters
     ----------

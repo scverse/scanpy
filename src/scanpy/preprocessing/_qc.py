@@ -225,7 +225,7 @@ def calculate_qc_metrics(
     Note that this method can take a while to compile on the first call. That
     result is then cached to disk to be used later.
 
-    .. array-support:: np sp da
+    .. array-support:: pp.calculate_qc_metrics
 
     Parameters
     ----------

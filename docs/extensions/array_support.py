@@ -18,17 +18,17 @@ if TYPE_CHECKING:
 
 
 class ArraySupport(SphinxDirective):
-    """In the scanpy-tutorials repo, this links to the canonical location (here!)."""
+    """Document array support."""
 
     required_arguments: ClassVar = 1
-    optional_arguments: ClassVar = 999
-
-    option_spec: ClassVar = {
-        "except": lambda arg: arg.split(" "),
-    }
 
     def run(self) -> list[nodes.Node]:  # noqa: D102
-        array_types = list(_docs.parse(self.arguments, self.options.get("except", ())))
+        array_support = self.config.array_support
+        if not self.arguments[0] not in array_support:
+            self.error(
+                f"API not in `array_support`, add it in `docs/conf.py`: {self.arguments[0]}"
+            )
+        array_types = list(_docs.parse(*array_support[self.arguments[0]]))
         headers = ("Array type", "supported", "… in dask :class:`~dask.array.Array`")
         data: list[tuple[_docs.Inner, bool, bool]] = []
         for array_type in _docs.parse(["np", "sp"], inner=True):
@@ -129,3 +129,4 @@ def one[T](arg: Collection[T]) -> T | None:
 def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_directive("array-support", ArraySupport)
+    app.add_config_value("array_support", {}, "env")
