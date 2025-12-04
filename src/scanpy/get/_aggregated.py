@@ -531,9 +531,9 @@ def _combine_categories(
         code_array[i] = df[c].cat.codes
     code_array *= factors[:, None]
 
-    result_categorical = pd.Categorical.from_codes(
-        code_array.sum(axis=0), categories=result_categories
-    )
+    codes = code_array.sum(axis=0)
+    codes = np.where(np.any(code_array < 0, axis=0), -1, codes)
+    result_categorical = pd.Categorical.from_codes(codes, categories=result_categories)
 
     # Filter unused categories
     result_categorical = result_categorical.remove_unused_categories()
@@ -554,8 +554,9 @@ def sparse_indicator(
         weight = mask * weight
     elif mask is None and weight is None:
         weight = np.broadcast_to(1.0, len(categorical))
+    missing = categorical.isna()
     a = sparse.coo_matrix(
-        (weight, (categorical.codes, np.arange(len(categorical)))),
+        (weight[~missing], (categorical.codes[~missing], np.arange((~missing).sum()))),
         shape=(len(categorical.categories), len(categorical)),
     )
     return a
