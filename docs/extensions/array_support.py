@@ -25,16 +25,19 @@ class ArraySupport(SphinxDirective):
 
     required_arguments: ClassVar = 1
 
+    @property
+    def _array_support(self) -> dict[str, tuple[list[str], list[str]]]:
+        return self.config.array_support
+
     def run(self) -> list[nodes.Node]:  # noqa: D102
         if self.arguments[0] == "all":
             return self._render_overview()
 
-        array_support = self.config.array_support
-        if not self.arguments[0] not in array_support:
+        if not self.arguments[0] not in self._array_support:
             self.error(
                 f"API not in `array_support`, add it in `docs/conf.py`: {self.arguments[0]}"
             )
-        array_types = list(_docs.parse(*array_support[self.arguments[0]]))
+        array_types = list(_docs.parse(*self._array_support[self.arguments[0]]))
         headers = ("Array type", "supported", "… in dask :class:`~dask.array.Array`")
         data: list[tuple[_docs.Inner, bool, bool]] = []
         for array_type in ALL_INNER:
@@ -49,8 +52,33 @@ class ArraySupport(SphinxDirective):
         return self._render_table(headers, rows)
 
     def _render_overview(self) -> list[nodes.Node]:
-        headers = []
-        rows = []
+        headers = ["Function", *(at.rst() for at in ALL_INNER)]
+        rows: list[nodes.row] = []
+        for fn, (include, exclude) in self._array_support.items():
+            row_header, _ = self.parse_inline(f":func:`scanpy.{fn}`")
+            ats = frozenset(_docs.parse(include, exclude))
+            cells: list[list[nodes.Node]] = [
+                row_header,
+                *(
+                    [
+                        nodes.Text(
+                            ("✅" if at in ats else "❌") + ("⚡" if dt in ats else "")
+                        )
+                    ]
+                    for at, dt in zip(
+                        ALL_INNER, map(_docs.DaskArray, ALL_INNER), strict=True
+                    )
+                ),
+            ]
+            rows.append(
+                nodes.row(
+                    "",
+                    *(
+                        nodes.entry("", nodes.paragraph("", "", *cell))
+                        for cell in cells
+                    ),
+                )
+            )
         return self._render_table(headers, rows)
 
     def _render_support_data(

@@ -170,7 +170,7 @@ intersphinx_mapping = dict(
 
 array_support: dict[str, tuple[list[str], list[str]]] = {
     "experimental.pp.highly_variable_genes": (["np", "sp"], []),
-    "get.aggregated": (["np", "sp", "da"], []),
+    "get.aggregate": (["np", "sp", "da"], []),
     "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
     "pp.combat": (["np"], []),
     "pp.downsample_counts": (["np", "sp[csr]"], []),
