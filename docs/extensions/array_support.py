@@ -11,10 +11,13 @@ from sphinx.util.docutils import SphinxDirective
 from scanpy._utils import _docs
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Sequence
+    from collections.abc import Collection, Generator, Iterable, Sequence
     from typing import ClassVar
 
     from sphinx.application import Sphinx
+
+
+ALL_INNER = list(_docs.parse(["np", "sp"], inner=True))
 
 
 class ArraySupport(SphinxDirective):
@@ -23,6 +26,9 @@ class ArraySupport(SphinxDirective):
     required_arguments: ClassVar = 1
 
     def run(self) -> list[nodes.Node]:  # noqa: D102
+        if self.arguments[0] == "all":
+            return self._render_overview()
+
         array_support = self.config.array_support
         if not self.arguments[0] not in array_support:
             self.error(
@@ -31,7 +37,7 @@ class ArraySupport(SphinxDirective):
         array_types = list(_docs.parse(*array_support[self.arguments[0]]))
         headers = ("Array type", "supported", "… in dask :class:`~dask.array.Array`")
         data: list[tuple[_docs.Inner, bool, bool]] = []
-        for array_type in _docs.parse(["np", "sp"], inner=True):
+        for array_type in ALL_INNER:
             dask_array_type = _docs.DaskArray(array_type)
             data.append((
                 array_type,
@@ -39,26 +45,18 @@ class ArraySupport(SphinxDirective):
                 dask_array_type in array_types,
             ))
 
-        return self._render_table(headers, data)
+        rows = self._render_support_data(data)
+        return self._render_table(headers, rows)
 
-    def _render_table(
+    def _render_overview(self) -> list[nodes.Node]:
+        headers = []
+        rows = []
+        return self._render_table(headers, rows)
+
+    def _render_support_data(
         self,
-        headers: tuple[str, str, str],
         data: list[tuple[_docs.Inner, bool, bool]],
-    ) -> list[nodes.Node]:
-
-        colspecs = [nodes.colspec(stub=True), *(nodes.colspec() for _ in range(2))]
-        thead = nodes.thead(
-            "",
-            nodes.row(
-                "",
-                *(
-                    nodes.entry("", nodes.paragraph("", "", *self.parse_inline(t)[0]))
-                    for t in headers
-                ),
-            ),
-        )
-        tbody = nodes.tbody()
+    ) -> Generator[nodes.row, None, None]:
         for t, group in groupby(data, key=lambda r: type(r[0])):
             group = list(group)  # noqa: PLW2901
             if (  # if all sparse types have the same support, just one row
@@ -78,43 +76,52 @@ class ArraySupport(SphinxDirective):
                     nodes.inline("", "}"),
                 ]
                 header = [nodes.literal("", "", *refs)]
-                tbody += [self._render_row(header, support=support, in_dask=in_dask)]
+                yield self._render_row(header, support=support, in_dask=in_dask)
             else:  # otherwise, show them individually
-                tbody += [
-                    self._render_row(
+                for array_type, support, in_dask in group:
+                    yield self._render_row(
                         self._render_array_type(array_type),
                         support=support,
                         in_dask=in_dask,
                     )
-                    for array_type, support, in_dask in group
-                ]
+
+    def _render_row(
+        self, header: Sequence[nodes.Node], *, support: bool, in_dask: bool
+    ) -> nodes.row:
+        cells: list[Sequence[nodes.Node]] = [
+            header,
+            [nodes.Text("✅" if support else "❌")],
+            [nodes.Text("✅" if in_dask else "❌")],
+        ]
+        children = (nodes.entry("", nodes.paragraph("", "", *cell)) for cell in cells)
+        return nodes.row("", *children)
+
+    def _render_table(
+        self, headers: Collection[str], rows: Iterable[nodes.row]
+    ) -> list[nodes.Node]:
+        colspecs = [
+            nodes.colspec(stub=True),
+            *(nodes.colspec() for _ in range(len(headers) - 1)),
+        ]
+        header_nodes = [
+            nodes.entry("", nodes.paragraph("", "", *self.parse_inline(t)[0]))
+            for t in headers
+        ]
+        thead = nodes.thead("", nodes.row("", *header_nodes))
+        tbody = nodes.tbody("", *rows)
         return [
             nodes.table(
                 "",
                 nodes.title("", "Array type support"),
-                nodes.tgroup("", *colspecs, thead, tbody, cols=3),
+                nodes.tgroup("", *colspecs, thead, tbody, cols=len(colspecs)),
                 ids=["array-support"],
             )
         ]
-
-    def _render_row(
-        self, header: Sequence[nodes.Node], *, support: bool, in_dask: bool
-    ) -> nodes.Node:
-        cells: list[Sequence[nodes.Node]] = [
-            header,
-            self._render_support(support),
-            self._render_support(in_dask),
-        ]
-        children = (nodes.entry("", nodes.paragraph("", "", *cell)) for cell in cells)
-        return nodes.row("", *children)
 
     def _render_array_type(self, array_type: _docs.ArrayType, /) -> list[nodes.Node]:
         nodes_, msgs = self.parse_inline(array_type.rst())
         assert not msgs, msgs
         return nodes_
-
-    def _render_support(self, support: bool, /) -> list[nodes.Node]:  # noqa: FBT001
-        return [nodes.Text("✅" if support else "❌")]
 
 
 def one[T](arg: Collection[T]) -> T | None:
