@@ -76,6 +76,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
+    .. array-support:: tl.louvain
+
     Parameters
     ----------
     adata

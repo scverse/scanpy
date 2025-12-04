@@ -10,6 +10,10 @@ import scanpy as sc
 Additional functionality is available in the broader {doc}`ecosystem <../ecosystem>`, with some tools being wrapped in the {mod}`scanpy.external` module.
 ```
 
+```{eval-rst}
+.. array-support:: all
+```
+
 ```{toctree}
 :maxdepth: 2
 

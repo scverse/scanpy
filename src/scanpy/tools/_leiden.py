@@ -56,6 +56,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
 
+    .. array-support:: tl.leiden
+
     Parameters
     ----------
     adata

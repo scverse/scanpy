@@ -73,6 +73,8 @@ def scrublet(  # noqa: PLR0913
     :func:`~scanpy.pp.scrublet_simulate_doublets`, and run the core scrublet
     function :func:`~scanpy.pp.scrublet` with ``adata_sim`` set.
 
+    .. array-support:: pp.scrublet
+
     Parameters
     ----------
     adata
@@ -511,6 +513,8 @@ def scrublet_simulate_doublets(
     random_seed: _LegacyRandom = 0,
 ) -> AnnData:
     """Simulate doublets by adding the counts of random observed transcriptome pairs.
+
+    .. array-support:: pp.scrublet_simulate_doublets
 
     Parameters
     ----------

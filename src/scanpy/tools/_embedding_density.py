@@ -59,6 +59,8 @@ def embedding_density(  # noqa: PLR0912
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
 
+    .. array-support:: tl.embedding_density
+
     Parameters
     ----------
     adata

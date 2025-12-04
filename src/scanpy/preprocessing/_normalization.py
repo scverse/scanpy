@@ -158,6 +158,8 @@ def normalize_total(  # noqa: PLR0912
     Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
     :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
 
+    .. array-support:: pp.normalize_total
+
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
         call functions that trigger `.compute()` on the :class:`~dask.array.Array` if `exclude_highly_expressed`

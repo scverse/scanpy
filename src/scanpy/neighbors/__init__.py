@@ -91,6 +91,8 @@ def neighbors(  # noqa: PLR0913
     in the adaption of :cite:t:`Haghverdi2016`.
     If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
 
+    .. array-support:: pp.neighbors
+
     Parameters
     ----------
     adata

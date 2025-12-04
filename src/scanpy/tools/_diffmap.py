@@ -34,6 +34,8 @@ def diffmap(
     `method=='umap'`. Differences between these options shouldn't usually be
     dramatic.
 
+    .. array-support:: tl.diffmap
+
     Parameters
     ----------
     adata
