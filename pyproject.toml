@@ -87,7 +87,7 @@ Twitter = "https://x.com/scverse_team"
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
 
-[project.optional-dependencies]
+[dependency-groups]
 test-min = [
     "pytest",
     "pytest-mock",
@@ -98,7 +98,7 @@ test-min = [
     "tuna",
 ]
 test = [
-    "scanpy[test-min]",
+    { include-group = "test-min" },
     # optional storage and processing modes
     "scanpy[dask]",
     "zarr>=2.18.7",
@@ -131,6 +131,8 @@ dev = [
     "towncrier",   # release note management
     "scipy-stubs", # static typing and IDE support
 ]
+
+[project.optional-dependencies]
 # Algorithms
 paga = [ "igraph" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ] # Louvain community detection

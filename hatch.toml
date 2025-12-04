@@ -1,9 +1,9 @@
 [envs.default]
 installer = "uv"
-features = [ "dev" ]
+dependency-groups = [ "dev" ]
 
 [envs.docs]
-features = [ "doc" ]
+dependency-groups = [ "doc" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -15,7 +15,7 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = [  ]
-features = [ "dev", "test-min" ]
+dependency-groups = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
@@ -34,11 +34,10 @@ overrides.matrix.deps.python = [
     { if = [ "pre" ], value = "3.14" },
 ]
 overrides.matrix.deps.extra-dependencies = [
-    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
 ]
-overrides.matrix.deps.features = [
-    { if = [ "stable", "pre", "low-vers" ], value = "test" },
-]
+# Should be `value = "test"`: https://github.com/pypa/hatch/issues/2114
+overrides.matrix.deps.dependency-groups = { if = [ "stable", "pre", "low-vers" ], value = [ "dev", "test" ] }
 
 [[envs.hatch-test.matrix]]
 deps = [ "stable", "pre", "low-vers", "few-extras" ]

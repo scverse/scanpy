@@ -75,7 +75,7 @@ If you are using `pip>=21.3`, an editable install can be made:
 ```console
 $ python -m venv .venv
 $ source .venv/bin/activate
-$ pip install -e '.[dev,test]'
+$ pip install --group=dev --group=test -e .
 ```
 :::
 
@@ -87,7 +87,7 @@ $ pipx install beni
 $ beni pyproject.toml > environment.yml
 $ conda env create -f environment.yml
 $ conda activate scanpy
-$ pip install -e '.[dev,doc,test]'
+$ pip install --group=dev --group=test --group=doc -e .
 ```
 
 For instructions on how to work with the code, see the {ref}`contribution guide <contribution-guide>`.
