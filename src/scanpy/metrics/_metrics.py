@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
 from scipy.sparse import coo_matrix
 
 from .._compat import SpBase
+from .._utils import NeighborsView
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from anndata import AnnData
     from numpy.typing import ArrayLike
 
 
@@ -97,28 +98,98 @@ def confusion_matrix(
     return df
 
 
+@overload
 def modularity(
     connectivities: ArrayLike | SpBase,
+    /,
     labels: pd.Series | ArrayLike,
     *,
     is_directed: bool,
+) -> float: ...
+
+
+@overload
+def modularity(
+    adata: AnnData,
+    /,
+    labels: str | pd.Series | ArrayLike = "leiden",
+    *,
+    neighbors_key: str | None = None,
+    is_directed: bool | None = None,
+) -> float: ...
+
+
+def modularity(
+    adata_or_connectivities: AnnData | ArrayLike | SpBase,
+    /,
+    labels: str | pd.Series | ArrayLike = "leiden",
+    *,
+    neighbors_key: str | None = None,
+    is_directed: bool | None = None,
 ) -> float:
     """Compute the modularity of a graph given its connectivities and labels.
 
     Parameters
     ----------
-    connectivities:
-        Weighted adjacency matrix representing the graph. Can be a dense NumPy array or a sparse CSR matrix.
-    labels:
+    adata_or_connectivities
+        The AnnData object containing the data or a weighted adjacency matrix representing the graph.
+        Can be a dense NumPy array or a sparse CSR matrix.
+    labels
         Cluster labels for each node in the graph.
-    is_directed:
+        When `AnnData` is provided, this can be the key in `adata.obs` that contains the clustering labels and defaults to `"leiden"`.
+    neighbors_key
+        When `AnnData` is provided, the key in `adata.obsp` that contains the connectivities.
+    is_directed
         Whether the graph is directed or undirected. If True, the graph is treated as directed; otherwise, it is treated as undirected.
 
     Returns
     -------
-    float
-        The modularity of the graph based on the provided clustering.
+    The modularity of the graph based on the provided clustering.
     """
+    if isinstance(adata_or_connectivities, AnnData):
+        return modularity_adata(
+            adata_or_connectivities,
+            labels=labels,
+            neighbors_key=neighbors_key,
+            is_directed=is_directed,
+        )
+    if isinstance(labels, str):
+        msg = "`labels` must be provided as array when passing a connectivities array"
+        raise TypeError(msg)
+    if is_directed is None:
+        msg = "`is_directed` must be provided when passing a connectivities array"
+        raise TypeError(msg)
+    return modularity_array(
+        adata_or_connectivities, labels=labels, is_directed=is_directed
+    )
+
+
+def modularity_adata(
+    adata: AnnData,
+    /,
+    *,
+    labels: str | pd.Series | ArrayLike,
+    neighbors_key: str | None,
+    is_directed: bool | None,
+) -> float:
+    labels = adata.obs[labels] if isinstance(labels, str) else labels
+    nv = NeighborsView(adata, neighbors_key)
+    connectivities = nv["connectivities"]
+
+    if is_directed is None and (is_directed := nv["params"].get("is_directed")) is None:
+        msg = "`adata` has no `'is_directed'` in `adata.uns[neighbors_key]['params']`, need to specify `is_directed`"
+        raise ValueError(msg)
+
+    return modularity(connectivities, labels, is_directed=is_directed)
+
+
+def modularity_array(
+    connectivities: ArrayLike | SpBase,
+    /,
+    *,
+    labels: pd.Series | ArrayLike,
+    is_directed: bool,
+) -> float:
     try:
         # try to import igraph in case the user wants to calculate modularity
         # not in the main module to avoid import errors
@@ -129,7 +200,7 @@ def modularity(
     if isinstance(connectivities, SpBase):
         # check if the connectivities is a sparse matrix
         coo = coo_matrix(connectivities)
-        edges = list(zip(coo.row, coo.col, strict=False))
+        edges = list(zip(coo.row, coo.col, strict=True))
         # converting to the coo format to extract the edges and weights
         # storing only non-zero elements and their indices
         weights = coo.data.tolist()
@@ -144,41 +215,3 @@ def modularity(
     labels = pd.Categorical(np.asarray(labels)).codes
 
     return graph.modularity(labels)
-
-
-def modularity_adata(
-    adata: AnnData,
-    *,
-    label_key: str | ArrayLike = "leiden",
-    key: str = "neighbors",
-    is_directed: bool,
-) -> float:
-    # default to leiden labels and connectivities as it is more common
-    """Compute modularity from an AnnData object using stored graph and clustering labels.
-
-    Parameters
-    ----------
-    adata:
-        The AnnData object containing the data.
-    label_key:
-        The key in `adata.obs` that contains the clustering labels. Defaults to "leiden".
-    key:
-        The key in `adata.obsp` that contains the connectivities. Defaults to "neighbors".
-    is_directed:
-        Whether the graph is directed or undirected. If True, the graph is treated as directed; otherwise, it is treated as undirected.
-
-    Returns
-    -------
-    float
-        The modularity of the graph based on the provided clustering.
-    """
-    label_array = adata.obs[label_key] if isinstance(label_key, str) else label_key
-    connectivities_key = adata.uns[key]["connectivities_key"]
-    params = adata.uns[key]["params"]
-    connectivities = adata.obsp[connectivities_key]
-    is_directed = params["is_directed"]
-
-    if isinstance(connectivities, pd.DataFrame):
-        connectivities = connectivities.values
-
-    return modularity(connectivities, label_array, is_directed=is_directed)
