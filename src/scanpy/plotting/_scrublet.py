@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from .._compat import old_positionals
-from . import _utils
+from ._utils import savefig_or_show
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    Scale = Literal["linear", "log", "symlog", "logit"] | str
+type Scale = Literal["linear", "log", "symlog", "logit"] | str
 
 
 @old_positionals(
@@ -33,8 +33,7 @@ def scrublet_score_distribution(
     show: bool = True,
     save: str | bool | None = None,
 ) -> Figure | Sequence[tuple[Axes, Axes]] | tuple[Axes, Axes] | None:
-    """\
-    Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
+    """Plot histogram of doublet scores for observed transcriptomes and simulated doublets.
 
     The histogram for simulated doublets is useful for determining the correct doublet
     score threshold.
@@ -63,14 +62,14 @@ def scrublet_score_distribution(
     If ``return_fig`` is True, a :class:`~matplotlib.figure.Figure`.
     If ``show==False`` a list of :class:`~matplotlib.axes.Axes`.
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pp.scrublet`: Main way of running Scrublet, runs
         preprocessing, doublet simulation and calling.
     :func:`~scanpy.pp.scrublet_simulate_doublets`: Run Scrublet's doublet
         simulation separately for advanced usage.
-    """
 
+    """
     if "scrublet" not in adata.uns:
         msg = "Please run scrublet before trying to generate the scrublet plot."
         raise ValueError(msg)
@@ -132,7 +131,7 @@ def scrublet_score_distribution(
 
     fig.tight_layout()
 
-    _utils.savefig_or_show("scrublet_score_distribution", show=show, save=save)
+    savefig_or_show("scrublet_score_distribution", show=show, save=save)
     if return_fig:
         return fig
     elif not show:

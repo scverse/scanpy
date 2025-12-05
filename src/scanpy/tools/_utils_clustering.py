@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._utils import _CSMatrix
+    from .._compat import CSBase
 
 
 def rename_groups(
@@ -24,7 +24,7 @@ def rename_groups(
 ) -> pd.Series[str]:
     key_added = f"{restrict_key}_R" if key_added is None else key_added
     all_groups = adata.obs[restrict_key].astype("U")
-    prefix = "-".join(restrict_categories) + ","
+    prefix = f"{'-'.join(restrict_categories)},"
     new_groups = [prefix + g for g in groups.astype("U")]
     all_groups.iloc[restrict_indices] = new_groups
     return all_groups
@@ -35,8 +35,8 @@ def restrict_adjacency(
     restrict_key: str,
     *,
     restrict_categories: Sequence[str],
-    adjacency: _CSMatrix,
-) -> tuple[_CSMatrix, NDArray[np.bool_]]:
+    adjacency: CSBase,
+) -> tuple[CSBase, NDArray[np.bool_]]:
     if not isinstance(restrict_categories[0], str):
         msg = "You need to use strings to label categories, e.g. '1' instead of 1."
         raise ValueError(msg)

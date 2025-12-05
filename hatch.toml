@@ -15,22 +15,30 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = [  ]
-features = [ "dev", "test", "dask-ml" ]
+features = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
-    { if = [ "min" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
+    { if = [ "low-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
-    { if = [ "min" ], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
+    { if = [
+        "low-vers",
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "min" ], value = "3.10" },
-    { if = [ "stable", "full", "pre" ], value = "3.12" },
+    { if = [ "low-vers" ], value = "3.12" },
+    { if = [ "stable", "few-extras" ], value = "3.13" },
+    # numba doesn’t support 3.14 in a stable release yet:
+    # https://github.com/numba/numba/issues/9957
+    { if = [ "pre" ], value = "3.14" },
+]
+overrides.matrix.deps.extra-dependencies = [
+    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
 ]
 overrides.matrix.deps.features = [
-    { if = [ "full" ], value = "test-full" },
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
 ]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "full", "pre", "min" ]
+deps = [ "stable", "pre", "low-vers", "few-extras" ]

@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import colormaps
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -38,8 +36,7 @@ if TYPE_CHECKING:
 
 @_doc_params(common_plot_args=doc_common_plot_args)
 class StackedViolin(BasePlot):
-    """\
-    Stacked violin plots.
+    """Stacked violin plots.
 
     Makes a compact image composed of individual violin plots
     (from :func:`~seaborn.violinplot`) stacked on top of each other.
@@ -88,7 +85,7 @@ class StackedViolin(BasePlot):
         Are passed to :func:`~seaborn.violinplot`.
 
 
-    See also
+    See Also
     --------
     :func:`~scanpy.pl.stacked_violin`: simpler way to call StackedViolin but with less
         options.
@@ -96,19 +93,23 @@ class StackedViolin(BasePlot):
         to plot marker genes identified using :func:`~scanpy.tl.rank_genes_groups`
 
     Examples
-    -------
-
+    --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    >>> markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
+    >>> sc.pl.StackedViolin(
+    ...     adata, markers, groupby="bulk_labels", dendrogram=True
+    ... )  # doctest: +ELLIPSIS
     <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
 
     Using var_names as dict:
 
-    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-    >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels', dendrogram=True)  # doctest: +ELLIPSIS
+    >>> markers = {{"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}}
+    >>> sc.pl.StackedViolin(
+    ...     adata, markers, groupby="bulk_labels", dendrogram=True
+    ... )  # doctest: +ELLIPSIS
     <scanpy.plotting._stacked_violin.StackedViolin object at 0x...>
+
     """
 
     DEFAULT_SAVE_PREFIX = "stacked_violin_"
@@ -143,15 +144,15 @@ class StackedViolin(BasePlot):
     # None will draw unadorned violins.
     DEFAULT_INNER = None
 
+    # Called unconditionally when accessing an instance attribute:
     def __getattribute__(self, name: str) -> object:
-        """Called unconditionally when accessing an instance attribute"""
         # If the user has set the deprecated version on the class,
         # and our code accesses the new version from the instance,
         # return the user-specified version instead and warn.
         # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning)
+            warn(msg, FutureWarning)
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
@@ -174,7 +175,7 @@ class StackedViolin(BasePlot):
         "vcenter",
         "norm",
     )
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
         var_names: _VarNames | Mapping[str, _VarNames],
@@ -226,7 +227,7 @@ class StackedViolin(BasePlot):
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning)
+            warn(msg, FutureWarning)
         if standard_scale == "group":
             self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
             self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
@@ -267,7 +268,7 @@ class StackedViolin(BasePlot):
         "x_padding",
         "y_padding",
     )
-    def style(
+    def style(  # noqa: PLR0913
         self,
         *,
         cmap: Colormap | str | None | Empty = _empty,
@@ -284,8 +285,7 @@ class StackedViolin(BasePlot):
         # deprecated
         scale: DensityNorm | Empty = _empty,
     ) -> Self:
-        r"""\
-        Modifies plot visual parameters
+        r"""Modify plot visual parameters.
 
         Parameters
         ----------
@@ -333,7 +333,7 @@ class StackedViolin(BasePlot):
         :class:`~scanpy.pl.StackedViolin`
 
         Examples
-        -------
+        --------
         >>> import scanpy as sc
         >>> adata = sc.datasets.pbmc68k_reduced()
         >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
@@ -342,6 +342,7 @@ class StackedViolin(BasePlot):
 
         >>> sc.pl.StackedViolin(adata, markers, groupby='bulk_labels') \
         ...     .style(row_palette='Blues', linewidth=0).show()
+
         """
         super().style(cmap=cmap)
 
@@ -402,7 +403,7 @@ class StackedViolin(BasePlot):
         if self.are_axes_swapped:
             _color_df = _color_df.T
 
-        cmap = plt.get_cmap(self.kwds.pop("cmap", self.cmap))
+        cmap = colormaps.get_cmap(self.kwds.pop("cmap", self.cmap))
         normalize = check_colornorm(
             self.vboundnorm.vmin,
             self.vboundnorm.vmax,
@@ -493,13 +494,8 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
-        if Version(pd.__version__) >= Version("2.1"):
-            stack_kwargs = {"future_stack": True}
-        else:
-            stack_kwargs = {"dropna": False}
-
         df = (
-            pd.DataFrame(_matrix.stack(**stack_kwargs))
+            pd.DataFrame(_matrix.stack(future_stack=True))
             .reset_index()
             .rename(
                 columns={
@@ -583,10 +579,7 @@ class StackedViolin(BasePlot):
             self._setup_violin_axes_ticks(row_ax, num_cols)
 
     def _setup_violin_axes_ticks(self, row_ax: Axes, num_cols: int):
-        """
-        Configures each of the violin plot axes ticks like remove or add labels etc.
-
-        """
+        """Configure each of the violin plot axes ticks like remove or add labels etc."""
         # remove the default seaborn grids because in such a compact
         # plot are unnecessary
 
@@ -617,7 +610,7 @@ class StackedViolin(BasePlot):
             # and align the firts label on top of the tick and
             # the second below the tick. This avoid overlapping
             # of nearby ticks
-            import matplotlib.ticker as ticker
+            from matplotlib import ticker
 
             # use MaxNLocator to set 2 ticks
             row_ax.yaxis.set_major_locator(
@@ -667,7 +660,7 @@ class StackedViolin(BasePlot):
     groupby_plots_args=doc_common_groupby_plot_args,
     vminmax=doc_vboundnorm,
 )
-def stacked_violin(
+def stacked_violin(  # noqa: PLR0913
     adata: AnnData,
     var_names: _VarNames | Mapping[str, _VarNames],
     groupby: str | Sequence[str],
@@ -688,7 +681,6 @@ def stacked_violin(
     categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     return_fig: bool | None = False,
     ax: _AxesSubplot | None = None,
     vmin: float | None = None,
@@ -706,10 +698,10 @@ def stacked_violin(
     # deprecated
     order: Sequence[str] | None | Empty = _empty,
     scale: DensityNorm | Empty = _empty,
+    save: bool | str | None = None,
     **kwds,
 ) -> StackedViolin | dict | None:
-    """\
-    Stacked violin plots.
+    """Stacked violin plots.
 
     Makes a compact image composed of individual violin plots
     (from :func:`~seaborn.violinplot`) stacked on top of each other.
@@ -758,7 +750,7 @@ def stacked_violin(
     If `return_fig` is `True`, returns a :class:`~scanpy.pl.StackedViolin` object,
     else if `show` is false, return axes dict
 
-    See also
+    See Also
     --------
     :class:`~scanpy.pl.StackedViolin`: The StackedViolin class can be used to to control
         several visual parameters not available in this function.
@@ -766,8 +758,7 @@ def stacked_violin(
         using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
-    -------
-
+    --------
     Visualization of violin plots of a few genes grouped by the category `bulk_labels`:
 
     .. plot::
@@ -808,7 +799,7 @@ def stacked_violin(
             "`order` is deprecated (and never worked for `stacked_violin`), "
             "use categories_order instead"
         )
-        warnings.warn(msg, FutureWarning)
+        warn(msg, FutureWarning)
         # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(

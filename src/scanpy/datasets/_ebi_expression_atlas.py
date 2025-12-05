@@ -17,7 +17,12 @@ from ..readwrite import _download
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
-    from typing import BinaryIO
+    from pandas._typing import ReadCsvBuffer
+
+    from scanpy._compat import CSRBase
+
+
+CHUNK_SIZE = int(1e7)
 
 
 def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -33,7 +38,7 @@ def sniff_url(accession: str):
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = f"{e.msg} ({base_url})"  # Report failed url
+        e.add_note(base_url)
         raise
 
 
@@ -42,39 +47,45 @@ def download_experiment(accession: str):
     sniff_url(accession)
 
     base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
-    design_url = f"{base_url}/download?accessKey=&fileType="
-    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
+    design_url = f"{base_url}/download?accessKey=&fileType=experiment-design"
+    mtx_url = f"{base_url}/download/zip?accessKey=&fileType=quantification-raw"
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    _download(
-        design_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
-    )
-    _download(
-        mtx_url + "quantification-raw",
-        experiment_dir / "expression_archive.zip",
-    )
+    _download(design_url, experiment_dir / "experimental_design.tsv")
+    _download(mtx_url, experiment_dir / "expression_archive.zip")
 
 
-def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
+def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> CSRBase:
     curline = stream.readline()
     while curline.startswith(b"%"):
         curline = stream.readline()
-    n, m, _ = (int(x) for x in curline[:-1].split(b" "))
+    n, m, e = map(int, curline[:-1].split(b" "))
 
+    dtype_data = np.float32
     max_int32 = np.iinfo(np.int32).max
-    coord_dtype = np.int64 if n > max_int32 or m > max_int32 else np.int32
+    dtype_coord = np.int64 if n > max_int32 or m > max_int32 else np.int32
 
-    data = pd.read_csv(
+    data = np.ndarray((e,), dtype=dtype_data)
+    i = np.ndarray((e,), dtype=dtype_coord)
+    j = np.ndarray((e,), dtype=dtype_coord)
+    start = 0
+    with pd.read_csv(
         stream,
         sep=r"\s+",
         header=None,
-        dtype={0: coord_dtype, 1: coord_dtype, 2: np.float32},
-    )
-    mtx = sparse.csr_matrix((data[2], (data[1] - 1, data[0] - 1)), shape=(m, n))
-    return mtx
+        dtype={0: dtype_coord, 1: dtype_coord, 2: dtype_data},
+        chunksize=CHUNK_SIZE,
+    ) as reader:
+        chunk: pd.DataFrame
+        for chunk in reader:
+            l = chunk.shape[0]
+            data[start : start + l] = chunk[2]
+            i[start : start + l] = chunk[1] - 1
+            j[start : start + l] = chunk[0] - 1
+            start += l
+    return sparse.csr_matrix((data, (i, j)), shape=(m, n))  # noqa: TID251
 
 
 def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
@@ -100,12 +111,11 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
 ) -> anndata.AnnData:
-    """\
-    Load a dataset from the EBI Single Cell Expression Atlas.
+    """Load a dataset from the EBI Single Cell Expression Atlas.
 
     The atlas_ can be browsed online to find the ``accession`` you want.
     Downloaded datasets are saved in the directory specified by
-    :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
+    :attr:`~scanpy.settings.datasetdir`.
 
     .. _atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 
@@ -130,6 +140,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+
     """
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / f"{accession}.h5ad"

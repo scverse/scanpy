@@ -16,7 +16,7 @@ Additional functionality is available in the broader {doc}`ecosystem <../ecosyst
 preprocessing
 tools
 plotting
-reading
+io
 get
 queries
 metrics

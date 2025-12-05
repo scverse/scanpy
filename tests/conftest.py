@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import sys
 from pathlib import Path
 from textwrap import dedent
@@ -48,7 +49,7 @@ def _manage_log_handlers() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, None]:
-    """Allow use of scanpy’s logger with caplog"""
+    """Allow use of scanpy’s logger with caplog."""
     import scanpy as sc
 
     sc.settings._root_logger.addHandler(caplog.handler)
@@ -70,7 +71,7 @@ class CompareResult(TypedDict):
 
 
 @pytest.fixture
-def check_same_image(add_nunit_attachment):
+def check_same_image(cache: pytest.Cache):
     from urllib.parse import quote
 
     from matplotlib.testing.compare import compare_images
@@ -80,23 +81,25 @@ def check_same_image(add_nunit_attachment):
         actual: Path | os.PathLike,
         *,
         tol: int,
-        basename: str = "",
+        root: Path,
+        save: bool = True,
     ) -> None:
         __tracebackhide__ = True
 
-        def fmt_descr(descr):
-            return f"{descr} ({basename})" if basename else descr
-
         result = cast(
-            CompareResult | None,
+            "CompareResult | None",
             compare_images(str(expected), str(actual), tol=tol, in_decorator=True),
         )
         if result is None:
             return
 
-        add_nunit_attachment(result["expected"], fmt_descr("Expected"))
-        add_nunit_attachment(result["actual"], fmt_descr("Result"))
-        add_nunit_attachment(result["diff"], fmt_descr("Difference"))
+        if save:
+            d = cache.mkdir("debug")
+            for image in ("expected", "actual", "diff"):
+                src = Path(result[image])
+                dst = d / src.relative_to(root)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
 
         result_urls = {
             k: f"file://{quote(v)}" if isinstance(v, str) else v
@@ -121,10 +124,10 @@ def check_same_image(add_nunit_attachment):
 def image_comparer(check_same_image):
     from matplotlib import pyplot as plt
 
-    def save_and_compare(*path_parts: Path | os.PathLike, tol: int):
+    def save_and_compare(root: Path, path_str: Path | os.PathLike, *, tol: int):
         __tracebackhide__ = True
 
-        base_pth = Path(*path_parts)
+        base_pth = root / path_str
 
         if not base_pth.is_dir():
             base_pth.mkdir()
@@ -135,7 +138,7 @@ def image_comparer(check_same_image):
         if not expected_pth.is_file():
             msg = f"No expected output found at {expected_pth}."
             raise OSError(msg)
-        check_same_image(expected_pth, actual_pth, tol=tol)
+        check_same_image(expected_pth, actual_pth, tol=tol, root=root)
 
     return save_and_compare
 

@@ -1,4 +1,4 @@
-"""Preprocessing recipes from the literature"""
+"""Preprocessing recipes from the literature."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from .. import logging as logg
 from .. import preprocessing as pp
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -16,7 +16,7 @@ from ._normalization import normalize_total
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._compat import _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
 
 @old_positionals(
@@ -39,8 +39,7 @@ def recipe_weinreb17(
     random_state: _LegacyRandom = 0,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of :cite:p:`Weinreb2017`.
+    """Normalize and filter as of :cite:p:`Weinreb2017`.
 
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
@@ -53,12 +52,11 @@ def recipe_weinreb17(
         Logarithmize data?
     copy
         Return a copy if true.
-    """
-    from scipy.sparse import issparse
 
+    """
     from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
 
-    if issparse(adata.X):
+    if isinstance(adata.X, CSBase):
         msg = "`recipe_weinreb16 does not support sparse matrices."
         raise ValueError(msg)
     if copy:
@@ -70,14 +68,14 @@ def recipe_weinreb17(
     )
     gene_subset = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
-    X_pca = pp.pca(
+    x_pca = pp.pca(
         zscore_deprecated(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
         random_state=random_state,
     )
     # update adata
-    adata.obsm["X_pca"] = X_pca
+    adata.obsm["X_pca"] = x_pca
     return adata if copy else None
 
 
@@ -85,8 +83,7 @@ def recipe_weinreb17(
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of Seurat :cite:p:`Satija2015`.
+    """Normalize and filter as of Seurat :cite:p:`Satija2015`.
 
     This uses a particular preprocessing.
 
@@ -103,6 +100,7 @@ def recipe_seurat(
         Show a plot of the gene dispersion vs. mean relation.
     copy
         Return a copy if true.
+
     """
     if copy:
         adata = adata.copy()
@@ -134,8 +132,7 @@ def recipe_zheng17(
     plot: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Normalization and filtering as of :cite:t:`Zheng2017`.
+    """Normalize and filter as of :cite:t:`Zheng2017`.
 
     Reproduces the preprocessing of :cite:t:`Zheng2017` – the Cell Ranger R Kit of 10x
     Genomics.
@@ -176,6 +173,7 @@ def recipe_zheng17(
     Returns
     -------
     Returns or updates `adata` depending on `copy`.
+
     """
     start = logg.info("running recipe zheng17")
     if copy:

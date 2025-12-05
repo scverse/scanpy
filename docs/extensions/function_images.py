@@ -1,4 +1,4 @@
-"""Images for plot functions"""
+"""Images for plot functions."""
 
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 def insert_function_images(  # noqa: PLR0917
     app: Sphinx, what: str, name: str, obj: Any, options: Options, lines: list[str]
-):
+) -> None:
+    """Insert images for plot functions."""
     path = app.config.api_dir / f"{name}.png"
     if what != "function" or not path.is_file():
         return
@@ -26,6 +27,7 @@ def insert_function_images(  # noqa: PLR0917
     ]
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> None:
+    """App setup hook."""
     app.add_config_value("api_dir", Path(), "env")
     app.connect("autodoc-process-docstring", insert_function_images)

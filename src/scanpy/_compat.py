@@ -1,26 +1,50 @@
 from __future__ import annotations
 
-import os
 import sys
 import warnings
-from dataclasses import dataclass, field
-from functools import WRAPPER_ASSIGNMENTS, cache, partial, wraps
+from functools import cache, partial, wraps
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
-import numpy as np
+import legacy_api_wrap
 from packaging.version import Version
+from scipy import sparse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
+__all__ = [
+    "CSBase",
+    "CSCBase",
+    "CSRBase",
+    "DaskArray",
+    "SpBase",
+    "_numba_threading_layer",
+    "deprecated",
+    "fullname",
+    "njit",
+    "old_positionals",
+    "pkg_metadata",
+    "pkg_version",
+    "warn",
+]
 
-_LegacyRandom = int | np.random.RandomState | None
+
+SpBase = sparse.spmatrix | sparse.sparray  # noqa: TID251
+"""Only use when you directly convert it to a known subclass."""
+
+_CSArray = sparse.csr_array | sparse.csc_array  # noqa: TID251
+"""Only use if you want to specially handle arrays as opposed to matrices."""
+
+_CSMatrix = sparse.csr_matrix | sparse.csc_matrix  # noqa: TID251
+"""Only use if you want to specially handle matrices as opposed to arrays."""
+
+CSRBase = sparse.csr_matrix | sparse.csr_array  # noqa: TID251
+CSCBase = sparse.csc_matrix | sparse.csc_array  # noqa: TID251
+CSBase = _CSArray | _CSMatrix
 
 
 if TYPE_CHECKING:
@@ -29,30 +53,8 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-
-    class DaskArray:
-        pass
-
-
-if find_spec("zappy") or TYPE_CHECKING:
-    from zappy.base import ZappyArray
-else:
-
-    class ZappyArray:
-        pass
-
-
-__all__ = [
-    "DaskArray",
-    "ZappyArray",
-    "fullname",
-    "pkg_metadata",
-    "pkg_version",
-    "old_positionals",
-    "deprecated",
-    "njit",
-    "_numba_threading_layer",
-]
+    DaskArray = type("Array", (), {})
+    DaskArray.__module__ = "dask.array"
 
 
 def fullname(typ: type) -> str:
@@ -61,25 +63,6 @@ def fullname(typ: type) -> str:
     if module == "builtins" or module is None:
         return name
     return f"{module}.{name}"
-
-
-if sys.version_info >= (3, 11):
-    from contextlib import chdir
-else:
-    import os
-    from contextlib import AbstractContextManager
-
-    @dataclass
-    class chdir(AbstractContextManager):
-        path: Path
-        _old_cwd: list[Path] = field(default_factory=list)
-
-        def __enter__(self) -> None:
-            self._old_cwd.append(Path.cwd())
-            os.chdir(self.path)
-
-        def __exit__(self, *_excinfo) -> None:
-            os.chdir(self._old_cwd.pop())
 
 
 def pkg_metadata(package: str) -> PackageMetadata:
@@ -95,48 +78,59 @@ def pkg_version(package: str) -> Version:
     return Version(version(package))
 
 
-if find_spec("legacy_api_wrap") or TYPE_CHECKING:
-    from legacy_api_wrap import legacy_api  # noqa: TID251
+# File prefixes for us and decorators we use
+_FILE_PREFIXES: tuple[str, ...] = (
+    str(Path(__file__).parent),
+    str(Path(legacy_api_wrap.__file__).parent),
+)
 
-    old_positionals = partial(legacy_api, category=FutureWarning)
+
+old_positionals = partial(
+    legacy_api_wrap.legacy_api,  # noqa: TID251
+    category=FutureWarning,
+    skip_file_prefixes=_FILE_PREFIXES,
+)
+
+
+# we’re not using _FILE_PREFIXES here,
+# since a wholesale deprecated function shouldn’t be used internally anyway
+if TYPE_CHECKING:
+    from warnings import deprecated
 else:
-    # legacy_api_wrap is currently a hard dependency,
-    # but this code makes it possible to run scanpy without it.
-    def old_positionals(*old_positionals: str):
-        return lambda func: func
+    if sys.version_info >= (3, 13):
+        from warnings import deprecated as _deprecated
+    else:
+        from typing_extensions import deprecated as _deprecated
+    deprecated = partial(_deprecated, category=FutureWarning)
 
 
-if sys.version_info >= (3, 11):
-
-    @wraps(BaseException.add_note)
-    def add_note(exc: BaseException, note: str) -> None:
-        exc.add_note(note)
-else:
-
-    def add_note(exc: BaseException, note: str) -> None:
-        if not hasattr(exc, "__notes__"):
-            exc.__notes__ = []
-        exc.__notes__.append(note)
-
-
-if sys.version_info >= (3, 13):
-    from warnings import deprecated as _deprecated
-else:
-    from typing_extensions import deprecated as _deprecated
-
-
-deprecated = partial(_deprecated, category=FutureWarning)
+def warn(
+    message: str,
+    category: type[Warning],
+    *,
+    source: str | None = None,
+    skip_file_prefixes: tuple[str, ...] = (),
+    more_file_prefixes: tuple[str, ...] = (),
+) -> None:
+    """Issue a warning, skipping frames from certain file prefixes."""
+    if not skip_file_prefixes:
+        skip_file_prefixes = (*_FILE_PREFIXES, *more_file_prefixes)
+    elif more_file_prefixes:
+        msg = "Cannot use both `skip_file_prefixes` and `more_file_prefixes`."
+        raise TypeError(msg)
+    warnings.warn(  # noqa: TID251
+        message, category, source=source, skip_file_prefixes=skip_file_prefixes
+    )
 
 
 @overload
-def njit(fn: Callable[P, R], /) -> Callable[P, R]: ...
+def njit[**P, R](fn: Callable[P, R], /) -> Callable[P, R]: ...
 @overload
-def njit() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
-def njit(
+def njit[**P, R]() -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def njit[**P, R](
     fn: Callable[P, R] | None = None, /
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
-    """\
-    Jit-compile a function using numba.
+    """Jit-compile a function using numba.
 
     On call, this function dispatches to a parallel or sequential numba function,
     depending on if it has been called from a thread pool.
@@ -161,7 +155,7 @@ def njit(
                     f"Trying to run {f.__name__} in serial mode. "
                     "In case of problems, install `tbb`."
                 )
-                warnings.warn(msg, stacklevel=2)
+                warn(msg, UserWarning)
             return fns[parallel](*args, **kwargs)
 
         return wrapper
@@ -169,8 +163,8 @@ def njit(
     return decorator if fn is None else decorator(fn)
 
 
-LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
-Layer = Literal["tbb", "omp", "workqueue"]
+type LayerType = Literal["default", "safe", "threadsafe", "forksafe"]
+type Layer = Literal["tbb", "omp", "workqueue"]
 
 
 LAYERS: dict[LayerType, set[Layer]] = {
@@ -194,8 +188,7 @@ def _is_in_unsafe_thread_pool() -> bool:
 
 @cache
 def _numba_threading_layer() -> Layer:
-    """\
-    Get numba’s threading layer.
+    """Get numba’s threading layer.
 
     This function implements the algorithm as described in
     <https://numba.readthedocs.io/en/stable/user/threading-layer.html>
@@ -209,7 +202,7 @@ def _numba_threading_layer() -> Layer:
         return numba.config.THREADING_LAYER
 
     # given by layer type (safe, …)
-    for layer in cast(list[Layer], numba.config.THREADING_LAYER_PRIORITY):
+    for layer in cast("list[Layer]", numba.config.THREADING_LAYER_PRIORITY):
         if layer not in available:
             continue
         if layer != "workqueue":
@@ -224,42 +217,3 @@ def _numba_threading_layer() -> Layer:
         f" ({available=}, {numba.config.THREADING_LAYER_PRIORITY=})"
     )
     raise ValueError(msg)
-
-
-def _legacy_numpy_gen(
-    random_state: _LegacyRandom | None = None,
-) -> np.random.Generator:
-    """Return a random generator that behaves like the legacy one."""
-
-    if random_state is not None:
-        if isinstance(random_state, np.random.RandomState):
-            np.random.set_state(random_state.get_state(legacy=False))
-            return _FakeRandomGen(random_state)
-        np.random.seed(random_state)
-    return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
-
-
-class _FakeRandomGen(np.random.Generator):
-    _state: np.random.RandomState
-
-    def __init__(self, random_state: np.random.RandomState) -> None:
-        self._state = random_state
-
-    @classmethod
-    def _delegate(cls) -> None:
-        for name, meth in np.random.Generator.__dict__.items():
-            if name.startswith("_") or not callable(meth):
-                continue
-
-            def mk_wrapper(name: str):
-                # Old pytest versions try to run the doctests
-                @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
-                def wrapper(self: _FakeRandomGen, *args, **kwargs):
-                    return getattr(self._state, name)(*args, **kwargs)
-
-                return wrapper
-
-            setattr(cls, name, mk_wrapper(name))
-
-
-_FakeRandomGen._delegate()

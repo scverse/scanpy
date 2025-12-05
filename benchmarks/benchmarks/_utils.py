@@ -9,37 +9,37 @@ import numpy as np
 import pooch
 from anndata import concat
 from asv_runner.benchmarks.mark import skip_for_params
-from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from collections.abc import Set as AbstractSet
-    from typing import Literal, Protocol, TypeVar
+    from typing import Literal, Protocol
 
     from anndata import AnnData
 
-    C = TypeVar("C", bound=Callable)
+    from scanpy._compat import CSCBase
 
     class ParamSkipper(Protocol):
-        def __call__(self, **skipped: AbstractSet) -> Callable[[C], C]: ...
+        def __call__[C: Callable](self, **skipped: AbstractSet) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
-    KeyX = Literal[None, "off-axis"]
+    KeyX = Literal["off-axis"] | None
     KeyCount = Literal["counts", "counts-off-axis"]
 
 
 @cache
 def _pbmc68k_reduced() -> AnnData:
-    """A small datasets with a dense `.X`"""
+    """A small datasets with a dense `.X`."""  # noqa: D401
     adata = sc.datasets.pbmc68k_reduced()
     assert isinstance(adata.X, np.ndarray)
     assert not np.isfortran(adata.X)
 
     # raw has the same number of genes, so we can use it for counts
     # it doesn’t actually contain counts for some reason, but close enough
-    assert isinstance(adata.raw.X, sparse.csr_matrix)
+    assert isinstance(adata.raw.X, CSRBase)
     adata.layers["counts"] = adata.raw.X.toarray(order="C")
     mapper = dict(
         percent_mito="pct_counts_mt",
@@ -56,7 +56,7 @@ def pbmc68k_reduced() -> AnnData:
 @cache
 def _pbmc3k() -> AnnData:
     adata = sc.datasets.pbmc3k()
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     return adata
@@ -90,7 +90,7 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
         adata = concat(adatas, label="sample")
     adata.obs_names_make_unique()
 
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     adata.obs["n_counts"] = adata.layers["counts"].sum(axis=1).A1
@@ -108,7 +108,7 @@ def _lung93k() -> AnnData:
         known_hash="md5:4f28af5ff226052443e7e0b39f3f9212",
     )
     adata = sc.read_h5ad(path)
-    assert isinstance(adata.X, sparse.csr_matrix)
+    assert isinstance(adata.X, CSRBase)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
     sc.pp.log1p(adata)
     return adata
@@ -118,8 +118,8 @@ def lung93k() -> AnnData:
     return _lung93k().copy()
 
 
-def to_off_axis(x: np.ndarray | sparse.csr_matrix) -> np.ndarray | sparse.csc_matrix:
-    if isinstance(x, sparse.csr_matrix):
+def to_off_axis(x: np.ndarray | CSRBase) -> np.ndarray | CSCBase:
+    if isinstance(x, CSRBase):
         return x.tocsc()
     if isinstance(x, np.ndarray):
         assert not np.isfortran(x)
@@ -179,11 +179,10 @@ def get_count_dataset(
 def param_skipper(
     param_names: Sequence[str], params: tuple[Sequence[object], ...]
 ) -> ParamSkipper:
-    """Creates a decorator that will skip all combinations that contain any of the given parameters.
+    """Create a decorator that will skip all combinations that contain any of the given parameters.
 
     Examples
     --------
-
     >>> param_names = ["letters", "numbers"]
     >>> params = [["a", "b"], [3, 4, 5]]
     >>> skip_when = param_skipper(param_names, params)
@@ -194,13 +193,15 @@ def param_skipper(
     >>> run_as_asv_benchmark(func)
     b 4
     b 5
+
     """
 
-    def skip(**skipped: AbstractSet) -> Callable[[C], C]:
+    def skip[C: Callable](**skipped: AbstractSet) -> Callable[[C], C]:
         skipped_combs = [
             tuple(record.values())
             for record in (
-                dict(zip(param_names, vals)) for vals in itertools.product(*params)
+                dict(zip(param_names, vals, strict=True))
+                for vals in itertools.product(*params)
             )
             if any(v in skipped.get(n, set()) for n, v in record.items())
         ]

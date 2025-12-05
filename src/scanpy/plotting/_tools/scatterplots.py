@@ -1,43 +1,44 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Mapping, Sequence  # noqa: TCH003
+from collections.abc import Mapping, Sequence  # noqa: TC003
 from copy import copy
 from functools import partial
 from itertools import combinations, product
 from numbers import Integral
 from typing import (
     TYPE_CHECKING,
-    Any,  # noqa: TCH003
-    Literal,  # noqa: TCH003
+    Any,  # noqa: TC003
+    Literal,  # noqa: TC003
 )
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData  # noqa: TCH002
-from cycler import Cycler  # noqa: TCH002
+from anndata import AnnData  # noqa: TC002
+from cycler import Cycler  # noqa: TC002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes  # noqa: TCH002
+from matplotlib.axes import Axes  # noqa: TC002
 from matplotlib.colors import (
-    Colormap,  # noqa: TCH002
+    Colormap,  # noqa: TC002
     Normalize,
 )
-from matplotlib.figure import Figure  # noqa: TCH002
-from numpy.typing import NDArray  # noqa: TCH002
-from packaging.version import Version
+from matplotlib.figure import Figure  # noqa: TC002
+from matplotlib.markers import MarkerStyle
+from numpy.typing import NDArray  # noqa: TC002
 
 from ... import logging as logg
 from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import (
-    Empty,  # noqa: TCH001
+    Empty,  # noqa: TC001
     _doc_params,
     _empty,
     sanitize_anndata,
 )
+from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
-from ...tools._draw_graph import _Layout  # noqa: TCH001
+from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -47,11 +48,11 @@ from .._docs import (
     doc_show_save_ax,
 )
 from .._utils import (
-    ColorLike,  # noqa: TCH001
-    VBound,  # noqa: TCH001
-    _FontSize,  # noqa: TCH001
-    _FontWeight,  # noqa: TCH001
-    _LegendLoc,  # noqa: TCH001
+    ColorLike,  # noqa: TC001
+    VBound,  # noqa: TC001
+    _FontSize,  # noqa: TC001
+    _FontWeight,  # noqa: TC001
+    _LegendLoc,  # noqa: TC001
     check_colornorm,
     check_projection,
     circles,
@@ -67,7 +68,7 @@ if TYPE_CHECKING:
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def embedding(
+def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     basis: str,
     *,
@@ -99,7 +100,7 @@ def embedding(
     legend_fontweight: int | _FontWeight = "bold",
     legend_loc: _LegendLoc | None = "right margin",
     legend_fontoutline: int | None = None,
-    colorbar_loc: str | None = "right",
+    colorbar_loc: Literal["right", "left", "top", "bottom"] | None = "right",
     vmax: VBound | Sequence[VBound] | None = None,
     vmin: VBound | Sequence[VBound] | None = None,
     vcenter: VBound | Sequence[VBound] | None = None,
@@ -112,14 +113,13 @@ def embedding(
     wspace: float | None = None,
     title: str | Sequence[str] | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     return_fig: bool | None = None,
     marker: str | Sequence[str] = ".",
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
+    """Scatter plot for user specified embedding basis (e.g. umap, pca, etc).
 
     Parameters
     ----------
@@ -133,6 +133,7 @@ def embedding(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
     """
     #####################
     # Argument handling #
@@ -225,7 +226,8 @@ def embedding(
         ):
             size = np.array(size, dtype=float)
     else:
-        size = 120000 / adata.shape[0]
+        # if the basis has NaNs, ignore the corresponding cells for size calcluation
+        size = 120000 / (~np.isnan(basis_values).any(axis=1)).sum()
 
     ##########
     # Layout #
@@ -238,7 +240,7 @@ def embedding(
         wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
 
     if components is not None:
-        color, dimensions = list(zip(*product(color, dimensions)))
+        color, dimensions = list(zip(*product(color, dimensions), strict=True))
 
     color, dimensions, marker = _broadcast_args(color, dimensions, marker)
 
@@ -274,7 +276,7 @@ def embedding(
     #     color=gene1, components=[1,2], color=gene1, components=[2,3],
     #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
     # ]
-    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions)):
+    for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         color_source_vector = _get_color_source_vector(
             adata,
@@ -404,12 +406,16 @@ def embedding(
                         **kwargs_outline,
                     )
 
+            edgecolor = kwargs_scatter.pop("edgecolor", None)
+            if not MarkerStyle(marker[count]).is_filled():
+                edgecolor = None
             cax = scatter(
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
                 rasterized=settings._vector_friendly,
                 marker=marker[count],
+                edgecolor=edgecolor,
                 **kwargs_scatter,
             )
 
@@ -515,18 +521,18 @@ def _get_vboundnorm(
     index: int,
     colors: Sequence[float],
 ) -> tuple[float | None, float | None]:
-    """
-    Evaluates the value of vmin, vmax and vcenter, which could be a
-    str in which case is interpreted as a percentile and should
-    be specified in the form 'pN' where N is the percentile.
-    Eg. for a percentile of 85 the format would be 'p85'.
-    Floats are accepted as p99.9
+    """Evaluate the value of `vmin`, `vmax` and `vcenter`.
 
-    Alternatively, vmin/vmax could be a function that is applied to
-    the list of color values (`colors`).  E.g.
+    Each could be a str in which case is interpreted as a percentile and should
+    be specified in the form `pN` where `N` is the percentile.
+    Eg. for a percentile of 85 the format would be `p85`.
+    Floats are accepted as `p99.9`.
 
-    def my_vmax(colors): np.percentile(colors, p=80)
+    Alternatively, `vmin`/`vmax` could be a function that is applied to
+    the list of color values (`colors`). E.g.
 
+    >>> def my_vmax(colors):
+    ...     return np.percentile(colors, p=80)
 
     Parameters
     ----------
@@ -537,7 +543,6 @@ def _get_vboundnorm(
 
     Returns
     -------
-
     (vmin, vmax, vcenter, norm) containing None or float values for
     vmin, vmax, vcenter and matplotlib.colors.Normalize  or None for norm.
 
@@ -597,7 +602,6 @@ def _get_vboundnorm(
 
 def _wraps_plot_scatter(wrapper):
     """Update the wrapper function to use the correct signature."""
-
     params = inspect.signature(embedding, eval_str=True).parameters.copy()
     wrapper_sig = inspect.signature(wrapper, eval_str=True)
     wrapper_params = wrapper_sig.parameters.copy()
@@ -634,8 +638,7 @@ def _wraps_plot_scatter(wrapper):
     show_save_ax=doc_show_save_ax,
 )
 def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in UMAP basis.
+    """Scatter plot in UMAP basis.
 
     Parameters
     ----------
@@ -681,9 +684,10 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.umap
+
     """
     return embedding(adata, "umap", **kwargs)
 
@@ -696,8 +700,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in tSNE basis.
+    """Scatter plot in tSNE basis.
 
     Parameters
     ----------
@@ -722,9 +725,10 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.tsne
+
     """
     return embedding(adata, "tsne", **kwargs)
 
@@ -736,8 +740,7 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     show_save_ax=doc_show_save_ax,
 )
 def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in Diffusion Map basis.
+    """Scatter plot in Diffusion Map basis.
 
     Parameters
     ----------
@@ -761,9 +764,10 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.diffmap
+
     """
     return embedding(adata, "diffmap", **kwargs)
 
@@ -778,8 +782,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 def draw_graph(
     adata: AnnData, *, layout: _Layout | None = None, **kwargs
 ) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in graph-drawing basis.
+    """Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
@@ -807,14 +810,15 @@ def draw_graph(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.draw_graph
+
     """
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
     basis = f"draw_graph_{layout}"
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
         raise ValueError(msg)
 
@@ -833,11 +837,10 @@ def pca(
     annotate_var_explained: bool = False,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in PCA coordinates.
+    """Scatter plot in PCA coordinates.
 
     Use the parameter `annotate_var_explained` to annotate the explained variance.
 
@@ -878,9 +881,10 @@ def pca(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pp.pca
+
     """
     if not annotate_var_explained:
         return embedding(
@@ -925,6 +929,7 @@ def pca(
 
 
 @deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
     adata_color_etc=doc_adata_color_etc,
@@ -932,7 +937,7 @@ def pca(
     scatter_bulk=doc_scatter_embedding,
     show_save_ax=doc_show_save_ax,
 )
-def spatial(
+def spatial(  # noqa: PLR0913
     adata: AnnData,
     *,
     basis: str = "spatial",
@@ -948,11 +953,10 @@ def spatial(
     na_color: ColorLike | None = None,
     show: bool | None = None,
     return_fig: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
-    """\
-    Scatter plot in spatial coordinates.
+    """Scatter plot in spatial coordinates.
 
     .. deprecated:: 1.11.0
        Use :func:`squidpy.pl.spatial_scatter` instead.
@@ -996,13 +1000,18 @@ def spatial(
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
+    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+        sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
     --------
     :func:`scanpy.datasets.visium_sge`
         Example visium data.
+
     """
     # get default image params if available
     library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
@@ -1088,7 +1097,7 @@ def _components_to_dimensions(
     return dimensions
 
 
-def _add_categorical_legend(
+def _add_categorical_legend(  # noqa: PLR0913
     ax: Axes,
     color_source_vector,
     *,
@@ -1181,9 +1190,7 @@ def _get_color_source_vector(
     layer: str | None = None,
     groups: Sequence[str] | None = None,
 ) -> np.ndarray | pd.api.extensions.ExtensionArray:
-    """
-    Get array from adata that colors will be based on.
-    """
+    """Get array from adata that colors will be based on."""
     if value_to_plot is None:
         # Points will be plotted with `na_color`. Ideally this would work
         # with the "bad color" in a color map but that throws a warning. Instead
@@ -1203,6 +1210,7 @@ def _get_color_source_vector(
     else:
         values = adata.obs_vector(value_to_plot, layer=layer)
     if mask_obs is not None:
+        values = values.copy()
         values[~mask_obs] = np.nan
     if groups and isinstance(values, pd.Categorical):
         values = values.remove_categories(values.categories.difference(groups))
@@ -1216,15 +1224,21 @@ def _get_palette(adata, values_key: str, palette=None):
     else:
         values = pd.Categorical(adata.obs[values_key])
     if palette:
-        _utils._set_colors_for_categorical_obs(adata, values_key, palette)
+        _utils.set_colors_for_categorical_obs(adata, values_key, palette)
     elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
         values.categories
     ):
-        #  set a default palette in case that no colors or few colors are found
-        _utils._set_default_colors_for_categorical_obs(adata, values_key)
+        #  set a default palette in case that no colors or too few colors are found
+        _utils.set_default_colors_for_categorical_obs(adata, values_key)
     else:
-        _utils._validate_palette(adata, values_key)
-    return dict(zip(values.categories, adata.uns[color_key]))
+        _utils.validate_palette(adata, values_key)
+    return dict(
+        zip(
+            values.categories,
+            adata.uns[color_key][: len(values.categories)],
+            strict=True,
+        )
+    )
 
 
 def _color_vector(
@@ -1235,8 +1249,7 @@ def _color_vector(
     palette: str | Sequence[str] | Cycler | None,
     na_color: ColorLike = "lightgray",
 ) -> tuple[np.ndarray | pd.api.extensions.ExtensionArray, Literal["cat", "na", "cont"]]:
-    """
-    Map array of values to array of hex (plus alpha) codes.
+    """Map array of values to array of hex (plus alpha) codes.
 
     For categorical data, the return value is list of colors taken
     from the category palette or from the given `palette` value.
@@ -1261,10 +1274,7 @@ def _color_vector(
     }
     # If color_map does not have unique values, this can be slow as the
     # result is not categorical
-    if Version(pd.__version__) < Version("2.1.0"):
-        color_vector = pd.Categorical(values.map(color_map))
-    else:
-        color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
+    color_vector = pd.Categorical(values.map(color_map, na_action="ignore"))
     # Set color to 'missing color' for all missing values
     if color_vector.isna().any():
         color_vector = color_vector.add_categories([to_hex(na_color)])
@@ -1273,10 +1283,7 @@ def _color_vector(
 
 
 def _basis2name(basis):
-    """
-    converts the 'basis' into the proper name.
-    """
-
+    """Convert the 'basis' into the proper name."""
     component_name = (
         "DC"
         if basis == "diffmap"
@@ -1294,8 +1301,7 @@ def _basis2name(basis):
 
 
 def _check_spot_size(spatial_data: Mapping | None, spot_size: float | None) -> float:
-    """
-    Resolve spot_size value.
+    """Resolve spot_size value.
 
     This is a required argument for spatial plots.
     """
@@ -1328,8 +1334,7 @@ def _check_scale_factor(
 def _check_spatial_data(
     uns: Mapping, library_id: str | None | Empty
 ) -> tuple[str | None, Mapping | None]:
-    """
-    Given a mapping, try and extract a library id/ mapping with spatial data.
+    """Given a mapping, try and extract a library id/ mapping with spatial data.
 
     Assumes this is `.uns` from how we parse visium data.
     """
@@ -1342,7 +1347,7 @@ def _check_spatial_data(
             )
             raise ValueError(msg)
         elif len(spatial_mapping) == 1:
-            library_id = list(spatial_mapping.keys())[0]
+            library_id = next(iter(spatial_mapping.keys()))
         else:
             library_id = None
     spatial_data = spatial_mapping[library_id] if library_id is not None else None
@@ -1356,9 +1361,7 @@ def _check_img(
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
-    """
-    Resolve image for spatial plots.
-    """
+    """Resolve image for spatial plots."""
     if img is None and spatial_data is not None and img_key is _empty:
         img_key = next(
             (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
@@ -1394,12 +1397,9 @@ def _check_na_color(
 
 def _broadcast_args(*args):
     """Broadcasts arguments to a common length."""
-
     lens = [len(arg) for arg in args]
     longest = max(lens)
     if not (set(lens) == {1, longest} or set(lens) == {longest}):
         msg = f"Could not broadcast together arguments with shapes: {lens}."
         raise ValueError(msg)
-    return list(
-        [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]
-    )
+    return [[arg[0] for _ in range(longest)] if len(arg) == 1 else arg for arg in args]

@@ -1,6 +1,4 @@
-"""\
-Shared docstrings for plotting function parameters.
-"""
+"""Shared docstrings for plotting function parameters."""
 
 from __future__ import annotations
 
@@ -47,7 +45,7 @@ doc_cm_palette = """\
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
-    or `mpl.cm.cividis`), see :func:`~matplotlib.pyplot.get_cmap`.
+    or `mpl.cm.cividis`), see :meth:`~matplotlib.cm.ColormapRegistry.get_cmap`.
     If `None`, the value of `mpl.rcParams["image.cmap"]` is used.
     The default `color_map` can be set using :func:`~scanpy.set_figure_params`.
 palette
@@ -92,20 +90,11 @@ legend_fontweight
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
-colorbar_loc
-    Where to place the colorbar for continous variables. If `None`, no colorbar
-    is added.
 size
     Point size. If `None`, is automatically computed as 120000 / n_cells.
     Can be a sequence containing the size for each cell. The order should be
     the same as in adata.obs.
 {doc_cm_palette}
-na_color
-    Color to use for null or masked values. Can be anything matplotlib accepts as a
-    color. Used for all points if `color=None`.
-na_in_legend
-    If there are missing values, whether they get an entry in the legend. Currently
-    only implemented for categorical legends.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
@@ -130,7 +119,7 @@ vmax
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
     The format is the same as for `vmin`.
-    Example: sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')\
+    Example: ``sc.pl.umap(adata, color='TREM2', vcenter='p50', cmap='RdBu_r')``\
 """
 
 doc_vboundnorm = """\
@@ -143,8 +132,7 @@ vmax
 vcenter
     The value representing the center of the color scale. Useful for diverging colormaps.
 norm
-    Custom color normalization object from matplotlib. See
-    `https://matplotlib.org/stable/tutorials/colors/colormapnorms.html` for details.\
+    Custom color normalization object from matplotlib. See :ref:`colormapnorms` for details.\
 """
 
 doc_outline = """\
@@ -175,6 +163,15 @@ return_fig
 # Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
 doc_scatter_embedding = f"""\
 {doc_scatter_basic}
+colorbar_loc
+    Where to place the colorbar for continous variables. If `None`, no colorbar
+    is added.
+na_color
+    Color to use for null or masked values. Can be anything matplotlib accepts as a
+    color. Used for all points if `color=None`.
+na_in_legend
+    If there are missing values, whether they get an entry in the legend. Currently
+    only implemented for categorical legends.
 {doc_vbound_percentile}
 {doc_outline}
 {doc_panels}
@@ -189,7 +186,8 @@ show
 save
     If `True` or a `str`, save the figure.
     A string is appended to the default filename.
-    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.\
+    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+    (deprecated in favour of `sc.pl.plot(show=False).figure.savefig()`).\
 """
 
 doc_show_save_ax = f"""\

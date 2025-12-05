@@ -4,12 +4,10 @@ from typing import TYPE_CHECKING, overload
 
 import numpy as np
 
-from scanpy._compat import DaskArray
+from .._compat import DaskArray
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
-
-    from scanpy._compat import ZappyArray
 
 
 @overload
@@ -33,7 +31,7 @@ def materialize_as_ndarray(
 
 
 def materialize_as_ndarray(
-    a: DaskArray | ArrayLike | tuple[ArrayLike | ZappyArray | DaskArray, ...],
+    a: DaskArray | ArrayLike | tuple[ArrayLike | DaskArray, ...],
 ) -> tuple[np.ndarray] | np.ndarray:
     """Compute distributed arrays and convert them to numpy ndarrays."""
     if isinstance(a, DaskArray):

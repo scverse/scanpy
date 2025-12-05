@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import functools
+import operator
 from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import TYPE_CHECKING
@@ -14,7 +16,7 @@ from scanpy.get import obs_df
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata, subsample
+from ..._utils import _doc_params, _empty, sanitize_anndata
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -57,8 +59,7 @@ if TYPE_CHECKING:
 
 @_doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def pca_overview(adata: AnnData, **params):
-    """\
-    Plot PCA results.
+    """Plot PCA results.
 
     The parameters are the ones of the scatter plot. Call pca_ranking separately
     if you want to change the default settings.
@@ -79,6 +80,7 @@ def pca_overview(adata: AnnData, **params):
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     Examples
     --------
     .. plot::
@@ -90,9 +92,10 @@ def pca_overview(adata: AnnData, **params):
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     pp.pca
+
     """
     show = params.pop("show", None)
     pca(adata, **params, show=False)
@@ -114,8 +117,7 @@ def pca_loadings(
     show: bool | None = None,
     save: str | bool | None = None,
 ):
-    """\
-    Rank genes according to contributions to PCs.
+    """Rank genes according to contributions to PCs.
 
     Parameters
     ----------
@@ -186,10 +188,10 @@ def pca_variance_ratio(
     *,
     log: bool = False,
     show: bool | None = None,
+    # deprecated
     save: bool | str | None = None,
 ):
-    """\
-    Plot the variance ratio.
+    """Plot the variance ratio.
 
     Parameters
     ----------
@@ -203,6 +205,7 @@ def pca_variance_ratio(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
+
     """
     ranking(
         adata,
@@ -228,17 +231,18 @@ def dpt_timeseries(
     *,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     as_heatmap: bool = True,
     marker: str | Sequence[str] = ".",
+    # deprecated
+    save: bool | None = None,
 ):
-    """\
-    Heatmap of pseudotime series.
+    """Heatmap of pseudotime series.
 
     Parameters
     ----------
     as_heatmap
         Plot the timeseries as heatmap.
+
     """
     if adata.n_vars > 100:
         logg.warning(
@@ -275,11 +279,12 @@ def dpt_groups_pseudotime(
     color_map: str | Colormap | None = None,
     palette: Sequence[str] | Cycler | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
-):
-    """\
-    Plot groups and pseudotime.
+    return_fig: bool = False,
+    # deprecated
+    save: bool | str | None = None,
+) -> Figure | None:
+    """Plot groups and pseudotime.
 
     Parameters
     ----------
@@ -289,10 +294,11 @@ def dpt_groups_pseudotime(
     {show_save}
     marker
         Marker style. See :mod:`~matplotlib.markers` for details.
+
     """
-    _, (ax_grp, ax_ord) = plt.subplots(2, 1)
+    fig, (ax_grp, ax_ord) = plt.subplots(2, 1)
     timeseries_subplot(
-        adata.obs["dpt_groups"].cat.codes,
+        adata.obs["dpt_groups"].cat.codes.to_numpy(),
         time=adata.obs["dpt_order"].values,
         color=np.asarray(adata.obs["dpt_groups"]),
         highlights_x=adata.uns["dpt_changepoints"],
@@ -319,6 +325,8 @@ def dpt_groups_pseudotime(
         marker=marker,
     )
     savefig_or_show("dpt_groups_pseudotime", save=save, show=show)
+    if return_fig:
+        return fig
 
 
 @old_positionals(
@@ -333,7 +341,7 @@ def dpt_groups_pseudotime(
     "ax",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups(
+def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -344,12 +352,11 @@ def rank_genes_groups(
     ncols: int = 4,
     sharey: bool = True,
     show: bool | None = None,
-    save: bool | None = None,
     ax: Axes | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ) -> list[Axes] | None:
-    """\
-    Plot ranking of genes.
+    """Plot ranking of genes.
 
     Parameters
     ----------
@@ -395,7 +402,7 @@ def rank_genes_groups(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.rank_genes_groups
 
@@ -499,11 +506,14 @@ def rank_genes_groups(
 
 
 def _fig_show_save_or_axes(
-    plot_obj: BasePlot, *, return_fig: bool, show: bool | None, save: bool | None
+    plot_obj: BasePlot,
+    *,
+    return_fig: bool,
+    show: bool | None,
+    # deprecated
+    save: bool | None,
 ):
-    """
-    Decides what to return
-    """
+    """Decides what to return."""
     if return_fig:
         return plot_obj
     plot_obj.make_figure()
@@ -514,7 +524,7 @@ def _fig_show_save_or_axes(
     return plot_obj.get_axes()
 
 
-def _rank_genes_groups_plot(
+def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     plot_type: str = "heatmap",
     *,
@@ -526,14 +536,12 @@ def _rank_genes_groups_plot(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
     gene_symbols: str | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Common function to call the different rank_genes_groups_* plots
-    """
+    """Call the different `rank_genes_groups_*` plots."""
     if var_names is not None and n_genes is not None:
         msg = (
             "The arguments n_genes and var_names are mutually exclusive. Please "
@@ -551,7 +559,9 @@ def _rank_genes_groups_plot(
     if var_names is not None:
         if isinstance(var_names, Mapping):
             # get a single list of all gene names in the dictionary
-            var_names_list = sum([list(x) for x in var_names.values()], [])
+            var_names_list = functools.reduce(
+                operator.iadd, [list(x) for x in var_names.values()], []
+            )
         elif isinstance(var_names, str):
             var_names_list = [var_names]
         else:
@@ -701,11 +711,10 @@ def rank_genes_groups_heatmap(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
+    """Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`).
 
     Parameters
     ----------
@@ -741,10 +750,11 @@ def rank_genes_groups_heatmap(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.rank_genes_groups
     tl.dendrogram
+
     """
     return _rank_genes_groups_plot(
         adata,
@@ -784,11 +794,10 @@ def rank_genes_groups_tracksplot(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
+    """Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`).
 
     Parameters
     ----------
@@ -807,8 +816,8 @@ def rank_genes_groups_tracksplot(
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.rank_genes_groups(adata, 'bulk_labels')
         sc.pl.rank_genes_groups_tracksplot(adata)
-    """
 
+    """
     return _rank_genes_groups_plot(
         adata,
         plot_type="tracksplot",
@@ -842,7 +851,7 @@ def rank_genes_groups_tracksplot(
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
     show_save_ax=doc_show_save_ax,
 )
-def rank_genes_groups_dotplot(
+def rank_genes_groups_dotplot(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -862,12 +871,11 @@ def rank_genes_groups_dotplot(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
+    """Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`).
 
     Parameters
     ----------
@@ -966,9 +974,10 @@ def rank_genes_groups_dotplot(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.rank_genes_groups
+
     """
     return _rank_genes_groups_plot(
         adata,
@@ -990,7 +999,7 @@ def rank_genes_groups_dotplot(
 
 @old_positionals("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
-def rank_genes_groups_stacked_violin(
+def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -1001,13 +1010,13 @@ def rank_genes_groups_stacked_violin(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Plot ranking of genes using stacked_violin plot
-    (see :func:`~scanpy.pl.stacked_violin`)
+    """Plot ranking of genes using stacked_violin plot.
+
+    (See :func:`~scanpy.pl.stacked_violin`)
 
     Parameters
     ----------
@@ -1028,13 +1037,13 @@ def rank_genes_groups_stacked_violin(
     --------
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, 'bulk_labels')
+    >>> sc.tl.rank_genes_groups(adata, "bulk_labels")
 
-    >>> sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4,
-    ... min_logfoldchange=4, figsize=(8,6))
+    >>> sc.pl.rank_genes_groups_stacked_violin(
+    ...     adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6)
+    ... )
 
     """
-
     return _rank_genes_groups_plot(
         adata,
         plot_type="stacked_violin",
@@ -1069,7 +1078,7 @@ def rank_genes_groups_stacked_violin(
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
     show_save_ax=doc_show_save_ax,
 )
-def rank_genes_groups_matrixplot(
+def rank_genes_groups_matrixplot(  # noqa: PLR0913
     adata: AnnData,
     groups: str | Sequence[str] | None = None,
     *,
@@ -1089,12 +1098,11 @@ def rank_genes_groups_matrixplot(
     min_logfoldchange: float | None = None,
     key: str | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     return_fig: bool = False,
+    save: bool | None = None,  # deprecated
     **kwds,
 ):
-    """\
-    Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`)
+    """Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`).
 
     Parameters
     ----------
@@ -1178,8 +1186,8 @@ def rank_genes_groups_matrixplot(
             min_logfoldchange=3,
             colorbar_title='log fold change',
         )
-    """
 
+    """
     return _rank_genes_groups_plot(
         adata,
         plot_type="matrixplot",
@@ -1214,7 +1222,7 @@ def rank_genes_groups_matrixplot(
     "save",
 )
 @_doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_violin(
+def rank_genes_groups_violin(  # noqa: PLR0913
     adata: AnnData,
     groups: Sequence[str] | None = None,
     *,
@@ -1230,12 +1238,11 @@ def rank_genes_groups_violin(
     size: int = 1,
     ax: Axes | None = None,
     show: bool | None = None,
-    save: bool | None = None,
     # deprecated
+    save: bool | None = None,
     scale: DensityNorm | Empty = _empty,
 ):
-    """\
-    Plot ranking of genes for all tested comparisons.
+    """Plot ranking of genes for all tested comparisons.
 
     Parameters
     ----------
@@ -1265,6 +1272,7 @@ def rank_genes_groups_violin(
     size
         Size of the jitter points.
     {show_save_ax}
+
     """
     if key is None:
         key = "rank_genes_groups"
@@ -1328,7 +1336,7 @@ def rank_genes_groups_violin(
         _ax.set_title(f"{group_name} vs. {reference}")
         _ax.legend_.remove()
         _ax.set_ylabel("expression")
-        _ax.set_xticklabels(new_gene_names, rotation="vertical")
+        _ax.set_xticks(range(len(new_gene_names)), new_gene_names, rotation="vertical")
         writekey = (
             f"rank_genes_groups_{adata.uns[key]['params']['groupby']}_{group_name}"
         )
@@ -1348,11 +1356,11 @@ def sim(
     as_heatmap: bool = False,
     shuffle: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     marker: str | Sequence[str] = ".",
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
-    """\
-    Plot results of simulation.
+    """Plot results of simulation.
 
     Parameters
     ----------
@@ -1369,6 +1377,7 @@ def sim(
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
+
     """
     if tmax_realization is not None:
         tmax = tmax_realization
@@ -1399,12 +1408,12 @@ def sim(
             np.arange(n_realizations).astype(int) + 1,
         )
         savefig_or_show("sim", save=save, show=show)
-    else:
-        # shuffled data
-        X = adata.X
-        X, rows = subsample(X, seed=1)
+    else:  # shuffle data
+        np.random.seed(1)
+        rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
+        x = adata[rows].X
         timeseries(
-            X,
+            x,
             var_names=adata.var_names,
             xlim=[0, 1.25 * adata.n_obs],
             highlights_x=np.arange(tmax, n_realizations * tmax, tmax),
@@ -1437,7 +1446,7 @@ def sim(
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )
-def embedding_density(
+def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     basis: str = "umap",
     *,
@@ -1456,13 +1465,12 @@ def embedding_density(
     wspace: None = None,
     title: str | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
     return_fig: bool | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwargs,
 ) -> Figure | Axes | None:
-    """\
-    Plot the density of cells in an embedding (per condition).
+    """Plot the density of cells in an embedding (per condition).
 
     Plots the gaussian kernel density estimates (over condition) from the
     `sc.tl.embedding_density()` output.
@@ -1529,9 +1537,10 @@ def embedding_density(
 
     .. currentmodule:: scanpy
 
-    See also
+    See Also
     --------
     tl.embedding_density
+
     """
     sanitize_anndata(adata)
 
@@ -1550,7 +1559,7 @@ def embedding_density(
     if groupby is not None:
         key += f"_{groupby}"
 
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = (
             f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
@@ -1727,14 +1736,13 @@ def _get_values_to_plot(
     key: str | None = "rank_genes_groups",
     gene_symbols: str | None = None,
 ):
-    """
-    If rank_genes_groups has been called, this function
-    prepares a dataframe containing scores, pvalues, logfoldchange etc to be plotted
-    as dotplot or matrixplot.
+    """Prepare a dataframe to be plotted as dotplot or matrixplot.
 
-    The dataframe index are the given groups and the columns are the gene_names
+    The specified `values_to_plot` stem from `rank_genes_groups`.
 
-    used by rank_genes_groups_dotplot
+    The dataframe `index` are the given groups and the `columns` are the `gene_names`.
+
+    (used by `rank_genes_groups_dotplot`)
 
     Parameters
     ----------
@@ -1750,6 +1758,7 @@ def _get_values_to_plot(
         By default 'rank_genes_groups'
     gene_symbols
         Key for field in .var that stores gene symbols.
+
     Returns
     -------
     pandas DataFrame index=groups, columns=gene_names

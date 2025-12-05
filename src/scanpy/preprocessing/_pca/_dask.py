@@ -5,62 +5,57 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
-from numpy.typing import NDArray
+from fast_array_utils import stats
 
+from scanpy._utils import raise_if_dask_feature_axis_chunked
 from scanpy._utils._doctests import doctest_needs
 
-from .._utils import _get_mean_var
+from ..._compat import CSBase
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from numpy.typing import DTypeLike
+    from numpy.typing import DTypeLike, NDArray
 
     from ..._compat import DaskArray
-    from .._utils import _CSMatrix
 
 
 @dataclass
-class PCASparseDask:
+class PCAEighDask:
     n_components: int | None = None
 
     @doctest_needs("dask")
-    def fit(self, x: DaskArray) -> PCASparseDaskFit:
+    def fit(self, x: DaskArray) -> PCAEighDaskFit:
         """Fit the model on `x`.
 
-        This method transforms `self` into a `PCASparseDaskFit` object and returns it.
+        This method transforms `self` into a `PCAEighDaskFit` object and returns it.
 
         Examples
         --------
         >>> import dask.array as da
         >>> import scipy.sparse as sp
         >>> x = (
-        ...     da.array(sp.random(100, 200, density=0.3, dtype="float32").toarray())
+        ...     da.array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
         ...     .rechunk((10, -1))
         ...     .map_blocks(sp.csr_matrix)
         ... )
         >>> x
-        dask.array<csr_matrix, shape=(100, 200), dtype=float32, chunksize=(10, 200), chunktype=scipy.csr_matrix>
-        >>> pca_fit = PCASparseDask().fit(x)
-        >>> assert isinstance(pca_fit, PCASparseDaskFit)
+        dask.array<csr_matrix, shape=(100, 200), dtype=int64, chunksize=(10, 200), chunktype=scipy.csr_matrix>
+        >>> pca_fit = PCAEighDask().fit(x)
+        >>> assert isinstance(pca_fit, PCAEighDaskFit)
         >>> pca_fit.transform(x)
-        dask.array<transform_block, shape=(100, 100), dtype=float32, chunksize=(10, 100), chunktype=numpy.ndarray>
+        dask.array<transform_block, shape=(100, 100), dtype=float64, chunksize=(10, 100), chunktype=numpy.ndarray>
+
         """
-        if x._meta.format != "csr":
+        if isinstance(x._meta, CSBase) and x._meta.format != "csr":
             msg = (
-                "Only dask arrays with CSR-meta format are supported. "
+                "Only sparse dask arrays with CSR-meta format are supported. "
                 f"Got {x._meta.format} as meta."
             )
             raise ValueError(msg)
-        if x.chunksize[1] != x.shape[1]:
-            msg = (
-                "Only dask arrays with chunking along the first axis are supported. "
-                f"Got chunksize {x.chunksize} with shape {x.shape}. "
-                "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
-            )
-            raise ValueError(msg)
-        self.__class__ = PCASparseDaskFit
-        self = cast(PCASparseDaskFit, self)
+        raise_if_dask_feature_axis_chunked(x)
+        self.__class__ = PCAEighDaskFit
+        self = cast("PCAEighDaskFit", self)  # noqa: PLW0642
 
         self.n_components_ = (
             min(x.shape) if self.n_components is None else self.n_components
@@ -99,7 +94,7 @@ class PCASparseDask:
 
 
 @dataclass
-class PCASparseDaskFit(PCASparseDask):
+class PCAEighDaskFit(PCAEighDask):
     n_components_: int = field(init=False)
     n_samples_: int = field(init=False)
     n_features_in_: int = field(init=False)
@@ -118,7 +113,7 @@ class PCASparseDaskFit(PCASparseDask):
             import dask.array as da
 
         def transform_block(
-            x_part: _CSMatrix,
+            x_part: CSBase | NDArray,
             mean_: NDArray[np.floating],
             components_: NDArray[np.floating],
         ):
@@ -132,8 +127,7 @@ class PCASparseDaskFit(PCASparseDask):
             mean_=self.mean_,
             components_=self.components_,
             chunks=(x.chunks[0], self.n_components_),
-            meta=np.zeros([0], dtype=x.dtype),
-            dtype=x.dtype,
+            meta=np.array([], dtype=np.float64),
         )
 
 
@@ -151,12 +145,10 @@ def _cov_sparse_dask(
     tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]]
     | tuple[NDArray[np.floating], NDArray[np.floating]]
 ):
-    """\
-    Computes the covariance matrix and row/col means of matrix `x`.
+    r"""Compute the covariance matrix and row/col means of matrix `x`.
 
     Parameters
     ----------
-
     x
         A sparse matrix
     return_gram
@@ -169,13 +161,13 @@ def _cov_sparse_dask(
 
     Returns
     -------
-
-    :math:`\\cov(X, X)`
-        The covariance matrix of `x` in the form :math:`\\cov(X, X) = \\E(XX) - \\E(X)\\E(X)`.
-    :math:`\\gram(X, X)`
-        When return_gram is `True`, the gram matrix of `x` in the form :math:`\\frac{1}{n} X.T \\dot X`.
-    :math:`\\mean(X)`
+    :math:`\cov(X, X)`
+        The covariance matrix of `x` in the form :math:`\cov(X, X) = \E(XX) - \E(X)\E(X)`.
+    :math:`\gram(X, X)`
+        When return_gram is `True`, the gram matrix of `x` in the form :math:`\frac{1}{n} X.T \dot X`.
+    :math:`\mean(X)`
         The row means of `x`.
+
     """
     if TYPE_CHECKING:
         import dask.array.core as da
@@ -189,24 +181,24 @@ def _cov_sparse_dask(
     else:
         dtype = np.dtype(dtype)
 
-    def gram_block(x_part: _CSMatrix):
-        gram_matrix: _CSMatrix = x_part.T @ x_part
-        return gram_matrix.toarray()[None, ...]  # need new axis for summing
+    def gram_block(x_part: CSBase | NDArray):
+        gram_matrix = x_part.T @ x_part
+        if isinstance(gram_matrix, CSBase):
+            gram_matrix = gram_matrix.toarray()
+        return gram_matrix[None, ...]  # need new axis for summing
 
     gram_matrix_dask: DaskArray = da.map_blocks(
         gram_block,
         x,
         new_axis=(1,),
         chunks=((1,) * x.blocks.size, (x.shape[1],), (x.shape[1],)),
-        meta=np.array([], dtype=x.dtype),
-        dtype=x.dtype,
+        meta=np.array([], dtype=dtype),
+        dtype=dtype,
     ).sum(axis=0)
-    mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
-        tuple[NDArray, NDArray[np.float64]],
-        dask.compute(gram_matrix_dask, mean_x_dask),
+        "tuple[NDArray, NDArray[np.float64]]",
+        dask.compute(gram_matrix_dask, stats.mean(x, axis=0, dtype=dtype)),
     )
-    gram_matrix = gram_matrix.astype(dtype)
     gram_matrix /= x.shape[0]
 
     cov_result = gram_matrix.copy() if return_gram else gram_matrix

@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, concat
 from scipy import sparse
+from sklearn.utils import check_random_state
 
 from ... import logging as logg
-from ..._utils import _get_legacy_random
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
@@ -21,17 +21,16 @@ if TYPE_CHECKING:
     from numpy.random import RandomState
     from numpy.typing import NDArray
 
-    from ..._compat import _LegacyRandom
+    from ..._compat import CSBase, CSCBase
+    from ..._utils.random import _LegacyRandom
     from ...neighbors import _Metric, _MetricFn
-    from .._utils import _CSMatrix
 
 __all__ = ["Scrublet"]
 
 
 @dataclass(kw_only=True)
 class Scrublet:
-    """\
-    Initialize Scrublet object with counts matrix and doublet prediction parameters
+    """Initialize Scrublet object with counts matrix and doublet prediction parameters.
 
     Parameters
     ----------
@@ -62,11 +61,12 @@ class Scrublet:
     random_state
         Random state for doublet simulation, approximate
         nearest neighbor search, and PCA/TruncatedSVD.
+
     """
 
     # init fields
 
-    counts_obs: InitVar[_CSMatrix | NDArray[np.integer]] = field(kw_only=False)
+    counts_obs: InitVar[CSBase | NDArray[np.integer]] = field(kw_only=False)
     total_counts_obs: InitVar[NDArray[np.integer] | None] = None
     sim_doublet_ratio: float = 2.0
     n_neighbors: InitVar[int | None] = None
@@ -79,13 +79,13 @@ class Scrublet:
     _n_neighbors: int = field(init=False, repr=False)
     _random_state: RandomState = field(init=False, repr=False)
 
-    _counts_obs: sparse.csc_matrix = field(init=False, repr=False)
+    _counts_obs: CSCBase = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_obs_norm: _CSMatrix = field(init=False, repr=False)
+    _counts_obs_norm: CSBase = field(init=False, repr=False)
 
-    _counts_sim: _CSMatrix = field(init=False, repr=False)
+    _counts_sim: CSBase = field(init=False, repr=False)
     _total_counts_sim: NDArray[np.integer] = field(init=False, repr=False)
-    _counts_sim_norm: _CSMatrix | None = field(default=None, init=False, repr=False)
+    _counts_sim_norm: CSBase | None = field(default=None, init=False, repr=False)
 
     # Fields set by methods
 
@@ -166,23 +166,23 @@ class Scrublet:
 
     def __post_init__(
         self,
-        counts_obs: _CSMatrix | NDArray[np.integer],
+        counts_obs: CSBase | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
         random_state: _LegacyRandom,
     ) -> None:
-        self._counts_obs = sparse.csc_matrix(counts_obs)
+        self._counts_obs = sparse.csc_matrix(counts_obs)  # noqa: TID251
         self._total_counts_obs = (
             np.asarray(self._counts_obs.sum(1)).squeeze()
             if total_counts_obs is None
             else total_counts_obs
         )
         self._n_neighbors = (
-            int(round(0.5 * np.sqrt(self._counts_obs.shape[0])))
+            round(0.5 * np.sqrt(self._counts_obs.shape[0]))
             if n_neighbors is None
             else n_neighbors
         )
-        self._random_state = _get_legacy_random(random_state)
+        self._random_state = check_random_state(random_state)
 
     def simulate_doublets(
         self,
@@ -192,8 +192,8 @@ class Scrublet:
     ) -> None:
         """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         sim_doublet_ratio
             Number of doublets to simulate relative to the number of observed
             transcriptomes. If `None`, self.sim_doublet_ratio is used.
@@ -208,8 +208,8 @@ class Scrublet:
         Sets
         ----
         doublet_parents_
-        """
 
+        """
         if sim_doublet_ratio is None:
             sim_doublet_ratio = self.sim_doublet_ratio
         else:
@@ -220,30 +220,29 @@ class Scrublet:
 
         pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
 
-        E1 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 0], :])
-        E2 = cast(sparse.csc_matrix, self._counts_obs[pair_ix[:, 1], :])
+        e1 = cast("CSCBase", self._counts_obs[pair_ix[:, 0], :])
+        e2 = cast("CSCBase", self._counts_obs[pair_ix[:, 1], :])
         tots1 = self._total_counts_obs[pair_ix[:, 0]]
         tots2 = self._total_counts_obs[pair_ix[:, 1]]
         if synthetic_doublet_umi_subsampling < 1:
             self._counts_sim, self._total_counts_sim = subsample_counts(
-                E1 + E2,
+                e1 + e2,
                 rate=synthetic_doublet_umi_subsampling,
                 original_totals=tots1 + tots2,
                 random_seed=self._random_state,
             )
         else:
-            self._counts_sim = E1 + E2
+            self._counts_sim = e1 + e2
             self._total_counts_sim = tots1 + tots2
         self.doublet_parents_ = pair_ix
 
     def set_manifold(
         self, manifold_obs: NDArray[np.float64], manifold_sim: NDArray[np.float64]
     ) -> None:
-        """\
-        Set the manifold coordinates used in k-nearest-neighbor graph construction
+        """Set the manifold coordinates used in k-nearest-neighbor graph construction.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         manifold_obs
             (shape: n_cells × n_features)
             The single-cell "manifold" coordinates (e.g., PCA coordinates)
@@ -259,8 +258,8 @@ class Scrublet:
         Sets
         ----
         manifold_obs_, manifold_sim_,
-        """
 
+        """
         self.manifold_obs_ = manifold_obs
         self.manifold_sim_ = manifold_sim
 
@@ -271,13 +270,12 @@ class Scrublet:
         distance_metric: _Metric | _MetricFn = "euclidean",
         get_doublet_neighbor_parents: bool = False,
     ) -> NDArray[np.float64]:
-        """\
-        Calculate doublet scores for observed transcriptomes and simulated doublets
+        """Calculate doublet scores for observed transcriptomes and simulated doublets.
 
         Requires that manifold_obs_ and manifold_sim_ have already been set.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         use_approx_neighbors
             Use approximate nearest neighbor method (annoy) for the KNN
             classifier.
@@ -299,8 +297,8 @@ class Scrublet:
         doublet_scores_obs_, doublet_scores_sim_,
         doublet_errors_obs_, doublet_errors_sim_,
         doublet_neighbor_parents_
-        """
 
+        """
         self._nearest_neighbor_classifier(
             k=self._n_neighbors,
             exp_doub_rate=self.expected_doublet_rate,
@@ -337,7 +335,7 @@ class Scrublet:
         n_sim: int = (manifold.obs["doub_labels"] == "sim").sum()
 
         # Adjust k (number of nearest neighbors) based on the ratio of simulated to observed cells
-        k_adj = int(round(k * (1 + n_sim / float(n_obs))))
+        k_adj = round(k * (1 + n_sim / float(n_obs)))
 
         # Find k_adj nearest neighbors
         knn = Neighbors(manifold)
@@ -364,16 +362,16 @@ class Scrublet:
         rho = exp_doub_rate
         r = n_sim / float(n_obs)
         nd = n_sim_neigh.astype(np.float64)
-        N = float(k_adj)
+        n = float(k_adj)
 
         # Bayesian
-        q = (nd + 1) / (N + 2)
-        Ld = q * rho / r / (1 - rho - q * (1 - rho - rho / r))
+        q = (nd + 1) / (n + 2)
+        ld = q * rho / r / (1 - rho - q * (1 - rho - rho / r))
 
-        se_q = np.sqrt(q * (1 - q) / (N + 3))
+        se_q = np.sqrt(q * (1 - q) / (n + 3))
         se_rho = stdev_doub_rate
 
-        se_Ld = (
+        se_ld = (
             q
             * rho
             / r
@@ -381,10 +379,10 @@ class Scrublet:
             * np.sqrt((se_q / q * (1 - rho)) ** 2 + (se_rho / rho * (1 - q)) ** 2)
         )
 
-        self.doublet_scores_obs_ = Ld[manifold.obs["doub_labels"] == "obs"]
-        self.doublet_scores_sim_ = Ld[manifold.obs["doub_labels"] == "sim"]
-        self.doublet_errors_obs_ = se_Ld[manifold.obs["doub_labels"] == "obs"]
-        self.doublet_errors_sim_ = se_Ld[manifold.obs["doub_labels"] == "sim"]
+        self.doublet_scores_obs_ = ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_scores_sim_ = ld[manifold.obs["doub_labels"] == "sim"]
+        self.doublet_errors_obs_ = se_ld[manifold.obs["doub_labels"] == "obs"]
+        self.doublet_errors_sim_ = se_ld[manifold.obs["doub_labels"] == "sim"]
 
         # get parents of doublet neighbors, if requested
         neighbor_parents = None
@@ -392,8 +390,8 @@ class Scrublet:
             parent_cells = self.doublet_parents_
             neighbors = neighbors - n_obs
             neighbor_parents = []
-            for iCell in range(n_obs):
-                this_doub_neigh = neighbors[iCell, :][neighbors[iCell, :] > -1]
+            for c in range(n_obs):
+                this_doub_neigh = neighbors[c, :][neighbors[c, :] > -1]
                 if len(this_doub_neigh) > 0:
                     this_doub_neigh_parents = np.unique(
                         parent_cells[this_doub_neigh, :].flatten()
@@ -406,11 +404,10 @@ class Scrublet:
     def call_doublets(
         self, *, threshold: float | None = None, verbose: bool = True
     ) -> NDArray[np.bool_] | None:
-        """\
-        Call trancriptomes as doublets or singlets
+        """Call trancriptomes as doublets or singlets.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         threshold
             Doublet score threshold for calling a transcriptome
             a doublet. If `None`, this is set automatically by looking
@@ -427,20 +424,20 @@ class Scrublet:
         predicted_doublets_, z_scores_, threshold_,
         detected_doublet_rate_, detectable_doublet_fraction,
         overall_doublet_rate_
-        """
 
+        """
         if threshold is None:
             # automatic threshold detection
             # http://scikit-image.org/docs/dev/api/skimage.filters.html
             from skimage.filters import threshold_minimum
 
             try:
-                threshold = cast(float, threshold_minimum(self.doublet_scores_sim_))
+                threshold = cast("float", threshold_minimum(self.doublet_scores_sim_))
                 if verbose:
                     logg.info(
                         f"Automatically set threshold at doublet score = {threshold:.2f}"
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.predicted_doublets_ = None
                 if verbose:
                     logg.warning(
@@ -449,16 +446,16 @@ class Scrublet:
                     )
                 return self.predicted_doublets_
 
-        Ld_obs = self.doublet_scores_obs_
-        Ld_sim = self.doublet_scores_sim_
+        ld_obs = self.doublet_scores_obs_
+        ld_sim = self.doublet_scores_sim_
         se_obs = self.doublet_errors_obs_
-        Z = (Ld_obs - threshold) / se_obs
-        self.predicted_doublets_ = Ld_obs > threshold
-        self.z_scores_ = Z
+        z = (ld_obs - threshold) / se_obs
+        self.predicted_doublets_ = ld_obs > threshold
+        self.z_scores_ = z
         self.threshold_ = threshold
-        self.detected_doublet_rate_ = (Ld_obs > threshold).sum() / float(len(Ld_obs))
-        self.detectable_doublet_fraction_ = (Ld_sim > threshold).sum() / float(
-            len(Ld_sim)
+        self.detected_doublet_rate_ = (ld_obs > threshold).sum() / float(len(ld_obs))
+        self.detectable_doublet_fraction_ = (ld_sim > threshold).sum() / float(
+            len(ld_sim)
         )
         self.overall_doublet_rate_ = (
             self.detected_doublet_rate_ / self.detectable_doublet_fraction_

@@ -13,17 +13,15 @@ from .._utils import _choose_graph, get_literal_vals
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
-    from typing import LiteralString, TypeVar
+    from typing import LiteralString
 
     from anndata import AnnData
-    from scipy.sparse import spmatrix
 
-    from .._compat import _LegacyRandom
-
-    S = TypeVar("S", bound=LiteralString)
+    from .._compat import SpBase
+    from .._utils.random import _LegacyRandom
 
 
-_Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
+type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
 @old_positionals(
@@ -37,7 +35,7 @@ _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"
     "obsp",
     "copy",
 )
-def draw_graph(
+def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
@@ -45,15 +43,14 @@ def draw_graph(
     root: int | None = None,
     random_state: _LegacyRandom = 0,
     n_jobs: int | None = None,
-    adjacency: spmatrix | None = None,
+    adjacency: SpBase | None = None,
     key_added_ext: str | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
     **kwds,
 ) -> AnnData | None:
-    """\
-    Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
+    """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires running :func:`~scanpy.pp.neighbors`, first.
@@ -121,6 +118,7 @@ def draw_graph(
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
         `draw_graph` parameters.
+
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     if layout not in (layouts := get_literal_vals(_Layout)):
@@ -174,7 +172,7 @@ def draw_graph(
 
 
 def fa2_positions(
-    adjacency: spmatrix | np.ndarray, init_coords: np.ndarray, **kwds
+    adjacency: SpBase | np.ndarray, init_coords: np.ndarray, **kwds
 ) -> list[tuple[float, float]]:
     from fa2_modified import ForceAtlas2
 
@@ -205,7 +203,7 @@ def fa2_positions(
     return forceatlas2.forceatlas2(adjacency, pos=init_coords, iterations=iterations)
 
 
-def coerce_fa2_layout(layout: S) -> S | Literal["fa", "fr"]:
+def coerce_fa2_layout[S: LiteralString](layout: S) -> S | Literal["fa", "fr"]:
     # see whether fa2 is installed
     if layout != "fa":
         return layout

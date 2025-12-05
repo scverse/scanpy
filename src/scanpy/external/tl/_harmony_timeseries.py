@@ -1,7 +1,4 @@
-"""\
-Harmony time series for data visualization with augmented affinity matrix at
-discrete time points
-"""
+"""Harmony time series for data visualization with augmented affinity matrix at discrete time points."""
 
 from __future__ import annotations
 
@@ -29,9 +26,7 @@ def harmony_timeseries(
     n_jobs: int = -2,
     copy: bool = False,
 ) -> AnnData | None:
-    """\
-    Harmony time series for data visualization with augmented affinity matrix
-    at discrete time points :cite:p:`Nowotschin2019`.
+    """Harmony time series for data visualization with augmented affinity matrix at discrete time points :cite:p:`Nowotschin2019`.
 
     Harmony time series is a framework for data visualization, trajectory
     detection and interpretation for scRNA-seq data measured at discrete
@@ -112,7 +107,7 @@ def harmony_timeseries(
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
-    ...     time_points, categories=['sa1', 'sa2', 'sa3']
+    ...     time_points, categories=["sa1", "sa2", "sa3"]
     ... )
 
     Normalize and filter for highly expressed genes
@@ -135,13 +130,13 @@ def harmony_timeseries(
     Harmony_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*,
     amongst other things.
-    """
 
+    """
     try:
         import harmony
-    except ImportError:
+    except ImportError as e:
         msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")

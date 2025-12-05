@@ -1,3 +1,5 @@
+"""Analysis tools."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -44,12 +46,12 @@ __all__ = [
     "dpt",
     "draw_graph",
     "embedding_density",
+    "filter_rank_genes_groups",
     "ingest",
     "leiden",
     "louvain",
     "marker_gene_overlap",
     "paga",
-    "filter_rank_genes_groups",
     "rank_genes_groups",
     "score_genes",
     "score_genes_cell_cycle",

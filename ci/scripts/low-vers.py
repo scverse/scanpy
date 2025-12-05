@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = [
-#   "tomli; python_version < '3.11'",
-#   "packaging",
-# ]
+# requires-python = ">=3.11"
+# dependencies = [ "packaging" ]
 # ///
+"""Parse a pyproject.toml file and output a list of minimum dependency versions."""
 
 from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
 from collections import deque
 from contextlib import ExitStack
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 from packaging.requirements import Requirement
 from packaging.version import Version
@@ -31,14 +26,14 @@ if TYPE_CHECKING:
 
 
 def min_dep(req: Requirement) -> Requirement:
-    """
-    Given a requirement, return the minimum version specifier.
+    """Given a requirement, return the minimum version specifier.
 
     Example
     -------
-
     >>> min_dep(Requirement("numpy>=1.0"))
-    <Requirement('numpy==1.0.*')>
+    <Requirement('numpy==1.0')>
+    >>> min_dep(Requirement("numpy<3.0"))
+    <Requirement('numpy<3.0')>
     """
     req_name = req.name
     if req.extras:
@@ -48,8 +43,8 @@ def min_dep(req: Requirement) -> Requirement:
         spec for spec in req.specifier if spec.operator in {"==", "~=", ">=", ">"}
     ]
     if not filter_specs:
-        return Requirement(req_name)
-
+        # TODO: handle markers
+        return Requirement(f"{req_name}{req.specifier}")
     min_version = Version("0.0.0.a1")
     for spec in filter_specs:
         if spec.operator in {">", ">=", "~="}:
@@ -57,15 +52,17 @@ def min_dep(req: Requirement) -> Requirement:
         elif spec.operator == "==":
             min_version = Version(spec.version)
 
-    return Requirement(f"{req_name}=={min_version}.*")
+    return Requirement(f"{req_name}=={min_version}")
 
 
 def extract_min_deps(
     dependencies: Iterable[Requirement], *, pyproject
 ) -> Generator[Requirement, None, None]:
+    """Extract minimum dependency versions from a list of requirements."""
     dependencies = deque(dependencies)  # We'll be mutating this
     project_name = pyproject["project"]["name"]
 
+    deps = {}
     while len(dependencies) > 0:
         req = dependencies.pop()
 
@@ -78,12 +75,16 @@ def extract_min_deps(
                 extra_deps = pyproject["project"]["optional-dependencies"][extra]
                 dependencies += map(Requirement, extra_deps)
         else:
-            yield min_dep(req)
+            if req.name in deps:
+                req.specifier &= deps[req.name].specifier
+                req.extras |= deps[req.name].extras
+            deps[req.name] = min_dep(req)
+    yield from deps.values()
 
 
 class Args(argparse.Namespace):
-    """\
-    Parse a pyproject.toml file and output a list of minimum dependencies.
+    """Parse a pyproject.toml file and output a list of minimum dependencies.
+
     Output is optimized for `[uv] pip install` (see `-o`/`--output` for details).
     """
 
@@ -94,14 +95,17 @@ class Args(argparse.Namespace):
 
     @classmethod
     def parse(cls, argv: Sequence[str] | None = None) -> Self:
+        """Parse CLI arguments."""
         return cls.parser().parse_args(argv, cls())
 
     @classmethod
     def parser(cls) -> argparse.ArgumentParser:
+        """Construct a CLI argument parser."""
         parser = argparse.ArgumentParser(
             prog="min-deps",
             description=cls.__doc__,
             usage="pip install `python min-deps.py pyproject.toml`",
+            allow_abbrev=False,
         )
         parser.add_argument(
             "_path",
@@ -139,10 +143,12 @@ class Args(argparse.Namespace):
 
     @cached_property
     def pyproject(self) -> dict[str, Any]:
+        """Return the parsed `pyproject.toml`."""
         return tomllib.loads(self._path.read_text())
 
     @cached_property
     def extras(self) -> AbstractSet[str]:
+        """Return the extras to install."""
         if self._extras:
             if self._all_extras:
                 sys.exit("Cannot specify both --extras and --all-extras")
@@ -153,6 +159,7 @@ class Args(argparse.Namespace):
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Run main entry point."""
     args = Args.parse(argv)
 
     project_name = args.pyproject["project"]["name"]

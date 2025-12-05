@@ -1,6 +1,7 @@
 # Scanpy outfiles
 /data/
 /write/
+/figures/
 
 # Docs
 /docs/_build/
@@ -27,7 +28,7 @@
 
 # Python build files
 __pycache__/
-/ci/scanpy-min-deps.txt
+/ci/scanpy-low-vers.txt
 /dist/
 /*-env/
 /env-*/

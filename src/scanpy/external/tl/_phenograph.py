@@ -1,6 +1,4 @@
-"""\
-Perform clustering using PhenoGraph
-"""
+"""Perform clustering using PhenoGraph."""
 
 from __future__ import annotations
 
@@ -8,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import old_positionals, pkg_version
 from ..._utils import renamed_arg
 from ..._utils._doctests import doctest_needs
 
@@ -18,8 +17,8 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     import numpy as np
-    from scipy.sparse import spmatrix
 
+    from ..._compat import SpBase
     from ...tools._leiden import MutableVertexPartition
 
 
@@ -43,8 +42,8 @@ if TYPE_CHECKING:
     "copy",
 )
 @doctest_needs("phenograph")
-def phenograph(
-    data: AnnData | np.ndarray | spmatrix,
+def phenograph(  # noqa: PLR0913
+    data: AnnData | np.ndarray | SpBase,
     clustering_algo: Literal["louvain", "leiden"] | None = "louvain",
     *,
     k: int = 30,
@@ -69,9 +68,8 @@ def phenograph(
     seed: int | None = None,
     copy: bool = False,
     **kargs: Any,
-) -> tuple[np.ndarray | None, spmatrix, float | None] | None:
-    """\
-    PhenoGraph clustering :cite:p:`Levine2015`.
+) -> tuple[np.ndarray | None, SpBase, float | None] | None:
+    """PhenoGraph clustering :cite:p:`Levine2015`.
 
     **PhenoGraph** is a clustering method designed for high-dimensional single-cell
     data. It works by creating a graph ("network") representing phenotypic similarities
@@ -201,44 +199,54 @@ def phenograph(
     Plot phenograph clusters on tSNE:
 
     >>> sc.pl.tsne(
-    ...     adata, color = ["pheno_louvain", "pheno_leiden"], s = 100,
-    ...     palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10
+    ...     adata,
+    ...     color=["pheno_louvain", "pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
 
     Cluster and cluster centroids for input Numpy ndarray
 
     >>> df = np.random.rand(1000, 40)
     >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
+    >>> dframe.index, dframe.columns = (
+    ...     map(str, dframe.index),
+    ...     map(str, dframe.columns),
+    ... )
     >>> adata = AnnData(dframe)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
-    ...     adata, color=['pheno_leiden'], s=100,
-    ...     palette=sc.pl.palettes.vega_20_scanpy, legend_fontsize=10
+    ...     adata,
+    ...     color=["pheno_leiden"],
+    ...     s=100,
+    ...     palette=sc.pl.palettes.vega_20_scanpy,
+    ...     legend_fontsize=10,
     ... )
+
     """
     start = logg.info("PhenoGraph clustering")
 
     try:
         import phenograph
 
-        assert phenograph.__version__ >= "1.5.3"
-    except (ImportError, AssertionError, AttributeError):
+        assert pkg_version("phenograph") >= Version("1.5.3")
+    except (ImportError, AssertionError, AttributeError) as e:
         msg = (
             "please install the latest release of phenograph:\n\t"
             "pip install -U PhenoGraph"
         )
-        raise ImportError(msg)
+        raise ImportError(msg) from e
 
     if isinstance(data, AnnData):
         adata = data
         try:
             data = data.obsm["X_pca"]
-        except KeyError:
+        except KeyError as e:
             msg = "Please run `sc.pp.pca` on `data` and try again!"
-            raise KeyError(msg)
+            raise KeyError(msg) from e
     else:
         adata = None
         copy = True
@@ -249,7 +257,7 @@ def phenograph(
     ig_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_ig"
     q_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_q"
 
-    communities, graph, Q = phenograph.cluster(
+    communities, graph, q = phenograph.cluster(
         data=data,
         clustering_algo=clustering_algo,
         k=k,
@@ -273,11 +281,11 @@ def phenograph(
     logg.info("    finished", time=start)
 
     if copy:
-        return communities, graph, Q
+        return communities, graph, q
 
     if adata is not None:
         adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
-        if Q:
-            adata.uns[q_key] = Q
+        if q:
+            adata.uns[q_key] = q

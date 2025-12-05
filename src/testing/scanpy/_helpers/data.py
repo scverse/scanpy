@@ -1,5 +1,5 @@
-"""
-Functions returning copies of datasets as cheaply as possible,
+"""Functions returning copies of datasets as cheaply as possible.
+
 i.e. without having to hit the disk or (in case of ``_pbmc3k_normalized``) recomputing normalization.
 """
 
@@ -41,9 +41,7 @@ def pbmc68k_reduced() -> AnnData:
 
 def krumsiek11() -> AnnData:
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "Observation names are not unique", module="anndata"
-        )
+        warnings.filterwarnings("ignore", "Observation names are not unique")
         return _krumsiek11().copy()
 
 

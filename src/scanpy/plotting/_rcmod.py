@@ -9,12 +9,11 @@ from matplotlib import rcParams
 from . import palettes
 
 
-def set_rcParams_scanpy(fontsize=14, color_map=None):
+def set_rcParams_scanpy(fontsize=14, color_map=None) -> None:  # noqa: N802
     """Set matplotlib.rcParams to Scanpy defaults.
 
-    Call this through `settings.set_figure_params`.
+    Call this through :func:`scanpy.set_figure_params`.
     """
-
     # figure
     rcParams["figure.figsize"] = (4, 4)
     rcParams["figure.subplot.left"] = 0.18
@@ -34,7 +33,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
         "Bitstream Vera Sans",
         "sans-serif",
     ]
-    fontsize = fontsize
     rcParams["font.size"] = fontsize
     rcParams["legend.fontsize"] = 0.92 * fontsize
     rcParams["axes.titlesize"] = fontsize
@@ -68,6 +66,6 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams["image.cmap"] = rcParams["image.cmap"] if color_map is None else color_map
 
 
-def set_rcParams_defaults():
+def set_rcParams_defaults() -> None:  # noqa: N802
     """Reset `matplotlib.rcParams` to defaults."""
     rcParams.update(mpl.rcParamsDefault)

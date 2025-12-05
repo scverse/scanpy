@@ -2,6 +2,7 @@
 # /// script
 # dependencies = [ "towncrier", "packaging" ]
 # ///
+"""Script to automate towncrier release note PRs."""
 
 from __future__ import annotations
 
@@ -16,11 +17,14 @@ if TYPE_CHECKING:
 
 
 class Args(argparse.Namespace):
+    """Command line arguments."""
+
     version: str
     dry_run: bool
 
 
 def parse_args(argv: Sequence[str] | None = None) -> Args:
+    """Construct a CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="towncrier-automation",
         description=(
@@ -52,6 +56,7 @@ def parse_args(argv: Sequence[str] | None = None) -> Args:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    """Run main entry point."""
     args = parse_args(argv)
 
     # Run towncrier
@@ -66,13 +71,15 @@ def main(argv: Sequence[str] | None = None) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    pr_description = "" if base_branch == "main" else "@meeseeksdev backport to main"
+    pr_description = "- [x] Release notes not necessary because: compiles release notes"
+    if base_branch != "main":
+        pr_description += "\n\n@meeseeksdev backport to main"
     branch_name = f"release_notes_{args.version}"
 
     # Create a new branch + commit
     subprocess.run(["git", "switch", "-c", branch_name], check=True)
     subprocess.run(["git", "add", "docs/release-notes"], check=True)
-    pr_title = f"(chore): generate {args.version} release notes"
+    pr_title = f"docs: generate {args.version} release notes"
     subprocess.run(["git", "commit", "-m", pr_title], check=True)
 
     # push

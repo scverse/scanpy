@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from .._compat import old_positionals
+from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import _doc_params
 from ..preprocessing._normalization import normalize_total
-from . import _utils
 from ._docs import doc_show_save_ax
+from ._utils import savefig_or_show
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -32,8 +32,7 @@ def highest_expr_genes(
     ax: Axes | None = None,
     **kwds,
 ):
-    """\
-    Fraction of counts assigned to each gene over all cells.
+    """Fraction of counts assigned to each gene over all cells.
 
     Computes, for each gene, the fraction of counts assigned to that gene within
     a cell. The `n_top` genes with the highest mean fraction over all cells are
@@ -70,15 +69,15 @@ def highest_expr_genes(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`.
+
     """
     import seaborn as sns  # Slow import, only import if called
-    from scipy.sparse import issparse
 
     # compute the percentage of each gene per cell
     norm_dict = normalize_total(adata, target_sum=100, layer=layer, inplace=False)
 
     # identify the genes with the highest mean
-    if issparse(norm_dict["X"]):
+    if isinstance(norm_dict["X"], CSBase):
         mean_percent = norm_dict["X"].mean(axis=0).A1
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
         counts_top_genes = norm_dict["X"][:, top_idx].toarray()
@@ -99,13 +98,13 @@ def highest_expr_genes(
         # figsize is hardcoded to produce a tall image. To change the fig size,
         # a matplotlib.axes.Axes object needs to be passed.
         height = (n_top * 0.2) + 1.5
-        fig, ax = plt.subplots(figsize=(5, height))
+        _fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=counts_top_genes, orient="h", ax=ax, fliersize=1, **kwds)
     ax.set_xlabel("% of total counts")
     if log:
         ax.set_xscale("log")
     show = settings.autoshow if show is None else show
-    _utils.savefig_or_show("highest_expr_genes", show=show, save=save)
+    savefig_or_show("highest_expr_genes", show=show, save=save)
     if show:
         return None
     return ax
