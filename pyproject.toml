@@ -96,6 +96,7 @@ test-min = [
     "pytest-randomly",
     "pytest-rerunfailures",
     "tuna",
+    "dependency-groups",    # for CI scripts doctests
 ]
 test = [
     { include-group = "test-min" },
@@ -109,7 +110,7 @@ test = [
     "scanpy[dask-ml]",
 ]
 doc = [
-    "sphinx>=8.2.3",
+    "sphinx>=9.0.4",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.16",
     "sphinx-autodoc-typehints>=1.25.2",
@@ -154,7 +155,8 @@ packages = [ "src/testing", "src/scanpy" ]
 source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
 
-[tool.pytest.ini_options]
+[tool.pytest]
+strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
@@ -164,7 +166,6 @@ addopts = [
 ]
 testpaths = [ "./tests", "./ci", "scanpy" ]
 norecursedirs = [ "tests/_images" ]
-xfail_strict = true
 junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
