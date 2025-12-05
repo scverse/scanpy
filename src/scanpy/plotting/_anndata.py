@@ -8,13 +8,11 @@ from itertools import pairwise, product
 from types import NoneType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict, cast
 
-import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps, gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
@@ -22,9 +20,9 @@ from .. import logging as logg
 from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import (
-    _check_use_raw,
     _doc_params,
     _empty,
+    check_use_raw,
     get_literal_vals,
     sanitize_anndata,
 )
@@ -65,9 +63,9 @@ if TYPE_CHECKING:
         _LegendLoc,
     )
 
-    # TODO: is that all?
-    _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = str | Sequence[str]
+# TODO: is that all?
+type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
+type _VarNames = str | Sequence[str]
 
 
 class VarGroups(NamedTuple):
@@ -147,8 +145,9 @@ def scatter(  # noqa: PLR0913
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
     show: bool | None = None,
-    save: str | bool | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: str | bool | None = None,
 ) -> Axes | list[Axes] | None:
     """Scatter plot along observations or variables axes.
 
@@ -229,7 +228,7 @@ def _check_if_annotations(
     """
     annotations: pd.Index[str] = getattr(adata, axis_name).columns
     other_ax_obj = (
-        adata.raw if _check_use_raw(adata, use_raw) and axis_name == "obs" else adata
+        adata.raw if check_use_raw(adata, use_raw) and axis_name == "obs" else adata
     )
     names: pd.Index[str] = getattr(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
@@ -284,7 +283,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     """See docstring of scatter."""
     sanitize_anndata(adata)
 
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
 
     # Process layers
     if layers in ["X", None] or (isinstance(layers, str) and layers in adata.layers):
@@ -325,7 +324,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             # ignore the '0th' diffusion component
             if basis == "diffmap":
                 components += 1
-            Y = adata.obsm["X_" + basis][:, components]
+            xy = adata.obsm["X_" + basis][:, components]
             # correct the component vector for use in labeling etc.
             if basis == "diffmap":
                 components -= 1
@@ -346,13 +345,13 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             x_arr = adata.obs_vector(x, layer=layers[0])
             y_arr = adata.obs_vector(y, layer=layers[1])
 
-        Y = np.c_[x_arr, y_arr]
+        xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
         raise ValueError(msg)
 
     if size is None:
-        n = Y.shape[0]
+        n = xy.shape[0]
         size = 120000 / n
 
     if legend_fontsize is None:
@@ -394,7 +393,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         categorical = False  # by default, assume continuous or flat color
         colorbar = None
         # test whether we have categorial or continuous annotation
-        if key in adata.obs_keys():
+        if key in adata.obs:
             if isinstance(adata.obs[key].dtype, CategoricalDtype):
                 categorical = True
             else:
@@ -410,7 +409,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         else:
             msg = (
                 f"key {key!r} is invalid! pass valid observation annotation, "
-                f"one of {adata.obs_keys()} or a gene name {adata.var_names}"
+                f"one of {adata.obs.columns.tolist()} or a gene name {adata.var_names}"
             )
             raise ValueError(msg)
         if colorbar is None:
@@ -427,33 +426,36 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
         ]
 
-    axs: list[Axes] = scatter_base(
-        Y,
-        title=title,
-        alpha=alpha,
-        component_name=component_name,
-        axis_labels=axis_labels,
-        component_indexnames=components + 1,
-        projection=projection,
-        colors=color_ids,
-        highlights=highlights,
-        colorbars=colorbars,
-        right_margin=right_margin,
-        left_margin=left_margin,
-        sizes=[size for _ in keys],
-        markers=marker,
-        color_map=color_map,
-        show_ticks=show_ticks,
-        ax=ax,
+    axs = cast(
+        "list[Axes]",
+        scatter_base(
+            xy,
+            title=title,
+            alpha=alpha,
+            component_name=component_name,
+            axis_labels=axis_labels,
+            component_indexnames=components + 1,
+            projection=projection,
+            colors=color_ids,
+            highlights=highlights,
+            colorbars=colorbars,
+            right_margin=right_margin,
+            left_margin=left_margin,
+            sizes=[size for _ in keys],
+            markers=marker,
+            color_map=color_map,
+            show_ticks=show_ticks,
+            ax=ax,
+        ),
     )
 
-    def add_centroid(centroids, name, Y, mask):
-        Y_mask = Y[mask]
-        if Y_mask.shape[0] == 0:
+    def add_centroid(centroids, name, xy, mask) -> None:
+        xy_mask = xy[mask]
+        if xy_mask.shape[0] == 0:
             return
-        median = np.median(Y_mask, axis=0)
-        i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
-        centroids[name] = Y_mask[i]
+        median = np.median(xy_mask, axis=0)
+        i = np.argmin(np.sum(np.abs(xy_mask - median), axis=1))
+        centroids[name] = xy_mask[i]
 
     # loop over all categorical annotation and plot it
     for ikey, pal in zip(categoricals, palettes, strict=False):
@@ -462,7 +464,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             adata, key, palette=pal, force_update_colors=palette is not None
         )
         # actually plot the groups
-        mask_remaining = np.ones(Y.shape[0], dtype=bool)
+        mask_remaining = np.ones(xy.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
             for iname, name in enumerate(adata.obs[key].cat.categories):
@@ -472,7 +474,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                         key,
                         iname,
                         adata,
-                        Y,
+                        xy,
                         projection=projection,
                         size=size,
                         alpha=alpha,
@@ -480,7 +482,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     mask_remaining[mask] = False
                     if legend_loc.startswith("on data"):
-                        add_centroid(centroids, name, Y, mask)
+                        add_centroid(centroids, name, xy, mask)
         else:
             groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
@@ -499,19 +501,19 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                         key,
                         iname,
                         adata,
-                        Y,
+                        xy,
                         projection=projection,
                         size=size,
                         alpha=alpha,
                         marker=marker,
                     )
                     if legend_loc.startswith("on data"):
-                        add_centroid(centroids, name, Y, mask)
+                        add_centroid(centroids, name, xy, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
-            data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
+            data = [xy[mask_remaining, 0], xy[mask_remaining, 1]]
             if projection == "3d":
-                data.append(Y[mask_remaining, 2])
+                data.append(xy[mask_remaining, 2])
             axs[ikey].scatter(
                 *data,
                 marker=marker,
@@ -569,11 +571,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
             )
         if legend is not None:
-            if Version(mpl.__version__) < Version("3.7"):
-                _attr = "legendHandles"
-            else:
-                _attr = "legend_handles"
-            for handle in getattr(legend, _attr):
+            for handle in legend.legend_handles:
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter
@@ -756,9 +754,9 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
-    # deprecatd
+    # deprecated
+    save: bool | str | None = None,
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
@@ -867,7 +865,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     import seaborn as sns  # Slow import, only import if called
 
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
@@ -1013,7 +1011,7 @@ def clustermap(
     *,
     use_raw: bool | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwds,
 ) -> ClusterGrid | None:
     """Hierarchically-clustered heatmap.
@@ -1060,17 +1058,17 @@ def clustermap(
         msg = "Currently, only a single key is supported."
         raise ValueError(msg)
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
-    X = adata.raw.X if use_raw else adata.X
-    if isinstance(X, CSBase):
-        X = X.toarray()
-    df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
+    use_raw = check_use_raw(adata, use_raw)
+    x = adata.raw.X if use_raw else adata.X
+    if isinstance(x, CSBase):
+        x = x.toarray()
+    df = pd.DataFrame(x, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:
         row_colors = adata.obs[obs_keys]
         _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
         # do this more efficiently... just a quick solution
         lut = dict(
-            zip(row_colors.cat.categories, adata.uns[obs_keys + "_colors"], strict=True)
+            zip(row_colors.cat.categories, adata.uns[f"{obs_keys}_colors"], strict=True)
         )
         row_colors = adata.obs[obs_keys].map(lut)
         g = sns.clustermap(df, row_colors=row_colors.values, **kwds)
@@ -1229,13 +1227,13 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
             # or when groupby is a list of columns the colors are assigned on the fly,
             # which may create inconsistencies in multiple runs that require sorting
             # of the categories (eg. when dendrogram is plotted).
-            if groupby + "_colors" not in adata.uns:
+            if f"{groupby}_colors" not in adata.uns:
                 # if colors are not found, assign a new palette
                 # and save it using the same code for embeddings
                 from ._tools.scatterplots import _get_palette
 
                 _get_palette(adata, groupby)
-            groupby_colors = adata.uns[groupby + "_colors"]
+            groupby_colors = adata.uns[f"{groupby}_colors"]
         else:
             # this case happen when adata.obs[groupby] is numeric
             # the values are converted into a category on the fly
@@ -1344,14 +1342,10 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            (
-                label2code,
-                ticks,
-                labels,
-                groupby_cmap,
-                norm,
-            ) = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation="left"
+            label2code, ticks, _labels, groupby_cmap, norm = (
+                _plot_categories_as_colorblocks(
+                    groupby_ax, obs_tidy, colors=groupby_colors, orientation="left"
+                )
             )
 
             # add lines to main heatmap
@@ -1437,14 +1431,10 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            (
-                label2code,
-                ticks,
-                labels,
-                groupby_cmap,
-                norm,
-            ) = _plot_categories_as_colorblocks(
-                groupby_ax, obs_tidy, colors=groupby_colors, orientation="bottom"
+            label2code, ticks, _labels, groupby_cmap, norm = (
+                _plot_categories_as_colorblocks(
+                    groupby_ax, obs_tidy, colors=groupby_colors, orientation="bottom"
+                )
             )
             # add lines to main heatmap
             line_positions = (
@@ -1578,11 +1568,11 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     pl.rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     """
-    if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != "category":
+    if groupby not in adata.obs or adata.obs[groupby].dtype.name != "category":
         msg = (
             "groupby has to be a valid categorical observation. "
             f"Given value: {groupby}, valid categorical observations: "
-            f"{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']}"
+            f"{[x for x in adata.obs if adata.obs[x].dtype.name == 'category']}"
         )
         raise ValueError(msg)
 
@@ -1604,10 +1594,10 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     # get categories colors:
     if f"{groupby}_colors" not in adata.uns:
-        from ._utils import _set_default_colors_for_categorical_obs
+        from ._utils import set_default_colors_for_categorical_obs
 
-        _set_default_colors_for_categorical_obs(adata, groupby)
-    groupby_colors = adata.uns[groupby + "_colors"]
+        set_default_colors_for_categorical_obs(adata, groupby)
+    groupby_colors = adata.uns[f"{groupby}_colors"]
 
     if dendrogram:
         # compute dendrogram if needed and reorder
@@ -1701,7 +1691,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
         ax.spines["top"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
         ax.grid(visible=False)
-        ymin, ymax = ax.get_ylim()
+        _ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
         ax.set_yticklabels([str(ymax)], ha="left", va="top")
@@ -1730,7 +1720,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    label2code, ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+    _label2code, ticks, _labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
         groupby_ax, obs_tidy.T, colors=groupby_colors, orientation="bottom"
     )
     # add lines to plot
@@ -1868,7 +1858,7 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     norm: Normalize | None = None,
     **kwds,
 ) -> list[Axes] | None:
-    """Plot the correlation matrix computed as part of `sc.tl.dendrogram`.
+    """Plot the correlation matrix computed as part of :func:`scanpy.tl.dendrogram`.
 
     Parameters
     ----------
@@ -2061,7 +2051,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     """
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if isinstance(var_names, str):
         var_names = [var_names]
 
@@ -2071,15 +2061,17 @@ def _prepare_dataframe(  # noqa: PLR0912
             # if not a list, turn into a list
             groupby = [groupby]
         for group in groupby:
-            if group not in [*adata.obs_keys(), adata.obs.index.name]:
+            if group not in [*adata.obs, adata.obs.index.name]:
                 if adata.obs.index.name is not None:
                     msg = f' or index name "{adata.obs.index.name}"'
                 else:
                     msg = ""
-                raise ValueError(
+                msg = (
                     "groupby has to be a valid observation. "
-                    f"Given {group}, is not in observations: {adata.obs_keys()}" + msg
+                    f"Given {group}, is not in observations: "
+                    f"{adata.obs.columns.tolist()} {msg}"
                 )
+                raise ValueError(msg)
             if group in adata.obs.columns and group == adata.obs.index.name:
                 msg = (
                     f"Given group {group} is both and index and a column level, "
@@ -2235,7 +2227,7 @@ def _plot_var_groups_brackets(
             group_y_center = top[idx] + float(diff) / 2
             # cut label to fit available space
             label = (
-                var_groups.labels[idx][: int(diff * 2)] + "."
+                f"{var_groups.labels[idx][: int(diff * 2)]}."
                 if diff * 2 < len(var_groups.labels[idx])
                 else var_groups.labels[idx]
             )
@@ -2324,9 +2316,10 @@ def _reorder_categories_after_dendrogram(
             position = var_groups.positions[idx]
             _var_names = var_names[position[0] : position[1] + 1]
             var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-            positions_ordered.append(
-                (position_start, position_start + len(_var_names) - 1)
-            )
+            positions_ordered.append((
+                position_start,
+                position_start + len(_var_names) - 1,
+            ))
             position_start += len(_var_names)
             labels_ordered.append(var_groups.labels[idx])
         var_groups = VarGroups(labels_ordered, positions_ordered)
@@ -2357,7 +2350,7 @@ def _format_first_three_categories(categories):
     """Clean up warning message."""
     categories = list(categories)
     if len(categories) > 3:
-        categories = categories[:3] + ["etc."]
+        categories = [*categories[:3], "etc."]
     return ", ".join(categories)
 
 
@@ -2568,7 +2561,7 @@ def _plot_categories_as_colorblocks(
     if colors is None:
         groupby_cmap = colormaps.get_cmap(cmap_name)
     else:
-        groupby_cmap = ListedColormap(colors, groupby + "_cmap")
+        groupby_cmap = ListedColormap(colors, f"{groupby}_cmap")
     norm = BoundaryNorm(np.arange(groupby_cmap.N + 1) - 0.5, groupby_cmap.N)
 
     # determine groupby label positions such that they appear
@@ -2660,7 +2653,7 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     color bar ax
 
     """
-    width, height = fig.get_size_inches()
+    _width, height = fig.get_size_inches()
     if height > max_cbar_height:
         # to make the colorbar shorter, the
         # ax is split and the lower portion is used.

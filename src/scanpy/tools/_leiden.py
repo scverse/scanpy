@@ -8,6 +8,7 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._compat import warn
 from .._utils.random import set_igraph_random_state
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -20,12 +21,12 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
 
-try:  # separate block for fallible import
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
-    if not TYPE_CHECKING:
-        MutableVertexPartition = type("MutableVertexPartition", (), {})
-        MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from leidenalg.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type("MutableVertexPartition", (), {})
+            MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
 def leiden(  # noqa: PLR0912, PLR0913, PLR0915
@@ -43,7 +44,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph"] = "leidenalg",
+    flavor: Literal["leidenalg", "igraph"] | None = None,
     **clustering_args,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -118,6 +119,14 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     """
+    if flavor is None:
+        flavor = "leidenalg"
+        msg = (
+            "In the future, the default backend for leiden will be igraph instead of leidenalg. "
+            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+            "`directed` must also be `False` to work with igraph’s implementation."
+        )
+        warn(msg, FutureWarning)
     if flavor not in {"igraph", "leidenalg"}:
         msg = (
             f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
@@ -134,11 +143,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         try:
             import leidenalg
-
-            msg = 'In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n To achieve the future defaults please pass: flavor="igraph" and n_iterations=2.  directed must also be False to work with igraph\'s implementation.'
-            _utils.warn_once(msg, FutureWarning, stacklevel=3)
         except ImportError as e:
-            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
+            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
             raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 

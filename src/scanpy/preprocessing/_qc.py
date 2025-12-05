@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import singledispatch, wraps
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numba
 import numpy as np
@@ -13,7 +12,7 @@ from scipy import sparse
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
-from .._compat import CSBase, CSRBase, DaskArray, njit
+from .._compat import CSBase, CSRBase, DaskArray, njit, warn
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -49,7 +48,7 @@ def describe_obs(  # noqa: PLR0913
     use_raw: bool = False,
     log1p: bool | None = True,
     inplace: bool = False,
-    X=None,
+    x=None,
     parallel=None,
 ) -> pd.DataFrame | None:
     """Describe observations of anndata.
@@ -82,39 +81,36 @@ def describe_obs(  # noqa: PLR0913
 
     """
     if parallel is not None:
-        warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning,
-            stacklevel=2,
-        )
+        msg = "Argument `parallel` is deprecated, and currently has no effect."
+        warn(msg, FutureWarning)
     # Handle whether X is passed
-    if X is None:
-        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, CSBase):
-            X.eliminate_zeros()
+    if x is None:
+        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        if isinstance(x, CSBase):
+            x.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     obs_metrics[f"n_{var_type}_by_{expr_type}"] = materialize_as_ndarray(
-        axis_nnz(X, axis=1)
+        axis_nnz(x, axis=1)
     )
     if log1p:
         obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
             obs_metrics[f"n_{var_type}_by_{expr_type}"]
         )
-    obs_metrics[f"total_{expr_type}"] = stats.sum(X, axis=1)
+    obs_metrics[f"total_{expr_type}"] = stats.sum(x, axis=1)
     if log1p:
         obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             obs_metrics[f"total_{expr_type}"]
         )
     if percent_top:
         percent_top = sorted(percent_top)
-        proportions = top_segment_proportions(X, percent_top)
+        proportions = top_segment_proportions(x, percent_top)
         for i, n in enumerate(percent_top):
             obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
         obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
-            X[:, adata.var[qc_var].values], axis=1
+            x[:, adata.var[qc_var].values], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -147,7 +143,7 @@ def describe_var(
     use_raw: bool = False,
     inplace: bool = False,
     log1p: bool = True,
-    X: CSBase | np.ndarray | None = None,
+    x: CSBase | np.ndarray | None = None,
 ) -> pd.DataFrame | None:
     """Describe variables of anndata.
 
@@ -173,22 +169,22 @@ def describe_var(
 
     """
     # Handle whether X is passed
-    if X is None:
-        X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
-        if isinstance(X, CSBase):
-            X.eliminate_zeros()
+    if x is None:
+        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        if isinstance(x, CSBase):
+            x.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
     var_metrics[f"n_cells_by_{expr_type}"], var_metrics[f"mean_{expr_type}"] = (
-        materialize_as_ndarray((axis_nnz(X, axis=0), stats.mean(X, axis=0)))
+        materialize_as_ndarray((axis_nnz(x, axis=0), stats.mean(x, axis=0)))
     )
     if log1p:
         var_metrics[f"log1p_mean_{expr_type}"] = np.log1p(
             var_metrics[f"mean_{expr_type}"]
         )
     var_metrics[f"pct_dropout_by_{expr_type}"] = (
-        1 - var_metrics[f"n_cells_by_{expr_type}"] / X.shape[0]
+        1 - var_metrics[f"n_cells_by_{expr_type}"] / x.shape[0]
     ) * 100
-    var_metrics[f"total_{expr_type}"] = stats.sum(X, axis=0)
+    var_metrics[f"total_{expr_type}"] = stats.sum(x, axis=0)
     if log1p:
         var_metrics[f"log1p_total_{expr_type}"] = np.log1p(
             var_metrics[f"total_{expr_type}"]
@@ -276,15 +272,12 @@ def calculate_qc_metrics(
 
     """
     if parallel is not None:
-        warn(
-            "Argument `parallel` is deprecated, and currently has no effect.",
-            FutureWarning,
-            stacklevel=2,
-        )
+        msg = "Argument `parallel` is deprecated, and currently has no effect."
+        warn(msg, FutureWarning)
     # Pass X so I only have to do it once
-    X = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
-    if isinstance(X, CSBase):
-        X.eliminate_zeros()
+    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    if isinstance(x, CSBase):
+        x.eliminate_zeros()
 
     # Convert qc_vars to list if str
     if isinstance(qc_vars, str):
@@ -297,7 +290,7 @@ def calculate_qc_metrics(
         qc_vars=qc_vars,
         percent_top=percent_top,
         inplace=inplace,
-        X=X,
+        x=x,
         log1p=log1p,
     )
     var_metrics = describe_var(
@@ -305,7 +298,7 @@ def calculate_qc_metrics(
         expr_type=expr_type,
         var_type=var_type,
         inplace=inplace,
-        X=X,
+        x=x,
         log1p=log1p,
     )
 
@@ -415,6 +408,9 @@ def top_segment_proportions(mtx: np.ndarray, ns: Collection[int]) -> np.ndarray:
 def _(mtx: DaskArray, ns: Collection[int]) -> DaskArray:
     if not isinstance(mtx._meta, CSRBase | np.ndarray):
         msg = f"DaskArray must have csr matrix or ndarray meta, got {mtx._meta}."
+        raise ValueError(msg)
+    if mtx.chunksize[1] != mtx.shape[1]:
+        msg = f"{mtx} must not be chunked along the feature axis"
         raise ValueError(msg)
     return mtx.map_blocks(
         lambda x: top_segment_proportions(x, ns), meta=np.array([])

@@ -16,19 +16,17 @@ from scanpy._compat import CSRBase
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from collections.abc import Set as AbstractSet
-    from typing import Literal, Protocol, TypeVar
+    from typing import Literal, Protocol
 
     from anndata import AnnData
 
     from scanpy._compat import CSCBase
 
-    C = TypeVar("C", bound=Callable)
-
     class ParamSkipper(Protocol):
-        def __call__(self, **skipped: AbstractSet) -> Callable[[C], C]: ...
+        def __call__[C: Callable](self, **skipped: AbstractSet) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
-    KeyX = Literal[None, "off-axis"]
+    KeyX = Literal["off-axis"] | None
     KeyCount = Literal["counts", "counts-off-axis"]
 
 
@@ -198,7 +196,7 @@ def param_skipper(
 
     """
 
-    def skip(**skipped: AbstractSet) -> Callable[[C], C]:
+    def skip[C: Callable](**skipped: AbstractSet) -> Callable[[C], C]:
         skipped_combs = [
             tuple(record.values())
             for record in (

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
@@ -12,7 +11,7 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, njit
+from ..._compat import CSBase, njit, warn
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
@@ -140,16 +139,13 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_obs_rep(adata, layer=layer)
     computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and not check_nonnegative_integers(X):
-        warnings.warn(
-            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+    if check_values and not check_nonnegative_integers(x):
+        msg = "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
     # check theta
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
@@ -168,32 +164,32 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     residual_gene_vars = []
     for batch in np.unique(batch_info):
         adata_subset_prefilter = adata[batch_info == batch]
-        X_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
+        x_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
 
         # Filter out zero genes
         with settings.verbosity.override(Verbosity.error):
-            nonzero_genes = np.ravel(X_batch_prefilter.sum(axis=0)) != 0
+            nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        X_batch = _get_obs_rep(adata_subset, layer=layer)
+        x_batch = _get_obs_rep(adata_subset, layer=layer)
 
         # Prepare clipping
         if clip is None:
-            n = X_batch.shape[0]
+            n = x_batch.shape[0]
             clip = np.sqrt(n)
         if clip < 0:
             msg = "Pearson residuals require `clip>=0` or `clip=None`."
             raise ValueError(msg)
 
-        if isinstance(X_batch, CSBase):
-            X_batch = X_batch.tocsc()
-            X_batch.eliminate_zeros()
-            calculate_res = partial(_calculate_res_sparse, X_batch.astype(np.float64))
+        if isinstance(x_batch, CSBase):
+            x_batch = x_batch.tocsc()
+            x_batch.eliminate_zeros()
+            calculate_res = partial(_calculate_res_sparse, x_batch.astype(np.float64))
         else:
-            X_batch = np.array(X_batch, dtype=np.float64, order="F")
-            calculate_res = partial(_calculate_res_dense, X_batch)
+            x_batch = np.array(x_batch, dtype=np.float64, order="F")
+            calculate_res = partial(_calculate_res_dense, x_batch)
 
-        sums_genes = np.array(X_batch.sum(axis=0)).ravel()
-        sums_cells = np.array(X_batch.sum(axis=1)).ravel()
+        sums_genes = np.array(x_batch.sum(axis=0)).ravel()
+        sums_cells = np.array(x_batch.sum(axis=1)).ravel()
         sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
@@ -202,8 +198,8 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             sum_total=np.float64(sum_total),
             clip=np.float64(clip),
             theta=np.float64(theta),
-            n_genes=X_batch.shape[1],
-            n_cells=X_batch.shape[0],
+            n_genes=x_batch.shape[1],
+            n_cells=x_batch.shape[0],
         )
 
         # Add 0 values for genes that were filtered out
@@ -227,7 +223,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     # Median rank across batches, ignoring batches in which gene was not selected
     medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
-    means, variances = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    means, variances = materialize_as_ndarray(mean_var(x, axis=0, correction=1))
     df = pd.DataFrame.from_dict(
         dict(
             means=means,

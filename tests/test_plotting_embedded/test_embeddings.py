@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from functools import partial, wraps
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -248,6 +249,23 @@ def test_embedding_colorbar_location(image_comparer):
 
     adata = pbmc3k_processed().raw.to_adata()
 
-    sc.pl.pca(adata, color="LDHB", colorbar_loc=None)
+    sc.pl.pca(adata, color="LDHB", colorbar_loc=None, show=False)
 
     save_and_compare_images("no_colorbar")
+
+
+def test_raise_save_future_warning(tmp_path: Path) -> None:
+    adata = pbmc3k_processed()
+
+    unique_id = str(uuid.uuid4())[:8]
+    test_filename = f"test_violin_{unique_id}.png"
+
+    sc.settings.figdir, original_figdir = tmp_path, sc.settings.figdir
+    try:
+        with pytest.warns(FutureWarning, match=r"Argument `save` is deprecated"):
+            sc.pl.violin(adata, keys="louvain", save=test_filename, show=False)
+
+        expected_file = tmp_path / f"violin{test_filename}"
+        assert expected_file.exists(), f"Expected file {expected_file} was not created"
+    finally:
+        sc.settings.figdir = original_figdir

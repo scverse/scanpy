@@ -114,37 +114,37 @@ def test_graph_metrics_w_constant_values(
 
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
-    XT = pbmc.raw.X.T.copy()
+    x_t = pbmc.raw.X.T.copy()
     g = pbmc.obsp["connectivities"].copy()
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
-    const_inds = np.random.choice(XT.shape[0], 10, replace=False)
+    const_inds = np.random.choice(x_t.shape[0], 10, replace=False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
-        XT_zero_vals = XT.copy()
-        XT_zero_vals[const_inds, :] = 0
-        XT_zero_vals = array_type(XT_zero_vals)
-        XT_const_vals = XT.copy()
-        XT_const_vals[const_inds, :] = 42
-        XT_const_vals = array_type(XT_const_vals)
+        x_t_zero_vals = x_t.copy()
+        x_t_zero_vals[const_inds, :] = 0
+        x_t_zero_vals = array_type(x_t_zero_vals)
+        x_t_const_vals = x_t.copy()
+        x_t_const_vals[const_inds, :] = 42
+        x_t_const_vals = array_type(x_t_const_vals)
 
-    results_full = metric(g, array_type(XT))
+    results_full = metric(g, array_type(x_t))
     # TODO: Check for warnings
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_zeros = metric(g, XT_zero_vals)
+        results_const_zeros = metric(g, x_t_zero_vals)
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_vals = metric(g, XT_const_vals)
+        results_const_vals = metric(g, x_t_const_vals)
 
     assert not np.isnan(results_full).any()
     equality_check(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
-    non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
+    non_const_mask = ~np.isin(np.arange(x_t.shape[0]), const_inds)
     equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
 
 
@@ -167,11 +167,14 @@ def test_confusion_matrix():
     assert np.all(mtx == 0.5)
 
 
-def test_confusion_matrix_randomized():
+@pytest.mark.flaky(reruns=5)  # possible that #classes > #samples÷2
+def test_confusion_matrix_randomized() -> None:
+    rng = np.random.default_rng()
+
     chars = np.array(list(ascii_letters))
-    pos = np.random.choice(len(chars), size=np.random.randint(50, 150))
+    pos = rng.choice(len(chars), size=rng.integers(50, 150))
     a = chars[pos]
-    b = np.random.permutation(chars)[pos]
+    b = rng.permutation(chars)[pos]
     df = pd.DataFrame({"a": a, "b": b})
 
     pd.testing.assert_frame_equal(
@@ -185,9 +188,10 @@ def test_confusion_matrix_randomized():
 
 
 def test_confusion_matrix_api():
-    data = pd.DataFrame(
-        {"a": np.random.randint(5, size=100), "b": np.random.randint(5, size=100)}
-    )
+    data = pd.DataFrame({
+        "a": np.random.randint(5, size=100),
+        "b": np.random.randint(5, size=100),
+    })
     expected = sc.metrics.confusion_matrix(data["a"], data["b"])
 
     pd.testing.assert_frame_equal(expected, sc.metrics.confusion_matrix("a", "b", data))
@@ -207,14 +211,12 @@ def test_confusion_matrix_api():
 @needs.igraph
 def test_modularity_sample_structure(use_sparse, is_directed):
     # 4 node adjacency matrix with two separate 2-node communities
-    mat = np.array(
-        [
-            [1, 1, 0, 0],
-            [1, 1, 0, 0],
-            [0, 0, 1, 1],
-            [0, 0, 1, 1],
-        ]
-    )
+    mat = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+    ])
     labels = ["A", "A", "B", "B"]
     adj = csr_matrix(mat) if use_sparse else mat
     score = modularity(adj, labels, is_directed=is_directed)
@@ -279,14 +281,12 @@ def test_modularity_adata_multiple_clusterings(cluster_method):
 # Test 5: Modularity should be the same no matter the order of the labels
 @needs.igraph
 def test_modularity_order():
-    adj = np.array(
-        [
-            [1, 1, 0, 0],
-            [1, 1, 0, 0],
-            [0, 0, 1, 1],
-            [0, 0, 1, 1],
-        ]
-    )
+    adj = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+    ])
     labels1 = ["A", "A", "B", "B"]
     labels2 = ["B", "B", "A", "A"]
     score_1 = modularity(adj, labels1, is_directed=False)

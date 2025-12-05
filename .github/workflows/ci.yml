@@ -11,11 +11,9 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
-  UV_CONSTRAINT: ci/constraints.txt
-
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
+  # It’s impossible to ignore SyntaxWarnings for a single module,
+  # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
+  UV_COMPILE_BYTECODE: "1"
 
 jobs:
   get-environments:
@@ -23,13 +21,10 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          filter: blob:none
-          fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
+      - uses: astral-sh/setup-uv@v7
+        with: { enable-cache: false }
       - id: get-envs
         run: |
           ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
@@ -38,7 +33,7 @@ jobs:
               | {
                 name: .key,
                 "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
-                python: .value.python,
+                python: .value.python
               }
             )')
           echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
@@ -49,19 +44,13 @@ jobs:
     strategy:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
-    env:  # environment variable for use in codecov’s env_vars tagging
-      ENV_NAME: ${{ matrix.env.name }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          filter: blob:none
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
           python-version: ${{ matrix.env.python }}
-          cache-dependency-glob: pyproject.toml
 
       - name: Cache downloaded data
         uses: actions/cache@v4
@@ -70,37 +59,41 @@ jobs:
           key: pytest
 
       - name: Install dependencies
-        run: uvx hatch -v env create ${{ matrix.env.name }}
+        run: |
+          uv tool install --with='click!=8.3.0' hatch
+          hatch -v env create ${{ matrix.env.name }}
 
       - name: Run tests
         if: matrix.env.test-type == null
-        run: uvx hatch run ${{ matrix.env.name }}:run
+        run: hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        run: uvx hatch run ${{ matrix.env.name }}:run-cov --cov --cov-report=xml
+        run: |
+          hatch run ${{ matrix.env.name }}:run-cov
+          hatch run ${{ matrix.env.name }}:cov-combine
+          hatch run ${{ matrix.env.name }}:coverage xml
 
       - name: Upload coverage data
+        if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
         uses: codecov/codecov-action@v5
-        if: matrix.env.test-type == 'coverage'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           files: test-data/coverage.xml
 
       - name: Upload test results
-        # yaml strings can’t start with “!”, so using explicit substitution
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           file: test-data/test-results.xml
 
       - name: Publish debug artifacts
-        if: matrix.env.test-type == 'coverage'
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
         with:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
@@ -108,16 +101,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
+      - uses: actions/setup-python@v6
         with:
-          fetch-depth: 0
-          filter: blob:none
-      - uses: actions/setup-python@v5
+          python-version: "3.x"
+      - uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
+          enable-cache: true
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
 
@@ -129,6 +120,6 @@ jobs:
       - build
     runs-on: ubuntu-latest
     steps:
-        - uses: re-actors/alls-green@release/v1
-          with:
-            jobs: ${{ toJSON(needs) }}
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

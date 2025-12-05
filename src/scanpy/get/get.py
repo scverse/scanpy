@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from numpy.typing import NDArray
-from packaging.version import Version
 
 from .._compat import CSBase
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
-    from typing import Any, Literal
+    from typing import Any, Literal, Unpack
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
 
 
 # TODO: implement diffxpy method, make singledispatch
-def rank_genes_groups_df(  # noqa: PLR0912
+def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,
@@ -80,10 +79,7 @@ def rank_genes_groups_df(  # noqa: PLR0912
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    if Version(pd.__version__) >= Version("2.1"):
-        d = d.stack(level=1, future_stack=True).reset_index()
-    else:
-        d = d.stack(level=1).reset_index()
+    d = d.stack(level=1, future_stack=True).reset_index()
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -193,7 +189,8 @@ def _check_indices(
 
 
 def _get_array_values(
-    X,
+    x,
+    /,
     dim_names: pd.Index,
     keys: Iterable[str],
     *,
@@ -210,10 +207,10 @@ def _get_array_values(
         rev_idxer = mutable_idxer.copy()
         mutable_idxer[axis] = idx[idx_order]
         rev_idxer[axis] = np.argsort(idx_order)
-        matrix = X[tuple(mutable_idxer)][tuple(rev_idxer)]
+        matrix = x[tuple(mutable_idxer)][tuple(rev_idxer)]
     else:
         mutable_idxer[axis] = idx
-        matrix = X[tuple(mutable_idxer)]
+        matrix = x[tuple(mutable_idxer)]
 
     if isinstance(matrix, CSBase):
         matrix = matrix.toarray()
@@ -402,43 +399,45 @@ def var_df(
     return df
 
 
+class _ObsRep(TypedDict, total=False):
+    use_raw: bool
+    layer: str | None
+    obsm: str | None
+    obsp: str | None
+
+
 def _get_obs_rep(
-    adata: AnnData,
-    *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
+    adata: AnnData, **choices: Unpack[_ObsRep]
 ) -> (
     np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
 ):
     """Choose array aligned with obs annotation."""
     # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw, bool):
+    if not isinstance(use_raw := choices.get("use_raw", False), bool):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."
         raise TypeError(msg)
+    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp"}
 
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made in {0, 1}
-    if choices_made == 0:
-        return adata.X
-    if is_layer:
-        return adata.layers[layer]
-    if use_raw:
-        return adata.raw.X
-    if is_obsm:
-        return adata.obsm[obsm]
-    if is_obsp:
-        return adata.obsp[obsp]
-    msg = (
-        "That was unexpected. Please report this bug at:\n\n\t"
-        "https://github.com/scverse/scanpy/issues"
-    )
-    raise AssertionError(msg)
+    # we do this here so the `case _` branch knows which ones are valid for the
+    # respective calling function. E.g. `_get_obs_rep(adata, layer="a", obsm="b")`
+    # will say that “Only one of `layer` or `obsm` can be specified.”
+    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+        case []:
+            return adata.X
+        # can’t use {"key": v} as match expression, since they allow additional entries
+        case [("layer", layer)]:
+            return adata.layers[layer]
+        case [("use_raw", True)]:
+            return adata.raw.X
+        case [("obsm", obsm)]:
+            return adata.obsm[obsm]
+        case [("obsp", obsp)]:
+            return adata.obsp[obsp]
+        case _:
+            valid = [f"`{k}`" for k in choices]
+            valid[-1] = f"or {valid[-1]}"
+            msg = f"Only one of {', '.join(valid)} can be specified."
+            raise ValueError(msg)
 
 
 def _set_obs_rep(
@@ -475,10 +474,7 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
-M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
-
-
-def _check_mask(
+def _check_mask[M: NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
     mask: str | M,
     dim: Literal["obs", "var"],

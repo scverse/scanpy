@@ -26,13 +26,10 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
-
-# Used with get_literal_vals
-_Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-
-_CONST_MAX_SIZE = 10000000
+_CONST_MAX_SIZE: int = 10_000_000
 
 
 def _select_top_n(scores: NDArray, n_top: int):
@@ -85,29 +82,31 @@ def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
 
 
 def _ranks(
-    X: NDArray[np.number] | CSBase,
+    x: NDArray[np.number] | CSBase,
+    /,
     mask_obs: NDArray[np.bool_] | None = None,
     mask_obs_rest: NDArray[np.bool_] | None = None,
 ) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
-    n_genes = X.shape[1]
+    n_genes = x.shape[1]
 
-    if isinstance(X, CSBase):
+    if isinstance(x, CSBase):
         merge = lambda tpl: sparse.vstack(tpl).toarray()
-        adapt = lambda X: X.toarray()
+        adapt = lambda x: x.toarray()
     else:
         merge = np.vstack
-        adapt = lambda X: X
+        adapt = lambda x: x
 
     masked = mask_obs is not None and mask_obs_rest is not None
 
     if masked:
         n_cells = np.count_nonzero(mask_obs) + np.count_nonzero(mask_obs_rest)
-        get_chunk = lambda X, left, right: merge(
-            (X[mask_obs, left:right], X[mask_obs_rest, left:right])
-        )
+        get_chunk = lambda x, left, right: merge((
+            x[mask_obs, left:right],
+            x[mask_obs_rest, left:right],
+        ))
     else:
-        n_cells = X.shape[0]
-        get_chunk = lambda X, left, right: adapt(X[:, left:right])
+        n_cells = x.shape[0]
+        get_chunk = lambda x, left, right: adapt(x[:, left:right])
 
     # Calculate chunk frames
     max_chunk = max(_CONST_MAX_SIZE // n_cells, 1)
@@ -115,7 +114,7 @@ def _ranks(
     for left in range(0, n_genes, max_chunk):
         right = min(left + max_chunk, n_genes)
 
-        ranks = rankdata(get_chunk(X, left, right))
+        ranks = rankdata(get_chunk(x, left, right))
         yield ranks, left, right
 
 
@@ -159,23 +158,23 @@ class _RankGenes:
             if use_raw:
                 msg = "Cannot specify `layer` and have `use_raw=True`."
                 raise ValueError(msg)
-            X = adata_comp.layers[layer]
+            x = adata_comp.layers[layer]
         else:
             if use_raw and adata.raw is not None:
                 adata_comp = adata.raw
-            X = adata_comp.X
-        raise_not_implemented_error_if_backed_type(X, "rank_genes_groups")
+            x = adata_comp.X
+        raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
 
         # for correct getnnz calculation
-        if isinstance(X, CSBase):
-            X.eliminate_zeros()
+        if isinstance(x, CSBase):
+            x.eliminate_zeros()
 
         if self.mask_var is not None:
-            self.X = X[:, self.mask_var]
+            self.X = x[:, self.mask_var]
             self.var_names = adata_comp.var_names[self.mask_var]
 
         else:
-            self.X = X
+            self.X = x
             self.var_names = adata_comp.var_names
 
         self.ireference = None
@@ -213,43 +212,43 @@ class _RankGenes:
             self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
         else:
             mask_rest = self.groups_masks_obs[self.ireference]
-            X_rest = self.X[mask_rest]
+            x_rest = self.X[mask_rest]
             self.means[self.ireference], self.vars[self.ireference] = mean_var(
-                X_rest, axis=0, correction=1
+                x_rest, axis=0, correction=1
             )
             # deleting the next line causes a memory leak for some reason
-            del X_rest
+            del x_rest
 
         if isinstance(self.X, CSBase):
-            get_nonzeros = lambda X: X.getnnz(axis=0)
+            get_nonzeros = lambda x: x.getnnz(axis=0)
         else:
-            get_nonzeros = lambda X: np.count_nonzero(X, axis=0)
+            get_nonzeros = lambda x: np.count_nonzero(x, axis=0)
 
         for group_index, mask_obs in enumerate(self.groups_masks_obs):
-            X_mask = self.X[mask_obs]
+            x_mask = self.X[mask_obs]
 
             if self.comp_pts:
-                self.pts[group_index] = get_nonzeros(X_mask) / X_mask.shape[0]
+                self.pts[group_index] = get_nonzeros(x_mask) / x_mask.shape[0]
 
             if self.ireference is not None and group_index == self.ireference:
                 continue
 
             self.means[group_index], self.vars[group_index] = mean_var(
-                X_mask, axis=0, correction=1
+                x_mask, axis=0, correction=1
             )
 
             if self.ireference is None:
                 mask_rest = ~mask_obs
-                X_rest = self.X[mask_rest]
+                x_rest = self.X[mask_rest]
                 (
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
-                ) = mean_var(X_rest, axis=0, correction=1)
+                ) = mean_var(x_rest, axis=0, correction=1)
                 # this can be costly for sparse data
                 if self.comp_pts:
-                    self.pts_rest[group_index] = get_nonzeros(X_rest) / X_rest.shape[0]
+                    self.pts_rest[group_index] = get_nonzeros(x_rest) / x_rest.shape[0]
                 # deleting the next line causes a memory leak for some reason
-                del X_rest
+                del x_rest
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
@@ -317,7 +316,7 @@ class _RankGenes:
             # initialize space for z-scores
             scores = np.zeros(n_genes)
             # initialize space for tie correction coefficients
-            T = np.zeros(n_genes) if tie_correct else 1
+            tc_coef = np.zeros(n_genes) if tie_correct else 1
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 if group_index == self.ireference:
@@ -338,10 +337,10 @@ class _RankGenes:
                 for ranks, left, right in _ranks(self.X, mask_obs, mask_obs_rest):
                     scores[left:right] = ranks[0:n_active, :].sum(axis=0)
                     if tie_correct:
-                        T[left:right] = _tiecorrect(ranks)
+                        tc_coef[left:right] = _tiecorrect(ranks)
 
                 std_dev = np.sqrt(
-                    T * n_active * m_active * (n_active + m_active + 1) / 12.0
+                    tc_coef * n_active * m_active * (n_active + m_active + 1) / 12.0
                 )
 
                 scores = (
@@ -359,22 +358,22 @@ class _RankGenes:
             n_cells = self.X.shape[0]
 
             if tie_correct:
-                T = np.zeros((n_groups, n_genes))
+                tc_coef = np.zeros((n_groups, n_genes))
 
             for ranks, left, right in _ranks(self.X):
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
                     scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
                     if tie_correct:
-                        T[group_index, left:right] = _tiecorrect(ranks)
+                        tc_coef[group_index, left:right] = _tiecorrect(ranks)
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
 
-                T_i = T[group_index] if tie_correct else 1
+                coef = tc_coef[group_index] if tie_correct else 1
 
                 std_dev = np.sqrt(
-                    T_i * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
+                    coef * n_active * (n_cells - n_active) * (n_cells + 1) / 12.0
                 )
 
                 scores[group_index, :] = (
@@ -393,14 +392,14 @@ class _RankGenes:
         from sklearn.linear_model import LogisticRegression
 
         # Indexing with a series causes issues, possibly segfault
-        X = self.X[self.grouping_mask.values, :]
+        x = self.X[self.grouping_mask.values, :]
 
         if len(self.groups_order) == 1:
             msg = "Cannot perform logistic regression on a single cluster."
             raise ValueError(msg)
 
         clf = LogisticRegression(**kwds)
-        clf.fit(X, self.grouping.cat.codes)
+        clf.fit(x, self.grouping.cat.codes)
         scores_all = clf.coef_
         # not all codes necessarily appear in data
         existing_codes = np.unique(self.grouping.cat.codes)
@@ -526,6 +525,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     """Rank genes for characterizing groups.
 
     Expects logarithmized data.
+
+    ..  warning::
+
+        Comparing between cells leads to highly inflated p-values,
+        since cells are not independent observations :cite:p`Squair2021`.
+        Especially in single-cell data, consider instead to use more appropriate methods such as combining pseudobulking with :doc:`pydeseq2:index`.
+
+        :func:`decoupler.pp.pseudobulk` or :func:`scanpy.get.aggregate` can be used to aggregate samples for pseudobulking.
+        Ours is a bit more verbose, but supports :doc:`dask:index` arrays for improved performance.
 
     Parameters
     ----------
@@ -756,11 +764,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     return adata if copy else None
 
 
-def _calc_frac(X: NDArray[np.number] | CSBase) -> NDArray[np.float64]:
+def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     n_nonzero = (
-        X.getnnz(axis=0) if isinstance(X, CSBase) else np.count_nonzero(X, axis=0)
+        x.getnnz(axis=0) if isinstance(x, CSBase) else np.count_nonzero(x, axis=0)
     )
-    return n_nonzero / X.shape[0]
+    return n_nonzero / x.shape[0]
 
 
 @old_positionals(
@@ -887,10 +895,10 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         var_names = gene_names[cluster].values
 
         if not use_logfolds or not use_fraction:
-            sub_X = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
+            sub_x = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
             in_group = (adata.obs[groupby] == cluster).to_numpy()
-            X_in = sub_X[in_group]
-            X_out = sub_X[~in_group]
+            x_in = sub_x[in_group]
+            x_out = sub_x[~in_group]
 
         if use_fraction:
             fraction_in_cluster_matrix.loc[:, cluster] = (
@@ -900,13 +908,13 @@ def filter_rank_genes_groups(  # noqa: PLR0912
                 adata.uns[key]["pts_rest"][cluster].loc[var_names].values
             )
         else:
-            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(X_in)
-            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(X_out)
+            fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
+            fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(x_out)
 
         if not use_logfolds:
             # compute mean value
-            mean_in_cluster = np.ravel(X_in.mean(0))
-            mean_out_cluster = np.ravel(X_out.mean(0))
+            mean_in_cluster = np.ravel(x_in.mean(0))
+            mean_out_cluster = np.ravel(x_out.mean(0))
             # compute fold change
             fold_change_matrix.loc[:, cluster] = np.log2(
                 (expm1_func(mean_in_cluster) + 1e-9)

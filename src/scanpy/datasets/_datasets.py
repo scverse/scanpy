@@ -6,21 +6,21 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
-from ..readwrite import read, read_visium
-from ._utils import check_datasetdir_exists, filter_oldformatwarning
+from ..readwrite import read, read_h5ad, read_visium
+from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from .._utils.random import _LegacyRandom
 
-    VisiumSampleID = Literal[
+    type VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
         "V1_Breast_Cancer_Block_A_Section_2",
         "V1_Human_Heart",
@@ -96,14 +96,14 @@ def blobs(
     """
     import sklearn.datasets
 
-    X, y = sklearn.datasets.make_blobs(
+    x, y = sklearn.datasets.make_blobs(
         n_samples=n_observations,
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
         random_state=random_state,
     )
-    return AnnData(X, obs=dict(blobs=y.astype(str)))
+    return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
 @doctest_internet
@@ -123,6 +123,8 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
 
@@ -151,9 +153,9 @@ def krumsiek11() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.krumsiek11()
+    >>> sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
@@ -196,6 +198,8 @@ def moignard15() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.moignard15()
+    UserWarning: Unknown extension is not supported and will be removed
+        warn(msg)
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
@@ -205,7 +209,7 @@ def moignard15() -> AnnData:
     backup_url = "https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
     adata = read(filename, sheet="dCt_values.txt", backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
-    gene_subset = ~np.in1d(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
+    gene_subset = ~np.isin(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
     adata = adata[:, gene_subset].copy()  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
     adata.uns["iroot"] = 532  # note that in Matlab/R, counting starts at 1
@@ -262,13 +266,13 @@ def paul15() -> AnnData:
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
-        X = f["data.debatched"][()].astype(np.float32)
+        x = f["data.debatched"][()].astype(np.float32)
         gene_names = f["data.debatched_rownames"][()].astype(str)
         cell_names = f["data.debatched_colnames"][()].astype(str)
         clusters = f["cluster.id"][()].flatten().astype(int)
         infogenes_names = f["info.genes_strings"][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = AnnData(X.transpose())
+    adata = AnnData(x.transpose())
     adata.var_names = gene_names
     adata.obs_names = cell_names
     # names reflecting the cell type identifications from the paper
@@ -305,9 +309,9 @@ def toggleswitch() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.toggleswitch()
+    >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
 
@@ -318,7 +322,6 @@ def toggleswitch() -> AnnData:
     return adata
 
 
-@filter_oldformatwarning
 def pbmc68k_reduced() -> AnnData:
     r"""Subsampled and processed 68k PBMCs.
 
@@ -349,17 +352,13 @@ def pbmc68k_reduced() -> AnnData:
         uns: 'bulk_labels_colors', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
-        obsp: 'distances', 'connectivities'
+        obsp: 'connectivities', 'distances'
 
     """
-    filename = HERE / "10x_pbmc68k_reduced.h5ad"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        return read(filename)
+    return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
     r"""3k PBMCs from 10x Genomics.
@@ -375,7 +374,7 @@ def pbmc3k() -> AnnData:
 
     .. note::
        This downloads 5.9 MB of data upon the first call of the function and stores it in
-       :attr:`~scanpy._settings.ScanpyConfig.datasetdir`\ `/pbmc3k_raw.h5ad`.
+       :attr:`~scanpy.settings.datasetdir`\ `/pbmc3k_raw.h5ad`.
 
     The following code was run to produce the file.
 
@@ -406,12 +405,13 @@ def pbmc3k() -> AnnData:
 
     """
     url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
@@ -447,7 +447,8 @@ def pbmc3k_processed() -> AnnData:
     url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 
 
@@ -540,6 +541,10 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    FutureWarning: Use `squidpy.datasets.visium` instead.
+        sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        ...
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
@@ -552,4 +557,6 @@ def visium_sge(
         sample_id, spaceranger_version, download_image=include_hires_tiff
     )
     source_image_path = sample_dir / "image.tif" if include_hires_tiff else None
-    return read_visium(sample_dir, source_image_path=source_image_path)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*squidpy\.read", FutureWarning)
+        return read_visium(sample_dir, source_image_path=source_image_path)

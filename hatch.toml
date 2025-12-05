@@ -27,8 +27,11 @@ overrides.matrix.deps.pre-install-commands = [
     ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "low-vers" ], value = "3.11" },
-    { if = [ "stable", "pre" ], value = "3.13" },
+    { if = [ "low-vers" ], value = "3.12" },
+    { if = [ "stable", "few-extras" ], value = "3.13" },
+    # numba doesn’t support 3.14 in a stable release yet:
+    # https://github.com/numba/numba/issues/9957
+    { if = [ "pre" ], value = "3.14" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },

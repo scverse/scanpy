@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from functools import partial
+
+import pandas as pd
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -64,13 +67,13 @@ def test_leiden_random_state(adata_neighbors, flavor):
     adata_2 = sc.tl.leiden(
         adata_neighbors,
         flavor=flavor,
-        random_state=2,
+        random_state=3,
         copy=True,
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
-    assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
 
 
 @needs.igraph
@@ -124,7 +127,7 @@ def test_leiden_equal_defaults(adata_neighbors):
         adata_neighbors, flavor="leidenalg", directed=True, copy=True
     )
     igraph_clustered = sc.tl.leiden(
-        adata_neighbors, copy=True, n_iterations=2, directed=False
+        adata_neighbors, flavor="igraph", copy=True, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
@@ -149,8 +152,12 @@ def test_leiden_objective_function(adata_neighbors):
 @pytest.mark.parametrize(
     ("clustering", "key"),
     [
-        pytest.param(sc.tl.louvain, "louvain", marks=needs.louvain),
-        pytest.param(sc.tl.leiden, "leiden", marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
@@ -160,7 +167,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         print("Analyzing cluster ", c)
         cells_in_c = adata_neighbors.obs[key] == c
         ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
-        key_sub = str(key) + "_sub"
+        key_sub = f"{key}_sub"
         clustering(
             adata_neighbors,
             restrict_to=(key, [c]),
@@ -180,45 +187,17 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         assert len(common_cat) == 0
 
 
-@needs.louvain
-@needs.igraph
-def test_louvain_basic(adata_neighbors):
-    sc.tl.louvain(adata_neighbors)
-    sc.tl.louvain(adata_neighbors, use_weights=True)
-    sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
-    sc.tl.louvain(adata_neighbors, flavor="igraph")
-
-
-@needs.louvain
-@pytest.mark.parametrize("random_state", [10, 999])
-@pytest.mark.parametrize("resolution", [0.9, 1.1])
-def test_louvain_custom_key(adata_neighbors, resolution, random_state):
-    sc.tl.louvain(
-        adata_neighbors,
-        key_added="louvain_custom",
-        random_state=random_state,
-        resolution=resolution,
-    )
-    assert (
-        adata_neighbors.uns["louvain_custom"]["params"]["random_state"] == random_state
-    )
-    assert adata_neighbors.uns["louvain_custom"]["params"]["resolution"] == resolution
-
-
-@needs.louvain
-@needs.igraph
-def test_partition_type(adata_neighbors):
-    import louvain
-
-    sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
-    sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
-
-
 @pytest.mark.parametrize(
     ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
-        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
-        pytest.param(sc.tl.louvain, "louvain", 0.8, [0.9, 1.1], marks=needs.louvain),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            0.8,
+            [0.9, 1.1],
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_custom_key(

@@ -98,7 +98,7 @@ def highest_expr_genes(
         # figsize is hardcoded to produce a tall image. To change the fig size,
         # a matplotlib.axes.Axes object needs to be passed.
         height = (n_top * 0.2) + 1.5
-        fig, ax = plt.subplots(figsize=(5, height))
+        _fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=counts_top_genes, orient="h", ax=ax, fliersize=1, **kwds)
     ax.set_xlabel("% of total counts")
     if log:
