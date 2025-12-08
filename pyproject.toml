@@ -54,7 +54,7 @@ dependencies = [
     "numpy>=2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.9",
-    "pandas >=2.2.2",
+    "pandas >=2.2.2, <3.0.0rc0",
     "scipy>=1.13",
     "seaborn>=0.13.2",
     "h5py>=3.11",
@@ -87,7 +87,7 @@ Twitter = "https://x.com/scverse_team"
 [project.scripts]
 scanpy = "scanpy.cli:console_main"
 
-[project.optional-dependencies]
+[dependency-groups]
 test-min = [
     "pytest",
     "pytest-mock",
@@ -96,9 +96,10 @@ test-min = [
     "pytest-randomly",
     "pytest-rerunfailures",
     "tuna",
+    "dependency-groups",    # for CI scripts doctests
 ]
 test = [
-    "scanpy[test-min]",
+    { include-group = "test-min" },
     # optional storage and processing modes
     "scanpy[dask]",
     "zarr>=2.18.7",
@@ -131,6 +132,8 @@ dev = [
     "towncrier",   # release note management
     "scipy-stubs", # static typing and IDE support
 ]
+
+[project.optional-dependencies]
 # Algorithms
 paga = [ "igraph" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ] # Louvain community detection
@@ -152,7 +155,8 @@ packages = [ "src/testing", "src/scanpy" ]
 source = "vcs"
 raw-options.version_scheme = "release-branch-semver"
 
-[tool.pytest.ini_options]
+[tool.pytest]
+strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
@@ -162,7 +166,6 @@ addopts = [
 ]
 testpaths = [ "./tests", "./ci", "scanpy" ]
 norecursedirs = [ "tests/_images" ]
-xfail_strict = true
 junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
