@@ -21,7 +21,7 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: astral-sh/setup-uv@v7
         with: { enable-cache: false }
@@ -45,7 +45,7 @@ jobs:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
 
       - uses: astral-sh/setup-uv@v7
@@ -101,7 +101,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
