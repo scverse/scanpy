@@ -58,6 +58,8 @@ class Aggregate:
         mask: NDArray[np.bool_] | None = None,
     ) -> None:
         self.groupby = groupby
+        if (missing := groupby.isna()).any():
+            mask = mask & ~missing if mask is not None else ~missing
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         self.data = data
 
@@ -554,9 +556,10 @@ def sparse_indicator(
         weight = mask * weight
     elif mask is None and weight is None:
         weight = np.broadcast_to(1.0, len(categorical))
-    missing = categorical.isna()
+    # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
+    codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
     a = sparse.coo_matrix(
-        (weight[~missing], (categorical.codes[~missing], np.arange((~missing).sum()))),
+        (weight, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
     )
     return a
