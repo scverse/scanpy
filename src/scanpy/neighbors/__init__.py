@@ -700,7 +700,9 @@ class Neighbors:
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = method if method in {"gauss", "jaccard", "binary", None} else "umap"
+        conn_method = (
+            method if method in {"gauss", "jaccard", "binary", None} else "umap"
+        )
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."

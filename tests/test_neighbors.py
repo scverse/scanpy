@@ -156,7 +156,9 @@ def neigh() -> Neighbors:
 
 @pytest.mark.parametrize("method", ["umap", "gauss", "jaccard", "binary"])
 def test_distances_euclidean(
-    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss", "jaccard", "binary"]
+    mocker: MockerFixture,
+    neigh: Neighbors,
+    method: Literal["umap", "gauss", "jaccard", "binary"],
 ):
     """Umap, gauss, jaccard and binary behave the same for distances.
 
