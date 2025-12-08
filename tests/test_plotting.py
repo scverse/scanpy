@@ -28,7 +28,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any
+    from typing import Any, Literal
 
     from matplotlib.axes import Axes
 
@@ -161,10 +161,6 @@ def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
     save_and_compare_images(f"heatmap_small{'_swap' if swap_axes else ''}_alignment")
 
 
-@pytest.mark.skipif(
-    pkg_version("matplotlib") < Version("3.1"),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
-)
 @pytest.mark.parametrize(
     ("obs_keys", "name"),
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
@@ -353,8 +349,12 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
     save_and_compare_images(id)
 
 
-def test_dotplot_obj(image_comparer):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+@pytest.mark.parametrize("swap_axes", [True, False])
+@pytest.mark.parametrize("standard_scale", ["var", "group", None])
+def test_dotplot_obj(
+    image_comparer, standard_scale: Literal["var", "group"] | None, *, swap_axes: bool
+):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = pbmc68k_reduced()
@@ -372,14 +372,17 @@ def test_dotplot_obj(image_comparer):
         layer="test",
         dendrogram=True,
         return_fig=True,
-        standard_scale="var",
+        standard_scale=standard_scale,
+        swap_axes=swap_axes,
         smallest_dot=40,
         colorbar_title="scaled column max",
         size_title="Fraction of cells",
     )
     plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").make_figure()
 
-    save_and_compare_images("dotplot_std_scale_var")
+    save_and_compare_images(
+        f"dotplot_obj{f'_std_scale_{standard_scale}' if standard_scale is not None else ''}{'_swap_axes' if swap_axes else ''}"
+    )
 
 
 def test_dotplot_style_no_reset():
@@ -1336,12 +1339,39 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         )
 
 
-def test_timeseries():
+@pytest.fixture(scope="session")
+def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.diffmap(adata)
-    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
-    sc.pl.dpt_timeseries(adata, as_heatmap=True, show=False)
+    sc.tl.leiden(adata, resolution=0.5, key_added="leiden_0_5", flavor="leidenalg")
+    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
+    sc.tl.diffmap(adata, n_comps=10)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", ".*invalid value encountered in scalar divide"
+        )
+        sc.tl.dpt(adata, n_branchings=3)
+    return adata
+
+
+@needs.leidenalg
+@needs.igraph
+@pytest.mark.parametrize(
+    "func",
+    [sc.pl.dpt_groups_pseudotime, sc.pl.dpt_timeseries],
+)
+def test_dpt_plots(
+    image_comparer, pbmc_68k_dpt_session: AnnData, func: Callable
+) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc_68k_dpt_session.copy()
+    func(
+        adata,
+        show=False,
+        **(dict(as_heatmap=True) if func is sc.pl.dpt_timeseries else {}),
+    )
+    save_and_compare_images(func.__name__)
 
 
 def test_scatter_raw(tmp_path):
@@ -1821,3 +1851,8 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+
+def test_dogplot() -> None:
+    """Test that the dogplot function runs without errors."""
+    sc.pl.dogplot()

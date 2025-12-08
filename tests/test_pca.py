@@ -58,30 +58,24 @@ A_svd = np.array([
     [-1.50180389, 5.56886849, 1.64034442, 2.24476032, -0.05109001],
 ])
 
-
-if pkg_version("anndata") < Version("0.9"):
-
-    def to_memory(self: AnnData, *, copy: bool = False) -> AnnData:
-        """Compatibility version of AnnData.to_memory() that works with old AnnData versions."""
-        adata = self
-        if adata.isbacked:
-            adata = adata.to_memory()
-        return adata.copy() if copy else adata
-
-else:
-    to_memory = AnnData.to_memory
-
-ARRAY_TYPES = [
+# These are array types which are expected to work with the current PCA implementation.
+VALID_ARRAY_TYPES = [
     param_with(
         at,
         marks=[needs.dask_ml] if at.id == "dask_array_dense-1d_chunked" else [],
     )
     for at in ARRAY_TYPES_ALL
-    if at.id not in {"dask_array_dense", "dask_array_sparse"}
+    if at.id
+    not in {
+        "dask_array_dense",
+        "dask_array_sparse",
+        "dask_array_sparse-1d_chunked-csc_array",
+        "dask_array_sparse-1d_chunked-csc_matrix",
+    }
 ]
 
 
-@pytest.fixture(params=ARRAY_TYPES)
+@pytest.fixture(params=VALID_ARRAY_TYPES)
 def array_type(request: pytest.FixtureRequest) -> ArrayType:
     return request.param
 
@@ -105,8 +99,12 @@ def gen_pca_params(
         xfail_reason = "dask without 1d chunking scheme not supported"
         yield None, None, xfail_reason
         return
-    if id == "dask_array_sparse-1d_chunked" and not zero_center:
+    if "dask_array_sparse-1d_chunked" in id and not zero_center:
         xfail_reason = "Sparse-in-dask with zero_center=False not implemented yet"
+        yield None, None, xfail_reason
+        return
+    if "dask_array_sparse-1d_chunked-csc" in id:
+        xfail_reason = "Sparse-in-dask with csc blocks not implemented yet"
         yield None, None, xfail_reason
         return
     if svd_solver_type is None:
@@ -149,7 +147,12 @@ def possible_solvers(
             svd_solvers = {"auto", "full", "tsqr", "randomized", "covariance_eigh"}
         case (dc, False) if id == "dask_array_dense-1d_chunked":
             svd_solvers = {"tsqr", "randomized"}
-        case (dc, True) if id == "dask_array_sparse-1d_chunked":
+        case (dc, True) if (
+            # See https://github.com/scverse/scanpy/blob/216b21d91312b899e939db9636d9ab20e7c29d77/src/testing/scanpy/_pytest/params.py#L88-L103
+            # for why we need two checks (i.e., before and after allowing CSC matrices)
+            "dask_array_sparse-1d_chunked-csr" in id
+            or id == "dask_array_sparse-1d_chunked"
+        ):
             svd_solvers = {"covariance_eigh"}
         case (type() as dc, True) if issubclass(dc, CSBase):
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
@@ -160,7 +163,7 @@ def possible_solvers(
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
-            pytest.fail(f"Unknown {array_type=} ({zero_center=})")
+            pytest.fail(f"Unknown {array_type=} ({zero_center=}) ({id=})")
 
     if svd_solver_type == "invalid":
         svd_solvers = all_svd_solvers - svd_solvers
@@ -190,7 +193,7 @@ def possible_solvers(
                 f"{svd_solver or svd_solver_type}-{'xfail' if xfail_reason else warn_pat_expected}"
             ),
         )
-        for array_type in ARRAY_TYPES
+        for array_type in VALID_ARRAY_TYPES
         for zero_center in [True, False]
         for svd_solver_type in [None, "valid", "invalid"]
         for svd_solver, warn_pat_expected, xfail_reason in gen_pca_params(
@@ -230,7 +233,7 @@ def test_pca_transform(array_type):
     warnings.filterwarnings("error")
     sc.pp.pca(adata, n_comps=4, zero_center=True, dtype="float64")
 
-    adata = to_memory(adata)
+    adata = adata.to_memory()
     assert np.linalg.norm(a_pca_abs[:, :4] - np.abs(adata.obsm["X_pca"])) < 2e-05
 
 
@@ -349,11 +352,11 @@ def test_pca_reproducible(array_type):
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
-        a, c = map(to_memory, [a, c])
+        a, c = map(AnnData.to_memory, [a, c])
         assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
-def test_pca_chunked():
+def test_pca_chunked() -> None:
     """Tests that chunked PCA is equivalent to default PCA.
 
     See also <https://github.com/scverse/scanpy/issues/1590>
@@ -366,16 +369,22 @@ def test_pca_chunked():
     default = sc.pp.pca(pbmc_full, copy=True)
 
     # Taking absolute value since sometimes dimensions are flipped
+    rtol = 1e-6
     np.testing.assert_allclose(
-        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"])
+        np.abs(chunked.obsm["X_pca"]), np.abs(default.obsm["X_pca"]), rtol=rtol
     )
-    np.testing.assert_allclose(np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]))
     np.testing.assert_allclose(
-        np.abs(chunked.uns["pca"]["variance"]), np.abs(default.uns["pca"]["variance"])
+        np.abs(chunked.varm["PCs"]), np.abs(default.varm["PCs"]), rtol=rtol
+    )
+    np.testing.assert_allclose(
+        np.abs(chunked.uns["pca"]["variance"]),
+        np.abs(default.uns["pca"]["variance"]),
+        rtol=rtol,
     )
     np.testing.assert_allclose(
         np.abs(chunked.uns["pca"]["variance_ratio"]),
         np.abs(default.uns["pca"]["variance_ratio"]),
+        rtol=rtol,
     )
 
 
@@ -422,6 +431,19 @@ def test_mask_length_error():
         sc.pp.pca(adata, mask_var=mask_var, copy=True)
 
 
+@pytest.mark.parametrize("mask_type", ["highly_variable", "array"])
+def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None:
+    """Check that trying to use mask_var with obsm raises an error."""
+    adata = AnnData(A_list)
+    mask_var = (
+        _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
+    )
+    with pytest.raises(
+        ValueError, match=r"Argument `mask_var` is incompatible with `obsm`."
+    ):
+        sc.pp.pca(adata, mask_var=mask_var, obsm="X_pca", copy=True)
+
+
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
     adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
@@ -434,7 +456,7 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     adata_w_mask.var["mask"] = mask_var
     sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
 
-    adata, adata_w_mask = map(to_memory, [adata, adata_w_mask])
+    adata, adata_w_mask = map(AnnData.to_memory, [adata, adata_w_mask])
     assert np.allclose(
         adata.X.toarray() if isinstance(adata.X, CSBase) else adata.X,
         adata_w_mask.X.toarray()
@@ -483,54 +505,65 @@ def test_mask_defaults(array_type, float_dtype):
     with_var = sc.pp.pca(adata, copy=True, dtype=float_dtype)
     assert without_var.uns["pca"]["params"]["mask_var"] is None
     assert with_var.uns["pca"]["params"]["mask_var"] == "highly_variable"
-    without_var, with_var = map(to_memory, [without_var, with_var])
+    without_var, with_var = map(AnnData.to_memory, [without_var, with_var])
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
 
     with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
-    with_no_mask = to_memory(with_no_mask)
+    with_no_mask = with_no_mask.to_memory()
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
 
-def test_pca_layer():
+@pytest.mark.parametrize("rep", ["layer", "obsm"])
+def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     """Tests that layers works the same way as `X`."""
-    adata = pbmc3k_normalized()
+    adata = pbmc3k_normalized()[:200].copy()
 
-    layer_adata = adata.copy()
-    layer_adata.layers["counts"] = adata.X.copy()
-    del layer_adata.X
+    rep_adata = adata.copy()
+    if rep == "layer":
+        rep_adata.layers["counts"] = adata.X.copy()
+    elif rep == "obsm":
+        # make sure `rep_adata.obsm` has a different shape from `rep_adata`,
+        # so code can’t accidentally use `.var{,m,p}`
+        rep_adata.obsm["counts"] = adata.X.copy()[:, :100]
+        adata = adata[:, :100].copy()
+    else:
+        pytest.fail(f"Unknown {rep=}")
+    del rep_adata.X
 
-    sc.pp.pca(adata)
-    sc.pp.pca(layer_adata, layer="counts")
+    sc.pp.pca(adata, mask_var=None)
+    sc.pp.pca(rep_adata, **{rep: "counts"}, mask_var=None)
 
-    assert layer_adata.uns["pca"]["params"]["layer"] == "counts"
-    assert "layer" not in adata.uns["pca"]["params"]
+    assert rep_adata.uns["pca"]["params"][rep] == "counts"
+    assert rep not in adata.uns["pca"]["params"]
 
     np.testing.assert_equal(
-        adata.uns["pca"]["variance"], layer_adata.uns["pca"]["variance"]
+        adata.uns["pca"]["variance"], rep_adata.uns["pca"]["variance"]
     )
     np.testing.assert_equal(
-        adata.uns["pca"]["variance_ratio"], layer_adata.uns["pca"]["variance_ratio"]
+        adata.uns["pca"]["variance_ratio"], rep_adata.uns["pca"]["variance_ratio"]
     )
-    np.testing.assert_equal(adata.obsm["X_pca"], layer_adata.obsm["X_pca"])
-    np.testing.assert_equal(adata.varm["PCs"], layer_adata.varm["PCs"])
+    np.testing.assert_equal(adata.obsm["X_pca"], rep_adata.obsm["X_pca"])
+    pcs = (
+        rep_adata.varm["PCs"] if rep == "layer" else rep_adata.uns["pca"]["components"]
+    )
+    np.testing.assert_equal(adata.varm["PCs"], pcs)
 
 
-# Skipping these tests during min-deps testing shouldn't be an issue because the sparse-in-dask feature is not available on anndata<0.10 anyway
-needs_anndata_dask = pytest.mark.skipif(
-    pkg_version("anndata") < Version("0.10"),
-    reason="Old AnnData doesn’t have dask test helpers",
+@pytest.mark.skipif(
+    pkg_version("scikit-learn") < Version("1.5"),
+    reason="covariance_eigh added in scikit-learn 1.5",
 )
-
-
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     "other_array_type",
     [
-        lambda x: x.toarray(),
-        *(at.values[0] for at in ARRAY_TYPES if "1d_chunked" in at.id),
+        pytest.param(lambda x: x.toarray(), id="dense"),
+        *(
+            pytest.param(at.values[0], id=at.id)
+            for at in VALID_ARRAY_TYPES
+            if "1d_chunked" in at.id
+        ),
     ],
-    ids=["dense-mem", "sparse-dask", "dense-dask"],
 )
 def test_covariance_eigh_impls(other_array_type):
     warnings.filterwarnings("error")
@@ -542,14 +575,13 @@ def test_covariance_eigh_impls(other_array_type):
     sc.pp.pca(adata_sparse_mem, svd_solver="covariance_eigh")
     sc.pp.pca(adata_other, svd_solver="covariance_eigh")
 
-    to_memory(adata_other)
+    adata_other.to_memory()
     np.testing.assert_allclose(
         np.abs(adata_sparse_mem.obsm["X_pca"]), np.abs(adata_other.obsm["X_pca"])
     )
 
 
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     ("msg_re", "op"),
     [
@@ -576,8 +608,8 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
     adata_sparse.X = op(
         next(
             at.values[0]
-            for at in ARRAY_TYPES
-            if at.id == "dask_array_sparse-1d_chunked"
+            for at in VALID_ARRAY_TYPES
+            if "dask_array_sparse-1d_chunked" in at.id
         )(adata_sparse.X)
     )
 
@@ -586,7 +618,6 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
 
 
 @needs.dask
-@needs_anndata_dask
 @pytest.mark.parametrize(
     ("dtype", "dtype_arg", "rtol"),
     [
@@ -599,7 +630,9 @@ def test_sparse_dask_input_errors(msg_re: str, op: Callable[[DaskArray], DaskArr
 def test_cov_sparse_dask(dtype, dtype_arg, rtol):
     x_arr = A_list.astype(dtype)
     x = next(
-        at.values[0] for at in ARRAY_TYPES if at.id == "dask_array_sparse-1d_chunked"
+        at.values[0]
+        for at in VALID_ARRAY_TYPES
+        if "dask_array_sparse-1d_chunked" in at.id
     )(x_arr)
     cov, gram, mean = _cov_sparse_dask(x, return_gram=True, dtype=dtype_arg)
     np.testing.assert_allclose(mean, np.mean(x_arr, axis=0))

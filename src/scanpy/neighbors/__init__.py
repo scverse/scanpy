@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
-from warnings import warn
 
 import numpy as np
 import scipy
@@ -16,7 +14,7 @@ from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, old_positionals
+from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
@@ -28,8 +26,8 @@ from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, MutableMapping
-    from typing import Any, Literal, NotRequired
+    from collections.abc import Callable, Mapping, MutableMapping
+    from typing import Any, Literal, NotRequired, TypeAlias
 
     from anndata import AnnData
     from igraph import Graph
@@ -37,12 +35,12 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
+    # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
-
-N_DCS = 15  # default number of diffusion components
+N_DCS: int = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
-N_PCS = settings.N_PCS
+N_PCS: int = settings.N_PCS
 
 
 class KwdsForTransformer(TypedDict):
@@ -88,9 +86,10 @@ def neighbors(  # noqa: PLR0913
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
-    :cite:t:`Haghverdi2016`.
+    the connectivity of the manifold (`method=='umap'`).
+    If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
+    in the adaption of :cite:t:`Haghverdi2016`.
+    If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
 
     Parameters
     ----------
@@ -125,11 +124,14 @@ def neighbors(  # noqa: PLR0913
            Use `method='binary'` for strictly uniform connectivity weights.
     method
         Use 'umap' :cite:p:`McInnes2018`, 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
-        with adaptive width :cite:t:`Haghverdi2016`), or 'binary' for computing connectivities.
+        with adaptive width :cite:t:`Haghverdi2016`), 'jaccard' (Jaccard kernel as in
+        PhenoGraph, :cite:t:`Levine2015`)or 'binary' for computing connectivities.
 
         - 'umap': Creates connectivities with varying strengths based on fuzzy simplicial sets
         - 'gauss': Uses Gaussian kernels with adaptive widths, respects `knn` parameter
+        - 'jaccard': Uses Jaccard kernels
         - 'binary': Creates binary (0/1) connectivities based on k-nearest neighbor graph
+
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -637,6 +639,12 @@ class Neighbors:
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
+        elif method == "jaccard":
+            self._connectivities = _connectivity.jaccard(
+                knn_indices,
+                n_obs=self._adata.shape[0],
+                n_neighbors=self.n_neighbors,
+            )
         elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
@@ -659,7 +667,7 @@ class Neighbors:
     ) -> tuple[_Method | None, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
-        `method` will be coerced to `'gauss'` or `'umap'`.
+        `method` will be coerced to `'gauss'`, `'umap'`, or `'jaccard'`.
         `transformer` is coerced from a str or instance to an instance class.
 
         If `transformer` is `None` and there are few data points,
@@ -678,7 +686,7 @@ class Neighbors:
             transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
-        # Coerce `method` to 'gauss' or 'umap'
+        # Coerce `method` to 'gauss', 'umap', or 'jaccard'
         if method == "rapids":
             if transformer is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer`."
@@ -692,7 +700,7 @@ class Neighbors:
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = method if method in {"gauss", "binary", None} else "umap"
+        conn_method = method if method in {"gauss", "jaccard", "binary", None} else "umap"
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
@@ -732,7 +740,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning, stacklevel=3)
+            warn(msg, FutureWarning)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)

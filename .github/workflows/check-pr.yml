@@ -32,7 +32,7 @@ jobs:
         with:
           success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
-        uses: kaisugi/action-regex-match@v1.0.1
+        uses: kaisugi/action-regex-match@v1.0.2
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
@@ -53,10 +53,8 @@ jobs:
     needs: check-milestone
     if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","ci"]'), needs.check-milestone.outputs.type)
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
       - name: Find out if a relevant release fragment is added
         uses: dorny/paths-filter@v3
         id: changes

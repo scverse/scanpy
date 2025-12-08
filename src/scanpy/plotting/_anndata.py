@@ -8,13 +8,11 @@ from itertools import pairwise, product
 from types import NoneType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict, cast
 
-import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps, gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
@@ -22,9 +20,9 @@ from .. import logging as logg
 from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import (
-    _check_use_raw,
     _doc_params,
     _empty,
+    check_use_raw,
     get_literal_vals,
     sanitize_anndata,
 )
@@ -65,9 +63,9 @@ if TYPE_CHECKING:
         _LegendLoc,
     )
 
-    # TODO: is that all?
-    _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
-    _VarNames = str | Sequence[str]
+# TODO: is that all?
+type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
+type _VarNames = str | Sequence[str]
 
 
 class VarGroups(NamedTuple):
@@ -147,8 +145,9 @@ def scatter(  # noqa: PLR0913
     marker: str | Sequence[str] = ".",
     title: str | Collection[str] | None = None,
     show: bool | None = None,
-    save: str | bool | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: str | bool | None = None,
 ) -> Axes | list[Axes] | None:
     """Scatter plot along observations or variables axes.
 
@@ -229,7 +228,7 @@ def _check_if_annotations(
     """
     annotations: pd.Index[str] = getattr(adata, axis_name).columns
     other_ax_obj = (
-        adata.raw if _check_use_raw(adata, use_raw) and axis_name == "obs" else adata
+        adata.raw if check_use_raw(adata, use_raw) and axis_name == "obs" else adata
     )
     names: pd.Index[str] = getattr(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
@@ -284,7 +283,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     """See docstring of scatter."""
     sanitize_anndata(adata)
 
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
 
     # Process layers
     if layers in ["X", None] or (isinstance(layers, str) and layers in adata.layers):
@@ -427,24 +426,27 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             key.replace("_", " ") if not is_color_like(key) else "" for key in keys
         ]
 
-    axs: list[Axes] = scatter_base(
-        xy,
-        title=title,
-        alpha=alpha,
-        component_name=component_name,
-        axis_labels=axis_labels,
-        component_indexnames=components + 1,
-        projection=projection,
-        colors=color_ids,
-        highlights=highlights,
-        colorbars=colorbars,
-        right_margin=right_margin,
-        left_margin=left_margin,
-        sizes=[size for _ in keys],
-        markers=marker,
-        color_map=color_map,
-        show_ticks=show_ticks,
-        ax=ax,
+    axs = cast(
+        "list[Axes]",
+        scatter_base(
+            xy,
+            title=title,
+            alpha=alpha,
+            component_name=component_name,
+            axis_labels=axis_labels,
+            component_indexnames=components + 1,
+            projection=projection,
+            colors=color_ids,
+            highlights=highlights,
+            colorbars=colorbars,
+            right_margin=right_margin,
+            left_margin=left_margin,
+            sizes=[size for _ in keys],
+            markers=marker,
+            color_map=color_map,
+            show_ticks=show_ticks,
+            ax=ax,
+        ),
     )
 
     def add_centroid(centroids, name, xy, mask) -> None:
@@ -569,11 +571,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
             )
         if legend is not None:
-            if Version(mpl.__version__) < Version("3.7"):
-                _attr = "legendHandles"
-            else:
-                _attr = "legend_handles"
-            for handle in getattr(legend, _attr):
+            for handle in legend.legend_handles:
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter
@@ -756,9 +754,9 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
-    # deprecatd
+    # deprecated
+    save: bool | str | None = None,
     scale: DensityNorm | Empty = _empty,
     **kwds,
 ) -> Axes | FacetGrid | None:
@@ -867,7 +865,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     import seaborn as sns  # Slow import, only import if called
 
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
     if isinstance(keys, str):
         keys = [keys]
     keys = list(OrderedDict.fromkeys(keys))  # remove duplicates, preserving the order
@@ -1013,7 +1011,7 @@ def clustermap(
     *,
     use_raw: bool | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
+    save: bool | str | None = None,  # deprecated
     **kwds,
 ) -> ClusterGrid | None:
     """Hierarchically-clustered heatmap.
@@ -1060,7 +1058,7 @@ def clustermap(
         msg = "Currently, only a single key is supported."
         raise ValueError(msg)
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw)
+    use_raw = check_use_raw(adata, use_raw)
     x = adata.raw.X if use_raw else adata.X
     if isinstance(x, CSBase):
         x = x.toarray()
@@ -1596,9 +1594,9 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     # get categories colors:
     if f"{groupby}_colors" not in adata.uns:
-        from ._utils import _set_default_colors_for_categorical_obs
+        from ._utils import set_default_colors_for_categorical_obs
 
-        _set_default_colors_for_categorical_obs(adata, groupby)
+        set_default_colors_for_categorical_obs(adata, groupby)
     groupby_colors = adata.uns[f"{groupby}_colors"]
 
     if dendrogram:
@@ -2053,7 +2051,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     """
     sanitize_anndata(adata)
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if isinstance(var_names, str):
         var_names = [var_names]
 

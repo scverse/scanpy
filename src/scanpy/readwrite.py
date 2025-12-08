@@ -7,15 +7,21 @@ import warnings
 from functools import partial
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, cast, get_args, overload
-from warnings import warn
 
 import anndata.utils
 import h5py
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+from matplotlib.image import imread
 from packaging.version import Version
 
-if Version(anndata.__version__) >= Version("0.11.0rc2"):
+from . import logging as logg
+from ._compat import deprecated, old_positionals, pkg_version, warn
+from ._settings import AnnDataFileFormat, settings
+from ._utils import _empty
+
+if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
         read_csv,
         read_excel,
@@ -37,14 +43,6 @@ else:
         read_text,
         read_zarr,
     )
-
-from anndata import AnnData
-from matplotlib.image import imread
-
-from . import logging as logg
-from ._compat import deprecated, old_positionals
-from ._settings import AnnDataFileFormat, settings
-from ._utils import _empty
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -705,14 +703,14 @@ def write(
             "'csv' is not a good choice for anything, especially storing AnnData, "
             "and will be removed from this function. Use 'h5ad' or 'zarr' instead."
         )
-        warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         adata.write_csvs(filename)
         return
     elif ext not in {"h5ad", "h5", "zarr"}:
         msg = f"Unknown file format: {ext} (not in {valid_exts})"
         raise ValueError(msg)
 
-    if Version(anndata.__version__) >= Version("0.11.0rc2"):
+    if pkg_version("anndata") >= Version("0.11.0rc2"):
         from anndata.io import write_h5ad, write_zarr
 
         extra_kw = dict(convert_strings_to_categoricals=convert_strings_to_categoricals)

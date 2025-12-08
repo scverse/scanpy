@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.11"
-# dependencies = [ "packaging" ]
+# dependencies = [ "packaging", "dependency-groups" ]
 # ///
 """Parse a pyproject.toml file and output a list of minimum dependency versions."""
 
@@ -16,6 +16,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import dependency_groups
 from packaging.requirements import Requirement
 from packaging.version import Version
 
@@ -92,6 +93,8 @@ class Args(argparse.Namespace):
     output: Path | None
     _extras: list[str]
     _all_extras: bool
+    _groups: list[str]
+    _all_groups: bool
 
     @classmethod
     def parse(cls, argv: Sequence[str] | None = None) -> Self:
@@ -129,6 +132,21 @@ class Args(argparse.Namespace):
             help="get all extras",
         )
         parser.add_argument(
+            "--groups",
+            dest="_groups",
+            metavar="GROUP",
+            type=str,
+            nargs="*",
+            default=(),
+            help="dependency groups to install",
+        )
+        parser.add_argument(
+            "--all-groups",
+            dest="_all_groups",
+            action="store_true",
+            help="get all dependency groups",
+        )
+        parser.add_argument(
             *("--output", "-o"),
             metavar="FILE",
             type=Path,
@@ -157,6 +175,17 @@ class Args(argparse.Namespace):
             return set()
         return self.pyproject["project"]["optional-dependencies"].keys()
 
+    @cached_property
+    def groups(self) -> AbstractSet[str]:
+        """Return the dependency groups to install."""
+        if self._groups:
+            if self._all_groups:
+                sys.exit("Cannot specify both --groups and --all-groups")
+            return dict.fromkeys(self._groups).keys()
+        if not self._all_groups:
+            return set()
+        return self.pyproject["dependency-groups"].keys()
+
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Run main entry point."""
@@ -166,6 +195,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     deps = [
         *map(Requirement, args.pyproject["project"]["dependencies"]),
         *(Requirement(f"{project_name}[{extra}]") for extra in args.extras),
+        *map(
+            Requirement,
+            dependency_groups.resolve(
+                args.pyproject["dependency-groups"], *args.groups
+            ),
+        ),
     ]
 
     min_deps = extract_min_deps(deps, pyproject=args.pyproject)

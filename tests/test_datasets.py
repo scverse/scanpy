@@ -157,11 +157,12 @@ def test_visium_datasets_images():
     assert output == f"{image_path}: image/tiff"
 
 
-def test_download_failure():
+def test_download_failure() -> None:
     from urllib.error import HTTPError
 
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPError) as excinfo:
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
+    excinfo.value.close()
 
 
 # These are tested via doctest
@@ -201,4 +202,6 @@ def test_doc_shape(ds_name):
         )
         warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
         dataset = cached_fn()
-    assert repr(dataset) in docstring
+
+    repr_ = repr(dataset)
+    assert repr_ in docstring

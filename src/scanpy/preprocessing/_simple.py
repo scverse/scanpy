@@ -8,7 +8,7 @@ from __future__ import annotations
 import warnings
 from functools import singledispatch
 from itertools import repeat
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, overload
 
 import numba
 import numpy as np
@@ -22,8 +22,8 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
 from .._settings import settings as sett
 from .._utils import (
-    _check_array_function_arguments,
     _resolve_axis,
+    check_array_function_arguments,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
     renamed_arg,
@@ -32,11 +32,6 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
-
-try:
-    import dask.array as da
-except ImportError:
-    da = None
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
@@ -47,9 +42,6 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike, _LegacyRandom
-
-
-A = TypeVar("A", bound=np.ndarray | CSBase | DaskArray)
 
 
 @old_positionals(
@@ -105,9 +97,9 @@ def filter_cells(
     Examples
     --------
     >>> import scanpy as sc
-    >>> adata = sc.datasets.krumsiek11()
+    >>> adata = sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     >>> adata.obs_names_make_unique()
     >>> adata.n_obs
     640
@@ -352,7 +344,7 @@ def log1p(
     Returns or updates `data`, depending on `copy`.
 
     """
-    _check_array_function_arguments(
+    check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
     return log1p_array(data, copy=copy, base=base)
@@ -632,9 +624,6 @@ def normalize_per_cell(
     return x if copy else None
 
 
-DT = TypeVar("DT")
-
-
 @njit
 def _create_regressor_categorical(
     x: np.ndarray, /, number_categories: int, cat_array: np.ndarray
@@ -875,7 +864,7 @@ def sample(
     p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
-def sample(
+def sample[A: np.ndarray | CSBase | DaskArray](
     data: A,
     fraction: float | None = None,
     *,

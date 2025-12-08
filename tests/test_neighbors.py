@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -123,6 +122,29 @@ transitions_gauss_noknn = [
 ]
 
 
+# jaccard kernel – only knn results
+connectivities_jaccard = [
+    [0.0, 0.3333333333333333, 0.0, 0.3333333333333333],
+    [0.3333333333333333, 0.0, 0.16666666666666666, 0.3333333333333333],
+    [0.0, 0.16666666666666666, 0.0, 0.16666666666666666],
+    [0.3333333333333333, 0.3333333333333333, 0.16666666666666666, 0.0],
+]
+
+transitions_sym_jaccard = [
+    [0.0, 0.4225771273642583, 0.0, 0.4225771273642583],
+    [0.4225771273642583, 0.0, 0.4225771273642583, 0.2857142857142857],
+    [0.0, 0.4225771273642583, 0.0, 0.4225771273642583],
+    [0.4225771273642583, 0.2857142857142857, 0.4225771273642583, 0.0],
+]
+
+transitions_jaccard = [
+    [0.0, 0.5, 0.0, 0.5],
+    [0.35714285714285715, 0.0, 0.35714285714285715, 0.2857142857142857],
+    [0.0, 0.5, 0.0, 0.5],
+    [0.35714285714285715, 0.2857142857142857, 0.35714285714285715, 0.0],
+]
+
+
 def get_neighbors() -> Neighbors:
     return Neighbors(AnnData(np.array(X)))
 
@@ -132,11 +154,11 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize("method", ["umap", "gauss", "binary"])
+@pytest.mark.parametrize("method", ["umap", "gauss", "jaccard", "binary"])
 def test_distances_euclidean(
-    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss", "binary"]
+    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss", "jaccard", "binary"]
 ):
-    """Umap and gauss behave the same for distances.
+    """Umap, gauss, jaccard and binary behave the same for distances.
 
     They call pynndescent for large data.
     """
@@ -194,6 +216,13 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             transitions_sym_gauss_knn,
             id="gauss",
         ),
+        pytest.param(
+            "jaccard",
+            connectivities_jaccard,
+            transitions_jaccard,
+            transitions_sym_jaccard,
+            id="jaccard",
+        ),
     ],
 )
 def test_connectivities_euclidean(neigh: Neighbors, method, conn, trans, trans_sym):
@@ -244,8 +273,6 @@ def test_restore_n_neighbors(neigh, conv):
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
+    ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from ..._utils.random import _LegacyRandom
 
-    _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
+    type _AEType = Literal["zinb-conddisp", "zinb", "nb-conddisp", "nb"]
 
 
 @old_positionals(

@@ -21,13 +21,10 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v5
-        with:
-          filter: blob:none
-          fetch-depth: 0
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: false
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
+      - uses: astral-sh/setup-uv@v7
+        with: { enable-cache: false }
       - id: get-envs
         run: |
           ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
@@ -36,7 +33,7 @@ jobs:
               | {
                 name: .key,
                 "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
-                python: .value.python | sub("3[.]13"; "3.13.3"),  # https://github.com/numba/numba/issues/10101
+                python: .value.python
               }
             )')
           echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
@@ -47,19 +44,13 @@ jobs:
     strategy:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
-    env:  # environment variable for use in codecov’s env_vars tagging
-      ENV_NAME: ${{ matrix.env.name }}
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
           python-version: ${{ matrix.env.python }}
-          cache-dependency-glob: pyproject.toml
 
       - name: Cache downloaded data
         uses: actions/cache@v4
@@ -77,8 +68,6 @@ jobs:
         run: hatch run ${{ matrix.env.name }}:run
       - name: Run tests (coverage)
         if: matrix.env.test-type == 'coverage'
-        env:
-          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
         run: |
           hatch run ${{ matrix.env.name }}:run-cov
           hatch run ${{ matrix.env.name }}:cov-combine
@@ -89,7 +78,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           files: test-data/coverage.xml
 
@@ -98,13 +87,13 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: ENV_NAME
+          flags: ${{ matrix.env.name }}
           fail_ci_if_error: true
           file: test-data/test-results.xml
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
@@ -112,14 +101,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          filter: blob:none
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uvx --from build pyproject-build --sdist --wheel .

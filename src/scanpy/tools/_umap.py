@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.utils import check_array, check_random_state
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView
 from ._utils import _choose_representation, get_init_pos_from_paga
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from .._utils.random import _LegacyRandom
 
-    _InitPos = Literal["paga", "spectral", "random"]
+type _InitPos = Literal["paga", "spectral", "random"]
 
 
 @old_positionals(
@@ -236,7 +236,7 @@ def umap(  # noqa: PLR0913, PLR0915
             "`method='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         metric = neigh_params.get("metric", "euclidean")
         if metric != "euclidean":
             msg = (

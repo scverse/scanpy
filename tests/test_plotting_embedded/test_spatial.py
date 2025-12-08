@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import partial
 from pathlib import Path
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -46,11 +45,6 @@ def test_visium_circles(image_comparer):  # standard visium data
 
 
 def test_visium_default(image_comparer):  # default values
-    from packaging.version import parse as parse_version
-
-    if parse_version(mpl.__version__) < parse_version("3.7.0"):
-        pytest.xfail("Matplotlib 3.7.0+ required for this test")
-
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")

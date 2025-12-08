@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    Scale = Literal["linear", "log", "symlog", "logit"] | str
+type Scale = Literal["linear", "log", "symlog", "logit"] | str
 
 
 @old_positionals(

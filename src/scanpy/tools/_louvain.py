@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -11,7 +10,7 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated, old_positionals, pkg_version, warn
 from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -176,7 +175,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if Version(louvain.__version__) < Version("0.7.0"):
+            if pkg_version("louvain") < Version("0.7.0"):
                 louvain.set_rng_seed(random_state)
             else:
                 partition_kwargs["seed"] = random_state
@@ -195,7 +194,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
             "`flavor='rapids'` is deprecated. "
             "Use `rapids_singlecell.tl.louvain` instead."
         )
-        warnings.warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         # nvLouvain only works with undirected graphs,
         # and `adjacency` must have a directed edge in both directions
         import cudf

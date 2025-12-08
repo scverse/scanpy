@@ -15,6 +15,7 @@ from ._anndata import (
     violin,
 )
 from ._dotplot import DotPlot, dotplot
+from ._easter_egg import dogplot
 from ._matrixplot import MatrixPlot, matrixplot
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 from ._qc import highest_expr_genes
@@ -63,6 +64,7 @@ __all__ = [
     "correlation_matrix",
     "dendrogram",
     "diffmap",
+    "dogplot",
     "dotplot",
     "dpt_groups_pseudotime",
     "dpt_timeseries",
