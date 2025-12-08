@@ -1,10 +1,10 @@
 [envs.default]
 installer = "uv"
-features = [ "dev" ]
+dependency-groups = [ "dev" ]
 
 [envs.docs]
-features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+dependency-groups = [ "doc" ]
+scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
@@ -15,7 +15,7 @@ scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-n
 
 [envs.hatch-test]
 default-args = [  ]
-features = [ "dev", "test-min" ]
+dependency-groups = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
@@ -24,7 +24,7 @@ overrides.matrix.deps.env-vars = [
 overrides.matrix.deps.pre-install-commands = [
     { if = [
         "low-vers",
-    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras -o ci/scanpy-low-vers.txt" },
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --all-groups -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
@@ -34,9 +34,9 @@ overrides.matrix.deps.python = [
     { if = [ "pre" ], value = "3.14" },
 ]
 overrides.matrix.deps.extra-dependencies = [
-    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
 ]
-overrides.matrix.deps.features = [
+overrides.matrix.deps.dependency-groups = [
     { if = [ "stable", "pre", "low-vers" ], value = "test" },
 ]
 
