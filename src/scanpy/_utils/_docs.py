@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from itertools import product
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
@@ -36,10 +35,15 @@ class Numpy(ArrayType):
 @dataclass(unsafe_hash=True, frozen=True)
 class ScipySparse(ArrayType):
     format: Literal["csr", "csc"]
-    container: Literal["array", "matrix"]
 
     def __str__(self) -> str:  # pragma: no cover
-        return f"scipy.sparse.{self.format}_{self.container}"
+        return f"scipy.sparse.{self.format}_{{array,matrix}}"
+
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        return (
+            f":class:`{'~' if short else ''}scipy.sparse.{self.format}_array` / "
+            f":class:`~scipy.sparse.{self.format}_matrix`"
+        )
 
 
 type Inner = Numpy | ScipySparse
@@ -100,15 +104,13 @@ def _parse_mod(
                 raise ValueError(msg)
             yield Numpy()
         case "sp":
-            if tags - {"csr", "csc", "array", "matrix"}:  # pragma: no cover
+            if tags - {"csr", "csc"}:  # pragma: no cover
                 msg = f"invalid tags {tags!r}"
                 raise ValueError(msg)
-            for format, container in product(("csr", "csc"), ("array", "matrix")):
+            for format in ("csr", "csc"):
                 if tags & {"csr", "csc"} and format not in tags:
                     continue
-                if tags & {"array", "matrix"} and container not in tags:
-                    continue
-                yield ScipySparse(format=format, container=container)
+                yield ScipySparse(format=format)
         case "da":
             for chunk in parse(tags if tags else inner_includes, inner=True):
                 yield DaskArray(chunk=chunk)

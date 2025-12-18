@@ -169,9 +169,7 @@ def getsourcelines(obj):
     return getsourcelines(obj)
 
 
-ALL_SPS = [
-    _docs.ScipySparse(fmt, c) for fmt in ("csr", "csc") for c in ("array", "matrix")
-]
+ALL_SPS = [_docs.ScipySparse(fmt) for fmt in ("csr", "csc")]
 
 
 @pytest.mark.parametrize(
@@ -188,29 +186,20 @@ ALL_SPS = [
         pytest.param(
             "sp da[sp[csr]]",
             [],
-            [
-                *ALL_SPS,
-                *(
-                    _docs.DaskArray(_docs.ScipySparse("csr", c))
-                    for c in ("array", "matrix")
-                ),
-            ],
+            [*ALL_SPS, _docs.DaskArray(_docs.ScipySparse("csr"))],
             id="include_fewer_nested",
         ),
         pytest.param(
             "da[sp[csc]]",
             [],
-            [_docs.DaskArray(_docs.ScipySparse("csc", c)) for c in ("array", "matrix")],
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
             id="include_only_nested",
         ),
         pytest.param("da[sp[csc]]", "sp da", [], id="remove_more"),
         pytest.param(
             "sp da",
-            "sp da[sp[matrix]]",
-            [
-                _docs.DaskArray(_docs.ScipySparse(fmt, "array"))
-                for fmt in ("csr", "csc")
-            ],
+            "sp da[sp[csr]]",
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
             id="only_dask_subset",
         ),
     ],
