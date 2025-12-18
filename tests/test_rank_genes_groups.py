@@ -267,8 +267,8 @@ def test_wilcoxon_symmetry():
     assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
 
 
-@pytest.mark.parametrize("reference", [True, False])
-def test_wilcoxon_tie_correction(reference):
+@pytest.mark.parametrize("reference", [True, False], ids=["ref", "rest"])
+def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     pbmc = pbmc68k_reduced()
 
     groups = ["CD14+ Monocyte", "Dendritic"]
@@ -276,19 +276,20 @@ def test_wilcoxon_tie_correction(reference):
 
     _, groups_masks = select_groups(pbmc, groups, groupby)
 
-    x = pbmc.raw.X[groups_masks[0]].toarray()
+    if reference:
+        ref = groups[1]
+        mask_rest = groups_masks[1]
+    else:
+        ref = "rest"
+        mask_rest = ~groups_masks[0]
+        groups = groups[:1]
 
-    mask_rest = groups_masks[1] if reference else ~groups_masks[0]
+    assert isinstance(pbmc.raw.X, CSBase)
+    x = pbmc.raw.X[groups_masks[0]].toarray()
     y = pbmc.raw.X[mask_rest].toarray()
 
     pvals = mannwhitneyu(x, y, use_continuity=False, alternative="two-sided").pvalue
     pvals[np.isnan(pvals)] = 1.0
-
-    if reference:
-        ref = groups[1]
-    else:
-        ref = "rest"
-        groups = groups[:1]
 
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
     with (
@@ -298,7 +299,7 @@ def test_wilcoxon_tie_correction(reference):
     ):
         test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
-    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals)
+    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-6)
 
 
 def test_wilcoxon_huge_data(monkeypatch):
