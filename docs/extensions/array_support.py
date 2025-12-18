@@ -52,8 +52,9 @@ class ArraySupport(SphinxDirective):
                 dask_array_type in array_types,
             ))
 
+        title = nodes.title("", "", *self.parse_inline(":ref:`array-support`")[0])
         rows = self._render_support_data(data)
-        return self._render_table(headers, rows)
+        return self._render_table(headers, rows, title=title)
 
     def _render_overview(self) -> list[nodes.Node]:
         headers = ["Function", *(at.rst(short=True) for at in ALL_INNER)]
@@ -61,14 +62,10 @@ class ArraySupport(SphinxDirective):
         for fn, (include, exclude) in self._array_support.items():
             row_header, _ = self.parse_inline(f":func:`scanpy.{fn}`")
             ats = frozenset(_docs.parse(include, exclude))
-            cells: list[list[nodes.Node]] = [
+            cells: list[Sequence[nodes.Node]] = [
                 row_header,
                 *(
-                    [
-                        nodes.Text(
-                            ("✅" if at in ats else "❌") + ("⚡" if dt in ats else "")
-                        )
-                    ]
+                    self._render_support(at in ats, dask=dt in ats)
                     for at, dt in zip(
                         ALL_INNER, map(_docs.DaskArray, ALL_INNER), strict=True
                     )
@@ -122,14 +119,18 @@ class ArraySupport(SphinxDirective):
     ) -> nodes.row:
         cells: list[Sequence[nodes.Node]] = [
             header,
-            [nodes.Text("✅" if support else "❌")],
-            [nodes.Text("✅" if in_dask else "❌")],
+            self._render_support(support),
+            self._render_support(in_dask),
         ]
         children = (nodes.entry("", nodes.paragraph("", "", *cell)) for cell in cells)
         return nodes.row("", *children)
 
     def _render_table(
-        self, headers: Collection[str], rows: Iterable[nodes.row]
+        self,
+        headers: Collection[str],
+        rows: Iterable[nodes.row],
+        *,
+        title: nodes.title | None = None,
     ) -> list[nodes.Node]:
         colspecs = [
             nodes.colspec(stub=True),
@@ -144,10 +145,23 @@ class ArraySupport(SphinxDirective):
         return [
             nodes.table(
                 "",
-                nodes.title("", "Array type support"),
+                *([title] if title else []),
                 nodes.tgroup("", *colspecs, thead, tbody, cols=len(colspecs)),
                 ids=["array-support"],
             )
+        ]
+
+    def _render_support(
+        self,
+        support: bool,  # noqa: FBT001
+        /,
+        *,
+        dask: bool = False,
+    ) -> Sequence[nodes.Node]:
+        dask_expl = "Also supports this type as chunk in a dask Array"
+        return [
+            nodes.Text(("✅" if support else "❌") + " " * dask),
+            *([nodes.abbreviation(text="⚡", explanation=dask_expl)] if dask else []),
         ]
 
     def _render_array_type(self, array_type: _docs.ArrayType, /) -> list[nodes.Node]:

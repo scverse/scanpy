@@ -1,4 +1,4 @@
-"""Add `array-support` directive."""
+"""Utilities for `array-support` directive (see `/docs/extensions/array_support.py`)."""
 
 from __future__ import annotations
 
