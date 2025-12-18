@@ -38,7 +38,7 @@ class ArraySupport(SphinxDirective):
                 f"API not in `array_support`, add it in `docs/conf.py`: {self.arguments[0]}"
             )
         array_types = list(_docs.parse(*self._array_support[self.arguments[0]]))
-        headers = ("Array type", "supported", "… in dask :class:`~dask.array.Array`")
+        headers = ("Array type", "supported", "… experimentally in dask :class:`~dask.array.Array`")
         data: list[tuple[_docs.Inner, bool, bool]] = []
         for array_type in ALL_INNER:
             dask_array_type = _docs.DaskArray(array_type)
