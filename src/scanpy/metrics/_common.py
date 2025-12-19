@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
+from .._utils import NeighborsView
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -65,17 +66,22 @@ class _SparseMetric(ABC):
                 raise NotImplementedError(msg)
 
 
-def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> CSRBase:
+def _get_graph(
+    adata: AnnData,
+    *,
+    use_graph: str | None = None,
+    neighbors_key: str | None = None,
+) -> CSRBase:
     if use_graph is not None:
-        raise NotImplementedError()
-    # Fix for anndata<0.7
-    if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-        return adata.obsp["connectivities"]
-    elif "neighbors" in adata.uns:
-        return adata.uns["neighbors"]["connectivities"]
-    else:
+        if neighbors_key is not None:
+            msg = "Cannot specify both `use_graph` and `neighbors_key`."
+            raise TypeError(msg)
+        return adata.obsp[use_graph]
+    nv = NeighborsView(adata, neighbors_key)
+    if "connectivities" not in nv:
         msg = "Must run neighbors first."
         raise ValueError(msg)
+    return nv["connectivities"]
 
 
 @overload

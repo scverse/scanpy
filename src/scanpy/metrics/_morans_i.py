@@ -9,7 +9,9 @@ import numba
 import numpy as np
 
 from .._compat import CSRBase, njit
+from .._utils import _doc_params
 from ..get import _get_obs_rep
+from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
 if TYPE_CHECKING:
@@ -20,12 +22,14 @@ if TYPE_CHECKING:
 
 
 @singledispatch
+@_doc_params(neighbors_key=doc_neighbors_key)
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
     vals: _Vals | None = None,
     *,
     use_graph: str | None = None,
+    neighbors_key: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -40,11 +44,11 @@ def morans_i(
     .. math::
 
         I =
-            \frac{
-                N \sum_{i, j} w_{i, j} z_{i} z_{j}
-            }{
-                S_{0} \sum_{i} z_{i}^{2}
-            }
+            \frac{{
+                N \sum_{{i,j}} w_{{i,j}} z_{{i}} z_{{j}}
+            }}{{
+                S_{{0}} \sum_{{i}} z_{{i}}^{{2}}
+            }}
 
     Params
     ------
@@ -58,8 +62,10 @@ def morans_i(
         object by using key word arguments: `layer`, `obsm`, `obsp`, or
         `use_raw`.
     use_graph
-        Key to use for graph in anndata object. If not provided, default
-        neighbors connectivities will be used instead.
+        Key to use for graph in anndata object.
+        If not provided, default neighbors connectivities will be used instead.
+        (See ``neighbors_key`` below.)
+    {neighbors_key}
     layer
         Key for `adata.layers` to choose `vals`.
     obsm
@@ -94,7 +100,7 @@ def morans_i(
 
     """
     adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph)
+    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
     return morans_i(g, vals)
