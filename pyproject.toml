@@ -145,6 +145,8 @@ skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes m
 harmony = [ "harmonypy" ]                              # Harmony dataset integration
 scanorama = [ "scanorama" ]                            # Scanorama dataset integration
 scrublet = [ "scikit-image>=0.23.1" ]                  # Doublet detection with automatic thresholds
+# Plotting
+plotting = [ "colour-science" ]
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine

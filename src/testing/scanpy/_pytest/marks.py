@@ -30,6 +30,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
 
     mod: str
 
+    colour = "colour-science"
     dask = auto()
     dask_ml = auto()
     fa2 = auto()

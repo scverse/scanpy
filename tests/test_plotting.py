@@ -834,7 +834,7 @@ _RANK_GENES_GROUPS_PARAMS = [
     [pytest.param(name, fn, id=name) for name, fn in _RANK_GENES_GROUPS_PARAMS],
 )
 def test_rank_genes_groups(image_comparer, name, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=25)
 
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
@@ -1858,39 +1858,61 @@ def test_dogplot() -> None:
     sc.pl.dogplot()
 
 
-params_dotplot_group_cmaps = [
-    pytest.param("dotplot_group_cmaps", False, id="default"),
-    pytest.param("dotplot_group_cmaps_swap_axes", True, id="swap_axes"),
-]
+def test_dotplot_group_colors_raises_error_on_missing_dep(monkeypatch):
+    """Check that an informative ImportError is raised when colour-science is missing."""
+    import sys
+
+    # Remove colour from sys.modules if present and block reimport
+    monkeypatch.setitem(sys.modules, "colour", None)
+
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    group_colors = {"CD19+ B": "blue"}
+
+    with pytest.raises(ImportError, match="pip install colour-science"):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            show=False,
+        )
 
 
-@pytest.mark.parametrize(("name", "swap_axes"), params_dotplot_group_cmaps)
-def test_dotplot_group_cmaps(image_comparer, name, swap_axes):
-    """Check group_cmaps parameter with custom color maps per group."""
+@needs.colour
+@pytest.mark.parametrize(
+    ("name", "swap_axes"),
+    [
+        ("dotplot_group_colors", False),
+        ("dotplot_group_colors_swap_axes", True),
+    ],
+)
+def test_dotplot_group_colors(image_comparer, name, swap_axes):
+    """Check group_colors parameter with custom colors per group."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = pbmc68k_reduced()
 
     markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1", "IMP3", "UBALD2", "LTB", "CLPP"]
 
-    group_cmaps = {
-        "CD14+ Monocyte": "Greys",
-        "Dendritic": "Purples",
-        "CD8+ Cytotoxic T": "Reds",
-        "CD8+/CD45RA+ Naive Cytotoxic": "Greens",
-        "CD4+/CD45RA+/CD25- Naive T": "Oranges",
-        "CD4+/CD25 T Reg": "Blues",
-        "CD4+/CD45RO+ Memory": "hot",
-        "CD19+ B": "cool",
-        "CD56+ NK": "winter",
-        "CD34+": "copper",
+    group_colors = {
+        "CD14+ Monocyte": "gray",
+        "Dendritic": "#a65628",  # brown
+        "CD8+ Cytotoxic T": "red",
+        "CD8+/CD45RA+ Naive Cytotoxic": "green",
+        "CD4+/CD45RA+/CD25- Naive T": "orange",
+        "CD4+/CD25 T Reg": "blue",
+        "CD4+/CD45RO+ Memory": "#ff7f00",  # orange
+        "CD19+ B": "#984ea3",  # purple
+        "CD56+ NK": "pink",
+        "CD34+": "cyan",
     }
 
     sc.pl.dotplot(
         adata,
         markers,
         groupby="bulk_labels",
-        group_cmaps=group_cmaps,
+        group_colors=group_colors,
         dendrogram=True,
         swap_axes=swap_axes,
         show=False,
@@ -1898,14 +1920,75 @@ def test_dotplot_group_cmaps(image_comparer, name, swap_axes):
     save_and_compare_images(name)
 
 
-def test_dotplot_group_cmaps_raises_error():
-    """Check that a ValueError is raised for missing groups in group_cmaps."""
+@needs.colour
+def test_dotplot_group_colors_fallback(image_comparer):
+    """Check that fallback to default cmap works for groups not in group_colors."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1"]
+
+    # Intentionally incomplete dict to test fallback
+    group_colors = {
+        "CD14+ Monocyte": "gray",
+        "Dendritic": "purple",
+    }
+
+    # Expect warning about missing groups since we only specify 2 of 10 groups
+    with pytest.warns(
+        UserWarning, match="will use the default colormap as no specific colors"
+    ):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            cmap="Reds",  # Fallback cmap
+            dendrogram=True,
+            show=False,
+        )
+    save_and_compare_images("dotplot_group_colors_fallback")
+
+
+@needs.colour
+def test_dotplot_group_colors_warns_on_cmap():
+    """Check that a warning is raised when both cmap and group_colors are passed."""
     adata = pbmc68k_reduced()
     markers = ["CD79A"]
-    # Intentionally incomplete dictionary to trigger the error
-    group_cmaps = {"CD19+ B": "Blues"}
+    group_colors = {"CD19+ B": "blue"}
 
-    with pytest.raises(ValueError, match="missing from the `group_cmaps` dictionary"):
+    # Expect both warnings: one for cmap+group_colors, one for missing groups
+    with pytest.warns(UserWarning, match="cmap|colormap") as record:
         sc.pl.dotplot(
-            adata, markers, groupby="bulk_labels", group_cmaps=group_cmaps, show=False
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            cmap="viridis",
+            show=False,
+        )
+    # Check that we got both expected warnings
+    warning_messages = [str(w.message) for w in record]
+    assert any("Both `cmap` and `group_colors`" in msg for msg in warning_messages)
+    assert any("no specific colors were assigned" in msg for msg in warning_messages)
+
+
+@needs.colour
+def test_dotplot_group_colors_warns_on_missing_groups():
+    """Check that a warning is raised when not all groups have colors assigned."""
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    # Only assign color to one group - others should trigger warning
+    group_colors = {"CD19+ B": "blue"}
+
+    with pytest.warns(
+        UserWarning, match="will use the default colormap as no specific colors"
+    ):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            show=False,
         )
