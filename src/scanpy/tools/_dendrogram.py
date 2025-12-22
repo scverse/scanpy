@@ -67,6 +67,8 @@ def dendrogram(  # noqa: PLR0913
         groups and not per cell. The correlation matrix is computed using by
         default pearson but other methods are available.
 
+    .. array-support:: tl.dendrogram
+
     Parameters
     ----------
     adata

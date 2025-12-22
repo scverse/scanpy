@@ -63,6 +63,8 @@ def ingest(
     You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
     passing it.
 
+    .. array-support:: tl.ingest
+
     Parameters
     ----------
     adata
@@ -365,7 +367,7 @@ class Ingest:
             return adata.obsm[self._use_rep]
         return adata.X
 
-    def fit(self, adata_new):
+    def fit(self, adata_new: AnnData) -> None:
         """Map `adata_new` to the same representation as `adata`.
 
         This function identifies the representation which was used to

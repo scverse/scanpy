@@ -204,6 +204,8 @@ def aggregate(  # noqa: PLR0912
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
+    .. array-support:: get.aggregate
+
     Params
     ------
     adata

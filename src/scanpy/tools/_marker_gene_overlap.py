@@ -81,7 +81,7 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adj_pval_threshold: float | None = None,
     key_added: str = "marker_gene_overlap",
     inplace: bool = False,
-):
+) -> pd.DataFrame:
     """Calculate an overlap score between data-derived marker genes and provided markers.
 
     Marker gene overlap scores can be quoted as overlap counts, overlap
