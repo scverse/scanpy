@@ -66,7 +66,7 @@ jobs:
           echo "::group::Create environment"
           hatch -v env create ${{ matrix.env.name }}
           echo "::endgroup::"
-          hatch run ${{ matrix.env.name }}:python -c 'import session_info2 as si, scanpy, anndata; print(si.session_info(dependencies=True))'
+          hatch run ${{ matrix.env.name }}:session-info scanpy anndata
 
       - name: Run tests
         if: matrix.env.test-type == null
