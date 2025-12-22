@@ -35,7 +35,8 @@ class PCAEighDask:
         >>> import dask.array as da
         >>> import scipy.sparse as sp
         >>> x = (
-        ...     da.array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
+        ...     da
+        ...     .array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
         ...     .rechunk((10, -1))
         ...     .map_blocks(sp.csr_matrix)
         ... )

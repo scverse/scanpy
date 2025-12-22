@@ -1134,7 +1134,8 @@ def _add_categorical_legend(  # noqa: PLR0913
         # identify centroids to put labels
 
         all_pos = (
-            pd.DataFrame(scatter_array, columns=["x", "y"])
+            pd
+            .DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
             # Have to sort_index since if observed=True and categorical is unordered

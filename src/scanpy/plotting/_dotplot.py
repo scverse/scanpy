@@ -203,7 +203,8 @@ class DotPlot(BasePlot):
             # 2. compute mean expression value value
             if mean_only_expressed:
                 dot_color_df = (
-                    self.obs_tidy.mask(~obs_bool)
+                    self.obs_tidy
+                    .mask(~obs_bool)
                     .groupby(level=0, observed=True)
                     .mean()
                     .fillna(0)

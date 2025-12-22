@@ -71,7 +71,8 @@ def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarr
         return np.vstack(clip_square_sum(block, clip_val))[None, ...]
 
     squared_batch_counts_sum, batch_counts_sum = (
-        data_batch.map_blocks(
+        data_batch
+        .map_blocks(
             sum_and_sum_squares_clipped_from_block,
             new_axis=(1,),
             chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
