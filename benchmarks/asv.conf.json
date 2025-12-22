@@ -70,21 +70,7 @@
     // pip (with all the conda available packages installed first,
     // followed by the pip installed packages).
     //
-    "matrix": {
-        "numpy": [""],
-        "scipy": [""],
-        "h5py": [""],
-        "natsort": [""],
-        "pandas": [""],
-        "memory_profiler": [""],
-        "zarr": [""],
-        "pytest": [""],
-        "pip+igraph": [""], // https://github.com/airspeed-velocity/asv/issues/1554
-        // "psutil": [""]
-        "pooch": [""],
-        "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
-        // "scikit-misc": [""],
-    },
+    "matrix": {},
 
     // Combinations of libraries/python versions can be excluded/included
     // from the set to test. Each entry is a dictionary containing additional
