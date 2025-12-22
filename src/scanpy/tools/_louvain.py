@@ -223,7 +223,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         else:
             louvain_parts, _ = cugraph.louvain(g)
         groups = (
-            louvain_parts.to_pandas()
+            louvain_parts
+            .to_pandas()
             .sort_values("vertex")[["partition"]]
             .to_numpy()
             .ravel()

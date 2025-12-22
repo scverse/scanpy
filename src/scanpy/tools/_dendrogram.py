@@ -160,7 +160,8 @@ def dendrogram(  # noqa: PLR0913
 
     # aggregate values within categories using 'mean'
     mean_df = (
-        rep_df.groupby(level=0, observed=True)
+        rep_df
+        .groupby(level=0, observed=True)
         .mean()
         .loc[categories]  # Fixed ordering for pandas < 2
     )

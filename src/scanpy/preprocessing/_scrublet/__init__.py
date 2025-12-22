@@ -471,7 +471,8 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         "parameters": {
             "expected_doublet_rate": expected_doublet_rate,
             "sim_doublet_ratio": (
-                adata_sim.uns.get("scrublet", {})
+                adata_sim.uns
+                .get("scrublet", {})
                 .get("parameters", {})
                 .get("sim_doublet_ratio", None)
             ),
