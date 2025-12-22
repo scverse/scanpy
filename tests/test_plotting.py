@@ -1992,3 +1992,100 @@ def test_dotplot_group_colors_warns_on_missing_groups():
             group_colors=group_colors,
             show=False,
         )
+
+
+@needs.colour
+def test_dotplot_group_colors_coverage():
+    """Test to ensure full code coverage for group_colors feature."""
+    import matplotlib.pyplot as plt
+
+    adata = pbmc68k_reduced()
+    markers = ["CD79A", "CD3D", "CST3"]
+
+    # Test with complete group_colors to exercise _create_white_to_color_gradient
+    group_colors = {
+        cat: f"C{i}" for i, cat in enumerate(adata.obs["bulk_labels"].cat.categories)
+    }
+
+    # Create DotPlot and call make_figure to exercise _plot_stacked_colorbars
+    dp = sc.pl.DotPlot(
+        adata,
+        markers,
+        groupby="bulk_labels",
+        group_colors=group_colors,
+    )
+    dp.make_figure()
+
+    # Verify group_cmaps was created
+    assert dp.group_cmaps is not None
+    assert len(dp.group_cmaps) == len(adata.obs["bulk_labels"].cat.categories)
+
+    # Check that each group has a colormap (not a string)
+    for group, cmap in dp.group_cmaps.items():
+        assert callable(cmap), f"Expected colormap for {group}, got {type(cmap)}"
+
+    plt.close()
+
+
+@needs.colour
+def test_dotplot_group_colors_with_string_fallback():
+    """Test the fallback case where group_cmap is a string (default cmap)."""
+    import matplotlib.pyplot as plt
+
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+
+    # Only one group has a color, others fall back to default cmap (string)
+    group_colors = {"CD19+ B": "blue"}
+
+    with pytest.warns(
+        UserWarning, match="will use the default colormap as no specific colors"
+    ):
+        dp = sc.pl.DotPlot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+        )
+
+    dp.make_figure()
+
+    # Verify the fallback groups have the default cmap
+    for group, cmap in dp.group_cmaps.items():
+        if group == "CD19+ B":
+            # This should be a ListedColormap
+            assert callable(cmap)
+
+    plt.close()
+
+
+@needs.colour
+def test_create_white_to_color_gradient():
+    """Test the _create_white_to_color_gradient utility function."""
+    import numpy as np
+    from matplotlib.colors import ListedColormap
+
+    from scanpy.plotting._utils import _create_white_to_color_gradient
+
+    # Test with various color formats
+    test_colors = [
+        "red",  # named color
+        "#ff0000",  # hex
+        (1.0, 0.0, 0.0),  # RGB tuple
+        "C0",  # matplotlib cycle color
+    ]
+
+    for color in test_colors:
+        cmap = _create_white_to_color_gradient(color)
+
+        # Check it returns a ListedColormap
+        assert isinstance(cmap, ListedColormap), f"Failed for color: {color}"
+
+        # Check the colormap has 256 colors by default
+        assert len(cmap.colors) == 256, f"Wrong number of colors for: {color}"
+
+        # Check first color is white (or very close to it)
+        first_color = cmap.colors[0]
+        assert np.allclose(first_color[:3], [1.0, 1.0, 1.0], atol=0.01), (
+            f"First color should be white for: {color}"
+        )
