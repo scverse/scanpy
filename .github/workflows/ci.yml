@@ -60,8 +60,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv tool install --with='click!=8.3.0' hatch
+          echo "::group::Install hatch"
+          uv tool install hatch
+          echo "::endgroup::"
+          echo "::group::Create environment"
           hatch -v env create ${{ matrix.env.name }}
+          echo "::endgroup::"
+          hatch run ${{ matrix.env.name }}:python -c 'import session_info2 as si, scanpy, anndata; print(si.session_info(dependencies=True))'
 
       - name: Run tests
         if: matrix.env.test-type == null
