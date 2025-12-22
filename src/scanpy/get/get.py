@@ -258,8 +258,8 @@ def obs_df(
     >>> plotdf = sc.get.obs_df(
     ...     pbmc, keys=["CD8B", "n_genes"], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
-    >>> plotdf.columns
-    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.columns.astype("string")
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='string')
     >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 

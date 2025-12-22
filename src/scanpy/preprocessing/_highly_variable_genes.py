@@ -813,9 +813,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata.var["highly_variable"] = df["highly_variable"]
     adata.var["means"] = df["means"]
     adata.var["dispersions"] = df["dispersions"]
-    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(
-        np.float32, copy=False
-    )
+    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(np.float32)
 
     if batch_key is not None:
         adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]

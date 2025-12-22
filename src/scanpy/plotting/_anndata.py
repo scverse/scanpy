@@ -1202,11 +1202,11 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     ).issubset(categories)
 
     if standard_scale == "obs":
-        obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
-        obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
+        obs_tidy = obs_tidy.sub(obs_tidy.min(axis=1), axis=0)
+        obs_tidy = obs_tidy.div(obs_tidy.max(axis=1), axis=0).fillna(0)
     elif standard_scale == "var":
-        obs_tidy -= obs_tidy.min(0)
-        obs_tidy = (obs_tidy / obs_tidy.max(0)).fillna(0)
+        obs_tidy -= obs_tidy.min(axis=0)
+        obs_tidy = (obs_tidy / obs_tidy.max(axis=0)).fillna(0)
     elif standard_scale is None:
         pass
     else:
