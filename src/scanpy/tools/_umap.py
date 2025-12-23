@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from sklearn.utils import check_array, check_random_state
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._utils.random import _LegacyRandom
+    from ._types import DensmapMethodKwds
 
 type _InitPos = Literal["paga", "spectral", "random"]
 
@@ -52,7 +53,8 @@ def umap(  # noqa: PLR0913, PLR0915
     random_state: _LegacyRandom = 0,
     a: float | None = None,
     b: float | None = None,
-    method: Literal["umap", "rapids"] = "umap",
+    method: Literal["umap", "rapids", "densmap"] = "umap",
+    method_kwds: DensmapMethodKwds | None = None,
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
@@ -129,6 +131,8 @@ def umap(  # noqa: PLR0913, PLR0915
 
         ``'umap'``
             Umap’s simplical set embedding.
+        ``'densmap'``
+            Umap’s simplical set embedding with densmap=True :cite:p:`Narayan2021`.
         ``'rapids'``
             GPU accelerated implementation.
 
@@ -148,19 +152,51 @@ def umap(  # noqa: PLR0913, PLR0915
     copy
         Return a copy instead of writing to adata.
 
+    method_kwds
+        Additional method parameters.
+
+        If method is ``'densmap'``, the following parameters are available:
+
+            ``dens_lambda`` : `float`, optional (default: 2.0)
+                Controls the regularization weight of the density correlation term
+                in densMAP. Higher values prioritize density preservation over the
+                UMAP objective, and vice versa for values closer to zero. Setting this
+                parameter to zero is equivalent to running the original UMAP algorithm.
+            ``dens_frac`` : `float`, optional (default: 0.3)
+                Controls the fraction of epochs (between 0 and 1) where the
+                density-augmented objective is used in densMAP. The first
+                (1 - dens_frac) fraction of epochs optimize the original UMAP objective
+                before introducing the density correlation term.
+            ``dens_var_shift`` : `float`, optional (default: 0.1)
+                A small constant added to the variance of local radii in the
+                embedding when calculating the density correlation objective to
+                prevent numerical instability from dividing by a small number
+
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
+    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields unless method is 'densmap':
 
     `adata.obsm['X_umap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         UMAP coordinates of data.
     `adata.uns['umap' | key_added]` : :class:`dict`
         UMAP parameters.
 
+    When method is 'densmap', sets the following fields:
+
+    `adata.obsm['X_densmap']` : :class:`numpy.ndarray` (dtype `float`)
+        densMAP coordinates of data.
+    `adata.uns['densmap']` : :class:`dict`
+        densMAP parameters.
+
     """
     adata = adata.copy() if copy else adata
 
-    key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
+    key_obsm, key_uns = (
+        (("X_densmap", "densmap") if method == "densmap" else ("X_umap", "umap"))
+        if key_added is None
+        else [key_added] * 2
+    )
+    method_name = "DensMAP" if method == "densmap" else "UMAP"
 
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"
@@ -186,6 +222,7 @@ def umap(  # noqa: PLR0913, PLR0915
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
+
     adata.uns[key_uns] = dict(params=dict(a=a, b=b))
     if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
@@ -209,7 +246,33 @@ def umap(  # noqa: PLR0913, PLR0915
         n_pcs=neigh_params.get("n_pcs", None),
         silent=True,
     )
-    if method == "umap":
+
+    if method_kwds is None:
+        method_kwds = {}
+
+    densmap_kwds = (
+        {
+            "graph_dists": neighbors["distances"],
+            "n_neighbors": neigh_params.get("n_neighbors", 15),
+            # Default params from umap package
+            # Reference: https://github.com/lmcinnes/umap/blob/868e55cb614f361a0d31540c1f4a4b175136025c/umap/umap_.py#L1692
+            # If user provided method_kwds, the user-provided values should
+            # overwrite the default values specified above.
+            "lambda": method_kwds.get("dens_lambda", 2.0),
+            "frac": method_kwds.get("dens_frac", 0.3),
+            "var_shift": method_kwds.get("dens_var_shift", 0.1),
+        }
+        if method == "densmap"
+        else {}
+    )
+    if method == "densmap":
+        adata.uns[key_uns]["params"].update({
+            "dens_lambda": densmap_kwds["lambda"],
+            "dens_frac": densmap_kwds["frac"],
+            "dens_var_shift": densmap_kwds["var_shift"],
+        })
+
+    if method == "umap" or method == "densmap":
         # the data matrix X is really only used for determining the number of connected components
         # for the init condition in the UMAP embedding
         default_epochs = 500 if neighbors["connectivities"].shape[0] <= 10000 else 200
@@ -228,8 +291,8 @@ def umap(  # noqa: PLR0913, PLR0915
             random_state=random_state,
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
-            densmap=False,
-            densmap_kwds={},
+            densmap=(method == "densmap"),
+            densmap_kwds=densmap_kwds,
             output_dens=False,
             verbose=settings.verbosity > 3,
         )
@@ -274,8 +337,8 @@ def umap(  # noqa: PLR0913, PLR0915
         time=start,
         deep=(
             "added\n"
-            f"    {key_obsm!r}, UMAP coordinates (adata.obsm)\n"
-            f"    {key_uns!r}, UMAP parameters (adata.uns)"
+            f"    {key_obsm!r}, {method_name} coordinates (adata.obsm)\n"
+            f"    {key_uns!r}, {method_name} parameters (adata.uns)"
         ),
     )
     return adata if copy else None
