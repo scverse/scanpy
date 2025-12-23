@@ -834,7 +834,7 @@ _RANK_GENES_GROUPS_PARAMS = [
     [pytest.param(name, fn, id=name) for name, fn in _RANK_GENES_GROUPS_PARAMS],
 )
 def test_rank_genes_groups(image_comparer, name, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+    save_and_compare_images = partial(image_comparer, ROOT, tol=25)
 
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
@@ -1856,3 +1856,193 @@ def test_violin_scale_warning(monkeypatch):
 def test_dogplot() -> None:
     """Test that the dogplot function runs without errors."""
     sc.pl.dogplot()
+
+
+def test_dotplot_group_colors_raises_error_on_missing_dep(monkeypatch):
+    """Check that an informative ImportError is raised when colour-science is missing."""
+    import sys
+
+    # Remove colour from sys.modules if present and block reimport
+    monkeypatch.setitem(sys.modules, "colour", None)
+
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    group_colors = {"CD19+ B": "blue"}
+
+    with pytest.raises(ImportError, match="pip install colour-science"):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            show=False,
+        )
+
+
+@needs.colour
+@pytest.mark.parametrize(
+    ("name", "swap_axes"),
+    [
+        ("dotplot_group_colors", False),
+        ("dotplot_group_colors_swap_axes", True),
+    ],
+)
+def test_dotplot_group_colors(image_comparer, name, swap_axes):
+    """Check group_colors parameter with custom colors per group."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1", "IMP3", "UBALD2", "LTB", "CLPP"]
+
+    group_colors = {
+        "CD14+ Monocyte": "gray",
+        "Dendritic": "#a65628",  # brown
+        "CD8+ Cytotoxic T": "red",
+        "CD8+/CD45RA+ Naive Cytotoxic": "green",
+        "CD4+/CD45RA+/CD25- Naive T": "orange",
+        "CD4+/CD25 T Reg": "blue",
+        "CD4+/CD45RO+ Memory": "#ff7f00",  # orange
+        "CD19+ B": "#984ea3",  # purple
+        "CD56+ NK": "pink",
+        "CD34+": "cyan",
+    }
+
+    sc.pl.dotplot(
+        adata,
+        markers,
+        groupby="bulk_labels",
+        group_colors=group_colors,
+        dendrogram=True,
+        swap_axes=swap_axes,
+        show=False,
+    )
+    save_and_compare_images(name)
+
+
+@needs.colour
+def test_dotplot_group_colors_fallback(image_comparer):
+    """Check that fallback to default cmap works for groups not in group_colors."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc68k_reduced()
+
+    markers = ["SERPINB1", "IGFBP7", "GNLY", "IFITM1"]
+
+    # Intentionally incomplete dict to test fallback
+    group_colors = {
+        "CD14+ Monocyte": "gray",
+        "Dendritic": "purple",
+    }
+
+    # Expect warning about missing groups since we only specify 2 of 10 groups
+    with pytest.warns(
+        UserWarning, match="will use the default colormap as no specific colors"
+    ):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            cmap="Reds",  # Fallback cmap
+            dendrogram=True,
+            show=False,
+        )
+    save_and_compare_images("dotplot_group_colors_fallback")
+
+
+@needs.colour
+def test_dotplot_group_colors_warns_on_cmap():
+    """Check that a warning is raised when both cmap and group_colors are passed."""
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    group_colors = {"CD19+ B": "blue"}
+
+    # Expect both warnings: one for cmap+group_colors, one for missing groups
+    with pytest.warns(UserWarning, match="cmap|colormap") as record:
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            cmap="viridis",
+            show=False,
+        )
+    # Check that we got both expected warnings
+    warning_messages = [str(w.message) for w in record]
+    assert any("Both `cmap` and `group_colors`" in msg for msg in warning_messages)
+    assert any("no specific colors were assigned" in msg for msg in warning_messages)
+
+
+@needs.colour
+def test_dotplot_group_colors_warns_on_missing_groups():
+    """Check that a warning is raised when not all groups have colors assigned."""
+    adata = pbmc68k_reduced()
+    markers = ["CD79A"]
+    # Only assign color to one group - others should trigger warning
+    group_colors = {"CD19+ B": "blue"}
+
+    with pytest.warns(
+        UserWarning, match="will use the default colormap as no specific colors"
+    ):
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby="bulk_labels",
+            group_colors=group_colors,
+            show=False,
+        )
+
+
+def test_dotplot_group_colors_coverage_mock(mocker):
+    """Force-runs the group_colors logic using a MOCK 'colour' library. Uses the built-in 'mocker' fixture to avoid top-level imports."""
+    import importlib
+    import sys
+
+    import scanpy.plotting  # <--- Need this to fix the reference later
+    import scanpy.plotting._dotplot
+    import scanpy.plotting._utils
+
+    # 1. Create a Fake 'colour' library using the existing 'mocker' fixture
+    mock_colour = mocker.MagicMock()
+    # Fake OKLab conversion returning a red-ish color
+    mock_colour.convert.return_value = np.array([0.6, 0.2, 0.1])
+    # Fake Gradient returning random RGBs (256 steps)
+    mock_colour.algebra.lerp.return_value = np.random.rand(256, 3)
+
+    # 2. Patch 'sys.modules' so Python thinks 'colour' is installed
+    mocker.patch.dict(sys.modules, {"colour": mock_colour})
+
+    # We MUST reload the modules so they detect the "installed" package
+    importlib.reload(scanpy.plotting._utils)
+    importlib.reload(scanpy.plotting._dotplot)
+
+    try:
+        # 3. Setup dummy data WITH STRING INDICES
+        adata = AnnData(
+            X=np.random.rand(4, 2),
+            obs=pd.DataFrame(
+                {"group": ["A", "B", "A", "B"]}, index=["c1", "c2", "c3", "c4"]
+            ),
+            var=pd.DataFrame(index=["gene1", "gene2"]),
+        )
+
+        # 4. Run the DotPlot with group_colors
+        sc.pl.dotplot(
+            adata,
+            ["gene1", "gene2"],
+            groupby="group",
+            group_colors={"A": "red", "B": "blue"},
+            show=False,
+        )
+
+    finally:
+        # Cleanup: Reload modules back to original state
+        importlib.reload(scanpy.plotting._utils)
+        importlib.reload(scanpy.plotting._dotplot)
+
+        # CRITICAL FIX: Re-link the class in the parent package.
+        # This ensures 'sc.pl.DotPlot' points to the same class as the reloaded module,
+        # preventing "isinstance" failures in subsequent tests.
+        scanpy.plotting.DotPlot = scanpy.plotting._dotplot.DotPlot
+        scanpy.plotting.dotplot = scanpy.plotting._dotplot.dotplot

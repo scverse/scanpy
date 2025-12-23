@@ -1105,3 +1105,56 @@ def _deprecated_scale(
 def _dk(dendrogram: bool | str | None) -> str | None:  # noqa: FBT001
     """Convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
     return None if isinstance(dendrogram, bool) else dendrogram
+
+
+def _create_white_to_color_gradient(color: ColorLike, n_steps: int = 256):
+    """Generate a perceptually uniform colormap from white to a target color.
+
+    This function uses the OKLab color space for interpolation to ensure that
+    the brightness of the generated colormap changes uniformly.
+
+    Parameters
+    ----------
+    color
+        The target color for the gradient. Can be any valid matplotlib color.
+    n_steps
+        The number of steps in the colormap.
+
+    Returns
+    -------
+    A `matplotlib.colors.ListedColormap` object.
+    """
+    try:
+        import colour
+    except ImportError:
+        msg = (
+            "Please install the `colour-science` package to use `group_colors`: "
+            "`pip install colour-science` or `pip install scanpy[plotting]`"
+        )
+        raise ImportError(msg) from None
+    from matplotlib.colors import ListedColormap, to_hex
+
+    # Convert the input color to a hex string
+    hex_color = to_hex(color, keep_alpha=False)
+
+    # Define the color space for interpolation
+    space = "OKLab"
+
+    # Convert start (white) and end (target color) to the OKLab color space
+    target_oklab = colour.convert(hex_color, "Hexadecimal", space)
+    white_oklab = colour.convert("#ffffff", "Hexadecimal", space)
+
+    # Create the gradient through linear interpolation in OKLab
+    gradient = colour.algebra.lerp(
+        np.linspace(0, 1, n_steps)[..., np.newaxis],
+        white_oklab,
+        target_oklab,
+    )
+
+    # Convert the gradient back to sRGB for display
+    rgb_gradient = colour.convert(gradient, space, "sRGB")
+
+    # Clip values to be within the valid [0, 1] range for RGB
+    clipped_rgb = np.clip(rgb_gradient, 0, 1)
+
+    return ListedColormap(clipped_rgb)
