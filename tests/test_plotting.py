@@ -1999,6 +1999,7 @@ def test_dotplot_group_colors_coverage_mock(mocker):
     import importlib
     import sys
 
+    import scanpy.plotting  # <--- Need this to fix the reference later
     import scanpy.plotting._dotplot
     import scanpy.plotting._utils
 
@@ -2017,12 +2018,11 @@ def test_dotplot_group_colors_coverage_mock(mocker):
     importlib.reload(scanpy.plotting._dotplot)
 
     try:
-        # 3. Setup dummy data WITH STRING INDICES to satisfy AnnData strictness
+        # 3. Setup dummy data WITH STRING INDICES
         adata = AnnData(
             X=np.random.rand(4, 2),
             obs=pd.DataFrame(
-                {"group": ["A", "B", "A", "B"]},
-                index=["c1", "c2", "c3", "c4"],  # <--- FIXED: Explicit string indices
+                {"group": ["A", "B", "A", "B"]}, index=["c1", "c2", "c3", "c4"]
             ),
             var=pd.DataFrame(index=["gene1", "gene2"]),
         )
@@ -2040,3 +2040,9 @@ def test_dotplot_group_colors_coverage_mock(mocker):
         # Cleanup: Reload modules back to original state
         importlib.reload(scanpy.plotting._utils)
         importlib.reload(scanpy.plotting._dotplot)
+
+        # CRITICAL FIX: Re-link the class in the parent package.
+        # This ensures 'sc.pl.DotPlot' points to the same class as the reloaded module,
+        # preventing "isinstance" failures in subsequent tests.
+        scanpy.plotting.DotPlot = scanpy.plotting._dotplot.DotPlot
+        scanpy.plotting.dotplot = scanpy.plotting._dotplot.dotplot
