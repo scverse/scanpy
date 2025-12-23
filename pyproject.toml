@@ -108,7 +108,6 @@ test = [
     "scanpy[leiden]",
     "scanpy[skmisc]",
     "scanpy[dask-ml]",
-    "scanpy[plotting]",
 ]
 doc = [
     "sphinx>=8.2.3",
