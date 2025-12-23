@@ -114,11 +114,26 @@ def neighbors(  # noqa: PLR0913
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
+
+        .. note::
+           The `knn` parameter affects all methods but differently:
+
+           - 'gauss': Directly controls whether to use hard thresholding vs soft weighting
+           - 'umap': Affects the initial k-NN preprocessing, but UMAP still creates
+             varying connectivity strengths via fuzzy simplicial sets
+           - 'binary': Creates uniform (0/1) connectivity weights when `knn=True`
+
+           Use `method='binary'` for strictly uniform connectivity weights.
     method
-        Use 'umap' :cite:p:`McInnes2018`,
-        'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
-        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`)
-        for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018`, 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
+        with adaptive width :cite:t:`Haghverdi2016`), 'jaccard' (Jaccard kernel as in
+        PhenoGraph, :cite:t:`Levine2015`)or 'binary' for computing connectivities.
+
+        - 'umap': Creates connectivities with varying strengths based on fuzzy simplicial sets
+        - 'gauss': Uses Gaussian kernels with adaptive widths, respects `knn` parameter
+        - 'jaccard': Uses Jaccard kernels
+        - 'binary': Creates binary (0/1) connectivities based on k-nearest neighbor graph
+
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -544,6 +559,7 @@ class Neighbors:
         method
             See :func:`scanpy.pp.neighbors`.
             If `None`, skip calculating connectivities.
+            Use 'binary' for uniform connectivity weights when `knn=True`.
 
         Returns
         -------
@@ -573,6 +589,15 @@ class Neighbors:
 
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning("Using high n_obs without `knn=True` takes a lot of memory...")
+
+        # Warn when using knn=True with umap method
+        if knn and method == "umap":
+            logg.warning(
+                "Using `knn=True` with `method='umap'` affects k-NN preprocessing "
+                "but UMAP will still create connectivities with varying strengths. "
+                "For uniform connectivity weights, use `method='binary'` instead."
+            )
+
         # do not use the cached rp_forest
         self._rp_forest = None
         self.n_neighbors = n_neighbors
@@ -601,7 +626,11 @@ class Neighbors:
                     self._rp_forest = _make_forest_dict(index)
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
 
-        if method == "umap":
+        if method == "binary":
+            self._connectivities = _get_sparse_matrix_from_indices_distances(
+                knn_indices, np.ones_like(knn_distances), keep_self=False
+            )
+        elif method == "umap":
             self._connectivities = _connectivity.umap(
                 knn_indices,
                 knn_distances,
@@ -673,7 +702,9 @@ class Neighbors:
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = method if method in {"gauss", "jaccard", None} else "umap"
+        conn_method = (
+            method if method in {"gauss", "jaccard", "binary", None} else "umap"
+        )
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
