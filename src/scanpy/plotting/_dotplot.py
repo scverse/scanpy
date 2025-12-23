@@ -244,7 +244,7 @@ class DotPlot(BasePlot):
 
     def _prepare_dot_data(self, dot_color_df, dot_size_df):
         """Calculate the dataframes for dot size and color.
-        
+
         Refactored to helper to satisfy complexity checks.
         """
         # for if category defined by groupby (if any) compute for each var_name
@@ -657,12 +657,12 @@ class DotPlot(BasePlot):
             ax = fig.add_subplot(
                 colorbar_gs[i, 0]
             )  # Place the colorbar Axes in the first, wider column
-            
+
             # self.group_cmaps[group_name] is already a Colormap object (or string from fallback)
             cmap = self.group_cmaps[group_name]
             if isinstance(cmap, str):
                 cmap = colormaps.get_cmap(cmap)
-                
+
             mappable = ScalarMappable(norm=legend_norm, cmap=cmap)
 
             cb = matplotlib.colorbar.Colorbar(
