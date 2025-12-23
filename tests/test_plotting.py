@@ -28,6 +28,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from contextlib import ExitStack
     from typing import Any, Literal
 
     from matplotlib.axes import Axes
@@ -174,7 +175,14 @@ def test_clustermap(image_comparer, obs_keys, name):
 
 
 params_dotplot_matrixplot_stacked_violin = [
-    pytest.param(id, fn, id=id)
+    pytest.param(
+        *(id, fn),
+        id=id,
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=[pytest.mark.xfail("seaborn is incompatible with pandas 3")]
+        if pkg_version("pandas").major >= 3 and "stacked_violin" in id
+        else [],
+    )
     for id, fn in [
         (
             "dotplot",
@@ -534,14 +542,18 @@ def test_multiple_plots(image_comparer):
     save_and_compare_images("multiple_plots")
 
 
-def test_violin(image_comparer):
+def test_violin(
+    subtests: pytest.SubTests, exit_stack: ExitStack, image_comparer
+) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=40)
+    exit_stack.enter_context(plt.rc_context())
+    sc.pl.set_rcParams_defaults()
+    sc.set_figure_params(dpi=50, color_map="viridis")
 
-    with plt.rc_context():
-        sc.pl.set_rcParams_defaults()
-        sc.set_figure_params(dpi=50, color_map="viridis")
+    pbmc = pbmc68k_reduced()
+    pbmc.layers["negative"] = pbmc.X * -1
 
-        pbmc = pbmc68k_reduced()
+    with subtests.test("default"):
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -552,6 +564,7 @@ def test_violin(image_comparer):
         )
         save_and_compare_images("violin_multi_panel")
 
+    with subtests.test(groupby="bulk_labels"):
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -565,8 +578,7 @@ def test_violin(image_comparer):
         )
         save_and_compare_images("violin_multi_panel_with_groupby")
 
-        # test use of layer
-        pbmc.layers["negative"] = pbmc.X * -1
+    with subtests.test(layer="negative"):
         sc.pl.violin(
             pbmc,
             "CST3",
@@ -831,7 +843,18 @@ _RANK_GENES_GROUPS_PARAMS = [
 
 @pytest.mark.parametrize(
     ("name", "fn"),
-    [pytest.param(name, fn, id=name) for name, fn in _RANK_GENES_GROUPS_PARAMS],
+    [
+        pytest.param(
+            name,
+            fn,
+            id=name,
+            # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+            marks=[pytest.mark.xfail("seaborn is incompatible with pandas 3")]
+            if pkg_version("pandas").major >= 3 and "stacked_violin" in id
+            else [],
+        )
+        for name, fn in _RANK_GENES_GROUPS_PARAMS
+    ],
 )
 def test_rank_genes_groups(image_comparer, name, fn):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)

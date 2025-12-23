@@ -16,7 +16,7 @@ from scanpy.get import obs_df
 from ... import logging as logg
 from ..._compat import old_positionals
 from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata
+from ..._utils import _doc_params, _empty, sanitize_anndata, with_cat_dtype
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -1295,12 +1295,13 @@ def rank_genes_groups_violin(  # noqa: PLR0913
             _gene_names = _gene_names.tolist()
         df = obs_df(adata, _gene_names, use_raw=use_raw, gene_symbols=gene_symbols)
         new_gene_names = df.columns
-        df["hue"] = adata.obs[groups_key].astype(str).values
+        df["hue"] = adata.obs[groups_key].astype(str).array
         if reference == "rest":
             df.loc[df["hue"] != group_name, "hue"] = "rest"
         else:
             df.loc[~df["hue"].isin([group_name, reference]), "hue"] = np.nan
-        df["hue"] = df["hue"].astype("category")
+        # Convert categories to object because of https://github.com/mwaskom/seaborn/issues/3893
+        df["hue"] = with_cat_dtype(df["hue"].astype("category"), object)
         df_tidy = pd.melt(df, id_vars="hue", value_vars=new_gene_names)
         x = "variable"
         y = "value"
@@ -1316,7 +1317,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
             hue="hue",
             split=split,
             density_norm=density_norm,
-            orient="vertical",
+            orient="v",
             ax=ax,
         )
         if strip:

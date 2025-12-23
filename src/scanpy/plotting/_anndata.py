@@ -749,7 +749,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     layer: str | None = None,
     density_norm: DensityNorm = "width",
     order: Sequence[str] | None = None,
-    multi_panel: bool | None = None,
+    multi_panel: bool = False,
     xlabel: str = "",
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,

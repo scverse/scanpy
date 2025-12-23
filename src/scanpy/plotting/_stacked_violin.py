@@ -558,7 +558,7 @@ class StackedViolin(BasePlot):
                 x=x,
                 y="values",
                 data=_df,
-                orient="vertical",
+                orient="v",
                 ax=row_ax,
                 # use a single `color`` if row_colors[idx] is defined
                 # else use the palette
