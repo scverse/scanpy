@@ -179,7 +179,7 @@ params_dotplot_matrixplot_stacked_violin = [
         *(id, fn),
         id=id,
         # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=[pytest.mark.xfail("seaborn is incompatible with pandas 3")]
+        marks=[pytest.mark.xfail(reason="seaborn is incompatible with pandas 3")]
         if pkg_version("pandas").major >= 3 and "stacked_violin" in id
         else [],
     )
@@ -849,8 +849,8 @@ _RANK_GENES_GROUPS_PARAMS = [
             fn,
             id=name,
             # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-            marks=[pytest.mark.xfail("seaborn is incompatible with pandas 3")]
-            if pkg_version("pandas").major >= 3 and "stacked_violin" in id
+            marks=[pytest.mark.xfail(reason="seaborn is incompatible with pandas 3")]
+            if pkg_version("pandas").major >= 3 and "violin" in name
             else [],
         )
         for name, fn in _RANK_GENES_GROUPS_PARAMS
