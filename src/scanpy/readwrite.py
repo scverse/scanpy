@@ -1157,7 +1157,7 @@ def is_valid_filename(
             raise ValueError(msg)
         return ext if return_ext else True
     if len(ext_from_file) > 2:
-        logg.warning(
+        logg.debug(
             f"Your filename has more than two extensions: {ext_from_file}.\n"
             f"Only considering the two last: {ext_from_file[-2:]}."
         )
