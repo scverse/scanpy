@@ -17,12 +17,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from matplotlib.testing import setup
 from sklearn.exceptions import ConvergenceWarning
 
-setup()
-
 import scanpy as sc
+from scanpy._compat import pkg_version
 from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
@@ -32,7 +30,7 @@ ROOT = HERE / "_images_pbmc3k"
 @needs.leidenalg
 # https://github.com/pandas-dev/pandas/issues/61928
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-def test_pbmc3k(image_comparer):  # noqa: PLR0915
+def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     np.random.seed(0)
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
@@ -55,19 +53,22 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # add the total counts per cell as observations-annotation to adata
     adata.obs["n_counts"] = adata.X.sum(axis=1).A1
 
-    sc.pl.violin(
-        adata,
-        ["n_genes", "n_counts", "percent_mito"],
-        jitter=False,
-        multi_panel=True,
-        show=False,
-    )
-    save_and_compare_images("violin")
+    with subtests.test("violin"):
+        sc.pl.violin(
+            adata,
+            ["n_genes", "n_counts", "percent_mito"],
+            jitter=False,
+            multi_panel=True,
+            show=False,
+        )
+        save_and_compare_images("violin")
 
-    sc.pl.scatter(adata, x="n_counts", y="percent_mito", show=False)
-    save_and_compare_images("scatter_1")
-    sc.pl.scatter(adata, x="n_counts", y="n_genes", show=False)
-    save_and_compare_images("scatter_2")
+    with subtests.test("scatter_1"):
+        sc.pl.scatter(adata, x="n_counts", y="percent_mito", show=False)
+        save_and_compare_images("scatter_1")
+    with subtests.test("scatter_2"):
+        sc.pl.scatter(adata, x="n_counts", y="n_genes", show=False)
+        save_and_compare_images("scatter_2")
 
     adata = adata[adata.obs["n_genes"] < 2500, :]
     adata = adata[adata.obs["percent_mito"] < 0.05, :]
@@ -84,9 +85,11 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
             max_mean=3,
             min_disp=0.5,
         )
-    with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
-        sc.pl.filter_genes_dispersion(filter_result, show=False)
-    save_and_compare_images("filter_genes_dispersion")
+
+    with subtests.test("filter_genes_dispersion"):
+        with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
+            sc.pl.filter_genes_dispersion(filter_result, show=False)
+        save_and_compare_images("filter_genes_dispersion")
 
     adata = adata[:, filter_result.gene_subset].copy()
     sc.pp.log1p(adata)
@@ -96,19 +99,17 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     # PCA
 
     sc.pp.pca(adata, svd_solver="arpack")
-    sc.pl.pca(adata, color="CST3", show=False)
-    save_and_compare_images("pca")
+    with subtests.test("pca"):
+        sc.pl.pca(adata, color="CST3", show=False)
+        save_and_compare_images("pca")
 
-    sc.pl.pca_variance_ratio(adata, log=True, show=False)
-    save_and_compare_images("pca_variance_ratio")
+    with subtests.test("pca_variance_ratio"):
+        sc.pl.pca_variance_ratio(adata, log=True, show=False)
+        save_and_compare_images("pca_variance_ratio")
 
-    # UMAP
+    # Neighbors
 
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
-    # sc.tl.umap(adata)  # umaps lead to slight variations
-
-    # sc.pl.umap(adata, color=['CST3', 'NKG7', 'PPBP'], use_raw=False, show=False)
-    # save_and_compare_images('umap_1')
 
     # Clustering the graph
 
@@ -121,10 +122,9 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
         flavor="igraph",
     )
 
-    # sc.pl.umap(adata, color=["leiden", "CST3", "NKG7"], show=False)
-    # save_and_compare_images("umap_2")
-    sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
-    save_and_compare_images("scatter_3")
+    with subtests.test("scatter_3"):
+        sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
+        save_and_compare_images("scatter_3")
 
     # Finding marker genes
     # Due to incosistency with our test runner vs local, these clusters need to
@@ -136,9 +136,10 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     data_df = adata[:, marker_genes].to_df()
     data_df["leiden"] = adata.obs["leiden"]
     max_idxs = data_df.groupby("leiden", observed=True).mean().idxmax()
-    assert not max_idxs[marker_genes][
-        max_idxs[marker_genes].duplicated(keep=False)
-    ].tolist(), "Not all marker genes are unique per cluster"
+    with subtests.test("marker_genes_unique"):
+        assert not max_idxs[marker_genes][
+            max_idxs[marker_genes].duplicated(keep=False)
+        ].tolist(), "Not all marker genes are unique per cluster"
     leiden_relabel = {
         max_idxs[marker_gene]: str(i) for i, marker_gene in enumerate(marker_genes)
     }
@@ -152,23 +153,29 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     )
 
     sc.tl.rank_genes_groups(adata, "leiden")
-    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-    save_and_compare_images("rank_genes_groups_1")
+    with subtests.test("rank_genes_groups_1"):
+        sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
+        save_and_compare_images("rank_genes_groups_1")
 
     with warnings.catch_warnings():
         # This seems to only happen with older versions of scipy for some reason
         warnings.filterwarnings("always", category=ConvergenceWarning)
         sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
-    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-    save_and_compare_images("rank_genes_groups_2")
+    with subtests.test("rank_genes_groups_2"):
+        sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
+        save_and_compare_images("rank_genes_groups_2")
 
     sc.tl.rank_genes_groups(adata, "leiden", groups=["0"], reference="1")
-    sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
-    save_and_compare_images("rank_genes_groups_3")
+    with subtests.test("rank_genes_groups_3"):
+        sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
+        save_and_compare_images("rank_genes_groups_3")
 
-    # gives a strange error, probably due to jitter or something
-    # sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
-    # save_and_compare_images('rank_genes_groups_4')
+    with subtests.test("rank_genes_groups_4"):
+        sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
+        try:
+            save_and_compare_images("rank_genes_groups_4")
+        except AssertionError:
+            pytest.xfail("rank_genes_groups_violin not reproducible (jitter?)")
 
     new_cluster_names = [
         *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
@@ -176,9 +183,14 @@ def test_pbmc3k(image_comparer):  # noqa: PLR0915
     ]
     adata.rename_categories("leiden", new_cluster_names)
 
-    # sc.pl.umap(adata, color='leiden', legend_loc='on data', title='', frameon=False, show=False)
-    # save_and_compare_images('umap_3')
-    sc.pl.violin(
-        adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
-    )
-    save_and_compare_images("violin_2")
+    with subtests.test("violin_2"):
+        sc.pl.violin(
+            adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
+        )
+        try:
+            save_and_compare_images("violin_2")
+        except AssertionError:
+            if pkg_version("pandas").major >= 3:
+                # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+                pytest.xfail("seaborn is incompatible with pandas 3")
+            raise

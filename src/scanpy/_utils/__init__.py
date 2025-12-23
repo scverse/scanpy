@@ -29,6 +29,7 @@ from weakref import WeakSet
 
 import h5py
 import numpy as np
+import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
+    from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
     from ..neighbors import NeighborsParams, RPForestDict
@@ -79,6 +81,7 @@ __all__ = [
     "sanitize_anndata",
     "select_groups",
     "update_params",
+    "with_cat_dtype",
 ]
 
 
@@ -492,6 +495,23 @@ def moving_average(a: np.ndarray, n: int):
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1 :] / n
+
+
+@singledispatch
+def with_cat_dtype[X: pd.Series | pd.CategoricalIndex | pd.Categorical](
+    x: X, dtype: PdDtype
+) -> X:
+    raise NotImplementedError
+
+
+@with_cat_dtype.register(pd.Series)
+def _(x: pd.Series, dtype: PdDtype) -> pd.Series:
+    return x.cat.set_categories(x.cat.categories.astype(dtype))
+
+
+@with_cat_dtype.register(pd.Categorical | pd.CategoricalIndex)
+def _[X: pd.Categorical | pd.CategoricalIndex](x: X, dtype: PdDtype) -> X:
+    return x.set_categories(x.categories.astype(dtype))
 
 
 # --------------------------------------------------------------------------------

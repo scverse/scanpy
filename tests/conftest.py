@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, TypedDict, cast
@@ -148,3 +149,9 @@ def plt():
     from matplotlib import pyplot as plt
 
     return plt
+
+
+@pytest.fixture
+def exit_stack() -> Generator[ExitStack]:
+    with ExitStack() as stack:
+        yield stack

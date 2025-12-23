@@ -219,7 +219,7 @@ def spring_project(  # noqa: PLR0912, PLR0915
     np.save(subplot_dir / "cell_filter.npy", np.arange(x.shape[0]))
 
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
-    coords = coords - coords.min(0)[None, :]
+    coords = coords - coords.min(axis=0)[None, :]
     coords = (
         coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :]
         + np.array([200, -200])[None, :]
@@ -342,8 +342,8 @@ def _get_color_stats_genes(color_stats, x, gene_list):
     means, variances = mean_var(x, axis=0, correction=1)
     stdevs = np.zeros(variances.shape, dtype=float)
     stdevs[variances > 0] = np.sqrt(variances[variances > 0])
-    mins = x.min(0).todense().A1
-    maxes = x.max(0).todense().A1
+    mins = x.min(axis=0).todense().A1
+    maxes = x.max(axis=0).todense().A1
 
     pctl = 99.6
     pctl_n = (100 - pctl) / 100.0 * x.shape[0]

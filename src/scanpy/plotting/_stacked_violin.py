@@ -229,11 +229,13 @@ class StackedViolin(BasePlot):
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
             warn(msg, FutureWarning)
         if standard_scale == "group":
-            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
-            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
+            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(axis=1), axis=0)
+            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(axis=1), axis=0).fillna(
+                0
+            )
         elif standard_scale == "var":
-            self.obs_tidy -= self.obs_tidy.min(0)
-            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
+            self.obs_tidy -= self.obs_tidy.min(axis=0)
+            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(axis=0)).fillna(0)
         elif standard_scale is None:
             pass
         else:
@@ -556,7 +558,7 @@ class StackedViolin(BasePlot):
                 x=x,
                 y="values",
                 data=_df,
-                orient="vertical",
+                orient="v",
                 ax=row_ax,
                 # use a single `color`` if row_colors[idx] is defined
                 # else use the palette
