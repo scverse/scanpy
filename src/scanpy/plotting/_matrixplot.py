@@ -169,7 +169,8 @@ class MatrixPlot(BasePlot):
         if values_df is None:
             # compute mean value
             values_df = (
-                self.obs_tidy.groupby(level=0, observed=True)
+                self.obs_tidy
+                .groupby(level=0, observed=True)
                 .mean()
                 .loc[
                     self.categories_order

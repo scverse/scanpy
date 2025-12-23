@@ -96,7 +96,8 @@ def rank_genes_groups_df(
     for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
             pts_df = (
-                adata.uns[key][pts][group]
+                adata
+                .uns[key][pts][group]
                 .rename_axis(index="names")
                 .reset_index()
                 .melt(id_vars="names", var_name="group", value_name=name)

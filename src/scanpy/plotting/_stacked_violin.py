@@ -394,7 +394,8 @@ class StackedViolin(BasePlot):
         # get mean values for color and transform to color values
         # using colormap
         _color_df = (
-            _matrix.groupby(level=0, observed=True)
+            _matrix
+            .groupby(level=0, observed=True)
             .median()
             .loc[
                 self.categories_order
@@ -497,7 +498,8 @@ class StackedViolin(BasePlot):
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
         df = (
-            pd.DataFrame(_matrix.stack(future_stack=True))
+            pd
+            .DataFrame(_matrix.stack(future_stack=True))
             .reset_index()
             .rename(
                 columns={
