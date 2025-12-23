@@ -466,7 +466,13 @@ def test_stacked_violin_obj(image_comparer, plt):
 
 
 # checking for https://github.com/scverse/scanpy/issues/3152
-def test_stacked_violin_swap_axes_match(image_comparer):
+def test_stacked_violin_swap_axes_match(
+    request: pytest.FixtureRequest, image_comparer
+) -> None:
+    if pkg_version("pandas").major >= 3:
+        reason = "seaborn is incompatible with pandas 3"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     save_and_compare_images = partial(image_comparer, ROOT, tol=10)
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(
@@ -543,7 +549,7 @@ def test_multiple_plots(image_comparer):
 
 
 def test_violin(
-    subtests: pytest.SubTests, exit_stack: ExitStack, image_comparer
+    subtests: pytest.Subtests, exit_stack: ExitStack, image_comparer
 ) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=40)
     exit_stack.enter_context(plt.rc_context())
@@ -576,7 +582,12 @@ def test_violin(
             show=False,
             rotation=90,
         )
-        save_and_compare_images("violin_multi_panel_with_groupby")
+        try:
+            save_and_compare_images("violin_multi_panel_with_groupby")
+        except AssertionError:
+            if pkg_version("pandas").major >= 3:
+                pytest.skip("seaborn is incompatible with pandas 3")
+            raise
 
     with subtests.test(layer="negative"):
         sc.pl.violin(
