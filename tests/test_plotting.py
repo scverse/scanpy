@@ -586,6 +586,7 @@ def test_violin(
             save_and_compare_images("violin_multi_panel_with_groupby")
         except AssertionError:
             if pkg_version("pandas").major >= 3:
+                # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
                 pytest.skip("seaborn is incompatible with pandas 3")
             raise
 
