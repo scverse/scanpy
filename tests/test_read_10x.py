@@ -28,15 +28,19 @@ def assert_anndata_equal(a1, a2):
         pytest.param(
             ROOT / "1.2.0" / "filtered_gene_bc_matrices" / "hg19_chr21",
             ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
+            id="1.2.0",
         ),
         pytest.param(
             ROOT / "3.0.0" / "filtered_feature_bc_matrix",
             ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5",
+            id="3.0.0",
         ),
     ],
 )
-@pytest.mark.parametrize("prefix", [None, "prefix_"])
-def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
+@pytest.mark.parametrize("prefix", [None, "prefix_"], ids=["no_prefix", "prefix"])
+def test_read_10x(
+    tmp_path: Path, mtx_path: Path, h5_path: Path, prefix: str | None
+) -> None:
     if prefix is not None:
         # Build files named "prefix_XXX.xxx" in a temporary directory.
         mtx_path_orig = mtx_path
