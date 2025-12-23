@@ -626,23 +626,24 @@ def _read_10x_mtx(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
         header=None,
         sep="\t",
+        dtype="str",
     )
     if var_names == "gene_symbols":
-        var_names_idx = pd.Index(genes[1].values)
+        var_names_idx = pd.Index(genes[1].array)
         if make_unique:
             var_names_idx = anndata.utils.make_index_unique(var_names_idx)
         adata.var_names = var_names_idx
-        adata.var["gene_ids"] = genes[0].values
+        adata.var["gene_ids"] = genes[0].array
     elif var_names == "gene_ids":
-        adata.var_names = genes[0].values
-        adata.var["gene_symbols"] = genes[1].values
+        adata.var_names = genes[0].array
+        adata.var["gene_symbols"] = genes[1].array
     else:
         msg = "`var_names` needs to be 'gene_symbols' or 'gene_ids'"
         raise ValueError(msg)
     if not is_legacy:
-        adata.var["feature_types"] = genes[2].values
+        adata.var["feature_types"] = genes[2].array
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].values
+    adata.obs_names = barcodes[0].array
     return adata
 
 
