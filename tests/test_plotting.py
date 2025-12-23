@@ -2010,7 +2010,6 @@ def test_dotplot_group_colors_coverage_mock(mocker):
     mock_colour.algebra.lerp.return_value = np.random.rand(256, 3)
 
     # 2. Patch 'sys.modules' so Python thinks 'colour' is installed
-    # mocker.patch.dict automatically undoes itself after the test!
     mocker.patch.dict(sys.modules, {"colour": mock_colour})
 
     # We MUST reload the modules so they detect the "installed" package
@@ -2018,15 +2017,17 @@ def test_dotplot_group_colors_coverage_mock(mocker):
     importlib.reload(scanpy.plotting._dotplot)
 
     try:
-        # 3. Setup dummy data (no need for external helpers)
+        # 3. Setup dummy data WITH STRING INDICES to satisfy AnnData strictness
         adata = AnnData(
             X=np.random.rand(4, 2),
-            obs=pd.DataFrame({"group": ["A", "B", "A", "B"]}),
+            obs=pd.DataFrame(
+                {"group": ["A", "B", "A", "B"]},
+                index=["c1", "c2", "c3", "c4"],  # <--- FIXED: Explicit string indices
+            ),
             var=pd.DataFrame(index=["gene1", "gene2"]),
         )
 
         # 4. Run the DotPlot with group_colors
-        # This executes the "RED" lines in _dotplot.py even on CI
         sc.pl.dotplot(
             adata,
             ["gene1", "gene2"],
@@ -2036,6 +2037,6 @@ def test_dotplot_group_colors_coverage_mock(mocker):
         )
 
     finally:
-        # Cleanup: Reload modules back to original state so we don't break other tests
+        # Cleanup: Reload modules back to original state
         importlib.reload(scanpy.plotting._utils)
         importlib.reload(scanpy.plotting._dotplot)
