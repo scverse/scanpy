@@ -470,6 +470,7 @@ def test_stacked_violin_swap_axes_match(
     request: pytest.FixtureRequest, image_comparer
 ) -> None:
     if pkg_version("pandas").major >= 3:
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
         reason = "seaborn is incompatible with pandas 3"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -861,6 +862,7 @@ _RANK_GENES_GROUPS_PARAMS = [
             fn,
             id=name,
             # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+            # and https://github.com/mwaskom/seaborn/issues/3893
             marks=[pytest.mark.xfail(reason="seaborn is incompatible with pandas 3")]
             if pkg_version("pandas").major >= 3 and "violin" in name
             else [],
