@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Scverse Community Forum
+    url: https://discourse.scverse.org/
+    about: If you have questions about “How to do X”, please ask them here.

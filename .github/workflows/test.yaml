@@ -1,0 +1,103 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 5 1,15 * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Get the test environment from hatch as defined in pyproject.toml.
+  # This ensures that the pyproject.toml is the single point of truth for test definitions and the same tests are
+  # run locally and on continuous integration.
+  # Check [[tool.hatch.envs.hatch-test.matrix]] in pyproject.toml and https://hatch.pypa.io/latest/environment/ for
+  # more details.
+  get-environments:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Get test environments
+        id: get-envs
+        run: |
+          ENVS_JSON=$(uvx hatch env show --json | jq -c 'to_entries
+            | map(
+                select(.key | startswith("hatch-test"))
+                | {
+                    name: .key,
+                    label: (if (.key | contains("pre")) then .key + " (PRE-RELEASE DEPENDENCIES)" else .key end),
+                    python: .value.python
+                  }
+              )')
+          echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
+
+  # Run tests through hatch. Spawns a separate runner for each environment defined in the hatch matrix obtained above.
+  test:
+    needs: get-environments
+    permissions:
+       id-token: write  # for codecov OIDC
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+
+    name: ${{ matrix.env.label }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ contains(matrix.env.name, 'pre') }}  # make "all-green" pass even if pre-release job fails
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.env.python }}
+      - name: create hatch environment
+        run: uvx hatch env create ${{ matrix.env.name }}
+      - name: run tests using hatch
+        env:
+          MPLBACKEND: agg
+          PLATFORM: ${{ matrix.os }}
+          DISPLAY: :42
+        run: uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto
+      - name: generate coverage report
+        run: |
+          # See https://coverage.readthedocs.io/en/latest/config.html#run-patch
+          test -f .coverage || uvx hatch run ${{ matrix.env.name }}:cov-combine
+          uvx hatch run ${{ matrix.env.name }}:cov-report   # report visibly
+          uvx hatch run ${{ matrix.env.name }}:coverage xml # create report for upload
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          use_oidc: true
+
+  # Check that all tests defined above pass. This makes it easy to set a single "required" test in branch
+  # protection instead of having to update it frequently. See https://github.com/re-actors/alls-green#why.
+  check:
+    name: Tests pass in all hatch environments
+    if: always()
+    needs:
+      - get-environments
+      - test
+    runs-on: ubuntu-latest
+    steps:
+        - uses: re-actors/alls-green@release/v1
+          with:
+            jobs: ${{ toJSON(needs) }}

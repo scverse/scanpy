@@ -1,0 +1,17 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+    "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+    "formatter": { "useEditorconfig": true },
+    "overrides": [
+        {
+            "includes": ["./.vscode/*.json", "**/*.jsonc"],
+            "json": {
+                "formatter": { "trailingCommas": "all" },
+                "parser": {
+                    "allowComments": true,
+                    "allowTrailingCommas": true,
+                },
+            },
+        },
+    ],
+}

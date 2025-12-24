@@ -1,0 +1,11 @@
+name: Feature request
+description: Propose a new feature for scanpy
+type: Enhancement
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of feature
+      description: Please describe your suggestion for a new feature. It might help to describe a problem or use case, plus any alternatives that you have considered.
+    validations:
+      required: true

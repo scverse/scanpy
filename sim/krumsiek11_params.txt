@@ -1,8 +1,0 @@
-model = sim/krumsiek11.txt
-tmax = 800
-branching = True
-nrRealizations = 4
-noiseObs = 0
-noiseDyn = 0.001
-step = 5
-seed = 0

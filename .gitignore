@@ -1,24 +1,21 @@
-# Scanpy
-data/
-figs/
-*/figs/
-write/
-
-# always-ignore extensions
-*~
-
-# Python / Byte-compiled / optimized / DLL 
-__pycache__/
-*.py[cod]
-
-# OS or Editor files and folders
+# Temp files
 .DS_Store
-Thumbs.db
-.ipynb_checkpoints/
-.directory
-/.idea/
+*~
+buck-out/
 
-# always-ignore directories
+# Compiled files
+.venv/
+__pycache__/
+.*cache/
+
+# Distribution / packaging
 /dist/
-/build/
 
+# Tests and coverage
+/data/
+/node_modules/
+/.coverage*
+
+# docs
+/docs/generated/
+/docs/_build/

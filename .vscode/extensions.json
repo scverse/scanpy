@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        // GitHub integration
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        // Language support
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "tamasfe.even-better-toml",
+        // Dependency management
+        "ninoseki.vscode-mogami",
+        // Linting and formatting
+        "editorconfig.editorconfig",
+        "charliermarsh.ruff",
+        "biomejs.biome",
+    ],
+}

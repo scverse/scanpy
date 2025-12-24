@@ -1,0 +1,93 @@
+name: Bug report
+description: Report something that is broken or incorrect
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: Please read [this guide](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports)
+        detailing how to provide the necessary information for us to reproduce your bug. In brief:
+          * Please provide exact steps how to reproduce the bug in a clean Python environment.
+          * In case it's not clear what's causing this bug, please provide the data or the data generation procedure.
+          * Replicate problems on public datasets or share data subsets when full sharing isn't possible.
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        Which version of packages.
+
+        Please install `session-info2`, run the following command in a notebook,
+        click the “Copy as Markdown” button, then paste the results into the text box below.
+
+        ```python
+        In[1]: import session_info2; session_info2.session_info(dependencies=True)
+        ```
+
+        Alternatively, run this in a console:
+
+        ```python
+        >>> import session_info2; print(session_info2.session_info(dependencies=True)._repr_mimebundle_()["text/markdown"])
+        ```
+      render: python
+      placeholder: |
+        anndata	0.11.3
+        ----	----
+        charset-normalizer	3.4.1
+        coverage	7.7.0
+        psutil	7.0.0
+        dask	2024.7.1
+        jaraco.context	5.3.0
+        numcodecs	0.15.1
+        jaraco.functools	4.0.1
+        Jinja2	3.1.6
+        sphinxcontrib-jsmath	1.0.1
+        sphinxcontrib-htmlhelp	2.1.0
+        toolz	1.0.0
+        session-info2	0.1.2
+        PyYAML	6.0.2
+        llvmlite	0.44.0
+        scipy	1.15.2
+        pandas	2.2.3
+        sphinxcontrib-devhelp	2.0.0
+        h5py	3.13.0
+        tblib	3.0.0
+        setuptools-scm	8.2.0
+        more-itertools	10.3.0
+        msgpack	1.1.0
+        sparse	0.15.5
+        wrapt	1.17.2
+        jaraco.collections	5.1.0
+        numba	0.61.0
+        pyarrow	19.0.1
+        pytz	2025.1
+        MarkupSafe	3.0.2
+        crc32c	2.7.1
+        sphinxcontrib-qthelp	2.0.0
+        sphinxcontrib-serializinghtml	2.0.0
+        zarr	2.18.4
+        asciitree	0.3.3
+        six	1.17.0
+        sphinxcontrib-applehelp	2.0.0
+        numpy	2.1.3
+        cloudpickle	3.1.1
+        sphinxcontrib-bibtex	2.6.3
+        natsort	8.4.0
+        jaraco.text	3.12.1
+        setuptools	76.1.0
+        Deprecated	1.2.18
+        packaging	24.2
+        python-dateutil	2.9.0.post0
+        ----	----
+        Python	3.13.2 | packaged by conda-forge | (main, Feb 17 2025, 14:10:22) [GCC 13.3.0]
+        OS	Linux-6.11.0-109019-tuxedo-x86_64-with-glibc2.39
+        Updated	2025-03-18 15:47

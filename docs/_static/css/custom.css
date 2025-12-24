@@ -1,0 +1,4 @@
+/* Reduce the font size in data frames - See https://github.com/scverse/cookiecutter-scverse/issues/193 */
+div.cell_output table.dataframe {
+    font-size: 0.8em;
+}
