@@ -179,7 +179,7 @@ params_dotplot_matrixplot_stacked_violin = [
         *(id, fn),
         id=id,
         # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=[pytest.mark.xfail(reason="seaborn is incompatible with pandas 3")]
+        marks=[pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
         if pkg_version("pandas").major >= 3 and "stacked_violin" in id
         else [],
     )
@@ -471,7 +471,7 @@ def test_stacked_violin_swap_axes_match(
 ) -> None:
     if pkg_version("pandas").major >= 3:
         # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        reason = "seaborn is incompatible with pandas 3"
+        reason = "seaborn violin plot is incompatible with pandas 3"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=10)
@@ -588,7 +588,7 @@ def test_violin(
         except AssertionError:
             if pkg_version("pandas").major >= 3:
                 # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-                pytest.skip("seaborn is incompatible with pandas 3")
+                pytest.skip("seaborn violin plot is incompatible with pandas 3")
             raise
 
     with subtests.test(layer="negative"):
@@ -863,7 +863,7 @@ _RANK_GENES_GROUPS_PARAMS = [
             id=name,
             # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
             # and https://github.com/mwaskom/seaborn/issues/3893
-            marks=[pytest.mark.xfail(reason="seaborn is incompatible with pandas 3")]
+            marks=[pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
             if pkg_version("pandas").major >= 3 and "violin" in name
             else [],
         )

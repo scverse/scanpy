@@ -192,5 +192,5 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
         except AssertionError:
             if pkg_version("pandas").major >= 3:
                 # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-                pytest.xfail("seaborn is incompatible with pandas 3")
+                pytest.xfail("seaborn violin plot is incompatible with pandas 3")
             raise
