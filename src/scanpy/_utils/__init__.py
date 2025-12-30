@@ -290,7 +290,7 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> G
     import igraph as ig
 
     sources, targets = adjacency.nonzero()
-    weights = dematrix(adjacency[sources, targets]).ravel()
+    weights = dematrix(adjacency[sources, targets]).ravel() if len(sources) else []
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
     g.add_edges(list(zip(sources, targets, strict=True)))
