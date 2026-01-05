@@ -39,6 +39,7 @@ def test_cell_demultiplexing():
     expected = pd.array(doublets + classes + negatives, dtype="string")
     classification = test_data.obs["Classification"].array.astype("string")
     # This is a bit flaky, so allow some mismatches:
-    if (expected != classification).sum() > 3:
+    # (Series() because of https://github.com/pandas-dev/pandas/issues/63458)
+    if pd.Series(expected != classification).sum() > 3:
         # Compare lists for better error message
         assert classification.tolist() == expected.tolist()

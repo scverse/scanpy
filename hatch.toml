@@ -35,6 +35,7 @@ overrides.matrix.deps.python = [
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "pandas>=3rc0" },
 ]
 overrides.matrix.deps.dependency-groups = [
     { if = [ "stable", "pre", "low-vers" ], value = "test" },
