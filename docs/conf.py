@@ -126,7 +126,7 @@ ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
-always_use_bars_union = True  # Don’t use `Union` when building with Python ≤3.14
+always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
 
 pygments_style = "default"
 pygments_dark_style = "native"
