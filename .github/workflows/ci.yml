@@ -79,6 +79,7 @@ jobs:
           hatch run ${{ matrix.env.name }}:run-cov
           hatch run ${{ matrix.env.name }}:cov-combine
           hatch run ${{ matrix.env.name }}:coverage xml
+          hatch run ${{ matrix.env.name }}:cov-report
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
