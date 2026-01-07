@@ -126,6 +126,7 @@ ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
+always_use_bars_union = True  # Don’t use `Union` when building with Python ≤3.14
 
 pygments_style = "default"
 pygments_dark_style = "native"
@@ -157,11 +158,7 @@ intersphinx_mapping = dict(
     pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
-    python=(
-        # TODO: switch to `/3` once docs are built with Python 3.14
-        "https://docs.python.org/3.13",
-        None,
-    ),
+    python=("https://docs.python.org/3", None),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
