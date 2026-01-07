@@ -84,19 +84,20 @@ jobs:
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
         uses: codecov/codecov-action@v5
         with:
-          use_oidc: true
           flags: ${{ matrix.env.name }}
-          fail_ci_if_error: true
           files: test-data/coverage.xml
+          use_oidc: true
+          fail_ci_if_error: true
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
-          use_oidc: true
+          report_type: test_results
           flags: ${{ matrix.env.name }}
+          files: test-data/test-results.xml
+          use_oidc: true
           fail_ci_if_error: true
-          file: test-data/test-results.xml
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}
