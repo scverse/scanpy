@@ -273,9 +273,18 @@ def scrublet(  # noqa: PLR0913
         ]
         scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
 
+        # Keep track of the dtypes in the original adata.obs
+
+        orig_dtypes = adata.obs.dtypes
+
         # Now reset the obs to get the scrublet scores
 
         adata.obs = scrubbed_obs.loc[adata.obs_names.values]
+
+        # Coerce dtypes from the original adata.obs back to the new adata.obs after _run_scrublet()
+
+        for col_name, col_type in orig_dtypes.items():
+            adata.obs[col_name] = adata.obs[col_name].astype(dtype=col_type)
 
         # Save the .uns from each batch separately
 
