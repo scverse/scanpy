@@ -228,3 +228,14 @@ def test_scrublet_simulate_doublets():
         adata_sim.obsm["doublet_parents"],
         np.array([[13, 132], [106, 43], [152, 3], [160, 103]]),
     )
+
+
+def test_scrublet_dtypes():
+    """Test that Scrublet does not change dtypes of existing data.obs cols."""
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    adata.obs["batch"] = adata.obs["batch"].astype("category")
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
+
+    assert adata.obs["batch"].dtype == "category"
