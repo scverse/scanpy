@@ -262,7 +262,6 @@ def scrublet(  # noqa: PLR0913
 
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
-
         batches = np.unique(adata.obs[batch_key])
         scrubbed = [
             _run_scrublet(
@@ -274,20 +273,16 @@ def scrublet(  # noqa: PLR0913
         scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed])
 
         # Keep track of the dtypes in the original adata.obs
-
         orig_dtypes = adata.obs.dtypes
 
         # Now reset the obs to get the scrublet scores
-
         adata.obs = scrubbed_obs.loc[adata.obs_names.values]
 
         # Coerce dtypes from the original adata.obs back to the new adata.obs after _run_scrublet()
-
         for col_name, col_type in orig_dtypes.items():
             adata.obs[col_name] = adata.obs[col_name].astype(dtype=col_type)
 
         # Save the .uns from each batch separately
-
         adata.uns["scrublet"] = {}
         adata.uns["scrublet"]["batches"] = dict(
             zip(batches, [scrub["uns"] for scrub in scrubbed], strict=True)
@@ -295,14 +290,12 @@ def scrublet(  # noqa: PLR0913
 
         # Record that we've done batched analysis, so e.g. the plotting
         # function knows what to do.
-
         adata.uns["scrublet"]["batched_by"] = batch_key
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim)
 
         # Copy outcomes to input object from our processed version
-
         adata.obs["doublet_score"] = scrubbed["obs"]["doublet_score"]
         adata.obs["predicted_doublet"] = scrubbed["obs"]["predicted_doublet"]
         adata.uns["scrublet"] = scrubbed["uns"]
