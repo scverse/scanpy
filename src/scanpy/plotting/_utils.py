@@ -1127,6 +1127,7 @@ def _create_white_to_color_gradient(
     -------
     A `matplotlib.colors.ListedColormap` object.
     """
+    popt = np.get_printoptions()
     try:
         import colour
     except ImportError:
@@ -1135,6 +1136,9 @@ def _create_white_to_color_gradient(
             "`pip install colour-science` or `pip install scanpy[plotting]`"
         )
         raise ImportError(msg) from None
+    finally:  # https://github.com/colour-science/colour/issues/1388
+        np.set_printoptions(legacy=popt["legacy"])
+
     from matplotlib.colors import ListedColormap, to_hex
 
     # Convert the input color to a hex string
