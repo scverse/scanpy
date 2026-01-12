@@ -52,6 +52,8 @@ def paga(
         `init_pos='paga'` to get single-cell embeddings that are typically more
         faithful to the global topology.
 
+    .. array-support:: tl.paga
+
     Parameters
     ----------
     adata
@@ -136,7 +138,7 @@ def paga(
         adata.uns["paga"]["connectivities"] = paga.connectivities
         adata.uns["paga"]["connectivities_tree"] = paga.connectivities_tree
         # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
-        adata.uns[groups + "_sizes"] = np.array(paga.ns)
+        adata.uns[f"{groups}_sizes"] = np.array(paga.ns)
     else:
         paga.compute_transitions()
         adata.uns["paga"]["transitions_confidence"] = paga.transitions_confidence
@@ -285,8 +287,8 @@ class PAGA:
             raise ValueError(msg)
         # restore this at some point
         # if 'expected_n_edges_random' not in self._adata.uns['paga']:
-        #     raise ValueError(
-        #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
+        #     msg = 'Before running PAGA with `use_rna_velocity=True`, run it with `False`.'
+        #     raise ValueError(msg)
         import igraph
 
         g = _utils.get_igraph_from_adjacency(
@@ -423,13 +425,13 @@ def paga_expression_entropies(adata: AnnData) -> list[float]:
     """
     from scipy.stats import entropy
 
-    groups_order, groups_masks = _utils.select_groups(
+    _groups_order, groups_masks = _utils.select_groups(
         adata, key=adata.uns["paga"]["groups"]
     )
     entropies = []
     for mask in groups_masks:
-        X_mask = adata.X[mask].todense()
-        x_median = np.nanmedian(X_mask, axis=1, overwrite_input=True)
+        x_mask = adata.X[mask].todense()
+        x_median = np.nanmedian(x_mask, axis=1, overwrite_input=True)
         x_probs = (x_median - np.nanmin(x_median)) / (
             np.nanmax(x_median) - np.nanmin(x_median)
         )

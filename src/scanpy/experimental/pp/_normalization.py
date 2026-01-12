@@ -2,20 +2,13 @@ from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numpy as np
 from anndata import AnnData
 
-from scanpy._compat import CSBase
-
 from ... import logging as logg
-from ..._utils import (
-    _doc_params,
-    _empty,
-    check_nonnegative_integers,
-    view_to_actual,
-)
+from ..._compat import CSBase, warn
+from ..._utils import _doc_params, _empty, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -37,9 +30,9 @@ if TYPE_CHECKING:
 
 
 def _pearson_residuals(
-    X: CSBase | np.ndarray, theta, clip, check_values, *, copy: bool = False
+    x: CSBase | np.ndarray, /, theta, clip, check_values, *, copy: bool = False
 ):
-    X = X.copy() if copy else X
+    x = x.copy() if copy else x
 
     # check theta
     if theta <= 0:
@@ -49,30 +42,27 @@ def _pearson_residuals(
         raise ValueError(msg)
     # prepare clipping
     if clip is None:
-        n = X.shape[0]
+        n = x.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
         msg = "Pearson residuals require `clip>=0` or `clip=None`."
         raise ValueError(msg)
 
-    if check_values and not check_nonnegative_integers(X):
-        warn(
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+    if check_values and not check_nonnegative_integers(x):
+        msg = "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
-    if isinstance(X, CSBase):
-        sums_genes = np.sum(X, axis=0)
-        sums_cells = np.sum(X, axis=1)
+    if isinstance(x, CSBase):
+        sums_genes = np.sum(x, axis=0)
+        sums_cells = np.sum(x, axis=1)
         sum_total = np.sum(sums_genes).squeeze()
     else:
-        sums_genes = np.sum(X, axis=0, keepdims=True)
-        sums_cells = np.sum(X, axis=1, keepdims=True)
+        sums_genes = np.sum(x, axis=0, keepdims=True)
+        sums_cells = np.sum(x, axis=1, keepdims=True)
         sum_total = np.sum(sums_genes)
 
     mu = np.array(sums_cells @ sums_genes / sum_total)
-    diff = np.array(X - mu)
+    diff = np.array(x - mu)
     residuals = diff / np.sqrt(mu + mu**2 / theta)
 
     # clip
@@ -96,6 +86,7 @@ def normalize_pearson_residuals(
     clip: float | None = None,
     check_values: bool = True,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -138,17 +129,17 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else "adata.X"
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, check_values, copy=not inplace)
+    residuals = _pearson_residuals(x, theta, clip, check_values, copy=not inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
-        _set_obs_rep(adata, residuals, layer=layer)
+        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
         adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)
@@ -226,7 +217,9 @@ def normalize_pearson_residuals_pca(
 
     """
     # Unify new mask argument and deprecated use_highly_varible argument
-    _, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
+    _, mask_var = _handle_mask_var(
+        adata, mask_var, use_highly_variable=use_highly_variable
+    )
     del use_highly_variable
 
     if mask_var is not None:

@@ -1,10 +1,10 @@
 [envs.default]
 installer = "uv"
-features = [ "dev" ]
+dependency-groups = [ "dev" ]
 
 [envs.docs]
-features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W --keep-going {args}"
+dependency-groups = [ "doc" ]
+scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
@@ -14,26 +14,29 @@ scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
 scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
 
 [envs.hatch-test]
+python = "3.14"
 default-args = [  ]
-features = [ "dev", "test", "dask-ml" ]
+dependency-groups = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
 overrides.matrix.deps.env-vars = [
     { if = [ "pre" ], key = "UV_PRERELEASE", value = "allow" },
-    { if = [ "min" ], key = "UV_CONSTRAINT", value = "ci/scanpy-min-deps.txt" },
+    { if = [ "low-vers" ], key = "UV_CONSTRAINT", value = "ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.pre-install-commands = [
-    { if = [ "min" ], value = "uv run ci/scripts/min-deps.py pyproject.toml --all-extras -o ci/scanpy-min-deps.txt" },
+    { if = [
+        "low-vers",
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --all-groups -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "min" ], value = "3.11" },
-    { if = [ "stable", "full", "pre" ], value = "3.13" },
-]
-overrides.matrix.deps.features = [
-    { if = [ "full" ], value = "test-full" },
+    { if = [ "low-vers" ], value = "3.12" },
 ]
 overrides.matrix.deps.extra-dependencies = [
-    { if = [ "pre" ], value = "anndata[dev,test] @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "pandas>=3rc0" },
+]
+overrides.matrix.deps.dependency-groups = [
+    { if = [ "stable", "pre", "low-vers" ], value = "test" },
 ]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "full", "pre", "min" ]
+deps = [ "stable", "pre", "low-vers", "few-extras" ]

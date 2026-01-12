@@ -13,17 +13,15 @@ from .._utils import _choose_graph, get_literal_vals
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
-    from typing import LiteralString, TypeVar
+    from typing import LiteralString
 
     from anndata import AnnData
 
     from .._compat import SpBase
     from .._utils.random import _LegacyRandom
 
-    S = TypeVar("S", bound=LiteralString)
 
-
-_Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
+type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
 @old_positionals(
@@ -69,6 +67,8 @@ def draw_graph(  # noqa: PLR0913
     .. |fa2-modified| replace:: `fa2-modified`
     .. _fa2-modified: https://github.com/AminAlam/fa2_modified
     .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
+
+    .. array-support:: tl.draw_graph
 
     Parameters
     ----------
@@ -205,7 +205,7 @@ def fa2_positions(
     return forceatlas2.forceatlas2(adjacency, pos=init_coords, iterations=iterations)
 
 
-def coerce_fa2_layout(layout: S) -> S | Literal["fa", "fr"]:
+def coerce_fa2_layout[S: LiteralString](layout: S) -> S | Literal["fa", "fr"]:
     # see whether fa2 is installed
     if layout != "fa":
         return layout

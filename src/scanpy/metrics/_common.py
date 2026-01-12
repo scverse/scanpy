@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from abc import ABC, abstractmethod
 from dataclasses import InitVar, dataclass, field
 from functools import singledispatch
@@ -9,18 +8,16 @@ from typing import TYPE_CHECKING, ClassVar, overload
 import numpy as np
 import pandas as pd
 
-from .._compat import CSRBase, DaskArray, SpBase, fullname
+from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
+from .._utils import NeighborsView
 
 if TYPE_CHECKING:
-    from typing import NoReturn, TypeVar
+    from typing import NoReturn
 
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    T_NonSparse = TypeVar("T_NonSparse", bound=NDArray | DaskArray)
-    V = TypeVar("V", bound=NDArray | CSRBase)
-
-    _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
+    type _Vals = NDArray | SpBase | DaskArray | pd.DataFrame | pd.Series
 
 
 __all__ = ["_SparseMetric", "_get_graph"]
@@ -69,21 +66,26 @@ class _SparseMetric(ABC):
                 raise NotImplementedError(msg)
 
 
-def _get_graph(adata: AnnData, *, use_graph: str | None = None) -> CSRBase:
+def _get_graph(
+    adata: AnnData,
+    *,
+    use_graph: str | None = None,
+    neighbors_key: str | None = None,
+) -> CSRBase:
     if use_graph is not None:
-        raise NotImplementedError()
-    # Fix for anndata<0.7
-    if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
-        return adata.obsp["connectivities"]
-    elif "neighbors" in adata.uns:
-        return adata.uns["neighbors"]["connectivities"]
-    else:
+        if neighbors_key is not None:
+            msg = "Cannot specify both `use_graph` and `neighbors_key`."
+            raise TypeError(msg)
+        return adata.obsp[use_graph]
+    nv = NeighborsView(adata, neighbors_key)
+    if "connectivities" not in nv:
         msg = "Must run neighbors first."
         raise ValueError(msg)
+    return nv["connectivities"]
 
 
 @overload
-def _resolve_vals(val: T_NonSparse) -> T_NonSparse: ...
+def _resolve_vals[T: NDArray | DaskArray](val: T) -> T: ...
 @overload
 def _resolve_vals(val: SpBase) -> CSRBase: ...
 @overload
@@ -120,7 +122,7 @@ def _(val: pd.DataFrame | pd.Series) -> NDArray:
     return val.to_numpy()
 
 
-def _vals_heterogeneous(
+def _vals_heterogeneous[V: NDArray | CSRBase](
     vals: V,
 ) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
     """Check that values wont cause issues in computation.
@@ -130,7 +132,7 @@ def _vals_heterogeneous(
     For details on why this is neccesary, see:
     https://github.com/scverse/scanpy/issues/1806
     """
-    from scanpy._utils import is_constant
+    from fast_array_utils.stats import is_constant
 
     full_result = np.empty(vals.shape[0], dtype=np.float64)
     full_result.fill(np.nan)
@@ -138,9 +140,6 @@ def _vals_heterogeneous(
     if idxer.all():
         idxer = slice(None)
     else:
-        warnings.warn(
-            f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = f"{len(idxer) - idxer.sum()} variables were constant, will return nan for these."
+        warn(msg, UserWarning)
     return vals[idxer], idxer, full_result

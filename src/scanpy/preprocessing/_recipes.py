@@ -68,14 +68,14 @@ def recipe_weinreb17(
     )
     gene_subset = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
-    X_pca = pp.pca(
+    x_pca = pp.pca(
         zscore_deprecated(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
         random_state=random_state,
     )
     # update adata
-    adata.obsm["X_pca"] = X_pca
+    adata.obsm["X_pca"] = x_pca
     return adata if copy else None
 
 

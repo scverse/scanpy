@@ -1,23 +1,29 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy._compat import CSBase
-from testing.scanpy._helpers import anndata_v0_8_constructor_compat
+from scanpy._compat import CSBase, pkg_version
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+# https://github.com/lmcinnes/umap/issues/1216
+SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
+    pkg_version("umap-learn") <= Version("0.5.9.post2")
+    and pkg_version("numba") >= Version("0.62.0rc1"),
+    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
+)
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -116,8 +122,31 @@ transitions_gauss_noknn = [
 ]
 
 
+# jaccard kernel – only knn results
+connectivities_jaccard = [
+    [0.0, 0.3333333333333333, 0.0, 0.3333333333333333],
+    [0.3333333333333333, 0.0, 0.16666666666666666, 0.3333333333333333],
+    [0.0, 0.16666666666666666, 0.0, 0.16666666666666666],
+    [0.3333333333333333, 0.3333333333333333, 0.16666666666666666, 0.0],
+]
+
+transitions_sym_jaccard = [
+    [0.0, 0.4225771273642583, 0.0, 0.4225771273642583],
+    [0.4225771273642583, 0.0, 0.4225771273642583, 0.2857142857142857],
+    [0.0, 0.4225771273642583, 0.0, 0.4225771273642583],
+    [0.4225771273642583, 0.2857142857142857, 0.4225771273642583, 0.0],
+]
+
+transitions_jaccard = [
+    [0.0, 0.5, 0.0, 0.5],
+    [0.35714285714285715, 0.0, 0.35714285714285715, 0.2857142857142857],
+    [0.0, 0.5, 0.0, 0.5],
+    [0.35714285714285715, 0.2857142857142857, 0.35714285714285715, 0.0],
+]
+
+
 def get_neighbors() -> Neighbors:
-    return Neighbors(anndata_v0_8_constructor_compat(np.array(X)))
+    return Neighbors(AnnData(np.array(X)))
 
 
 @pytest.fixture
@@ -125,11 +154,11 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize("method", ["umap", "gauss"])
+@pytest.mark.parametrize("method", ["umap", "gauss", "jaccard"])
 def test_distances_euclidean(
-    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss"]
+    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss", "jaccard"]
 ):
-    """Umap and gauss behave the same for distances.
+    """Umap, gauss, and jaccard behave the same for distances.
 
     They call pynndescent for large data.
     """
@@ -177,6 +206,7 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
+            marks=SKIPIF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
@@ -185,6 +215,13 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             transitions_gauss_knn,
             transitions_sym_gauss_knn,
             id="gauss",
+        ),
+        pytest.param(
+            "jaccard",
+            connectivities_jaccard,
+            transitions_jaccard,
+            transitions_sym_jaccard,
+            id="jaccard",
         ),
     ],
 )
@@ -236,8 +273,6 @@ def test_restore_n_neighbors(neigh, conv):
 
     ad = AnnData(np.array(X))
     # Allow deprecated usage for now
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
+    ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1

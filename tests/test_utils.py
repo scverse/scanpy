@@ -9,17 +9,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
-from packaging.version import Version
 from scipy import sparse
 
-from scanpy._compat import CSBase, DaskArray, pkg_version
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
     axis_mul_or_truediv,
-    axis_sum,
     check_nonnegative_integers,
     descend_classes_and_funcs,
-    elem_mul,
-    is_constant,
 )
 from scanpy._utils.random import (
     ith_k_tuple,
@@ -27,15 +23,14 @@ from scanpy._utils.random import (
     random_k_tuples,
     random_str,
 )
-from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
     ARRAY_TYPES_SPARSE,
-    ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
 
@@ -59,7 +54,7 @@ def test_descend_classes_and_funcs():
 def test_axis_mul_or_truediv_badop():
     dividend = np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]])
     divisor = np.array([0.1, 0.2])
-    with pytest.raises(ValueError, match=".*not one of truediv or mul"):
+    with pytest.raises(ValueError, match=r"not one of truediv or mul"):
         axis_mul_or_truediv(dividend, divisor, op=np.add, axis=0)
 
 
@@ -96,6 +91,7 @@ def test_scale_column(array_type, op):
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero encountered:RuntimeWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_divide_by_zero(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
@@ -117,13 +113,13 @@ def test_divide_by_zero(array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
-def test_scale_out_with_dask_or_sparse_raises(array_type):
+def test_scale_out_with_dask_or_sparse_raises(array_type: Callable):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
     divisor = np.array([0.1, 0.2, 0.5])
     if isinstance(dividend, DaskArray):
         with pytest.raises(
             TypeError if "dask" in array_type.__name__ else ValueError,
-            match="`out`*",
+            match="`out`",
         ):
             axis_mul_or_truediv(dividend, divisor, op=truediv, axis=1, out=dividend)
 
@@ -151,31 +147,6 @@ def test_scale_rechunk(array_type, axis, op):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def test_elem_mul(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    m2 = array_type(asarray([[2, 2, 1], [3, 2, 0]]))
-    expd = np.array([[0, 2, 1], [3, 0, 0]])
-    res = asarray(elem_mul(m1, m2))
-    np.testing.assert_array_equal(res, expd)
-
-
-@pytest.mark.parametrize(
-    "array_type", [*ARRAY_TYPES, pytest.param(sparse.coo_matrix, id="scipy_coo")]
-)
-def test_axis_sum(array_type):
-    m1 = array_type(asarray([[0, 1, 1], [1, 0, 1]]))
-    expd_0 = np.array([1, 1, 2])
-    expd_1 = np.array([2, 2])
-    res_0 = asarray(axis_sum(m1, axis=0))
-    res_1 = asarray(axis_sum(m1, axis=1))
-    if "matrix" in array_type.__name__:  # for sparse since dimension is kept
-        res_0 = res_0.ravel()
-        res_1 = res_1.ravel()
-    np.testing.assert_array_equal(res_0, expd_0)
-    np.testing.assert_array_equal(res_1, expd_1)
-
-
-@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("array_value", "expected"),
     [
@@ -194,10 +165,10 @@ def test_axis_sum(array_type):
     ],
 )
 def test_check_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+    x = array_type(array_value)
 
-    received = check_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
@@ -206,63 +177,6 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
         # convert to python bool
         received = received.item()
     assert received is expected
-
-
-# TODO: Make it work for sparse-in-dask
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE_DASK_UNSUPPORTED)
-def test_is_constant(array_type):
-    constant_inds = [1, 3]
-    A = np.arange(20).reshape(5, 4)
-    A[constant_inds, :] = 10
-    A = array_type(A)
-    AT = array_type(A.T)
-
-    assert not is_constant(A)
-    assert not np.any(is_constant(A, axis=0))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(A, axis=1)
-    )
-
-    assert not is_constant(AT)
-    assert not np.any(is_constant(AT, axis=1))
-    np.testing.assert_array_equal(
-        [False, True, False, True, False], is_constant(AT, axis=0)
-    )
-
-
-@needs.dask
-@pytest.mark.parametrize(
-    ("axis", "expected"),
-    [
-        pytest.param(None, False, id="None"),
-        pytest.param(0, [True, True, False, False], id="0"),
-        pytest.param(1, [False, False, True, True, False, True], id="1"),
-    ],
-)
-@pytest.mark.parametrize("block_type", [np.array, sparse.csr_matrix])  # noqa: TID251
-def test_is_constant_dask(request: pytest.FixtureRequest, axis, expected, block_type):
-    import dask.array as da
-
-    if (
-        isinstance(block_type, type)
-        and issubclass(block_type, CSBase)
-        and (axis is None or pkg_version("dask") < Version("2023.2.0"))
-    ):
-        reason = "Dask has weak support for scipy sparse matrices"
-        # This test is flaky for old dask versions, but when `axis=None` it reliably fails
-        request.applymarker(pytest.mark.xfail(reason=reason, strict=axis is None))
-
-    x_data = [
-        [0, 0, 1, 1],
-        [0, 0, 1, 1],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 0],
-    ]
-    x = da.from_array(np.array(x_data), chunks=2).map_blocks(block_type)
-    result = is_constant(x, axis=axis).compute()
-    np.testing.assert_array_equal(expected, result)
 
 
 @pytest.mark.parametrize("seed", [0, 1, 1256712675])

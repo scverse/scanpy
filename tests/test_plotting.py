@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from itertools import chain, combinations, repeat
 from pathlib import Path
@@ -23,16 +24,26 @@ from testing.scanpy._helpers.data import (
     pbmc3k_processed,
     pbmc68k_reduced,
 )
+from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import param_with
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from contextlib import ExitStack
+    from typing import Any, Literal
 
     from matplotlib.axes import Axes
 
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
+
+xfail_seaborn_pandas3 = (
+    [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
+    if pkg_version("pandas").major >= 3
+    else []
+)
 
 
 # Test images are saved in the directory ./_images/<test-name>/
@@ -57,71 +68,53 @@ def test_highest_expr_genes(image_comparer, col, layer):
 
 
 @needs.leidenalg
-def test_heatmap(image_comparer):
+@pytest.mark.parametrize(
+    ("params", "key"),
+    [
+        pytest.param({}, "heatmap", id="default"),
+        pytest.param(
+            dict(swap_axes=True, figsize=(10, 3), cmap="YlGnBu"),
+            "heatmap_swap_axes",
+            id="swap",
+        ),
+        pytest.param(
+            dict(
+                groupby="numeric_value",
+                num_categories=4,
+                figsize=(4.5, 5),
+                dendrogram=False,
+            ),
+            "heatmap2",
+            id="numeric",
+        ),
+        pytest.param(
+            dict(standard_scale="var", layer="test"),
+            "heatmap_std_scale_var",
+            id="std_scale=var",
+        ),
+        pytest.param(
+            dict(standard_scale="obs"),
+            "heatmap_std_scale_obs",
+            id="std_scale=obs",
+        ),
+    ],
+)
+def test_heatmap(image_comparer, params: dict[str, Any], key: str) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = krumsiek11()
-    sc.pl.heatmap(
-        adata, adata.var_names, "cell_type", use_raw=False, show=False, dendrogram=True
-    )
-    save_and_compare_images("heatmap")
-
-    # test swap axes
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        show=False,
-        dendrogram=True,
-        swap_axes=True,
-        figsize=(10, 3),
-        cmap="YlGnBu",
-    )
-    save_and_compare_images("heatmap_swap_axes")
-
-    # test heatmap numeric column():
-
-    # set as numeric column the vales for the first gene on the matrix
     adata.obs["numeric_value"] = adata.X[:, 0]
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "numeric_value",
-        use_raw=False,
-        num_categories=4,
-        figsize=(4.5, 5),
-        show=False,
-    )
-    save_and_compare_images("heatmap2")
-
-    # test var/obs standardization and layer
     adata.layers["test"] = -1 * adata.X.copy()
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale="var",
-        layer="test",
-    )
-    save_and_compare_images("heatmap_std_scale_var")
 
-    # test standard_scale_obs
-    sc.pl.heatmap(
-        adata,
-        adata.var_names,
-        "cell_type",
-        use_raw=False,
-        dendrogram=True,
-        show=False,
-        standard_scale="obs",
-    )
-    save_and_compare_images("heatmap_std_scale_obs")
+    params = dict(groupby="cell_type", dendrogram=True) | params
+    sc.pl.heatmap(adata, adata.var_names, **params, use_raw=False, show=False)
+    save_and_compare_images(key)
 
-    # test var_names as dict
+
+@needs.leidenalg
+def test_heatmap_var_as_dict(image_comparer) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
     pbmc = pbmc68k_reduced()
     sc.tl.leiden(
         pbmc,
@@ -132,7 +125,7 @@ def test_heatmap(image_comparer):
         directed=False,
     )
     # call umap to trigger colors for the clusters
-    sc.pl.umap(pbmc, color="clusters")
+    sc.pl.umap(pbmc, color="clusters", show=False)
     marker_genes_dict = {
         "3": ["GNLY", "NKG7"],
         "1": ["FCER1A"],
@@ -149,11 +142,17 @@ def test_heatmap(image_comparer):
         cmap="RdBu_r",
         dendrogram=True,
         swap_axes=True,
+        show=False,
     )
     save_and_compare_images("heatmap_var_as_dict")
 
-    # test that plot elements are well aligned
-    # small
+
+@needs.leidenalg
+@pytest.mark.parametrize("swap_axes", [True, False])
+def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
+    """Test that plot elements are well aligned."""
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
     a = AnnData(
         np.array([[0, 0.3, 0.5], [1, 1.3, 1.5], [2, 2.3, 2.5]]),
         obs={"foo": ["a", "b", "c"]},
@@ -161,20 +160,16 @@ def test_heatmap(image_comparer):
     )
     a.obs["foo"] = a.obs["foo"].astype("category")
     sc.pl.heatmap(
-        a, var_names=a.var_names, groupby="foo", swap_axes=True, figsize=(4, 4)
+        a,
+        var_names=a.var_names,
+        groupby="foo",
+        swap_axes=swap_axes,
+        figsize=(4, 4),
+        show=False,
     )
-    save_and_compare_images("heatmap_small_swap_alignment")
-
-    sc.pl.heatmap(
-        a, var_names=a.var_names, groupby="foo", swap_axes=False, figsize=(4, 4)
-    )
-    save_and_compare_images("heatmap_small_alignment")
+    save_and_compare_images(f"heatmap_small{'_swap' if swap_axes else ''}_alignment")
 
 
-@pytest.mark.skipif(
-    pkg_version("matplotlib") < Version("3.1"),
-    reason="https://github.com/mwaskom/seaborn/issues/1953",
-)
 @pytest.mark.parametrize(
     ("obs_keys", "name"),
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
@@ -183,166 +178,177 @@ def test_clustermap(image_comparer, obs_keys, name):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     adata = krumsiek11()
-    sc.pl.clustermap(adata, obs_keys)
+    sc.pl.clustermap(adata, obs_keys, show=False)
     save_and_compare_images(name)
 
 
 params_dotplot_matrixplot_stacked_violin = [
-    pytest.param(id, fn, id=id)
-    for id, fn in [
-        (
-            "dotplot",
-            partial(
-                sc.pl.dotplot, groupby="cell_type", title="dotplot", dendrogram=True
-            ),
+    pytest.param(
+        partial(sc.pl.dotplot, groupby="cell_type", title="dotplot", dendrogram=True),
+        id="dotplot",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=7,
+            title="non categorical obs",
+            figsize=(7, 2.5),
         ),
-        (
-            "dotplot2",
-            partial(
-                sc.pl.dotplot,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=7,
-                title="non categorical obs",
-                figsize=(7, 2.5),
-            ),
+        id="dotplot2",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            dot_max=0.7,
+            dot_min=0.1,
+            cmap="hot_r",
+            title="dot_max=0.7 dot_min=0.1, var_groups",
+            var_group_positions=[(0, 1), (9, 10)],
+            var_group_labels=["A", "B"],
+            dendrogram=True,
         ),
-        (
-            "dotplot3",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                dot_max=0.7,
-                dot_min=0.1,
-                cmap="hot_r",
-                title="dot_max=0.7 dot_min=0.1, var_groups",
-                var_group_positions=[(0, 1), (9, 10)],
-                var_group_labels=["A", "B"],
-                dendrogram=True,
-            ),
+        id="dotplot3",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            use_raw=False,
+            dendrogram=True,
+            layer="test",
+            swap_axes=True,
+            title="swap_axes, layer=-1*X, scale=group\nsmallest_dot=10",
+            standard_scale="group",
+            smallest_dot=10,
         ),
-        (
-            "dotplot_std_scale_group",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                use_raw=False,
-                dendrogram=True,
-                layer="test",
-                swap_axes=True,
-                title="swap_axes, layer=-1*X, scale=group\nsmallest_dot=10",
-                standard_scale="group",
-                smallest_dot=10,
-            ),
+        id="dotplot_std_scale_group",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            dot_max=0.7,
+            dot_min=0.1,
+            color_map="winter",
+            title="var as dict",
+            dendrogram=True,
         ),
-        (
-            "dotplot_dict",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                dot_max=0.7,
-                dot_min=0.1,
-                color_map="winter",
-                title="var as dict",
-                dendrogram=True,
-            ),
+        id="dotplot_dict",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            use_raw=False,
+            title="matrixplot",
+            dendrogram=True,
         ),
-        (
-            "matrixplot",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                use_raw=False,
-                title="matrixplot",
-                dendrogram=True,
-            ),
+        id="matrixplot",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            dendrogram=True,
+            standard_scale="var",
+            layer="test",
+            cmap="Blues_r",
+            title='scale var, custom colorbar_title, layer="test"',
+            colorbar_title="Scaled expression",
         ),
-        (
-            "matrixplot_std_scale_var_dict",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                dendrogram=True,
-                standard_scale="var",
-                layer="test",
-                cmap="Blues_r",
-                title='scale var, custom colorbar_title, layer="test"',
-                colorbar_title="Scaled expression",
-            ),
+        id="matrixplot_std_scale_var_dict",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            use_raw=False,
+            standard_scale="group",
+            title="scale_group, swap_axes",
+            swap_axes=True,
         ),
-        (
-            "matrixplot_std_scale_group",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                use_raw=False,
-                standard_scale="group",
-                title="scale_group, swap_axes",
-                swap_axes=True,
-            ),
+        id="matrixplot_std_scale_group",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=4,
+            title="non-categorical obs, custom figsize",
+            figsize=(8, 2.5),
+            cmap="RdBu_r",
         ),
-        (
-            "matrixplot2",
-            partial(
-                sc.pl.matrixplot,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=4,
-                title="non-categorical obs, custom figsize",
-                figsize=(8, 2.5),
-                cmap="RdBu_r",
-            ),
+        id="matrixplot2",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            use_raw=False,
+            title="stacked_violin",
+            dendrogram=True,
         ),
-        (
-            "stacked_violin",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                use_raw=False,
-                title="stacked_violin",
-                dendrogram=True,
-            ),
+        id="stacked_violin",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            dendrogram=True,
+            standard_scale="var",
+            layer="test",
+            title='scale var, layer="test"',
         ),
-        (
-            "stacked_violin_std_scale_var_dict",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                dendrogram=True,
-                standard_scale="var",
-                layer="test",
-                title='scale var, layer="test"',
-            ),
+        id="stacked_violin_std_scale_var_dict",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            use_raw=False,
+            standard_scale="group",
+            title="scale_group\nswap_axes",
+            swap_axes=True,
+            cmap="Blues",
         ),
-        (
-            "stacked_violin_std_scale_group",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                use_raw=False,
-                standard_scale="group",
-                title="scale_group\nswap_axes",
-                swap_axes=True,
-                cmap="Blues",
-            ),
+        id="stacked_violin_std_scale_group",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=4,
+            title="non-categorical obs, custom figsize",
+            figsize=(8, 2.5),
         ),
-        (
-            "stacked_violin_no_cat_obs",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=4,
-                title="non-categorical obs, custom figsize",
-                figsize=(8, 2.5),
-            ),
-        ),
-    ]
+        id="stacked_violin_no_cat_obs",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
 ]
 
 
-@pytest.mark.parametrize(("id", "fn"), params_dotplot_matrixplot_stacked_violin)
-def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
+@pytest.mark.parametrize(
+    ("id", "fn"),
+    [
+        param_with(p, lambda fn, p=p: (p.id, fn))
+        for p in params_dotplot_matrixplot_stacked_violin
+    ],
+)
+def test_dotplot_matrixplot_stacked_violin(
+    image_comparer, id: str, fn: Callable[[AnnData], None]
+) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = krumsiek11()
@@ -354,15 +360,21 @@ def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
         "group c": ["Cebpa", "Pu.1", "cJun", "EgrNab", "Gfi1"],
     }
 
-    if id.endswith("dict"):
-        fn(adata, genes_dict, show=False)
-    else:
-        fn(adata, adata.var_names, show=False)
+    with warnings.catch_warnings():
+        # https://github.com/pandas-dev/pandas/issues/61928
+        warnings.filterwarnings(
+            "ignore", r"invalid value encountered in cast", RuntimeWarning
+        )
+        fn(adata, genes_dict if id.endswith("dict") else adata.var_names, show=False)
     save_and_compare_images(id)
 
 
-def test_dotplot_obj(image_comparer):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+@pytest.mark.parametrize("swap_axes", [True, False])
+@pytest.mark.parametrize("standard_scale", ["var", "group", None])
+def test_dotplot_obj(
+    image_comparer, standard_scale: Literal["var", "group"] | None, *, swap_axes: bool
+):
+    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     # test dotplot dot_min, dot_max, color_map, and var_groups
     pbmc = pbmc68k_reduced()
@@ -380,14 +392,17 @@ def test_dotplot_obj(image_comparer):
         layer="test",
         dendrogram=True,
         return_fig=True,
-        standard_scale="var",
+        standard_scale=standard_scale,
+        swap_axes=swap_axes,
         smallest_dot=40,
         colorbar_title="scaled column max",
         size_title="Fraction of cells",
     )
-    plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").show()
+    plot.style(dot_edge_color="black", dot_edge_lw=0.1, cmap="Reds").make_figure()
 
-    save_and_compare_images("dotplot_std_scale_var")
+    save_and_compare_images(
+        f"dotplot_obj{f'_std_scale_{standard_scale}' if standard_scale is not None else ''}{'_swap_axes' if swap_axes else ''}"
+    )
 
 
 def test_dotplot_style_no_reset():
@@ -406,7 +421,9 @@ def test_dotplot_add_totals(image_comparer):
 
     pbmc = pbmc68k_reduced()
     markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
-    sc.pl.dotplot(pbmc, markers, "bulk_labels", return_fig=True).add_totals().show()
+    sc.pl.dotplot(
+        pbmc, markers, "bulk_labels", return_fig=True
+    ).add_totals().make_figure()
     save_and_compare_images("dotplot_totals")
 
 
@@ -430,7 +447,9 @@ def test_matrixplot_obj(image_comparer):
         title="added totals",
         return_fig=True,
     )
-    plot.add_totals(sort="descending").style(edge_color="white", edge_lw=0.5).show()
+    plot.add_totals(sort="descending").style(
+        edge_color="white", edge_lw=0.5
+    ).make_figure()
     save_and_compare_images("matrixplot_with_totals")
 
     axes = plot.get_axes()
@@ -454,12 +473,19 @@ def test_stacked_violin_obj(image_comparer, plt):
         title="return_fig. add_totals",
         return_fig=True,
     )
-    plot.add_totals().style(row_palette="tab20").show()
+    plot.add_totals().style(row_palette="tab20").make_figure()
     save_and_compare_images("stacked_violin_return_fig")
 
 
 # checking for https://github.com/scverse/scanpy/issues/3152
-def test_stacked_violin_swap_axes_match(image_comparer):
+def test_stacked_violin_swap_axes_match(
+    request: pytest.FixtureRequest, image_comparer
+) -> None:
+    if pkg_version("pandas").major >= 3:
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        reason = "seaborn violin plot is incompatible with pandas 3"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     save_and_compare_images = partial(image_comparer, ROOT, tol=10)
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(
@@ -478,7 +504,7 @@ def test_stacked_violin_swap_axes_match(image_comparer):
         swap_axes=True,
         return_fig=True,
     )
-    swapped_ax.show()
+    swapped_ax.make_figure()
     save_and_compare_images("stacked_violin_swap_axes_pbmc68k_reduced")
 
 
@@ -487,7 +513,7 @@ def test_tracksplot(image_comparer):
 
     adata = krumsiek11()
     sc.pl.tracksplot(
-        adata, adata.var_names, "cell_type", dendrogram=True, use_raw=False
+        adata, adata.var_names, "cell_type", dendrogram=True, use_raw=False, show=False
     )
     save_and_compare_images("tracksplot")
 
@@ -502,7 +528,7 @@ def test_multiple_plots(image_comparer):
         "B-cell": ["CD79A", "CD79B", "MS4A1"],
         "myeloid": ["CST3", "LYZ"],
     }
-    fig, (ax1, ax2, ax3) = plt.subplots(
+    _fig, (ax1, ax2, ax3) = plt.subplots(
         1, 3, figsize=(20, 5), gridspec_kw={"wspace": 0.7}
     )
     _ = sc.pl.stacked_violin(
@@ -535,14 +561,18 @@ def test_multiple_plots(image_comparer):
     save_and_compare_images("multiple_plots")
 
 
-def test_violin(image_comparer):
+def test_violin(
+    subtests: pytest.Subtests, exit_stack: ExitStack, image_comparer
+) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=40)
+    exit_stack.enter_context(plt.rc_context())
+    sc.pl.set_rcParams_defaults()
+    sc.set_figure_params(dpi=50, color_map="viridis")
 
-    with plt.rc_context():
-        sc.pl.set_rcParams_defaults()
-        sc.set_figure_params(dpi=50, color_map="viridis")
+    pbmc = pbmc68k_reduced()
+    pbmc.layers["negative"] = pbmc.X * -1
 
-        pbmc = pbmc68k_reduced()
+    with subtests.test("default"):
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -553,6 +583,7 @@ def test_violin(image_comparer):
         )
         save_and_compare_images("violin_multi_panel")
 
+    with subtests.test(groupby="bulk_labels"):
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -564,10 +595,15 @@ def test_violin(image_comparer):
             show=False,
             rotation=90,
         )
-        save_and_compare_images("violin_multi_panel_with_groupby")
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        with context.xfail(
+            pkg_version("pandas").major >= 3,
+            reason="seaborn violin plot is incompatible with pandas 3",
+            raises=AssertionError,
+        ):
+            save_and_compare_images("violin_multi_panel_with_groupby")
 
-        # test use of layer
-        pbmc.layers["negative"] = pbmc.X * -1
+    with subtests.test(layer="negative"):
         sc.pl.violin(
             pbmc,
             "CST3",
@@ -607,7 +643,7 @@ def test_dendrogram(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=10)
 
     pbmc = pbmc68k_reduced()
-    sc.pl.dendrogram(pbmc, "bulk_labels")
+    sc.pl.dendrogram(pbmc, "bulk_labels", show=False)
     save_and_compare_images("dendrogram")
 
 
@@ -615,17 +651,16 @@ def test_correlation(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
-    sc.pl.correlation_matrix(pbmc, "bulk_labels")
+    sc.pl.correlation_matrix(pbmc, "bulk_labels", show=False)
     save_and_compare_images("correlation")
 
 
 _RANK_GENES_GROUPS_PARAMS = [
-    (
-        "sharey",
+    pytest.param(
         partial(sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False),
+        id="sharey",
     ),
-    (
-        "basic",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups,
             n_genes=12,
@@ -633,13 +668,13 @@ _RANK_GENES_GROUPS_PARAMS = [
             sharey=False,
             show=False,
         ),
+        id="basic",
     ),
-    (
-        "heatmap",
+    pytest.param(
         partial(sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap="YlGnBu", show=False),
+        id="heatmap",
     ),
-    (
-        "heatmap_swap_axes",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_heatmap,
             n_genes=20,
@@ -651,9 +686,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             cmap="bwr",
         ),
+        id="heatmap_swap_axes",
     ),
-    (
-        "heatmap_swap_axes_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_heatmap,
             n_genes=20,
@@ -666,22 +701,24 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             cmap="RdBu_r",
         ),
+        id="heatmap_swap_axes_vcenter",
     ),
-    (
-        "stacked_violin",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_stacked_violin,
             n_genes=3,
             show=False,
             groups=["3", "0", "5"],
         ),
+        id="stacked_violin",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
     ),
-    (
-        "dotplot",
+    pytest.param(
         partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
+        id="dotplot",
     ),
-    (
-        "dotplot_gene_names",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             var_names={
@@ -695,9 +732,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             show=False,
         ),
+        id="dotplot_gene_names",
     ),
-    (
-        "dotplot_logfoldchange",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             n_genes=4,
@@ -710,9 +747,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             title="log fold changes swap_axes",
             show=False,
         ),
+        id="dotplot_logfoldchange",
     ),
-    (
-        "dotplot_logfoldchange_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             n_genes=4,
@@ -726,9 +763,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             title="log fold changes swap_axes",
             show=False,
         ),
+        id="dotplot_logfoldchange_vcenter",
     ),
-    (
-        "matrixplot",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -737,9 +774,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             gene_symbols="symbol",
             use_raw=False,
         ),
+        id="matrixplot",
     ),
-    (
-        "matrixplot_gene_names_symbol",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             var_names={
@@ -755,18 +792,18 @@ _RANK_GENES_GROUPS_PARAMS = [
             use_raw=False,
             show=False,
         ),
+        id="matrixplot_gene_names_symbol",
     ),
-    (
-        "matrixplot_n_genes_negative",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=-5,
             show=False,
             title="matrixplot n_genes=-5",
         ),
+        id="matrixplot_n_genes_negative",
     ),
-    (
-        "matrixplot_swap_axes",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -778,9 +815,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             cmap="bwr",
             title="log fold changes swap_axes",
         ),
+        id="matrixplot_swap_axes",
     ),
-    (
-        "matrixplot_swap_axes_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -793,18 +830,18 @@ _RANK_GENES_GROUPS_PARAMS = [
             cmap="bwr",
             title="log fold changes swap_axes",
         ),
+        id="matrixplot_swap_axes_vcenter",
     ),
-    (
-        "tracksplot",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_tracksplot,
             n_genes=3,
             show=False,
             groups=["3", "2", "1"],
         ),
+        id="tracksplot",
     ),
-    (
-        "violin",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_violin,
             groups="0",
@@ -814,9 +851,11 @@ _RANK_GENES_GROUPS_PARAMS = [
             strip=False,
             show=False,
         ),
+        id="violin",
+        # https://github.com/mwaskom/seaborn/issues/3893
+        marks=xfail_seaborn_pandas3,
     ),
-    (
-        "violin_not_raw",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_violin,
             groups="0",
@@ -826,15 +865,20 @@ _RANK_GENES_GROUPS_PARAMS = [
             strip=False,
             show=False,
         ),
+        id="violin_not_raw",
+        # https://github.com/mwaskom/seaborn/issues/3893
+        marks=xfail_seaborn_pandas3,
     ),
 ]
 
 
 @pytest.mark.parametrize(
     ("name", "fn"),
-    [pytest.param(name, fn, id=name) for name, fn in _RANK_GENES_GROUPS_PARAMS],
+    [param_with(p, lambda fn, p=p: (p.id, fn)) for p in _RANK_GENES_GROUPS_PARAMS],
 )
-def test_rank_genes_groups(image_comparer, name, fn):
+def test_rank_genes_groups(
+    image_comparer, name: str, fn: Callable[[AnnData], None]
+) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
@@ -851,7 +895,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
 
 def test_rank_genes_group_axes(image_comparer):
-    fn = next(fn for name, fn in _RANK_GENES_GROUPS_PARAMS if name == "basic")
+    fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=23)
 
@@ -860,13 +904,12 @@ def test_rank_genes_group_axes(image_comparer):
 
     pbmc.var["symbol"] = pbmc.var.index + "__"
 
-    fig, ax = plt.subplots(figsize=(12, 16))
+    _fig, ax = plt.subplots(figsize=(12, 16))
     ax.set_axis_off()
     with plt.rc_context({"axes.grid": True}):
         axes: list[Axes] = fn(pbmc, ax=ax, show=False)
 
     assert len(axes) == 11
-    fig.show()
     save_and_compare_images("ranked_genes")
     plt.close()
 
@@ -929,11 +972,11 @@ def test_plot_rank_genes_groups_gene_symbols(
     pth_1_a = tmp_path / f"{func.__name__}_equivalent_gene_symbols_1_a.png"
     pth_1_b = tmp_path / f"{func.__name__}_equivalent_gene_symbols_1_b.png"
 
-    func(a, gene_symbols="gene_symbol")
+    func(a, gene_symbols="gene_symbol", show=False)
     plt.savefig(pth_1_a)
     plt.close()
 
-    func(b)
+    func(b, show=False)
     plt.savefig(pth_1_b)
 
     check_same_image(pth_1_a, pth_1_b, tol=1, root=tmp_path)
@@ -941,11 +984,11 @@ def test_plot_rank_genes_groups_gene_symbols(
     pth_2_a = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_a.png"
     pth_2_b = tmp_path / f"{func.__name__}_equivalent_gene_symbols_2_b.png"
 
-    func(a)
+    func(a, show=False)
     plt.savefig(pth_2_a)
     plt.close()
 
-    func(b, gene_symbols="ensembl_id")
+    func(b, gene_symbols="ensembl_id", show=False)
     plt.savefig(pth_2_b)
     plt.close()
 
@@ -965,7 +1008,7 @@ def test_plot_rank_genes_groups_gene_symbols(
 )
 def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same_image):
     """Checks that once can pass a negative value for n_genes and var_names as a dict."""
-    N = 3
+    n = 3
     pbmc = pbmc68k_reduced().raw.to_adata()
     groups = pbmc.obs["louvain"].cat.categories[:3]
     pbmc = pbmc[pbmc.obs["louvain"].isin(groups)][::3].copy()
@@ -977,8 +1020,8 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     for g, subdf in sc.get.rank_genes_groups_df(pbmc, group=groups).groupby(
         "group", observed=True
     ):
-        top_genes[g] = list(subdf["names"].head(N))
-        bottom_genes[g] = list(subdf["names"].tail(N))
+        top_genes[g] = list(subdf["names"].head(n))
+        bottom_genes[g] = list(subdf["names"].tail(n))
 
     positive_n_pth = tmp_path / f"{func.__name__}_positive_n.png"
     top_genes_pth = tmp_path / f"{func.__name__}_top_genes.png"
@@ -986,16 +1029,16 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     bottom_genes_pth = tmp_path / f"{func.__name__}_bottom_genes.png"
 
     def wrapped(pth, **kwargs):
-        func(pbmc, groupby="louvain", dendrogram=False, **kwargs)
+        func(pbmc, groupby="louvain", dendrogram=False, **kwargs, show=False)
         plt.savefig(pth)
         plt.close()
 
-    wrapped(positive_n_pth, n_genes=N)
+    wrapped(positive_n_pth, n_genes=n)
     wrapped(top_genes_pth, var_names=top_genes)
 
     check_same_image(positive_n_pth, top_genes_pth, tol=1, root=tmp_path)
 
-    wrapped(negative_n_pth, n_genes=-N)
+    wrapped(negative_n_pth, n_genes=-n)
     wrapped(bottom_genes_pth, var_names=bottom_genes)
 
     check_same_image(negative_n_pth, bottom_genes_pth, tol=1, root=tmp_path)
@@ -1004,7 +1047,7 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     with pytest.raises(
         ValueError, match="n_genes and var_names are mutually exclusive"
     ):
-        wrapped(tmp_path / "not_written.png", n_genes=N, var_names=top_genes)
+        wrapped(tmp_path / "not_written.png", n_genes=n, var_names=top_genes)
 
 
 @pytest.mark.parametrize(
@@ -1214,6 +1257,7 @@ def test_scatter_embedding_groups_and_size(image_comparer):
         color=["bulk_labels"],
         groups=["CD14+ Monocyte", "Dendritic"],
         size=(np.arange(pbmc.shape[0]) / 40) ** 1.7,
+        show=False,
     )
     save_and_compare_images("embedding_groups_size")
 
@@ -1238,6 +1282,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(image_comparer):
         cmap="viridis_r",
         alpha=0.9,
         wspace=0.5,
+        show=False,
     )
     save_and_compare_images("embedding_outline_vmin_vmax")
 
@@ -1250,7 +1295,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
-        ValueError, match="Passing both norm and vmin/vmax/vcenter is not allowed."
+        ValueError, match=r"Passing both norm and vmin/vmax/vcenter is not allowed\."
     ):
         sc.pl.embedding(
             pbmc,
@@ -1261,6 +1306,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
             vmax=1,
             vcenter=0.5,
             cmap="RdBu_r",
+            show=False,
         )
 
     try:
@@ -1283,6 +1329,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         vcenter=[0.015, None, None],
         norm=[None, norm, norm],
         wspace=0.5,
+        show=False,
     )
 
     sc.pl.umap(
@@ -1291,6 +1338,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         frameon=False,
         norm=norm,
         wspace=0.5,
+        show=False,
     )
     plt.savefig(tmp_path / "umap_norm_fig0.png")
     plt.close()
@@ -1301,6 +1349,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         frameon=False,
         norm=divnorm,
         wspace=0.5,
+        show=False,
     )
     plt.savefig(tmp_path / "umap_norm_fig1.png")
     plt.close()
@@ -1313,6 +1362,7 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         vmin=150,
         vmax=6000,
         wspace=0.5,
+        show=False,
     )
     plt.savefig(tmp_path / "umap_norm_fig2.png")
     plt.close()
@@ -1334,12 +1384,39 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_i
         )
 
 
-def test_timeseries():
+@pytest.fixture(scope="session")
+def pbmc_68k_dpt_session() -> AnnData:
     adata = pbmc68k_reduced()
     sc.pp.neighbors(adata, n_neighbors=5, method="gauss", knn=False)
-    sc.tl.diffmap(adata)
-    sc.tl.dpt(adata, n_branchings=1, n_dcs=10)
-    sc.pl.dpt_timeseries(adata, as_heatmap=True)
+    sc.tl.leiden(adata, resolution=0.5, key_added="leiden_0_5", flavor="leidenalg")
+    adata.uns["iroot"] = np.flatnonzero(adata.obs["leiden_0_5"] == "0")[0]
+    sc.tl.diffmap(adata, n_comps=10)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", ".*invalid value encountered in scalar divide"
+        )
+        sc.tl.dpt(adata, n_branchings=3)
+    return adata
+
+
+@needs.leidenalg
+@needs.igraph
+@pytest.mark.parametrize(
+    "func",
+    [sc.pl.dpt_groups_pseudotime, sc.pl.dpt_timeseries],
+)
+def test_dpt_plots(
+    image_comparer, pbmc_68k_dpt_session: AnnData, func: Callable
+) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+
+    adata = pbmc_68k_dpt_session.copy()
+    func(
+        adata,
+        show=False,
+        **(dict(as_heatmap=True) if func is sc.pl.dpt_timeseries else {}),
+    )
+    save_and_compare_images(func.__name__)
 
 
 def test_scatter_raw(tmp_path):
@@ -1347,11 +1424,11 @@ def test_scatter_raw(tmp_path):
     raw_pth = tmp_path / "raw.png"
     x_pth = tmp_path / "X.png"
 
-    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=True)
+    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=True, show=False)
     plt.savefig(raw_pth, dpi=60)
     plt.close()
 
-    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=False)
+    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=False, show=False)
     plt.savefig(x_pth, dpi=60)
     plt.close()
 
@@ -1367,7 +1444,7 @@ def test_binary_scatter(image_comparer):
         obs=dict(binary=np.asarray([False, True, True])),
     )
     sc.pp.pca(data)
-    sc.pl.pca(data, color="binary")
+    sc.pl.pca(data, color="binary", show=False)
     if pkg_version("scikit-learn") >= Version("1.5.0rc1"):
         save_and_compare_images("binary_pca")
     else:
@@ -1397,6 +1474,7 @@ def test_scatter_no_basis_per_obs(image_comparer, color):
         use_raw=False,
         # palette only applies to categorical, i.e. color=='bulk_labels'
         palette="Set2",
+        show=False,
     )
     color_str = color if isinstance(color, str) else "_".join(color)
     save_and_compare_images(f"scatter_HES_percent_mito_{color_str}")
@@ -1407,7 +1485,9 @@ def test_scatter_no_basis_per_var(image_comparer):
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
-    sc.pl.scatter(pbmc, x="AAAGCCTGGCTAAC-1", y="AAATTCGATGCACA-1", use_raw=False)
+    sc.pl.scatter(
+        pbmc, x="AAAGCCTGGCTAAC-1", y="AAATTCGATGCACA-1", use_raw=False, show=False
+    )
     save_and_compare_images("scatter_AAAGCCTGGCTAAC-1_vs_AAATTCGATGCACA-1")
 
 
@@ -1423,10 +1503,12 @@ def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw
     """Test scatterplots of raw layer with no basis."""
     adata = pbmc_filtered()
 
-    sc.pl.scatter(adata.raw.to_adata(), x="EGFL7", y="F12", color="FAM185A")
+    sc.pl.scatter(adata.raw.to_adata(), x="EGFL7", y="F12", color="FAM185A", show=False)
     plt.savefig(path1 := tmp_path / "scatter-raw-to-adata.png")
 
-    sc.pl.scatter(adata, x="EGFL7", y="F12", color="FAM185A", use_raw=use_raw)
+    sc.pl.scatter(
+        adata, x="EGFL7", y="F12", color="FAM185A", use_raw=use_raw, show=False
+    )
     plt.savefig(path2 := tmp_path / f"scatter-{use_raw=}.png")
     plt.close()
 
@@ -1464,19 +1546,19 @@ def test_rankings(image_comparer):
 
     pbmc = pbmc68k_reduced()
     sc.pp.pca(pbmc)
-    sc.pl.pca_loadings(pbmc)
+    sc.pl.pca_loadings(pbmc, show=False)
     save_and_compare_images("pca_loadings")
 
-    sc.pl.pca_loadings(pbmc, components="1,2,3")
+    sc.pl.pca_loadings(pbmc, components="1,2,3", show=False)
     save_and_compare_images("pca_loadings")
 
-    sc.pl.pca_loadings(pbmc, components=[1, 2, 3])
+    sc.pl.pca_loadings(pbmc, components=[1, 2, 3], show=False)
     save_and_compare_images("pca_loadings")
 
-    sc.pl.pca_loadings(pbmc, include_lowest=False)
+    sc.pl.pca_loadings(pbmc, include_lowest=False, show=False)
     save_and_compare_images("pca_loadings_without_lowest")
 
-    sc.pl.pca_loadings(pbmc, n_points=10)
+    sc.pl.pca_loadings(pbmc, n_points=10, show=False)
     save_and_compare_images("pca_loadings_10_points")
 
 
@@ -1590,7 +1672,7 @@ def test_groupby_index(image_comparer):
         "CST3",
     ]
     pbmc_subset = pbmc[:10].copy()
-    sc.pl.dotplot(pbmc_subset, genes, groupby="index")
+    sc.pl.dotplot(pbmc_subset, genes, groupby="index", show=False)
     save_and_compare_images("dotplot_groupby_index")
 
 
@@ -1610,7 +1692,11 @@ def test_groupby_list(image_comparer):
 
     with mpl.rc_context({"figure.subplot.bottom": 0.5}):
         sc.pl.dotplot(
-            adata, ["Gata1", "Gata2"], groupby=["rand_cat", "cell_type"], swap_axes=True
+            adata,
+            ["Gata1", "Gata2"],
+            groupby=["rand_cat", "cell_type"],
+            swap_axes=True,
+            show=False,
         )
         save_and_compare_images("dotplot_groupby_list_catorder")
 
@@ -1627,8 +1713,7 @@ def test_color_cycler(caplog):
         caplog.at_level(logging.WARNING),
         plt.rc_context({"axes.prop_cycle": cyl, "patch.facecolor": colors[0]}),
     ):
-        sc.pl.umap(pbmc, color="phase")
-        plt.show()
+        sc.pl.umap(pbmc, color="phase", show=False)
         plt.close()
 
     assert caplog.text == ""
@@ -1640,14 +1725,14 @@ def test_repeated_colors_w_missing_value():
     v[0] = np.nan
     v = v.astype("category")
 
-    ad = sc.AnnData(obs=pd.DataFrame(v, columns=["value"]))
+    ad = sc.AnnData(obs=dict(value=v))
     ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
 
-    sc.pl.umap(ad, color="value")
+    sc.pl.umap(ad, color="value", show=False)
 
     ad.uns["value_colors"][1] = ad.uns["value_colors"][0]
 
-    sc.pl.umap(ad, color="value")
+    sc.pl.umap(ad, color="value", show=False)
 
 
 @pytest.mark.parametrize(
@@ -1662,7 +1747,7 @@ def test_repeated_colors_w_missing_value():
     ],
 )
 def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
-    N_GENES = 4
+    n_genes = 4
 
     adata = pbmc68k_reduced()
 
@@ -1681,18 +1766,18 @@ def test_filter_rank_genes_groups_plots(tmp_path, plot, check_same_image):
     df = df.query(conditions)[["group", "names"]]
 
     var_names = {
-        k: v.head(N_GENES).tolist()
+        k: v.head(n_genes).tolist()
         for k, v in df.groupby("group", observed=True)["names"]
     }
 
     pth_a = tmp_path / f"{plot.__name__}_filter_a.png"
     pth_b = tmp_path / f"{plot.__name__}_filter_b.png"
 
-    plot(adata, key="rank_genes_groups_filtered", n_genes=N_GENES)
+    plot(adata, key="rank_genes_groups_filtered", n_genes=n_genes, show=False)
     plt.savefig(pth_a)
     plt.close()
 
-    plot(adata, key="rank_genes_groups", var_names=var_names)
+    plot(adata, key="rank_genes_groups", var_names=var_names, show=False)
     plt.savefig(pth_b)
     plt.close()
 
@@ -1733,11 +1818,11 @@ def test_umap_mask_equal(tmp_path, check_same_image):
     mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
     ax = sc.pl.umap(pbmc, size=8.0, show=False)
-    sc.pl.umap(pbmc[mask_obs], size=8.0, color="LDHB", ax=ax)
+    sc.pl.umap(pbmc[mask_obs], size=8.0, color="LDHB", ax=ax, show=False)
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask_obs=mask_obs)
+    sc.pl.umap(pbmc, size=8.0, color="LDHB", mask_obs=mask_obs, show=False)
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
@@ -1752,6 +1837,32 @@ def test_umap_mask_mult_plots():
     axes = sc.pl.umap(pbmc, color=color, mask_obs=mask_obs, show=False)
     assert isinstance(axes, list)
     assert len(axes) == len(color)
+
+
+def test_umap_categories_dont_change_when_rerun_with_fewer_categories():
+    """Check that lowering the categories of interest does not cause a recalculation of colors."""
+    pbmc = pbmc3k_processed()
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+    old_colors = pbmc.uns["louvain_colors"].copy()
+    pbmc.obs.loc[pbmc.obs["louvain"] == "NK cells", "louvain"] = "B cells"
+    pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.remove_unused_categories()
+    # see https://github.com/scverse/scanpy/issues/3716 for why this used to fail
+    # Recalculation of the UMAP should not cause a re-calculation of colors
+    # when there are fewer categories.
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert (old_colors == pbmc.uns["louvain_colors"]).all()
+
+
+def test_umap_categories_change_when_rerun_with_more_categories():
+    """Check that growing the categories of interest causes a recalculation of colors."""
+    pbmc = pbmc3k_processed()
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.uns["louvain_colors"]) == len(pbmc.obs["louvain"].cat.categories)
+    pbmc.obs["louvain"] = pbmc.obs["louvain"].cat.add_categories("New Category")
+    pbmc.obs.loc[pbmc.obs_names[:5], "louvain"] = "New Category"
+    _ = sc.pl.umap(pbmc, color="louvain", show=False)
+    assert len(pbmc.obs["louvain"].cat.categories) == len(pbmc.uns["louvain_colors"])
 
 
 def test_umap_mask_no_modification():
@@ -1769,11 +1880,11 @@ def test_string_mask(tmp_path, check_same_image):
     pbmc = pbmc3k_processed()
     pbmc.obs["mask"] = mask_obs = pbmc.obs["louvain"].isin(["B cells", "NK cells"])
 
-    sc.pl.umap(pbmc, mask_obs=mask_obs, color="LDHB")
+    sc.pl.umap(pbmc, mask_obs=mask_obs, color="LDHB", show=False)
     plt.savefig(p1 := tmp_path / "umap_mask_fig1.png")
     plt.close()
 
-    sc.pl.umap(pbmc, color="LDHB", mask_obs="mask")
+    sc.pl.umap(pbmc, color="LDHB", mask_obs="mask", show=False)
     plt.savefig(p2 := tmp_path / "umap_mask_fig2.png")
     plt.close()
 
@@ -1785,3 +1896,8 @@ def test_violin_scale_warning(monkeypatch):
     monkeypatch.setattr(sc.pl.StackedViolin, "DEFAULT_SCALE", "count", raising=False)
     with pytest.warns(FutureWarning, match="Don’t set DEFAULT_SCALE"):
         sc.pl.StackedViolin(adata, adata.var_names[:3], groupby="louvain")
+
+
+def test_dogplot() -> None:
+    """Test that the dogplot function runs without errors."""
+    sc.pl.dogplot()

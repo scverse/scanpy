@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    Scale = Literal["linear", "log", "symlog", "logit"] | str
+type Scale = Literal["linear", "log", "symlog", "logit"] | str
 
 
 @old_positionals(
@@ -78,7 +78,7 @@ def scrublet_score_distribution(
 
     if "batched_by" in adata.uns["scrublet"]:
         batched_by = adata.uns["scrublet"]["batched_by"]
-        batches = adata.obs[batched_by].astype("category", copy=False)
+        batches = adata.obs[batched_by].astype("category")
         n_batches = len(batches.cat.categories)
         figsize = (figsize[0], figsize[1] * n_batches)
     else:

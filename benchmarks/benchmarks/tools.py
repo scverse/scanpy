@@ -5,61 +5,48 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import anndata as ad
 
 import scanpy as sc
 
 from ._utils import pbmc68k_reduced
 
-if TYPE_CHECKING:
-    from anndata import AnnData
 
-# setup variables
+class ToolsSuite:  # noqa: D101
+    def setup_cache(self) -> None:
+        adata = pbmc68k_reduced()
+        assert "X_pca" in adata.obsm
+        adata.write_h5ad("adata.h5ad")
 
-adata: AnnData
+    def setup(self) -> None:
+        self.adata = ad.read_h5ad("adata.h5ad")
 
+    def time_umap(self) -> None:
+        sc.tl.umap(self.adata)
 
-def setup():
-    global adata  # noqa: PLW0603
-    adata = pbmc68k_reduced()
-    assert "X_pca" in adata.obsm
+    def peakmem_umap(self) -> None:
+        sc.tl.umap(self.adata)
 
+    def time_diffmap(self) -> None:
+        sc.tl.diffmap(self.adata)
 
-def time_umap():
-    sc.tl.umap(adata)
+    def peakmem_diffmap(self) -> None:
+        sc.tl.diffmap(self.adata)
 
+    def time_leiden(self) -> None:
+        sc.tl.leiden(self.adata, flavor="igraph")
 
-def peakmem_umap():
-    sc.tl.umap(adata)
+    def peakmem_leiden(self) -> None:
+        sc.tl.leiden(self.adata, flavor="igraph")
 
+    def time_rank_genes_groups(self) -> None:
+        sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
 
-def time_diffmap():
-    sc.tl.diffmap(adata)
+    def peakmem_rank_genes_groups(self) -> None:
+        sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
 
+    def time_score_genes(self) -> None:
+        sc.tl.score_genes(self.adata, self.adata.var_names[:500])
 
-def peakmem_diffmap():
-    sc.tl.diffmap(adata)
-
-
-def time_leiden():
-    sc.tl.leiden(adata, flavor="igraph")
-
-
-def peakmem_leiden():
-    sc.tl.leiden(adata, flavor="igraph")
-
-
-def time_rank_genes_groups() -> None:
-    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
-
-
-def peakmem_rank_genes_groups() -> None:
-    sc.tl.rank_genes_groups(adata, "bulk_labels", method="wilcoxon")
-
-
-def time_score_genes() -> None:
-    sc.tl.score_genes(adata, adata.var_names[:500])
-
-
-def peakmem_score_genes() -> None:
-    sc.tl.score_genes(adata, adata.var_names[:500])
+    def peakmem_score_genes(self) -> None:
+        sc.tl.score_genes(self.adata, self.adata.var_names[:500])

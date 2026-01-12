@@ -41,6 +41,7 @@ def paul500() -> AnnData:
 )
 @pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
+    *,
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
@@ -101,18 +102,19 @@ def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
 def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     """Simulate doublets based on the randomly selected parents used previously."""
     n_sim = parents.shape[0]
-    I = sparse.coo_matrix(
+    entries = sparse.coo_matrix(
         (
             np.ones(2 * n_sim),
             (np.repeat(np.arange(n_sim), 2), parents.flat),
         ),
         (n_sim, adata.n_obs),
     )
-    X = I @ adata.layers["raw"]
+    # maintain data type, just like the real scrublet function.
+    x = (entries @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
-        X,
+        x,
         var=pd.DataFrame(index=adata.var_names),
-        obs={"total_counts": np.ravel(X.sum(axis=1))},
+        obs={"total_counts": np.ravel(x.sum(axis=1))},
         obsm={"doublet_parents": parents.copy()},
     )
 
@@ -155,32 +157,14 @@ def test_scrublet_data(cache: pytest.Cache):
         random_state=random_state,
     )
 
-    try:
-        # Require that the doublet scores are the same whether simulation is via
-        # the main function or manually provided
-        assert_allclose(
-            adata_scrublet_manual_sim.obs["doublet_score"],
-            adata_scrublet_auto_sim.obs["doublet_score"],
-            atol=1e-15,
-            rtol=1e-15,
-        )
-    except AssertionError:
-        import zarr
-
-        # try debugging https://github.com/scverse/scanpy/issues/3068
-        cache_path = cache.mkdir("debug")
-        store_manual = zarr.ZipStore(cache_path / "scrublet-manual.zip", mode="w")
-        store_auto = zarr.ZipStore(cache_path / "scrublet-auto.zip", mode="w")
-        z_manual = zarr.zeros(
-            adata_scrublet_manual_sim.shape[0], chunks=10, store=store_manual
-        )
-        z_auto = zarr.zeros(
-            adata_scrublet_auto_sim.shape[0], chunks=10, store=store_auto
-        )
-        z_manual[...] = adata_scrublet_manual_sim.obs["doublet_score"].values
-        z_auto[...] = adata_scrublet_auto_sim.obs["doublet_score"].values
-
-        raise
+    # Require that the doublet scores are the same whether simulation is via
+    # the main function or manually provided
+    assert_allclose(
+        adata_scrublet_manual_sim.obs["doublet_score"],
+        adata_scrublet_auto_sim.obs["doublet_score"],
+        atol=1e-15,
+        rtol=1e-15,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -244,3 +228,13 @@ def test_scrublet_simulate_doublets():
         adata_sim.obsm["doublet_parents"],
         np.array([[13, 132], [106, 43], [152, 3], [160, 103]]),
     )
+
+
+def test_scrublet_dtypes() -> None:
+    """Test that Scrublet does not change dtypes of existing data.obs cols."""
+    adata = pbmc200()
+    adata.obs["batch"] = pd.Categorical(100 * ["a"] + 100 * ["b"])
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
+
+    assert adata.obs["batch"].dtype == "category"

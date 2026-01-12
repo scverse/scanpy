@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from sklearn.utils import deprecated
-
+from ..._compat import deprecated
 from ...preprocessing import _scrublet
 from ._bbknn import bbknn
 from ._dca import dca

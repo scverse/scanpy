@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
 from datetime import datetime
 from functools import partial
+from importlib.metadata import version as get_version
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import matplotlib  # noqa
 from docutils import nodes
 from packaging.version import Version
+from sphinxcontrib.katex import NODEJS_BINARY
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use("agg")
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-import scanpy
+os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -29,6 +33,7 @@ nitpicky = True  # Warn about broken links. This is here for a reason: Do not ch
 needs_sphinx = "4.0"  # Nicer param docs
 suppress_warnings = [
     "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
+    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
 ]
 
 # General information
@@ -36,7 +41,7 @@ project = "Scanpy"
 author = "Scanpy development team"
 repository_url = "https://github.com/scverse/scanpy"
 copyright = f"{datetime.now():%Y}, scverse"
-version = scanpy.__version__.replace(".dirty", "")
+version = get_version("scanpy").replace(".dirty", "")
 
 # Bumping the version updates all docs, so don't do that
 if Version(version).is_devrelease:
@@ -48,7 +53,6 @@ release = version
 # Bibliography settings
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
-
 
 # default settings
 templates_path = ["_templates"]
@@ -70,17 +74,17 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.doctest",
     "sphinx.ext.coverage",
-    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
     "sphinxcontrib.bibtex",
+    "sphinxcontrib.katex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
     "sphinx.ext.linkcode",
     "sphinx_design",
+    "sphinx_issues",
     "sphinx_tabs.tabs",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
@@ -89,7 +93,12 @@ extensions = [
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
+autodoc_default_options = {
+    # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
+    "members": False,
+    # show “Bases: SomeClass” at the top of class docs
+    "show-inheritance": True,
+}
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
@@ -117,9 +126,12 @@ ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
+always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
 
 pygments_style = "default"
 pygments_dark_style = "native"
+
+katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
     anndata=("https://anndata.readthedocs.io/en/stable/", None),
@@ -128,6 +140,11 @@ intersphinx_mapping = dict(
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
+    decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
+    fast_array_utils=(
+        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
+        None,
+    ),
     h5py=("https://docs.h5py.org/en/stable/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
@@ -138,6 +155,7 @@ intersphinx_mapping = dict(
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
+    pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
     python=("https://docs.python.org/3", None),
@@ -150,6 +168,39 @@ intersphinx_mapping = dict(
 )
 
 
+array_support: dict[str, tuple[list[str], list[str]]] = {
+    "experimental.pp.highly_variable_genes": (["np", "sp"], []),
+    "get.aggregate": (["np", "sp", "da"], []),
+    "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
+    "pp.combat": (["np"], []),
+    "pp.downsample_counts": (["np", "sp[csr]"], []),
+    "pp.filter_cells": (["np", "sp", "da"], []),
+    "pp.filter_genes": (["np", "sp", "da"], []),
+    "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.log1p": (["np", "sp", "da"], []),
+    "pp.neighbors": (["np", "sp"], []),
+    "pp.normalize_total": (["np", "sp[csr]", "da"], []),
+    "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.regress_out": (["np"], []),
+    "pp.sample": (["np", "sp", "da"], []),
+    "pp.scale": (["np", "sp", "da"], []),
+    "pp.scrublet": (["np", "sp"], []),
+    "pp.scrublet_simulate_doublets": (["np", "sp"], []),
+    "tl.dendrogram": (["np", "sp"], []),
+    "tl.diffmap": (["np", "sp"], []),
+    "tl.dpt": (["np", "sp"], []),
+    "tl.draw_graph": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.embedding_density": (["np"], []),
+    "tl.ingest": (["np", "sp"], []),
+    "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.paga": (["np", "sp"], []),
+    "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.tsne": (["np", "sp"], []),
+    "tl.umap": (["np", "sp"], []),
+}
+
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
@@ -159,12 +210,13 @@ html_theme_options = {
     "use_repository_button": True,
 }
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 html_show_sphinx = False
 html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
@@ -241,8 +293,5 @@ plot_html_show_source_link = False
 plot_working_directory = HERE.parent  # Project root
 
 # link config
-extlinks = {
-    "issue": ("https://github.com/scverse/scanpy/issues/%s", "issue%s"),
-    "pr": ("https://github.com/scverse/scanpy/pull/%s", "pr%s"),
-}
+issues_github_path = "scverse/scanpy"
 rtd_links_prefix = PurePosixPath("src")

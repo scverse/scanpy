@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import scipy.linalg
+from fast_array_utils import stats
 
+from scanpy._utils import raise_if_dask_feature_axis_chunked
 from scanpy._utils._doctests import doctest_needs
 
 from ..._compat import CSBase
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -34,7 +35,8 @@ class PCAEighDask:
         >>> import dask.array as da
         >>> import scipy.sparse as sp
         >>> x = (
-        ...     da.array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
+        ...     da
+        ...     .array(sp.random(100, 200, density=0.3, dtype="int64").toarray())
         ...     .rechunk((10, -1))
         ...     .map_blocks(sp.csr_matrix)
         ... )
@@ -52,13 +54,7 @@ class PCAEighDask:
                 f"Got {x._meta.format} as meta."
             )
             raise ValueError(msg)
-        if x.chunksize[1] != x.shape[1]:
-            msg = (
-                "Only dask arrays with chunking along the first axis are supported. "
-                f"Got chunksize {x.chunksize} with shape {x.shape}. "
-                "Rechunking should be simple and cost nothing from AnnData's on-disk format when the on-disk layout has this chunking."
-            )
-            raise ValueError(msg)
+        raise_if_dask_feature_axis_chunked(x)
         self.__class__ = PCAEighDaskFit
         self = cast("PCAEighDaskFit", self)  # noqa: PLW0642
 
@@ -200,10 +196,9 @@ def _cov_sparse_dask(
         meta=np.array([], dtype=dtype),
         dtype=dtype,
     ).sum(axis=0)
-    mean_x_dask, _ = _get_mean_var(x)
     gram_matrix, mean_x = cast(
         "tuple[NDArray, NDArray[np.float64]]",
-        dask.compute(gram_matrix_dask, mean_x_dask),
+        dask.compute(gram_matrix_dask, stats.mean(x, axis=0, dtype=dtype)),
     )
     gram_matrix /= x.shape[0]
 

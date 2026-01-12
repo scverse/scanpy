@@ -48,9 +48,9 @@ These classes allow fine tuning of visual parameters.
    :nosignatures:
    :toctree: generated/classes
 
-    pl.DotPlot
-    pl.MatrixPlot
-    pl.StackedViolin
+   pl.DotPlot
+   pl.MatrixPlot
+   pl.StackedViolin
 
 ```
 
@@ -64,7 +64,6 @@ Methods for visualizing quality control and results of preprocessing functions.
    :toctree: generated/
 
    pl.highest_expr_genes
-   pl.filter_genes_dispersion
    pl.highly_variable_genes
    pl.scrublet_score_distribution
 
@@ -118,7 +117,7 @@ Compute densities on embeddings.
 
 #### Branching trajectories and pseudotime, clustering
 
-Visualize clusters using one of the embedding methods passing `color='louvain'`.
+Visualize clusters using one of the embedding methods passing e.g. `color='leiden'`.
 
 ```{eval-rst}
 .. autosummary::
@@ -130,6 +129,16 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
    pl.paga
    pl.paga_path
    pl.paga_compare
+```
+
+Visualize hierarchical clustering results as a heatmap.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.correlation_matrix
 ```
 
 #### Marker genes

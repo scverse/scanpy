@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from fast_array_utils.stats import mean_var
 from packaging.version import Version
 from scipy.sparse.linalg import LinearOperator, svds
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip
 
 from ..._compat import pkg_version
-from .._utils import _get_mean_var
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -62,10 +62,10 @@ def _pca_compat_sparse(
     idx = np.argsort(-s)
     v = v[idx, :]
 
-    X_pca = (u * s)[:, idx]
+    x_pca = (u * s)[:, idx]
     ev = s[idx] ** 2 / (x.shape[0] - 1)
 
-    total_var = _get_mean_var(x)[1].sum()
+    total_var = mean_var(x, correction=1, axis=0)[1].sum()
     ev_ratio = ev / total_var
 
     from sklearn.decomposition import PCA
@@ -74,4 +74,4 @@ def _pca_compat_sparse(
     pca.explained_variance_ = ev
     pca.explained_variance_ratio_ = ev_ratio
     pca.components_ = v
-    return X_pca, pca
+    return x_pca, pca

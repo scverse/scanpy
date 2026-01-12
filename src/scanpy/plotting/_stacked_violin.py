@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from matplotlib import colormaps
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -154,7 +152,7 @@ class StackedViolin(BasePlot):
         # This is done because class properties are hard to do.
         if name == "DEFAULT_DENSITY_NORM" and hasattr(self, "DEFAULT_SCALE"):
             msg = "Don’t set DEFAULT_SCALE, use DEFAULT_DENSITY_NORM instead"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
@@ -229,13 +227,15 @@ class StackedViolin(BasePlot):
         if standard_scale == "obs":
             standard_scale = "group"
             msg = "`standard_scale='obs'` is deprecated, use `standard_scale='group'` instead"
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            warn(msg, FutureWarning)
         if standard_scale == "group":
-            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(1), axis=0)
-            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(1), axis=0).fillna(0)
+            self.obs_tidy = self.obs_tidy.sub(self.obs_tidy.min(axis=1), axis=0)
+            self.obs_tidy = self.obs_tidy.div(self.obs_tidy.max(axis=1), axis=0).fillna(
+                0
+            )
         elif standard_scale == "var":
-            self.obs_tidy -= self.obs_tidy.min(0)
-            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(0)).fillna(0)
+            self.obs_tidy -= self.obs_tidy.min(axis=0)
+            self.obs_tidy = (self.obs_tidy / self.obs_tidy.max(axis=0)).fillna(0)
         elif standard_scale is None:
             pass
         else:
@@ -394,7 +394,8 @@ class StackedViolin(BasePlot):
         # get mean values for color and transform to color values
         # using colormap
         _color_df = (
-            _matrix.groupby(level=0, observed=True)
+            _matrix
+            .groupby(level=0, observed=True)
             .median()
             .loc[
                 self.categories_order
@@ -496,13 +497,9 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
-        if Version(pd.__version__) >= Version("2.1"):
-            stack_kwargs = {"future_stack": True}
-        else:
-            stack_kwargs = {"dropna": False}
-
         df = (
-            pd.DataFrame(_matrix.stack(**stack_kwargs))
+            pd
+            .DataFrame(_matrix.stack(future_stack=True))
             .reset_index()
             .rename(
                 columns={
@@ -561,7 +558,7 @@ class StackedViolin(BasePlot):
                 x=x,
                 y="values",
                 data=_df,
-                orient="vertical",
+                orient="v",
                 ax=row_ax,
                 # use a single `color`` if row_colors[idx] is defined
                 # else use the palette
@@ -688,7 +685,6 @@ def stacked_violin(  # noqa: PLR0913
     categories_order: Sequence[str] | None = None,
     swap_axes: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     return_fig: bool | None = False,
     ax: _AxesSubplot | None = None,
     vmin: float | None = None,
@@ -706,6 +702,7 @@ def stacked_violin(  # noqa: PLR0913
     # deprecated
     order: Sequence[str] | None | Empty = _empty,
     scale: DensityNorm | Empty = _empty,
+    save: bool | str | None = None,
     **kwds,
 ) -> StackedViolin | dict | None:
     """Stacked violin plots.
@@ -806,7 +803,7 @@ def stacked_violin(  # noqa: PLR0913
             "`order` is deprecated (and never worked for `stacked_violin`), "
             "use categories_order instead"
         )
-        warnings.warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         # no reason to set `categories_order` here, as `order` never worked.
 
     vp = StackedViolin(

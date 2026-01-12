@@ -21,8 +21,9 @@ def highly_variable_genes(  # noqa: PLR0912
     *,
     log: bool = False,
     show: bool | None = None,
-    save: bool | str | None = None,
     highly_variable_genes: bool = True,
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
     """Plot dispersions or normalized variance versus means for genes.
 
@@ -89,12 +90,11 @@ def highly_variable_genes(  # noqa: PLR0912
             plt.ylim(y_min, 1.05 * np.max(var_or_disp))
         if idx == 0:
             plt.legend()
-        plt.xlabel(("$log_{10}$ " if False else "") + "mean expressions of genes")
+        plt.xlabel(f"{'$log_{10}$ ' if False else ''}mean expressions of genes")
         data_type = "dispersions" if not seurat_v3_flavor else "variances"
         plt.ylabel(
-            ("$log_{10}$ " if False else "")
-            + f"{data_type} of genes"
-            + (" (normalized)" if idx == 0 else " (not normalized)")
+            f"{'$log_{10}$ ' if False else ''}{data_type} "
+            f"of genes ({'' if idx == 0 else 'not '}normalized)"
         )
 
     show = settings.autoshow if show is None else show
@@ -112,6 +112,7 @@ def filter_genes_dispersion(
     *,
     log: bool = False,
     show: bool | None = None,
+    # deprecated
     save: bool | str | None = None,
 ) -> None:
     """Plot dispersions versus means for genes.

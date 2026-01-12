@@ -6,6 +6,7 @@ import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from functools import partial, update_wrapper
+from importlib.metadata import version
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
     from session_info2 import SessionInfo
 
-    from ._settings import ScanpyConfig
+    from ._settings import SettingsMeta
 
 
 # This is currently the only documented API
@@ -74,19 +75,20 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings: ScanpyConfig):
+def _set_log_file(settings: SettingsMeta) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
     root.addHandler(h)
 
 
-def _set_log_level(settings: ScanpyConfig, level: int):
+def _set_log_level(settings: SettingsMeta, level: int) -> None:
     root = settings._root_logger
     root.setLevel(level)
     for h in list(root.handlers):
@@ -178,12 +180,10 @@ def print_version_and_date(*, file=None):
         Optional path for output.
 
     """
-    from . import __version__
-
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {version('scanpy')}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 

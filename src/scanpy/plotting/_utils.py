@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Literal, TypedDict, overload
+from itertools import cycle, islice
+from typing import TYPE_CHECKING, Literal, overload
 
-import matplotlib as mpl
 import numpy as np
 from cycler import Cycler, cycler
 from matplotlib import axes, colormaps, gridspec, rcParams, ticker
@@ -12,11 +12,11 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars
+from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import old_positionals
+from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _empty
 from . import palettes
@@ -33,16 +33,50 @@ if TYPE_CHECKING:
 
     from .._utils import Empty
 
-    # TODO: more
-    DensityNorm = Literal["area", "count", "width"]
+__all__ = [
+    "ColorLike",
+    "DensityNorm",
+    "VBound",
+    "_AxesSubplot",
+    "_FontSize",
+    "_FontWeight",
+    "_LegendLoc",
+    "_deprecated_scale",
+    "_dk",
+    "add_colors_for_categorical_sample_annotation",
+    "check_colornorm",
+    "check_projection",
+    "circles",
+    "default_palette",
+    "fix_kwds",
+    "make_grid_spec",
+    "matrix",
+    "plot_arrows",
+    "plot_edges",
+    "savefig_or_show",
+    "scatter_base",
+    "scatter_group",
+    "set_colors_for_categorical_obs",
+    "set_default_colors_for_categorical_obs",
+    "setup_axes",
+    "ticks_formatter",
+    "timeseries_as_heatmap",
+    "timeseries_subplot",
+    "validate_palette",
+]
+
+# TODO: more
+type DensityNorm = Literal["area", "count", "width"]
 
 # These are needed by _wraps_plot_scatter
-VBound = str | float | Callable[[Sequence[float]], float]
-_FontWeight = Literal["light", "normal", "medium", "semibold", "bold", "heavy", "black"]
-_FontSize = Literal[
+type VBound = str | float | Callable[[Sequence[float]], float]
+type _FontWeight = Literal[
+    "light", "normal", "medium", "semibold", "bold", "heavy", "black"
+]
+type _FontSize = Literal[
     "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"
 ]
-_LegendLoc = Literal[
+type _LegendLoc = Literal[
     "none",
     "right margin",
     "on data",
@@ -59,7 +93,7 @@ _LegendLoc = Literal[
     "upper center",
     "center",
 ]
-ColorLike = str | tuple[float, ...]
+type ColorLike = str | tuple[float, ...]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -94,8 +128,9 @@ def matrix(  # noqa: PLR0913
     colorbar_shrink: float = 0.5,
     color_map: str | Colormap | None = None,
     show: bool | None = None,
-    save: bool | str | None = None,
     ax: Axes | None = None,
+    # deprecated
+    save: bool | str | None = None,
 ) -> None:
     """Plot a matrix."""
     if ax is None:
@@ -117,17 +152,17 @@ def matrix(  # noqa: PLR0913
     savefig_or_show("matrix", show=show, save=save)
 
 
-def timeseries(X, **kwargs):
+def timeseries(X, **kwargs):  # noqa: N803
     """Plot X. See timeseries_subplot."""
     plt.figure(
         figsize=tuple(2 * s for s in rcParams["figure.figsize"]),
-        subplotpars=sppars(left=0.12, right=0.98, bottom=0.13),
+        subplotpars=SubplotParams(left=0.12, right=0.98, bottom=0.13),
     )
     timeseries_subplot(X, **kwargs)
 
 
 def timeseries_subplot(  # noqa: PLR0912, PLR0913
-    X: np.ndarray,
+    X: np.ndarray,  # noqa: N803
     *,
     time=None,
     color=None,
@@ -154,41 +189,42 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
         X with n columns, color is of length n.
 
     """
-    if color is not None:
-        use_color_map = isinstance(color[0], float | np.floating)
+    use_color_map = color is not None and isinstance(color[0], float | np.floating)
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
     if X.ndim == 1:
-        X = X[:, None]
+        X = X[:, None]  # noqa: N806
     if X.shape[1] > 1:
-        colors = palette[: X.shape[1]].by_key()["color"]
+        colors = islice(cycle(palette.by_key()["color"]), X.shape[1])
         subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
     elif use_color_map:
         colors = [color]
         subsets = [(x_range, X[:, 0])]
     else:
         levels, _ = np.unique(color, return_inverse=True)
-        colors = np.array(palette[: len(levels)].by_key()["color"])
+        colors = islice(cycle(palette.by_key()["color"]), len(levels))
         subsets = [(x_range[color == level], X[color == level, :]) for level in levels]
 
     if isinstance(marker, str):
         marker = [marker]
     if len(marker) != len(subsets) and len(marker) == 1:
-        marker = [marker[0] for _ in range(len(subsets))]
+        marker = [marker[0]] * len(subsets)
+    if not (has_var_names := (len(var_names) > 0)):
+        var_names = [""] * len(subsets)
 
     if ax is None:
         ax = plt.subplot()
-    for i, (x, y) in enumerate(subsets):
+    for (x, y), m, c, var_name in zip(subsets, marker, colors, var_names, strict=True):
         ax.scatter(
             x,
             y,
-            marker=marker[i],
+            marker=m,
             edgecolor="face",
             s=rcParams["lines.markersize"],
-            c=colors[i],
-            label=var_names[i] if len(var_names) > 0 else "",
-            cmap=color_map,
+            c=c,
+            label=var_name,
             rasterized=settings._vector_friendly,
+            **(dict(cmap=color_map) if use_color_map else {}),
         )
     ylim = ax.get_ylim()
     for h in highlights_x:
@@ -200,12 +236,16 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
     ax.set_ylabel(ylabel)
     if yticks is not None:
         ax.set_yticks(yticks)
-    if len(var_names) > 0 and legend:
+    if has_var_names and legend:
         ax.legend(frameon=False)
 
 
 def timeseries_as_heatmap(
-    X: np.ndarray, *, var_names: Collection[str] = (), highlights_x=(), color_map=None
+    X: np.ndarray,  # noqa: N803
+    *,
+    var_names: Collection[str] = (),
+    highlights_x=(),
+    color_map=None,
 ):
     """Plot timeseries as heatmap.
 
@@ -222,27 +262,7 @@ def timeseries_as_heatmap(
     if var_names.ndim == 2:
         var_names = var_names[:, 0]
 
-    # transpose X
-    X = X.T
-    min_x = np.min(X)
-
-    # insert space into X
-    if False:
-        # generate new array with highlights_x
-        space = 10  # integer
-        x_new = np.zeros((X.shape[0], X.shape[1] + space * len(highlights_x)))
-        hold = 0
-        _hold = 0
-        space_sum = 0
-        for h in highlights_x:
-            _h = h + space_sum
-            x_new[:, _hold:_h] = X[:, hold:h]
-            x_new[:, _h : _h + space] = min_x * np.ones((X.shape[0], space))
-            # update variables
-            space_sum += space
-            _hold = _h + space
-            hold = h
-        x_new[:, _hold:] = X[:, hold:]
+    X = X.T  # noqa: N806
 
     _, ax = plt.subplots(figsize=(1.5 * 4, 2 * 4))
     img = ax.imshow(
@@ -264,7 +284,7 @@ def timeseries_as_heatmap(
 # -------------------------------------------------------------------------------
 
 
-additional_colors = {
+_ADDITIONAL_COLORS = {
     "gold2": "#eec900",
     "firebrick3": "#cd2626",
     "khaki2": "#eee685",
@@ -306,12 +326,12 @@ additional_colors = {
 # -------------------------------------------------------------------------------
 
 
-def savefig(writekey, dpi=None, ext=None):
+def _savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
     The `filename` is generated as follows:
 
-        filename = settings.figdir / (writekey + settings.plot_suffix + '.' + settings.file_format_figs)
+        filename = settings.figdir / f"{writekey}{settings.plot_suffix}.{settings.file_format_figs}"
     """
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
@@ -339,6 +359,7 @@ def savefig(writekey, dpi=None, ext=None):
 
 def savefig_or_show(
     writekey: str,
+    *,
     show: bool | None = None,
     dpi: int | None = None,
     ext: str | None = None,
@@ -355,13 +376,17 @@ def savefig_or_show(
         # append it
         writekey += save
         save = True
-    save = settings.autosave if save is None else save
-    show = settings.autoshow if show is None else show
-    if save:
-        savefig(writekey, dpi=dpi, ext=ext)
-    if show:
+    if do_save := settings.autosave if save is None else save:
+        if save:  # `save=True | "some-str"` argument has been used
+            msg = (
+                "Argument `save` is deprecated and will be removed in a future version. "
+                "Use `sc.pl.plot(show=False).figure.savefig()` instead."
+            )
+            warn(msg, FutureWarning)
+        _savefig(writekey, dpi=dpi, ext=ext)
+    if settings.autoshow if show is None else show:
         plt.show()
-    if save:
+    if do_save:
         plt.close()  # clear figure
 
 
@@ -376,7 +401,7 @@ def default_palette(
         return palette
 
 
-def _validate_palette(adata: AnnData, key: str) -> None:
+def validate_palette(adata: AnnData, key: str) -> None:
     """Validate and update the list of colors in `adata.uns[f'{key}_colors']`.
 
     Not only valid matplotlib colors are checked but also if the color name
@@ -388,7 +413,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
         # check if the color is a valid R color and translate it
         # to a valid hex color value
         palette = [
-            color if is_color_like(color) else additional_colors[color]
+            color if is_color_like(color) else _ADDITIONAL_COLORS[color]
             for color in raw_palette
         ]
     except KeyError as e:
@@ -396,7 +421,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
             f"The following color value found in adata.uns['{key}_colors'] "
             f"is not valid: {e.args[0]!r}. Default colors will be used instead."
         )
-        _set_default_colors_for_categorical_obs(adata, key)
+        set_default_colors_for_categorical_obs(adata, key)
         palette = None
     # Don’t modify if nothing changed
     if palette is None or np.array_equal(palette, adata.uns[color_key]):
@@ -404,7 +429,7 @@ def _validate_palette(adata: AnnData, key: str) -> None:
     adata.uns[color_key] = palette
 
 
-def _set_colors_for_categorical_obs(
+def set_colors_for_categorical_obs(
     adata, value_to_plot, palette: str | Sequence[str] | Cycler
 ):
     """Set `adata.uns[f'{value_to_plot}_colors']` according to the given palette.
@@ -453,7 +478,7 @@ def _set_colors_for_categorical_obs(
                 )
             try:  # check that colors are valid
                 _color_list = [
-                    color if is_color_like(color) else additional_colors[color]
+                    color if is_color_like(color) else _ADDITIONAL_COLORS[color]
                     for color in palette
                 ]
             except KeyError as e:
@@ -478,10 +503,10 @@ def _set_colors_for_categorical_obs(
         cc = palette()
         colors_list = [to_hex(next(cc)["color"]) for x in range(len(categories))]
 
-    adata.uns[value_to_plot + "_colors"] = colors_list
+    adata.uns[f"{value_to_plot}_colors"] = colors_list
 
 
-def _set_default_colors_for_categorical_obs(adata, value_to_plot):
+def set_default_colors_for_categorical_obs(adata, value_to_plot):
     """Set `adata.uns[f'{value_to_plot}_colors']` using default color palettes.
 
     Parameters
@@ -523,7 +548,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
             "'grey' color will be used for all categories."
         )
 
-    _set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
+    set_colors_for_categorical_obs(adata, value_to_plot, palette[:length])
 
 
 def add_colors_for_categorical_sample_annotation(
@@ -532,11 +557,11 @@ def add_colors_for_categorical_sample_annotation(
     color_key = f"{key}_colors"
     colors_needed = len(adata.obs[key].cat.categories)
     if palette and force_update_colors:
-        _set_colors_for_categorical_obs(adata, key, palette)
+        set_colors_for_categorical_obs(adata, key, palette)
     elif color_key in adata.uns and len(adata.uns[color_key]) <= colors_needed:
-        _validate_palette(adata, key)
+        validate_palette(adata, key)
     else:
-        _set_default_colors_for_categorical_obs(adata, key)
+        set_default_colors_for_categorical_obs(adata, key)
 
 
 def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=None):
@@ -588,15 +613,15 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
         )
 
     basis_key = _get_basis(adata, basis)
-    X = adata.obsm[basis_key]
-    V = adata.obsm[f"{v_prefix}_{basis}"]
+    x = adata.obsm[basis_key]
+    v = adata.obsm[f"{v_prefix}_{basis}"]
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
         ax.quiver(
-            X[:, 0],
-            X[:, 1],
-            V[:, 0],
-            V[:, 1],
+            x[:, 0],
+            x[:, 1],
+            v[:, 0],
+            v[:, 1],
             **quiver_kwds,
             rasterized=settings._vector_friendly,
         )
@@ -607,7 +632,7 @@ def scatter_group(
     key: str,
     cat_code: int,
     adata: AnnData,
-    Y: np.ndarray,
+    y: np.ndarray,
     *,
     projection: Literal["2d", "3d"] = "2d",
     size: int = 3,
@@ -616,17 +641,17 @@ def scatter_group(
 ):
     """Scatter of group using representation of data Y."""
     mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].values
-    color = adata.uns[key + "_colors"][cat_code]
+    color = adata.uns[f"{key}_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
 
-        color = rgb2hex(adata.uns[key + "_colors"][cat_code])
+        color = rgb2hex(adata.uns[f"{key}_colors"][cat_code])
     if not is_color_like(color):
         msg = f"{color!r} is not a valid matplotlib color."
         raise ValueError(msg)
-    data = [Y[mask_obs, 0], Y[mask_obs, 1]]
+    data = [y[mask_obs, 0], y[mask_obs, 1]]
     if projection == "3d":
-        data.append(Y[mask_obs, 2])
+        data.append(y[mask_obs, 2])
     ax.scatter(
         *data,
         marker=marker,
@@ -695,7 +720,7 @@ def setup_axes(  # noqa: PLR0912
     if ax is None:
         plt.figure(
             figsize=(figure_width, height),
-            subplotpars=sppars(left=0, right=1, bottom=bottom_offset),
+            subplotpars=SubplotParams(left=0, right=1, bottom=bottom_offset),
         )
     left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
     for i in range(1, len(panels)):
@@ -725,7 +750,8 @@ def setup_axes(  # noqa: PLR0912
 
 
 def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
-    Y: np.ndarray,
+    y: np.ndarray,
+    /,
     *,
     colors: str | Sequence[ColorLike | np.ndarray] = "blue",
     sort_order=True,
@@ -749,7 +775,7 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
 
     Parameters
     ----------
-    Y
+    y
         Data array.
     projection
 
@@ -774,7 +800,7 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
         sizes = [sizes[0] for _ in range(len(colors))]
     if len(markers) != len(colors) and len(markers) == 1:
         markers = [markers[0] for _ in range(len(colors))]
-    axs, panel_pos, draw_region_width, figure_width = setup_axes(
+    axs, panel_pos, draw_region_width, _figure_width = setup_axes(
         ax,
         panels=colors,
         colorbars=colorbars,
@@ -788,17 +814,17 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
         marker = markers[icolor]
         bottom = panel_pos[0][0]
         height = panel_pos[1][0] - bottom
-        Y_sort = Y
+        y_sort = y
         if not is_color_like(color_spec) and sort_order:
             sort = np.argsort(color_spec)
             color = color_spec[sort]
-            Y_sort = Y[sort]
+            y_sort = y[sort]
         else:
             color = color_spec
         if projection == "2d":
-            data = Y_sort[:, 0], Y_sort[:, 1]
+            data = y_sort[:, 0], y_sort[:, 1]
         elif projection == "3d":
-            data = Y_sort[:, 0], Y_sort[:, 1], Y_sort[:, 2]
+            data = y_sort[:, 0], y_sort[:, 1], y_sort[:, 2]
         else:
             msg = f"Unknown projection {projection!r} not in '2d', '3d'"
             raise ValueError(msg)
@@ -832,9 +858,9 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
         for ihighlight, highlight_text in zip(
             highlights_indices, highlights_labels, strict=True
         ):
-            data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
+            data = [y[ihighlight, 0]], [y[ihighlight, 1]]
             if "3d" in projection:
-                data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
+                data = [y[ihighlight, 0]], [y[ihighlight, 1]], [y[ihighlight, 2]]
             ax.scatter(
                 *data,
                 c="black",
@@ -876,270 +902,8 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
-def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
-    """Plot scatter plot of data.
-
-    Parameters
-    ----------
-    ax
-        Axis to plot on.
-    Y
-        Data array, data to be plotted needs to be in the first two columns.
-
-    """
-    if "s" not in kwargs:
-        kwargs["s"] = 2 if Y.shape[0] > 500 else 10
-    if "edgecolors" not in kwargs:
-        kwargs["edgecolors"] = "face"
-    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=settings._vector_friendly)
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-
-def arrows_transitions(ax: Axes, X: np.ndarray, indices: Sequence[int], weight=None):
-    """Plot arrows of transitions in data matrix.
-
-    Parameters
-    ----------
-    ax
-        Axis object from matplotlib.
-    X
-        Data array, any representation wished (X, psi, phi, etc).
-    indices
-        Indices storing the transitions.
-
-    """
-    step = 1
-    width = axis_to_data(ax, 0.001)
-    if X.shape[0] > 300:
-        step = 5
-        width = axis_to_data(ax, 0.0005)
-    if X.shape[0] > 500:
-        step = 30
-        width = axis_to_data(ax, 0.0001)
-    head_width = 10 * width
-    for ix, x in enumerate(X):
-        if ix % step != 0:
-            continue
-        X_step = X[indices[ix]] - x
-        # don't plot arrow of length 0
-        for itrans in range(X_step.shape[0]):
-            alphai = 1
-            widthi = width
-            head_widthi = head_width
-            if weight is not None:
-                alphai *= weight[ix, itrans]
-                widthi *= weight[ix, itrans]
-            if not np.any(X_step[itrans, :1]):
-                continue
-            ax.arrow(
-                x[0],
-                x[1],
-                X_step[itrans, 0],
-                X_step[itrans, 1],
-                length_includes_head=True,
-                width=widthi,
-                head_width=head_widthi,
-                alpha=alphai,
-                color="grey",
-            )
-
-
-def ticks_formatter(x, pos):
-    # pretty scientific notation
-    if False:
-        a, b = f"{x:.2e}".split("e")
-        b = int(b)
-        return rf"${a} \times 10^{{{b}}}$"
-    else:
-        return f"{x:.3f}".rstrip("0").rstrip(".")
-
-
-def pimp_axis(x_or_y_ax):
-    """Remove trailing zeros."""
-    x_or_y_ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
-
-
-def scale_to_zero_one(x):
-    """Take some 1d data and scale it so that min matches 0 and max 1."""
-    xscaled = x - np.min(x)
-    xscaled /= np.max(xscaled)
-    return xscaled
-
-
-class _Level(TypedDict):
-    total: int
-    current: int
-
-
-def hierarchy_pos(
-    G, root: int, levels_: Mapping[int, int] | None = None, width=1.0, height=1.0
-) -> dict[int, tuple[float, float]]:
-    """Tree layout for networkx graph.
-
-    See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
-    answer by burubum.
-
-    If there is a cycle that is reachable from root, then this will see
-    infinite recursion.
-
-    Parameters
-    ----------
-    G: the graph
-    root: the root node
-    levels: a dictionary
-            key: level number (starting from 0)
-            value: number of nodes in this level
-    width: horizontal space allocated for drawing
-    height: vertical space allocated for drawing
-
-    """
-
-    def make_levels(
-        levels: dict[int, _Level],
-        node: int = root,
-        current_level: int = 0,
-        parent: int | None = None,
-    ) -> dict[int, _Level]:
-        """Compute the number of nodes for each level."""
-        if current_level not in levels:
-            levels[current_level] = _Level(total=0, current=0)
-        levels[current_level]["total"] += 1
-        neighbors: list[int] = list(G.neighbors(node))
-        if parent is not None:
-            neighbors.remove(parent)
-        for neighbor in neighbors:
-            levels = make_levels(levels, neighbor, current_level + 1, node)
-        return levels
-
-    if levels_ is None:
-        levels = make_levels({})
-    else:
-        levels = {k: _Level(total=0, current=0) for k, v in levels_.items()}
-
-    def make_pos(
-        pos: dict[int, tuple[float, float]],
-        node: int = root,
-        current_level: int = 0,
-        parent: int | None = None,
-        vert_loc: float = 0.0,
-    ):
-        dx = 1 / levels[current_level]["total"]
-        left = dx / 2
-        pos[node] = ((left + dx * levels[current_level]["current"]) * width, vert_loc)
-        levels[current_level]["current"] += 1
-        neighbors: list[int] = list(G.neighbors(node))
-        if parent is not None:
-            neighbors.remove(parent)
-        for neighbor in neighbors:
-            pos = make_pos(pos, neighbor, current_level + 1, node, vert_loc - vert_gap)
-        return pos
-
-    vert_gap = height / (max(levels.keys()) + 1)
-    return make_pos({})
-
-
-def hierarchy_sc(G, root, node_sets):
-    import networkx as nx
-
-    def make_sc_tree(sc_G, node=root, parent=None):
-        sc_G.add_node(node)
-        neighbors = G.neighbors(node)
-        if parent is not None:
-            sc_G.add_edge(parent, node)
-            neighbors.remove(parent)
-        old_node = node
-        for n in node_sets[int(node)]:
-            new_node = str(node) + "_" + str(n)
-            sc_G.add_node(new_node)
-            sc_G.add_edge(old_node, new_node)
-            old_node = new_node
-        for neighbor in neighbors:
-            sc_G = make_sc_tree(sc_G, neighbor, node)
-        return sc_G
-
-    return make_sc_tree(nx.Graph())
-
-
-def zoom(ax, xy="x", factor=1):
-    """Zoom into axis."""
-    limits = ax.get_xlim() if xy == "x" else ax.get_ylim()
-    new_limits = 0.5 * (limits[0] + limits[1]) + 1.0 / factor * np.array(
-        (-0.5, 0.5)
-    ) * (limits[1] - limits[0])
-    if xy == "x":
-        ax.set_xlim(new_limits)
-    else:
-        ax.set_ylim(new_limits)
-
-
-def get_ax_size(ax: Axes, fig: Figure):
-    """Get axis size.
-
-    Parameters
-    ----------
-    ax
-        Axis object from matplotlib.
-    fig
-        Figure.
-
-    """
-    bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
-    width *= fig.dpi
-    height *= fig.dpi
-
-
-def axis_to_data(ax: Axes, width: float):
-    """For a width in axis coordinates, return the corresponding in data coordinates.
-
-    Parameters
-    ----------
-    ax
-        Axis object from matplotlib.
-    width
-        Width in xaxis coordinates.
-
-    """
-    xlim = ax.get_xlim()
-    widthx = width * (xlim[1] - xlim[0])
-    ylim = ax.get_ylim()
-    widthy = width * (ylim[1] - ylim[0])
-    return 0.5 * (widthx + widthy)
-
-
-def axis_to_data_points(ax: Axes, points_axis: np.ndarray):
-    """Map points in axis coordinates to data coordinates.
-
-    Uses matplotlib.transform.
-
-    Parameters
-    ----------
-    ax
-        Axis object from matplotlib.
-    points_axis
-        Points in axis coordinates.
-
-    """
-    axis_to_data = ax.transAxes + ax.transData.inverted()
-    return axis_to_data.transform(points_axis)
-
-
-def data_to_axis_points(ax: Axes, points_data: np.ndarray):
-    """Map points in data coordinates to axis coordinates.
-
-    Uses matplotlib.transform.
-
-    Parameters
-    ----------
-    ax
-        Axis object from matplotlib.
-    points_data
-        Points in data coordinates.
-
-    """
-    data_to_axis = axis_to_data.inverted()
-    return data_to_axis(points_data)
+def ticks_formatter(x, pos) -> str:
+    return f"{x:.3f}".rstrip("0").rstrip(".")
 
 
 def check_projection(projection):
@@ -1147,18 +911,11 @@ def check_projection(projection):
     if projection not in {"2d", "3d"}:
         msg = f"Projection must be '2d' or '3d', was '{projection}'."
         raise ValueError(msg)
-    if projection == "3d":
-        from packaging.version import parse
-
-        mpl_version = parse(mpl.__version__)
-        if mpl_version < parse("3.3.3"):
-            msg = f"3d plotting requires matplotlib > 3.3.3. Found {mpl.__version__}"
-            raise ImportError(msg)
 
 
 def circles(
     x, y, *, s, ax, marker=None, c="b", vmin=None, vmax=None, scale_factor=1.0, **kwargs
-):
+) -> PatchCollection:
     """Make a scatter plot of circles.
 
     Similar to pl.scatter, but the size of circles are in data scale.
@@ -1195,7 +952,7 @@ def circles(
     --------
     a = np.arange(11)
     circles(a, a, s=a*0.2, c=a, alpha=0.5, ec='none')
-    pl.colorbar()
+    plt.colorbar()
     License
     --------
     This code is under [The BSD 3-Clause License]
@@ -1341,10 +1098,10 @@ def _deprecated_scale(
         msg = "can’t specify both `scale` and `density_norm`"
         raise ValueError(msg)
     msg = "`scale` is deprecated, use `density_norm` instead"
-    warnings.warn(msg, FutureWarning, stacklevel=3)
+    warn(msg, FutureWarning)
     return scale
 
 
-def _dk(dendrogram: bool | str | None) -> str | None:
+def _dk(dendrogram: bool | str | None) -> str | None:  # noqa: FBT001
     """Convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
     return None if isinstance(dendrogram, bool) else dendrogram

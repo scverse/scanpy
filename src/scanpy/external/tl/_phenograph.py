@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from anndata import AnnData
+from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import old_positionals
+from ..._compat import old_positionals, pkg_version
 from ..._utils import renamed_arg
 from ..._utils._doctests import doctest_needs
 
@@ -231,7 +232,7 @@ def phenograph(  # noqa: PLR0913
     try:
         import phenograph
 
-        assert phenograph.__version__ >= "1.5.3"
+        assert pkg_version("phenograph") >= Version("1.5.3")
     except (ImportError, AssertionError, AttributeError) as e:
         msg = (
             "please install the latest release of phenograph:\n\t"
@@ -256,7 +257,7 @@ def phenograph(  # noqa: PLR0913
     ig_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_ig"
     q_key = f"pheno_{'jaccard' if jaccard else 'gaussian'}_q"
 
-    communities, graph, Q = phenograph.cluster(
+    communities, graph, q = phenograph.cluster(
         data=data,
         clustering_algo=clustering_algo,
         k=k,
@@ -280,11 +281,11 @@ def phenograph(  # noqa: PLR0913
     logg.info("    finished", time=start)
 
     if copy:
-        return communities, graph, Q
+        return communities, graph, q
 
     if adata is not None:
         adata.obsp[ig_key] = graph.tocsr()
         if comm_key:
             adata.obs[comm_key] = pd.Categorical(communities)
-        if Q:
-            adata.uns[q_key] = Q
+        if q:
+            adata.uns[q_key] = q
