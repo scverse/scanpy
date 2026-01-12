@@ -282,11 +282,13 @@ class DotPlot(BasePlot):
                 dot_color_df = self.obs_tidy.groupby(level=0, observed=True).mean()
 
             if self.standard_scale == "group":
-                dot_color_df = dot_color_df.sub(dot_color_df.min(1), axis=0)
-                dot_color_df = dot_color_df.div(dot_color_df.max(1), axis=0).fillna(0)
+                dot_color_df = dot_color_df.sub(dot_color_df.min(axis=1), axis=0)
+                dot_color_df = dot_color_df.div(
+                    dot_color_df.max(axis=1), axis=0
+                ).fillna(0)
             elif self.standard_scale == "var":
-                dot_color_df -= dot_color_df.min(0)
-                dot_color_df = (dot_color_df / dot_color_df.max(0)).fillna(0)
+                dot_color_df -= dot_color_df.min(axis=0)
+                dot_color_df = (dot_color_df / dot_color_df.max(axis=0)).fillna(0)
             elif self.standard_scale is None:
                 pass
             else:
@@ -827,10 +829,10 @@ class DotPlot(BasePlot):
                 group_axis = 1
         if standard_scale is not None:
             dot_color = dot_color.sub(
-                dot_color.min((group_axis + 1) % 2), axis=group_axis
+                dot_color.min(axis=1 - group_axis), axis=group_axis
             )
             dot_color = dot_color.div(
-                dot_color.max((group_axis + 1) % 2), axis=group_axis
+                dot_color.max(axis=1 - group_axis), axis=group_axis
             ).fillna(0)
         # make scatter plot in which
         # x = var_names
