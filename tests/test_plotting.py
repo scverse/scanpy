@@ -1858,7 +1858,9 @@ def test_dogplot() -> None:
     sc.pl.dogplot()
 
 
-def test_dotplot_group_colors_raises_error_on_missing_dep(monkeypatch):
+def test_dotplot_group_colors_raises_error_on_missing_dep(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Check that an informative ImportError is raised when colour-science is missing."""
     import sys
 
@@ -1887,7 +1889,7 @@ def test_dotplot_group_colors_raises_error_on_missing_dep(monkeypatch):
         ("dotplot_group_colors_swap_axes", True),
     ],
 )
-def test_dotplot_group_colors(image_comparer, name, swap_axes):
+def test_dotplot_group_colors(image_comparer, name, swap_axes) -> None:
     """Check group_colors parameter with custom colors per group."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -1921,7 +1923,7 @@ def test_dotplot_group_colors(image_comparer, name, swap_axes):
 
 
 @needs.colour
-def test_dotplot_group_colors_fallback(image_comparer):
+def test_dotplot_group_colors_fallback(image_comparer) -> None:
     """Check that fallback to default cmap works for groups not in group_colors."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -1952,7 +1954,7 @@ def test_dotplot_group_colors_fallback(image_comparer):
 
 
 @needs.colour
-def test_dotplot_group_colors_warns_on_cmap():
+def test_dotplot_group_colors_warns_on_cmap() -> None:
     """Check that a warning is raised when both cmap and group_colors are passed."""
     adata = pbmc68k_reduced()
     markers = ["CD79A"]
@@ -1975,7 +1977,7 @@ def test_dotplot_group_colors_warns_on_cmap():
 
 
 @needs.colour
-def test_dotplot_group_colors_warns_on_missing_groups():
+def test_dotplot_group_colors_warns_on_missing_groups() -> None:
     """Check that a warning is raised when not all groups have colors assigned."""
     adata = pbmc68k_reduced()
     markers = ["CD79A"]
@@ -1994,7 +1996,7 @@ def test_dotplot_group_colors_warns_on_missing_groups():
         )
 
 
-def test_dotplot_group_colors_coverage_mock(mocker):
+def test_dotplot_group_colors_coverage_mock(mocker) -> None:
     """Force-runs the group_colors logic using a MOCK 'colour' library. Uses the built-in 'mocker' fixture to avoid top-level imports."""
     import importlib
     import sys

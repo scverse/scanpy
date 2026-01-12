@@ -216,33 +216,37 @@ class DotPlot(BasePlot):
         self.standard_scale = standard_scale
         self.expression_cutoff = expression_cutoff
         self.mean_only_expressed = mean_only_expressed
-        self.group_colors = group_colors
-        self.group_cmaps = None
-
         self.dot_color_df, self.dot_size_df = self._prepare_dot_data(
             dot_color_df, dot_size_df
         )
+        self.group_cmaps = self._prepare_group_cmaps(group_colors)
 
-        if self.group_colors is not None:
-            self.group_cmaps = {}
-            plotted_groups = self.dot_color_df.index
-            missing_groups = []
-            for group in plotted_groups:
-                if group in self.group_colors:
-                    self.group_cmaps[group] = _create_white_to_color_gradient(
-                        self.group_colors[group]
-                    )
-                else:
-                    self.group_cmaps[group] = self.cmap
-                    missing_groups.append(group)
-            if missing_groups:
-                warn(
-                    f"The following groups will use the default colormap as no "
-                    f"specific colors were assigned: {missing_groups}",
-                    UserWarning,
+    def _prepare_group_cmaps(
+        self, group_colors: Mapping[str, ColorLike] | None
+    ) -> dict[str, Colormap] | None:
+        if group_colors is None:
+            return None
+        group_cmaps = {}
+        missing_groups = []
+        for group in self.dot_color_df.index:
+            if group in group_colors:
+                group_cmaps[group] = _create_white_to_color_gradient(
+                    group_colors[group]
                 )
+            else:
+                group_cmaps[group] = self.cmap
+                missing_groups.append(group)
+        if missing_groups:
+            warn(
+                f"The following groups will use the default colormap as no "
+                f"specific colors were assigned: {missing_groups}",
+                UserWarning,
+            )
+        return group_cmaps
 
-    def _prepare_dot_data(self, dot_color_df, dot_size_df):
+    def _prepare_dot_data(
+        self, dot_color_df: pd.DataFrame | None, dot_size_df: pd.DataFrame | None
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Calculate the dataframes for dot size and color.
 
         Refactored to helper to satisfy complexity checks.
