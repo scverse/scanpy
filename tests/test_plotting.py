@@ -148,7 +148,7 @@ def test_heatmap_var_as_dict(image_comparer) -> None:
 
 
 @needs.leidenalg
-@pytest.mark.parametrize("swap_axes", [True, False])
+@pytest.mark.parametrize("swap_axes", [True, False], ids=["swap_axes", "default"])
 def test_heatmap_alignment(*, image_comparer, swap_axes: bool) -> None:
     """Test that plot elements are well aligned."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
@@ -369,7 +369,7 @@ def test_dotplot_matrixplot_stacked_violin(
     save_and_compare_images(id)
 
 
-@pytest.mark.parametrize("swap_axes", [True, False])
+@pytest.mark.parametrize("swap_axes", [True, False], ids=["swap_axes", "default"])
 @pytest.mark.parametrize("standard_scale", ["var", "group", None])
 def test_dotplot_obj(
     image_comparer, standard_scale: Literal["var", "group"] | None, *, swap_axes: bool
@@ -1498,7 +1498,7 @@ def pbmc_filtered() -> Callable[[], AnnData]:
     return pbmc.copy
 
 
-@pytest.mark.parametrize("use_raw", [True, None])
+@pytest.mark.parametrize("use_raw", [True, None], ids=["use_raw", "default"])
 def test_scatter_no_basis_raw(check_same_image, pbmc_filtered, tmp_path, use_raw):
     """Test scatterplots of raw layer with no basis."""
     adata = pbmc_filtered()
@@ -1927,14 +1927,8 @@ def test_dotplot_group_colors_raises_error_on_missing_dep(
 
 
 @needs.colour
-@pytest.mark.parametrize(
-    ("name", "swap_axes"),
-    [
-        ("dotplot_group_colors", False),
-        ("dotplot_group_colors_swap_axes", True),
-    ],
-)
-def test_dotplot_group_colors(image_comparer, name, swap_axes) -> None:
+@pytest.mark.parametrize("swap_axes", [True, False], ids=["swap_axes", "default"])
+def test_dotplot_group_colors(*, image_comparer, swap_axes: bool) -> None:
     """Check group_colors parameter with custom colors per group."""
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
@@ -1964,7 +1958,7 @@ def test_dotplot_group_colors(image_comparer, name, swap_axes) -> None:
         swap_axes=swap_axes,
         show=False,
     )
-    save_and_compare_images(name)
+    save_and_compare_images(f"dotplot_group_colors{'_swap_axes' if swap_axes else ''}")
 
 
 @needs.colour
@@ -2039,57 +2033,3 @@ def test_dotplot_group_colors_warns_on_missing_groups() -> None:
             group_colors=group_colors,
             show=False,
         )
-
-
-def test_dotplot_group_colors_coverage_mock(mocker) -> None:
-    """Force-runs the group_colors logic using a MOCK 'colour' library. Uses the built-in 'mocker' fixture to avoid top-level imports."""
-    import importlib
-    import sys
-
-    import scanpy.plotting  # <--- Need this to fix the reference later
-    import scanpy.plotting._dotplot
-    import scanpy.plotting._utils
-
-    # 1. Create a Fake 'colour' library using the existing 'mocker' fixture
-    mock_colour = mocker.MagicMock()
-    # Fake OKLab conversion returning a red-ish color
-    mock_colour.convert.return_value = np.array([0.6, 0.2, 0.1])
-    # Fake Gradient returning random RGBs (256 steps)
-    mock_colour.algebra.lerp.return_value = np.random.rand(256, 3)
-
-    # 2. Patch 'sys.modules' so Python thinks 'colour' is installed
-    mocker.patch.dict(sys.modules, {"colour": mock_colour})
-
-    # We MUST reload the modules so they detect the "installed" package
-    importlib.reload(scanpy.plotting._utils)
-    importlib.reload(scanpy.plotting._dotplot)
-
-    try:
-        # 3. Setup dummy data WITH STRING INDICES
-        adata = AnnData(
-            X=np.random.rand(4, 2),
-            obs=pd.DataFrame(
-                {"group": ["A", "B", "A", "B"]}, index=["c1", "c2", "c3", "c4"]
-            ),
-            var=pd.DataFrame(index=["gene1", "gene2"]),
-        )
-
-        # 4. Run the DotPlot with group_colors
-        sc.pl.dotplot(
-            adata,
-            ["gene1", "gene2"],
-            groupby="group",
-            group_colors={"A": "red", "B": "blue"},
-            show=False,
-        )
-
-    finally:
-        # Cleanup: Reload modules back to original state
-        importlib.reload(scanpy.plotting._utils)
-        importlib.reload(scanpy.plotting._dotplot)
-
-        # CRITICAL FIX: Re-link the class in the parent package.
-        # This ensures 'sc.pl.DotPlot' points to the same class as the reloaded module,
-        # preventing "isinstance" failures in subsequent tests.
-        scanpy.plotting.DotPlot = scanpy.plotting._dotplot.DotPlot
-        scanpy.plotting.dotplot = scanpy.plotting._dotplot.dotplot
