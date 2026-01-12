@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing import Any, Literal
 
     import numpy as np
-    from _pytest.mark.structures import ParameterSet
+    from _pytest.mark.structures import ParameterSet, _HiddenParam
 
     from ....scanpy._compat import DaskArray
 
@@ -53,7 +53,7 @@ def param_with(
     transform: Callable[..., Iterable[Any]] = lambda x: (x,),
     *,
     marks: Iterable[pytest.Mark | pytest.MarkDecorator] = (),
-    id: str | None = None,
+    id: str | _HiddenParam | None = None,
 ) -> ParameterSet:
     return pytest.param(
         *transform(*at.values), marks=[*at.marks, *marks], id=id or at.id

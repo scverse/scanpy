@@ -24,7 +24,9 @@ from testing.scanpy._helpers.data import (
     pbmc3k_processed,
     pbmc68k_reduced,
 )
+from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
+from testing.scanpy._pytest.params import param_with
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -36,6 +38,12 @@ if TYPE_CHECKING:
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
+
+xfail_seaborn_pandas3 = (
+    [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
+    if pkg_version("pandas").major >= 3
+    else []
+)
 
 
 # Test images are saved in the directory ./_images/<test-name>/
@@ -176,171 +184,171 @@ def test_clustermap(image_comparer, obs_keys, name):
 
 params_dotplot_matrixplot_stacked_violin = [
     pytest.param(
-        *(id, fn),
-        id=id,
-        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=[
-            pytest.mark.xfail(
-                reason="seaborn violin plot is incompatible with pandas 3"
-            )
-        ]
-        if pkg_version("pandas").major >= 3 and "stacked_violin" in id
-        else [],
-    )
-    for id, fn in [
-        (
-            "dotplot",
-            partial(
-                sc.pl.dotplot, groupby="cell_type", title="dotplot", dendrogram=True
-            ),
+        partial(sc.pl.dotplot, groupby="cell_type", title="dotplot", dendrogram=True),
+        id="dotplot",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=7,
+            title="non categorical obs",
+            figsize=(7, 2.5),
         ),
-        (
-            "dotplot2",
-            partial(
-                sc.pl.dotplot,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=7,
-                title="non categorical obs",
-                figsize=(7, 2.5),
-            ),
+        id="dotplot2",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            dot_max=0.7,
+            dot_min=0.1,
+            cmap="hot_r",
+            title="dot_max=0.7 dot_min=0.1, var_groups",
+            var_group_positions=[(0, 1), (9, 10)],
+            var_group_labels=["A", "B"],
+            dendrogram=True,
         ),
-        (
-            "dotplot3",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                dot_max=0.7,
-                dot_min=0.1,
-                cmap="hot_r",
-                title="dot_max=0.7 dot_min=0.1, var_groups",
-                var_group_positions=[(0, 1), (9, 10)],
-                var_group_labels=["A", "B"],
-                dendrogram=True,
-            ),
+        id="dotplot3",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            use_raw=False,
+            dendrogram=True,
+            layer="test",
+            swap_axes=True,
+            title="swap_axes, layer=-1*X, scale=group\nsmallest_dot=10",
+            standard_scale="group",
+            smallest_dot=10,
         ),
-        (
-            "dotplot_std_scale_group",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                use_raw=False,
-                dendrogram=True,
-                layer="test",
-                swap_axes=True,
-                title="swap_axes, layer=-1*X, scale=group\nsmallest_dot=10",
-                standard_scale="group",
-                smallest_dot=10,
-            ),
+        id="dotplot_std_scale_group",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.dotplot,
+            groupby="cell_type",
+            dot_max=0.7,
+            dot_min=0.1,
+            color_map="winter",
+            title="var as dict",
+            dendrogram=True,
         ),
-        (
-            "dotplot_dict",
-            partial(
-                sc.pl.dotplot,
-                groupby="cell_type",
-                dot_max=0.7,
-                dot_min=0.1,
-                color_map="winter",
-                title="var as dict",
-                dendrogram=True,
-            ),
+        id="dotplot_dict",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            use_raw=False,
+            title="matrixplot",
+            dendrogram=True,
         ),
-        (
-            "matrixplot",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                use_raw=False,
-                title="matrixplot",
-                dendrogram=True,
-            ),
+        id="matrixplot",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            dendrogram=True,
+            standard_scale="var",
+            layer="test",
+            cmap="Blues_r",
+            title='scale var, custom colorbar_title, layer="test"',
+            colorbar_title="Scaled expression",
         ),
-        (
-            "matrixplot_std_scale_var_dict",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                dendrogram=True,
-                standard_scale="var",
-                layer="test",
-                cmap="Blues_r",
-                title='scale var, custom colorbar_title, layer="test"',
-                colorbar_title="Scaled expression",
-            ),
+        id="matrixplot_std_scale_var_dict",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="cell_type",
+            use_raw=False,
+            standard_scale="group",
+            title="scale_group, swap_axes",
+            swap_axes=True,
         ),
-        (
-            "matrixplot_std_scale_group",
-            partial(
-                sc.pl.matrixplot,
-                groupby="cell_type",
-                use_raw=False,
-                standard_scale="group",
-                title="scale_group, swap_axes",
-                swap_axes=True,
-            ),
+        id="matrixplot_std_scale_group",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.matrixplot,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=4,
+            title="non-categorical obs, custom figsize",
+            figsize=(8, 2.5),
+            cmap="RdBu_r",
         ),
-        (
-            "matrixplot2",
-            partial(
-                sc.pl.matrixplot,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=4,
-                title="non-categorical obs, custom figsize",
-                figsize=(8, 2.5),
-                cmap="RdBu_r",
-            ),
+        id="matrixplot2",
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            use_raw=False,
+            title="stacked_violin",
+            dendrogram=True,
         ),
-        (
-            "stacked_violin",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                use_raw=False,
-                title="stacked_violin",
-                dendrogram=True,
-            ),
+        id="stacked_violin",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            dendrogram=True,
+            standard_scale="var",
+            layer="test",
+            title='scale var, layer="test"',
         ),
-        (
-            "stacked_violin_std_scale_var_dict",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                dendrogram=True,
-                standard_scale="var",
-                layer="test",
-                title='scale var, layer="test"',
-            ),
+        id="stacked_violin_std_scale_var_dict",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="cell_type",
+            use_raw=False,
+            standard_scale="group",
+            title="scale_group\nswap_axes",
+            swap_axes=True,
+            cmap="Blues",
         ),
-        (
-            "stacked_violin_std_scale_group",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="cell_type",
-                use_raw=False,
-                standard_scale="group",
-                title="scale_group\nswap_axes",
-                swap_axes=True,
-                cmap="Blues",
-            ),
+        id="stacked_violin_std_scale_group",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
+    pytest.param(
+        partial(
+            sc.pl.stacked_violin,
+            groupby="numeric_column",
+            use_raw=False,
+            num_categories=4,
+            title="non-categorical obs, custom figsize",
+            figsize=(8, 2.5),
         ),
-        (
-            "stacked_violin_no_cat_obs",
-            partial(
-                sc.pl.stacked_violin,
-                groupby="numeric_column",
-                use_raw=False,
-                num_categories=4,
-                title="non-categorical obs, custom figsize",
-                figsize=(8, 2.5),
-            ),
-        ),
-    ]
+        id="stacked_violin_no_cat_obs",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
+    ),
 ]
 
 
-@pytest.mark.parametrize(("id", "fn"), params_dotplot_matrixplot_stacked_violin)
-def test_dotplot_matrixplot_stacked_violin(image_comparer, id, fn):
+@pytest.mark.parametrize(
+    ("id", "fn"),
+    [
+        param_with(p, lambda fn, p=p: (p.id, fn))
+        for p in params_dotplot_matrixplot_stacked_violin
+    ],
+)
+def test_dotplot_matrixplot_stacked_violin(
+    image_comparer, id: str, fn: Callable[[AnnData], None]
+) -> None:
     save_and_compare_images = partial(image_comparer, ROOT, tol=5)
 
     adata = krumsiek11()
@@ -587,13 +595,13 @@ def test_violin(
             show=False,
             rotation=90,
         )
-        try:
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        with context.xfail(
+            pkg_version("pandas").major >= 3,
+            reason="seaborn violin plot is incompatible with pandas 3",
+            raises=AssertionError,
+        ):
             save_and_compare_images("violin_multi_panel_with_groupby")
-        except AssertionError:
-            if pkg_version("pandas").major >= 3:
-                # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-                pytest.skip("seaborn violin plot is incompatible with pandas 3")
-            raise
 
     with subtests.test(layer="negative"):
         sc.pl.violin(
@@ -648,12 +656,11 @@ def test_correlation(image_comparer):
 
 
 _RANK_GENES_GROUPS_PARAMS = [
-    (
-        "sharey",
+    pytest.param(
         partial(sc.pl.rank_genes_groups, n_genes=12, n_panels_per_row=3, show=False),
+        id="sharey",
     ),
-    (
-        "basic",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups,
             n_genes=12,
@@ -661,13 +668,13 @@ _RANK_GENES_GROUPS_PARAMS = [
             sharey=False,
             show=False,
         ),
+        id="basic",
     ),
-    (
-        "heatmap",
+    pytest.param(
         partial(sc.pl.rank_genes_groups_heatmap, n_genes=4, cmap="YlGnBu", show=False),
+        id="heatmap",
     ),
-    (
-        "heatmap_swap_axes",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_heatmap,
             n_genes=20,
@@ -679,9 +686,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             cmap="bwr",
         ),
+        id="heatmap_swap_axes",
     ),
-    (
-        "heatmap_swap_axes_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_heatmap,
             n_genes=20,
@@ -694,22 +701,24 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             cmap="RdBu_r",
         ),
+        id="heatmap_swap_axes_vcenter",
     ),
-    (
-        "stacked_violin",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_stacked_violin,
             n_genes=3,
             show=False,
             groups=["3", "0", "5"],
         ),
+        id="stacked_violin",
+        # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        marks=xfail_seaborn_pandas3,
     ),
-    (
-        "dotplot",
+    pytest.param(
         partial(sc.pl.rank_genes_groups_dotplot, n_genes=4, show=False),
+        id="dotplot",
     ),
-    (
-        "dotplot_gene_names",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             var_names={
@@ -723,9 +732,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             vmax=3,
             show=False,
         ),
+        id="dotplot_gene_names",
     ),
-    (
-        "dotplot_logfoldchange",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             n_genes=4,
@@ -738,9 +747,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             title="log fold changes swap_axes",
             show=False,
         ),
+        id="dotplot_logfoldchange",
     ),
-    (
-        "dotplot_logfoldchange_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_dotplot,
             n_genes=4,
@@ -754,9 +763,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             title="log fold changes swap_axes",
             show=False,
         ),
+        id="dotplot_logfoldchange_vcenter",
     ),
-    (
-        "matrixplot",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -765,9 +774,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             gene_symbols="symbol",
             use_raw=False,
         ),
+        id="matrixplot",
     ),
-    (
-        "matrixplot_gene_names_symbol",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             var_names={
@@ -783,18 +792,18 @@ _RANK_GENES_GROUPS_PARAMS = [
             use_raw=False,
             show=False,
         ),
+        id="matrixplot_gene_names_symbol",
     ),
-    (
-        "matrixplot_n_genes_negative",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=-5,
             show=False,
             title="matrixplot n_genes=-5",
         ),
+        id="matrixplot_n_genes_negative",
     ),
-    (
-        "matrixplot_swap_axes",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -806,9 +815,9 @@ _RANK_GENES_GROUPS_PARAMS = [
             cmap="bwr",
             title="log fold changes swap_axes",
         ),
+        id="matrixplot_swap_axes",
     ),
-    (
-        "matrixplot_swap_axes_vcenter",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_matrixplot,
             n_genes=5,
@@ -821,18 +830,18 @@ _RANK_GENES_GROUPS_PARAMS = [
             cmap="bwr",
             title="log fold changes swap_axes",
         ),
+        id="matrixplot_swap_axes_vcenter",
     ),
-    (
-        "tracksplot",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_tracksplot,
             n_genes=3,
             show=False,
             groups=["3", "2", "1"],
         ),
+        id="tracksplot",
     ),
-    (
-        "violin",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_violin,
             groups="0",
@@ -842,9 +851,11 @@ _RANK_GENES_GROUPS_PARAMS = [
             strip=False,
             show=False,
         ),
+        id="violin",
+        # https://github.com/mwaskom/seaborn/issues/3893
+        marks=xfail_seaborn_pandas3,
     ),
-    (
-        "violin_not_raw",
+    pytest.param(
         partial(
             sc.pl.rank_genes_groups_violin,
             groups="0",
@@ -854,32 +865,21 @@ _RANK_GENES_GROUPS_PARAMS = [
             strip=False,
             show=False,
         ),
+        id="violin_not_raw",
+        # https://github.com/mwaskom/seaborn/issues/3893
+        marks=xfail_seaborn_pandas3,
     ),
 ]
 
 
 @pytest.mark.parametrize(
     ("name", "fn"),
-    [
-        pytest.param(
-            name,
-            fn,
-            id=name,
-            # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-            # and https://github.com/mwaskom/seaborn/issues/3893
-            marks=[
-                pytest.mark.xfail(
-                    reason="seaborn violin plot is incompatible with pandas 3"
-                )
-            ]
-            if pkg_version("pandas").major >= 3 and "violin" in name
-            else [],
-        )
-        for name, fn in _RANK_GENES_GROUPS_PARAMS
-    ],
+    [param_with(p, lambda fn, p=p: (p.id, fn)) for p in _RANK_GENES_GROUPS_PARAMS],
 )
-def test_rank_genes_groups(image_comparer, name, fn):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=25)
+def test_rank_genes_groups(
+    image_comparer, name: str, fn: Callable[[AnnData], None]
+) -> None:
+    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
@@ -895,7 +895,7 @@ def test_rank_genes_groups(image_comparer, name, fn):
 
 
 def test_rank_genes_group_axes(image_comparer):
-    fn = next(fn for name, fn in _RANK_GENES_GROUPS_PARAMS if name == "basic")
+    fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=23)
 

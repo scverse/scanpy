@@ -21,6 +21,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
@@ -187,10 +188,10 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
         sc.pl.violin(
             adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
         )
-        try:
+        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+        with context.xfail(
+            pkg_version("pandas").major >= 3,
+            reason="seaborn violin plot is incompatible with pandas 3",
+            raises=AssertionError,
+        ):
             save_and_compare_images("violin_2")
-        except AssertionError:
-            if pkg_version("pandas").major >= 3:
-                # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-                pytest.xfail("seaborn violin plot is incompatible with pandas 3")
-            raise
