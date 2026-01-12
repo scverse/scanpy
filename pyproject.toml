@@ -103,11 +103,12 @@ test = [
     # optional storage and processing modes
     "scanpy[dask]",
     "zarr>=2.18.7",
-    # additional tested algorithms
+    # additional tested features
     "scanpy[scrublet]",
     "scanpy[leiden]",
     "scanpy[skmisc]",
     "scanpy[dask-ml]",
+    "scanpy[plotting]",
 ]
 doc = [
     "sphinx>=8.2.3",
@@ -126,7 +127,7 @@ doc = [
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml,leiden]",
+    "scanpy[paga,dask-ml,leiden,plotting]",
     "sam-algorithm",
 ]
 dev = [
@@ -145,6 +146,8 @@ skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes m
 harmony = [ "harmonypy" ]                              # Harmony dataset integration
 scanorama = [ "scanorama" ]                            # Scanorama dataset integration
 scrublet = [ "scikit-image>=0.23.1" ]                  # Doublet detection with automatic thresholds
+# Plotting
+plotting = [ "colour-science" ]
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
