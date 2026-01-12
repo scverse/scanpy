@@ -27,7 +27,7 @@ type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
 @njit
-def _get_sparce_nanmean_indptr(
+def _get_sparse_nanmean_indptr(
     data: NDArray[np.float64], indptr: NDArray[np.int32], shape: tuple[int, int]
 ) -> NDArray[np.float64]:
     n_rows = len(indptr) - 1
@@ -52,7 +52,7 @@ def _get_sparce_nanmean_indptr(
 
 
 @njit
-def _get_sparce_nanmean_indices(
+def _get_sparse_nanmean_indices(
     data: NDArray[np.float64], indices: NDArray[np.int32], shape: tuple
 ) -> NDArray[np.float64]:
     num_bins = shape[1]
@@ -89,11 +89,12 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     # base algo for CSR, for csc we should "transpose" matrix size and use same logics
     if isinstance(x, CSCBase):
         algo_shape = x.shape[::-1]
-        algo_axis = int(not axis)
-    if algo_axis == 1:
-        return _get_sparce_nanmean_indptr(x.data, x.indptr, algo_shape)
-    else:
-        return _get_sparce_nanmean_indices(x.data, x.indices, algo_shape)
+        algo_axis = 1 - axis
+    return (
+        _get_sparse_nanmean_indptr(x.data, x.indptr, algo_shape)
+        if algo_axis == 1
+        else _get_sparse_nanmean_indices(x.data, x.indices, algo_shape)
+    )
 
 
 @old_positionals(
