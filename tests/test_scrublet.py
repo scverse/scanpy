@@ -230,11 +230,10 @@ def test_scrublet_simulate_doublets():
     )
 
 
-def test_scrublet_dtypes():
+def test_scrublet_dtypes() -> None:
     """Test that Scrublet does not change dtypes of existing data.obs cols."""
     adata = pbmc200()
-    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
-    adata.obs["batch"] = adata.obs["batch"].astype("category")
+    adata.obs["batch"] = pd.Categorical(100 * ["a"] + 100 * ["b"])
 
     sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
 
