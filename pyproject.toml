@@ -103,11 +103,12 @@ test = [
     # optional storage and processing modes
     "scanpy[dask]",
     "zarr>=2.18.7",
-    # additional tested algorithms
+    # additional tested features
     "scanpy[scrublet]",
     "scanpy[leiden]",
     "scanpy[skmisc]",
     "scanpy[dask-ml]",
+    "scanpy[plotting]",
 ]
 doc = [
     "sphinx>=8.2.3",
