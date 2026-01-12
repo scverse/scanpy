@@ -597,9 +597,8 @@ class DotPlot(BasePlot):
 
         # If group_colors is used, dynamically calculate the total height needed for all colorbars
         if self.group_cmaps is not None:
-            per_cbar_height = (
-                self.min_figure_height * 0.12
-            )  # Use a slightly larger height for better spacing
+            # Use a slightly larger height for better spacing
+            per_cbar_height = self.min_figure_height * 0.12
             n_cbars = len(self.dot_color_df.index)
             cbar_legend_height = per_cbar_height * n_cbars
 
@@ -749,7 +748,7 @@ class DotPlot(BasePlot):
         dot_ax: Axes,
         *,
         cmap: Colormap | str | None,
-        group_cmaps: Mapping[str, str] | None,
+        group_cmaps: Mapping[str, Colormap] | None,
         color_on: Literal["dot", "square"],
         dot_max: float | None,
         dot_min: float | None,
@@ -872,51 +871,7 @@ class DotPlot(BasePlot):
         size = size * (largest_dot - smallest_dot) + smallest_dot
         normalize = check_colornorm(vmin, vmax, vcenter, norm)
 
-        if group_cmaps is None:
-            # Plotting logic for single colormap
-            if color_on == "square":
-                if edge_color is None:
-                    from seaborn.utils import relative_luminance
-
-                    # use either black or white for the edge color
-                    # depending on the luminance of the background
-                    # square color
-                    edge_color = []
-                    for color_value in cmap(normalize(mean_flat)):
-                        lum = relative_luminance(color_value)
-                        edge_color.append(".15" if lum > 0.408 else "w")
-
-                edge_lw = 1.5 if edge_lw is None else edge_lw
-
-                # first make a heatmap similar to `sc.pl.matrixplot`
-                # (squares with the asigned colormap). Circles will be plotted
-                # on top
-                dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
-                for axis in ["top", "bottom", "left", "right"]:
-                    dot_ax.spines[axis].set_linewidth(1.5)
-                # Create a temporary kwargs dict for this group's scatter call
-                # to avoid modifying the original kwds dictionary within the loop.
-                kwds_scatter = fix_kwds(
-                    kwds,
-                    s=size,
-                    linewidth=edge_lw,
-                    facecolor="none",
-                    edgecolor=edge_color,
-                )
-                dot_ax.scatter(x, y, **kwds_scatter)
-            else:
-                edge_color = "none" if edge_color is None else edge_color
-                edge_lw = 0.0 if edge_lw is None else edge_lw
-                color = cmap(normalize(mean_flat))
-                kwds_scatter = fix_kwds(
-                    kwds,
-                    s=size,
-                    color=color,
-                    linewidth=edge_lw,
-                    edgecolor=edge_color,
-                )
-                dot_ax.scatter(x, y, **kwds_scatter)
-        else:
+        if group_cmaps is not None:
             # Plotting logic for group-specific colormaps
             groups_iter = dot_color.columns if are_axes_swapped else dot_color.index
             n_vars = dot_color.shape[0] if are_axes_swapped else dot_color.shape[1]
@@ -951,6 +906,48 @@ class DotPlot(BasePlot):
                     edgecolor=edge_color,
                 )
                 dot_ax.scatter(x_group, y_group, **kwds_scatter)
+        elif color_on == "square":
+            if edge_color is None:
+                from seaborn.utils import relative_luminance
+
+                # use either black or white for the edge color
+                # depending on the luminance of the background
+                # square color
+                edge_color = []
+                for color_value in cmap(normalize(mean_flat)):
+                    lum = relative_luminance(color_value)
+                    edge_color.append(".15" if lum > 0.408 else "w")
+
+            edge_lw = 1.5 if edge_lw is None else edge_lw
+
+            # first make a heatmap similar to `sc.pl.matrixplot`
+            # (squares with the asigned colormap). Circles will be plotted
+            # on top
+            dot_ax.pcolor(dot_color.values, cmap=cmap, norm=normalize)
+            for axis in ["top", "bottom", "left", "right"]:
+                dot_ax.spines[axis].set_linewidth(1.5)
+            # Create a temporary kwargs dict for this group's scatter call
+            # to avoid modifying the original kwds dictionary within the loop.
+            kwds_scatter = fix_kwds(
+                kwds,
+                s=size,
+                linewidth=edge_lw,
+                facecolor="none",
+                edgecolor=edge_color,
+            )
+            dot_ax.scatter(x, y, **kwds_scatter)
+        else:
+            edge_color = "none" if edge_color is None else edge_color
+            edge_lw = 0.0 if edge_lw is None else edge_lw
+            color = cmap(normalize(mean_flat))
+            kwds_scatter = fix_kwds(
+                kwds,
+                s=size,
+                color=color,
+                linewidth=edge_lw,
+                edgecolor=edge_color,
+            )
+            dot_ax.scatter(x, y, **kwds_scatter)
 
         y_ticks = np.arange(dot_color.shape[0]) + 0.5
         dot_ax.set_yticks(y_ticks)
@@ -1126,7 +1123,7 @@ def dotplot(  # noqa: PLR0913
     Examples
     --------
     Create a dot plot using the given markers and the PBMC example dataset grouped by
-    the category 'bulk_labels'.
+    the category `'bulk_labels'`.
 
     .. plot::
         :context: close-figs
@@ -1136,15 +1133,17 @@ def dotplot(  # noqa: PLR0913
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
-    Using var_names as dict:
+    Grouping `var_names` as well and specifying group colors for `groupby`:
 
     .. plot::
         :context: close-figs
 
+        from matplotlib import cm
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
-        sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+        group_colors = dict(zip(adata.obs["bulk_labels"].cat.categories, cm.tab10.colors))
+        sc.pl.dotplot(adata, markers, groupby='bulk_labels', group_colors=group_colors, dendrogram=True)
 
-    Get DotPlot object for fine tuning
+    Get `DotPlot` object for fine tuning
 
     .. plot::
         :context: close-figs
@@ -1152,7 +1151,7 @@ def dotplot(  # noqa: PLR0913
         dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
         dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
 
-    The axes used can be obtained using the get_axes() method
+    The axes used can be obtained using the `get_axes()` method
 
     .. code-block:: python
 

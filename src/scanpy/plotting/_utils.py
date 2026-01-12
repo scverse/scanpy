@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
-    from matplotlib.colors import Colormap
+    from matplotlib.colors import Colormap, ListedColormap
     from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
@@ -41,6 +41,7 @@ __all__ = [
     "_FontSize",
     "_FontWeight",
     "_LegendLoc",
+    "_create_white_to_color_gradient",
     "_deprecated_scale",
     "_dk",
     "add_colors_for_categorical_sample_annotation",
@@ -93,7 +94,7 @@ type _LegendLoc = Literal[
     "upper center",
     "center",
 ]
-type ColorLike = str | tuple[float, ...]
+type ColorLike = str | tuple[float, float, float] | tuple[float, float, float, float]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -1107,7 +1108,9 @@ def _dk(dendrogram: bool | str | None) -> str | None:  # noqa: FBT001
     return None if isinstance(dendrogram, bool) else dendrogram
 
 
-def _create_white_to_color_gradient(color: ColorLike, n_steps: int = 256):
+def _create_white_to_color_gradient(
+    color: ColorLike, n_steps: int = 256
+) -> ListedColormap:
     """Generate a perceptually uniform colormap from white to a target color.
 
     This function uses the OKLab color space for interpolation to ensure that
@@ -1157,4 +1160,6 @@ def _create_white_to_color_gradient(color: ColorLike, n_steps: int = 256):
     # Clip values to be within the valid [0, 1] range for RGB
     clipped_rgb = np.clip(rgb_gradient, 0, 1)
 
-    return ListedColormap(clipped_rgb)
+    return ListedColormap(
+        clipped_rgb, name=color if isinstance(color, str) else hex_color
+    )

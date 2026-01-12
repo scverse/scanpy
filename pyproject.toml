@@ -127,7 +127,7 @@ doc = [
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml,leiden]",
+    "scanpy[paga,dask-ml,leiden,plotting]",
     "sam-algorithm",
 ]
 dev = [
