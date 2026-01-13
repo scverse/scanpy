@@ -9,7 +9,6 @@ import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
-from scipy.sparse import coo_matrix
 
 from .._compat import SpBase
 from .._utils import NeighborsView
@@ -198,8 +197,12 @@ def modularity_array(
         msg = "igraph is require for computing modularity"
         raise ImportError(msg) from e
     if isinstance(connectivities, SpBase):
-        # check if the connectivities is a sparse matrix
-        coo = coo_matrix(connectivities)
+        if TYPE_CHECKING:
+            from scipy.sparse._base import _spbase
+
+            assert isinstance(connectivities, _spbase)
+
+        coo = connectivities.tocoo()
         edges = list(zip(coo.row, coo.col, strict=True))
         # converting to the coo format to extract the edges and weights
         # storing only non-zero elements and their indices

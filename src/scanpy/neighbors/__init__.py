@@ -166,8 +166,8 @@ def neighbors(  # noqa: PLR0913
         distances and connectivities are stored in `.obsp['distances']` and
         `.obsp['connectivities']` respectively.
         If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in `.obsp[f'{key_added}_distances']` and
-        connectivities in `.obsp[f'{key_added}_connectivities']`.
+        distances are stored in `.obsp[f'{{key_added}}_distances']` and
+        connectivities in `.obsp[f'{{key_added}}_connectivities']`.
     is_directed
         If `True`, the connectivity matrix is expected to be a directed graph.
     copy
@@ -177,9 +177,9 @@ def neighbors(  # noqa: PLR0913
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsp['distances' | key_added+'_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['distances' | f'{{key_added}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
-    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities' | f'{{key_added}}_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     `adata.uns['neighbors' | key_added]` : :class:`dict`
