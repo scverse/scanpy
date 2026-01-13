@@ -69,10 +69,11 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
-    metric: _Metric | _MetricFn | None
+    metric: _Metric | _MetricFn
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
+    is_directed: NotRequired[bool]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -86,10 +87,11 @@ def neighbors(  # noqa: PLR0913
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
-    metric: _Metric | _MetricFn | None = None,
+    metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
+    is_directed: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
@@ -165,8 +167,10 @@ def neighbors(  # noqa: PLR0913
         distances and connectivities are stored in `.obsp['distances']` and
         `.obsp['connectivities']` respectively.
         If specified, the neighbors data is added to .uns[key_added],
-        distances are stored in `.obsp[key_added+'_distances']` and
-        connectivities in `.obsp[key_added+'_connectivities']`.
+        distances are stored in `.obsp[f'{{key_added}}_distances']` and
+        connectivities in `.obsp[f'{{key_added}}_connectivities']`.
+    is_directed
+        If `True`, the connectivity matrix is expected to be a directed graph.
     copy
         Return a copy instead of writing to adata.
 
@@ -174,9 +178,9 @@ def neighbors(  # noqa: PLR0913
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsp['distances' | key_added+'_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
+    `adata.obsp['distances' | f'{{key_added}}_distances']` : :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Distance matrix of the nearest neighbors search. Each row (cell) has `n_neighbors`-1 non-zero entries. These are the distances to their `n_neighbors`-1 nearest neighbors (excluding the cell itself).
-    `adata.obsp['connectivities' | key_added+'_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
+    `adata.obsp['connectivities' | f'{{key_added}}_connectivities']` : :class:`scipy.sparse._csr.csr_matrix` (dtype `float`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
     `adata.uns['neighbors' | key_added]` : :class:`dict`
@@ -206,12 +210,14 @@ def neighbors(  # noqa: PLR0913
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
         # if a precomputed distance matrix is provided, skip the PCA and distance computation
-        return neighbors_from_distance(
+        return _neighbors_from_distance(
             adata,
             distances,
             n_neighbors=n_neighbors,
             metric=metric,
             method=method,
+            key_added=key_added,
+            is_directed=is_directed,
         )
     if metric is None:
         metric = "euclidean"
@@ -238,6 +244,7 @@ def neighbors(  # noqa: PLR0913
         method=method,
         random_state=random_state,
         metric=metric,
+        is_directed=is_directed,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
@@ -262,37 +269,16 @@ def neighbors(  # noqa: PLR0913
     return adata if copy else None
 
 
-def neighbors_from_distance(
+def _neighbors_from_distance(
     adata: AnnData,
     distances: np.ndarray | SpBase,
     *,
-    n_neighbors: int = 15,
-    metric: _Metric | None = None,
-    method: _Method = "umap",  # default to umap
-    key_added: str | None = None,
+    n_neighbors: int,
+    metric: _Metric,
+    method: _Method,
+    key_added: str | None,
+    is_directed: bool,
 ) -> AnnData:
-    """Compute neighbors from a precomputer distance matrix.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    distances
-        Precomputed dense or sparse distance matrix.
-    n_neighbors
-        Number of nearest neighbors to use in the graph.
-    metric
-        Name of metric used to compute `distances`.
-    method
-        Method to use for computing the graph. Currently only `'umap'` is supported.
-    key_added
-        Optional key under which to store the results. Default is 'neighbors'.
-
-    Returns
-    -------
-    adata
-        Annotated data with computed distances and connectivities.
-    """
     if isinstance(distances, SpBase):
         distances = sparse.csr_matrix(distances)  # noqa: TID251
         distances.setdiag(0)
@@ -326,6 +312,7 @@ def neighbors_from_distance(
         method=method,
         random_state=0,
         metric=metric,
+        is_directed=is_directed,
     )
     adata.uns[key_added] = neighbors_dict
     adata.obsp[neighbors_dict["distances_key"]] = distances
@@ -457,7 +444,7 @@ class Neighbors:
     n_dcs
         Number of diffusion components to use.
     neighbors_key
-        Where to look in `.uns` and `.obsp` for neighbors data
+        Where to look in `.uns` and `.obsp` for neighbors data.
 
     """
 

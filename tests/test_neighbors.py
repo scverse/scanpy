@@ -279,13 +279,14 @@ def test_restore_n_neighbors(neigh, conv):
     assert neigh_restored.n_neighbors == 1
 
 
-def test_neighbors_distance_equivalence():
+def test_neighbors_distance_equivalence() -> None:
     adata = pbmc68k_reduced()
     adata_d = adata.copy()
 
     sc.pp.neighbors(adata)
     # reusing the same distances
     sc.pp.neighbors(adata_d, distances=adata.obsp["distances"])
+
     np.testing.assert_allclose(
         adata.obsp["connectivities"].toarray(),
         adata_d.obsp["connectivities"].toarray(),
