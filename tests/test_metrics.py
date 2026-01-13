@@ -14,7 +14,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy.metrics import modularity
-from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
@@ -292,10 +292,9 @@ def test_modularity_invalid_labels() -> None:
 
 
 @needs.igraph
-@needs.leidenalg
 def test_modularity_adata() -> None:
     """Test domain of modularity score."""
-    adata = sc.datasets.pbmc3k()
+    adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
     sc.tl.leiden(adata, flavor="igraph")
