@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -178,7 +178,10 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         clustering_args["seed"] = random_state
-        part = leidenalg.find_partition(g, partition_type, **clustering_args)
+        part = cast(
+            "MutableVertexPartition",
+            leidenalg.find_partition(g, partition_type, **clustering_args),
+        )
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
@@ -212,6 +215,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         random_state=random_state,
         n_iterations=n_iterations,
     )
+    adata.uns[key_added]["modularity"] = part.modularity
     logg.info(
         "    finished",
         time=start,

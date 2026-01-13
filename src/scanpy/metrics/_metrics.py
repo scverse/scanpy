@@ -132,14 +132,14 @@ def modularity(
     ----------
     adata_or_connectivities
         The AnnData object containing the data or a weighted adjacency matrix representing the graph.
-        Can be a dense NumPy array or a sparse CSR matrix.
     labels
         Cluster labels for each node in the graph.
         When `AnnData` is provided, this can be the key in `adata.obs` that contains the clustering labels and defaults to `"leiden"`.
     neighbors_key
         When `AnnData` is provided, the key in `adata.obsp` that contains the connectivities.
     is_directed
-        Whether the graph is directed or undirected. If True, the graph is treated as directed; otherwise, it is treated as undirected.
+        Whether the graph is directed or undirected.
+        Optional when an `AnnData` object has been passed.
 
     Returns
     -------
@@ -171,6 +171,12 @@ def modularity_adata(
     neighbors_key: str | None,
     is_directed: bool | None,
 ) -> float:
+    if (
+        isinstance(labels, str)
+        and (m := adata.uns.get(labels, {}).get("modularity", None)) is not None
+    ):
+        return m
+
     labels = adata.obs[labels] if isinstance(labels, str) else labels
     nv = NeighborsView(adata, neighbors_key)
     connectivities = nv["connectivities"]

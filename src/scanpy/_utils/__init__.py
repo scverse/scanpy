@@ -883,20 +883,22 @@ class NeighborsView:
         This defines where to look for neighbors dictionary,
         connectivities, distances.
 
-        neigh = NeighborsView(adata, key)
-        neigh['distances']
-        neigh['connectivities']
-        neigh['params']
-        'connectivities' in neigh
-        'params' in neigh
+    Examples
+    --------
+    >>> neigh = NeighborsView(adata, key)
+    >>> neigh["distances"]
+    >>> neigh["connectivities"]
+    >>> neigh["params"]
+    >>> "connectivities" in neigh
+    >>> "params" in neigh
 
-        is the same as
+    is the same as
 
-        adata.obsp[adata.uns[key]['distances_key']]
-        adata.obsp[adata.uns[key]['connectivities_key']]
-        adata.uns[key]['params']
-        adata.uns[key]['connectivities_key'] in adata.obsp
-        'params' in adata.uns[key]
+    >>> adata.obsp[adata.uns[key]["distances_key"]]
+    >>> adata.obsp[adata.uns[key]["connectivities_key"]]
+    >>> adata.uns[key]["params"]
+    >>> adata.uns[key]["connectivities_key"] in adata.obsp
+    >>> "params" in adata.uns[key]
 
     """
 

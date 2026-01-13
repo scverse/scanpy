@@ -292,16 +292,21 @@ def test_modularity_invalid_labels() -> None:
 
 
 @needs.igraph
-def test_modularity_adata() -> None:
+def test_modularity_adata(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test domain of modularity score."""
     adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
     sc.tl.leiden(adata, flavor="igraph")
 
-    score = modularity(adata, labels="leiden")
+    with monkeypatch.context() as m:
+        # retrieve pre-calculated modularity
+        m.delattr(sc.metrics._metrics, "modularity_array")
+        score = modularity(adata, labels="leiden")
+    score_arr = modularity(adata, labels=adata.obs["leiden"])
 
     assert 0 <= score <= 1
+    assert pytest.approx(score_arr, rel=1e-3) == score
 
 
 @needs.igraph
