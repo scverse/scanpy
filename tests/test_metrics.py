@@ -299,7 +299,7 @@ def test_modularity_adata() -> None:
     sc.pp.neighbors(adata)
     sc.tl.leiden(adata, flavor="igraph")
 
-    score = modularity(adata, labels="louvain")
+    score = modularity(adata, labels="leiden")
 
     assert 0 <= score <= 1
 
