@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
+from itertools import combinations
 from string import ascii_letters
 from typing import TYPE_CHECKING
 
@@ -292,21 +293,33 @@ def test_modularity_invalid_labels() -> None:
 
 
 @needs.igraph
-def test_modularity_adata(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test domain of modularity score."""
+def test_modularity_adata(
+    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
+) -> None:
+    """Test domain and API of modularity score."""
     adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
     sc.tl.leiden(adata, flavor="igraph")
 
+    scores = {}
     with monkeypatch.context() as m:
         # retrieve pre-calculated modularity
         m.delattr(sc.metrics._metrics, "modularity_array")
-        score = modularity(adata, labels="leiden")
-    score_arr = modularity(adata, labels=adata.obs["leiden"])
+        scores["retrieve"] = modularity(adata, labels="leiden", mode="retrieve")
+    scores["calculate"] = modularity(adata, labels="leiden", mode="calculate")
+    del adata.uns["leiden"]["modularity"]
+    scores["update"] = modularity(adata, labels="leiden", mode="update")
 
-    assert 0 <= score <= 1
-    assert pytest.approx(score_arr, rel=1e-3) == score
+    for name, s in scores.items():
+        with subtests.test("bounds", score=name):
+            assert 0 <= s <= 1
+    for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
+        rel = 1e-6 if {n0, n1} == {"update", "calculate"} else 1e-3
+        with subtests.test("equality", l=n0, r=n1):
+            assert pytest.approx(s0, rel=rel) == s1
+    with subtests.test("update"):
+        assert adata.uns["leiden"]["modularity"] is scores["update"]
 
 
 @needs.igraph

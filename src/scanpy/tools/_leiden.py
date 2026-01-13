@@ -47,7 +47,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     flavor: Literal["leidenalg", "igraph"] | None = None,
     **clustering_args,
 ) -> AnnData | None:
-    """Cluster cells into subgroups :cite:p:`Traag2019`.
+    r"""Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
@@ -121,7 +121,10 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
-        The modularity score of the final clustering.
+        The modularity score of the final clustering,
+        as calculated by the `flavor`.
+        Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`
+        to calculate a score independent of `flavor`.
 
     """
     if flavor is None:

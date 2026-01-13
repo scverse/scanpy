@@ -14,6 +14,7 @@ from .._utils import NeighborsView
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from numpy.typing import ArrayLike
 
@@ -116,6 +117,7 @@ def modularity(
     *,
     neighbors_key: str | None = None,
     is_directed: bool | None = None,
+    mode: Literal["calculate", "update", "retrieve"] = "calculate",
 ) -> float: ...
 
 
@@ -126,6 +128,7 @@ def modularity(
     *,
     neighbors_key: str | None = None,
     is_directed: bool | None = None,
+    mode: Literal["calculate", "update", "retrieve"] = "calculate",
 ) -> float:
     """Compute the modularity of a graph given its connectivities and labels.
 
@@ -141,6 +144,10 @@ def modularity(
     is_directed
         Whether the graph is directed or undirected.
         Optional when an `AnnData` object has been passed.
+    mode
+        When `AnnData` is provided,
+        this controls if the stored modularity is retrieved,
+        or if we should calculate it (and optionally update it in `adata.uns[labels]`).
 
     Returns
     -------
@@ -152,6 +159,7 @@ def modularity(
             labels=labels,
             neighbors_key=neighbors_key,
             is_directed=is_directed,
+            mode=mode,
         )
     if isinstance(labels, str):
         msg = "`labels` must be provided as array when passing a connectivities array"
@@ -171,14 +179,14 @@ def modularity_adata(
     labels: str | pd.Series | ArrayLike,
     neighbors_key: str | None,
     is_directed: bool | None,
+    mode: Literal["calculate", "update", "retrieve"],
 ) -> float:
-    if (
-        isinstance(labels, str)
-        and (m := adata.uns.get(labels, {}).get("modularity", None)) is not None
-    ):
-        return m
+    if mode in {"retrieve", "update"} and not isinstance(labels, str):
+        msg = "`labels` must be a string when `mode` is `'retrieve'` or `'update'`"
+        raise ValueError(msg)
+    if mode == "retrieve":
+        return adata.uns[labels]["modularity"]
 
-    labels = adata.obs[labels] if isinstance(labels, str) else labels
     nv = NeighborsView(adata, neighbors_key)
     connectivities = nv["connectivities"]
 
@@ -186,7 +194,14 @@ def modularity_adata(
         msg = "`adata` has no `'is_directed'` in `adata.uns[neighbors_key]['params']`, need to specify `is_directed`"
         raise ValueError(msg)
 
-    return modularity(connectivities, labels, is_directed=is_directed)
+    m = modularity(
+        connectivities,
+        adata.obs[labels] if isinstance(labels, str) else labels,
+        is_directed=is_directed,
+    )
+    if mode == "update":
+        adata.uns[labels]["modularity"] = m
+    return m
 
 
 def modularity_array(
@@ -197,8 +212,6 @@ def modularity_array(
     is_directed: bool,
 ) -> float:
     try:
-        # try to import igraph in case the user wants to calculate modularity
-        # not in the main module to avoid import errors
         import igraph as ig
     except ImportError as e:
         msg = "igraph is require for computing modularity"
@@ -207,5 +220,4 @@ def modularity_array(
     graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
     # cluster labels to integer codes required by igraph
     labels = pd.Categorical(np.asarray(labels)).codes
-
     return graph.modularity(labels)
