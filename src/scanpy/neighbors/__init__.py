@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from inspect import signature
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
@@ -213,8 +214,8 @@ def neighbors(  # noqa: PLR0913
         adata = adata.copy() if copy else adata
         if adata.is_view:  # we shouldn't need this here...
             adata._init_as_actual(adata.copy())
-        neighbors = Neighbors(adata)
-        neighbors.compute_neighbors(
+        neighbors_ = Neighbors(adata)
+        neighbors_.compute_neighbors(
             n_neighbors,
             n_pcs=n_pcs,
             use_rep=use_rep,
@@ -226,9 +227,15 @@ def neighbors(  # noqa: PLR0913
             random_state=random_state,
         )
     else:
-        if random_state != 0:
+        params = locals()
+        if ignored := {
+            p.name
+            for p in signature(neighbors).parameters.values()
+            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "random_state"}
+            if params[p.name] != p.default
+        }:
             warn(
-                "The `random_state` parameter is ignored if `distances` is given.",
+                f"Parameter(s) ignored if `distances` is given: {ignored}",
                 UserWarning,
             )
             random_state = 0
@@ -249,15 +256,15 @@ def neighbors(  # noqa: PLR0913
             distances = np.asarray(distances)
             np.fill_diagonal(distances, 0)
 
-        neighbors = Neighbors(adata)
-        neighbors.n_neighbors = n_neighbors
-        neighbors.knn = True
-        neighbors._distances = distances
-        neighbors._connectivities = neighbors._compute_connectivites(method)
+        neighbors_ = Neighbors(adata)
+        neighbors_.n_neighbors = n_neighbors
+        neighbors_.knn = True
+        neighbors_._distances = distances
+        neighbors_._connectivities = neighbors_._compute_connectivites(method)
 
     key_added, neighbors_dict = _get_metadata(
         key_added,
-        n_neighbors=neighbors.n_neighbors,
+        n_neighbors=neighbors_.n_neighbors,
         method=method,
         random_state=random_state,
         metric=metric,
@@ -267,12 +274,12 @@ def neighbors(  # noqa: PLR0913
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
-    if neighbors.rp_forest is not None:
-        neighbors_dict["rp_forest"] = neighbors.rp_forest
+    if neighbors_.rp_forest is not None:
+        neighbors_dict["rp_forest"] = neighbors_.rp_forest
 
     adata.uns[key_added] = neighbors_dict
-    adata.obsp[neighbors_dict["distances_key"]] = neighbors.distances
-    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors.connectivities
+    adata.obsp[neighbors_dict["distances_key"]] = neighbors_.distances
+    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors_.connectivities
 
     logg.info(
         "    finished",
