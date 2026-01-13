@@ -120,6 +120,9 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
 
+    `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
+        The modularity score of the final clustering.
+
     """
     if flavor is None:
         flavor = "leidenalg"
