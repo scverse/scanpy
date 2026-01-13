@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from inspect import signature
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from igraph import Graph
+    from numpy.typing import NDArray
 
     from .._utils.random import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
@@ -69,7 +71,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
-    metric: _Metric | _MetricFn
+    metric: _Metric | _MetricFn | None
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
@@ -87,7 +89,7 @@ def neighbors(  # noqa: PLR0913
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
-    metric: _Metric | _MetricFn = "euclidean",
+    metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
@@ -150,7 +152,8 @@ def neighbors(  # noqa: PLR0913
                Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
-        If `distances` is given, this parameter is simply stored in `.uns` (see below).
+        If `distances` is given, this parameter is simply stored in `.uns` (see below),
+        otherwise defaults to `'euclidean'`.
 
         *ignored if ``transformer`` is an instance.*
     metric_kwds
@@ -204,40 +207,64 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
-    if distances is not None:
+    if distances is None:
+        if metric is None:
+            metric = "euclidean"
+        start = logg.info("computing neighbors")
+        adata = adata.copy() if copy else adata
+        if adata.is_view:  # we shouldn't need this here...
+            adata._init_as_actual(adata.copy())
+        neighbors_ = Neighbors(adata)
+        neighbors_.compute_neighbors(
+            n_neighbors,
+            n_pcs=n_pcs,
+            use_rep=use_rep,
+            knn=knn,
+            method=method,
+            transformer=transformer,
+            metric=metric,
+            metric_kwds=metric_kwds,
+            random_state=random_state,
+        )
+    else:
+        params = locals()
+        if ignored := {
+            p.name
+            for p in signature(neighbors).parameters.values()
+            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "random_state"}
+            if params[p.name] != p.default
+        }:
+            warn(
+                f"Parameter(s) ignored if `distances` is given: {ignored}",
+                UserWarning,
+            )
+            random_state = 0
         if callable(metric):
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
+        start = logg.info("computing connectivities")
         # if a precomputed distance matrix is provided, skip the PCA and distance computation
-        return _neighbors_from_distance(
-            adata,
-            distances,
-            n_neighbors=n_neighbors,
-            metric=metric,
-            method=method,
-            key_added=key_added,
-            is_directed=is_directed,
-        )
-    start = logg.info("computing neighbors")
-    adata = adata.copy() if copy else adata
-    if adata.is_view:  # we shouldn't need this here...
-        adata._init_as_actual(adata.copy())
-    neighbors = Neighbors(adata)
-    neighbors.compute_neighbors(
-        n_neighbors,
-        n_pcs=n_pcs,
-        use_rep=use_rep,
-        knn=knn,
-        method=method,
-        transformer=transformer,
-        metric=metric,
-        metric_kwds=metric_kwds,
-        random_state=random_state,
-    )
+        if isinstance(distances, SpBase):
+            if TYPE_CHECKING:
+                from scipy.sparse._base import _spbase
+
+                assert isinstance(distances, _spbase)
+            distances = distances.tocsr(copy=True)
+            distances.setdiag(0)
+            distances.eliminate_zeros()
+        else:
+            distances = np.asarray(distances)
+            np.fill_diagonal(distances, 0)
+
+        neighbors_ = Neighbors(adata)
+        neighbors_.n_neighbors = n_neighbors
+        neighbors_.knn = True
+        neighbors_._distances = distances
+        neighbors_._connectivities = neighbors_._compute_connectivites(method)
 
     key_added, neighbors_dict = _get_metadata(
         key_added,
-        n_neighbors=neighbors.n_neighbors,
+        n_neighbors=neighbors_.n_neighbors,
         method=method,
         random_state=random_state,
         metric=metric,
@@ -247,12 +274,12 @@ def neighbors(  # noqa: PLR0913
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
-    if neighbors.rp_forest is not None:
-        neighbors_dict["rp_forest"] = neighbors.rp_forest
+    if neighbors_.rp_forest is not None:
+        neighbors_dict["rp_forest"] = neighbors_.rp_forest
 
     adata.uns[key_added] = neighbors_dict
-    adata.obsp[neighbors_dict["distances_key"]] = neighbors.distances
-    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors.connectivities
+    adata.obsp[neighbors_dict["distances_key"]] = neighbors_.distances
+    adata.obsp[neighbors_dict["connectivities_key"]] = neighbors_.connectivities
 
     logg.info(
         "    finished",
@@ -264,57 +291,6 @@ def neighbors(  # noqa: PLR0913
         ),
     )
     return adata if copy else None
-
-
-def _neighbors_from_distance(
-    adata: AnnData,
-    distances: np.ndarray | SpBase,
-    *,
-    n_neighbors: int,
-    metric: _Metric,
-    method: _Method,
-    key_added: str | None,
-    is_directed: bool,
-) -> AnnData:
-    if isinstance(distances, SpBase):
-        distances = sparse.csr_matrix(distances)  # noqa: TID251
-        distances.setdiag(0)
-        distances.eliminate_zeros()
-    else:
-        distances = np.asarray(distances)
-        np.fill_diagonal(distances, 0)
-
-    if method == "umap":
-        if isinstance(distances, CSRBase):
-            knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
-                distances, n_neighbors
-            )
-        else:
-            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
-                distances, n_neighbors
-            )
-        connectivities = umap(
-            knn_indices, knn_distances, n_obs=adata.n_obs, n_neighbors=n_neighbors
-        )
-    elif method == "gauss":
-        distances = sparse.csr_matrix(distances)  # noqa: TID251
-        connectivities = _connectivity.gauss(distances, n_neighbors, knn=True)
-    else:
-        msg = f"Method {method} not implemented."
-        raise NotImplementedError(msg)
-
-    key_added, neighbors_dict = _get_metadata(
-        key_added,
-        n_neighbors=n_neighbors,
-        method=method,
-        random_state=0,
-        metric=metric,
-        is_directed=is_directed,
-    )
-    adata.uns[key_added] = neighbors_dict
-    adata.obsp[neighbors_dict["distances_key"]] = distances
-    adata.obsp[neighbors_dict["connectivities_key"]] = connectivities
-    return adata
 
 
 def _get_metadata(
@@ -601,7 +577,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-    def compute_neighbors(  # noqa: PLR0912
+    def compute_neighbors(
         self,
         n_neighbors: int = 30,
         n_pcs: int | None = None,
@@ -684,26 +660,11 @@ class Neighbors:
                     self._rp_forest = _make_forest_dict(index)
         start_connect = logg.debug("computed neighbors", time=start_neighbors)
 
-        if method == "umap":
-            self._connectivities = _connectivity.umap(
-                knn_indices,
-                knn_distances,
-                n_obs=self._adata.shape[0],
-                n_neighbors=self.n_neighbors,
-            )
-        elif method == "gauss":
-            self._connectivities = _connectivity.gauss(
-                self._distances, self.n_neighbors, knn=self.knn
-            )
-        elif method == "jaccard":
-            self._connectivities = _connectivity.jaccard(
-                knn_indices,
-                n_obs=self._adata.shape[0],
-                n_neighbors=self.n_neighbors,
-            )
-        elif method is not None:
-            msg = f"{method!r} should have been coerced in _handle_transform_args"
-            raise AssertionError(msg)
+        self._connectivities = (
+            None
+            if method is None
+            else self._compute_connectivites(method, (knn_indices, knn_distances))
+        )
         self._number_connected_components = 1
         if isinstance(self._connectivities, CSBase):
             from scipy.sparse.csgraph import connected_components
@@ -712,6 +673,43 @@ class Neighbors:
             self._number_connected_components = self._connected_components[0]
         if method is not None:
             logg.debug("computed connectivities", time=start_connect)
+
+    def _compute_connectivites(
+        self,
+        method: _Method,
+        knn_ind_dist: (
+            tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]] | None
+        ) = None,
+    ) -> CSRBase | NDArray[np.float32 | np.float64] | None:
+        def get_knn():
+            if knn_ind_dist is not None:
+                return knn_ind_dist
+            if isinstance(self._distances, CSBase):
+                return _get_indices_distances_from_sparse_matrix(
+                    self._distances.tocsr(), self.n_neighbors
+                )
+            assert self._distances is not None
+            return _get_indices_distances_from_dense_matrix(
+                self._distances, self.n_neighbors
+            )
+
+        if method == "umap":
+            knn_indices, knn_distances = get_knn()
+            return umap(
+                knn_indices,
+                knn_distances,
+                n_obs=self._adata.n_obs,
+                n_neighbors=self.n_neighbors,
+            )
+        if method == "gauss":
+            return _connectivity.gauss(self._distances, self.n_neighbors, knn=self.knn)
+        if method == "jaccard":
+            knn_indices, _ = get_knn()
+            return _connectivity.jaccard(
+                knn_indices, n_obs=self._adata.n_obs, n_neighbors=self.n_neighbors
+            )
+        msg = f"Method {method} not implemented."
+        raise NotImplementedError(msg)
 
     def _handle_transformer(
         self,
