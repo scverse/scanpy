@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 def _has_self_column(
     indices: NDArray[np.int32 | np.int64],
-    distances: NDArray[np.float32 | np.float64],
 ) -> bool:
     # some algorithms have some messed up reordering.
     return (indices[:, 0] == np.arange(indices.shape[0])).any()
@@ -26,7 +25,7 @@ def _remove_self_column(
     indices: NDArray[np.int32 | np.int64],
     distances: NDArray[np.float32 | np.float64],
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
-    if not _has_self_column(indices, distances):
+    if not _has_self_column(indices):
         msg = "The first neighbor should be the cell itself."
         raise AssertionError(msg)
     return indices[:, 1:], distances[:, 1:]
@@ -86,7 +85,7 @@ def _get_indices_distances_from_sparse_matrix(
         indices, distances = _ind_dist_slow(d, n_neighbors)
 
     # handle RAPIDS style indices_distances lacking the self-column
-    if not _has_self_column(indices, distances):
+    if not _has_self_column(indices):
         indices = np.hstack([np.arange(indices.shape[0])[:, None], indices])
         distances = np.hstack([np.zeros(distances.shape[0])[:, None], distances])
 
@@ -101,25 +100,45 @@ def _get_indices_distances_from_sparse_matrix(
 def _ind_dist_slow(
     d: CSRBase, /, n_neighbors: int
 ) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
-    indices = np.zeros((d.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((d.shape[0], n_neighbors), dtype=d.dtype)
+    d = d.tocsr()
+    n_obs = d.shape[0]
+    indices = np.zeros((n_obs, n_neighbors), dtype=int)
+    indices[:, 0] = np.arange(n_obs)  # set self-indices
+    distances = np.zeros((n_obs, n_neighbors), dtype=d.dtype)
     n_neighbors_m1 = n_neighbors - 1
-    for i in range(indices.shape[0]):
-        neighbors = d[i].nonzero()  # 'true' and 'spurious' zeros
-        indices[i, 0] = i
-        distances[i, 0] = 0
+
+    for i in range(n_obs):
+        row = d.getrow(i)
+        row_indices = row.indices
+        row_data = row.data
+
+        if len(row_indices) == 0:
+            continue
+
+        # self-indices are preset, so we filter them out here
+        mask = row_indices != i
+        non_self_indices = row_indices[mask]
+        non_self_data = row_data[mask]
+
         # account for the fact that there might be more than n_neighbors
         # due to an approximate search
         # [the point itself was not detected as its own neighbor during the search]
-        if len(neighbors[1]) > n_neighbors_m1:
-            sorted_indices = np.argsort(d[i][neighbors].A1)[:n_neighbors_m1]
-            indices[i, 1:] = neighbors[1][sorted_indices]
-            distances[i, 1:] = d[i][
-                neighbors[0][sorted_indices], neighbors[1][sorted_indices]
+        if len(non_self_indices) > n_neighbors_m1:
+            # partial sorting to get the n_neighbors - 1 smallest distances
+            partition_indices = np.argpartition(non_self_data, n_neighbors_m1 - 1)[
+                :n_neighbors_m1
             ]
+            sorted_partition = partition_indices[
+                np.argsort(non_self_data[partition_indices])
+            ]
+            indices[i, 1:] = non_self_indices[sorted_partition]
+            distances[i, 1:] = non_self_data[sorted_partition]
         else:
-            indices[i, 1:] = neighbors[1]
-            distances[i, 1:] = d[i][neighbors]
+            n_actual = len(non_self_indices)
+            if n_actual > 0:
+                indices[i, 1 : 1 + n_actual] = non_self_indices
+                distances[i, 1 : 1 + n_actual] = non_self_data
+
     return indices, distances
 
 

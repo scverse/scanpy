@@ -20,7 +20,7 @@ __all__ = [
     "_MetricSparseCapable",
 ]
 
-type _Method = Literal["umap", "gauss", "jaccard"]
+type _Method = Literal["umap", "gauss", "jaccard", "binary"]
 type _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
 
 type _MetricFn = Callable[[np.ndarray, np.ndarray], float]

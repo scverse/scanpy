@@ -154,11 +154,13 @@ def neigh() -> Neighbors:
     return get_neighbors()
 
 
-@pytest.mark.parametrize("method", ["umap", "gauss", "jaccard"])
+@pytest.mark.parametrize("method", ["umap", "gauss", "jaccard", "binary"])
 def test_distances_euclidean(
-    mocker: MockerFixture, neigh: Neighbors, method: Literal["umap", "gauss", "jaccard"]
+    mocker: MockerFixture,
+    neigh: Neighbors,
+    method: Literal["umap", "gauss", "jaccard", "binary"],
 ):
-    """Umap, gauss, and jaccard behave the same for distances.
+    """Umap, gauss, jaccard and binary behave the same for distances.
 
     They call pynndescent for large data.
     """
