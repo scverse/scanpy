@@ -10,13 +10,14 @@ from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
 
-from .._compat import SpBase
 from .._utils import NeighborsView
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from numpy.typing import ArrayLike
+
+    from .._compat import SpBase
 
 
 def confusion_matrix(
@@ -202,24 +203,8 @@ def modularity_array(
     except ImportError as e:
         msg = "igraph is require for computing modularity"
         raise ImportError(msg) from e
-    if isinstance(connectivities, SpBase):
-        if TYPE_CHECKING:
-            from scipy.sparse._base import _spbase
-
-            assert isinstance(connectivities, _spbase)
-
-        coo = connectivities.tocoo()
-        edges = list(zip(coo.row, coo.col, strict=True))
-        # converting to the coo format to extract the edges and weights
-        # storing only non-zero elements and their indices
-        weights = coo.data.tolist()
-        graph = ig.Graph(edges=edges, directed=is_directed)
-        graph.es["weight"] = weights
-    else:
-        # if the graph is dense, creates it directly using igraph's adjacency matrix
-        dense_array = np.asarray(connectivities)
-        igraph_mode = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
-        graph = ig.Graph.Weighted_Adjacency(dense_array.tolist(), mode=igraph_mode)
+    igraph_mode = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
+    graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
     # cluster labels to integer codes required by igraph
     labels = pd.Categorical(np.asarray(labels)).codes
 
