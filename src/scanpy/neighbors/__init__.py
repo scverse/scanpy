@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Mapping
 from textwrap import indent
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
-from warnings import warn
 
 import numpy as np
 import scipy
@@ -16,7 +14,7 @@ from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, old_positionals
+from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from . import _connectivity
@@ -30,8 +28,8 @@ from ._doc import doc_n_pcs, doc_use_rep
 from ._types import _KnownTransformer, _Method
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, MutableMapping
-    from typing import Any, Literal, NotRequired, Unpack
+    from collections.abc import Callable, Mapping, MutableMapping
+    from typing import Any, Literal, NotRequired, TypeAlias, Unpack
 
     from anndata import AnnData
     from igraph import Graph
@@ -39,12 +37,12 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
+    # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
+    RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
-RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
-
-N_DCS = 15  # default number of diffusion components
+N_DCS: int = 15  # default number of diffusion components
 # Backwards compat, constants should be defined in only one place.
-N_PCS = settings.N_PCS
+N_PCS: int = settings.N_PCS
 
 
 class KwdsForTransformer(TypedDict):
@@ -98,9 +96,12 @@ def neighbors(  # noqa: PLR0913
 
     The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
-    connectivities are computed according to :cite:t:`Coifman2005`, in the adaption of
-    :cite:t:`Haghverdi2016`.
+    the connectivity of the manifold (`method=='umap'`).
+    If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
+    in the adaption of :cite:t:`Haghverdi2016`.
+    If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
+
+    .. array-support:: pp.neighbors
 
     Parameters
     ----------
@@ -124,8 +125,10 @@ def neighbors(  # noqa: PLR0913
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
-        Use 'umap' :cite:p:`McInnes2018` or 'gauss' (Gauss kernel following :cite:t:`Coifman2005`
-        with adaptive width :cite:t:`Haghverdi2016`) for computing connectivities.
+        Use 'umap' :cite:p:`McInnes2018`,
+        'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
+        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`)
+        for computing connectivities.
     transformer
         Approximate kNN search implementation following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -354,7 +357,7 @@ class FlatTree(NamedTuple):  # noqa: D101
     indices: None
 
 
-def _backwards_compat_get_full_X_diffmap(adata: AnnData) -> np.ndarray:
+def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
     if "X_diffmap0" in adata.obs:
         return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
     else:
@@ -401,15 +404,11 @@ class OnFlySymMatrix:
         get_row: Callable[[Any], np.ndarray],
         shape: tuple[int, int],
         *,
-        DC_start: int = 0,
-        DC_end: int = -1,
         rows: MutableMapping[Any, np.ndarray] | None = None,
         restrict_array: np.ndarray | None = None,
     ):
         self.get_row = get_row
         self.shape = shape
-        self.DC_start = DC_start
-        self.DC_end = DC_end
         self.rows = {} if rows is None else rows
         self.restrict_array = restrict_array  # restrict the array to a subset
 
@@ -441,12 +440,7 @@ class OnFlySymMatrix:
         """Generate a view restricted to a subset of indices."""
         new_shape = index_array.shape[0], index_array.shape[0]
         return OnFlySymMatrix(
-            self.get_row,
-            new_shape,
-            DC_start=self.DC_start,
-            DC_end=self.DC_end,
-            rows=self.rows,
-            restrict_array=index_array,
+            self.get_row, new_shape, rows=self.rows, restrict_array=index_array
         )
 
 
@@ -526,9 +520,9 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm_keys():
+        if "X_diffmap" in adata.obsm:
             self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
+            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (
@@ -578,12 +572,12 @@ class Neighbors:
         This has not been tested, in contrast to `transitions_sym`.
 
         """
-        Zinv = (
+        z_inv = (
             self.Z.power(-1)
             if isinstance(self.Z, SpBase)  # can be DIA matrix
             else np.diag(1.0 / np.diag(self.Z))
         )
-        return self.Z @ self.transitions_sym @ Zinv
+        return self.Z @ self.transitions_sym @ z_inv
 
     @property
     def transitions_sym(self) -> np.ndarray | CSRBase | None:
@@ -682,8 +676,8 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
-        self._distances = transformer.fit_transform(X)
+        x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors
         )
@@ -717,6 +711,12 @@ class Neighbors:
             self._connectivities = _connectivity.gauss(
                 self._distances, self.n_neighbors, knn=self.knn
             )
+        elif method == "jaccard":
+            self._connectivities = _connectivity.jaccard(
+                knn_indices,
+                n_obs=self._adata.shape[0],
+                n_neighbors=self.n_neighbors,
+            )
         elif method is not None:
             msg = f"{method!r} should have been coerced in _handle_transform_args"
             raise AssertionError(msg)
@@ -739,7 +739,7 @@ class Neighbors:
     ) -> tuple[_Method | None, KnnTransformerLike, bool]:
         """Return effective `method` and transformer.
 
-        `method` will be coerced to `'gauss'` or `'umap'`.
+        `method` will be coerced to `'gauss'`, `'umap'`, or `'jaccard'`.
         `transformer` is coerced from a str or instance to an instance class.
 
         If `transformer` is `None` and there are few data points,
@@ -758,7 +758,7 @@ class Neighbors:
             transformer is None and (use_dense_distances or self._adata.n_obs < 4096)
         )
 
-        # Coerce `method` to 'gauss' or 'umap'
+        # Coerce `method` to 'gauss', 'umap', or 'jaccard'
         if method == "rapids":
             if transformer is not None:
                 msg = "Can’t specify both `method = 'rapids'` and `transformer`."
@@ -772,7 +772,7 @@ class Neighbors:
             raise ValueError(msg)
 
         # Validate `knn`
-        conn_method = method if method in {"gauss", None} else "umap"
+        conn_method = method if method in {"gauss", "jaccard", None} else "umap"
         if not knn and not (conn_method == "gauss" and transformer is None):
             # “knn=False” seems to be only intended for method “gauss”
             msg = f"`method = {method!r} only with `knn = True`."
@@ -812,7 +812,7 @@ class Neighbors:
                 "`transformer='rapids'` is deprecated. "
                 "Use `rapids_singlecell.tl.neighbors` instead."
             )
-            warn(msg, FutureWarning, stacklevel=3)
+            warn(msg, FutureWarning)
             from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
 
             transformer = RapidsKNNTransformer(**kwds)
@@ -841,32 +841,33 @@ class Neighbors:
 
         """
         start = logg.info("computing transitions")
-        W = self._connectivities
+        conn = self._connectivities
         # density normalization as of Coifman et al. (2005)
         # ensures that kernel matrix is independent of sampling density
         if density_normalize:
-            # q[i] is an estimate for the sampling density at point i
+            # dens[i] is an estimate for the sampling density at point i
             # it's also the degree of the underlying graph
-            q = np.asarray(W.sum(axis=0))
-            if not isinstance(W, CSBase):
-                Q = np.diag(1.0 / q)
+            dens = np.asarray(conn.sum(axis=0))
+            if not isinstance(conn, CSBase):
+                dens = np.diag(1.0 / dens)
             else:
-                Q = sparse.spdiags(1.0 / q, 0, W.shape[0], W.shape[0])
-            K = Q @ W @ Q
+                dens = sparse.spdiags(1.0 / dens, 0, conn.shape[0], conn.shape[0])
+            conn_norm = dens @ conn @ dens
         else:
-            K = W
+            conn_norm = conn
 
-        # z[i] is the square root of the row sum of K
-        z = np.sqrt(np.asarray(K.sum(axis=0)))
-        if not isinstance(K, CSBase):
+        # z[i] is the square root of the row sum of conn_norm
+        z = np.sqrt(np.asarray(conn_norm.sum(axis=0)))
+        if not isinstance(conn_norm, CSBase):
             self.Z = np.diag(1.0 / z)
         else:
-            self.Z = sparse.spdiags(1.0 / z, 0, K.shape[0], K.shape[0])
-        self._transitions_sym = self.Z @ K @ self.Z
+            self.Z = sparse.spdiags(1.0 / z, 0, conn_norm.shape[0], conn_norm.shape[0])
+        self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
     def compute_eigen(
         self,
+        *,
         n_comps: int = 15,
         sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",

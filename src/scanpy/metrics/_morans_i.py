@@ -9,7 +9,9 @@ import numba
 import numpy as np
 
 from .._compat import CSRBase, njit
+from .._utils import _doc_params
 from ..get import _get_obs_rep
+from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
 if TYPE_CHECKING:
@@ -20,12 +22,14 @@ if TYPE_CHECKING:
 
 
 @singledispatch
+@_doc_params(neighbors_key=doc_neighbors_key)
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
     vals: _Vals | None = None,
     *,
     use_graph: str | None = None,
+    neighbors_key: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -40,11 +44,11 @@ def morans_i(
     .. math::
 
         I =
-            \frac{
-                N \sum_{i, j} w_{i, j} z_{i} z_{j}
-            }{
-                S_{0} \sum_{i} z_{i}^{2}
-            }
+            \frac{{
+                N \sum_{{i,j}} w_{{i,j}} z_{{i}} z_{{j}}
+            }}{{
+                S_{{0}} \sum_{{i}} z_{{i}}^{{2}}
+            }}
 
     Params
     ------
@@ -58,8 +62,10 @@ def morans_i(
         object by using key word arguments: `layer`, `obsm`, `obsp`, or
         `use_raw`.
     use_graph
-        Key to use for graph in anndata object. If not provided, default
-        neighbors connectivities will be used instead.
+        Key to use for graph in anndata object.
+        If not provided, default neighbors connectivities will be used instead.
+        (See ``neighbors_key`` below.)
+    {neighbors_key}
     layer
         Key for `adata.layers` to choose `vals`.
     obsm
@@ -94,7 +100,7 @@ def morans_i(
 
     """
     adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph)
+    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
     return morans_i(g, vals)
@@ -114,8 +120,8 @@ class _MoransI(_SparseMetric):
         return _morans_i_mtx_csr(self.graph, vals_het)
 
     def vec(self) -> np.float64:
-        W = self.graph.data.sum()
-        return _morans_i_vec_W(self.graph, self._vals, W)
+        w = self.graph.data.sum()
+        return _morans_i_vec_w(self.graph, self._vals, w)
 
 
 ###############################################################################
@@ -125,7 +131,7 @@ class _MoransI(_SparseMetric):
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _morans_i_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
+def _morans_i_vec_w(g: CSRBase, x: np.ndarray, w: np.float64) -> np.float64:
     z = x - x.mean()
     z2ss = (z * z).sum()
     n = len(x)
@@ -137,37 +143,37 @@ def _morans_i_vec_W(g: CSRBase, x: np.ndarray, W: np.float64) -> np.float64:
         i_data = g.data[s]
         inum += (i_data * z[i_indices]).sum() * z[i]
 
-    return len(x) / W * inum / z2ss
+    return len(x) / w * inum / z2ss
 
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _morans_i_vec_W_sparse(
-    g: CSRBase, x_data: np.ndarray, x_indices: np.ndarray, n: int, W: np.float64
+def _morans_i_vec_w_sparse(
+    g: CSRBase, x_data: np.ndarray, x_indices: np.ndarray, n: int, w: np.float64
 ) -> np.float64:
     x_vec = np.zeros(n, dtype=x_data.dtype)
     x_vec[x_indices] = x_data
-    return _morans_i_vec_W(g, x_vec, W)
+    return _morans_i_vec_w(g, x_vec, w)
 
 
 @njit
-def _morans_i_mtx(g: CSRBase, X: np.ndarray) -> np.ndarray:
-    m, n = X.shape
+def _morans_i_mtx(g: CSRBase, x: np.ndarray) -> np.ndarray:
+    m, n = x.shape
     assert n == len(g.indptr) - 1
-    W = g.data.sum()
+    w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     for k in numba.prange(m):
-        x = X[k, :]
-        out[k] = _morans_i_vec_W(g, x, W)
+        x_vec = x[k, :]
+        out[k] = _morans_i_vec_w(g, x_vec, w)
     return out
 
 
 @njit
 def _morans_i_mtx_csr(g: CSRBase, x: CSRBase) -> np.ndarray:
     m, n = x.shape
-    W = g.data.sum()
+    w = g.data.sum()
     out = np.zeros(m, dtype=np.float64)
     x_data_list = np.split(x.data, x.indptr[1:-1])
     x_indices_list = np.split(x.indices, x.indptr[1:-1])
     for k in numba.prange(m):
-        out[k] = _morans_i_vec_W_sparse(g, x_data_list[k], x_indices_list[k], n, W)
+        out[k] = _morans_i_vec_w_sparse(g, x_data_list[k], x_indices_list[k], n, w)
     return out

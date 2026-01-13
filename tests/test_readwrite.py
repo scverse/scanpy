@@ -4,7 +4,6 @@ from contextlib import nullcontext
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
-import anndata
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -12,6 +11,7 @@ from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from scanpy.readwrite import _slugify
 from testing.scanpy._pytest.marks import needs
 
@@ -78,9 +78,12 @@ def test_write(
             assert sc.settings.file_format_data == ff
             return  # return early
         case "default", _:
-            monkeypatch.setattr(sc.settings, "file_format_data", ext)
-            with ctx:
-                sc.write("test", adata)
+            sc.settings.file_format_data, old = ext, sc.settings.file_format_data
+            try:
+                with ctx:
+                    sc.write("test", adata)
+            finally:
+                sc.settings.file_format_data = old
             d = sc.settings.writedir
         case _:
             pytest.fail("add branch for new style")
@@ -96,7 +99,7 @@ def test_write(
 
 
 @pytest.mark.skipif(
-    Version(anndata.__version__) < Version("0.11.0rc2"),
+    pkg_version("anndata") < Version("0.11.0rc2"),
     reason="Older AnnData has no convert_strings_to_categoricals",
 )
 @pytest.mark.parametrize("fmt", ["h5ad", pytest.param("zarr", marks=needs.zarr)])
@@ -109,8 +112,5 @@ def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> No
     adata_read = sc.read(p)
 
     assert_equal(adata_read, adata)
-    assert (
-        adata_read.obs["a"].dtype
-        == adata.obs["a"].dtype
-        == ("category" if s2c else "object")
-    )
+    assert adata_read.obs["a"].dtype == adata.obs["a"].dtype
+    assert adata_read.obs["a"].dtype in (("category",) if s2c else ("object", "string"))

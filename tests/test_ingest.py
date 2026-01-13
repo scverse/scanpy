@@ -8,7 +8,6 @@ from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
-from scanpy._compat import pkg_version
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 X = np.array(
@@ -84,7 +83,7 @@ def test_neighbors(adatas):
 
     num_correct = 0.0
     for i in range(adata_new.n_obs):
-        num_correct += np.sum(np.in1d(true_indices[i], indices[i]))
+        num_correct += np.sum(np.isin(true_indices[i], indices[i]))
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
@@ -103,13 +102,10 @@ def test_neighbors_defaults(adatas, n):
     assert ing._indices.shape[1] == n
 
 
-@pytest.mark.skipif(
-    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
-    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
-)
-def test_ingest_function(adatas):
-    adata_ref = adatas[0].copy()
-    adata_new = adatas[1].copy()
+# https://github.com/lmcinnes/umap/issues/1174
+@pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
+    adata_ref, adata_new = (ad.copy() for ad in adatas)
 
     sc.tl.ingest(
         adata_new,
@@ -136,7 +132,9 @@ def test_ingest_function(adatas):
     assert "X_pca" in ad.obsm
 
 
-def test_ingest_map_embedding_umap():
+# https://github.com/lmcinnes/umap/issues/1174
+@pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+def test_ingest_map_embedding_umap() -> None:
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
@@ -149,7 +147,7 @@ def test_ingest_map_embedding_umap():
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
+    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 

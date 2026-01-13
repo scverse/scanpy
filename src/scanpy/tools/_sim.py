@@ -131,7 +131,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     model_key = Path(params["model"]).with_suffix("").name
     writedir = params.get("writedir")
     if writedir is None:
-        writedir = settings.writedir / (model_key + "_sim")
+        writedir = settings.writedir / f"{model_key}_sim"
     else:
         writedir = Path(writedir)
     writedir.mkdir(parents=True, exist_ok=True)
@@ -181,9 +181,9 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
             for restart in range(nrRealizations + maxRestarts):
                 # slightly break symmetry in initial conditions
                 if "toggleswitch" in model_key:
-                    X0 = np.array(
-                        [0.8 for i in range(grnsim.dim)]
-                    ) + 0.01 * np.random.randn(grnsim.dim)
+                    X0 = np.array([
+                        0.8 for i in range(grnsim.dim)
+                    ]) + 0.01 * np.random.randn(grnsim.dim)
                 X = grnsim.sim_model(tmax=tmax, X0=X0, noiseDyn=noiseDyn)
                 # check branching
                 check = True
@@ -325,11 +325,9 @@ def write_data(  # noqa: PLR0912, PLR0913
                 if "hill" in model:
                     for i in range(Adj.shape[0]):
                         Adj[i, i] = 1
-                np.savetxt(dir + "/adj_" + id + ".txt", Adj, header=header, fmt="%d")
+                np.savetxt(f"{dir}/adj_{id}.txt", Adj, header=header, fmt="%d")
             if Coupl is not None:
-                np.savetxt(
-                    dir + "/coupl_" + id + ".txt", Coupl, header=header, fmt="%10.6f"
-                )
+                np.savetxt(f"{dir}/coupl_{id}.txt", Coupl, header=header, fmt="%10.6f")
         # write model file
         if varNames and Coupl is not None:
             with (dir / f"model_{id}.txt").open("w") as f:
@@ -340,8 +338,8 @@ def write_data(  # noqa: PLR0912, PLR0913
                 f.write('# involving variable names, "or", "and", "(", ")". \n')
                 f.write("# The order of equations matters! \n")
                 f.write("# \n")
-                f.write("# modelType = " + modelType + "\n")
-                f.write("# invTimeStep = " + str(invTimeStep) + "\n")
+                f.write(f"# modelType = {modelType}\n")
+                f.write(f"# invTimeStep = {invTimeStep}\n")
                 f.write("# \n")
                 f.write("# boolean update rules: \n")
                 for k, v in boolRules.items():
@@ -439,7 +437,7 @@ class GRNsim:
         # seed
         np.random.seed(params["seed"])
         # header
-        self.header = "model = " + self.model.name + " \n"
+        self.header = f"model = {self.model.name} \n"
         # params
         self.params = params
 
@@ -556,38 +554,38 @@ class GRNsim:
             settings.m(0, "reading model", self.model)
         # read model
         boolRules = []
-        for line in self.model.open():
-            if line.startswith("#") and "modelType =" in line:
-                keyval = line
-                if "|" in line:
-                    keyval, type = line.split("|")[:2]
-                self.modelType = keyval.split("=")[1].strip()
-            if line.startswith("#") and "invTimeStep =" in line:
-                keyval = line
-                if "|" in line:
-                    keyval, type = line.split("|")[:2]
-                self.invTimeStep = float(keyval.split("=")[1].strip())
-            if not line.startswith("#"):
-                boolRules.append([s.strip() for s in line.split("=")])
-            if line.startswith("# coupling list:"):
-                break
+        with self.model.open() as f:
+            for line in f:
+                if line.startswith("#") and "modelType =" in line:
+                    keyval = line
+                    if "|" in line:
+                        keyval, _type = line.split("|")[:2]
+                    self.modelType = keyval.split("=")[1].strip()
+                if line.startswith("#") and "invTimeStep =" in line:
+                    keyval = line
+                    if "|" in line:
+                        keyval, _type = line.split("|")[:2]
+                    self.invTimeStep = float(keyval.split("=")[1].strip())
+                if not line.startswith("#"):
+                    boolRules.append([s.strip() for s in line.split("=")])
+                if line.startswith("# coupling list:"):
+                    break
         self.dim = len(boolRules)
         self.boolRules = dict(boolRules)
         self.varNames = {s: i for i, s in enumerate(self.boolRules.keys())}
         names = self.varNames
         # read couplings via names
         self.Coupl = np.zeros((self.dim, self.dim))
-        boolContinue = True
-        for (
-            line
-        ) in self.model.open():  # open(self.model.replace('/model','/couplList')):
-            if line.startswith("# coupling list:"):
-                boolContinue = False
-            if boolContinue:
-                continue
-            if not line.startswith("#"):
-                gps, gs, val = line.strip().split()
-                self.Coupl[int(names[gps]), int(names[gs])] = float(val)
+        reading = False
+        with self.model.open() as f:
+            for line in f:  # open(self.model.replace('/model','/couplList')):
+                if line.startswith("# coupling list:"):
+                    reading = True
+                if not reading:
+                    continue
+                if not line.startswith("#"):
+                    gps, gs, val = line.strip().split()
+                    self.Coupl[int(names[gps]), int(names[gs])] = float(val)
         # adjancecy matrices
         self.Adj_signed = np.sign(self.Coupl)
         self.Adj = np.abs(np.array(self.Adj_signed))
@@ -792,7 +790,8 @@ class GRNsim:
         Returns list of parents.
         """
         rule_pa = (
-            rule.replace("(", "")
+            rule
+            .replace("(", "")
             .replace(")", "")
             .replace("or", "")
             .replace("and", "")
@@ -810,14 +809,11 @@ class GRNsim:
                 settings.m(0, "list of available variables:")
                 settings.m(0, list(self.varNames.keys()))
                 message = (
-                    'processing of rule "'
-                    + rule
-                    + " yields an invalid parent: "
-                    + pa
-                    + " | check whether the syntax is correct: \n"
-                    + 'only python expressions "(",")","or","and","not" '
-                    + "are allowed, variable names and expressions have to be separated "
-                    + "by white spaces"
+                    f"processing of rule {rule!r} yields an invalid parent: {pa} "
+                    "| check whether the syntax is correct: \n"
+                    'only python expressions "(",")","or","and","not" '
+                    "are allowed, variable names and expressions have to be separated "
+                    "by white spaces"
                 )
                 raise ValueError(message)
             if pa in pa_old:
@@ -876,12 +872,12 @@ class GRNsim:
     ):
         header = self.header
         tmax = int(X.shape[0])
-        header += "tmax = " + str(tmax) + "\n"
-        header += "branching = " + str(branching) + "\n"
-        header += "nrRealizations = " + str(nrRealizations) + "\n"
-        header += "noiseObs = " + str(noiseObs) + "\n"
-        header += "noiseDyn = " + str(self.noiseDyn) + "\n"
-        header += "seed = " + str(seed) + "\n"
+        header += f"tmax = {tmax}\n"
+        header += f"branching = {branching}\n"
+        header += f"nrRealizations = {nrRealizations}\n"
+        header += f"noiseObs = {noiseObs}\n"
+        header += f"noiseDyn = {self.noiseDyn}\n"
+        header += f"seed = {seed}\n"
         # add observational noise
         X += noiseObs * np.random.randn(tmax, self.dim)
         # call helper function
@@ -1192,41 +1188,43 @@ def sample_static_data(model, dir, verbosity=0):
     if model != "combi":
         n_edges = np.zeros(n_Coupls)
         for icoupl in range(n_Coupls):
-            Coupl, Adj, Adj_signed, n_e = sample_coupling_matrix(dim, connectivity)
+            _coupl, adj, _adj_signed, n_e = sample_coupling_matrix(dim, connectivity)
             if verbosity > 1:
                 settings.m(0, icoupl)
-                settings.m(0, Adj)
+                settings.m(0, adj)
             n_edges[icoupl] = n_e
             # sample data
-            X = StaticCauseEffect().sim_givenAdj(Adj, model)
-            write_data(X, dir, Adj=Adj)
+            X = StaticCauseEffect().sim_givenAdj(adj, model)
+            write_data(X, dir, Adj=adj)
         settings.m(0, "mean edge number:", n_edges.mean())
 
     else:
         X = StaticCauseEffect().sim_combi()
-        Adj = np.zeros((3, 3))
-        Adj[2, 0] = Adj[2, 1] = 0
-        write_data(X, dir, Adj=Adj)
+        adj = np.zeros((3, 3))
+        adj[2, 0] = adj[2, 1] = 0
+        write_data(X, dir, Adj=adj)
 
 
 if __name__ == "__main__":
     import argparse
 
-    #     epilog = ('    1: 2dim, causal direction X_1 -> X_0, constraint signs\n'
-    #               + '    2: 2dim, causal direction X_1 -> X_0, arbitrary signs\n'
-    #               + '    3: 2dim, causal direction X_1 <-> X_0, arbitrary signs\n'
-    #               + '    4: 2dim, mix of model 2 and 3\n'
-    #               + '    5: 6dim double toggle switch\n'
-    #               + '    6: two independent evolutions without repression, sync.\n'
-    #               + '    7: two independent evolutions without repression, random init\n'
-    #               + '    8: two independent evolutions directed repression, random init\n'
-    #               + '    9: two independent evolutions mutual repression, random init\n'
-    #               + '   10: two indep. evol., diff. self-loops possible, mut. repr., rand init\n')
+    #     epilog = (
+    #         "    1: 2dim, causal direction X_1 -> X_0, constraint signs\n"
+    #         "    2: 2dim, causal direction X_1 -> X_0, arbitrary signs\n"
+    #         "    3: 2dim, causal direction X_1 <-> X_0, arbitrary signs\n"
+    #         "    4: 2dim, mix of model 2 and 3\n"
+    #         "    5: 6dim double toggle switch\n"
+    #         "    6: two independent evolutions without repression, sync.\n"
+    #         "    7: two independent evolutions without repression, random init\n"
+    #         "    8: two independent evolutions directed repression, random init\n"
+    #         "    9: two independent evolutions mutual repression, random init\n"
+    #         "   10: two indep. evol., diff. self-loops possible, mut. repr., rand init\n"
+    #     )
     epilog = ""
     for k, v in StaticCauseEffect.availModels.items():
-        epilog += "    static-" + k + ": " + v
+        epilog += f"    static-{k}: {v}"
     for k, v in GRNsim.availModels.items():
-        epilog += "    " + k + ": " + v
+        epilog += f"    {k}: {v}"
     # command line options
     p = argparse.ArgumentParser(
         description=(

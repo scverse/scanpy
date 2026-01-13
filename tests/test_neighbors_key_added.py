@@ -11,12 +11,19 @@ n_neighbors = 5
 key = "test"
 
 
+@pytest.fixture(scope="session")
+def adata_session() -> sc.AnnData:
+    adata = sc.AnnData(pbmc68k_reduced().X)
+    sc.pp.pca(adata)
+    return adata
+
+
 @pytest.fixture
-def adata():
-    return sc.AnnData(pbmc68k_reduced().X)
+def adata(adata_session: sc.AnnData) -> sc.AnnData:
+    return adata_session.copy()
 
 
-def test_neighbors_key_added(adata):
+def test_neighbors_key_added(adata: sc.AnnData) -> None:
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0, key_added=key)
 
@@ -32,9 +39,9 @@ def test_neighbors_key_added(adata):
     )
 
 
-def test_neighbors_pca_keys_added_without_previous_pca_run(adata):
-    assert "pca" not in adata.uns
-    assert "X_pca" not in adata.obsm
+def test_neighbors_pca_keys_added_without_previous_pca_run(adata: sc.AnnData) -> None:
+    del adata.uns["pca"]
+    del adata.obsm["X_pca"]
     with pytest.warns(
         UserWarning,
         match=r".*Falling back to preprocessing with `sc.pp.pca` and default params",
@@ -45,7 +52,6 @@ def test_neighbors_pca_keys_added_without_previous_pca_run(adata):
 
 # test functions with neighbors_key and obsp
 @needs.igraph
-@needs.leidenalg
 @pytest.mark.parametrize("field", ["neighbors_key", "obsp"])
 def test_neighbors_key_obsp(adata, field):
     adata1 = adata.copy()
@@ -64,8 +70,8 @@ def test_neighbors_key_obsp(adata, field):
     assert adata.uns["draw_graph"]["params"] == adata1.uns["draw_graph"]["params"]
     assert np.allclose(adata.obsm["X_draw_graph_fr"], adata1.obsm["X_draw_graph_fr"])
 
-    sc.tl.leiden(adata, random_state=0)
-    sc.tl.leiden(adata1, random_state=0, **arg)
+    sc.tl.leiden(adata, flavor="igraph", random_state=0)
+    sc.tl.leiden(adata1, flavor="igraph", random_state=0, **arg)
 
     assert adata.uns["leiden"]["params"] == adata1.uns["leiden"]["params"]
     assert np.all(adata.obs["leiden"] == adata1.obs["leiden"])
@@ -89,23 +95,3 @@ def test_neighbors_key_obsp(adata, field):
             adata.uns["paga"]["connectivities_tree"].toarray(),
             adata1.uns["paga"]["connectivities_tree"].toarray(),
         )
-
-
-@needs.louvain
-@pytest.mark.parametrize("field", ["neighbors_key", "obsp"])
-def test_neighbors_key_obsp_louvain(adata, field):
-    adata1 = adata.copy()
-
-    sc.pp.neighbors(adata, n_neighbors=n_neighbors, random_state=0)
-    sc.pp.neighbors(adata1, n_neighbors=n_neighbors, random_state=0, key_added=key)
-
-    if field == "neighbors_key":
-        arg = {field: key}
-    else:
-        arg = {field: adata1.uns[key]["connectivities_key"]}
-
-    sc.tl.louvain(adata, random_state=0)
-    sc.tl.louvain(adata1, random_state=0, **arg)
-
-    assert adata.uns["louvain"]["params"] == adata1.uns["louvain"]["params"]
-    assert np.all(adata.obs["louvain"] == adata1.obs["louvain"])

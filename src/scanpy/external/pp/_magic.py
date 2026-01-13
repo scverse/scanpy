@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._compat import pkg_version
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -137,15 +138,15 @@ def magic(  # noqa: PLR0913
 
     """
     try:
-        from magic import MAGIC, __version__
+        from magic import MAGIC
     except ImportError as e:
         msg = "Please install magic package via `pip install magic-impute`"
         raise ImportError(msg) from e
     else:
-        if Version(__version__) < Version(MIN_VERSION):
+        if pkg_version("magic-impute") < Version(MIN_VERSION):
             msg = (
                 "scanpy requires magic-impute >= "
-                f"v{MIN_VERSION} (detected: v{__version__}). "
+                f"v{MIN_VERSION} (detected: v{pkg_version('magic-impute')}). "
                 "Please update magic package via `pip install -U magic-impute`"
             )
             raise ImportError(msg)
@@ -170,7 +171,7 @@ def magic(  # noqa: PLR0913
     adata = adata.copy() if copy else adata
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
-    X_magic = MAGIC(
+    x_magic = MAGIC(
         knn=knn,
         decay=decay,
         knn_max=knn_max,
@@ -195,15 +196,15 @@ def magic(  # noqa: PLR0913
     # update AnnData instance
     if name_list == "pca_only":
         # special case – update adata.obsm with smoothed values
-        adata.obsm["X_magic"] = X_magic.X
+        adata.obsm["X_magic"] = x_magic.X
     elif copy:
         # just return X_magic
-        X_magic.raw = adata
-        adata = X_magic
+        x_magic.raw = adata
+        adata = x_magic
     else:
         # replace data with smoothed data
         adata.raw = adata
-        adata.X = X_magic.X
+        adata.X = x_magic.X
 
     if copy:
         return adata

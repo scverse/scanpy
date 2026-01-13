@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
+from logging import StreamHandler
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,14 +16,26 @@ from scanpy import logging as log
 from scanpy import settings as s
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 
-def test_defaults():
-    assert s.logpath is None
+def test_defaults(
+    caplog: pytest.LogCaptureFixture, original_settings: Mapping[str, object]
+) -> None:
+    assert s.logpath is original_settings["_logpath"] is None
+    assert s.logfile is original_settings["_logfile"] is sys.stderr
+    # we override s.verbosity, so we only check the default here:
+    assert original_settings["_verbosity"] is Verbosity.warning
+
+    # check logging handler file and level
+    [handler] = (h for h in s._root_logger.handlers if h is not caplog.handler)
+    assert isinstance(handler, StreamHandler)
+    assert handler.stream is s.logfile
+    assert s._root_logger.level == s.verbosity.level
 
 
-def test_records(caplog: pytest.LogCaptureFixture):
+def test_records(caplog: pytest.LogCaptureFixture) -> None:
     s.verbosity = Verbosity.debug
     log.error("0")
     log.warning("1")
@@ -81,14 +95,17 @@ def test_logfile(tmp_path: Path, caplog: pytest.LogCaptureFixture):
 
     p = tmp_path / "test.log"
     s.logpath = p
-    assert s.logpath == p
-    assert s.logfile.name == str(p)
-    log.hint("test2")
-    log.debug("invisible")
-    assert s.logpath.read_text() == "--> test2\n"
+    try:
+        assert s.logpath == p
+        assert s.logfile.name == str(p)
+        log.hint("test2")
+        log.debug("invisible")
+        assert s.logpath.read_text() == "--> test2\n"
 
-    # setting a logfile removes all handlers
-    assert not caplog.records
+        # setting a logfile removes all handlers
+        assert not caplog.records
+    finally:
+        s.logfile.close()  # TODO: make this unnecessary
 
 
 def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
@@ -130,7 +147,10 @@ def test_timing(monkeypatch, capsys: pytest.CaptureFixture):
     "func",
     [
         sc.logging.print_header,
-        sc.logging.print_versions,
+        pytest.param(
+            sc.logging.print_versions,
+            marks=pytest.mark.filterwarnings("ignore:.*print_header:FutureWarning"),
+        ),
         sc.logging.print_version_and_date,
     ],
 )
@@ -143,6 +163,9 @@ def test_call_outputs(func):
     with redirect_stdout(output_io):
         out = func()
         if out is not None:
-            print(out)
+            with warnings.catch_warnings():
+                # https://github.com/pallets/markupsafe/issues/487
+                warnings.simplefilter("ignore")
+                print(out)
     output = output_io.getvalue()
     assert output != ""
