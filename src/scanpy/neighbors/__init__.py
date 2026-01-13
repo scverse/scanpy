@@ -69,7 +69,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_neighbors: int
     method: _Method
     random_state: _LegacyRandom
-    metric: _Metric | _MetricFn
+    metric: _Metric | _MetricFn | None
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
@@ -87,7 +87,7 @@ def neighbors(  # noqa: PLR0913
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
-    metric: _Metric | _MetricFn = "euclidean",
+    metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
@@ -274,7 +274,7 @@ def _neighbors_from_distance(
     distances: np.ndarray | SpBase,
     *,
     n_neighbors: int,
-    metric: _Metric,
+    metric: _Metric | None,
     method: _Method,
     key_added: str | None,
     is_directed: bool,
