@@ -298,7 +298,7 @@ def test_modularity_adata() -> None:
     adata = sc.datasets.pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
-    sc.tl.leiden(adata)
+    sc.tl.leiden(adata, flavor="igraph")
 
     score = modularity(adata, labels="louvain")
 
