@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+doc_neighbors_key = """\
+neighbors_key
+    Where to look for neighbors connectivities.
+    If not specified, this retrieves ``.obsp['connectivities']`` for connectivities
+    (default storage place for :func:`~scanpy.pp.neighbors`).
+    If specified, this retrieves
+    ``.obsp[.uns[neighbors_key]['connectivities_key']]`` for connectivities.
+"""
+
 doc_use_rep = """\
 use_rep
     Use the indicated representation. `'X'` or any key for `.obsm` is valid.

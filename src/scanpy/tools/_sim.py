@@ -790,7 +790,8 @@ class GRNsim:
         Returns list of parents.
         """
         rule_pa = (
-            rule.replace("(", "")
+            rule
+            .replace("(", "")
             .replace(")", "")
             .replace("or", "")
             .replace("and", "")

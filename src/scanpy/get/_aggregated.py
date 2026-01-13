@@ -58,6 +58,8 @@ class Aggregate:
         mask: NDArray[np.bool_] | None = None,
     ) -> None:
         self.groupby = groupby
+        if (missing := groupby.isna()).any():
+            mask = mask & ~missing if mask is not None else ~missing
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         self.data = data
 
@@ -201,6 +203,8 @@ def aggregate(  # noqa: PLR0912
     in the output `AnnData` object.
 
     If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
+
+    .. array-support:: get.aggregate
 
     Params
     ------
@@ -531,9 +535,9 @@ def _combine_categories(
         code_array[i] = df[c].cat.codes
     code_array *= factors[:, None]
 
-    result_categorical = pd.Categorical.from_codes(
-        code_array.sum(axis=0), categories=result_categories
-    )
+    codes = code_array.sum(axis=0)
+    codes = np.where(np.any(code_array < 0, axis=0), -1, codes)
+    result_categorical = pd.Categorical.from_codes(codes, categories=result_categories)
 
     # Filter unused categories
     result_categorical = result_categorical.remove_unused_categories()
@@ -554,8 +558,10 @@ def sparse_indicator(
         weight = mask * weight
     elif mask is None and weight is None:
         weight = np.broadcast_to(1.0, len(categorical))
+    # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
+    codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
     a = sparse.coo_matrix(
-        (weight, (categorical.codes, np.arange(len(categorical)))),
+        (weight, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
     )
     return a

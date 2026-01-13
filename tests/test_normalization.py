@@ -118,12 +118,16 @@ def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
 @pytest.mark.parametrize(
     ("params", "match"),
     [
-        pytest.param(dict(theta=0), r"Pearson residuals require theta > 0", id="theta"),
         pytest.param(
-            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta"
+            dict(theta=0), r"Pearson residuals require theta > 0", id="theta=0"
         ),
         pytest.param(
-            dict(clip=-1), r"Pearson residuals require `clip>=0` or `clip=None`."
+            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta=-1"
+        ),
+        pytest.param(
+            dict(clip=-1),
+            r"Pearson residuals require `clip>=0` or `clip=None`.",
+            id="clip=-1",
         ),
     ],
 )

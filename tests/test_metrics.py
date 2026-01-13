@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
+from anndata import AnnData
 from scipy import sparse
 
 import scanpy as sc
@@ -81,10 +82,12 @@ def test_consistency(metric) -> None:
         pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
     ],
 )
-def test_correctness(metric, size, expected):
+def test_correctness(metric, size, expected) -> None:
+    rng = np.random.default_rng()
+
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
-    connected[np.random.choice(100, size=size, replace=False)] = 1
+    connected[rng.choice(100, size=size, replace=False)] = 1
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
@@ -95,9 +98,6 @@ def test_correctness(metric, size, expected):
         metric(graph, connected),
         metric(graph, sparse.csr_matrix(connected)),  # noqa: TID251
     )
-    # Checking that obsp works
-    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})  # noqa: TID251
-    np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
 @pytest.mark.usefixtures("_threading")
@@ -106,10 +106,12 @@ def test_correctness(metric, size, expected):
 )
 def test_graph_metrics_w_constant_values(
     request: pytest.FixtureRequest, metric, array_type
-):
+) -> None:
     if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
+
+    rng = np.random.default_rng()
 
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
@@ -117,7 +119,7 @@ def test_graph_metrics_w_constant_values(
     g = pbmc.obsp["connectivities"].copy()
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
-    const_inds = np.random.choice(x_t.shape[0], 10, replace=False)
+    const_inds = rng.choice(x_t.shape[0], 10, replace=False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
         x_t_zero_vals = x_t.copy()
@@ -145,6 +147,43 @@ def test_graph_metrics_w_constant_values(
 
     non_const_mask = ~np.isin(np.arange(x_t.shape[0]), const_inds)
     equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
+
+
+@pytest.mark.parametrize(
+    ("neigh_params", "metric_params"),
+    [
+        pytest.param(
+            dict(key_added="foo"), dict(use_graph="foo_connectivities"), id="use_graph"
+        ),
+        pytest.param(
+            dict(key_added="bar"), dict(neighbors_key="bar"), id="neighbors_key"
+        ),
+    ],
+)
+def test_metrics_graph_params(metric, neigh_params, metric_params) -> None:
+    rng = np.random.default_rng()
+    adata = AnnData(rng.normal(size=(10, 20)))
+    sc.pp.neighbors(adata, **neigh_params)
+    if "use_graph" in metric_params:  # make sure no extra stuff is there
+        adata = AnnData(adata.X, obsp=adata.obsp)
+    metric(adata, **metric_params)
+
+
+@pytest.mark.parametrize(
+    ("params", "err_cls", "pattern"),
+    [
+        pytest.param(
+            dict(use_graph="foo", neighbors_key="bar"), TypeError, r"both", id="both"
+        ),
+        pytest.param(dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
+        pytest.param(dict(neighbors_key="bar"), KeyError, r"bar", id="no_key"),
+        pytest.param({}, KeyError, r"neighbors.*uns", id="nothing"),
+    ],
+)
+def test_metrics_graph_params_errors(metric, params, err_cls, pattern) -> None:
+    adata = AnnData(shape=(10, 20))
+    with pytest.raises(err_cls, match=pattern):
+        metric(adata, **params)
 
 
 def test_confusion_matrix():
@@ -186,10 +225,12 @@ def test_confusion_matrix_randomized() -> None:
     )
 
 
-def test_confusion_matrix_api():
+def test_confusion_matrix_api() -> None:
+    rng = np.random.default_rng()
+
     data = pd.DataFrame({
-        "a": np.random.randint(5, size=100),
-        "b": np.random.randint(5, size=100),
+        "a": rng.integers(5, size=100),
+        "b": rng.integers(5, size=100),
     })
     expected = sc.metrics.confusion_matrix(data["a"], data["b"])
 

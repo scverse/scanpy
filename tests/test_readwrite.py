@@ -112,8 +112,5 @@ def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> No
     adata_read = sc.read(p)
 
     assert_equal(adata_read, adata)
-    assert (
-        adata_read.obs["a"].dtype
-        == adata.obs["a"].dtype
-        == ("category" if s2c else "object")
-    )
+    assert adata_read.obs["a"].dtype == adata.obs["a"].dtype
+    assert adata_read.obs["a"].dtype in (("category",) if s2c else ("object", "string"))

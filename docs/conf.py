@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from datetime import datetime
 from functools import partial
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING
 import matplotlib  # noqa
 from docutils import nodes
 from packaging.version import Version
+from sphinxcontrib.katex import NODEJS_BINARY
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use("agg")
@@ -52,7 +54,6 @@ release = version
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 
-
 # default settings
 templates_path = ["_templates"]
 master_doc = "index"
@@ -73,10 +74,10 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.doctest",
     "sphinx.ext.coverage",
-    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinxcontrib.bibtex",
+    "sphinxcontrib.katex",
     "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
@@ -125,9 +126,12 @@ ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
 ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
+always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
 
 pygments_style = "default"
 pygments_dark_style = "native"
+
+katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
     anndata=("https://anndata.readthedocs.io/en/stable/", None),
@@ -154,11 +158,7 @@ intersphinx_mapping = dict(
     pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
     pytest=("https://docs.pytest.org/en/latest/", None),
-    python=(
-        # TODO: switch to `/3` once docs are built with Python 3.14
-        "https://docs.python.org/3.13",
-        None,
-    ),
+    python=("https://docs.python.org/3", None),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
@@ -166,6 +166,39 @@ intersphinx_mapping = dict(
     squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
 )
+
+
+array_support: dict[str, tuple[list[str], list[str]]] = {
+    "experimental.pp.highly_variable_genes": (["np", "sp"], []),
+    "get.aggregate": (["np", "sp", "da"], []),
+    "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
+    "pp.combat": (["np"], []),
+    "pp.downsample_counts": (["np", "sp[csr]"], []),
+    "pp.filter_cells": (["np", "sp", "da"], []),
+    "pp.filter_genes": (["np", "sp", "da"], []),
+    "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.log1p": (["np", "sp", "da"], []),
+    "pp.neighbors": (["np", "sp"], []),
+    "pp.normalize_total": (["np", "sp[csr]", "da"], []),
+    "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
+    "pp.regress_out": (["np"], []),
+    "pp.sample": (["np", "sp", "da"], []),
+    "pp.scale": (["np", "sp", "da"], []),
+    "pp.scrublet": (["np", "sp"], []),
+    "pp.scrublet_simulate_doublets": (["np", "sp"], []),
+    "tl.dendrogram": (["np", "sp"], []),
+    "tl.diffmap": (["np", "sp"], []),
+    "tl.dpt": (["np", "sp"], []),
+    "tl.draw_graph": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.embedding_density": (["np"], []),
+    "tl.ingest": (["np", "sp"], []),
+    "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
+    "tl.paga": (["np", "sp"], []),
+    "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.tsne": (["np", "sp"], []),
+    "tl.umap": (["np", "sp"], []),
+}
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -177,12 +210,13 @@ html_theme_options = {
     "use_repository_button": True,
 }
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 html_show_sphinx = False
 html_logo = "_static/img/Scanpy_Logo_BrightFG.svg"
 html_title = "scanpy"
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))

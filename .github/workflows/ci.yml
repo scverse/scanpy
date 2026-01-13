@@ -32,7 +32,7 @@ jobs:
               select(.key | startswith("hatch-test"))
               | {
                 name: .key,
-                "test-type": (if (.key | test("pre|min")) then "coverage" else null end),
+                "test-type": (if (.key | test("pre|low-vers")) then "coverage" else null end),
                 python: .value.python
               }
             )')
@@ -44,6 +44,8 @@ jobs:
     strategy:
       matrix:
         env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+    permissions:
+      id-token: write  # for codecov OIDC
     steps:
       - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
@@ -60,8 +62,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv tool install --with='click!=8.3.0' hatch
+          echo "::group::Install hatch"
+          uv tool install hatch
+          echo "::endgroup::"
+          echo "::group::Create environment"
           hatch -v env create ${{ matrix.env.name }}
+          echo "::endgroup::"
+          hatch run ${{ matrix.env.name }}:session-info scanpy anndata
 
       - name: Run tests
         if: matrix.env.test-type == null
@@ -72,24 +79,26 @@ jobs:
           hatch run ${{ matrix.env.name }}:run-cov
           hatch run ${{ matrix.env.name }}:cov-combine
           hatch run ${{ matrix.env.name }}:coverage xml
+          hatch run ${{ matrix.env.name }}:cov-report
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.env.name }}
-          fail_ci_if_error: true
           files: test-data/coverage.xml
+          use_oidc: true
+          fail_ci_if_error: true
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
           flags: ${{ matrix.env.name }}
+          files: test-data/test-results.xml
+          use_oidc: true
           fail_ci_if_error: true
-          file: test-data/test-results.xml
 
       - name: Publish debug artifacts
         if: ${{ !cancelled() }}

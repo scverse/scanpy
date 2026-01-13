@@ -71,7 +71,8 @@ def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarr
         return np.vstack(clip_square_sum(block, clip_val))[None, ...]
 
     squared_batch_counts_sum, batch_counts_sum = (
-        data_batch.map_blocks(
+        data_batch
+        .map_blocks(
             sum_and_sum_squares_clipped_from_block,
             new_axis=(1,),
             chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
@@ -362,10 +363,6 @@ def _highly_variable_genes_single_batch(
     n_removed = np.sum(~filt)
     if n_removed:
         x = x[:, filt].copy()
-
-    if hasattr(x, "_view_args"):  # AnnData array view
-        # For compatibility with anndata<0.9
-        x = x.copy()  # Doesn't actually copy memory, just removes View class wrapper
 
     if flavor == "seurat":
         x = x.copy()
@@ -662,6 +659,8 @@ def highly_variable_genes(  # noqa: PLR0913
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
 
+    .. array-support:: pp.highly_variable_genes
+
     Parameters
     ----------
     adata
@@ -815,9 +814,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata.var["highly_variable"] = df["highly_variable"]
     adata.var["means"] = df["means"]
     adata.var["dispersions"] = df["dispersions"]
-    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(
-        np.float32, copy=False
-    )
+    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(np.float32)
 
     if batch_key is not None:
         adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]
