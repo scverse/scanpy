@@ -20,10 +20,10 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 # https://github.com/lmcinnes/umap/issues/1216
-SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
-    pkg_version("umap-learn") <= Version("0.5.9.post2")
+XFAIL_IF_UMAP_BROKEN = pytest.mark.xfail(
+    pkg_version("umap-learn") < Version("0.6a0.dev0")
     and pkg_version("numba") >= Version("0.62.0rc1"),
-    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
+    reason="umap<0.6 is broken with numba≥0.62.0rc1",
 )
 
 # the input data
@@ -207,7 +207,7 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
-            marks=SKIPIF_UMAP_BROKEN,
+            marks=XFAIL_IF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
