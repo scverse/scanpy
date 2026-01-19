@@ -885,20 +885,23 @@ class NeighborsView:
 
     Examples
     --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> key = "neighbors"
+
     >>> neigh = NeighborsView(adata, key)
-    >>> neigh["distances"]
-    >>> neigh["connectivities"]
-    >>> neigh["params"]
-    >>> "connectivities" in neigh
-    >>> "params" in neigh
+    >>> d = neigh["distances"]
+    >>> c = neigh["connectivities"]
+    >>> p = neigh["params"]
 
-    is the same as
+    is the same as doing this manually
 
-    >>> adata.obsp[adata.uns[key]["distances_key"]]
-    >>> adata.obsp[adata.uns[key]["connectivities_key"]]
-    >>> adata.uns[key]["params"]
-    >>> adata.uns[key]["connectivities_key"] in adata.obsp
-    >>> "params" in adata.uns[key]
+    >>> d_key = adata.uns[key].get("distances_key", "distances")
+    >>> c_key = adata.uns[key].get("connectivities_key", "connectivities")
+    >>> assert d is adata.obsp[d_key]
+    >>> assert c is adata.obsp[c_key]
+    >>> assert p is adata.uns[key]["params"]
+    >>> assert c_key in adata.obsp
 
     """
 
