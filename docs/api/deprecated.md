@@ -1,4 +1,4 @@
-## Deprecated functions
+# Deprecated functions
 
 ```{eval-rst}
 .. currentmodule:: scanpy

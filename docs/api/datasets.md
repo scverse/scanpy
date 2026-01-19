@@ -1,4 +1,4 @@
-## Datasets
+# Datasets
 
 ```{eval-rst}
 .. module:: scanpy.datasets

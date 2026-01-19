@@ -1,4 +1,4 @@
-## Preprocessing: PP
+# Preprocessing: PP
 
 ```{eval-rst}
 .. module:: scanpy.external.pp
@@ -7,7 +7,7 @@
 
 (external-data-integration)=
 
-### Data integration
+## Data integration
 
 ```{eval-rst}
 .. autosummary::
@@ -20,7 +20,7 @@
 
 ```
 
-### Sample demultiplexing
+## Sample demultiplexing
 
 ```{eval-rst}
 .. autosummary::
@@ -29,7 +29,7 @@
    pp.hashsolo
 ```
 
-### Imputation
+## Imputation
 
 Note that the fundamental limitations of imputation are still under [debate](https://github.com/scverse/scanpy/issues/189).
 

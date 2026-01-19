@@ -1,4 +1,4 @@
-## Metrics
+# Metrics
 
 ```{eval-rst}
 .. module:: scanpy.metrics
