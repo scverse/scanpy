@@ -15,6 +15,7 @@ Collections of useful measurements for evaluating results.
    :nosignatures:
    :toctree: ../generated/
 
+   metrics.modularity
    metrics.confusion_matrix
    metrics.gearys_c
    metrics.morans_i

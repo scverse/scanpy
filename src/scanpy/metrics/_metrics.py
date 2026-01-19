@@ -16,7 +16,10 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal
 
-    from numpy.typing import ArrayLike
+    if TYPE_CHECKING:
+        from numpy.typing import ArrayLike
+    else:  # sphinx-autodoc-typehints will execute the outer block, but end up here:
+        ArrayLike = type("ArrayLike", (), dict(__module__="numpy.typing"))
 
     from .._compat import SpBase
 

@@ -262,6 +262,7 @@ qualname_overrides = {
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
     "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
+    "numpy.typing.ArrayLike": ("py:data", "numpy.typing.ArrayLike"),
 }
 
 nitpick_ignore = [
