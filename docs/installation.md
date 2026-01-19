@@ -78,7 +78,7 @@ $ hatch run towncrier:create  # create changelog entry
 :::
 
 :::{tab-item} Pip
-:sync: conda
+:sync: pip
 
 If you are using `pip>=21.3`, an editable install can be made:
 
