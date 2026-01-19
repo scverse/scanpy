@@ -2,22 +2,28 @@
 
 To use `scanpy` from another project, install it using your favourite environment manager:
 
-::::{tabs}
+::::{tab-set}
 
-:::{group-tab} Hatch (recommended)
+:::{tab-item} Hatch (recommended)
+:sync: hatch
+
 Adding `scanpy[leiden]` to your dependencies is enough.
 See below for how to use Scanpy’s {ref}`dev-install-instructions`.
 :::
 
-:::{group-tab} Pip/PyPI
-If you prefer to exclusively use PyPI run:
+:::{tab-item} Pip
+:sync: pip
+
+If you prefer to exclusively use pip run:
 
 ```console
 $ pip install 'scanpy[leiden]'
 ```
 :::
 
-:::{group-tab} Conda
+:::{tab-item} Conda
+:sync: conda
+
 After installing installing e.g. [Miniconda][], run:
 
 ```console
@@ -54,9 +60,11 @@ $ gh repo clone scverse/scanpy
 $ cd scanpy
 ```
 
-::::{tabs}
+::::{tab-set}
 
-:::{group-tab} Hatch (recommended)
+:::{tab-item} Hatch (recommended)
+:sync: hatch
+
 To use one of the predefined [Hatch environments][] in {file}`hatch.toml`,
 run either `hatch test [args]` or `hatch run [env:]command [...args]`, e.g.:
 
@@ -69,7 +77,9 @@ $ hatch run towncrier:create  # create changelog entry
 [hatch environments]: https://hatch.pypa.io/latest/tutorials/environment/basic-usage/
 :::
 
-:::{group-tab} Pip/PyPI
+:::{tab-item} Pip
+:sync: conda
+
 If you are using `pip>=21.3`, an editable install can be made:
 
 ```console
@@ -79,7 +89,9 @@ $ pip install --group=dev --group=test -e .
 ```
 :::
 
-:::{group-tab} Conda
+:::{tab-item} Conda
+:sync: conda
+
 If you want to let `conda` handle the installations of dependencies, do:
 
 ```console

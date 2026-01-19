@@ -1,7 +1,7 @@
 (reading)=
 (reading-and-writing)=
 
-## Reading and Writing
+# Reading and Writing
 
 ```{eval-rst}
 .. currentmodule:: scanpy

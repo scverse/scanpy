@@ -31,10 +31,6 @@ if TYPE_CHECKING:
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
-suppress_warnings = [
-    "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
-    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
-]
 
 # General information
 project = "Scanpy"
@@ -85,7 +81,6 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_issues",
-    "sphinx_tabs.tabs",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
@@ -117,6 +112,9 @@ myst_enable_extensions = [
 ]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
 myst_heading_anchors = 3
+myst_ignore_mime_types = [  # from custom extension patch_myst_nb
+    "application/vnd.microsoft.datawrangler.viewer.v0+json",
+]
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True

@@ -119,7 +119,6 @@ doc = [
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
-    "sphinx-tabs",
     "sphinxext-opengraph",              # for nice cards when sharing on social
     "sphinx-copybutton",
     "nbsphinx>=0.9",
