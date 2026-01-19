@@ -87,6 +87,7 @@ extensions = [
 
 # Generate the API documentation when building
 autosummary_generate = True
+autodoc_typehints = "none"
 autodoc_member_order = "bysource"
 autodoc_default_options = {
     # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
