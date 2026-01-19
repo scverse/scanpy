@@ -5,16 +5,13 @@
 from __future__ import annotations
 
 from copy import copy
-from functools import partial
 from typing import TYPE_CHECKING
 
 from myst_nb.core.render import MditRenderMixin, NbElementRenderer
 
 if TYPE_CHECKING:
-    from collections.abc import Set as AbstractSet
-
     from docutils import nodes
-    from myst_nb.core.render import MimeData
+    from myst_nb.core.render import MimeData, SelfType
     from sphinx.application import Sphinx
 
 
@@ -24,7 +21,7 @@ ru_i_orig = NbElementRenderer.render_unhandled_inline
 
 
 def get_cell_level_config(
-    self: MditRenderMixin,
+    self: SelfType,
     field: str,
     cell_metadata: dict[str, object],
     line: int | None = None,
@@ -34,29 +31,23 @@ def get_cell_level_config(
     return copy(rv)
 
 
-def render_unhandled(
-    self: NbElementRenderer, data: MimeData, *, ignore: AbstractSet[str]
-) -> list[nodes.Element]:
-    """Suppress warning with `ignore`."""
-    if data.mime_type in ignore:
-        return []
-    return ru_orig(self, data)
-
-
-def render_unh_i(
-    self: NbElementRenderer, data: MimeData, *, ignore: AbstractSet[str]
-) -> list[nodes.Element]:
-    """Suppress warning with `ignore`."""
-    if data.mime_type in ignore:
-        return []
-    return ru_i_orig(self, data)
-
-
 def setup(app: Sphinx) -> None:
     """App setup hook."""
     app.add_config_value("myst_ignore_mime_types", [], "env")
     ignore = set(app.config.myst_ignore_mime_types)
 
+    def render_unhandled(
+        self: NbElementRenderer, data: MimeData
+    ) -> list[nodes.Element]:
+        if data.mime_type in ignore:
+            return []
+        return ru_orig(self, data)
+
+    def render_unh_i(self: NbElementRenderer, data: MimeData) -> list[nodes.Element]:
+        if data.mime_type in ignore:
+            return []
+        return ru_i_orig(self, data)
+
     MditRenderMixin.get_cell_level_config = get_cell_level_config
-    NbElementRenderer.render_unhandled = partial(render_unhandled, ignore=ignore)
-    NbElementRenderer.render_unhandled_inline = partial(render_unh_i, ignore=ignore)
+    NbElementRenderer.render_unhandled = render_unhandled
+    NbElementRenderer.render_unhandled_inline = render_unh_i
