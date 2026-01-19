@@ -11,11 +11,14 @@ import pandas as pd
 import pytest
 import threadpoolctl
 from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from scanpy.metrics import modularity
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.context import xfail
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
@@ -304,20 +307,27 @@ def test_modularity_adata(
 
     scores = {}
     with monkeypatch.context() as m:
-        # retrieve pre-calculated modularity
+        # make sure we don’t calculate it
         m.delattr(sc.metrics._metrics, "modularity_array")
         scores["retrieve"] = modularity(adata, labels="leiden", mode="retrieve")
+    del adata.uns["leiden"]["modularity"]  # make sure it’s not retrieved
     scores["calculate"] = modularity(adata, labels="leiden", mode="calculate")
-    del adata.uns["leiden"]["modularity"]
+    assert "modularity" not in adata.uns["leiden"]
     scores["update"] = modularity(adata, labels="leiden", mode="update")
 
     for name, s in scores.items():
         with subtests.test("bounds", score=name):
             assert 0 <= s <= 1
     for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
-        rel = 1e-6 if {n0, n1} == {"update", "calculate"} else 1e-3
-        with subtests.test("equality", l=n0, r=n1):
-            assert pytest.approx(s0, rel=rel) == s1
+        approx = {n0, n1} != {"update", "calculate"}
+        with (
+            subtests.test("equality", l=n0, r=n1),
+            xfail(
+                approx and pkg_version("igraph") < Version("1"),
+                reason="igraph 0.x has different modularity behavior",
+            ),
+        ):
+            assert pytest.approx(s0, rel=1e-3 if approx else 1e-6) == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
 
