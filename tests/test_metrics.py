@@ -306,7 +306,6 @@ def test_modularity_invalid_labels() -> None:
 def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) -> None:
     """Invalid parameters for non-anndata usage."""
     adj = np.eye(3)
-    labels = ["A", "A", "B"]
     with pytest.raises(TypeError, match=pat):
         modularity(adj, labels, is_directed=is_directed)  # type: ignore
 
