@@ -302,6 +302,7 @@ def test_modularity_invalid_labels() -> None:
         pytest.param(["A", "A", "B"], None, r"is_directed", id="is_directed-missing"),
     ],
 )
+@needs.igraph
 def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) -> None:
     """Invalid parameters for non-anndata usage."""
     adj = np.eye(3)
