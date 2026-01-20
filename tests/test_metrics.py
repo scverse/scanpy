@@ -285,7 +285,7 @@ def test_modularity_single_community() -> None:
 
 @needs.igraph
 def test_modularity_invalid_labels() -> None:
-    """Invalad input, labels length does not match adjacency matrix size."""
+    """Invalid input, labels length does not match adjacency matrix size."""
     import igraph as ig
 
     adj = np.eye(4)
@@ -293,6 +293,21 @@ def test_modularity_invalid_labels() -> None:
 
     with pytest.raises(ig.InternalError, match=r"Membership vector size differs"):
         modularity(adj, labels, is_directed=False)
+
+
+@pytest.mark.parametrize(
+    ("labels", "is_directed", "pat"),
+    [
+        pytest.param("col_name", False, r"labels.*array", id="label-no_sequence"),
+        pytest.param(["A", "A", "B"], None, r"is_directed", id="is_directed-missing"),
+    ],
+)
+def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) -> None:
+    """Invalid parameters for non-anndata usage."""
+    adj = np.eye(3)
+    labels = ["A", "A", "B"]
+    with pytest.raises(TypeError, match=pat):
+        modularity(adj, labels, is_directed=is_directed)  # type: ignore
 
 
 @needs.igraph
@@ -330,6 +345,26 @@ def test_modularity_adata(
             assert pytest.approx(s0, rel=1e-3 if approx else 1e-6) == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
+
+
+@pytest.mark.parametrize(
+    ("labels", "args", "pat"),
+    [
+        pytest.param(["A"] * 3, dict(mode="retrieve"), r"labels.*string", id="labels"),
+        pytest.param("label", dict(), r"no.*is_directed", id="is_directed-missing"),
+    ],
+)
+def test_modularity_adata_errors(
+    labels: object, args: dict[str, object], pat: str
+) -> None:
+    """Invalid parameters for anndata usage."""
+    adata = AnnData(
+        obs=dict(label=["A", "A", "B"]),
+        obsp=dict(connectivities=np.eye(3)),
+        uns=dict(neighbors=dict(params={})),
+    )
+    with pytest.raises(ValueError, match=pat):
+        modularity(adata, labels, **args)  # type: ignore
 
 
 @needs.igraph

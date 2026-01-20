@@ -216,7 +216,7 @@ def modularity_array(
 ) -> float:
     try:
         import igraph as ig
-    except ImportError as e:
+    except ImportError as e:  # pragma: no cover
         msg = "igraph is require for computing modularity"
         raise ImportError(msg) from e
     igraph_mode = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
