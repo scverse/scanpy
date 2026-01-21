@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
 
 import pandas as pd
@@ -28,14 +29,21 @@ FLAVORS = [
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
-    sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        resolution=resolution,
-        n_iterations=n_iterations,
-        directed=(flavor == "leidenalg"),
-        key_added="leiden_custom",
-    )
+    with (
+        nullcontext()
+        if flavor == "igraph"
+        else pytest.warns(
+            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+        )
+    ):
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            resolution=resolution,
+            n_iterations=n_iterations,
+            directed=(flavor == "leidenalg"),
+            key_added="leiden_custom",
+        )
     assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
     assert (
         adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
