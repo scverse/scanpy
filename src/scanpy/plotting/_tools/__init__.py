@@ -206,6 +206,16 @@ def pca_variance_ratio(
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 
+    Examples
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_variance_ratio(adata, n_pcs=50, log=True)
+
     """
     ranking(
         adata,
