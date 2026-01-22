@@ -143,7 +143,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
             msg = "Do not pass in partition_type argument when using igraph."
             raise ValueError(msg)
     else:
-        msg = "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Consider switching to it."
+        msg = "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to 'igraph' to use it."
         warn(msg, UserWarning)
         try:
             import leidenalg
