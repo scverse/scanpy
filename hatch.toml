@@ -4,6 +4,7 @@ dependency-groups = [ "dev" ]
 
 [envs.docs]
 dependency-groups = [ "doc" ]
+extra-dependencies = [ "pandas>=3" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
