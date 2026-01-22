@@ -104,11 +104,7 @@ def confusion_matrix(
 
 @overload
 def modularity(
-    connectivities: ArrayLike | SpBase,
-    /,
-    labels: pd.Series | ArrayLike,
-    *,
-    is_directed: bool,
+    connectivities: ArrayLike | SpBase, /, labels: ArrayLike, *, is_directed: bool
 ) -> float: ...
 
 
@@ -116,7 +112,7 @@ def modularity(
 def modularity(
     adata: AnnData,
     /,
-    labels: str | pd.Series | ArrayLike = "leiden",
+    labels: str | ArrayLike = "leiden",
     *,
     neighbors_key: str | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
@@ -126,7 +122,7 @@ def modularity(
 def modularity(
     adata_or_connectivities: AnnData | ArrayLike | SpBase,
     /,
-    labels: str | pd.Series | ArrayLike = "leiden",
+    labels: str | ArrayLike = "leiden",
     *,
     neighbors_key: str | None = None,
     is_directed: bool | None = None,
@@ -180,7 +176,7 @@ def modularity_adata(
     adata: AnnData,
     /,
     *,
-    labels: str | pd.Series | ArrayLike,
+    labels: str | ArrayLike,
     neighbors_key: str | None,
     mode: Literal["calculate", "update", "retrieve"],
 ) -> float:
@@ -201,19 +197,22 @@ def modularity_adata(
 
 
 def modularity_array(
-    connectivities: ArrayLike | SpBase,
-    /,
-    *,
-    labels: pd.Series | ArrayLike,
-    is_directed: bool,
+    connectivities: ArrayLike | SpBase, /, *, labels: ArrayLike, is_directed: bool
 ) -> float:
     try:
         import igraph as ig
     except ImportError as e:  # pragma: no cover
         msg = "igraph is require for computing modularity"
         raise ImportError(msg) from e
-    igraph_mode = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
-    graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
-    # cluster labels to integer codes required by igraph
-    labels = pd.Categorical(np.asarray(labels)).codes
-    return graph.modularity(labels)
+    igraph_mode: str = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
+    graph: ig.Graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
+    return graph.modularity(_codes(labels))
+
+
+def _codes(labels: ArrayLike) -> ArrayLike:
+    """Convert cluster labels to integer codes as required by igraph."""
+    if isinstance(labels, pd.Series):
+        labels = labels.astype("category").array
+    if not isinstance(labels, pd.Categorical):
+        labels = pd.Categorical(np.asarray(labels))
+    return labels.codes
