@@ -17,9 +17,11 @@ if TYPE_CHECKING:
     from typing import Literal
 
     if TYPE_CHECKING:
-        from numpy.typing import ArrayLike
+        from pandas.api.typing.aliases import AnyArrayLike
     else:  # sphinx-autodoc-typehints will execute the outer block, but end up here:
-        ArrayLike = type("ArrayLike", (), dict(__module__="numpy.typing"))
+        AnyArrayLike = type(
+            "AnyArrayLike", (), dict(__module__="pandas.api.typing.aliases")
+        )
 
     from .._compat import SpBase
 
@@ -104,7 +106,7 @@ def confusion_matrix(
 
 @overload
 def modularity(
-    connectivities: ArrayLike | SpBase, /, labels: ArrayLike, *, is_directed: bool
+    connectivities: AnyArrayLike | SpBase, /, labels: AnyArrayLike, *, is_directed: bool
 ) -> float: ...
 
 
@@ -112,7 +114,7 @@ def modularity(
 def modularity(
     adata: AnnData,
     /,
-    labels: str | ArrayLike = "leiden",
+    labels: str | AnyArrayLike = "leiden",
     *,
     neighbors_key: str | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
@@ -120,9 +122,9 @@ def modularity(
 
 
 def modularity(
-    adata_or_connectivities: AnnData | ArrayLike | SpBase,
+    adata_or_connectivities: AnnData | AnyArrayLike | SpBase,
     /,
-    labels: str | ArrayLike = "leiden",
+    labels: str | AnyArrayLike = "leiden",
     *,
     neighbors_key: str | None = None,
     is_directed: bool | None = None,
@@ -176,7 +178,7 @@ def modularity_adata(
     adata: AnnData,
     /,
     *,
-    labels: str | ArrayLike,
+    labels: str | AnyArrayLike,
     neighbors_key: str | None,
     mode: Literal["calculate", "update", "retrieve"],
 ) -> float:
@@ -197,7 +199,7 @@ def modularity_adata(
 
 
 def modularity_array(
-    connectivities: ArrayLike | SpBase, /, *, labels: ArrayLike, is_directed: bool
+    connectivities: AnyArrayLike | SpBase, /, *, labels: AnyArrayLike, is_directed: bool
 ) -> float:
     try:
         import igraph as ig
@@ -209,10 +211,10 @@ def modularity_array(
     return graph.modularity(_codes(labels))
 
 
-def _codes(labels: ArrayLike) -> ArrayLike:
+def _codes(labels: AnyArrayLike) -> AnyArrayLike:
     """Convert cluster labels to integer codes as required by igraph."""
     if isinstance(labels, pd.Series):
         labels = labels.astype("category", copy=False).array
     if not isinstance(labels, pd.Categorical):
-        labels = pd.Categorical(np.asarray(labels))
+        labels = pd.Categorical(labels)
     return labels.codes
