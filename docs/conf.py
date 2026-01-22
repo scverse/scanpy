@@ -260,6 +260,8 @@ qualname_overrides = {
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
+    # https://github.com/pandas-dev/pandas/issues/63810
+    "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
     "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
     "numpy.typing.ArrayLike": ("py:data", "numpy.typing.ArrayLike"),
 }
