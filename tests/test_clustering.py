@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -10,21 +11,27 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from typing import Literal
+
 
 @pytest.fixture
 def adata_neighbors():
     return pbmc68k_reduced()
 
 
-FLAVORS = [
-    pytest.param("igraph", marks=needs.igraph),
-    pytest.param("leidenalg", marks=needs.leidenalg),
-]
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("leidenalg", marks=needs.leidenalg),
+    ]
+)
+def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+    return request.param
 
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
@@ -44,7 +51,6 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
 def test_leiden_random_state(adata_neighbors, flavor):
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
@@ -72,8 +78,18 @@ def test_leiden_random_state(adata_neighbors, flavor):
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
+    # reproducible
     pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_1.uns["leiden"]["modularity"])
+        == adata_1_again.uns["leiden"]["modularity"]
+    )
+    # different clustering
     assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_2.uns["leiden"]["modularity"])
+        != adata_1_again.uns["leiden"]["modularity"]
+    )
 
 
 @needs.igraph
