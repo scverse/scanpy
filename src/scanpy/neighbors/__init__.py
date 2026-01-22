@@ -75,7 +75,6 @@ class NeighborsParams(TypedDict):  # noqa: D101
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
-    is_directed: NotRequired[bool]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -93,7 +92,6 @@ def neighbors(  # noqa: PLR0913
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     random_state: _LegacyRandom = 0,
     key_added: str | None = None,
-    is_directed: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
@@ -171,8 +169,6 @@ def neighbors(  # noqa: PLR0913
         If specified, the neighbors data is added to .uns[key_added],
         distances are stored in `.obsp[f'{{key_added}}_distances']` and
         connectivities in `.obsp[f'{{key_added}}_connectivities']`.
-    is_directed
-        If `True`, the connectivity matrix is expected to be a directed graph.
     copy
         Return a copy instead of writing to adata.
 
@@ -268,7 +264,6 @@ def neighbors(  # noqa: PLR0913
         method=method,
         random_state=random_state,
         metric=metric,
-        is_directed=is_directed,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),

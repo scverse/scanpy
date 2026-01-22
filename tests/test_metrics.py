@@ -351,7 +351,7 @@ def test_modularity_adata(
     ("labels", "args", "pat"),
     [
         pytest.param(["A"] * 3, dict(mode="retrieve"), r"labels.*string", id="labels"),
-        pytest.param("label", dict(), r"no.*is_directed", id="is_directed-missing"),
+        pytest.param("label", dict(is_directed=True), r"undirected", id="is_directed"),
     ],
 )
 def test_modularity_adata_errors(

@@ -119,7 +119,6 @@ def modularity(
     labels: str | pd.Series | ArrayLike = "leiden",
     *,
     neighbors_key: str | None = None,
-    is_directed: bool | None = None,
     mode: Literal["calculate", "update", "retrieve"] = "calculate",
 ) -> float: ...
 
@@ -145,8 +144,8 @@ def modularity(
     neighbors_key
         When `AnnData` is provided, the key in `adata.obsp` that contains the connectivities.
     is_directed
-        Whether the graph is directed or undirected.
-        Optional when an `AnnData` object has been passed.
+        Whether the connectivities are directed or undirected.
+        Always `False` if `AnnData` is provided, as connectivities are derived from (symmetric) neighbors.
     mode
         When `AnnData` is provided,
         this controls if the stored modularity is retrieved,
@@ -157,11 +156,13 @@ def modularity(
     The modularity of the graph based on the provided clustering.
     """
     if isinstance(adata_or_connectivities, AnnData):
+        if is_directed:
+            msg = f"Connectivities stored in `AnnData` are undirected, can’t specify `{is_directed=!r}`"
+            raise ValueError(msg)
         return modularity_adata(
             adata_or_connectivities,
             labels=labels,
             neighbors_key=neighbors_key,
-            is_directed=is_directed,
             mode=mode,
         )
     if isinstance(labels, str):
@@ -181,7 +182,6 @@ def modularity_adata(
     *,
     labels: str | pd.Series | ArrayLike,
     neighbors_key: str | None,
-    is_directed: bool | None,
     mode: Literal["calculate", "update", "retrieve"],
 ) -> float:
     if mode in {"retrieve", "update"} and not isinstance(labels, str):
@@ -190,18 +190,11 @@ def modularity_adata(
     if mode == "retrieve":
         return adata.uns[labels]["modularity"]
 
-    nv = NeighborsView(adata, neighbors_key)
-    connectivities = nv["connectivities"]
+    labels_vec = adata.obs[labels] if isinstance(labels, str) else labels
+    connectivities = NeighborsView(adata, neighbors_key)["connectivities"]
 
-    if is_directed is None and (is_directed := nv["params"].get("is_directed")) is None:
-        msg = "`adata` has no `'is_directed'` in `adata.uns[neighbors_key]['params']`, need to specify `is_directed`"
-        raise ValueError(msg)
-
-    m = modularity(
-        connectivities,
-        adata.obs[labels] if isinstance(labels, str) else labels,
-        is_directed=is_directed,
-    )
+    # distances are treated as symmetric, so connectivities as well
+    m = modularity(connectivities, labels_vec, is_directed=False)
     if mode == "update":
         adata.uns[labels]["modularity"] = m
     return m
