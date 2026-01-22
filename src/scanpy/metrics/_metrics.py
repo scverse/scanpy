@@ -212,7 +212,7 @@ def modularity_array(
 def _codes(labels: ArrayLike) -> ArrayLike:
     """Convert cluster labels to integer codes as required by igraph."""
     if isinstance(labels, pd.Series):
-        labels = labels.astype("category").array
+        labels = labels.astype("category", copy=False).array
     if not isinstance(labels, pd.Categorical):
         labels = pd.Categorical(np.asarray(labels))
     return labels.codes
