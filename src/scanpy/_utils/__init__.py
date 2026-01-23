@@ -883,20 +883,25 @@ class NeighborsView:
         This defines where to look for neighbors dictionary,
         connectivities, distances.
 
-        neigh = NeighborsView(adata, key)
-        neigh['distances']
-        neigh['connectivities']
-        neigh['params']
-        'connectivities' in neigh
-        'params' in neigh
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> key = "neighbors"
 
-        is the same as
+    >>> neigh = NeighborsView(adata, key)
+    >>> d = neigh["distances"]
+    >>> c = neigh["connectivities"]
+    >>> p = neigh["params"]
 
-        adata.obsp[adata.uns[key]['distances_key']]
-        adata.obsp[adata.uns[key]['connectivities_key']]
-        adata.uns[key]['params']
-        adata.uns[key]['connectivities_key'] in adata.obsp
-        'params' in adata.uns[key]
+    is the same as doing this manually
+
+    >>> d_key = adata.uns[key].get("distances_key", "distances")
+    >>> c_key = adata.uns[key].get("connectivities_key", "connectivities")
+    >>> assert d is adata.obsp[d_key]
+    >>> assert c is adata.obsp[c_key]
+    >>> assert p is adata.uns[key]["params"]
+    >>> assert c_key in adata.obsp
 
     """
 

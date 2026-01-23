@@ -95,8 +95,18 @@ def test_leiden_random_state(
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
+    # reproducible
     pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_1.uns["leiden"]["modularity"])
+        == adata_1_again.uns["leiden"]["modularity"]
+    )
+    # different clustering
     assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_2.uns["leiden"]["modularity"])
+        != adata_1_again.uns["leiden"]["modularity"]
+    )
 
 
 @needs.igraph
