@@ -29,7 +29,7 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
-def leiden(  # noqa: PLR0912, PLR0913, PLR0915
+def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
     *,
@@ -121,35 +121,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         and `n_iterations`.
 
     """
-    if flavor is None:
-        flavor = "leidenalg"
-        msg = (
-            "In the future, the default backend for leiden will be igraph instead of leidenalg. "
-            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
-            "`directed` must also be `False` to work with igraph’s implementation."
-        )
-        warn(msg, FutureWarning)
-    if flavor not in {"igraph", "leidenalg"}:
-        msg = (
-            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
-        )
-        raise ValueError(msg)
+    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     _utils.ensure_igraph()
-    if flavor == "igraph":
-        if directed:
-            msg = "Cannot use igraph’s leiden implementation with a directed graph."
-            raise ValueError(msg)
-        if partition_type is not None:
-            msg = "Do not pass in partition_type argument when using igraph."
-            raise ValueError(msg)
-    else:
-        msg = "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) 'igraph' to use it."
-        warn(msg, UserWarning)
-        try:
-            import leidenalg
-        except ImportError as e:
-            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
-            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
@@ -171,6 +144,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
     if flavor == "leidenalg":
+        import leidenalg
+
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
@@ -223,3 +198,38 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         ),
     )
     return adata if copy else None
+
+
+def _validate_flavor(
+    flavor: str | None, *, partition_type: object | None, directed: bool | None
+) -> Literal["igraph", "leidenalg"]:
+    match flavor:
+        case "igraph":
+            if directed:
+                msg = "Cannot use igraph’s leiden implementation with a directed graph."
+                raise ValueError(msg)
+            if partition_type is not None:
+                msg = "Do not pass in partition_type argument when using igraph."
+                raise ValueError(msg)
+        case None | "leidenalg":
+            msg = (
+                "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
+                "Set the flavor argument to (and install if needed) 'igraph' to use it."
+            )
+            if flavor is None:
+                msg += (
+                    "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+                    "`directed` must also be `False` to work with igraph’s implementation."
+                )
+            warn(msg, FutureWarning if flavor is None else UserWarning)
+            try:
+                import leidenalg  # noqa: F401
+            except ImportError as e:
+                msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
+                raise ImportError(msg) from e
+            flavor = "leidenalg"
+        case _:
+            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
+            raise ValueError(msg)
+    return flavor

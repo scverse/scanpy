@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from functools import partial
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -11,24 +12,37 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from anndata import AnnData
+
 
 @pytest.fixture
-def adata_neighbors():
+def adata_neighbors() -> AnnData:
     return pbmc68k_reduced()
 
 
-FLAVORS = [
-    pytest.param("igraph", marks=needs.igraph),
-    pytest.param("leidenalg", marks=needs.leidenalg),
-]
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("leidenalg", marks=needs.leidenalg),
+    ]
+)
+def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+    return request.param
 
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
+def test_leiden_basic(
+    adata_neighbors: sc.AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    resolution: float,
+    n_iterations: int,
+):
     with (
         nullcontext()
         if flavor == "igraph"
@@ -52,8 +66,9 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
-def test_leiden_random_state(adata_neighbors, flavor):
+def test_leiden_random_state(
+    adata_neighbors: AnnData, flavor: Literal["igraph", "leidenalg"]
+) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1 = sc.tl.leiden(
