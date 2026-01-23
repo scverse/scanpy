@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -14,9 +15,11 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from typing import Literal
 
+    from anndata import AnnData
+
 
 @pytest.fixture
-def adata_neighbors():
+def adata_neighbors() -> AnnData:
     return pbmc68k_reduced()
 
 
@@ -34,15 +37,27 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @needs.igraph
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
-    sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        resolution=resolution,
-        n_iterations=n_iterations,
-        directed=(flavor == "leidenalg"),
-        key_added="leiden_custom",
-    )
+def test_leiden_basic(
+    adata_neighbors: AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    resolution: float,
+    n_iterations: int,
+) -> None:
+    with (
+        nullcontext()
+        if flavor == "igraph"
+        else pytest.warns(
+            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+        )
+    ):
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            resolution=resolution,
+            n_iterations=n_iterations,
+            directed=(flavor == "leidenalg"),
+            key_added="leiden_custom",
+        )
     assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
     assert (
         adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
@@ -51,7 +66,9 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 
 @needs.leidenalg
 @needs.igraph
-def test_leiden_random_state(adata_neighbors, flavor):
+def test_leiden_random_state(
+    adata_neighbors: AnnData, flavor: Literal["igraph", "leidenalg"]
+) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1 = sc.tl.leiden(
