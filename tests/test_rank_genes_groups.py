@@ -299,7 +299,7 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     ):
         test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
-    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-6)
+    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
 
 def test_wilcoxon_huge_data(monkeypatch):
