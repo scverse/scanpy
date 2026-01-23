@@ -198,6 +198,8 @@ filterwarnings = [
     "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
+    "ignore:Detected unsupported threading environment:UserWarning",
+    "ignore:Cannot cache compiled function",
 ]
 
 [tool.coverage.run]

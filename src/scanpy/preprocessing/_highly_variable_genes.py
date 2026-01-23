@@ -13,7 +13,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
+from .._compat import CSBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._settings import Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
@@ -98,8 +98,7 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     )
 
 
-# parallel=False needed for accuracy
-@numba.njit(cache=True, parallel=False)  # noqa: TID251
+@njit
 def _sum_and_sum_squares_clipped(
     indices: NDArray[np.integer],
     data: NDArray[np.floating],
@@ -108,13 +107,34 @@ def _sum_and_sum_squares_clipped(
     clip_val: NDArray[np.float64],
     nnz: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    """
+    Parallel implementation using thread-local buffers to avoid race conditions.
+
+    Previous implementation used parallel=False due to race condition on shared arrays.
+    This version uses explicit thread-local reduction to restore both correctness
+    and parallelism.
+    """
+    # Thread-local accumulators for parallel reduction
+    n_threads = numba.get_num_threads()
+    squared_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+    sum_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+
+    # Parallel accumulation into thread-local buffers (no race condition)
     for i in numba.prange(nnz):
+        tid = numba.get_thread_id()
         idx = indices[i]
         element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[idx] += element**2
-        batch_counts_sum[idx] += element
+        squared_local[tid, idx] += element**2
+        sum_local[tid, idx] += element
+
+    # Reduction phase: combine thread-local results
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+
+    for t in range(n_threads):
+        for j in range(n_cols):
+            squared_batch_counts_sum[j] += squared_local[t, j]
+            batch_counts_sum[j] += sum_local[t, j]
 
     return squared_batch_counts_sum, batch_counts_sum
 
