@@ -72,8 +72,9 @@ class HVGSuite:  # noqa: D101
         adata, _ = get_dataset("pbmc3k")
         adata.write_h5ad("pbmc3k.h5ad")
 
-    def setup(self, dataset, layer, flavor) -> None:
-        self.adata = sc.pp.filter_genes(ad.read_h5ad("pbmc3k.h5ad"), min_cells=3)
+    def setup(self, flavor) -> None:
+        self.adata = ad.read_h5ad("pbmc3k.h5ad")
+        sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 
     def time_highly_variable_genes(self, *_) -> None:
