@@ -38,11 +38,11 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(
-    adata_neighbors: sc.AnnData,
+    adata_neighbors: AnnData,
     flavor: Literal["igraph", "leidenalg"],
     resolution: float,
     n_iterations: int,
-):
+) -> None:
     with (
         nullcontext()
         if flavor == "igraph"
