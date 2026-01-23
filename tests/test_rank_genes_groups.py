@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pickle
-from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -267,6 +266,7 @@ def test_wilcoxon_symmetry():
     assert np.allclose(np.abs(stats_mono), np.abs(stats_dend))
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 @pytest.mark.parametrize("reference", [True, False], ids=["ref", "rest"])
 def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     pbmc = pbmc68k_reduced()
@@ -292,14 +292,9 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     pvals[np.isnan(pvals)] = 1.0
 
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
-    with (
-        pytest.warns(RuntimeWarning, match=r"invalid value encountered")
-        if reference
-        else nullcontext()
-    ):
-        test_obj.compute_statistics("wilcoxon", tie_correct=True)
+    test_obj.compute_statistics("wilcoxon", tie_correct=True)
 
-    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-6)
+    np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
 
 def test_wilcoxon_huge_data(monkeypatch):

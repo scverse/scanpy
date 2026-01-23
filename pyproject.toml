@@ -113,7 +113,7 @@ test = [
 doc = [
     "sphinx>=8.2.3",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.16",
+    "scanpydoc>=0.16.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-issues>=5.0.1",
     "myst-parser>=2",
@@ -196,7 +196,8 @@ filterwarnings = [
     # https://github.com/matplotlib/matplotlib/pull/30589
     "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
     "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
-
+    # igraph vs leidenalg warning
+    "ignore:The `igraph` implementation of leiden clustering:UserWarning",
 ]
 
 [tool.coverage.run]
