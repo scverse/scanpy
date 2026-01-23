@@ -63,12 +63,17 @@ class PreprocessingSuite:  # noqa: D101
         sc.pp.scale(self.adata, max_value=10)
 
 
-class HVGSuite(PreprocessingSuite):  # noqa: D101
-    params = (*params, ["seurat_v3", "cell_ranger", "seurat"])
-    param_names = (*param_names, "flavor")
+class HVGSuite:  # noqa: D101
+    params = (["seurat_v3", "cell_ranger", "seurat"],)
+    param_names = ("flavor",)
+
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        adata, _ = get_dataset("pbmc3k")
+        adata.write_h5ad("pbmc3k.h5ad")
 
     def setup(self, dataset, layer, flavor) -> None:
-        self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
+        self.adata = sc.pp.filter_genes(ad.read_h5ad("pbmc3k.h5ad"), min_cells=3)
         self.flavor = flavor
 
     def time_highly_variable_genes(self, *_) -> None:
