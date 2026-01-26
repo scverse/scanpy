@@ -115,7 +115,7 @@ def _sum_and_sum_squares_clipped(
     sum_local = np.zeros((n_threads, n_cols), dtype=np.float64)
     squared_local = np.zeros((n_threads, n_cols), dtype=np.float64)
 
-    # We parallelize over the ROWS (your original approach)
+    # We parallelize over the rows of the sparse matrix
     for tid in numba.prange(n_threads):
         for r in range(tid, n_rows, n_threads):
             for i in range(indptr[r], indptr[r + 1]):
