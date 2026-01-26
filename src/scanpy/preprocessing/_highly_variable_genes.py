@@ -195,13 +195,19 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     )
 
     norm_gene_vars = []
-    for b in np.unique(batch_info):
+    unique_batches = np.unique(batch_info)
+    n_batches = len(unique_batches)
+
+    for b in unique_batches:
         data_batch = data[batch_info == b]
 
-        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
-        # These get computed anyway for loess
-        if isinstance(mean, DaskArray):
-            mean, var = mean.compute(), var.compute()
+        if n_batches > 1:
+            mean, var = stats.mean_var(data_batch, axis=0, correction=1)
+            # Compute Dask arrays since loess requires in-memory data
+            if isinstance(mean, DaskArray):
+                mean, var = mean.compute(), var.compute()
+        else:
+            mean, var = df["means"].to_numpy(), df["variances"].to_numpy()
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
