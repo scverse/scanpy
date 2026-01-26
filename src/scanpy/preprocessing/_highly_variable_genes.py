@@ -92,51 +92,50 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     return _sum_and_sum_squares_clipped(
         batch_counts.indices,
         batch_counts.data,
+        batch_counts.indptr,
+        n_rows=batch_counts.shape[0],
         n_cols=batch_counts.shape[1],
         clip_val=clip_val,
-        nnz=batch_counts.nnz,
     )
 
 
 @njit
 def _sum_and_sum_squares_clipped(
-    indices: NDArray[np.integer],
-    data: NDArray[np.floating],
+    indices: np.ndarray,
+    data: np.ndarray,
+    indptr: np.ndarray,
     *,
+    n_rows: int,
     n_cols: int,
-    clip_val: NDArray[np.float64],
-    nnz: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    """
-    Parallel implementation using thread-local buffers to avoid race conditions.
-
-    Previous implementation used parallel=False due to race condition on shared arrays.
-    This version uses explicit thread-local reduction to restore both correctness
-    and parallelism.
-    """
-    # Thread-local accumulators for parallel reduction
+    clip_val: np.ndarray,
+):
     n_threads = numba.get_num_threads()
-    squared_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+
+    # Each thread gets its own private buffer to avoid race conditions
     sum_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+    squared_local = np.zeros((n_threads, n_cols), dtype=np.float64)
 
-    # Parallel accumulation into thread-local buffers (no race condition)
-    for i in numba.prange(nnz):
-        tid = numba.get_thread_id()
-        idx = indices[i]
-        element = min(np.float64(data[i]), clip_val[idx])
-        squared_local[tid, idx] += element**2
-        sum_local[tid, idx] += element
+    # We parallelize over the ROWS (your original approach)
+    for tid in numba.prange(n_threads):
+        for r in range(tid, n_rows, n_threads):
+            for i in range(indptr[r], indptr[r + 1]):
+                col_idx = indices[i]
+                val = np.float64(data[i])
+                element = min(val, clip_val[col_idx])
+                # Use the thread's private buffer slice
+                sum_local[tid, col_idx] += element
+                squared_local[tid, col_idx] += element**2
 
-    # Reduction phase: combine thread-local results
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    # Reduction phase (merging the thread buffers)
+    final_sum = np.zeros(n_cols, dtype=np.float64)
+    final_squared = np.zeros(n_cols, dtype=np.float64)
 
     for t in range(n_threads):
-        for j in range(n_cols):
-            squared_batch_counts_sum[j] += squared_local[t, j]
-            batch_counts_sum[j] += sum_local[t, j]
+        for c in range(n_cols):
+            final_sum[c] += sum_local[t, c]
+            final_squared[c] += squared_local[t, c]
 
-    return squared_batch_counts_sum, batch_counts_sum
+    return final_squared, final_sum
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
