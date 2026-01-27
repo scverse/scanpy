@@ -83,7 +83,7 @@
         // "psutil": [""]
         "pooch": [""],
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
-        // "scikit-misc": [""],
+        "scikit-misc": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
@@ -104,7 +104,7 @@
     // - environment_type
     //     Environment type, as above.
     // - sys_platform
-    //     Platform, as in sys.platform. Possible values for the common
+    //     Platform, as in sys.platform. Possible values for the commonπ
     //     cases: 'linux2', 'win32', 'cygwin', 'darwin'.
     //
     // "exclude": [
