@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from ..._compat import deprecated
 from ...preprocessing import _scrublet
+from ...preprocessing._harmony_integrate import harmony_integrate
 from ._bbknn import bbknn
 from ._dca import dca
-from ._harmony_integrate import harmony_integrate
 from ._hashsolo import hashsolo
 from ._magic import magic
 from ._mnn_correct import mnn_correct
