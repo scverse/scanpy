@@ -44,3 +44,9 @@ class ToolsSuite:  # noqa: D101
 
     def peakmem_rank_genes_groups(self) -> None:
         sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
+
+    def time_score_genes(self) -> None:
+        sc.tl.score_genes(self.adata, self.adata.var_names[:500])
+
+    def peakmem_score_genes(self) -> None:
+        sc.tl.score_genes(self.adata, self.adata.var_names[:500])
