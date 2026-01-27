@@ -673,7 +673,7 @@ def numpy_regress_out(
 
 
 @old_positionals("layer", "n_jobs", "copy")
-def regress_out(
+def regress_out(  # noqa: PLR0915
     adata: AnnData,
     keys: str | Sequence[str],
     *,
@@ -773,7 +773,14 @@ def regress_out(
                 kwargs["order"] = "C"
             x = x.astype(target_dtype, **kwargs)
         x = to_dense(x, order="C") if isinstance(x, CSBase) else x
+        # set the number of threads to at most 64 to avoid oversubscription and fix hard crashes do to potential openmp limits.
+        total_threads = numba.get_num_threads()
+        if total_threads > 64:
+            numba.set_num_threads(64)
         res = numpy_regress_out(x, regressors)
+        # reset the number of threads to the original values.
+        if total_threads > 64:
+            numba.set_num_threads(total_threads)
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
