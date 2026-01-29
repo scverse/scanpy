@@ -4,7 +4,11 @@ dependency-groups = [ "dev" ]
 
 [envs.docs]
 dependency-groups = [ "doc" ]
-extra-dependencies = [ "pandas>=3" ]
+# MyST-NB 1.3.0 spams the doc build logs making debugging hard, so use https://github.com/executablebooks/MyST-NB/pull/704
+extra-dependencies = [
+    "pandas>=3",
+    "myst-nb @ git+https://github.com/executablebooks/MyST-NB.git@91273a686c66fd0383466c80eede61b208d7e426",
+]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
