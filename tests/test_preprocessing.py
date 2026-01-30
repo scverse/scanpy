@@ -170,7 +170,8 @@ def test_sample(
     p = ps["obs" if axis == 0 else "var"]
     expected = int(adata.shape[axis] * f_or_n) if isinstance(f_or_n, float) else f_or_n
     if p is not None and not replace and expected > (n_possible := (p != 0).sum()):
-        request.applymarker(pytest.xfail(f"Can’t draw {expected} out of {n_possible}"))
+        reason = f"Can’t draw {expected} out of {n_possible}"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     # ignoring this warning declaratively is a pain so do it here
     if find_spec("dask"):

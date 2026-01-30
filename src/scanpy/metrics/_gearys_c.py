@@ -9,7 +9,9 @@ import numba
 import numpy as np
 
 from .._compat import CSRBase, njit
+from .._utils import _doc_params
 from ..get import _get_obs_rep
+from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
 if TYPE_CHECKING:
@@ -20,12 +22,14 @@ if TYPE_CHECKING:
 
 
 @singledispatch
+@_doc_params(neighbors_key=doc_neighbors_key)
 def gearys_c(
     adata_or_graph: AnnData | CSRBase,
     /,
     vals: _Vals | None = None,
     *,
     use_graph: str | None = None,
+    neighbors_key: str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -42,11 +46,11 @@ def gearys_c(
     .. math::
 
         C =
-        \frac{
-            (N - 1)\sum_{i,j} w_{i,j} (x_i - x_j)^2
-        }{
-            2W \sum_i (x_i - \bar{x})^2
-        }
+        \frac{{
+            (N - 1)\sum_{{i,j}} w_{{i,j}} (x_i - x_j)^2
+        }}{{
+            2W \sum_i (x_i - \bar{{x}})^2
+        }}
 
     Params
     ------
@@ -60,8 +64,10 @@ def gearys_c(
         object by using key word arguments: `layer`, `obsm`, `obsp`, or
         `use_raw`.
     use_graph
-        Key to use for graph in anndata object. If not provided, default
-        neighbors connectivities will be used instead.
+        Key to use for graph in anndata object.
+        If not provided, default neighbors connectivities will be used instead.
+        (See ``neighbors_key`` below.)
+    {neighbors_key}
     layer
         Key for `adata.layers` to choose `vals`.
     obsm
@@ -96,7 +102,7 @@ def gearys_c(
 
     """
     adata = cast("AnnData", adata_or_graph)
-    g = _get_graph(adata, use_graph=use_graph)
+    g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     if vals is None:
         vals = _get_obs_rep(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
     return gearys_c(g, vals)

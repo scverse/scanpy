@@ -1,4 +1,4 @@
-## Preprocessing: `pp`
+# Preprocessing: `pp`
 
 ```{eval-rst}
 .. module:: scanpy.pp
@@ -12,7 +12,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell normalizat
 
 Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
 
-### Basic Preprocessing
+## Basic Preprocessing
 
 For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
 {func}`~scanpy.pl.filter_genes_dispersion` in {mod}`scanpy.pl`.
@@ -35,7 +35,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.downsample_counts
 ```
 
-### Recipes
+## Recipes
 
 ```{eval-rst}
 .. autosummary::
@@ -47,7 +47,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.recipe_seurat
 ```
 
-### Batch effect correction
+## Batch effect correction
 
 Also see {ref}`data-integration`. Note that a simple batch correction method is available via {func}`pp.regress_out`. Checkout {mod}`scanpy.external` for more.
 
@@ -59,7 +59,7 @@ Also see {ref}`data-integration`. Note that a simple batch correction method is 
    pp.combat
 ```
 
-### Doublet detection
+## Doublet detection
 
 ```{eval-rst}
 .. autosummary::
@@ -70,7 +70,7 @@ Also see {ref}`data-integration`. Note that a simple batch correction method is 
    pp.scrublet_simulate_doublets
 ```
 
-### Neighbors
+## Neighbors
 
 ```{eval-rst}
 .. autosummary::

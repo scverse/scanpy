@@ -96,7 +96,8 @@ def rank_genes_groups_df(
     for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
             pts_df = (
-                adata.uns[key][pts][group]
+                adata
+                .uns[key][pts][group]
                 .rename_axis(index="names")
                 .reset_index()
                 .melt(id_vars="names", var_name="group", value_name=name)
@@ -258,8 +259,8 @@ def obs_df(
     >>> plotdf = sc.get.obs_df(
     ...     pbmc, keys=["CD8B", "n_genes"], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
-    >>> plotdf.columns
-    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.columns.astype("string")
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='string')
     >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 

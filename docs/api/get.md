@@ -1,4 +1,4 @@
-## Get object from `AnnData`: `get`
+# Get object from `AnnData`: `get`
 
 ```{eval-rst}
 .. module:: scanpy.get

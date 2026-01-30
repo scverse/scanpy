@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -11,6 +10,8 @@ from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from anndata import AnnData
 
 
