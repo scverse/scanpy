@@ -111,7 +111,7 @@ test = [
     "scanpy[plotting]",
 ]
 doc = [
-    "sphinx>=8.2.3",
+    "sphinx>=9.1.0",
     "sphinx-book-theme>=1.1.0",
     "scanpydoc>=0.16.1",
     "sphinx-autodoc-typehints>=1.25.2",
@@ -200,6 +200,8 @@ filterwarnings = [
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     "ignore:Detected unsupported threading environment:UserWarning",
     "ignore:Cannot cache compiled function",
+    # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
+    "ignore:Consolidated metadata is currently not part:UserWarning",
 ]
 
 [tool.coverage.run]

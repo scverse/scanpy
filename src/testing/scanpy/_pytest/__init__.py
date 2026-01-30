@@ -8,6 +8,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
@@ -28,17 +29,21 @@ def original_settings(
 ) -> Generator[Mapping[str, object], None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
+    import anndata as ad
     import seaborn as sns  # noqa: F401
     from matplotlib import pyplot as plt
     from matplotlib.testing import setup
 
     import scanpy as sc
+    from scanpy._compat import pkg_version
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
         _original_settings = MappingProxyType(sc.settings.__dict__.copy())
 
     setup()
+    if pkg_version("anndata") >= Version("0.12"):
+        ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
