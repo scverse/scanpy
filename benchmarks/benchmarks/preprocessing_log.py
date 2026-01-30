@@ -34,7 +34,7 @@ class PreprocessingSuite:  # noqa: D101
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
-        for dataset, layer in product(*self.params[:2]):
+        for dataset, layer in product(*self.params):
             adata, _ = get_dataset(dataset, layer=layer)
             adata.write_h5ad(f"{dataset}_{layer}.h5ad")
 
