@@ -231,8 +231,6 @@ lint.pylint.max-positional-args = 5
 
 [tool.pyproject-fmt]
 indent = 4
-table_format = "short"
-collapse_tables = []
 expand_tables = [
     "project.optional-dependencies",
     "tool.ruff.lint.flake8-tidy-imports.banned-api",
