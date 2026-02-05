@@ -79,7 +79,7 @@ def confusion_matrix(
     mtx = _confusion_matrix(orig, new, labels=unique_labels)
     if normalize:
         sums = mtx.sum(axis=1)[:, np.newaxis]
-        mtx = np.divide(mtx, sums, where=sums != 0)
+        mtx = np.divide(mtx, sums, where=sums != 0, out=None)
 
     # Label
     orig_name = "Original labels" if orig.name is None else orig.name
