@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import pickle
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -24,8 +23,9 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any
+    from typing import Any, Literal
 
+    from numpy.lib.npyio import NpzFile
     from numpy.typing import NDArray
 
 HERE = Path(__file__).parent
@@ -59,126 +59,83 @@ def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
     return adata
 
 
-def get_true_scores() -> tuple[
-    NDArray[np.object_],
-    NDArray[np.object_],
-    NDArray[np.floating],
-    NDArray[np.floating],
-]:
-    with (DATA_PATH / "objs_t_test.pkl").open("rb") as f:
-        true_scores_t_test, true_names_t_test = pickle.load(f)
-    with (DATA_PATH / "objs_wilcoxon.pkl").open("rb") as f:
-        true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
+class Expected(TypedDict):
+    names: NDArray[np.str_]
+    scores: NDArray[np.floating]
 
-    return (
-        true_names_t_test,
-        true_names_wilcoxon,
-        true_scores_t_test,
-        true_scores_wilcoxon,
-    )
+
+def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
+    path = DATA_PATH / f"objs-{method}.npz"
+    with (
+        path.open("rb") as f,
+        cast("NpzFile", np.load(f, allow_pickle=False)) as z,
+    ):
+        expected = dict(z)
+    return Expected(names=expected["names"].astype("T"), scores=expected["scores"])
 
 
 # TODO: Make dask compatible
+@pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_results(array_type):
+def test_results(
+    subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
+) -> None:
     seed(1234)
-
     adata = get_example_data(array_type)
     assert adata.raw is None  # Assumption for later checks
+    expected = get_true_scores(method)
+    # no clue why we did this: https://github.com/scverse/scanpy/commit/7f10fa3138374bbc664776c6aae1c0e05cf2c5cf
+    n = 7 if method == "wilcoxon" else None
 
-    (
-        true_names_t_test,
-        true_names_wilcoxon,
-        true_scores_t_test,
-        true_scores_wilcoxon,
-    ) = get_true_scores()
+    rank_genes_groups(adata, "true_groups", n_genes=20, method=method)
+    results = adata.uns["rank_genes_groups"]
 
-    rank_genes_groups(adata, "true_groups", n_genes=20, method="t-test")
-
-    adata.uns["rank_genes_groups"]["names"] = adata.uns["rank_genes_groups"][
-        "names"
-    ].astype(true_names_t_test.dtype)
-
-    for name in true_scores_t_test.dtype.names:
-        assert np.allclose(
-            true_scores_t_test[name], adata.uns["rank_genes_groups"]["scores"][name]
-        )
-    assert np.array_equal(true_names_t_test, adata.uns["rank_genes_groups"]["names"])
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
-
-    rank_genes_groups(adata, "true_groups", n_genes=20, method="wilcoxon")
-
-    adata.uns["rank_genes_groups"]["names"] = adata.uns["rank_genes_groups"][
-        "names"
-    ].astype(true_names_wilcoxon.dtype)
-
-    for name in true_scores_t_test.dtype.names:
-        assert np.allclose(
-            true_scores_wilcoxon[name][:7],
-            adata.uns["rank_genes_groups"]["scores"][name][:7],
-        )
-    assert np.array_equal(
-        true_names_wilcoxon[:7], adata.uns["rank_genes_groups"]["names"][:7]
-    )
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+    for g in range(expected["names"].shape[0]):
+        with subtests.test(group=g):
+            assert np.allclose(expected["scores"][g, :n], results["scores"][str(g)][:n])
+            assert np.array_equal(
+                expected["names"][g, :n], results["names"][str(g)][:n]
+            )
+    assert results["params"]["use_raw"] is False
 
 
+@pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_results_layers(array_type):
+def test_results_layers(
+    subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
+) -> None:
     seed(1234)
-
     adata = get_example_data(array_type)
     adata.layers["to_test"] = adata.X.copy()
     x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
     mask = np.random.randint(0, 2, adata.shape, dtype=bool)
     x[mask] = 0
     adata.X = array_type(x)
+    scores = get_true_scores(method)["scores"]
 
-    _, _, true_scores_t_test, true_scores_wilcoxon = get_true_scores()
-
-    # Wilcoxon
-    rank_genes_groups(
-        adata,
-        "true_groups",
-        method="wilcoxon",
-        layer="to_test",
-        n_genes=20,
-    )
-    assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
-    for name in true_scores_t_test.dtype.names:
-        assert np.allclose(
-            true_scores_wilcoxon[name][:7],
-            adata.uns["rank_genes_groups"]["scores"][name][:7],
+    with subtests.test("layer"):
+        rank_genes_groups(
+            adata,
+            "true_groups",
+            method=method,
+            layer="to_test",
+            use_raw=None if method == "wilcoxon" else False,
+            n_genes=20,
         )
+        assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
+        for g in range(scores.shape[0]):
+            np.testing.assert_allclose(
+                scores[g, :7],
+                adata.uns["rank_genes_groups"]["scores"][str(g)][:7],
+                rtol=1e-5,  # default of np.allclose
+            )
 
-    rank_genes_groups(adata, "true_groups", method="wilcoxon", n_genes=20)
-    for name in true_scores_t_test.dtype.names:
-        assert not np.allclose(
-            true_scores_wilcoxon[name][:7],
-            adata.uns["rank_genes_groups"]["scores"][name][:7],
-        )
-
-    # t-test
-    rank_genes_groups(
-        adata,
-        "true_groups",
-        method="t-test",
-        layer="to_test",
-        use_raw=False,
-        n_genes=20,
-    )
-    for name in true_scores_t_test.dtype.names:
-        assert np.allclose(
-            true_scores_t_test[name][:7],
-            adata.uns["rank_genes_groups"]["scores"][name][:7],
-        )
-
-    rank_genes_groups(adata, "true_groups", method="t-test", n_genes=20)
-    for name in true_scores_t_test.dtype.names:
-        assert not np.allclose(
-            true_scores_t_test[name][:7],
-            adata.uns["rank_genes_groups"]["scores"][name][:7],
-        )
+    with subtests.test("X"):
+        rank_genes_groups(adata, "true_groups", method=method, n_genes=20)
+        for g in range(scores.shape[0]):
+            assert not np.allclose(
+                scores[g, :7], adata.uns["rank_genes_groups"]["scores"][str(g)][:7]
+            )
 
 
 def test_rank_genes_groups_use_raw():
