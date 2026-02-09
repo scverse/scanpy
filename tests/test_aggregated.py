@@ -90,7 +90,8 @@ def test_aggregate_vs_pandas(
         )
     else:
         expected = (
-            adata.to_df()
+            adata
+            .to_df()
             .astype(np.float64)
             .join(adata.obs[["louvain", "percent_mito_binned"]])
             .groupby(["louvain", "percent_mito_binned"], observed=True)
@@ -441,12 +442,14 @@ def test_aggregate_obsm_varm() -> None:
     assert_equal(result_obsm, result_varm.T)
 
     expected_sum = (
-        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        pd
+        .DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
         .groupby(adata_obsm.obs["blobs"], observed=True)
         .sum()
     )
     expected_mean = (
-        pd.DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
+        pd
+        .DataFrame(adata_obsm.obsm["test"], index=adata_obsm.obs_names)
         .groupby(adata_obsm.obs["blobs"], observed=True)
         .mean()
     )

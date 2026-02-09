@@ -46,7 +46,8 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: pip install 'asv>=0.6.4' py-rattler
+        # https://github.com/airspeed-velocity/asv/issues/1577
+        run: pip install 'asv>=0.6.4' 'py-rattler<0.22'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}

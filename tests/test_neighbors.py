@@ -12,6 +12,7 @@ from sklearn.neighbors import KNeighborsTransformer
 import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase, pkg_version
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -19,10 +20,10 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 # https://github.com/lmcinnes/umap/issues/1216
-SKIPIF_UMAP_BROKEN = pytest.mark.skipif(
-    pkg_version("umap-learn") <= Version("0.5.9.post2")
+XFAIL_IF_UMAP_BROKEN = pytest.mark.xfail(
+    pkg_version("umap-learn") < Version("0.6a0.dev0")
     and pkg_version("numba") >= Version("0.62.0rc1"),
-    reason="umap≤0.5.9.post2 is broken with numba≥0.62.0rc1",
+    reason="umap<0.6 is broken with numba≥0.62.0rc1",
 )
 
 # the input data
@@ -206,7 +207,7 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
-            marks=SKIPIF_UMAP_BROKEN,
+            marks=XFAIL_IF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
@@ -276,3 +277,27 @@ def test_restore_n_neighbors(neigh, conv):
     ad.uns["neighbors"] = dict(connectivities=conv(neigh.connectivities))
     neigh_restored = Neighbors(ad)
     assert neigh_restored.n_neighbors == 1
+
+
+def test_neighbors_distance_equivalence() -> None:
+    adata = pbmc68k_reduced()
+    adata_d = adata.copy()
+
+    sc.pp.neighbors(adata)
+    # reusing the same distances
+    sc.pp.neighbors(adata_d, distances=adata.obsp["distances"])
+
+    np.testing.assert_allclose(
+        adata.obsp["connectivities"].toarray(),
+        adata_d.obsp["connectivities"].toarray(),
+        rtol=1e-5,
+    )
+    np.testing.assert_allclose(
+        adata.obsp["distances"].toarray(),
+        adata_d.obsp["distances"].toarray(),
+        rtol=1e-5,
+    )
+    p, p_d = (ad.uns["neighbors"]["params"].copy() for ad in (adata, adata_d))
+    assert p.pop("metric") == "euclidean"
+    assert p_d.pop("metric") is None
+    assert p == p_d

@@ -4,6 +4,11 @@ dependency-groups = [ "dev" ]
 
 [envs.docs]
 dependency-groups = [ "doc" ]
+# MyST-NB 1.3.0 spams the doc build logs making debugging hard, so use https://github.com/executablebooks/MyST-NB/pull/704
+extra-dependencies = [
+    "pandas>=3",
+    "myst-nb @ git+https://github.com/executablebooks/MyST-NB.git@91273a686c66fd0383466c80eede61b208d7e426",
+]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -14,6 +19,7 @@ scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
 scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
 
 [envs.hatch-test]
+python = "3.14"
 default-args = [  ]
 dependency-groups = [ "dev", "test-min" ]
 extra-dependencies = [ "ipykernel" ]
@@ -28,13 +34,10 @@ overrides.matrix.deps.pre-install-commands = [
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
-    { if = [ "stable", "few-extras" ], value = "3.13" },
-    # numba doesn’t support 3.14 in a stable release yet:
-    # https://github.com/numba/numba/issues/9957
-    { if = [ "pre" ], value = "3.14" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
+    { if = [ "pre" ], value = "pandas>=3rc0" },
 ]
 overrides.matrix.deps.dependency-groups = [
     { if = [ "stable", "pre", "low-vers" ], value = "test" },

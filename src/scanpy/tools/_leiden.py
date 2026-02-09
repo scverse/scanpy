@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
-def leiden(  # noqa: PLR0912, PLR0913, PLR0915
+def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
     *,
@@ -47,7 +47,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     flavor: Literal["leidenalg", "igraph"] | None = None,
     **clustering_args,
 ) -> AnnData | None:
-    """Cluster cells into subgroups :cite:p:`Traag2019`.
+    r"""Cluster cells into subgroups :cite:p:`Traag2019`.
 
     Cluster cells using the Leiden algorithm :cite:p:`Traag2019`,
     an improved version of the Louvain algorithm :cite:p:`Blondel2008`.
@@ -55,6 +55,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
 
     This requires having run :func:`~scanpy.pp.neighbors` or
     :func:`~scanpy.external.pp.bbknn` first.
+
+    .. array-support:: tl.leiden
 
     Parameters
     ----------
@@ -118,34 +120,15 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         A dict with the values for the parameters `resolution`, `random_state`,
         and `n_iterations`.
 
+    `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
+        The modularity score of the final clustering,
+        as calculated by the `flavor`.
+        Use :func:`scanpy.metrics.modularity`\ `(adata, mode='calculate' | 'update')`
+        to calculate a score independent of `flavor`.
+
     """
-    if flavor is None:
-        flavor = "leidenalg"
-        msg = (
-            "In the future, the default backend for leiden will be igraph instead of leidenalg. "
-            "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
-            "`directed` must also be `False` to work with igraph’s implementation."
-        )
-        warn(msg, FutureWarning)
-    if flavor not in {"igraph", "leidenalg"}:
-        msg = (
-            f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
-        )
-        raise ValueError(msg)
+    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     _utils.ensure_igraph()
-    if flavor == "igraph":
-        if directed:
-            msg = "Cannot use igraph’s leiden implementation with a directed graph."
-            raise ValueError(msg)
-        if partition_type is not None:
-            msg = "Do not pass in partition_type argument when using igraph."
-            raise ValueError(msg)
-    else:
-        try:
-            import leidenalg
-        except ImportError as e:
-            msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
-            raise ImportError(msg) from e
     clustering_args = dict(clustering_args)
 
     start = logg.info("running Leiden clustering")
@@ -167,6 +150,8 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
     # (in the case of a partition variant that doesn't take it on input)
     clustering_args["n_iterations"] = n_iterations
     if flavor == "leidenalg":
+        import leidenalg
+
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
@@ -176,7 +161,10 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         clustering_args["seed"] = random_state
-        part = leidenalg.find_partition(g, partition_type, **clustering_args)
+        part = cast(
+            "MutableVertexPartition",
+            leidenalg.find_partition(g, partition_type, **clustering_args),
+        )
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
@@ -210,6 +198,7 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         random_state=random_state,
         n_iterations=n_iterations,
     )
+    adata.uns[key_added]["modularity"] = part.modularity
     logg.info(
         "    finished",
         time=start,
@@ -219,3 +208,38 @@ def leiden(  # noqa: PLR0912, PLR0913, PLR0915
         ),
     )
     return adata if copy else None
+
+
+def _validate_flavor(
+    flavor: str | None, *, partition_type: object | None, directed: bool | None
+) -> Literal["igraph", "leidenalg"]:
+    match flavor:
+        case "igraph":
+            if directed:
+                msg = "Cannot use igraph’s leiden implementation with a directed graph."
+                raise ValueError(msg)
+            if partition_type is not None:
+                msg = "Do not pass in partition_type argument when using igraph."
+                raise ValueError(msg)
+        case None | "leidenalg":
+            msg = (
+                "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
+                "Set the flavor argument to (and install if needed) 'igraph' to use it."
+            )
+            if flavor is None:
+                msg += (
+                    "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+                    "`directed` must also be `False` to work with igraph’s implementation."
+                )
+            warn(msg, FutureWarning if flavor is None else UserWarning)
+            try:
+                import leidenalg  # noqa: F401
+            except ImportError as e:
+                msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
+                raise ImportError(msg) from e
+            flavor = "leidenalg"
+        case _:
+            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
+            raise ValueError(msg)
+    return flavor

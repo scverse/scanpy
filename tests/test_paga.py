@@ -26,11 +26,13 @@ SKIP_IF_OLD_IGRAPH = pytest.mark.skipif(
 pytestmark = [needs.igraph]
 
 
-@pytest.fixture(scope="module")
-def pbmc_session():
+@pytest.fixture(scope="module", params=["dense", "sparse"])
+def pbmc_session(request: pytest.FixtureRequest) -> sc.AnnData:
     pbmc = pbmc68k_reduced()
-    sc.tl.paga(pbmc, groups="bulk_labels")
     pbmc.obs["cool_feature"] = pbmc[:, "CST3"].X.squeeze().copy()
+    if request.param == "sparse":
+        pbmc.X = pbmc.raw.X.tocsr()
+    sc.tl.paga(pbmc, groups="bulk_labels")
     assert not pbmc.obs["cool_feature"].isna().all()
     return pbmc
 

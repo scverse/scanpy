@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import h5py
 import numpy as np
+import pandas as pd
 import pytest
 
 import scanpy as sc
+
+if TYPE_CHECKING:
+    from typing import Literal
+
 
 ROOT = Path(__file__).parent
 ROOT = ROOT / "_data" / "10x_data"
@@ -28,15 +34,19 @@ def assert_anndata_equal(a1, a2):
         pytest.param(
             ROOT / "1.2.0" / "filtered_gene_bc_matrices" / "hg19_chr21",
             ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
+            id="1.2.0",
         ),
         pytest.param(
             ROOT / "3.0.0" / "filtered_feature_bc_matrix",
             ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5",
+            id="3.0.0",
         ),
     ],
 )
-@pytest.mark.parametrize("prefix", [None, "prefix_"])
-def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
+@pytest.mark.parametrize("prefix", [None, "prefix_"], ids=["no_prefix", "prefix"])
+def test_read_10x(
+    tmp_path: Path, mtx_path: Path, h5_path: Path, prefix: str | None
+) -> None:
     if prefix is not None:
         # Build files named "prefix_XXX.xxx" in a temporary directory.
         mtx_path_orig = mtx_path
@@ -64,6 +74,27 @@ def test_read_10x(tmp_path, mtx_path, h5_path, prefix):
     h5.write(from_h5_pth)
 
     assert_anndata_equal(sc.read_h5ad(from_mtx_pth), sc.read_h5ad(from_h5_pth))
+
+
+@pytest.mark.parametrize(
+    ("genes", "col_dtypes"),
+    [
+        pytest.param("symbols", dict(gene_ids="int64"), id="symbols"),
+        pytest.param("ids", dict(gene_symbols="str"), id="ids"),
+    ],
+)
+def test_read_10x_mtx_int(
+    genes: Literal["symbols", "ids"], col_dtypes: dict[str, str]
+) -> None:
+    str_dt = "str" if pd.options.future.infer_string else "object"
+    col_dtypes = {k: str_dt if v == "str" else v for k, v in col_dtypes.items()}
+
+    adata = sc.read_10x_mtx(
+        ROOT / "int-ids", var_names=f"gene_{genes}", compressed=False
+    )
+
+    assert adata.var.index.dtype == str_dt
+    assert dict(adata.var.dtypes) == dict(feature_types=str_dt, **col_dtypes)
 
 
 def test_read_10x_h5_v1():

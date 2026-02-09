@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..neighbors._doc import doc_neighbors_key
+
 doc_adata_color_etc = """\
 adata
     Annotated data matrix.
@@ -22,19 +24,14 @@ layer
     takes precedence over `use_raw`.\
 """
 
-doc_edges_arrows = """\
+doc_edges_arrows = f"""\
 edges
     Show edges.
 edges_width
     Width of edges.
 edges_color
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
-neighbors_key
-    Where to look for neighbors connectivities.
-    If not specified, this looks .obsp['connectivities'] for connectivities
-    (default storage place for pp.neighbors).
-    If specified, this looks
-    .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+{doc_neighbors_key}
 arrows
     Show arrows (deprecated in favour of `scvelo.pl.velocity_embedding`).
 arrows_kwds
