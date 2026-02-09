@@ -54,7 +54,7 @@ dependencies = [
     "numpy>=2",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "matplotlib>=3.9",
-    "pandas >=2.2.2, <3.0.0rc0",
+    "pandas >=2.2.2",
     "scipy>=1.13",
     "seaborn>=0.13.2",
     "h5py>=3.11",
@@ -103,29 +103,30 @@ test = [
     # optional storage and processing modes
     "scanpy[dask]",
     "zarr>=2.18.7",
-    # additional tested algorithms
+    # additional tested features
     "scanpy[scrublet]",
     "scanpy[leiden]",
     "scanpy[skmisc]",
     "scanpy[dask-ml]",
+    "scanpy[plotting]",
 ]
 doc = [
-    "sphinx>=8.2.3",
+    "sphinx>=9.1.0",
     "sphinx-book-theme>=1.1.0",
-    "scanpydoc>=0.16",
+    "scanpydoc>=0.16.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-issues>=5.0.1",
     "myst-parser>=2",
     "myst-nb>=1",
     "sphinx-design",
-    "sphinx-tabs",
     "sphinxext-opengraph",              # for nice cards when sharing on social
     "sphinx-copybutton",
     "nbsphinx>=0.9",
     "ipython>=7.20",                    # for nbsphinx code highlighting
     "sphinxcontrib-bibtex",
+    "sphinxcontrib-katex",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[paga,dask-ml,leiden]",
+    "scanpy[paga,dask-ml,leiden,plotting]",
     "sam-algorithm",
 ]
 dev = [
@@ -143,7 +144,9 @@ magic = [ "magic-impute>=2.0.4" ]                      # MAGIC imputation method
 skmisc = [ "scikit-misc>=0.5.1" ]                      # highly_variable_genes method 'seurat_v3'
 harmony = [ "harmonypy" ]                              # Harmony dataset integration
 scanorama = [ "scanorama" ]                            # Scanorama dataset integration
-scrublet = [ "scikit-image>=0.23" ]                    # Doublet detection with automatic thresholds
+scrublet = [ "scikit-image>=0.23.1" ]                  # Doublet detection with automatic thresholds
+# Plotting
+plotting = [ "colour-science" ]
 # Acceleration
 rapids = [ "cudf>=0.9", "cuml>=0.9", "cugraph>=0.9" ] # GPU accelerated calculation of neighbors
 dask = [ "dask[array]>=2024.5.1", "anndata[dask]" ]   # Use the Dask parallelization engine
@@ -193,7 +196,10 @@ filterwarnings = [
     # https://github.com/matplotlib/matplotlib/pull/30589
     "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
     "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
-
+    # igraph vs leidenalg warning
+    "ignore:The `igraph` implementation of leiden clustering:UserWarning",
+    # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
+    "ignore:Consolidated metadata is currently not part:UserWarning",
 ]
 
 [tool.coverage.run]

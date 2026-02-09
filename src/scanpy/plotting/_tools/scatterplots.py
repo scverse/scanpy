@@ -1,44 +1,28 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Mapping, Sequence  # noqa: TC003
+import re
+import textwrap
+from collections.abc import Sequence
 from copy import copy
-from functools import partial
+from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
-from typing import (
-    TYPE_CHECKING,
-    Any,  # noqa: TC003
-    Literal,  # noqa: TC003
-)
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData  # noqa: TC002
-from cycler import Cycler  # noqa: TC002
 from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes  # noqa: TC002
-from matplotlib.colors import (
-    Colormap,  # noqa: TC002
-    Normalize,
-)
-from matplotlib.figure import Figure  # noqa: TC002
+from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
-from numpy.typing import NDArray  # noqa: TC002
 
 from ... import logging as logg
 from ..._compat import deprecated
 from ..._settings import settings
-from ..._utils import (
-    Empty,  # noqa: TC001
-    _doc_params,
-    _empty,
-    sanitize_anndata,
-)
+from ..._utils import _doc_params, _empty, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
-from ...tools._draw_graph import _Layout  # noqa: TC001
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -47,19 +31,23 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import (
-    ColorLike,  # noqa: TC001
-    VBound,  # noqa: TC001
-    _FontSize,  # noqa: TC001
-    _FontWeight,  # noqa: TC001
-    _LegendLoc,  # noqa: TC001
-    check_colornorm,
-    check_projection,
-    circles,
-)
+from .._utils import check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Callable, Collection, Mapping
+    from types import FunctionType
+    from typing import Any, Literal
+
+    from anndata import AnnData
+    from cycler import Cycler
+    from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap
+    from matplotlib.figure import Figure
+    from numpy.typing import NDArray
+
+    from ..._utils import Empty
+    from ...tools._draw_graph import _Layout
+    from .._utils import ColorLike, VBound, _FontSize, _FontWeight, _LegendLoc
 
 
 @_doc_params(
@@ -600,10 +588,29 @@ def _get_vboundnorm(
     return tuple(out)
 
 
-def _wraps_plot_scatter(wrapper):
+_TYPE_GUARD_IMPORT_RE = re.compile(r"\nif TYPE_CHECKING:[^\n]*([\s\S]*?)(?=\n\S)")
+
+
+@cache
+def _get_guarded_imports(obj: FunctionType) -> Mapping[str, Any]:
+    """Simplified version from `sphinx-autodoc-typehints`."""
+    module = inspect.getmodule(obj)
+    assert module
+    code = inspect.getsource(module)
+    rv: dict[str, Any] = {}
+    for m in _TYPE_GUARD_IMPORT_RE.finditer(code):
+        guarded_code = textwrap.dedent(m.group(1))
+        rv.update(obj.__globals__)
+        exec(guarded_code, rv)
+        for k in obj.__globals__:
+            del rv[k]
+    return rv
+
+
+def _wraps_plot_scatter[**P, R](wrapper: Callable[P, R]) -> Callable[P, R]:
     """Update the wrapper function to use the correct signature."""
-    params = inspect.signature(embedding, eval_str=True).parameters.copy()
-    wrapper_sig = inspect.signature(wrapper, eval_str=True)
+    params = inspect.signature(embedding).parameters.copy()
+    wrapper_sig = inspect.signature(wrapper)
     wrapper_params = wrapper_sig.parameters.copy()
 
     params.pop("basis")
@@ -619,6 +626,14 @@ def _wraps_plot_scatter(wrapper):
     if wrapper_sig.return_annotation is not inspect.Signature.empty:
         annotations["return"] = wrapper_sig.return_annotation
 
+    # `sphinx-autodoc-typehints` can execute `if TYPECHECKING` blocks,
+    # but all all users of `_wraps_plot_scatter` that aren’t in this module
+    # won’t have any imports. So we execute and inject the imports here.
+    wrapper.__globals__.update({
+        k: v
+        for k, v in {**embedding.__globals__, **_get_guarded_imports(embedding)}.items()
+        if k not in wrapper.__globals__
+    })
     wrapper.__signature__ = inspect.Signature(
         list(params.values()), return_annotation=wrapper_sig.return_annotation
     )
@@ -1134,7 +1149,8 @@ def _add_categorical_legend(  # noqa: PLR0913
         # identify centroids to put labels
 
         all_pos = (
-            pd.DataFrame(scatter_array, columns=["x", "y"])
+            pd
+            .DataFrame(scatter_array, columns=["x", "y"])
             .groupby(color_source_vector, observed=True)
             .median()
             # Have to sort_index since if observed=True and categorical is unordered

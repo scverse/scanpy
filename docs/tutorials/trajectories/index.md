@@ -1,4 +1,4 @@
-## Trajectories
+# Trajectories
 
 ```{toctree}
 :maxdepth: 1

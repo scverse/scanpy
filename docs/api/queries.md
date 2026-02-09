@@ -1,4 +1,4 @@
-## Queries
+# Queries
 
 ```{eval-rst}
 .. module:: scanpy.queries

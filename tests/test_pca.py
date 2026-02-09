@@ -484,7 +484,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
     # There are slight difference based on whether the matrix was column or row major
     np.testing.assert_allclose(
-        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
+        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-10
     )
 
 

@@ -166,7 +166,8 @@ def paga_compare(  # noqa: PLR0912, PLR0913
             )[0]
             coords = _basis[:, dims]
             pos = (
-                pd.DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
+                pd
+                .DataFrame(coords, columns=["x", "y"], index=adata.obs_names)
                 .groupby(adata.obs[color], observed=True)
                 .median()
                 .sort_index()

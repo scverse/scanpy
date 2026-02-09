@@ -7,11 +7,8 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-from anndata import AnnData  # noqa: TC002
-from matplotlib.axes import Axes  # noqa: TC002
-from sklearn.utils import deprecated
 
-from .._compat import old_positionals
+from .._compat import deprecated, old_positionals
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
 from ..plotting import _scrublet, _utils, embedding
@@ -27,6 +24,9 @@ from .tl._wishbone import _anndata_to_wishbone
 if TYPE_CHECKING:
     from collections.abc import Collection
     from typing import Any
+
+    from anndata import AnnData
+    from matplotlib.axes import Axes
 
 
 __all__ = [
