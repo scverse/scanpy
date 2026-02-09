@@ -47,17 +47,6 @@ class PreprocessingSuite:  # noqa: D101
     def peakmem_pca(self, *_) -> None:
         sc.pp.pca(self.adata, svd_solver="arpack")
 
-    def time_highly_variable_genes(self, *_) -> None:
-        # the default flavor runs on log-transformed data
-        sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
-        )
-
-    def peakmem_highly_variable_genes(self, *_) -> None:
-        sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
-        )
-
     # regress_out is very slow for this dataset
     @skip_when(dataset={"pbmc3k"})
     def time_regress_out(self, *_) -> None:
@@ -72,3 +61,29 @@ class PreprocessingSuite:  # noqa: D101
 
     def peakmem_scale(self, *_) -> None:
         sc.pp.scale(self.adata, max_value=10)
+
+
+class HVGSuite:  # noqa: D101
+    params = (["seurat_v3", "cell_ranger", "seurat"],)
+    param_names = ("flavor",)
+
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        adata, _ = get_dataset("pbmc3k")
+        adata.write_h5ad("pbmc3k.h5ad")
+
+    def setup(self, flavor) -> None:
+        self.adata = ad.read_h5ad("pbmc3k.h5ad")
+        sc.pp.filter_genes(self.adata, min_cells=3)
+        self.flavor = flavor
+
+    def time_highly_variable_genes(self, *_) -> None:
+        # the default flavor runs on log-transformed data
+        sc.pp.highly_variable_genes(
+            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5, flavor=self.flavor
+        )
+
+    def peakmem_highly_variable_genes(self, *_) -> None:
+        sc.pp.highly_variable_genes(
+            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5, flavor=self.flavor
+        )

@@ -199,6 +199,8 @@ filterwarnings = [
     "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
+    "ignore:Detected unsupported threading environment:UserWarning",
+    "ignore:Cannot cache compiled function",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
 ]

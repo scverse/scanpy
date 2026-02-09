@@ -13,7 +13,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
+from .._compat import CSBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._settings import Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
@@ -92,31 +92,50 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     return _sum_and_sum_squares_clipped(
         batch_counts.indices,
         batch_counts.data,
+        batch_counts.indptr,
+        n_rows=batch_counts.shape[0],
         n_cols=batch_counts.shape[1],
         clip_val=clip_val,
-        nnz=batch_counts.nnz,
     )
 
 
-# parallel=False needed for accuracy
-@numba.njit(cache=True, parallel=False)  # noqa: TID251
+@njit
 def _sum_and_sum_squares_clipped(
-    indices: NDArray[np.integer],
-    data: NDArray[np.floating],
+    indices: np.ndarray,
+    data: np.ndarray,
+    indptr: np.ndarray,
     *,
+    n_rows: int,
     n_cols: int,
-    clip_val: NDArray[np.float64],
-    nnz: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    for i in numba.prange(nnz):
-        idx = indices[i]
-        element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[idx] += element**2
-        batch_counts_sum[idx] += element
+    clip_val: np.ndarray,
+):
+    n_threads = numba.get_num_threads()
 
-    return squared_batch_counts_sum, batch_counts_sum
+    # Each thread gets its own private buffer to avoid race conditions
+    sum_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+    squared_local = np.zeros((n_threads, n_cols), dtype=np.float64)
+
+    # We parallelize over the rows of the sparse matrix
+    for tid in numba.prange(n_threads):
+        for r in range(tid, n_rows, n_threads):
+            for i in range(indptr[r], indptr[r + 1]):
+                col_idx = indices[i]
+                val = np.float64(data[i])
+                element = min(val, clip_val[col_idx])
+                # Use the thread's private buffer slice
+                sum_local[tid, col_idx] += element
+                squared_local[tid, col_idx] += element**2
+
+    # Reduction phase (merging the thread buffers)
+    final_sum = np.zeros(n_cols, dtype=np.float64)
+    final_squared = np.zeros(n_cols, dtype=np.float64)
+
+    for t in range(n_threads):
+        for c in range(n_cols):
+            final_sum[c] += sum_local[t, c]
+            final_squared[c] += squared_local[t, c]
+
+    return final_squared, final_sum
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -176,13 +195,19 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     )
 
     norm_gene_vars = []
-    for b in np.unique(batch_info):
+    unique_batches = np.unique(batch_info)
+    n_batches = len(unique_batches)
+
+    for b in unique_batches:
         data_batch = data[batch_info == b]
 
-        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
-        # These get computed anyway for loess
-        if isinstance(mean, DaskArray):
-            mean, var = mean.compute(), var.compute()
+        if n_batches > 1:
+            mean, var = stats.mean_var(data_batch, axis=0, correction=1)
+            # Compute Dask arrays since loess requires in-memory data
+            if isinstance(mean, DaskArray):
+                mean, var = mean.compute(), var.compute()
+        else:
+            mean, var = df["means"].to_numpy(), df["variances"].to_numpy()
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
