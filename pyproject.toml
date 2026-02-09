@@ -173,6 +173,7 @@ junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
     "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+    "array_api: tests that use array_api (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
 ]
 filterwarnings = [
     'error',
