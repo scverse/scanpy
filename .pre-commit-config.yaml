@@ -3,7 +3,7 @@ ci:
 
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    rev: v0.15.0
     hooks:
     -   id: ruff-check
         args: ["--fix"]
@@ -20,13 +20,13 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v2.3.10
+    rev: v2.3.14
     hooks:
     -   id: biome-format
--   repo: https://github.com/ComPWA/taplo-pre-commit
-    rev: v0.9.3
+-   repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.15.1
     hooks:
-    -   id: taplo-format
+    -   id: pyproject-fmt
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
