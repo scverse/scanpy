@@ -273,7 +273,8 @@ filterwarnings = [
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
     "default:.*TSNE.*random.*to.*pca:FutureWarning",                       # we should set init=obsm["X_pca"] or so
-    "ignore::pyparsing.warnings.PyparsingDeprecationWarning:matplotlib",
+    # matplotlib <3.11 uses old pyparsing APIs
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
