@@ -85,6 +85,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+# PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 harmony = [ "harmonypy" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
@@ -92,9 +93,11 @@ louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
+# Neighbors acceleration
 rapids = [ "cudf>=0.9", "cugraph>=0.9", "cuml>=0.9" ]
 scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
+# highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
@@ -104,28 +107,16 @@ dev = [
 ]
 test = [
     "scanpy[dask-ml]",
-    # optional storage and processing modes
     "scanpy[dask]",
     "scanpy[leiden]",
     "scanpy[plotting]",
-    # additional tested features
     "scanpy[scrublet]",
     "scanpy[skmisc]",
     "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-test-min = [
-    "dependency-groups",    # for CI scripts doctests
-    "pytest",
-    "pytest-cov",           # only for use from VS Code
-    "pytest-mock",
-    "pytest-randomly",
-    "pytest-rerunfailures",
-    "pytest-xdist[psutil]",
-    "tuna",
-]
 doc = [
-    "ipython>=7.20",  # for nbsphinx code highlighting
+    "ipython>=7.20",                        # for nbsphinx code highlighting
     "myst-nb>=1",
     "myst-parser>=2",
     "nbsphinx>=0.9",
@@ -143,12 +134,21 @@ doc = [
     "sphinxcontrib-katex",
     "sphinxext-opengraph",                  # for nice cards when sharing on social
 ]
+test-min = [
+    "dependency-groups",    # for CI scripts doctests
+    "pytest",
+    "pytest-cov",           # only for use from VS Code
+    "pytest-mock",
+    "pytest-randomly",
+    "pytest-rerunfailures",
+    "pytest-xdist[psutil]",
+    "tuna",
+]
 
-[tool.hatch.build.targets.wheel]
-packages = [ "src/testing", "src/scanpy" ]
-[tool.hatch.version]
-source = "vcs"
-raw-options.version_scheme = "release-branch-semver"
+[tool.hatch]
+build.targets.wheel.packages = [ "src/testing", "src/scanpy" ]
+version.source = "vcs"
+version.raw-options.version_scheme = "release-branch-semver"
 
 [tool.ruff]
 src = [ "src" ]
@@ -204,7 +204,7 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "’", "α" ]
 lint.external = [ "PLR0917" ]
-lint.flake8-type-checking.exempt-modules = [  ]
+lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
 lint.isort.required-imports = [ "from __future__ import annotations" ]
@@ -231,6 +231,7 @@ lint.pylint.max-positional-args = 5
 
 [tool.pyproject-fmt]
 indent = 4
+table_format = "short"
 expand_tables = [
     "project.optional-dependencies",
     "tool.ruff.lint.flake8-tidy-imports.banned-api",
@@ -250,29 +251,28 @@ norecursedirs = [ "tests/_images" ]
 junit_family = "xunit1"
 markers = [
     "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (currently unused, but needs to be specified here as we import anndata.tests.helpers, which uses it)",
+    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
+    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
 filterwarnings = [
-    'error',
+    "error",
     # Umap warns when tensorflow isn’t installed.
-    'ignore::ImportWarning:umap',
+    "ignore::ImportWarning:umap",
     # seaborn≤0.13.2 causes some matplotlib warnings
-    'ignore::PendingDeprecationWarning:seaborn',
+    "ignore::PendingDeprecationWarning:seaborn",
     # matplotlib<3.10.4 causes a Pillow warning
-    'ignore:.*Pillow:DeprecationWarning',
+    "ignore:.*Pillow:DeprecationWarning",
     # networkx 2.x warns about scipy.sparse changes
-    'ignore:\n*.*scipy\.sparse array:DeprecationWarning:networkx',
+    "ignore:\\n*.*scipy\\.sparse array:DeprecationWarning:networkx",
     # h5py <3.9 uses deprecated np.product
-    'ignore:.*product.*deprecated.*NumPy:DeprecationWarning',
+    "ignore:.*product.*deprecated.*NumPy:DeprecationWarning",
     # old anndata versions have this
-    'ignore:is_categorical_dtype is deprecated:FutureWarning',
+    "ignore:is_categorical_dtype is deprecated:FutureWarning",
     # Ignore numba PEP 456 warning specific to ARM machines
-    'ignore:FNV hashing is not implemented in Numba.*:UserWarning',
+    "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
     # we want to see and eventually fix these
-    'default::numba.core.errors.NumbaPerformanceWarning',
-    'default:.*TSNE.*random.*to.*pca:FutureWarning',      # we should set init=obsm["X_pca"] or so
-    # https://github.com/matplotlib/matplotlib/pull/30589
-    "ignore:.*'(oneOf|parseString|resetCache|enablePackrat|leaveWhitespace|setName|setParseAction|endQuoteChar|unquoteResults)'.*'(one_of|parse_string|reset_cache|enable_packrat|leave_whitespace|set_name|set_parse_action|end_quote_char|unquote_results)':DeprecationWarning:matplotlib",
+    "default::numba.core.errors.NumbaPerformanceWarning",
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",                       # we should set init=obsm["X_pca"] or so
     "ignore:.*'(parseAll)'.*'(parse_all)':DeprecationWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
@@ -281,19 +281,19 @@ filterwarnings = [
 ]
 
 [tool.coverage]
+run.concurrency = [ "multiprocessing" ]
+run.data_file = "test-data/raw-coverage"
+run.omit = [ "src/testing/*", "tests/*" ]
+run.patch = [ "subprocess" ]
+run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
+    # https://github.com/numba/numba/issues/4268
+    "@(numba\\.|nb\\.)?njit.*",
+    "@deprecated.*",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
-    # https://github.com/numba/numba/issues/4268
-    '@(numba\.|nb\.)?njit.*',
-    "@deprecated.*",
 ]
-run.data_file = "test-data/raw-coverage"
-run.source_pkgs = [ "scanpy" ]
-run.omit = [ "tests/*", "src/testing/*" ]
-run.concurrency = [ "multiprocessing" ]
-run.patch = [ "subprocess" ]
 xml.output = "test-data/coverage.xml"
 
 [tool.towncrier]
@@ -314,4 +314,4 @@ fragment.docs.name = "Documentation"
 fragment.perf.name = "Performance"
 fragment.chore.name = "Miscellaneous changes"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"   # add `!` to commit type (e.g. “feature!:”)
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
