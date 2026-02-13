@@ -269,17 +269,17 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
         # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because we have a lot of np.ndarray checks.
         # Setting np.array here prevents the  `NumpyExtensionArray` from propagating.
-        color_source_vector = np.array(
-            _get_color_source_vector(
-                adata,
-                value_to_plot,
-                layer=layer,
-                mask_obs=mask_obs,
-                use_raw=use_raw,
-                gene_symbols=gene_symbols,
-                groups=groups,
-            )
+        color_source_vector = _get_color_source_vector(
+            adata,
+            value_to_plot,
+            layer=layer,
+            mask_obs=mask_obs,
+            use_raw=use_raw,
+            gene_symbols=gene_symbols,
+            groups=groups,
         )
+        if isinstance(color_source_vector, pd.core.arrays.NumpyExtensionArray):
+            color_source_vector = color_source_vector.to_numpy()
         color_vector, color_type = _color_vector(
             adata,
             value_to_plot,
