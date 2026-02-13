@@ -314,7 +314,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     if title is not None and isinstance(title, str):
         title = [title]
     highlights = adata.uns.get("highlights", [])
-    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0rc0")
+    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0.dev")
     if is_anndata_13:
         from anndata.acc import A
     if basis is not None:

@@ -1222,7 +1222,7 @@ def _get_color_source_vector(
         # We should probably just make an index for this, and share it over runs
         # TODO: Throw helpful error if this doesn't work
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
-    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0rc0")
+    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0.dev")
     if is_anndata_13:
         from anndata.acc import A
     if use_raw and value_to_plot not in adata.obs.columns:
