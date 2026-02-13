@@ -344,17 +344,18 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     adata.raw[A.X[:, y]] if is_anndata_13 else adata.raw.obs_vector(y)
                 )
         else:
-            x_arr = (
-                adata[A.layers[layers[0]][:, x]]
-                if is_anndata_13
-                else adata.obs_vector(x, layer=layers[0])
+            x_arr, y_arr = (
+                (
+                    (
+                        adata[A.obs[k]]
+                        if k in adata.obs.columns
+                        else adata[A.layers[layers[0]][:, k]]
+                    )
+                    if is_anndata_13
+                    else adata.obs_vector(k, layer=layers[0])
+                )
+                for k in [x, y]
             )
-            y_arr = (
-                adata[A.layers[layers[1]][:, y]]
-                if is_anndata_13
-                else adata.obs_vector(y, layer=layers[1])
-            )
-
         xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
