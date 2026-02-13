@@ -267,7 +267,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
-        # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because they appear to be quite finnicky with indexing i.e., `float64`.
+        # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because we have a lot of np.ndarray checks.
+        # Setting np.array here prevents the  `NumpyExtensionArray` from propagating.
         color_source_vector = np.array(
             _get_color_source_vector(
                 adata,
