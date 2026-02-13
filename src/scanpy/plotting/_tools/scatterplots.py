@@ -1225,7 +1225,7 @@ def _get_color_source_vector(
     is_anndata_13 = pkg_version("anndata") >= Version("0.13.0.dev")
     if is_anndata_13:
         from anndata.acc import A
-    if use_raw and value_to_plot not in adata.obs.columns:
+    if (not_obs := value_to_plot not in adata.obs.columns) and use_raw:
         values = (
             adata.raw[A.X[:, value_to_plot]]
             if is_anndata_13
@@ -1233,7 +1233,9 @@ def _get_color_source_vector(
         )
     else:
         values = (
-            adata[A.layers[layer][:, value_to_plot]]
+            adata[
+                A.layers[layer][:, value_to_plot] if not_obs else A.obs[value_to_plot]
+            ]
             if is_anndata_13
             else adata.obs_vector(value_to_plot, layer=layer)
         )
