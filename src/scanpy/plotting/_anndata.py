@@ -414,7 +414,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             c = adata.raw[:, key] if is_anndata_13 else adata.raw.obs_vector(key)
         elif key in adata.var_names:
             c = (
-                adata[A.layers[layers[2][:, key]]]
+                adata[A.layers[layers[2]][:, key]]
                 if is_anndata_13
                 else adata.obs_vector(key, layer=layers[2])
             )
