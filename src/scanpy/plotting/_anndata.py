@@ -410,7 +410,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                 c = adata.obs[key].to_numpy()
         # coloring according to gene expression
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
-            c = adata[A.obs[key]] if is_anndata_13 else adata.raw.obs_vector(key)
+            c = adata.raw[:, key] if is_anndata_13 else adata.raw.obs_vector(key)
         elif key in adata.var_names:
             c = (
                 adata[A.layers[layers[2][:, key]]]
