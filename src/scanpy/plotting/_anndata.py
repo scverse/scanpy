@@ -13,11 +13,12 @@ import pandas as pd
 from matplotlib import colormaps, gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
+from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase, old_positionals, pkg_version
 from .._settings import settings
 from .._utils import (
     _doc_params,
@@ -55,13 +56,7 @@ if TYPE_CHECKING:
     from seaborn.matrix import ClusterGrid
 
     from .._utils import Empty
-    from ._utils import (
-        ColorLike,
-        DensityNorm,
-        _FontSize,
-        _FontWeight,
-        _LegendLoc,
-    )
+    from ._utils import ColorLike, DensityNorm, _FontSize, _FontWeight, _LegendLoc
 
 # TODO: is that all?
 type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
@@ -319,6 +314,9 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     if title is not None and isinstance(title, str):
         title = [title]
     highlights = adata.uns.get("highlights", [])
+    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0rc0")
+    if is_anndata_13:
+        from anndata.acc import A
     if basis is not None:
         try:
             # ignore the '0th' diffusion component
@@ -334,16 +332,28 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     elif x is not None and y is not None:
         if use_raw:
             if x in adata.obs.columns:
-                x_arr = adata.obs_vector(x)
+                x_arr = adata[A.obs[x]] if is_anndata_13 else adata.obs_vector(x)
             else:
-                x_arr = adata.raw.obs_vector(x)
+                x_arr = (
+                    adata.raw[A.X[:, x]] if is_anndata_13 else adata.raw.obs_vector(x)
+                )
             if y in adata.obs.columns:
-                y_arr = adata.obs_vector(y)
+                y_arr = adata[A.obs[y]] if is_anndata_13 else adata.obs_vector(y)
             else:
-                y_arr = adata.raw.obs_vector(y)
+                y_arr = (
+                    adata.raw[A.X[:, y]] if is_anndata_13 else adata.raw.obs_vector(y)
+                )
         else:
-            x_arr = adata.obs_vector(x, layer=layers[0])
-            y_arr = adata.obs_vector(y, layer=layers[1])
+            x_arr = (
+                adata[A.layers[layers[0]][:, x]]
+                if is_anndata_13
+                else adata.obs_vector(x, layer=layers[0])
+            )
+            y_arr = (
+                adata[A.layers[layers[1]][:, y]]
+                if is_anndata_13
+                else adata.obs_vector(y, layer=layers[1])
+            )
 
         xy = np.c_[x_arr, y_arr]
     else:
@@ -400,9 +410,13 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                 c = adata.obs[key].to_numpy()
         # coloring according to gene expression
         elif use_raw and adata.raw is not None and key in adata.raw.var_names:
-            c = adata.raw.obs_vector(key)
+            c = adata[A.obs[key]] if is_anndata_13 else adata.raw.obs_vector(key)
         elif key in adata.var_names:
-            c = adata.obs_vector(key, layer=layers[2])
+            c = (
+                adata[A.layers[layers[2][:, key]]]
+                if is_anndata_13
+                else adata.obs_vector(key, layer=layers[2])
+            )
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False

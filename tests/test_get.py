@@ -204,12 +204,15 @@ def test_column_content():
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
-    query = ["CST3", "NKG7", "GNLY", "louvain", "n_counts", "n_genes"]
+    cols = ["louvain", "n_counts", "n_genes"]
+    query = [*cols, "CST3", "NKG7", "GNLY"]
     df = sc.get.obs_df(adata, query)
     for col in query:
         assert col in df
         np.testing.assert_array_equal(query, df.columns)
-        np.testing.assert_array_equal(df[col].values, adata.obs_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values, adata.obs[col] if col in cols else adata[:, col].X.ravel()
+        )
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
@@ -217,7 +220,10 @@ def test_column_content():
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:
-        np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values,
+            adata[col, :].X.ravel() if col in cell_ids else adata.var[col],
+        )
 
 
 def test_var_df(adata: AnnData):

@@ -16,9 +16,10 @@ from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
+from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import deprecated
+from ..._compat import deprecated, pkg_version
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, sanitize_anndata
 from ..._utils._doctests import doctest_internet
@@ -1221,10 +1222,21 @@ def _get_color_source_vector(
         # We should probably just make an index for this, and share it over runs
         # TODO: Throw helpful error if this doesn't work
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
+    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0rc0")
+    if is_anndata_13:
+        from anndata.acc import A
     if use_raw and value_to_plot not in adata.obs.columns:
-        values = adata.raw.obs_vector(value_to_plot)
+        values = (
+            adata.raw[A.X[:, value_to_plot]]
+            if is_anndata_13
+            else adata.raw.obs_vector(value_to_plot)
+        )
     else:
-        values = adata.obs_vector(value_to_plot, layer=layer)
+        values = (
+            adata[A.layers[layer][:, value_to_plot]]
+            if is_anndata_13
+            else adata.obs_vector(value_to_plot, layer=layer)
+        )
     if mask_obs is not None:
         values = values.copy()
         values[~mask_obs] = np.nan
