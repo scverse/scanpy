@@ -68,7 +68,9 @@ def test_consistency(metric) -> None:
     )
 
     all_genes = metric(pbmc, layer="raw")
-    first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
+    first_gene = metric(
+        pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
+    )
 
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
