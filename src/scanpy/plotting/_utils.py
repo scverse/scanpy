@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
+    from pandas.api.extensions import ExtensionArray
     from PIL.Image import Image
 
     from .._utils import Empty
@@ -44,6 +45,7 @@ __all__ = [
     "_create_white_to_color_gradient",
     "_deprecated_scale",
     "_dk",
+    "_obs_vector_compat",
     "add_colors_for_categorical_sample_annotation",
     "check_colornorm",
     "check_projection",
@@ -1167,3 +1169,18 @@ def _create_white_to_color_gradient(
     return ListedColormap(
         clipped_rgb, name=color if isinstance(color, str) else hex_color
     )
+
+
+def _obs_vector_compat(
+    adata, k: str, *, use_raw: bool, layer: str | None
+) -> np.ndarray | ExtensionArray:
+    try:
+        from anndata.acc import A
+    except ImportError:
+        assert layer is None
+        return adata.raw.obs_vector(k) if use_raw else adata.obs_vector(k)
+    else:
+        if k in adata.obs.columns:
+            return adata[A.obs[k]]
+        else:
+            return adata.raw[A.X[:, k]] if use_raw else adata[A.layers[layer][:, k]]

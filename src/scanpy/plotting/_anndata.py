@@ -13,12 +13,11 @@ import pandas as pd
 from matplotlib import colormaps, gridspec, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
-from packaging.version import Version
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
 from .. import logging as logg
-from .._compat import CSBase, old_positionals, pkg_version
+from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import (
     _doc_params,
@@ -37,6 +36,7 @@ from ._docs import (
 from ._utils import (
     _deprecated_scale,
     _dk,
+    _obs_vector_compat,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -314,9 +314,6 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     if title is not None and isinstance(title, str):
         title = [title]
     highlights = adata.uns.get("highlights", [])
-    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0.dev")
-    if is_anndata_13:
-        from anndata.acc import A
     if basis is not None:
         try:
             # ignore the '0th' diffusion component
@@ -330,32 +327,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             msg = f"compute coordinates using visualization tool {basis} first"
             raise KeyError(msg) from None
     elif x is not None and y is not None:
-        if use_raw:
-            if x in adata.obs.columns:
-                x_arr = adata[A.obs[x]] if is_anndata_13 else adata.obs_vector(x)
-            else:
-                x_arr = (
-                    adata.raw[A.X[:, x]] if is_anndata_13 else adata.raw.obs_vector(x)
-                )
-            if y in adata.obs.columns:
-                y_arr = adata[A.obs[y]] if is_anndata_13 else adata.obs_vector(y)
-            else:
-                y_arr = (
-                    adata.raw[A.X[:, y]] if is_anndata_13 else adata.raw.obs_vector(y)
-                )
-        else:
-            x_arr, y_arr = (
-                (
-                    (
-                        adata[A.obs[k]]
-                        if k in adata.obs.columns
-                        else adata[A.layers[layers[0]][:, k]]
-                    )
-                    if is_anndata_13
-                    else adata.obs_vector(k, layer=layers[0])
-                )
-                for k in [x, y]
-            )
+        x_arr, y_arr = (
+            _obs_vector_compat(adata, k, use_raw=use_raw, layer=layers[0])
+            for k in [x, y]
+        )
         xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
@@ -410,14 +385,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             else:
                 c = adata.obs[key].to_numpy()
         # coloring according to gene expression
-        elif use_raw and adata.raw is not None and key in adata.raw.var_names:
-            c = adata.raw[A.X[:, key]] if is_anndata_13 else adata.raw.obs_vector(key)
-        elif key in adata.var_names:
-            c = (
-                adata[A.layers[layers[2]][:, key]]
-                if is_anndata_13
-                else adata.obs_vector(key, layer=layers[2])
-            )
+        elif (use_raw and adata.raw is not None and key in adata.raw.var_names) or (
+            key in adata.var_names
+        ):
+            c = _obs_vector_compat(adata, key, use_raw=use_raw, layer=layers[0])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False

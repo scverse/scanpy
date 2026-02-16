@@ -16,10 +16,9 @@ from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
-from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import deprecated, pkg_version
+from ..._compat import deprecated
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, sanitize_anndata
 from ..._utils._doctests import doctest_internet
@@ -32,7 +31,7 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import check_colornorm, check_projection, circles
+from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -278,7 +277,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             gene_symbols=gene_symbols,
             groups=groups,
         )
-        if isinstance(color_source_vector, pd.core.arrays.NumpyExtensionArray):
+        if isinstance(color_source_vector, pd.arrays.NumpyExtensionArray):
             color_source_vector = color_source_vector.to_numpy()
         color_vector, color_type = _color_vector(
             adata,
@@ -1226,23 +1225,7 @@ def _get_color_source_vector(
         # We should probably just make an index for this, and share it over runs
         # TODO: Throw helpful error if this doesn't work
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
-    is_anndata_13 = pkg_version("anndata") >= Version("0.13.0.dev")
-    if is_anndata_13:
-        from anndata.acc import A
-    if (not_obs := value_to_plot not in adata.obs.columns) and use_raw:
-        values = (
-            adata.raw[A.X[:, value_to_plot]]
-            if is_anndata_13
-            else adata.raw.obs_vector(value_to_plot)
-        )
-    else:
-        values = (
-            adata[
-                A.layers[layer][:, value_to_plot] if not_obs else A.obs[value_to_plot]
-            ]
-            if is_anndata_13
-            else adata.obs_vector(value_to_plot, layer=layer)
-        )
+    values = _obs_vector_compat(adata, value_to_plot, use_raw=use_raw, layer=layer)
     if mask_obs is not None:
         values = values.copy()
         values[~mask_obs] = np.nan
