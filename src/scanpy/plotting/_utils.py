@@ -1172,15 +1172,20 @@ def _create_white_to_color_gradient(
 
 
 def _obs_vector_compat(
-    adata, k: str, *, use_raw: bool, layer: str | None
+    adata: AnnData, k: str, *, use_raw: bool, layer: str | None
 ) -> np.ndarray | ExtensionArray:
     try:
         from anndata.acc import A
     except ImportError:
-        assert layer is None
-        return adata.raw.obs_vector(k) if use_raw else adata.obs_vector(k)
+        return (
+            adata.raw.obs_vector(k)
+            if use_raw and k not in adata.obs.columns
+            else adata.obs_vector(k, layer=layer)
+        )
+
+    if k in adata.obs.columns:
+        return adata[A.obs[k]]
+    elif not use_raw:
+        return adata[A.layers[layer][:, k]]
     else:
-        if k in adata.obs.columns:
-            return adata[A.obs[k]]
-        else:
-            return adata.raw[A.X[:, k]] if use_raw else adata[A.layers[layer][:, k]]
+        return adata.raw[A.X[:, k]]

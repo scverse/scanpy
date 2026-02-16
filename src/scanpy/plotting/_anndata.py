@@ -319,7 +319,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             # ignore the '0th' diffusion component
             if basis == "diffmap":
                 components += 1
-            xy = adata.obsm["X_" + basis][:, components]
+            xy = adata.obsm[f"X_{basis}"][:, components]
             # correct the component vector for use in labeling etc.
             if basis == "diffmap":
                 components -= 1
