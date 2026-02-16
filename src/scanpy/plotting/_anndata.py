@@ -36,6 +36,7 @@ from ._docs import (
 from ._utils import (
     _deprecated_scale,
     _dk,
+    _obs_vector_compat,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -55,13 +56,7 @@ if TYPE_CHECKING:
     from seaborn.matrix import ClusterGrid
 
     from .._utils import Empty
-    from ._utils import (
-        ColorLike,
-        DensityNorm,
-        _FontSize,
-        _FontWeight,
-        _LegendLoc,
-    )
+    from ._utils import ColorLike, DensityNorm, _FontSize, _FontWeight, _LegendLoc
 
 # TODO: is that all?
 type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
@@ -324,7 +319,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             # ignore the '0th' diffusion component
             if basis == "diffmap":
                 components += 1
-            xy = adata.obsm["X_" + basis][:, components]
+            xy = adata.obsm[f"X_{basis}"][:, components]
             # correct the component vector for use in labeling etc.
             if basis == "diffmap":
                 components -= 1
@@ -332,19 +327,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             msg = f"compute coordinates using visualization tool {basis} first"
             raise KeyError(msg) from None
     elif x is not None and y is not None:
-        if use_raw:
-            if x in adata.obs.columns:
-                x_arr = adata.obs_vector(x)
-            else:
-                x_arr = adata.raw.obs_vector(x)
-            if y in adata.obs.columns:
-                y_arr = adata.obs_vector(y)
-            else:
-                y_arr = adata.raw.obs_vector(y)
-        else:
-            x_arr = adata.obs_vector(x, layer=layers[0])
-            y_arr = adata.obs_vector(y, layer=layers[1])
-
+        x_arr, y_arr = (
+            _obs_vector_compat(adata, k, use_raw=use_raw, layer=layer)
+            for layer, k in zip(layers, [x, y], strict=False)
+        )
         xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
@@ -399,10 +385,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             else:
                 c = adata.obs[key].to_numpy()
         # coloring according to gene expression
-        elif use_raw and adata.raw is not None and key in adata.raw.var_names:
-            c = adata.raw.obs_vector(key)
-        elif key in adata.var_names:
-            c = adata.obs_vector(key, layer=layers[2])
+        elif (use_raw and adata.raw is not None and key in adata.raw.var_names) or (
+            key in adata.var_names
+        ):
+            c = _obs_vector_compat(adata, key, use_raw=use_raw, layer=layers[2])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False

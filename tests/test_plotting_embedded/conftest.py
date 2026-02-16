@@ -58,7 +58,10 @@ def adata():
     adata.obs["label_missing"] = adata.obs["label"].copy()
     adata.obs.loc[::2, "label_missing"] = np.nan
 
-    adata.obs["1_missing"] = adata.obs_vector("1")
+    # TODO: If we don't `copy`, something about this being an ArrayView means that all values get set to nan?
+    # https://github.com/scverse/anndata/issues/2348
+    adata.obs["1_missing"] = adata[:, "1"].X.flatten().copy()
+
     adata.obs.loc[
         adata.obsm["spatial"][:, 0] < adata.obsm["spatial"][:, 0].mean(), "1_missing"
     ] = np.nan
