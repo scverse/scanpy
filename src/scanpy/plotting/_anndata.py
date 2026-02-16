@@ -328,8 +328,8 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             raise KeyError(msg) from None
     elif x is not None and y is not None:
         x_arr, y_arr = (
-            _obs_vector_compat(adata, k, use_raw=use_raw, layer=layers[0])
-            for k in [x, y]
+            _obs_vector_compat(adata, k, use_raw=use_raw, layer=layer)
+            for layer, k in zip(layers, [x, y], strict=False)
         )
         xy = np.c_[x_arr, y_arr]
     else:
@@ -388,7 +388,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
         elif (use_raw and adata.raw is not None and key in adata.raw.var_names) or (
             key in adata.var_names
         ):
-            c = _obs_vector_compat(adata, key, use_raw=use_raw, layer=layers[0])
+            c = _obs_vector_compat(adata, key, use_raw=use_raw, layer=layers[2])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False
