@@ -135,8 +135,8 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError as e:
-        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
-        raise ImportError(msg) from e
+        e.add_note("Please install `harmonyTS` and try again.")
+        raise
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")

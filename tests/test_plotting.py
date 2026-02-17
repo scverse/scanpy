@@ -1916,7 +1916,7 @@ def test_dotplot_group_colors_raises_error_on_missing_dep(
     markers = ["CD79A"]
     group_colors = {"CD19+ B": "blue"}
 
-    with pytest.raises(ImportError, match="pip install colour-science"):
+    with pytest.raises(ImportError, match=r"colour-science.*required"):
         sc.pl.dotplot(
             adata,
             markers,

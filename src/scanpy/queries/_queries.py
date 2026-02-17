@@ -67,8 +67,8 @@ def simple_query(
     try:
         from pybiomart import Server
     except ImportError as e:
-        msg = "This method requires the `pybiomart` module to be installed."
-        raise ImportError(msg) from e
+        e.add_note("Please install `pybiomart` and try again.")
+        raise
     server = Server(host, use_cache=use_cache)
     dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[f"{org}_gene_ensembl"]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
@@ -278,8 +278,8 @@ def enrich(
     try:
         from gprofiler import GProfiler
     except ImportError as e:
-        msg = "This method requires the `gprofiler-official` module to be installed."
-        raise ImportError(msg) from e
+        e.add_note("Please install `gprofiler-official` and try again.")
+        raise
     gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
     gprofiler_kwargs = dict(gprofiler_kwargs)
     for k in ["organism"]:
