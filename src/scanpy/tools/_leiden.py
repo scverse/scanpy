@@ -236,8 +236,10 @@ def _validate_flavor(
             try:
                 import leidenalg  # noqa: F401
             except ImportError as e:
-                msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip install leidenalg`."
-                raise ImportError(msg) from e
+                e.add_note(
+                    "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
+                )
+                raise
             flavor = "leidenalg"
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"

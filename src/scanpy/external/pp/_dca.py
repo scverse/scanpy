@@ -180,8 +180,8 @@ def dca(  # noqa: PLR0913
     try:
         from dca.api import dca
     except ImportError as e:
-        msg = "Please install dca package (>= 0.2.1) via `pip install dca`"
-        raise ImportError(msg) from e
+        e.add_note("Please install `dca` (≥ 0.2.1) and try again.")
+        raise e
 
     return dca(
         adata,

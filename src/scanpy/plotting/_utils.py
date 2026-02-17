@@ -1132,12 +1132,12 @@ def _create_white_to_color_gradient(
     popt = np.get_printoptions()
     try:
         import colour
-    except ImportError:
-        msg = (
-            "Please install the `colour-science` package to use `group_colors`: "
-            "`pip install colour-science` or `pip install scanpy[plotting]`"
+    except ImportError as e:
+        e.add_note(
+            "`colour-science` is required for using `group_colors`. "
+            "Please install `scanpy[plotting]` (or `colour-science` directly) and try again."
         )
-        raise ImportError(msg) from None
+        raise
     finally:  # https://github.com/colour-science/colour/issues/1388
         np.set_printoptions(legacy=popt["legacy"])
 
