@@ -577,11 +577,8 @@ def cellbrowser(  # noqa: PLR0913
     """
     try:
         import cellbrowser.cellbrowser as cb
-    except ImportError:
-        logg.error(
-            "The package cellbrowser is not installed. "
-            "Install with 'pip install cellbrowser' and retry."
-        )
+    except ImportError as e:
+        e.add_note("Please install `cellbrowser` and try again.")
         raise
 
     data_dir = str(data_dir)

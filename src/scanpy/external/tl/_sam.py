@@ -206,13 +206,8 @@ def sam(  # noqa: PLR0913
     try:
         from samalg import SAM
     except ImportError as e:
-        msg = (
-            "\nplease install sam-algorithm: \n\n"
-            "\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n"
-            "\tcd self-assembling-manifold\n"
-            "\tpip install ."
-        )
-        raise ImportError(msg) from e
+        e.add_note("Please install `sc-sam` and try again.")
+        raise
 
     logg.info("Self-assembling manifold")
 
