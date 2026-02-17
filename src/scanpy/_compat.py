@@ -113,6 +113,8 @@ def warn(
     more_file_prefixes: tuple[str, ...] = (),
 ) -> None:
     """Issue a warning, skipping frames from certain file prefixes."""
+    __tracebackhide__ = True
+
     if not skip_file_prefixes:
         skip_file_prefixes = (*_FILE_PREFIXES, *more_file_prefixes)
     elif more_file_prefixes:
