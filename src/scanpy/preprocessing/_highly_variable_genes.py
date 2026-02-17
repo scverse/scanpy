@@ -157,8 +157,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     try:
         from skmisc.loess import loess
     except ImportError as e:
-        msg = "Please install skmisc package via `pip install --user scikit-misc"
-        raise ImportError(msg) from e
+        e.add_note("Please install `scikit-misc` and try again.")
+        raise
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
