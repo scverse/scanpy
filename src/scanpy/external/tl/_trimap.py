@@ -103,8 +103,8 @@ def trimap(  # noqa: PLR0913
     try:
         from trimap import TRIMAP
     except ImportError as e:
-        msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
-        raise ImportError(msg) from e
+        e.add_note("Please install `trimap` and try again.")
+        raise
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata

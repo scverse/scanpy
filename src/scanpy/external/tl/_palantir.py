@@ -333,9 +333,9 @@ def palantir_results(
     return pr_res
 
 
-def _check_import():
+def _check_import() -> None:
     try:
         import palantir  # noqa: F401
     except ImportError as e:
-        msg = "\nplease install palantir:\n\tpip install palantir"
-        raise ImportError(msg) from e
+        e.add_note("Please install `palantir` and try again.")
+        raise

@@ -181,7 +181,10 @@ def scrublet(  # noqa: PLR0913
     if threshold is None and not find_spec("skimage"):  # pragma: no cover
         # Scrublet.call_doublets requires `skimage` with `threshold=None` but PCA
         # is called early, which is wasteful if there is not `skimage`
-        msg = "threshold is None and thus scrublet requires skimage, but skimage is not installed."
+        msg = (
+            "`threshold` is None and thus scrublet requires `scikit-image`. "
+            "Please install `scanpy[scrublet]` (or `scikit-image` directly) and try again."
+        )
         raise ValueError(msg)
 
     if copy:
