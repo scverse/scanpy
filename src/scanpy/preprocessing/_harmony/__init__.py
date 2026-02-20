@@ -12,6 +12,8 @@ from ..._settings import settings
 from ..._settings.verbosity import Verbosity
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     import pandas as pd
 
 
@@ -20,18 +22,18 @@ def harmonize(  # noqa: PLR0913
     batch_df: pd.DataFrame,
     batch_key: str | list[str],
     *,
-    theta: float | list[float] | None = None,
-    sigma: float = 0.1,
-    n_clusters: int | None = None,
-    max_iter_harmony: int = 10,
-    max_iter_clustering: int = 200,
-    tol_harmony: float = 1e-4,
-    tol_clustering: float = 1e-5,
-    ridge_lambda: float = 1.0,
-    correction_method: str = "original",
-    block_proportion: float = 0.05,
-    random_state: int | None = 0,
-    sparse: bool = False,
+    theta: float | list[float] | None,
+    sigma: float,
+    n_clusters: int | None,
+    max_iter_harmony: int,
+    max_iter_clustering: int,
+    tol_harmony: float,
+    tol_clustering: float,
+    ridge_lambda: float,
+    correction_method: Literal["fast", "original"],
+    block_proportion: float,
+    random_state: int | None,
+    sparse: bool,
 ) -> np.ndarray:
     """
     Run Harmony batch correction algorithm.
@@ -44,30 +46,6 @@ def harmonize(  # noqa: PLR0913
         DataFrame containing batch information.
     batch_key
         Column name(s) in batch_df containing batch labels.
-    theta
-        Diversity penalty weight(s). Default is 2 for each batch variable.
-    sigma
-        Width of soft clustering kernel. Default 0.1.
-    n_clusters
-        Number of clusters. Default is min(100, n_cells/30).
-    max_iter_harmony
-        Maximum Harmony iterations. Default 10.
-    max_iter_clustering
-        Maximum clustering iterations per Harmony round. Default 200.
-    tol_harmony
-        Convergence tolerance for Harmony. Default 1e-4.
-    tol_clustering
-        Convergence tolerance for clustering. Default 1e-5.
-    ridge_lambda
-        Ridge regression regularization. Default 1.0.
-    correction_method
-        'original' or 'fast'. Default 'original'.
-    block_proportion
-        Fraction of cells processed per clustering iteration. Default 0.05.
-    random_state
-        Random seed for reproducibility.
-    sparse
-        Use sparse matrices for phi. Reduces memory for large datasets.
 
     Returns
     -------
