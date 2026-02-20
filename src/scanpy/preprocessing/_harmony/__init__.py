@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import KW_ONLY, InitVar, dataclass, field
+from itertools import product
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -160,7 +161,7 @@ class Harmony:
         o: np.ndarray,
         theta: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
-        """Perform clustering step."""
+        """Perform clustering step. Modifies r, e, o in-place."""
         return _clustering(
             z_norm,
             self.batch_codes,
@@ -320,7 +321,7 @@ def _clustering(  # noqa: PLR0913
     """Run clustering iterations (modifies r, e, o in-place)."""
     n_cells = z_norm.shape[0]
     k = r.shape[1]
-    block_size = max(1, int(n_cells * block_proportion))
+    n_blocks = min(n_cells, 1 // block_proportion)
     term = -2.0 / sigma
 
     objectives_clustering = []
@@ -340,46 +341,41 @@ def _clustering(  # noqa: PLR0913
         idx_list = np.random.permutation(n_cells)
 
         # Process blocks
-        pos = 0
-        while pos < n_cells:
-            end_pos = min(pos + block_size, n_cells)
-            block_idx = idx_list[pos:end_pos]
+        for block_idx, b in product(
+            np.array_split(idx_list, n_blocks), range(n_batches)
+        ):
+            mask = batch_codes[block_idx] == b
+            if not np.any(mask):
+                continue
 
-            for b in range(n_batches):
-                mask = batch_codes[block_idx] == b
-                if not np.any(mask):
-                    continue
+            cell_idx = block_idx[mask]
 
-                cell_idx = block_idx[mask]
+            # Remove old r contribution from o and e
+            r_old = r[cell_idx, :]
+            r_old_sum = r_old.sum(axis=0)
+            o[b, :] -= r_old_sum
+            e -= pr_b * r_old_sum
 
-                # Remove old r contribution from o and e
-                r_old = r[cell_idx, :]
-                r_old_sum = r_old.sum(axis=0)
-                o[b, :] -= r_old_sum
-                e -= pr_b * r_old_sum
+            # Compute new r values
+            dots = z_norm[cell_idx, :] @ y_norm.T
+            r_new = np.exp(term * (1.0 - dots))
 
-                # Compute new r values
-                dots = z_norm[cell_idx, :] @ y_norm.T
-                r_new = np.exp(term * (1.0 - dots))
+            # Apply penalty
+            penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
+            r_new *= penalty
 
-                # Apply penalty
-                penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
-                r_new *= penalty
+            # Normalize rows to sum to 1
+            row_sums = r_new.sum(axis=1, keepdims=True)
+            row_sums = np.maximum(row_sums, 1e-12)
+            r_new /= row_sums
 
-                # Normalize rows to sum to 1
-                row_sums = r_new.sum(axis=1, keepdims=True)
-                row_sums = np.maximum(row_sums, 1e-12)
-                r_new /= row_sums
+            # Store back
+            r[cell_idx, :] = r_new
 
-                # Store back
-                r[cell_idx, :] = r_new
-
-                # Add new r contribution to o and e
-                r_new_sum = r_new.sum(axis=0)
-                o[b, :] += r_new_sum
-                e += pr_b * r_new_sum
-
-            pos = end_pos
+            # Add new r contribution to o and e
+            r_new_sum = r_new.sum(axis=0)
+            o[b, :] += r_new_sum
+            e += pr_b * r_new_sum
 
         # Compute objective
         obj = _compute_objective(y_norm, z_norm, r, theta=theta, sigma=sigma, o=o, e=e)
@@ -405,7 +401,6 @@ def _correction_original(
 ) -> np.ndarray:
     """Original correction method - per-cluster ridge regression."""
     _, d = x.shape
-    k = r.shape[1]
 
     # Ridge regularization matrix (don't penalize intercept)
     id_mat = np.eye(n_batches + 1)
@@ -414,9 +409,7 @@ def _correction_original(
 
     z = x.copy()
 
-    for k_idx in range(k):
-        r_k = r[:, k_idx]
-
+    for r_k in r.T:
         r_sum_total = r_k.sum()
         r_sum_per_batch = np.zeros(n_batches, dtype=x.dtype)
         for b in range(n_batches):
@@ -458,13 +451,11 @@ def _correction_fast(
 ) -> np.ndarray:
     """Fast correction method using precomputed factors."""
     _, d = x.shape
-    k = r.shape[1]
 
     z = x.copy()
     p = np.eye(n_batches + 1)
 
-    for k_idx in range(k):
-        o_k = o[:, k_idx]
+    for o_k, r_k in zip(o.T, r.T, strict=True):
         n_k = np.sum(o_k)
 
         factor = 1.0 / (o_k + ridge_lambda)
@@ -480,7 +471,6 @@ def _correction_fast(
 
         inv_mat = p_t_b_inv @ p
 
-        r_k = r[:, k_idx]
         phi_t_x = np.zeros((n_batches + 1, d), dtype=x.dtype)
         phi_t_x[0, :] = r_k @ x
         for b in range(n_batches):
