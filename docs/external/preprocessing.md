@@ -5,6 +5,11 @@
 .. currentmodule:: scanpy.external
 ```
 
+Previously found here, but now part of scanpy’s main API:
+- {func}`scanpy.pp.harmony_integrate`
+- {func}`scanpy.pp.scrublet`
+- {func}`scanpy.pp.scrublet_simulate_doublets`
+
 (external-data-integration)=
 
 ## Data integration
@@ -14,10 +19,8 @@
    :toctree: ../generated/
 
    pp.bbknn
-   pp.harmony_integrate
    pp.mnn_correct
    pp.scanorama_integrate
-
 ```
 
 ## Sample demultiplexing
@@ -39,5 +42,4 @@ Note that the fundamental limitations of imputation are still under [debate](htt
 
    pp.dca
    pp.magic
-
 ```
