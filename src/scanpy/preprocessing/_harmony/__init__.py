@@ -7,11 +7,15 @@ from scipy.sparse import csr_matrix  # noqa: TID251
 from sklearn.cluster import KMeans
 from tqdm.auto import tqdm
 
+from ... import logging as log
+from ..._settings import settings
+from ..._settings.verbosity import Verbosity
+
 if TYPE_CHECKING:
     import pandas as pd
 
 
-def harmonize(  # noqa: PLR0913, PLR0912
+def harmonize(  # noqa: PLR0913
     x: np.ndarray,
     batch_df: pd.DataFrame,
     batch_key: str | list[str],
@@ -27,7 +31,6 @@ def harmonize(  # noqa: PLR0913, PLR0912
     correction_method: str = "original",
     block_proportion: float = 0.05,
     random_state: int | None = 0,
-    verbose: bool = False,
     sparse: bool = False,
 ) -> np.ndarray:
     """
@@ -63,8 +66,6 @@ def harmonize(  # noqa: PLR0913, PLR0912
         Fraction of cells processed per clustering iteration. Default 0.05.
     random_state
         Random seed for reproducibility.
-    verbose
-        Print progress information.
     sparse
         Use sparse matrices for phi. Reduces memory for large datasets.
 
@@ -125,7 +126,7 @@ def harmonize(  # noqa: PLR0913, PLR0912
     converged = False
     z_hat = x.copy()
 
-    for i in tqdm(range(max_iter_harmony), disable=not verbose):
+    for i in tqdm(range(max_iter_harmony), disable=settings.verbosity < Verbosity.info):
         # Clustering step
         _clustering(
             z_norm,
@@ -159,12 +160,11 @@ def harmonize(  # noqa: PLR0913, PLR0912
         # Check convergence
         if _is_convergent_harmony(objectives_harmony, tol_harmony):
             converged = True
-            if verbose:
-                print(f"Harmony converged in {i + 1} iterations")
+            log.info(f"Harmony converged in {i + 1} iterations")
             break
 
-    if not converged and verbose:
-        print(f"Harmony did not converge after {max_iter_harmony} iterations.")
+    if not converged:
+        log.info(f"Harmony did not converge after {max_iter_harmony} iterations.")
 
     return z_hat
 
@@ -180,7 +180,7 @@ def _get_batch_codes(
         batch_vec = batch_df[batch_key[0]]
     else:
         df = batch_df[batch_key].astype("str")
-        batch_vec = df.apply(lambda row: ",".join(row), axis=1)
+        batch_vec = df.apply(",".join, axis=1)
 
     batch_cat = batch_vec.astype("category")
     codes = batch_cat.cat.codes.values.copy()

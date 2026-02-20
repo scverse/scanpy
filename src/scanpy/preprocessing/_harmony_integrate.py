@@ -60,7 +60,7 @@ def harmony_integrate(
     # Ensure the basis exists in adata.obsm
     if basis not in adata.obsm:
         msg = (
-            f"The specified basis '{basis}' is not available in adata.obsm. "
+            f"The specified basis {basis!r} is not available in `adata.obsm`. "
             f"Available bases: {list(adata.obsm.keys())}"
         )
         raise ValueError(msg)
