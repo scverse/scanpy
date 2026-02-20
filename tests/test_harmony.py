@@ -9,8 +9,8 @@ import pytest
 from anndata import AnnData
 from scipy.stats import pearsonr
 
-import scanpy as sc
 from scanpy.preprocessing import harmony_integrate
+from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -18,56 +18,53 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
 
+DATA = dict(
+    pca=("pbmc_3500_pcs.tsv.gz", "md5:27e319b3ddcc0c00d98e70aa8e677b10"),
+    pca_harmonized=(
+        "pbmc_3500_pcs_harmonized.tsv.gz",
+        "md5:a7c4ce4b98c390997c66d63d48e09221",
+    ),
+    meta=("pbmc_3500_meta.tsv.gz", "md5:8c7ca20e926513da7cf0def1211baecb"),
+)
+
+
 def _get_measure(
     x: np.ndarray, base: np.ndarray, norm: Literal["r", "L2"]
 ) -> np.ndarray:
     """Compute correlation or L2 distance between arrays."""
-    if norm == "r":
-        # Compute per-column correlation
+    if norm == "r":  # Compute per-column correlation
         if x.ndim == 1:
             corr, _ = pearsonr(x, base)
             return corr
-        corrs = []
-        for i in range(x.shape[1]):
-            corr, _ = pearsonr(x[:, i], base[:, i])
-            corrs.append(corr)
-        return np.array(corrs)
-
-    assert norm == "L2"
-    # L2 distance normalized by base norm
-    if x.ndim == 1:
-        return np.linalg.norm(x - base) / np.linalg.norm(base)
-    dists = []
-    for i in range(x.shape[1]):
-        dist = np.linalg.norm(x[:, i] - base[:, i]) / np.linalg.norm(base[:, i])
-        dists.append(dist)
-    return np.array(dists)
+        return np.array([pearsonr(x[:, i], base[:, i])[0] for i in range(x.shape[1])])
+    if norm == "L2":
+        # L2 distance normalized by base norm
+        if x.ndim == 1:
+            return np.linalg.norm(x - base) / np.linalg.norm(base)
+        return np.array([
+            np.linalg.norm(x[:, i] - base[:, i]) / np.linalg.norm(base[:, i])
+            for i in range(x.shape[1])
+        ])
+    pytest.fail(f"Unknown {norm=!r}")
 
 
 @pytest.fixture
 def adata_reference() -> AnnData:
     """Load reference data from harmonypy repository."""
-    x_pca_file = pooch.retrieve(
-        "https://github.com/slowkow/harmonypy/raw/refs/heads/master/data/pbmc_3500_pcs.tsv.gz",
-        known_hash="md5:27e319b3ddcc0c00d98e70aa8e677b10",
-    )
-    x_pca = pd.read_csv(x_pca_file, delimiter="\t")
-    x_pca_harmony_file = pooch.retrieve(
-        "https://github.com/slowkow/harmonypy/raw/refs/heads/master/data/pbmc_3500_pcs_harmonized.tsv.gz",
-        known_hash="md5:a7c4ce4b98c390997c66d63d48e09221",
-    )
-    x_pca_harmony = pd.read_csv(x_pca_harmony_file, delimiter="\t")
-    meta_file = pooch.retrieve(
-        "https://github.com/slowkow/harmonypy/raw/refs/heads/master/data/pbmc_3500_meta.tsv.gz",
-        known_hash="md5:8c7ca20e926513da7cf0def1211baecb",
-    )
-    meta = pd.read_csv(meta_file, delimiter="\t")
+    paths = {
+        f: pooch.retrieve(
+            f"https://github.com/slowkow/harmonypy/raw/refs/heads/master/data/{name}",
+            known_hash=hash_,
+        )
+        for f, (name, hash_) in DATA.items()
+    }
+    dfs = {f: pd.read_csv(path, delimiter="\t") for f, path in paths.items()}
     # Create unique index using row number + cell name
-    meta.index = [f"{i}_{cell}" for i, cell in enumerate(meta["cell"])]
+    dfs["meta"].index = [f"{i}_{cell}" for i, cell in enumerate(dfs["meta"]["cell"])]
     adata = AnnData(
         X=None,
-        obs=meta,
-        obsm={"X_pca": x_pca.values, "harmony_org": x_pca_harmony.values},
+        obs=dfs["meta"],
+        obsm={"X_pca": dfs["pca"].values, "harmony_org": dfs["pca_harmonized"].values},
     )
     return adata
 
@@ -78,19 +75,17 @@ def test_harmony_integrate(
     correction_method: Literal["fast", "original"], dtype: DTypeLike
 ) -> None:
     """Test that Harmony integrate works."""
-    adata = sc.datasets.pbmc68k_reduced()
-
+    adata = pbmc68k_reduced()
     harmony_integrate(
         adata, "bulk_labels", correction_method=correction_method, dtype=dtype
     )
-
     assert adata.obsm["X_pca_harmony"].shape == adata.obsm["X_pca"].shape
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
 def test_harmony_integrate_algos(subtests: pytest.Subtests, dtype: DTypeLike) -> None:
     """Test that both correction methods produce similar results."""
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     harmony_integrate(adata, "bulk_labels", correction_method="fast", dtype=dtype)
     fast = adata.obsm["X_pca_harmony"].copy()
@@ -130,7 +125,7 @@ def test_harmony_integrate_reference(
 
 def test_harmony_multiple_keys() -> None:
     """Test Harmony with multiple batch keys."""
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     # Create a second batch key
     adata.obs["batch2"] = np.random.choice(["A", "B", "C"], size=adata.n_obs)
 
@@ -141,7 +136,7 @@ def test_harmony_multiple_keys() -> None:
 
 def test_harmony_custom_parameters() -> None:
     """Test Harmony with custom parameters."""
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     harmony_integrate(
         adata,
         "bulk_labels",
@@ -156,14 +151,14 @@ def test_harmony_custom_parameters() -> None:
 
 def test_harmony_no_nan_output() -> None:
     """Test that Harmony output contains no NaN values."""
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
     harmony_integrate(adata, "bulk_labels")
     assert not np.isnan(adata.obsm["X_pca_harmony"]).any()
 
 
 def test_harmony_input_validation(subtests) -> None:
     """Test that Harmony raises errors for invalid inputs."""
-    adata = sc.datasets.pbmc68k_reduced()
+    adata = pbmc68k_reduced()
 
     with subtests.test("no basis"), pytest.raises(ValueError, match="not available"):
         harmony_integrate(adata, "bulk_labels", basis="nonexistent")
