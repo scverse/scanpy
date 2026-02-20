@@ -79,7 +79,8 @@ def confusion_matrix(
     mtx = _confusion_matrix(orig, new, labels=unique_labels)
     if normalize:
         sums = mtx.sum(axis=1)[:, np.newaxis]
-        mtx = np.divide(mtx, sums, where=sums != 0)
+        mtx = mtx.astype(np.float64)
+        np.divide(mtx, sums, where=sums != 0, out=mtx)
 
     # Label
     orig_name = "Original labels" if orig.name is None else orig.name
@@ -204,8 +205,11 @@ def modularity_array(
     try:
         import igraph as ig
     except ImportError as e:  # pragma: no cover
-        msg = "igraph is require for computing modularity"
-        raise ImportError(msg) from e
+        e.add_note(
+            "`igraph` is required for computing modularity. "
+            "Please install `igraph` and try again."
+        )
+        raise
     igraph_mode: str = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
     graph: ig.Graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
     return graph.modularity(_codes(labels))

@@ -157,8 +157,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     try:
         from skmisc.loess import loess
     except ImportError as e:
-        msg = "Please install skmisc package via `pip install --user scikit-misc"
-        raise ImportError(msg) from e
+        e.add_note("Please install `scikit-misc` and try again.")
+        raise
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
@@ -183,14 +183,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         # These get computed anyway for loess
         if isinstance(mean, DaskArray):
             mean, var = mean.compute(), var.compute()
-        not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
-
-        y = np.log10(var[not_const])
-        x = np.log10(mean[not_const])
-        model = loess(x, y, span=span, degree=2)
-        model.fit()
-        estimat_var[not_const] = model.outputs.fitted_values
+        if (not_const := var > 0).any():
+            y = np.log10(var[not_const])
+            x = np.log10(mean[not_const])
+            model = loess(x, y, span=span, degree=2)
+            model.fit()
+            estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10**estimat_var)
 
         # clip large values as in Seurat
