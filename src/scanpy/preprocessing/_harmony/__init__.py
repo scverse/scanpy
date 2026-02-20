@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -12,31 +13,17 @@ from ..._settings import settings
 from ..._settings.verbosity import Verbosity
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Literal
 
     import pandas as pd
 
+    from ..._compat import CSBase
 
-def harmonize(  # noqa: PLR0913
-    x: np.ndarray,
-    batch_df: pd.DataFrame,
-    batch_key: str | list[str],
-    *,
-    theta: float | list[float] | None,
-    sigma: float,
-    n_clusters: int | None,
-    max_iter_harmony: int,
-    max_iter_clustering: int,
-    tol_harmony: float,
-    tol_clustering: float,
-    ridge_lambda: float,
-    correction_method: Literal["fast", "original"],
-    block_proportion: float,
-    random_state: int | None,
-    sparse: bool,
-) -> np.ndarray:
-    """
-    Run Harmony batch correction algorithm.
+
+@dataclass
+class Harmony:
+    """Harmony batch correction algorithm.
 
     Parameters
     ----------
@@ -46,110 +33,173 @@ def harmonize(  # noqa: PLR0913
         DataFrame containing batch information.
     batch_key
         Column name(s) in batch_df containing batch labels.
-
-    Returns
-    -------
-    z_corr
-        Batch-corrected embedding matrix (n_cells x d).
     """
-    if random_state is not None:
-        np.random.seed(random_state)
 
-    # Ensure input is C-contiguous float array (infer dtype from x)
-    x = np.ascontiguousarray(x)
-    dtype = x.dtype
-    n_cells = x.shape[0]
+    batch_df: InitVar[pd.DataFrame]
+    batch_key: InitVar[str | Sequence[str]]
+    _: KW_ONLY
+    theta: float | Sequence[float] | None
+    sigma: float
+    n_clusters: int | None
+    max_iter_harmony: int
+    max_iter_clustering: int
+    tol_harmony: float
+    tol_clustering: float
+    ridge_lambda: float
+    correction_method: Literal["fast", "original"]
+    block_proportion: float
+    random_state: int | None
+    sparse: bool
 
-    # Normalize input for clustering
-    z_norm = _normalize_rows_l2(x)
+    batch_codes: np.ndarray = field(init=False)
+    n_batches: int = field(init=False)
 
-    # Process batch keys
-    batch_codes, n_batches = _get_batch_codes(batch_df, batch_key)
+    def __post_init__(
+        self, batch_df: pd.DataFrame, batch_key: str | Sequence[str]
+    ) -> None:
+        if self.max_iter_harmony < 1:
+            msg = "max_iter_harmony must be >= 1"
+            raise ValueError(msg)
 
-    # Build phi matrix (one-hot encoding of batches)
-    if sparse:
-        phi = _one_hot_encode_sparse(batch_codes, n_batches, dtype)
-        n_b = np.asarray(phi.sum(axis=0)).ravel()
-    else:
-        phi = _one_hot_encode(batch_codes, n_batches, dtype)
-        n_b = phi.sum(axis=0)
-    pr_b = (n_b / n_cells).reshape(-1, 1)
+        # Process batch keys
+        self.batch_codes, self.n_batches = _get_batch_codes(batch_df, batch_key)
 
-    # Set default theta
-    if theta is None:
-        theta_arr = np.ones(n_batches, dtype=dtype) * 2.0
-    elif isinstance(theta, (int, float)):
-        theta_arr = np.ones(n_batches, dtype=dtype) * float(theta)
-    else:
-        theta_arr = np.array(theta, dtype=dtype)
-    theta_arr = theta_arr.reshape(1, -1)
+    def fit(self, x: np.ndarray) -> np.ndarray:
+        """Run Harmony.
 
-    # Set default n_clusters
-    if n_clusters is None:
-        n_clusters = int(min(100, n_cells / 30))
-        n_clusters = max(n_clusters, 2)
+        Returns
+        -------
+        z_corr
+            Batch-corrected embedding matrix (n_cells x d).
+        """
+        if self.random_state is not None:
+            np.random.seed(self.random_state)
 
-    # Initialize centroids and state arrays
-    r, e, o, objectives_harmony = _initialize_centroids(
-        z_norm,
-        phi,
-        pr_b,
-        n_clusters=n_clusters,
-        sigma=sigma,
-        theta=theta_arr,
-        random_state=random_state,
-    )
+        # Ensure input is C-contiguous float array (infer dtype from x)
+        x = np.ascontiguousarray(x)
+        n_cells = x.shape[0]
 
-    # Main Harmony loop
-    converged = False
-    z_hat = x.copy()
+        # Normalize input for clustering
+        z_norm = _normalize_rows_l2(x)
 
-    for i in tqdm(range(max_iter_harmony), disable=settings.verbosity < Verbosity.info):
-        # Clustering step
-        _clustering(
+        # Build phi matrix (one-hot encoding of batches)
+        if self.sparse:
+            phi = _one_hot_encode_sparse(self.batch_codes, self.n_batches, x.dtype)
+            n_b = np.asarray(phi.sum(axis=0)).ravel()
+        else:
+            phi = _one_hot_encode(self.batch_codes, self.n_batches, x.dtype)
+            n_b = phi.sum(axis=0)
+        pr_b = (n_b / n_cells).reshape(-1, 1)
+
+        # Set default theta
+        if self.theta is None:
+            theta_arr = np.ones(self.n_batches, dtype=x.dtype) * 2.0
+        elif isinstance(self.theta, (int, float)):
+            theta_arr = np.ones(self.n_batches, dtype=x.dtype) * float(self.theta)
+        else:
+            theta_arr = np.array(self.theta, dtype=x.dtype)
+        theta_arr = theta_arr.reshape(1, -1)
+
+        # Set default n_clusters
+        if self.n_clusters is None:
+            n_clusters = int(min(100, n_cells / 30))
+            n_clusters = max(n_clusters, 2)
+        else:
+            n_clusters = self.n_clusters
+
+        # Initialize centroids and state arrays
+        r, e, o, obj_init = _initialize_centroids(
             z_norm,
-            batch_codes,
-            n_batches,
+            phi,
+            pr_b,
+            n_clusters=n_clusters,
+            sigma=self.sigma,
+            theta=theta_arr,
+            random_state=self.random_state,
+        )
+
+        # Main Harmony loop
+        objectives_harmony = [obj_init]
+        with tqdm(
+            range(self.max_iter_harmony), disable=settings.verbosity < Verbosity.info
+        ) as bar:
+            for i in bar:
+                r, e, o, obj = self._cluster(
+                    z_norm, pr_b, r=r, e=e, o=o, theta=theta_arr
+                )
+                if obj is not None:
+                    objectives_harmony.append(obj)
+                z_hat = self._correct(x, r, o)
+                z_norm = _normalize_rows_l2(z_hat)
+                if self._is_convergent(objectives_harmony, self.tol_harmony):
+                    log.info(f"Harmony converged in {i + 1} iterations")
+                    break
+            else:
+                log.info(
+                    f"Harmony did not converge after {self.max_iter_harmony} iterations."
+                )
+
+        return z_hat
+
+    @staticmethod
+    def _is_convergent(objectives: list[float], tol: float) -> bool:
+        """Check Harmony convergence."""
+        if len(objectives) < 2:
+            return False
+        obj_old = objectives[-2]
+        obj_new = objectives[-1]
+        return (obj_old - obj_new) < tol * abs(obj_old)
+
+    def _cluster(
+        self,
+        z_norm: np.ndarray,
+        pr_b: np.ndarray,
+        *,
+        r: np.ndarray,
+        e: np.ndarray,
+        o: np.ndarray,
+        theta: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
+        """Perform clustering step."""
+        return _clustering(
+            z_norm,
+            self.batch_codes,
+            self.n_batches,
             pr_b,
             r=r,
             e=e,
             o=o,
-            theta=theta_arr,
-            sigma=sigma,
-            max_iter=max_iter_clustering,
-            tol=tol_clustering,
-            block_proportion=block_proportion,
-            objectives_harmony=objectives_harmony,
+            theta=theta,
+            sigma=self.sigma,
+            max_iter=self.max_iter_clustering,
+            tol=self.tol_clustering,
+            block_proportion=self.block_proportion,
         )
 
-        # Correction step
-        if correction_method == "fast":
-            z_hat = _correction_fast(
-                x, batch_codes, n_batches, r, o, ridge_lambda=ridge_lambda
+    def _correct(self, x: np.ndarray, r: np.ndarray, o: np.ndarray) -> np.ndarray:
+        """Perform correction step."""
+        if self.correction_method == "fast":
+            return _correction_fast(
+                x,
+                self.batch_codes,
+                self.n_batches,
+                r,
+                o,
+                ridge_lambda=self.ridge_lambda,
             )
         else:
-            z_hat = _correction_original(
-                x, batch_codes, n_batches, r, ridge_lambda=ridge_lambda
+            return _correction_original(
+                x,
+                self.batch_codes,
+                self.n_batches,
+                r,
+                ridge_lambda=self.ridge_lambda,
             )
-
-        # Normalize corrected data for next iteration
-        z_norm = _normalize_rows_l2(z_hat)
-
-        # Check convergence
-        if _is_convergent_harmony(objectives_harmony, tol_harmony):
-            converged = True
-            log.info(f"Harmony converged in {i + 1} iterations")
-            break
-
-    if not converged:
-        log.info(f"Harmony did not converge after {max_iter_harmony} iterations.")
-
-    return z_hat
 
 
 def _get_batch_codes(
     batch_df: pd.DataFrame,
-    batch_key: str | list[str],
+    batch_key: str | Sequence[str],
 ) -> tuple[np.ndarray, int]:
     """Get batch codes from DataFrame."""
     if isinstance(batch_key, str):
@@ -157,11 +207,11 @@ def _get_batch_codes(
     elif len(batch_key) == 1:
         batch_vec = batch_df[batch_key[0]]
     else:
-        df = batch_df[batch_key].astype("str")
+        df = batch_df[list(batch_key)].astype("str")
         batch_vec = df.apply(",".join, axis=1)
 
     batch_cat = batch_vec.astype("category")
-    codes = batch_cat.cat.codes.values.copy()
+    codes = batch_cat.cat.codes.to_numpy(copy=True)
     n_batches = len(batch_cat.cat.categories)
 
     return codes.astype(np.int32), n_batches
@@ -208,14 +258,14 @@ def _normalize_rows_l1(r: np.ndarray) -> None:
 
 def _initialize_centroids(
     z_norm: np.ndarray,
-    phi: np.ndarray,
+    phi: np.ndarray | CSBase,
     pr_b: np.ndarray,
     *,
     n_clusters: int,
     sigma: float,
     theta: np.ndarray,
     random_state: int | None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Initialize cluster centroids using K-means."""
     kmeans = KMeans(
         n_clusters=n_clusters, random_state=random_state, n_init=10, max_iter=25
@@ -237,11 +287,9 @@ def _initialize_centroids(
     o = phi.T @ r
 
     # Compute initial objective
-    objectives_harmony: list = []
     obj = _compute_objective(y_norm, z_norm, r, theta=theta, sigma=sigma, o=o, e=e)
-    objectives_harmony.append(obj)
 
-    return r, e, o, objectives_harmony
+    return r, e, o, obj
 
 
 def _compute_r(
@@ -268,8 +316,7 @@ def _clustering(  # noqa: PLR0913
     max_iter: int,
     tol: float,
     block_proportion: float,
-    objectives_harmony: list,
-) -> None:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
     """Run clustering iterations (modifies r, e, o in-place)."""
     n_cells = z_norm.shape[0]
     k = r.shape[1]
@@ -340,8 +387,12 @@ def _clustering(  # noqa: PLR0913
 
         # Check convergence
         if _is_convergent_clustering(objectives_clustering, tol):
-            objectives_harmony.append(objectives_clustering[-1])
+            obj = objectives_clustering[-1]
             break
+    else:
+        obj = None
+
+    return r, e, o, obj
 
 
 def _correction_original(
@@ -467,20 +518,6 @@ def _compute_objective(
     diversity_penalty = sigma * np.sum(theta @ (o * log_ratio))
 
     return kmeans_error + entropy + diversity_penalty
-
-
-def _is_convergent_harmony(
-    objectives: list,
-    tol: float,
-) -> bool:
-    """Check Harmony convergence."""
-    if len(objectives) < 2:
-        return False
-
-    obj_old = objectives[-2]
-    obj_new = objectives[-1]
-
-    return (obj_old - obj_new) < tol * abs(obj_old)
 
 
 def _is_convergent_clustering(

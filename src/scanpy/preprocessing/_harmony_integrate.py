@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Literal
 
     from anndata import AnnData
@@ -13,12 +14,12 @@ if TYPE_CHECKING:
 
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
-    key: str | list[str],
+    key: str | Sequence[str],
     *,
     basis: str = "X_pca",
     adjusted_basis: str = "X_pca_harmony",
     dtype: DTypeLike = np.float64,
-    theta: float | list[float] | None = None,
+    theta: float | Sequence[float] | None = None,
     sigma: float = 0.1,
     n_clusters: int | None = None,
     max_iter_harmony: int = 10,
@@ -83,7 +84,7 @@ def harmony_integrate(  # noqa: PLR0913
     Updates adata with the field ``adata.obsm[adjusted_basis]``,
     containing principal components adjusted by Harmony.
     """
-    from ._harmony import harmonize
+    from ._harmony import Harmony
 
     # Ensure the basis exists in adata.obsm
     if basis not in adata.obsm:
@@ -115,8 +116,7 @@ def harmony_integrate(  # noqa: PLR0913
         raise ValueError(msg)
 
     # Run Harmony
-    harmony_out = harmonize(
-        x,
+    harmony = Harmony(
         adata.obs,
         key,
         theta=theta,
@@ -132,6 +132,7 @@ def harmony_integrate(  # noqa: PLR0913
         random_state=random_state,
         sparse=sparse,
     )
+    harmony_out = harmony.fit(x)
 
     # Store result
     adata.obsm[adjusted_basis] = harmony_out
