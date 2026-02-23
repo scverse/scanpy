@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Literal, overload
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
-from sklearn.utils import check_random_state
 
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
+from ..._utils.random import legacy_random_state
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from ..._utils import Empty
-    from ..._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
 
 
 type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -64,7 +64,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
     chunk_size: int | None = None,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     return_info: bool = False,
     mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
@@ -157,7 +157,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
-    random_state
+    rng
         Change to use different initial states for the optimization.
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
@@ -241,18 +241,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
-    # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state
     if not isinstance(x, DaskArray):
-        random_state = check_random_state(random_state)
-    elif not isinstance(random_state, int):
-        msg = f"random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array"
+        rng = np.random.default_rng(rng)
+    elif not isinstance(rng, int):
+        msg = f"rng needs to be an int, not a {type(rng).__name__} when passing a dask array"
         raise TypeError(msg)
 
     if chunked:
         if (
             not zero_center
-            or random_state
+            or rng is not None
             or (svd_solver is not None and svd_solver != "arpack")
         ):
             logg.debug("Ignoring zero_center, random_state, svd_solver")
@@ -287,9 +286,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
             )
             warn(msg, FutureWarning)
-            x_pca, pca_ = _pca_compat_sparse(
-                x, n_comps, solver=svd_solver, random_state=random_state
-            )
+            x_pca, pca_ = _pca_compat_sparse(x, n_comps, solver=svd_solver, rng=rng)
         else:
             if not isinstance(x, DaskArray):
                 from sklearn.decomposition import PCA
@@ -300,13 +297,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
-                    random_state=random_state,
+                    random_state=legacy_random_state(rng),
                 )
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
-                if random_state != 0:
-                    msg = f"Ignoring {random_state=} when using a sparse dask array"
+                if rng is not None:
+                    msg = f"Ignoring {rng=} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
@@ -319,7 +316,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
-                    random_state=random_state,
+                    random_state=legacy_random_state(rng),
                 )
             x_pca = pca_.fit_transform(x)
     else:
@@ -345,7 +342,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "    the following components often resemble the exact PCA very closely"
         )
         pca_ = TruncatedSVD(
-            n_components=n_comps, random_state=random_state, algorithm=svd_solver
+            n_components=n_comps,
+            random_state=legacy_random_state(rng),
+            algorithm=svd_solver,
         )
         x_pca = pca_.fit_transform(x)
 

@@ -16,7 +16,7 @@ from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
-    from ..._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
     from ...neighbors import _Metric, _MetricFn
 
 
@@ -59,7 +59,7 @@ def scrublet(  # noqa: PLR0913
     threshold: float | None = None,
     verbose: bool = True,
     copy: bool = False,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> AnnData | None:
     """Predict doublets using Scrublet :cite:p:`Wolock2019`.
 
@@ -147,7 +147,7 @@ def scrublet(  # noqa: PLR0913
     copy
         If :data:`True`, return a copy of the input ``adata`` with Scrublet results
         added. Otherwise, Scrublet results are added in place.
-    random_state
+    rng
         Initial state for doublet simulation and nearest neighbors.
 
     Returns
@@ -178,6 +178,7 @@ def scrublet(  # noqa: PLR0913
         scores for observed transcriptomes and simulated doublets.
 
     """
+    rng = np.random.default_rng(rng)
     if threshold is None and not find_spec("skimage"):  # pragma: no cover
         # Scrublet.call_doublets requires `skimage` with `threshold=None` but PCA
         # is called early, which is wasteful if there is not `skimage`
@@ -224,7 +225,7 @@ def scrublet(  # noqa: PLR0913
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                random_seed=random_state,
+                rng=rng,
             )
             del ad_obs.layers["raw"]
             if log_transform:
@@ -249,7 +250,7 @@ def scrublet(  # noqa: PLR0913
             knn_dist_metric=knn_dist_metric,
             get_doublet_neighbor_parents=get_doublet_neighbor_parents,
             threshold=threshold,
-            random_state=random_state,
+            rng=rng,
             verbose=verbose,
         )
 
@@ -307,18 +308,18 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,
     *,
-    n_neighbors: int | None = None,
-    expected_doublet_rate: float = 0.05,
-    stdev_doublet_rate: float = 0.02,
-    mean_center: bool = True,
-    normalize_variance: bool = True,
-    n_prin_comps: int = 30,
-    use_approx_neighbors: bool | None = None,
-    knn_dist_metric: _Metric | _MetricFn = "euclidean",
-    get_doublet_neighbor_parents: bool = False,
-    threshold: float | None = None,
-    random_state: _LegacyRandom = 0,
-    verbose: bool = True,
+    n_neighbors: int | None,
+    expected_doublet_rate: float,
+    stdev_doublet_rate: float,
+    mean_center: bool,
+    normalize_variance: bool,
+    n_prin_comps: int,
+    use_approx_neighbors: bool | None,
+    knn_dist_metric: _Metric | _MetricFn,
+    get_doublet_neighbor_parents: bool,
+    threshold: float | None,
+    rng: np.random.Generator,
+    verbose: bool,
 ) -> AnnData:
     """Core function for predicting doublets using Scrublet :cite:p:`Wolock2019`.
 
@@ -376,8 +377,8 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         practice to check the threshold visually using the
         `doublet_scores_sim_` histogram and/or based on co-localization of
         predicted doublets in a 2-D embedding.
-    random_state
-        Initial state for doublet simulation and nearest neighbors.
+    rng
+        Random number generator for doublet simulation and nearest neighbors.
     verbose
         If :data:`True`, log progress updates.
 
@@ -414,7 +415,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
         stdev_doublet_rate=stdev_doublet_rate,
-        random_state=random_state,
+        rng=rng,
     )
 
     # Ensure normalised matrix sparseness as Scrublet does
@@ -440,12 +441,10 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
-        pipeline.pca(scrub, n_prin_comps=n_prin_comps, random_state=scrub._random_state)
+        pipeline.pca(scrub, n_prin_comps=n_prin_comps, rng=scrub._rng)
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
-        pipeline.truncated_svd(
-            scrub, n_prin_comps=n_prin_comps, random_state=scrub._random_state
-        )
+        pipeline.truncated_svd(scrub, n_prin_comps=n_prin_comps, rng=scrub._rng)
 
     # Score the doublets
 
@@ -477,7 +476,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
                 .get("sim_doublet_ratio", None)
             ),
             "n_neighbors": n_neighbors,
-            "random_state": random_state,
+            "rng": rng,
         },
     }
 
@@ -511,7 +510,7 @@ def scrublet_simulate_doublets(
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
-    random_seed: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> AnnData:
     """Simulate doublets by adding the counts of random observed transcriptome pairs.
 
@@ -556,7 +555,7 @@ def scrublet_simulate_doublets(
 
     """
     x = _get_obs_rep(adata, layer=layer)
-    scrub = Scrublet(x, random_state=random_seed)
+    scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(
         sim_doublet_ratio=sim_doublet_ratio,

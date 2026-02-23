@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from ..._utils import Empty
+    from ..._utils.random import RNGLike, SeedLike
 
 
 def _pearson_residuals(
@@ -166,7 +167,7 @@ def normalize_pearson_residuals_pca(
     theta: float = 100,
     clip: float | None = None,
     n_comps: int | None = 50,
-    random_state: float = 0,
+    rng: SeedLike | RNGLike | None = None,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
     mask_var: np.ndarray | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
@@ -233,7 +234,7 @@ def normalize_pearson_residuals_pca(
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
     n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
 
     if inplace:

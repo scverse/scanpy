@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
 @old_positionals(
@@ -853,7 +853,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
@@ -996,7 +996,7 @@ def downsample_counts(
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1020,7 +1020,7 @@ def downsample_counts(
     total_counts
         Target total counts. If the count matrix has more than `total_counts`
         it will be downsampled to have this number.
-    random_state
+    rng
         Random seed for subsampling.
     replace
         Whether to sample the counts with replacement.
@@ -1037,6 +1037,7 @@ def downsample_counts(
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
+    rng = np.random.default_rng(rng)
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
@@ -1046,11 +1047,11 @@ def downsample_counts(
         adata = adata.copy()
     if total_counts_call:
         adata.X = _downsample_total_counts(
-            adata.X, total_counts, random_state=random_state, replace=replace
+            adata.X, total_counts, rng=rng, replace=replace
         )
     elif counts_per_cell_call:
         adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, random_state=random_state, replace=replace
+            adata.X, counts_per_cell, rng=rng, replace=replace
         )
     if copy:
         return adata
@@ -1061,7 +1062,7 @@ def _downsample_per_cell(
     /,
     counts_per_cell: int,
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
 ) -> CSBase:
     n_obs = x.shape[0]
@@ -1088,11 +1089,7 @@ def _downsample_per_cell(
         for rowidx in under_target:
             row = rows[rowidx]
             _downsample_array(
-                row,
-                counts_per_cell[rowidx],
-                random_state=random_state,
-                replace=replace,
-                inplace=True,
+                row, counts_per_cell[rowidx], rng=rng, replace=replace, inplace=True
             )
         x.eliminate_zeros()
         if not issubclass(original_type, CSRBase):  # Put it back
@@ -1103,11 +1100,7 @@ def _downsample_per_cell(
         for rowidx in under_target:
             row = x[rowidx, :]
             _downsample_array(
-                row,
-                counts_per_cell[rowidx],
-                random_state=random_state,
-                replace=replace,
-                inplace=True,
+                row, counts_per_cell[rowidx], rng=rng, replace=replace, inplace=True
             )
     return x
 
@@ -1117,7 +1110,7 @@ def _downsample_total_counts(
     /,
     total_counts: int,
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
 ) -> CSBase:
     total_counts = int(total_counts)
@@ -1128,21 +1121,13 @@ def _downsample_total_counts(
         original_type = type(x)
         if not isinstance(x, CSRBase):
             x = x.tocsr()
-        _downsample_array(
-            x.data,
-            total_counts,
-            random_state=random_state,
-            replace=replace,
-            inplace=True,
-        )
+        _downsample_array(x.data, total_counts, rng=rng, replace=replace, inplace=True)
         x.eliminate_zeros()
         if not issubclass(original_type, CSRBase):
             x = original_type(x)
     else:
         v = x.reshape(np.multiply(*x.shape))
-        _downsample_array(
-            v, total_counts, random_state=random_state, replace=replace, inplace=True
-        )
+        _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
     return x
 
 
@@ -1152,7 +1137,7 @@ def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: np.random.Generator,
     replace: bool = True,
     inplace: bool = False,
 ):
@@ -1162,14 +1147,13 @@ def _downsample_array(
 
     * total counts in cell must be less than target
     """
-    np.random.seed(random_state)
     cumcounts = col.cumsum()
     if inplace:
         col[:] = 0
     else:
         col = np.zeros_like(col)
     total = np.int_(cumcounts[-1])
-    sample = np.random.choice(total, target, replace=replace)
+    sample = rng.choice(total, target, replace=replace)
     sample.sort()
     geneptr = 0
     for count in sample:

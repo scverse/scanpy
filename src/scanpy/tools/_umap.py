@@ -4,12 +4,13 @@ import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
-from sklearn.utils import check_array, check_random_state
+from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView
+from .._utils.random import legacy_random_state
 from ._utils import _choose_representation, get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -17,7 +18,8 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
+
 
 type _InitPos = Literal["paga", "spectral", "random"]
 
@@ -49,7 +51,7 @@ def umap(  # noqa: PLR0913, PLR0915
     gamma: float = 1.0,
     negative_sample_rate: int = 5,
     init_pos: _InitPos | np.ndarray | None = "spectral",
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap", "rapids"] = "umap",
@@ -111,11 +113,10 @@ def umap(  # noqa: PLR0913, PLR0915
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
         * A numpy array of initial embedding positions.
-    random_state
-        If `int`, `random_state` is the seed used by the random number generator;
-        If `RandomState` or `Generator`, `random_state` is the random number generator;
-        If `None`, the random number generator is the `RandomState` instance used
-        by `np.random`.
+    rng
+        If `int`, `rng` is the seed used by the random number generator;
+        If `Generator`, `random_state` is the random number generator;
+        If `None`, the random number generator is not reproducible.
     a
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
@@ -158,6 +159,7 @@ def umap(  # noqa: PLR0913, PLR0915
         UMAP parameters.
 
     """
+    rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
     key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
@@ -191,16 +193,15 @@ def umap(  # noqa: PLR0913, PLR0915
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(
-            adata, random_state=random_state, neighbors_key=neighbors_key
+            adata, rng=rng, neighbors_key=neighbors_key
         )
     else:
         init_coords = init_pos  # Let umap handle it
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
-    if random_state != 0:
-        adata.uns[key_uns]["params"]["random_state"] = random_state
-    random_state = check_random_state(random_state)
+    if rng is not None:
+        adata.uns[key_uns]["params"]["random_state"] = rng
 
     neigh_params = neighbors["params"]
     x = _choose_representation(
@@ -225,7 +226,7 @@ def umap(  # noqa: PLR0913, PLR0915
             negative_sample_rate=negative_sample_rate,
             n_epochs=n_epochs,
             init=init_coords,
-            random_state=random_state,
+            random_state=legacy_random_state(rng),
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
             densmap=False,
@@ -265,7 +266,7 @@ def umap(  # noqa: PLR0913, PLR0915
             a=a,
             b=b,
             verbose=settings.verbosity > 3,
-            random_state=random_state,
+            random_state=legacy_random_state(rng),
         )
         x_umap = umap.fit_transform(x_contiguous)
     adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates

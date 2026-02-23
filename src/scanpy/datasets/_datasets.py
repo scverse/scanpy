@@ -12,13 +12,14 @@ from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
+from .._utils.random import legacy_random_state
 from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
     type VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
@@ -63,7 +64,7 @@ def blobs(
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> AnnData:
     """Gaussian Blobs.
 
@@ -78,7 +79,7 @@ def blobs(
     n_observations
         Number of observations. By default, this is the same observation number
         as in :func:`scanpy.datasets.krumsiek11`.
-    random_state
+    rng
         Determines random number generation for dataset creation.
 
     Returns
@@ -101,7 +102,7 @@ def blobs(
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
-        random_state=random_state,
+        random_state=legacy_random_state(rng),
     )
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 

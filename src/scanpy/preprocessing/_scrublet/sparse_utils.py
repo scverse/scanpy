@@ -5,13 +5,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 from fast_array_utils.stats import mean_var
 from scipy import sparse
-from sklearn.utils import check_random_state
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from ..._compat import CSBase
-    from ..._utils.random import _LegacyRandom
 
 
 def sparse_multiply(
@@ -48,11 +46,10 @@ def subsample_counts(
     *,
     rate: float,
     original_totals,
-    random_seed: _LegacyRandom = 0,
+    rng: np.random.Generator,
 ) -> tuple[CSBase, NDArray[np.int64]]:
     if rate < 1:
-        random_seed = check_random_state(random_seed)
-        e.data = random_seed.binomial(np.round(e.data).astype(int), rate)
+        e.data = rng.binomial(np.round(e.data).astype(int), rate)
         current_totals = np.asarray(e.sum(1)).squeeze()
         unsampled_orig_totals = original_totals - current_totals
         unsampled_downsamp_totals = np.random.binomial(

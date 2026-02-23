@@ -16,7 +16,7 @@ from ._normalization import normalize_total
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
 @old_positionals(
@@ -36,7 +36,7 @@ def recipe_weinreb17(
     cv_threshold: int = 2,
     n_pcs: int = 50,
     svd_solver="randomized",
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """Normalize and filter as of :cite:p:`Weinreb2017`.
@@ -72,7 +72,7 @@ def recipe_weinreb17(
         zscore_deprecated(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
-        random_state=random_state,
+        rng=rng,
     )
     # update adata
     adata.obsm["X_pca"] = x_pca

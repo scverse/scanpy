@@ -7,7 +7,6 @@ from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
-from sklearn.utils import check_random_state
 
 from . import ensure_igraph
 
@@ -23,6 +22,7 @@ __all__ = [
     "_LegacyRandom",
     "ith_k_tuple",
     "legacy_numpy_gen",
+    "legacy_random_state",
     "random_k_tuples",
     "random_str",
 ]
@@ -43,29 +43,29 @@ class _RNGIgraph:
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
 
-    def __init__(self, random_state: int | np.random.RandomState = 0) -> None:
-        self._rng = check_random_state(random_state)
+    def __init__(self, rng: SeedLike | RNGLike | None) -> None:
+        self._rng = np.random.default_rng(rng)
 
     def getrandbits(self, k: int) -> int:
-        return self._rng.tomaxint() & ((1 << k) - 1)
+        lims = np.iinfo(np.uint64)
+        i = int(self._rng.integers(0, lims.max, dtype=np.uint64))
+        return i & ((1 << k) - 1)
 
-    def randint(self, a: int, b: int) -> int:
-        return self._rng.randint(a, b + 1)
+    def randint(self, a: int, b: int) -> np.int64:
+        return self._rng.integers(a, b + 1)
 
     def __getattr__(self, attr: str):
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
 @contextmanager
-def set_igraph_random_state(
-    random_state: int | np.random.RandomState,
-) -> Generator[None, None, None]:
+def set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
     ensure_igraph()
     import igraph
 
-    rng = _RNGIgraph(random_state)
+    ig_rng = _RNGIgraph(rng)
     try:
-        igraph.set_random_number_generator(rng)
+        igraph.set_random_number_generator(ig_rng)
         yield None
     finally:
         igraph.set_random_number_generator(random)
@@ -112,6 +112,13 @@ class _FakeRandomGen(np.random.Generator):
 
 
 _FakeRandomGen._delegate()
+
+
+def legacy_random_state(rng: SeedLike | RNGLike | None) -> np.random.RandomState:
+    rng = np.random.default_rng(rng)
+    if isinstance(rng, _FakeRandomGen):
+        return rng._state
+    return np.random.RandomState(rng.bit_generator.spawn(1)[0])
 
 
 ###################

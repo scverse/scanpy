@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict
 import numpy as np
 import scipy
 from scipy import sparse
-from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
+from .._utils.random import legacy_random_state
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from igraph import Graph
     from numpy.typing import NDArray
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
     # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
@@ -90,7 +90,7 @@ def neighbors(  # noqa: PLR0913
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -158,8 +158,8 @@ def neighbors(  # noqa: PLR0913
         Options for the metric.
 
         *ignored if ``transformer`` is an instance.*
-    random_state
-        A numpy random seed.
+    rng
+        A numpy random number generator.
 
         *ignored if ``transformer`` is an instance.*
     key_added
@@ -220,14 +220,14 @@ def neighbors(  # noqa: PLR0913
             transformer=transformer,
             metric=metric,
             metric_kwds=metric_kwds,
-            random_state=random_state,
+            rng=rng,
         )
     else:
         params = locals()
         if ignored := {
             p.name
             for p in signature(neighbors).parameters.values()
-            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "random_state"}
+            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "rng"}
             if params[p.name] != p.default
         }:
             warn(
@@ -262,7 +262,7 @@ def neighbors(  # noqa: PLR0913
         key_added,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
-        random_state=random_state,
+        random_state=rng,
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
@@ -583,7 +583,7 @@ class Neighbors:
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-        random_state: _LegacyRandom = 0,
+        rng: SeedLike | RNGLike | None = None,
     ) -> None:
         """Compute distances and connectivities of neighbors.
 
@@ -619,7 +619,7 @@ class Neighbors:
             n_neighbors=n_neighbors,
             metric=metric,
             metric_params=metric_kwds,  # most use _params, not _kwds
-            random_state=random_state,
+            random_state=legacy_random_state(rng),
         )
         method, transformer, shortcut = self._handle_transformer(
             method, transformer, knn=knn, kwds=transformer_kwds_default
@@ -848,7 +848,7 @@ class Neighbors:
         n_comps: int = 15,
         sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
-        random_state: _LegacyRandom = 0,
+        rng: np.random.Generator,
     ):
         """Compute eigen decomposition of transition matrix.
 
@@ -861,8 +861,8 @@ class Neighbors:
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
-        random_state
-            A numpy random seed
+        rng
+            A numpy random number generator
 
         Returns
         -------
@@ -895,8 +895,7 @@ class Neighbors:
             matrix = matrix.astype(np.float64)
 
             # Setting the random initial vector
-            random_state = check_random_state(random_state)
-            v0 = random_state.standard_normal(matrix.shape[0])
+            v0 = rng.standard_normal(matrix.shape[0])
             evals, evecs = sparse.linalg.eigsh(
                 matrix, k=n_comps, which=which, ncv=ncv, v0=v0
             )

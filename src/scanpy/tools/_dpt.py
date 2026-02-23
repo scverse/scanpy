@@ -9,6 +9,7 @@ from natsort import natsorted
 
 from .. import logging as logg
 from .._compat import old_positionals
+from .._utils.random import legacy_numpy_gen
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -17,11 +18,17 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-def _diffmap(adata, n_comps=15, neighbors_key=None, random_state=0):
+def _diffmap(
+    adata: AnnData,
+    n_comps: int = 15,
+    *,
+    neighbors_key: str | None,
+    rng: np.random.Generator,
+) -> None:
     start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
-    dpt.compute_eigen(n_comps=n_comps, random_state=random_state)
+    dpt.compute_eigen(n_comps=n_comps, rng=rng)
     adata.obsm["X_diffmap"] = dpt.eigen_basis
     adata.uns["diffmap_evals"] = dpt.eigen_values
     logg.info(
@@ -144,7 +151,7 @@ def dpt(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
-        _diffmap(adata, neighbors_key=neighbors_key)
+        _diffmap(adata, neighbors_key=neighbors_key, rng=legacy_numpy_gen(0))
     # start with the actual computation
     dpt = DPT(
         adata,

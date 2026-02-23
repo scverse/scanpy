@@ -6,12 +6,12 @@ import numpy as np
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
+from ..._utils.random import legacy_random_state
 from .sparse_utils import sparse_multiply, sparse_zscore
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from ..._utils.random import _LegacyRandom
     from .core import Scrublet
 
 
@@ -46,10 +46,10 @@ def zscore(self: Scrublet) -> None:
 
 def truncated_svd(
     self: Scrublet,
-    n_prin_comps: int = 30,
+    n_prin_comps: int,
     *,
-    random_state: _LegacyRandom = 0,
-    algorithm: Literal["arpack", "randomized"] = "arpack",
+    rng: np.random.Generator,
+    algorithm: Literal["arpack", "randomized"],
 ) -> None:
     if self._counts_sim_norm is None:
         msg = "_counts_sim_norm is not set"
@@ -57,7 +57,9 @@ def truncated_svd(
     from sklearn.decomposition import TruncatedSVD
 
     svd = TruncatedSVD(
-        n_components=n_prin_comps, random_state=random_state, algorithm=algorithm
+        n_components=n_prin_comps,
+        random_state=legacy_random_state(rng),
+        algorithm=algorithm,
     ).fit(self._counts_obs_norm)
     self.set_manifold(
         svd.transform(self._counts_obs_norm), svd.transform(self._counts_sim_norm)
@@ -66,10 +68,10 @@ def truncated_svd(
 
 def pca(
     self: Scrublet,
-    n_prin_comps: int = 50,
+    n_prin_comps: int,
     *,
-    random_state: _LegacyRandom = 0,
-    svd_solver: Literal["auto", "full", "arpack", "randomized"] = "arpack",
+    rng: np.random.Generator,
+    svd_solver: Literal["auto", "full", "arpack", "randomized"],
 ) -> None:
     if self._counts_sim_norm is None:
         msg = "_counts_sim_norm is not set"
@@ -80,6 +82,8 @@ def pca(
     x_sim = self._counts_sim_norm.toarray()
 
     pca = PCA(
-        n_components=n_prin_comps, random_state=random_state, svd_solver=svd_solver
+        n_components=n_prin_comps,
+        random_state=legacy_random_state(rng),
+        svd_solver=svd_solver,
     ).fit(x_obs)
     self.set_manifold(pca.transform(x_obs), pca.transform(x_sim))

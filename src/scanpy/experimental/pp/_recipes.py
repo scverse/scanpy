@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
 
+    from ..._utils.random import RNGLike, SeedLike
+
 
 @_doc_params(
     adata=doc_adata,
@@ -42,7 +44,7 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     batch_key: str | None = None,
     chunksize: int = 1000,
     n_comps: int | None = 50,
-    random_state: float | None = 0,
+    rng: SeedLike | RNGLike | None = None,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
     check_values: bool = True,
     inplace: bool = True,
@@ -133,7 +135,7 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     experimental.pp.normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
 
     if inplace:
         normalization_param = adata_pca.uns["pearson_residuals_normalization"]

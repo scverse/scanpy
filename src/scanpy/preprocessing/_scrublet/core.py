@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, concat
 from scipy import sparse
-from sklearn.utils import check_random_state
 
 from ... import logging as logg
 from ...neighbors import (
@@ -18,11 +17,10 @@ from .._utils import sample_comb
 from .sparse_utils import subsample_counts
 
 if TYPE_CHECKING:
-    from numpy.random import RandomState
     from numpy.typing import NDArray
 
     from ..._compat import CSBase, CSCBase
-    from ..._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
     from ...neighbors import _Metric, _MetricFn
 
 __all__ = ["Scrublet"]
@@ -58,8 +56,8 @@ class Scrublet:
     stdev_doublet_rate
         Uncertainty in the expected doublet rate.
 
-    random_state
-        Random state for doublet simulation, approximate
+    rng
+        Random number generator for doublet simulation, approximate
         nearest neighbor search, and PCA/TruncatedSVD.
 
     """
@@ -72,12 +70,12 @@ class Scrublet:
     n_neighbors: InitVar[int | None] = None
     expected_doublet_rate: float = 0.1
     stdev_doublet_rate: float = 0.02
-    random_state: InitVar[_LegacyRandom] = 0
+    rng: InitVar[SeedLike | RNGLike | None] = None
 
     # private fields
 
     _n_neighbors: int = field(init=False, repr=False)
-    _random_state: RandomState = field(init=False, repr=False)
+    _rng: np.random.Generator = field(init=False, repr=False)
 
     _counts_obs: CSCBase = field(init=False, repr=False)
     _total_counts_obs: NDArray[np.integer] = field(init=False, repr=False)
@@ -169,7 +167,7 @@ class Scrublet:
         counts_obs: CSBase | NDArray[np.integer],
         total_counts_obs: NDArray[np.integer] | None,
         n_neighbors: int | None,
-        random_state: _LegacyRandom,
+        rng: SeedLike | RNGLike | None,
     ) -> None:
         self._counts_obs = sparse.csc_matrix(counts_obs)  # noqa: TID251
         self._total_counts_obs = (
@@ -182,7 +180,7 @@ class Scrublet:
             if n_neighbors is None
             else n_neighbors
         )
-        self._random_state = check_random_state(random_state)
+        self._rng = np.random.default_rng(rng)
 
     def simulate_doublets(
         self,
@@ -218,7 +216,7 @@ class Scrublet:
         n_obs = self._counts_obs.shape[0]
         n_sim = int(n_obs * sim_doublet_ratio)
 
-        pair_ix = sample_comb((n_obs, n_obs), n_sim, random_state=self._random_state)
+        pair_ix = sample_comb((n_obs, n_obs), n_sim, rng=self._rng)
 
         e1 = cast("CSCBase", self._counts_obs[pair_ix[:, 0], :])
         e2 = cast("CSCBase", self._counts_obs[pair_ix[:, 1], :])
@@ -229,7 +227,7 @@ class Scrublet:
                 e1 + e2,
                 rate=synthetic_doublet_umi_subsampling,
                 original_totals=tots1 + tots2,
-                random_seed=self._random_state,
+                rng=self._rng,
             )
         else:
             self._counts_sim = e1 + e2
@@ -348,7 +346,7 @@ class Scrublet:
             knn=True,
             transformer=transformer,
             method=None,
-            random_state=self._random_state,
+            rng=self._rng,
         )
         neighbors, _ = _get_indices_distances_from_sparse_matrix(knn.distances, k_adj)
         if use_approx_neighbors:
