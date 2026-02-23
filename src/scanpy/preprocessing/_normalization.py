@@ -8,7 +8,7 @@ import numpy as np
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
@@ -123,15 +123,6 @@ def _normalize_total_helper(
     return x, counts_per_cell, gene_subset
 
 
-@old_positionals(
-    "target_sum",
-    "exclude_highly_expressed",
-    "max_fraction",
-    "key_added",
-    "layer",
-    "inplace",
-    "copy",
-)
 def normalize_total(  # noqa: PLR0912
     adata: AnnData,
     *,

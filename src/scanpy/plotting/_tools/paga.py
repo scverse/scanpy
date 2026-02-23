@@ -19,7 +19,7 @@ from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
-from ..._compat import CSBase, old_positionals
+from ..._compat import CSBase
 from ..._settings import settings
 from .. import _utils
 from .._utils import matrix
@@ -39,29 +39,6 @@ if TYPE_CHECKING:
 type _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
-@old_positionals(
-    "edges",
-    "color",
-    "alpha",
-    "groups",
-    "components",
-    "projection",
-    "legend_loc",
-    "legend_fontsize",
-    "legend_fontweight",
-    "legend_fontoutline",
-    "color_map",
-    "palette",
-    "frameon",
-    "size",
-    "title",
-    "right_margin",
-    "left_margin",
-    "show",
-    "save",
-    "title_graph",
-    "groups_graph",
-)
 def paga_compare(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     basis=None,
@@ -354,25 +331,6 @@ def hierarchy_pos(
     return make_pos({})
 
 
-@old_positionals(
-    "threshold",
-    "color",
-    "layout",
-    "layout_kwds",
-    "init_pos",
-    "root",
-    "labels",
-    "single_component",
-    "solid_edges",
-    "dashed_edges",
-    "transitions",
-    "fontsize",
-    "fontweight",
-    "fontoutline",
-    "text_kwds",
-    "node_size_scale",
-    # 17 positionals are enough for backwards compat
-)
 def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
@@ -1089,31 +1047,6 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     return sct
 
 
-@old_positionals(
-    "use_raw",
-    "annotations",
-    "color_map",
-    "color_maps_annotations",
-    "palette_groups",
-    "n_avg",
-    "groups_key",
-    "xlim",
-    "title",
-    "left_margin",
-    "ytick_fontsize",
-    "title_fontsize",
-    "show_node_names",
-    "show_yticks",
-    "show_colorbar",
-    "legend_fontsize",
-    "legend_fontweight",
-    "normalize_to_zero_one",
-    "as_heatmap",
-    "return_data",
-    "show",
-    "save",
-    "ax",
-)
 def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     nodes: Sequence[str | int],

@@ -8,14 +8,12 @@ import numpy as np
 import pandas as pd
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("n_neighbors", "n_components", "n_jobs", "copy")
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
+from .._compat import warn
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
@@ -15,16 +15,6 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
 
 
-@old_positionals(
-    "use_rep",
-    "perplexity",
-    "early_exaggeration",
-    "learning_rate",
-    "random_state",
-    "use_fast_tsne",
-    "n_jobs",
-    "copy",
-)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(  # noqa: PLR0913
     adata: AnnData,

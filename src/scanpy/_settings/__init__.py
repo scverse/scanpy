@@ -8,7 +8,7 @@ from time import time
 from typing import TYPE_CHECKING, Literal, get_args
 
 from .. import logging
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated
 from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .verbosity import Verbosity
@@ -334,20 +334,6 @@ class SettingsMeta(SingletonMeta, type):
     def set_figure_params(cls, *args, **kwargs) -> None:
         cls._set_figure_params(*args, **kwargs)
 
-    @old_positionals(
-        "scanpy",
-        "dpi",
-        "dpi_save",
-        "frameon",
-        "vector_friendly",
-        "fontsize",
-        "figsize",
-        "color_map",
-        "format",
-        "facecolor",
-        "transparent",
-        "ipython_format",
-    )
     def _set_figure_params(  # noqa: PLR0913
         cls,
         *,

@@ -9,8 +9,7 @@ from anndata import AnnData
 from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import old_positionals, pkg_version
-from ..._utils import renamed_arg
+from ..._compat import pkg_version
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -22,25 +21,6 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
-@renamed_arg("adata", "data", pos_0=True)
-@old_positionals(
-    "k",
-    "directed",
-    "prune",
-    "min_cluster_size",
-    "jaccard",
-    "primary_metric",
-    "n_jobs",
-    "q_tol",
-    "louvain_time_limit",
-    "nn_method",
-    "partition_type",
-    "resolution_parameter",
-    "n_iterations",
-    "use_weights",
-    "seed",
-    "copy",
-)
 @doctest_needs("phenograph")
 def phenograph(  # noqa: PLR0913
     data: AnnData | np.ndarray | SpBase,

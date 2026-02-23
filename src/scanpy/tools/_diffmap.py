@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .._compat import old_positionals
 from ._dpt import _diffmap
 
 if TYPE_CHECKING:
@@ -11,7 +10,6 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
 
 
-@old_positionals("neighbors_key", "random_state", "copy")
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,

@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from .._compat import old_positionals
 from ._utils import savefig_or_show
 
 if TYPE_CHECKING:
@@ -20,9 +19,6 @@ if TYPE_CHECKING:
 type Scale = Literal["linear", "log", "symlog", "logit"] | str
 
 
-@old_positionals(
-    "scale_hist_obs", "scale_hist_sim", "figsize", "return_fig", "show", "save"
-)
 def scrublet_score_distribution(
     adata: AnnData,
     *,

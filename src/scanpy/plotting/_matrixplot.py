@@ -6,7 +6,6 @@ import numpy as np
 from matplotlib import colormaps, rcParams
 
 from .. import logging as logg
-from .._compat import old_positionals
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -96,26 +95,6 @@ class MatrixPlot(BasePlot):
     DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "standard_scale",
-        "ax",
-        "values_df",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -312,23 +291,6 @@ class MatrixPlot(BasePlot):
         return normalize
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "figsize",
-    "dendrogram",
-    "title",
-    "cmap",
-    "colorbar_title",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "var_group_rotation",
-    "layer",
-    "standard_scale",
-    # 17 positionals are enough for backwards compatibility
-)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
