@@ -45,7 +45,7 @@ def leiden(  # noqa: PLR0913
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: LeidenFlavor = "leidenalg",
+    flavor: LeidenFlavor | None = None,
     **clustering_args,
 ) -> AnnData | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -214,7 +214,7 @@ def leiden(  # noqa: PLR0913
 def _validate_flavor(
     flavor: str | None, *, partition_type: object | None, directed: bool | None
 ) -> Literal["igraph", "leidenalg"]:
-    if flavor is None:
+    if was_default := (flavor is None):
         from scanpy import settings
 
         flavor = settings.preset.leiden.flavor
@@ -227,6 +227,17 @@ def _validate_flavor(
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
         case "leidenalg":
+            msg = (
+                "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
+                "Set the flavor argument to (and install if needed) 'igraph' to use it."
+            )
+            if was_default:
+                msg += (
+                    "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
+                    "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
+                    "`directed` must also be `False` to work with igraph’s implementation."
+                )
+            warn(msg, FutureWarning if was_default else UserWarning)
             try:
                 import leidenalg  # noqa: F401
             except ImportError as e:
@@ -234,12 +245,6 @@ def _validate_flavor(
                     "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
                 )
                 raise
-            msg = (
-                "In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n"
-                'To achieve the future defaults please pass: `flavor="igraph"` and n_iterations=2. '
-                "directed must also be False to work with igraph's implementation."
-            )
-            warn(msg, FutureWarning)
         case _:
             msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
