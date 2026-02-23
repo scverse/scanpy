@@ -9,10 +9,6 @@ on:
 env:
   FORCE_COLOR: "1"
 
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
-
 jobs:
   benchmark:
     runs-on: ${{ matrix.os }}
@@ -29,16 +25,15 @@ jobs:
       ASV_DIR: "./benchmarks"
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 } # no blob:none so ASV can compare commits
 
       - name: Fetch main branch for `asv run`’s hash
         run: git fetch origin main:main
         if: ${{ github.ref_name != 'main' }}
 
       - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           cache: 'pip'
@@ -51,7 +46,8 @@ jobs:
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: pip install 'asv>=0.6.4'
+        # https://github.com/airspeed-velocity/asv/issues/1577
+        run: pip install 'asv>=0.6.4' 'py-rattler<0.22'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}

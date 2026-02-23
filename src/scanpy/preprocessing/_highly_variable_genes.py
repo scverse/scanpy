@@ -2,29 +2,121 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from functools import singledispatch
 from inspect import signature
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from fast_array_utils.stats import mean_var
+from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, old_positionals
+from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
 from .._settings import Verbosity, settings
-from .._utils import check_nonnegative_integers, sanitize_anndata
+from .._utils import (
+    check_nonnegative_integers,
+    raise_if_dask_feature_axis_chunked,
+    sanitize_anndata,
+)
 from ..get import _get_obs_rep
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from collections.abc import Callable
+    from typing import Concatenate, Literal, Unpack
 
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
+
+
+@singledispatch
+def clip_square_sum(
+    data_batch: np.ndarray, clip_val: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Clip data_batch by clip_val.
+
+    Parameters
+    ----------
+    data_batch
+        The data to be clipped
+    clip_val
+        Clip by these values (must be broadcastable to the input data)
+
+    Returns
+    -------
+        The clipeed data
+    """
+    batch_counts = data_batch.astype(np.float64).copy()
+    clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
+    np.putmask(
+        batch_counts,
+        batch_counts > clip_val_broad,
+        clip_val_broad,
+    )
+
+    squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
+    batch_counts_sum = batch_counts.sum(axis=0)
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(DaskArray)
+def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    n_blocks = data_batch.blocks.size
+
+    def sum_and_sum_squares_clipped_from_block(block):
+        return np.vstack(clip_square_sum(block, clip_val))[None, ...]
+
+    squared_batch_counts_sum, batch_counts_sum = (
+        data_batch
+        .map_blocks(
+            sum_and_sum_squares_clipped_from_block,
+            new_axis=(1,),
+            chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
+            meta=np.array([]),
+            dtype=np.float64,
+        )
+        .sum(axis=0)
+        .compute()
+    )
+    return squared_batch_counts_sum, batch_counts_sum
+
+
+@clip_square_sum.register(CSBase)
+def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    batch_counts = data_batch if isinstance(data_batch, CSRBase) else data_batch.tocsr()
+
+    return _sum_and_sum_squares_clipped(
+        batch_counts.indices,
+        batch_counts.data,
+        n_cols=batch_counts.shape[1],
+        clip_val=clip_val,
+        nnz=batch_counts.nnz,
+    )
+
+
+# parallel=False needed for accuracy
+@numba.njit(cache=True, parallel=False)  # noqa: TID251
+def _sum_and_sum_squares_clipped(
+    indices: NDArray[np.integer],
+    data: NDArray[np.floating],
+    *,
+    n_cols: int,
+    clip_val: NDArray[np.float64],
+    nnz: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
+    for i in numba.prange(nnz):
+        idx = indices[i]
+        element = min(np.float64(data[i]), clip_val[idx])
+        squared_batch_counts_sum[idx] += element**2
+        batch_counts_sum[idx] += element
+
+    return squared_batch_counts_sum, batch_counts_sum
 
 
 def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
@@ -69,26 +161,28 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         raise ImportError(msg) from e
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
+    raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
-        warnings.warn(
-            f"`{flavor=!r}` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+        msg = f"`{flavor=!r}` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
-    df["means"], df["variances"] = mean_var(data, axis=0, correction=1)
+    df["means"], df["variances"] = stats.mean_var(data, axis=0, correction=1)
 
-    if batch_key is None:
-        batch_info = pd.Categorical(np.zeros(adata.shape[0], dtype=int))
-    else:
-        batch_info = adata.obs[batch_key].to_numpy()
+    batch_info = (
+        pd.Categorical(np.zeros(adata.shape[0], dtype=int))
+        if batch_key is None
+        else adata.obs[batch_key].to_numpy()
+    )
 
     norm_gene_vars = []
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
 
-        mean, var = mean_var(data_batch, axis=0, correction=1)
+        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
+        # These get computed anyway for loess
+        if isinstance(mean, DaskArray):
+            mean, var = mean.compute(), var.compute()
         not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
 
@@ -100,32 +194,14 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         reg_std = np.sqrt(10**estimat_var)
 
         # clip large values as in Seurat
-        N = data_batch.shape[0]
-        vmax = np.sqrt(N)
-        clip_val = reg_std * vmax + mean
-        if isinstance(data_batch, CSBase):
-            batch_counts = data_batch.tocsr()
-            squared_batch_counts_sum, batch_counts_sum = _sum_and_sum_squares_clipped(
-                batch_counts.indices,
-                batch_counts.data,
-                n_cols=batch_counts.shape[1],
-                clip_val=clip_val,
-                nnz=batch_counts.nnz,
-            )
-        else:
-            batch_counts = data_batch.astype(np.float64).copy()
-            clip_val_broad = np.broadcast_to(clip_val, batch_counts.shape)
-            np.putmask(
-                batch_counts,
-                batch_counts > clip_val_broad,
-                clip_val_broad,
-            )
+        n_obs = data_batch.shape[0]
+        clip_val = reg_std * np.sqrt(n_obs) + mean
+        squared_batch_counts_sum, batch_counts_sum = clip_square_sum(
+            data_batch, clip_val
+        )
 
-            squared_batch_counts_sum = np.square(batch_counts).sum(axis=0)
-            batch_counts_sum = batch_counts.sum(axis=0)
-
-        norm_gene_var = (1 / ((N - 1) * np.square(reg_std))) * (
-            (N * np.square(mean))
+        norm_gene_var = (1 / ((n_obs - 1) * np.square(reg_std))) * (
+            (n_obs * np.square(mean))
             + squared_batch_counts_sum
             - 2 * batch_counts_sum * mean
         )
@@ -144,10 +220,12 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     ma_ranked = np.ma.masked_invalid(ranked_norm_gene_vars)
     median_ranked = np.ma.median(ma_ranked, axis=0).filled(np.nan)
 
-    df["gene_name"] = df.index
-    df["highly_variable_nbatches"] = num_batches_high_var
-    df["highly_variable_rank"] = median_ranked
-    df["variances_norm"] = np.mean(norm_gene_vars, axis=0)
+    df = df.assign(
+        gene_name=df.index,
+        highly_variable_nbatches=num_batches_high_var,
+        highly_variable_rank=median_ranked,
+        variances_norm=np.mean(norm_gene_vars, axis=0),
+    )
     if flavor == "seurat_v3":
         sort_cols = ["highly_variable_rank", "highly_variable_nbatches"]
         sort_ascending = [True, False]
@@ -175,10 +253,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'variances_norm', float vector (adata.var)"
         )
-        adata.var["highly_variable"] = df["highly_variable"].to_numpy()
-        adata.var["highly_variable_rank"] = df["highly_variable_rank"].to_numpy()
-        adata.var["means"] = df["means"].to_numpy()
-        adata.var["variances"] = df["variances"].to_numpy()
+        for to_numpy_key in [
+            "highly_variable",
+            "highly_variable_rank",
+            "means",
+            "variances",
+        ]:
+            adata.var[to_numpy_key] = df[to_numpy_key].to_numpy()
         adata.var["variances_norm"] = (
             df["variances_norm"].to_numpy().astype("float64", copy=False)
         )
@@ -195,27 +276,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             df = df.iloc[df["highly_variable"].to_numpy(), :]
 
         return df
-
-
-# parallel=False needed for accuracy
-@numba.njit(cache=True, parallel=False)  # noqa: TID251
-def _sum_and_sum_squares_clipped(
-    indices: NDArray[np.integer],
-    data: NDArray[np.floating],
-    *,
-    n_cols: int,
-    clip_val: NDArray[np.float64],
-    nnz: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-    squared_batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    batch_counts_sum = np.zeros(n_cols, dtype=np.float64)
-    for i in numba.prange(nnz):
-        idx = indices[i]
-        element = min(np.float64(data[i]), clip_val[idx])
-        squared_batch_counts_sum[idx] += element**2
-        batch_counts_sum[idx] += element
-
-    return squared_batch_counts_sum, batch_counts_sum
+    return None
 
 
 @dataclass
@@ -246,8 +307,7 @@ class _Cutoffs:
         }
         if {k: v for k, v in locals().items() if k in cutoffs} != defaults:
             msg = "If you pass `n_top_genes`, all cutoffs are ignored."
-            # 3: caller -> 2: `highly_variable_genes` -> 1: here
-            warnings.warn(msg, UserWarning, stacklevel=3)
+            warn(msg, UserWarning)
         return n_top_genes
 
     def in_bounds(
@@ -263,13 +323,18 @@ class _Cutoffs:
         )
 
 
+class HvgArgs(TypedDict):
+    cutoff: _Cutoffs | int
+    n_bins: int
+    flavor: Literal["seurat", "cell_ranger"]
+
+
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
     layer: str | None = None,
-    cutoff: _Cutoffs | int,
-    n_bins: int = 20,
-    flavor: Literal["seurat", "cell_ranger"] = "seurat",
+    filter_unexpressed_genes: bool = False,
+    **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     """See `highly_variable_genes`.
 
@@ -279,23 +344,37 @@ def _highly_variable_genes_single_batch(
     `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
 
     """
-    X = _get_obs_rep(adata, layer=layer)
+    cutoff = kwargs["cutoff"]
+    flavor = kwargs["flavor"]
+    n_bins = kwargs["n_bins"]
 
-    if hasattr(X, "_view_args"):  # AnnData array view
-        # For compatibility with anndata<0.9
-        X = X.copy()  # Doesn't actually copy memory, just removes View class wrapper
+    x = _get_obs_rep(adata, layer=layer)
+
+    # Filter to genes that are expressed
+    if filter_unexpressed_genes:
+        with settings.verbosity.override(Verbosity.error):
+            # TODO use groupby or so instead of materialize_as_ndarray
+            filt, _ = materialize_as_ndarray(
+                filter_genes(x, min_cells=1, inplace=False)
+            )
+    else:
+        filt = np.ones(x.shape[1], dtype=bool)
+
+    n_removed = np.sum(~filt)
+    if n_removed:
+        x = x[:, filt].copy()
 
     if flavor == "seurat":
-        X = X.copy()
+        x = x.copy()
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            X *= np.log(base)
+            x *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
-        if isinstance(X, np.ndarray):
-            np.expm1(X, out=X)
+        if isinstance(x, np.ndarray):
+            np.expm1(x, out=x)
         else:
-            X = np.expm1(X)
+            x = np.expm1(x)
 
-    mean, var = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    mean, var = materialize_as_ndarray(stats.mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -314,13 +393,25 @@ def _highly_variable_genes_single_batch(
     # actually do the normalization
     df["dispersions_norm"] = (df["dispersions"] - disp_stats["avg"]) / disp_stats["dev"]
     df["highly_variable"] = _subset_genes(
-        adata,
+        adata[:, filt],
         mean=mean,
         dispersion_norm=df["dispersions_norm"].to_numpy(),
         cutoff=cutoff,
     )
 
-    df.index = adata.var_names
+    df.index = adata[:, filt].var_names
+
+    if n_removed > 0:
+        # df.reset_index(drop=False, inplace=True, names=["gene"])
+        # Add 0 values for genes that were filtered out
+        missing_hvg = pd.DataFrame(
+            np.zeros((n_removed, len(df.columns))),
+            columns=df.columns,
+        )
+        missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
+        missing_hvg.index = adata.var_names[~filt]
+        df = pd.concat([df, missing_hvg]).loc[adata.var_names]
+
     return df
 
 
@@ -335,7 +426,10 @@ def _get_mean_bins(
         msg = '`flavor` needs to be "seurat" or "cell_ranger"'
         raise ValueError(msg)
 
-    return pd.cut(means, bins=bins)
+    rv = pd.cut(means, bins=bins)
+    # pandas converts Categoricals of Interval to string anyway: https://github.com/pandas-dev/pandas/issues/61928
+    # As long as it does, doing it manually is more efficient
+    return rv.cat.set_categories(rv.cat.categories.astype("string"), rename=True)
 
 
 def _get_disp_stats(
@@ -411,9 +505,11 @@ def _subset_genes(
 def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArray:
     x = x[~np.isnan(x)]
     if n > x.size:
-        msg = "`n_top_genes` > number of normalized dispersions, returning all genes with normalized dispersions."
-        # 5: caller -> 4: `highly_variable_genes` -> 3: `_…_single_batch` -> 2: `_subset_genes` -> 1: here
-        warnings.warn(msg, UserWarning, stacklevel=5)
+        msg = (
+            f"`n_top_genes` (={n}) > number of normalized dispersions (={x.size}), "
+            "returning all genes with normalized dispersions."
+        )
+        warn(msg, UserWarning)
         n = x.size
     if isinstance(x, DaskArray):
         return x.topk(n)[-1]
@@ -422,56 +518,51 @@ def _nth_highest(x: NDArray[np.float64] | DaskArray, n: int) -> float | DaskArra
     return x[n - 1]
 
 
-def _highly_variable_genes_batched(
+def _per_batch_func[R, **P](
+    func: Callable[Concatenate[AnnData, P], R],
     adata: AnnData,
-    batch_key: str,
-    *,
-    layer: str | None,
-    n_bins: int,
-    flavor: Literal["seurat", "cell_ranger"],
-    cutoff: _Cutoffs | int,
+    batch_mask: pd.Series[bool],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> R:
+    return func(adata[batch_mask].copy(), *args, **kwargs)
+
+
+def _highly_variable_genes_batched(
+    adata: AnnData, batch_key: str, *, layer: str | None, **kwargs: Unpack[HvgArgs]
 ) -> pd.DataFrame:
+    cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
-    dfs = []
-    gene_list = adata.var_names
-    for batch in batches:
-        adata_subset = adata[adata.obs[batch_key] == batch]
+    x = _get_obs_rep(adata, layer=layer)
 
-        # Filter to genes that are in the dataset
-        with settings.verbosity.override(Verbosity.error):
-            # TODO use groupby or so instead of materialize_as_ndarray
-            filt, _ = materialize_as_ndarray(
-                filter_genes(
-                    _get_obs_rep(adata_subset, layer=layer),
-                    min_cells=1,
-                    inplace=False,
-                )
-            )
+    func = _per_batch_func
+    if is_dask := isinstance(x, DaskArray):
+        from dask import delayed
 
-        adata_subset = adata_subset[:, filt]
+        func = delayed(_per_batch_func)
 
-        hvg = _highly_variable_genes_single_batch(
-            adata_subset, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+    dfs = (
+        func(
+            _highly_variable_genes_single_batch,
+            adata=adata,
+            batch_mask=adata.obs[batch_key] == batch,
+            layer=layer,
+            filter_unexpressed_genes=True,
+            **kwargs,
         )
-        hvg.reset_index(drop=False, inplace=True, names=["gene"])
+        for batch in batches
+    )
 
-        if (n_removed := np.sum(~filt)) > 0:
-            # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(
-                np.zeros((n_removed, len(hvg.columns))),
-                columns=hvg.columns,
-            )
-            missing_hvg["highly_variable"] = missing_hvg["highly_variable"].astype(bool)
-            missing_hvg["gene"] = gene_list[~filt]
-            hvg = pd.concat([hvg, missing_hvg], ignore_index=True)
+    if is_dask:
+        from dask import compute
 
-        dfs.append(hvg)
+        dfs = (compute(df)[0] for df in dfs)
 
     df = pd.concat(dfs, axis=0)
 
     df["highly_variable"] = df["highly_variable"].astype(int)
-    df = df.groupby("gene", observed=True).agg(
+    df = df.groupby(df.index, observed=True).agg(
         dict(
             means="mean",
             dispersions="mean",
@@ -532,6 +623,7 @@ def highly_variable_genes(  # noqa: PLR0913
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
+    filter_unexpressed_genes: bool | None = None,
     check_values: bool = True,
 ) -> pd.DataFrame | None:
     """Annotate highly variable genes :cite:p:`Satija2015,Zheng2017,Stuart2019`.
@@ -566,6 +658,8 @@ def highly_variable_genes(  # noqa: PLR0913
 
     See also `scanpy.experimental.pp._highly_variable_genes` for additional flavors
     (e.g. Pearson residuals).
+
+    .. array-support:: pp.highly_variable_genes
 
     Parameters
     ----------
@@ -613,6 +707,9 @@ def highly_variable_genes(  # noqa: PLR0913
         by how many batches they are a HVG. For dispersion-based flavors ties are broken
         by normalized dispersion. For `flavor = 'seurat_v3_paper'`, ties are broken by the median
         (across batches) rank based on within-batch normalized variance.
+    filter_unexpressed_genes
+        If `True`, remove genes that are not expressed in at least one cell from highly variable genes computation (does NOT remove the gene in-place).
+        Disabled by default and ignored if `batch_key` is set, since filtering always enabled for batch-aware mode.
     check_values
         Check if counts in selected layer are integers. A Warning is returned if set to True.
         Only used if `flavor='seurat_v3'`/`'seurat_v3_paper'`.
@@ -686,11 +783,20 @@ def highly_variable_genes(  # noqa: PLR0913
     )
     del min_disp, max_disp, min_mean, max_mean, n_top_genes
 
-    if batch_key is None:
+    if not batch_key:
         df = _highly_variable_genes_single_batch(
-            adata, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+            adata,
+            layer=layer,
+            cutoff=cutoff,
+            n_bins=n_bins,
+            flavor=flavor,
+            filter_unexpressed_genes=filter_unexpressed_genes or False,
         )
     else:
+        if filter_unexpressed_genes is False:
+            msg = f"filter_unexpressed_genes is set to False, but will ignored for batch-aware {flavor=!r} HVG computation"
+            warn(msg, UserWarning)
+        # filter_unexpressed_genes will not get passed to _highly_variable_genes_batched since it's always True for that function
         df = _highly_variable_genes_batched(
             adata, batch_key, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
         )
@@ -714,9 +820,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata.var["highly_variable"] = df["highly_variable"]
     adata.var["means"] = df["means"]
     adata.var["dispersions"] = df["dispersions"]
-    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(
-        np.float32, copy=False
-    )
+    adata.var["dispersions_norm"] = df["dispersions_norm"].astype(np.float32)
 
     if batch_key is not None:
         adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"]

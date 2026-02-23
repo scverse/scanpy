@@ -11,8 +11,10 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import Literal
 
-    _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
-    _LoggingLevelName = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"]
+type _VerbosityName = Literal["error", "warning", "info", "hint", "debug"]
+type _LoggingLevelName = Literal[
+    "CRITICAL", "ERROR", "WARNING", "INFO", "HINT", "DEBUG"
+]
 
 
 _VERBOSITY_TO_LOGLEVEL: dict[int | _VerbosityName, _LoggingLevelName] = {
@@ -54,6 +56,10 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         if isinstance(other, str):
             return self.name == other
         return NotImplemented
+
+    def __hash__(self) -> int:
+        # See https://docs.astral.sh/ruff/rules/eq-without-hash/
+        return super().__hash__()
 
     @property
     def level(self) -> int:

@@ -41,9 +41,7 @@ def pbmc68k_reduced() -> AnnData:
 
 def krumsiek11() -> AnnData:
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "Observation names are not unique", module="anndata"
-        )
+        warnings.filterwarnings("ignore", "Observation names are not unique")
         return _krumsiek11().copy()
 
 

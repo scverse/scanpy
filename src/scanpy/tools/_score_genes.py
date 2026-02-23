@@ -9,7 +9,7 @@ import pandas as pd
 
 from .. import logging as logg
 from .._compat import CSBase, old_positionals
-from .._utils import _check_use_raw, is_backed_type
+from .._utils import check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -21,32 +21,29 @@ if TYPE_CHECKING:
 
     from .._utils.random import _LegacyRandom
 
-    try:
-        _StrIdx = pd.Index[str]
-    except TypeError:  # Sphinx
-        _StrIdx = pd.Index
-    _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
+type _StrIdx = pd.Index[str]
+type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
-def _sparse_nanmean(X: CSBase, axis: Literal[0, 1]) -> NDArray[np.float64]:
+def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
-    if not isinstance(X, CSBase):
+    if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
     # count the number of nan elements per row/column (dep. on axis)
-    Z = X.copy()
-    Z.data = np.isnan(Z.data)
-    Z.eliminate_zeros()
-    n_elements = Z.shape[axis] - Z.sum(axis)
+    z = x.copy()
+    z.data = np.isnan(z.data)
+    z.eliminate_zeros()
+    n_elements = z.shape[axis] - z.sum(axis)
 
     # set the nans to 0, so that a normal .sum() works
-    Y = X.copy()
-    Y.data[np.isnan(Y.data)] = 0
-    Y.eliminate_zeros()
+    y = x.copy()
+    y.data[np.isnan(y.data)] = 0
+    y.eliminate_zeros()
 
     # the average
-    s = Y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
+    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
     m = s / n_elements
 
     return m
@@ -69,13 +66,14 @@ def score_genes(  # noqa: PLR0913
     use_raw: bool | None = None,
     layer: str | None = None,
 ) -> AnnData | None:
-    """Score a set of genes :cite:p:`Satija2015`.
+    """Score a set of genes :cite:p:`Tirosh2016`.
 
     The score is the average expression of a set of genes after subtraction by
     the average expression of a reference set of genes. The reference set is
     randomly sampled from the `gene_pool` for each binned expression value.
 
-    This reproduces the approach in Seurat :cite:p:`Satija2015` and has been implemented
+    This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
+    programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
 
     Parameters
@@ -122,7 +120,7 @@ def score_genes(  # noqa: PLR0913
     """
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
-    use_raw = _check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
         raise NotImplementedError(msg)
@@ -234,7 +232,7 @@ def _score_genes_bins(
 
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method="min") // n_items
-    keep_ctrl_in_obs_cut = False if ctrl_as_ref else obs_cut.index.isin(gene_list)
+    keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
     for cut in np.unique(obs_cut.loc[gene_list]):

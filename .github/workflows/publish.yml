@@ -7,10 +7,6 @@ on:
 env:
   FORCE_COLOR: "1"
 
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -18,14 +14,12 @@ jobs:
     permissions:
       id-token: write # to authenticate as Trusted Publisher to pypi.org
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          filter: blob:none
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+        with: { filter: 'blob:none', fetch-depth: 0 }
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-          cache: "pip"
-      - run: pip install build
-      - run: python -m build
+      - uses: astral-sh/setup-uv@v7
+      - run: uvx --from build pyproject-build --sdist --wheel .
+      - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1

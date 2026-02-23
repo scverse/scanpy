@@ -1,13 +1,16 @@
+ci:
+  autoupdate_commit_msg: "ci: pre-commit autoupdate"
+
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+    rev: v0.15.0
     hooks:
-    -   id: ruff
+    -   id: ruff-check
         args: ["--fix"]
     -   id: ruff-format
     # The following can be removed once PLR0917 is out of preview
     -   name: ruff preview rules
-        id: ruff
+        id: ruff-check
         args: ["--preview", "--select=PLR0917"]
 -   repo: https://github.com/flying-sheep/bibfmt
     rev: v4.3.0
@@ -17,15 +20,15 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v1.9.4
+    rev: v2.3.14
     hooks:
     -   id: biome-format
--   repo: https://github.com/ComPWA/taplo-pre-commit
-    rev: v0.9.3
+-   repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.15.1
     hooks:
-    -   id: taplo-format
+    -   id: pyproject-fmt
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
     -   id: trailing-whitespace
         exclude: tests/_data

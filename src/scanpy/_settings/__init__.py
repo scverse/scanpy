@@ -5,11 +5,11 @@ import sys
 from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, ParamSpec, TypeVar, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 from .. import logging
 from .._compat import deprecated, old_positionals
-from .._singleton import SingletonMeta
+from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Preset
 from .verbosity import Verbosity
@@ -22,17 +22,11 @@ if TYPE_CHECKING:
     from .verbosity import _VerbosityName
 
     # Collected from the print_* functions in matplotlib.backends
-    _Format = (
+    type _Format = (
         Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
-
-S = TypeVar("S")
-T = TypeVar("T")
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
@@ -49,7 +43,7 @@ def _type_check(var: object, name: str, types: type | UnionType) -> None:
     raise TypeError(msg)
 
 
-def _type_check_arg2(
+def _type_check_arg2[S, T, R, **P](
     types: type | UnionType,
 ) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
     def decorator(
@@ -66,11 +60,12 @@ def _type_check_arg2(
     return decorator
 
 
-class SettingsMeta(SingletonMeta):
+# `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
+class SettingsMeta(SingletonMeta, type):
     _preset: Preset
     # logging
     _root_logger: _RootLogger
-    _logfile: TextIO | None
+    _logfile: TextIO
     _verbosity: Verbosity
     # rest
     _n_pcs: int
@@ -83,7 +78,7 @@ class SettingsMeta(SingletonMeta):
     _cachedir: Path
     _datasetdir: Path
     _figdir: Path
-    _cache_compression: Literal["lzf", "gzip", None]
+    _cache_compression: Literal["lzf", "gzip"] | None
     _max_memory: float
     _n_jobs: int
     _categories_to_ignore: list[str]
@@ -131,13 +126,13 @@ class SettingsMeta(SingletonMeta):
         _set_log_level(cls, cls._verbosity.level)
 
     @property
-    def N_PCS(cls) -> int:
+    def N_PCS(cls) -> int:  # noqa: N802
         """Default number of principal components to use."""
         return cls._n_pcs
 
     @N_PCS.setter
     @_type_check_arg2(int)
-    def N_PCS(cls, n_pcs: int) -> None:
+    def N_PCS(cls, n_pcs: int) -> None:  # noqa: N802
         cls._n_pcs = n_pcs
 
     @property
@@ -177,8 +172,8 @@ class SettingsMeta(SingletonMeta):
 
     @file_format_figs.setter
     @_type_check_arg2(str)
-    def file_format_figs(self, figure_format: str) -> None:
-        self._file_format_figs = figure_format
+    def file_format_figs(cls, figure_format: str) -> None:
+        cls._file_format_figs = figure_format
 
     @property
     def autosave(cls) -> bool:
@@ -238,7 +233,7 @@ class SettingsMeta(SingletonMeta):
 
     @property
     def figdir(cls) -> Path:
-        """Directory for saving figures (default `'./figures/'`)."""
+        r"""Directory for `autosave`\ ing figures (default `'./figures/'`)."""
         return cls._figdir
 
     @figdir.setter
@@ -247,12 +242,14 @@ class SettingsMeta(SingletonMeta):
         cls._figdir = Path(figdir)
 
     @property
-    def cache_compression(cls) -> Literal["lzf", "gzip", None]:
+    def cache_compression(cls) -> Literal["lzf", "gzip"] | None:
         """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
         return cls._cache_compression
 
     @cache_compression.setter
-    def cache_compression(cls, cache_compression: Literal["lzf", "gzip", None]) -> None:
+    def cache_compression(
+        cls, cache_compression: Literal["lzf", "gzip"] | None
+    ) -> None:
         if cache_compression not in {"lzf", "gzip", None}:
             msg = (
                 f"`cache_compression` ({cache_compression}) "
@@ -298,7 +295,7 @@ class SettingsMeta(SingletonMeta):
     @_type_check_arg2(Path | str)
     def logpath(cls, logpath: Path | str | None) -> None:
         if logpath is None:
-            cls._logfile = None
+            cls.logfile = None
             cls._logpath = None
             return
         # set via “file object” branch of logfile.setter
@@ -306,7 +303,7 @@ class SettingsMeta(SingletonMeta):
         cls._logpath = Path(logpath)
 
     @property
-    def logfile(cls) -> TextIO | None:
+    def logfile(cls) -> TextIO:
         """The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
@@ -320,7 +317,7 @@ class SettingsMeta(SingletonMeta):
     @logfile.setter
     def logfile(cls, logfile: Path | str | TextIO | None) -> None:
         if not logfile:  # "" or None
-            logfile = sys.stdout if cls._is_run_from_ipython() else sys.stderr
+            logfile = cls._default_logfile()
         if isinstance(logfile, Path | str):
             cls.logpath = logfile
             return
@@ -451,6 +448,10 @@ class SettingsMeta(SingletonMeta):
 
         return getattr(builtins, "__IPYTHON__", False)
 
+    @classmethod
+    def _default_logfile(cls) -> TextIO:
+        return sys.stdout if cls._is_run_from_ipython() else sys.stderr
+
     def __str__(cls) -> str:
         return "\n".join(
             f"{k} = {v!r}"
@@ -459,7 +460,7 @@ class SettingsMeta(SingletonMeta):
         )
 
 
-class settings(metaclass=SettingsMeta):
+class settings(metaclass=SettingsMeta):  # noqa: N801
     """Settings for scanpy."""
 
     def __new__(cls) -> type[Self]:
@@ -467,8 +468,8 @@ class settings(metaclass=SettingsMeta):
 
     _preset = Preset.ScanpyV1
     # logging
-    _root_logger: ClassVar = _RootLogger(logging.INFO)
-    _logfile: ClassVar = None
+    _root_logger: ClassVar = _RootLogger(logging.WARNING)
+    _logfile: ClassVar = SettingsMeta._default_logfile()
     _logpath: ClassVar = None
     _verbosity: ClassVar = Verbosity.warning
     # rest
@@ -492,3 +493,8 @@ class settings(metaclass=SettingsMeta):
     _start: ClassVar = time()
     _previous_time: ClassVar = _start
     _previous_memory_usage: ClassVar = -1
+
+
+if not documenting():  # finish initialization
+    _set_log_level(settings, settings.verbosity.level)
+    _set_log_file(settings)

@@ -2,23 +2,15 @@ from __future__ import annotations
 
 from operator import truediv
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import numba
 import numpy as np
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
-
-try:
-    import dask
-    import dask.array as da
-except ImportError:
-    da = None
-    dask = None
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -125,10 +117,10 @@ def _normalize_total_helper(
 
     counts_per_cell = counts_per_cell / target_sum
     out = x if isinstance(x, np.ndarray | CSBase) else None
-    X = axis_mul_or_truediv(
+    x = axis_mul_or_truediv(
         x, counts_per_cell, op=truediv, out=out, allow_divide_by_zero=False, axis=0
     )
-    return X, counts_per_cell, gene_subset
+    return x, counts_per_cell, gene_subset
 
 
 @old_positionals(
@@ -148,6 +140,7 @@ def normalize_total(  # noqa: PLR0912
     max_fraction: float = 0.05,
     key_added: str | None = None,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -164,6 +157,8 @@ def normalize_total(  # noqa: PLR0912
 
     Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
     :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
+
+    .. array-support:: pp.normalize_total
 
     .. note::
         When used with a :class:`~dask.array.Array` in `adata.X`, this function will have to
@@ -194,7 +189,9 @@ def normalize_total(  # noqa: PLR0912
         Name of the field in `adata.obs` where the normalization factor is
         stored.
     layer
-        Layer to normalize instead of `X`. If `None`, `X` is normalized.
+        Layer to normalize instead of `X`.
+    obsm
+        Array to normalize instead of `X`.
     inplace
         Whether to update `adata` or return dictionary with normalized copies of
         `adata.X` and `adata.layers`.
@@ -265,10 +262,7 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer)
-    if x is None:
-        msg = f"Layer {layer!r} not found in adata."
-        raise ValueError(msg)
+    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:
@@ -278,7 +272,7 @@ def normalize_total(  # noqa: PLR0912
 
     start = logg.info("normalizing counts per cell")
 
-    X, counts_per_cell, gene_subset = _normalize_total_helper(
+    x, counts_per_cell, gene_subset = _normalize_total_helper(
         x,
         exclude_highly_expressed=exclude_highly_expressed,
         max_fraction=max_fraction,
@@ -293,16 +287,16 @@ def normalize_total(  # noqa: PLR0912
 
     cell_subset = counts_per_cell > 0
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
-        warn("Some cells have zero counts", UserWarning, stacklevel=2)
+        warn("Some cells have zero counts", UserWarning)
 
     dat = dict(
-        X=X,
+        X=x,
         norm_factor=counts_per_cell,
     )
     if inplace:
         if key_added is not None:
             adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer)
+        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
 
     logg.info(
         "    finished ({time_passed})",

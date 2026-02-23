@@ -59,6 +59,8 @@ def embedding_density(  # noqa: PLR0912
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
 
+    .. array-support:: tl.embedding_density
+
     Parameters
     ----------
     adata
@@ -125,7 +127,7 @@ def embedding_density(  # noqa: PLR0912
     if basis == "fa":
         basis = "draw_graph_fa"
 
-    if f"X_{basis}" not in adata.obsm_keys():
+    if f"X_{basis}" not in adata.obsm:
         msg = (
             "Cannot find the embedded representation "
             f"`adata.obsm['X_{basis}']`. Compute the embedding first."

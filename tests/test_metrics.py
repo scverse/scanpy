@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
+from itertools import combinations
 from string import ascii_letters
 from typing import TYPE_CHECKING
 
@@ -9,10 +10,16 @@ import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
+from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from testing.scanpy._helpers.data import pbmc68k_reduced
+from scanpy._compat import pkg_version
+from scanpy.metrics import modularity
+from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.context import xfail
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
@@ -79,10 +86,12 @@ def test_consistency(metric) -> None:
         pytest.param(sc.metrics.morans_i, 50, 1.0, id="morans_i"),
     ],
 )
-def test_correctness(metric, size, expected):
+def test_correctness(metric, size, expected) -> None:
+    rng = np.random.default_rng()
+
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
-    connected[np.random.choice(100, size=size, replace=False)] = 1
+    connected[rng.choice(100, size=size, replace=False)] = 1
     graph = np.zeros((100, 100))
     graph[np.ix_(connected.astype(bool), connected.astype(bool))] = 1
     graph[np.ix_(~connected.astype(bool), ~connected.astype(bool))] = 1
@@ -93,9 +102,6 @@ def test_correctness(metric, size, expected):
         metric(graph, connected),
         metric(graph, sparse.csr_matrix(connected)),  # noqa: TID251
     )
-    # Checking that obsp works
-    adata = sc.AnnData(sparse.csr_matrix((100, 100)), obsp={"connectivities": graph})  # noqa: TID251
-    np.testing.assert_equal(metric(adata, vals=connected), expected)
 
 
 @pytest.mark.usefixtures("_threading")
@@ -104,45 +110,84 @@ def test_correctness(metric, size, expected):
 )
 def test_graph_metrics_w_constant_values(
     request: pytest.FixtureRequest, metric, array_type
-):
+) -> None:
     if "dask" in array_type.__name__:
         reason = "DaskArray not yet supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
+    rng = np.random.default_rng()
+
     # https://github.com/scverse/scanpy/issues/1806
     pbmc = pbmc68k_reduced()
-    XT = pbmc.raw.X.T.copy()
+    x_t = pbmc.raw.X.T.copy()
     g = pbmc.obsp["connectivities"].copy()
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
-    const_inds = np.random.choice(XT.shape[0], 10, replace=False)
+    const_inds = rng.choice(x_t.shape[0], 10, replace=False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", sparse.SparseEfficiencyWarning)
-        XT_zero_vals = XT.copy()
-        XT_zero_vals[const_inds, :] = 0
-        XT_zero_vals = array_type(XT_zero_vals)
-        XT_const_vals = XT.copy()
-        XT_const_vals[const_inds, :] = 42
-        XT_const_vals = array_type(XT_const_vals)
+        x_t_zero_vals = x_t.copy()
+        x_t_zero_vals[const_inds, :] = 0
+        x_t_zero_vals = array_type(x_t_zero_vals)
+        x_t_const_vals = x_t.copy()
+        x_t_const_vals[const_inds, :] = 42
+        x_t_const_vals = array_type(x_t_const_vals)
 
-    results_full = metric(g, array_type(XT))
+    results_full = metric(g, array_type(x_t))
     # TODO: Check for warnings
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_zeros = metric(g, XT_zero_vals)
+        results_const_zeros = metric(g, x_t_zero_vals)
     with pytest.warns(
         UserWarning, match=r"10 variables were constant, will return nan for these"
     ):
-        results_const_vals = metric(g, XT_const_vals)
+        results_const_vals = metric(g, x_t_const_vals)
 
     assert not np.isnan(results_full).any()
     equality_check(results_const_zeros, results_const_vals)
     np.testing.assert_array_equal(np.nan, results_const_zeros[const_inds])
     np.testing.assert_array_equal(np.nan, results_const_vals[const_inds])
 
-    non_const_mask = ~np.isin(np.arange(XT.shape[0]), const_inds)
+    non_const_mask = ~np.isin(np.arange(x_t.shape[0]), const_inds)
     equality_check(results_full[non_const_mask], results_const_zeros[non_const_mask])
+
+
+@pytest.mark.parametrize(
+    ("neigh_params", "metric_params"),
+    [
+        pytest.param(
+            dict(key_added="foo"), dict(use_graph="foo_connectivities"), id="use_graph"
+        ),
+        pytest.param(
+            dict(key_added="bar"), dict(neighbors_key="bar"), id="neighbors_key"
+        ),
+    ],
+)
+def test_metrics_graph_params(metric, neigh_params, metric_params) -> None:
+    rng = np.random.default_rng()
+    adata = AnnData(rng.normal(size=(10, 20)))
+    sc.pp.neighbors(adata, **neigh_params)
+    if "use_graph" in metric_params:  # make sure no extra stuff is there
+        adata = AnnData(adata.X, obsp=adata.obsp)
+    metric(adata, **metric_params)
+
+
+@pytest.mark.parametrize(
+    ("params", "err_cls", "pattern"),
+    [
+        pytest.param(
+            dict(use_graph="foo", neighbors_key="bar"), TypeError, r"both", id="both"
+        ),
+        pytest.param(dict(use_graph="foo"), KeyError, r"foo", id="no_graph"),
+        pytest.param(dict(neighbors_key="bar"), KeyError, r"bar", id="no_key"),
+        pytest.param({}, KeyError, r"neighbors.*uns", id="nothing"),
+    ],
+)
+def test_metrics_graph_params_errors(metric, params, err_cls, pattern) -> None:
+    adata = AnnData(shape=(10, 20))
+    with pytest.raises(err_cls, match=pattern):
+        metric(adata, **params)
 
 
 def test_confusion_matrix():
@@ -164,11 +209,14 @@ def test_confusion_matrix():
     assert np.all(mtx == 0.5)
 
 
-def test_confusion_matrix_randomized():
+@pytest.mark.flaky(reruns=5)  # possible that #classes > #samples÷2
+def test_confusion_matrix_randomized() -> None:
+    rng = np.random.default_rng()
+
     chars = np.array(list(ascii_letters))
-    pos = np.random.choice(len(chars), size=np.random.randint(50, 150))
+    pos = rng.choice(len(chars), size=rng.integers(50, 150))
     a = chars[pos]
-    b = np.random.permutation(chars)[pos]
+    b = rng.permutation(chars)[pos]
     df = pd.DataFrame({"a": a, "b": b})
 
     pd.testing.assert_frame_equal(
@@ -181,10 +229,13 @@ def test_confusion_matrix_randomized():
     )
 
 
-def test_confusion_matrix_api():
-    data = pd.DataFrame(
-        {"a": np.random.randint(5, size=100), "b": np.random.randint(5, size=100)}
-    )
+def test_confusion_matrix_api() -> None:
+    rng = np.random.default_rng()
+
+    data = pd.DataFrame({
+        "a": rng.integers(5, size=100),
+        "b": rng.integers(5, size=100),
+    })
     expected = sc.metrics.confusion_matrix(data["a"], data["b"])
 
     pd.testing.assert_frame_equal(expected, sc.metrics.confusion_matrix("a", "b", data))
@@ -196,3 +247,151 @@ def test_confusion_matrix_api():
     pd.testing.assert_frame_equal(
         expected, sc.metrics.confusion_matrix(data["a"], "b", data)
     )
+
+
+@pytest.mark.parametrize("is_directed", [False, True], ids=["undirected", "directed"])
+@pytest.mark.parametrize("use_sparse", [False, True], ids=["dense", "sparse"])
+@needs.igraph
+def test_modularity_sample_structure(*, use_sparse: bool, is_directed: bool) -> None:
+    """Sample graph with clear community structure (dense & sparse, directed & undirected)."""
+    # 4 node adjacency matrix with two separate 2-node communities
+    mat = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+    ])
+    labels = ["A", "A", "B", "B"]
+    adj = sparse.csr_matrix(mat) if use_sparse else mat  # noqa: TID251
+
+    score = modularity(adj, labels, is_directed=is_directed)
+
+    # Modularity should be between 0 and 1
+    assert 0 <= score <= 1
+
+
+@needs.igraph
+def test_modularity_single_community() -> None:
+    """Edge case when all nodes belong to the same community/cluster."""
+    # fully connected graph sample
+    adj = np.ones((4, 4)) - np.eye(4)
+    labels = ["A", "A", "A", "A"]
+
+    score = modularity(adj, labels, is_directed=False)
+
+    # modularity should be 0
+    assert score == pytest.approx(0.0, rel=1e-6)
+
+
+@needs.igraph
+def test_modularity_invalid_labels() -> None:
+    """Invalid input, labels length does not match adjacency matrix size."""
+    import igraph as ig
+
+    adj = np.eye(4)
+    labels = ["A", "A", "B"]
+
+    with pytest.raises(ig.InternalError, match=r"Membership vector size differs"):
+        modularity(adj, labels, is_directed=False)
+
+
+@pytest.mark.parametrize(
+    ("labels", "is_directed", "pat"),
+    [
+        pytest.param("col_name", False, r"labels.*array", id="label-no_sequence"),
+        pytest.param(["A", "A", "B"], None, r"is_directed", id="is_directed-missing"),
+    ],
+)
+@needs.igraph
+def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) -> None:
+    """Invalid parameters for non-anndata usage."""
+    adj = np.eye(3)
+    with pytest.raises(TypeError, match=pat):
+        modularity(adj, labels, is_directed=is_directed)  # type: ignore
+
+
+@needs.igraph
+def test_modularity_adata(
+    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
+) -> None:
+    """Test domain and API of modularity score."""
+    adata = pbmc3k()
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+    sc.tl.leiden(adata, flavor="igraph")
+
+    scores = {}
+    with monkeypatch.context() as m:
+        # make sure we don’t calculate it
+        m.delattr(sc.metrics._metrics, "modularity_array")
+        scores["retrieve"] = modularity(adata, labels="leiden", mode="retrieve")
+    del adata.uns["leiden"]["modularity"]  # make sure it’s not retrieved
+    scores["calculate"] = modularity(adata, labels="leiden", mode="calculate")
+    assert "modularity" not in adata.uns["leiden"]
+    scores["update"] = modularity(adata, labels="leiden", mode="update")
+
+    for name, s in scores.items():
+        with subtests.test("bounds", score=name):
+            assert 0 <= s <= 1
+    for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
+        approx = {n0, n1} != {"update", "calculate"}
+        with (
+            subtests.test("equality", l=n0, r=n1),
+            xfail(
+                approx and pkg_version("igraph") < Version("1"),
+                reason="igraph 0.x has different modularity behavior",
+            ),
+        ):
+            assert pytest.approx(s0, rel=1e-3 if approx else 1e-6) == s1
+    with subtests.test("update"):
+        assert adata.uns["leiden"]["modularity"] is scores["update"]
+
+
+@pytest.mark.parametrize(
+    ("labels", "args", "pat"),
+    [
+        pytest.param(["A"] * 3, dict(mode="retrieve"), r"labels.*string", id="labels"),
+        pytest.param("label", dict(is_directed=True), r"undirected", id="is_directed"),
+    ],
+)
+def test_modularity_adata_errors(
+    labels: object, args: dict[str, object], pat: str
+) -> None:
+    """Invalid parameters for anndata usage."""
+    adata = AnnData(
+        obs=dict(label=["A", "A", "B"]),
+        obsp=dict(connectivities=np.eye(3)),
+        uns=dict(neighbors=dict(params={})),
+    )
+    with pytest.raises(ValueError, match=pat):
+        modularity(adata, labels, **args)  # type: ignore
+
+
+@needs.igraph
+def test_modularity_order() -> None:
+    """Modularity should be the same no matter the order of the labels."""
+    adj = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 1, 1],
+        [0, 0, 1, 1],
+    ])
+    labels1 = ["A", "A", "B", "B"]
+    labels2 = ["B", "B", "A", "A"]
+
+    score_1 = modularity(adj, labels1, is_directed=False)
+    score_2 = modularity(adj, labels2, is_directed=False)
+
+    assert score_1 == score_2
+
+
+@needs.igraph
+def test_modularity_disconnected_graph() -> None:
+    """Modularity on disconnected graph like edge-case behavior in some algorithms."""
+    adj = np.zeros((4, 4))
+    labels = ["A", "B", "C", "D"]
+
+    score = modularity(adj, labels, is_directed=False)
+
+    # Modularity should be undefined for disconnected graphs
+    assert np.isnan(score)

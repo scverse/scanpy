@@ -11,7 +11,7 @@ from anndata import AnnData
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-from scanpy._utils import _import_name, descend_classes_and_funcs
+from scanpy._utils import _docs, descend_classes_and_funcs, import_name
 
 if TYPE_CHECKING:
     from types import FunctionType
@@ -39,7 +39,7 @@ api_module_names = [
     "sc.metrics",
 ]
 api_modules = {
-    mod_name: _import_name(f"scanpy{mod_name.removeprefix('sc')}")
+    mod_name: import_name(f"scanpy{mod_name.removeprefix('sc')}")
     for mod_name in api_module_names
 }
 
@@ -50,6 +50,7 @@ api_functions = [
     for mod_name, mod in api_modules.items()
     for name in sorted(mod.__all__)
     if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
+    if not (isinstance(func, type) and issubclass(func, dict))  # TypedDict
 ]
 
 
@@ -166,3 +167,46 @@ def getsourcelines(obj):
         return getsourcelines(wrapped)
 
     return getsourcelines(obj)
+
+
+ALL_SPS = [_docs.ScipySparse(fmt) for fmt in ("csr", "csc")]
+
+
+@pytest.mark.parametrize(
+    ("include", "exclude", "expected"),
+    [
+        pytest.param("np", "", [_docs.Numpy()], id="np"),
+        pytest.param("np", "np", [], id="remove_identical"),
+        pytest.param(
+            "np da",
+            "",
+            [_docs.Numpy(), _docs.DaskArray(_docs.Numpy())],
+            id="dask_inherits",
+        ),
+        pytest.param(
+            "sp da[sp[csr]]",
+            [],
+            [*ALL_SPS, _docs.DaskArray(_docs.ScipySparse("csr"))],
+            id="include_fewer_nested",
+        ),
+        pytest.param(
+            "da[sp[csc]]",
+            [],
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
+            id="include_only_nested",
+        ),
+        pytest.param("da[sp[csc]]", "sp da", [], id="remove_more"),
+        pytest.param(
+            "sp da",
+            "sp da[sp[csr]]",
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
+            id="only_dask_subset",
+        ),
+    ],
+)
+def test_array_type_selector(
+    include: str, exclude: str, expected: list[_docs.ArrayType]
+) -> None:
+    inc, exc = (i.split(" ") if i else [] for i in (include, exclude))
+    received = list(_docs.parse(inc, exc))
+    assert received == expected

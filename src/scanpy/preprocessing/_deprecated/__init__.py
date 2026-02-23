@@ -57,7 +57,7 @@ def normalize_per_cell_weinreb16_deprecated(
     return x_norm
 
 
-def zscore_deprecated(X: np.ndarray) -> np.ndarray:
+def zscore_deprecated(x: np.ndarray, /) -> np.ndarray:
     """Z-score standardize each variable/gene in X :cite:p:`Weinreb2017`.
 
     Use `scale` instead.
@@ -72,6 +72,6 @@ def zscore_deprecated(X: np.ndarray) -> np.ndarray:
     Z-score standardized version of the data matrix.
 
     """
-    means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
-    stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))
-    return (X - means) / (stds + 0.0001)
+    means = np.tile(np.mean(x, axis=0)[None, :], (x.shape[0], 1))
+    stds = np.tile(np.std(x, axis=0)[None, :], (x.shape[0], 1))
+    return (x - means) / (stds + 0.0001)

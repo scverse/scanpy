@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+from functools import partial
+from typing import TYPE_CHECKING
+
+import pandas as pd
 import pytest
 from sklearn.metrics.cluster import normalized_mutual_info_score
 
@@ -7,32 +12,52 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from anndata import AnnData
+
 
 @pytest.fixture
-def adata_neighbors():
+def adata_neighbors() -> AnnData:
     return pbmc68k_reduced()
 
 
-FLAVORS = [
-    pytest.param("igraph", marks=needs.igraph),
-    pytest.param("leidenalg", marks=needs.leidenalg),
-]
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("leidenalg", marks=needs.leidenalg),
+    ]
+)
+def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+    return request.param
 
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
-    sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        resolution=resolution,
-        n_iterations=n_iterations,
-        directed=(flavor == "leidenalg"),
-        key_added="leiden_custom",
-    )
+def test_leiden_basic(
+    adata_neighbors: AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    resolution: float,
+    n_iterations: int,
+) -> None:
+    with (
+        nullcontext()
+        if flavor == "igraph"
+        else pytest.warns(
+            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+        )
+    ):
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            resolution=resolution,
+            n_iterations=n_iterations,
+            directed=(flavor == "leidenalg"),
+            key_added="leiden_custom",
+        )
     assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
     assert (
         adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
@@ -41,8 +66,9 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
-def test_leiden_random_state(adata_neighbors, flavor):
+def test_leiden_random_state(
+    adata_neighbors: AnnData, flavor: Literal["igraph", "leidenalg"]
+) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1 = sc.tl.leiden(
@@ -64,13 +90,23 @@ def test_leiden_random_state(adata_neighbors, flavor):
     adata_2 = sc.tl.leiden(
         adata_neighbors,
         flavor=flavor,
-        random_state=2,
+        random_state=3,
         copy=True,
         directed=is_leiden_alg,
         n_iterations=n_iterations,
     )
-    assert (adata_1.obs["leiden"] == adata_1_again.obs["leiden"]).all()
-    assert (adata_2.obs["leiden"] != adata_1_again.obs["leiden"]).any()
+    # reproducible
+    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_1.uns["leiden"]["modularity"])
+        == adata_1_again.uns["leiden"]["modularity"]
+    )
+    # different clustering
+    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+    assert (
+        pytest.approx(adata_2.uns["leiden"]["modularity"])
+        != adata_1_again.uns["leiden"]["modularity"]
+    )
 
 
 @needs.igraph
@@ -124,7 +160,7 @@ def test_leiden_equal_defaults(adata_neighbors):
         adata_neighbors, flavor="leidenalg", directed=True, copy=True
     )
     igraph_clustered = sc.tl.leiden(
-        adata_neighbors, copy=True, n_iterations=2, directed=False
+        adata_neighbors, flavor="igraph", copy=True, n_iterations=2, directed=False
     )
     assert (
         normalized_mutual_info_score(
@@ -149,7 +185,12 @@ def test_leiden_objective_function(adata_neighbors):
 @pytest.mark.parametrize(
     ("clustering", "key"),
     [
-        pytest.param(sc.tl.leiden, "leiden", marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_subset(adata_neighbors, clustering, key):
@@ -159,7 +200,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         print("Analyzing cluster ", c)
         cells_in_c = adata_neighbors.obs[key] == c
         ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
-        key_sub = str(key) + "_sub"
+        key_sub = f"{key}_sub"
         clustering(
             adata_neighbors,
             restrict_to=(key, [c]),
@@ -182,7 +223,14 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 @pytest.mark.parametrize(
     ("clustering", "default_key", "default_res", "custom_resolutions"),
     [
-        pytest.param(sc.tl.leiden, "leiden", 0.8, [0.9, 1.1], marks=needs.leidenalg),
+        pytest.param(
+            partial(sc.tl.leiden, flavor="leidenalg"),
+            "leiden",
+            0.8,
+            [0.9, 1.1],
+            marks=needs.leidenalg,
+            id="leiden",
+        ),
     ],
 )
 def test_clustering_custom_key(

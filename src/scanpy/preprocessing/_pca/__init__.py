@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING, Literal, overload
-from warnings import warn
 
-import anndata as ad
 import numpy as np
 from anndata import AnnData
 from packaging.version import Version
 from sklearn.utils import check_random_state
 
 from ... import logging as logg
-from ..._compat import CSBase, DaskArray, pkg_version
+from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ...get import _check_mask, _get_obs_rep
@@ -21,7 +18,7 @@ from ._compat import _pca_compat_sparse
 if TYPE_CHECKING:
     from collections.abc import Container
     from collections.abc import Set as AbstractSet
-    from typing import LiteralString, TypeVar
+    from typing import LiteralString
 
     import dask_ml.decomposition as dmld
     import sklearn.decomposition as skld
@@ -30,30 +27,28 @@ if TYPE_CHECKING:
     from ..._utils import Empty
     from ..._utils.random import _LegacyRandom
 
-    MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
-    MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
 
-    T = TypeVar("T", bound=LiteralString)
-    M = TypeVar("M", bound=LiteralString)
+type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
+type MethodSklearn = type[skld.PCA | skld.TruncatedSVD]
 
-
-SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
-SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
-SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
+type SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
+type SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
+type SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
 if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
-    SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
+    type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 else:
-    SvdSolvPCASparseSklearn = Literal["arpack"]
-SvdSolvPCADenseSklearn = Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
-SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
-SvdSolvSkearn = (
+    type SvdSolvPCASparseSklearn = Literal["arpack"]
+type SvdSolvPCADenseSklearn = (
+    Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
+)
+type SvdSolvTruncatedSVDSklearn = Literal["arpack", "randomized"]
+type SvdSolvSkearn = (
     SvdSolvPCADenseSklearn | SvdSolvPCASparseSklearn | SvdSolvTruncatedSVDSklearn
 )
 
-SvdSolvPCACustom = Literal["covariance_eigh"]
-
-SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
+type SvdSolvPCACustom = Literal["covariance_eigh"]
+type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
 @_doc_params(
@@ -64,6 +59,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     n_comps: int | None = None,
     *,
     layer: str | None = None,
+    obsm: str | None = None,
     zero_center: bool = True,
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
@@ -103,6 +99,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     .. [#dense-only] This implementation can not handle sparse chunks, try manually densifying them.
     .. [#densifies] This implementation densifies sparse chunks and therefore has increased memory usage.
 
+    .. array-support:: pp.pca
+
     Parameters
     ----------
     data
@@ -112,7 +110,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         Number of principal components to compute. Defaults to 50,
         or 1 - minimum dimension size of selected representation.
     layer
-        If provided, which element of layers to use for PCA.
+        If provided, which element of :attr:`~anndata.AnnData.layers` to use for PCA instead of `X`.
+    obsm
+        If provided, which element of :attr:`~anndata.AnnData.obsm` to use for PCA instead of `X`.
     zero_center
         If `True`, compute (or approximate) PCA from covariance matrix.
         If `False`, performa a truncated SVD instead of PCA.
@@ -192,7 +192,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     `.obsm['X_pca' | key_added]` : :class:`~scipy.sparse.csr_matrix` | :class:`~scipy.sparse.csc_matrix` | :class:`~numpy.ndarray` (shape `(adata.n_obs, n_comps)`)
         PCA representation of data.
     `.varm['PCs' | key_added]` : :class:`~numpy.ndarray` (shape `(adata.n_vars, n_comps)`)
-        The principal components containing the loadings.
+        The principal components containing the loadings *when `obsm=None`*.
+    `.uns['pca' | key_added]['components']` : :class:`~numpy.ndarray` (shape `(adata.obsm[obsm].shape[1], n_comps)`)
+        The principal components containing the loadings *when `obsm="..."`*.
     `.uns['pca' | key_added]['variance_ratio']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
         Ratio of explained variance.
     `.uns['pca' | key_added]['variance']` : :class:`~numpy.ndarray` (shape `(n_comps,)`)
@@ -201,9 +203,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     logg_start = logg.info("computing PCA")
-    if layer is not None and chunked:
+    if (layer is not None or obsm is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
-        msg = "Cannot use `layer` and `chunked` at the same time."
+        msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
     if key_added is _empty:
         key_added = settings.preset.pca.key_added
@@ -216,17 +218,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducibility, choose `svd_solver='arpack'`."
         )
     if return_anndata := isinstance(data, AnnData):
-        if layer is None and not chunked and is_backed_type(data.X):
+        if (layer is None and obsm is None) and not chunked and is_backed_type(data.X):
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
-    elif pkg_version("anndata") < Version("0.8.0rc1"):
-        adata = AnnData(data, dtype=data.dtype)
     else:
         adata = AnnData(data)
 
     # Unify new mask argument and deprecated use_highly_varible argument
-    mask_var_param, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
+    mask_var_param, mask_var = _handle_mask_var(
+        adata, mask_var, obsm=obsm, use_highly_variable=use_highly_variable
+    )
     del use_highly_variable
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
@@ -236,27 +238,14 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    X = _get_obs_rep(adata_comp, layer=layer)
-    if is_backed_type(X) and layer is not None:
-        msg = f"PCA is not implemented for matrices of type {type(X)} from layers"
+    x = _get_obs_rep(adata_comp, layer=layer, obsm=obsm)
+    if is_backed_type(x) and (layer is not None or obsm is not None):
+        msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
-    # See: https://github.com/scverse/scanpy/pull/2816#issuecomment-1932650529
-    if (
-        Version(ad.__version__) < Version("0.9")
-        and mask_var is not None
-        and isinstance(X, np.ndarray)
-    ):
-        warnings.warn(
-            "When using a mask parameter with anndata<0.9 on a dense array, the PCA"
-            "can have slightly different results due the array being column major "
-            "instead of row major.",
-            UserWarning,
-            stacklevel=2,
-        )
 
     # check_random_state returns a numpy RandomState when passed an int but
     # dask needs an int for random state
-    if not isinstance(X, DaskArray):
+    if not isinstance(x, DaskArray):
         random_state = check_random_state(random_state)
     elif not isinstance(random_state, int):
         msg = f"random_state needs to be an int, not a {type(random_state).__name__} when passing a dask array"
@@ -271,7 +260,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             logg.debug("Ignoring zero_center, random_state, svd_solver")
 
         incremental_pca_kwargs = dict()
-        if isinstance(X, DaskArray):
+        if isinstance(x, DaskArray):
             from dask.array import zeros
             from dask_ml.decomposition import IncrementalPCA
 
@@ -282,7 +271,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             from numpy import zeros
             from sklearn.decomposition import IncrementalPCA
 
-        X_pca = zeros((X.shape[0], n_comps), X.dtype)
+        x_pca = zeros((x.shape[0], n_comps), x.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps, **incremental_pca_kwargs)
 
@@ -292,51 +281,38 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
         for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
-            X_pca[start:end] = pca_.transform(chunk_dense)
+            x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(X, CSBase) and (
-            pkg_version("scikit-learn") < Version("1.4") or svd_solver == "lobpcg"
-        ):
-            if svd_solver not in (
-                {"lobpcg"} | get_literal_vals(SvdSolvPCASparseSklearn)
-            ):
-                if svd_solver is not None:
-                    msg = (
-                        f"Ignoring {svd_solver=} and using 'arpack', "
-                        "sparse PCA with sklearn < 1.4 only supports 'lobpcg' and 'arpack'."
-                    )
-                    warnings.warn(msg, UserWarning, stacklevel=2)
-                svd_solver = "arpack"
-            elif svd_solver == "lobpcg":
-                msg = (
-                    f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
-                    "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
-                )
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            X_pca, pca_ = _pca_compat_sparse(
-                X, n_comps, solver=svd_solver, random_state=random_state
+        if isinstance(x, CSBase) and svd_solver == "lobpcg":
+            msg = (
+                f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
+                "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
+            )
+            warn(msg, FutureWarning)
+            x_pca, pca_ = _pca_compat_sparse(
+                x, n_comps, solver=svd_solver, random_state=random_state
             )
         else:
-            if not isinstance(X, DaskArray):
+            if not isinstance(x, DaskArray):
                 from sklearn.decomposition import PCA
 
                 svd_solver = _handle_sklearn_args(
-                    svd_solver, PCA, sparse=isinstance(X, CSBase)
+                    svd_solver, PCA, sparse=isinstance(x, CSBase)
                 )
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            elif isinstance(X._meta, CSBase) or svd_solver == "covariance_eigh":
+            elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
                 if random_state != 0:
                     msg = f"Ignoring {random_state=} when using a sparse dask array"
-                    warnings.warn(msg, UserWarning, stacklevel=2)
+                    warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
-                    warnings.warn(msg, UserWarning, stacklevel=2)
+                    warn(msg, UserWarning)
                 pca_ = PCAEighDask(n_components=n_comps)
             else:
                 from dask_ml.decomposition import PCA
@@ -347,10 +323,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                     svd_solver=svd_solver,
                     random_state=random_state,
                 )
-            X_pca = pca_.fit_transform(X)
+            x_pca = pca_.fit_transform(x)
     else:
-        if isinstance(X, DaskArray):
-            if isinstance(X._meta, CSBase):
+        if isinstance(x, DaskArray):
+            if isinstance(x._meta, CSBase):
                 msg = (
                     "`zero_center=False` is not supported for sparse Dask arrays (yet). "
                     "See <https://github.com/dask/dask-ml/issues/123>."
@@ -373,34 +349,36 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         pca_ = TruncatedSVD(
             n_components=n_comps, random_state=random_state, algorithm=svd_solver
         )
-        X_pca = pca_.fit_transform(X)
+        x_pca = pca_.fit_transform(x)
 
-    if X_pca.dtype.descr != np.dtype(dtype).descr:
-        X_pca = X_pca.astype(dtype)
+    if x_pca.dtype.descr != np.dtype(dtype).descr:
+        x_pca = x_pca.astype(dtype)
 
     if return_anndata:
         key_obsm, key_varm, key_uns = (
             ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
         )
-        adata.obsm[key_obsm] = X_pca
+        adata.obsm[key_obsm] = x_pca
 
-        if mask_var is not None:
+        if obsm:
+            pass  # see below, components are stored in `uns`.
+        elif mask_var is not None:
             adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm[key_varm][mask_var] = pca_.components_.T
         else:
             adata.varm[key_varm] = pca_.components_.T
 
-        params = dict(
-            zero_center=zero_center,
-            use_highly_variable=mask_var_param == "highly_variable",
-            mask_var=mask_var_param,
-        )
-        if layer is not None:
-            params["layer"] = layer
         adata.uns[key_uns] = dict(
-            params=params,
+            params=dict(
+                zero_center=zero_center,
+                use_highly_variable=mask_var_param == "highly_variable",
+                mask_var=mask_var_param,
+                **(dict(layer=layer) if layer is not None else {}),
+                **(dict(obsm=obsm) if obsm is not None else {}),
+            ),
             variance=pca_.explained_variance_,
             variance_ratio=pca_.explained_variance_ratio_,
+            **(dict(components=pca_.components_.T) if obsm is not None else {}),
         )
 
         logg.info("    finished", time=logg_start)
@@ -416,24 +394,32 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         logg.info("    finished", time=logg_start)
         if return_info:
             return (
-                X_pca,
+                x_pca,
                 pca_.components_,
                 pca_.explained_variance_ratio_,
                 pca_.explained_variance_,
             )
         else:
-            return X_pca
+            return x_pca
 
 
 def _handle_mask_var(
     adata: AnnData,
     mask_var: NDArray[np.bool_] | str | Empty | None,
+    *,
+    obsm: str | None = None,
     use_highly_variable: bool | None,
 ) -> tuple[np.ndarray | str | None, np.ndarray | None]:
     """Unify new mask argument and deprecated use_highly_varible argument.
 
     Returns both the normalized mask parameter and the validated mask array.
     """
+    if obsm:
+        if mask_var is not _empty and mask_var is not None:
+            msg = "Argument `mask_var` is incompatible with `obsm`."
+            raise ValueError(msg)
+        return None, None
+
     # First, verify and possibly warn
     if use_highly_variable is not None:
         hint = (
@@ -441,7 +427,7 @@ def _handle_mask_var(
             "Use_highly_variable=False can be called through mask_var=None"
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
-        warn(msg, FutureWarning, stacklevel=2)
+        warn(msg, FutureWarning)
         if mask_var is not _empty:
             msg = f"These arguments are incompatible. {hint}"
             raise ValueError(msg)
@@ -524,7 +510,7 @@ def _handle_sklearn_args(
     return _handle_x_args(svd_solver, method, args, default, suffix=suffix)
 
 
-def _handle_x_args(
+def _handle_x_args[T: LiteralString](
     svd_solver: str | None,
     method: type,
     args: Container[T],
@@ -539,6 +525,5 @@ def _handle_x_args(
             f"Ignoring {svd_solver=} and using {default}, "
             f"{method.__module__}.{method.__qualname__}{suffix} only supports {args}."
         )
-        # (4: caller of `pca` -> 3: `pca` -> 2: `_handle_{sklearn,dask_ml}_args` -> 1: here)
-        warnings.warn(msg, UserWarning, stacklevel=4)
+        warn(msg, UserWarning)
     return default

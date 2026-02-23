@@ -41,6 +41,7 @@ def paul500() -> AnnData:
 )
 @pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
+    *,
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
@@ -101,7 +102,7 @@ def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
 def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     """Simulate doublets based on the randomly selected parents used previously."""
     n_sim = parents.shape[0]
-    I = sparse.coo_matrix(
+    entries = sparse.coo_matrix(
         (
             np.ones(2 * n_sim),
             (np.repeat(np.arange(n_sim), 2), parents.flat),
@@ -109,11 +110,11 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
         (n_sim, adata.n_obs),
     )
     # maintain data type, just like the real scrublet function.
-    X = (I @ adata.layers["raw"]).astype(adata.X.dtype)
+    x = (entries @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
-        X,
+        x,
         var=pd.DataFrame(index=adata.var_names),
-        obs={"total_counts": np.ravel(X.sum(axis=1))},
+        obs={"total_counts": np.ravel(x.sum(axis=1))},
         obsm={"doublet_parents": parents.copy()},
     )
 
@@ -227,3 +228,13 @@ def test_scrublet_simulate_doublets():
         adata_sim.obsm["doublet_parents"],
         np.array([[13, 132], [106, 43], [152, 3], [160, 103]]),
     )
+
+
+def test_scrublet_dtypes() -> None:
+    """Test that Scrublet does not change dtypes of existing data.obs cols."""
+    adata = pbmc200()
+    adata.obs["batch"] = pd.Categorical(100 * ["a"] + 100 * ["b"])
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
+
+    assert adata.obs["batch"].dtype == "category"

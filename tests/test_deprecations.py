@@ -6,18 +6,18 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 
-def test_deprecate_multicore_tsne():
+def test_deprecate_multicore_tsne() -> None:
     pbmc = pbmc68k_reduced()
 
     with pytest.warns(
-        UserWarning, match="calling tsne with n_jobs > 1 would use MulticoreTSNE"
+        UserWarning, match=r"calling tsne with `n_jobs` > 1 would use MulticoreTSNE"
     ):
         sc.tl.tsne(pbmc, n_jobs=2)
 
-    with pytest.warns(FutureWarning, match="Argument `use_fast_tsne` is deprecated"):
-        sc.tl.tsne(pbmc, use_fast_tsne=True)
-
-    with pytest.warns(UserWarning, match="Falling back to scikit-learn"):
+    with (
+        pytest.warns(FutureWarning, match=r"Argument `use_fast_tsne` is deprecated"),
+        pytest.warns(ImportWarning, match=r"MulticoreTSNE"),
+    ):
         sc.tl.tsne(pbmc, use_fast_tsne=True)
 
 

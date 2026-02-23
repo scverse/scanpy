@@ -1,6 +1,6 @@
 (settings)=
 
-## Settings
+# Settings
 
 
 ```{eval-rst}
