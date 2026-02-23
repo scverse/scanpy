@@ -7,7 +7,6 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-import legacy_api_wrap
 from packaging.version import Version
 from scipy import sparse
 
@@ -78,10 +77,7 @@ def pkg_version(package: str) -> Version:
 
 
 # File prefixes for us and decorators we use
-_FILE_PREFIXES: tuple[str, ...] = (
-    str(Path(__file__).parent),
-    str(Path(legacy_api_wrap.__file__).parent),
-)
+_FILE_PREFIXES: tuple[str, ...] = (str(Path(__file__).parent),)
 
 
 # we’re not using _FILE_PREFIXES here,
