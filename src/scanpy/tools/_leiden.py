@@ -230,8 +230,10 @@ def _validate_flavor(
             try:
                 import leidenalg  # noqa: F401
             except ImportError as e:
-                msg = "Please install the leiden algorithm: `conda install -c conda-forge leidenalg` or `pip3 install leidenalg`."
-                raise ImportError(msg) from e
+                e.add_note(
+                    "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
+                )
+                raise
             msg = (
                 "In the future, the default backend for leiden will be igraph instead of leidenalg.\n\n"
                 'To achieve the future defaults please pass: `flavor="igraph"` and n_iterations=2. '

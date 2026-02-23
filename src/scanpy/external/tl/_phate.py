@@ -152,11 +152,8 @@ def phate(  # noqa: PLR0913
     try:
         import phate
     except ImportError as e:
-        msg = (
-            "You need to install the package `phate`: please run `pip install "
-            "--user phate` in a terminal."
-        )
-        raise ImportError(msg) from e
+        e.add_note("Please install `phate` and try again.")
+        raise
     x_phate = phate.PHATE(
         n_components=n_components,
         k=k,

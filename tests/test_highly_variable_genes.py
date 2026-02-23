@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse as sps
 from anndata import AnnData
 from fast_array_utils import stats
 from pandas.testing import assert_frame_equal, assert_index_equal
@@ -520,6 +521,15 @@ def test_seurat_v3_warning():
         match="`flavor='seurat_v3'` expects raw count data, but non-integers were found.",
     ):
         sc.pp.highly_variable_genes(pbmc, flavor="seurat_v3")
+
+
+@needs.skmisc
+def test_seurat_v3_degenerate() -> None:
+    """Tests that the flavor handles all-zero genes."""
+    adata = AnnData(sps.random(10, 1000, density=0.001, format="csr", dtype="int"))
+    adata.X.data = np.abs(adata.X.data)
+
+    sc.pp.highly_variable_genes(adata, flavor="seurat_v3")
 
 
 def test_batches():
