@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     "copy",
     "random_state",
 )
-@accepts_legacy_random_state()
+@accepts_legacy_random_state(0)
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -306,7 +306,7 @@ def scrublet(  # noqa: PLR0913
     return adata if copy else None
 
 
-@accepts_legacy_random_state()
+@accepts_legacy_random_state(0)
 def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,
