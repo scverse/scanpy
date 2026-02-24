@@ -119,6 +119,7 @@ doc = [
     "myst-nb>=1",
     "myst-parser>=2",
     "nbsphinx>=0.9",
+    "numpy>=2.4",                           # type aliases
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting]",

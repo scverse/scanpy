@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from functools import partial
 from importlib.metadata import version as get_version
+from itertools import product
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -263,7 +264,10 @@ qualname_overrides = {
     # https://github.com/pandas-dev/pandas/issues/63810
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
     "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
-    "numpy.typing.ArrayLike": ("py:data", "numpy.typing.ArrayLike"),
+    **{
+        f"numpy.{prefix}typing.{name}": ("py:data", f"numpy.typing.{name}")
+        for name, prefix in product(["ArrayLike", "DTypeLike"], ["", "_"])
+    },
 }
 
 nitpick_ignore = [
