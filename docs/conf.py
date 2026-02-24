@@ -260,6 +260,9 @@ qualname_overrides = {
     "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
+    "scanpy._param_sets.HVGFlavor": "tuple",
+    "scanpy._param_sets.FilterCellsCutoffs": "tuple",
+    "scanpy._param_sets.FilterGenesCutoffs": "tuple",
     "pandas.core.series.Series": "pandas.Series",
     # https://github.com/pandas-dev/pandas/issues/63810
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),

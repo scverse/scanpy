@@ -20,7 +20,7 @@ from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
-from .._settings import settings as sett
+from .._settings import settings
 from .._utils import (
     _resolve_axis,
     check_array_function_arguments,
@@ -137,7 +137,7 @@ def filter_cells(
     )
     if n_given_options != 1:
         msg = (
-            "Only provide one of the optional parameters `min_counts`, "
+            "Provide exactly one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
         raise ValueError(msg)
@@ -253,7 +253,7 @@ def filter_genes(
     )
     if n_given_options != 1:
         msg = (
-            "Only provide one of the optional parameters `min_counts`, "
+            "Provide exactly one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
         )
         raise ValueError(msg)
@@ -729,7 +729,7 @@ def regress_out(
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
-    n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
     # regress on a single categorical variable
     variable_is_categorical = False
@@ -853,7 +853,7 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",

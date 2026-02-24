@@ -11,6 +11,7 @@ from .. import logging
 from .._compat import deprecated, old_positionals
 from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
+from .presets import Preset
 from .verbosity import Verbosity
 
 if TYPE_CHECKING:
@@ -61,6 +62,7 @@ def _type_check_arg2[S, T, R, **P](
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
 class SettingsMeta(SingletonMeta, type):
+    _preset: Preset
     # logging
     _root_logger: _RootLogger
     _logfile: TextIO
@@ -92,6 +94,15 @@ class SettingsMeta(SingletonMeta, type):
     """Variable for timing program parts."""
     _previous_memory_usage: int
     """Stores the previous memory usage."""
+
+    @property
+    def preset(cls) -> Preset:
+        """Preset to use."""
+        return cls._preset
+
+    @preset.setter
+    def preset(cls, preset: Preset | str) -> None:
+        cls._preset = Preset(preset)
 
     @property
     def verbosity(cls) -> Verbosity:
@@ -455,6 +466,7 @@ class settings(metaclass=SettingsMeta):  # noqa: N801
     def __new__(cls) -> type[Self]:
         return cls
 
+    _preset = Preset.ScanpyV1
     # logging
     _root_logger: ClassVar = _RootLogger(logging.WARNING)
     _logfile: ClassVar = SettingsMeta._default_logfile()

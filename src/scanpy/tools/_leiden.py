@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._compat import CSBase
+    from .._settings.presets import LeidenFlavor
     from .._utils.random import _LegacyRandom
 
     try:  # sphinx-autodoc-typehints + optional dependency
@@ -44,7 +45,7 @@ def leiden(  # noqa: PLR0913
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: Literal["leidenalg", "igraph"] | None = None,
+    flavor: LeidenFlavor | None = None,
     **clustering_args,
 ) -> AnnData | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -213,6 +214,10 @@ def leiden(  # noqa: PLR0913
 def _validate_flavor(
     flavor: str | None, *, partition_type: object | None, directed: bool | None
 ) -> Literal["igraph", "leidenalg"]:
+    if was_default := (flavor is None):
+        from scanpy import settings
+
+        flavor = settings.preset.leiden.flavor
     match flavor:
         case "igraph":
             if directed:
@@ -221,18 +226,18 @@ def _validate_flavor(
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
                 raise ValueError(msg)
-        case None | "leidenalg":
+        case "leidenalg":
             msg = (
                 "The `igraph` implementation of leiden clustering is *orders of magnitude faster*. "
                 "Set the flavor argument to (and install if needed) 'igraph' to use it."
             )
-            if flavor is None:
+            if was_default:
                 msg += (
                     "\nIn the future, the default backend for leiden will be igraph instead of leidenalg. "
                     "To achieve the future defaults please pass: `flavor='igraph'` and `n_iterations=2`. "
                     "`directed` must also be `False` to work with igraph’s implementation."
                 )
-            warn(msg, FutureWarning if flavor is None else UserWarning)
+            warn(msg, FutureWarning if was_default else UserWarning)
             try:
                 import leidenalg  # noqa: F401
             except ImportError as e:
@@ -240,8 +245,7 @@ def _validate_flavor(
                     "Please install `scanpy[leiden]` (or `leidenalg` directly) and try again."
                 )
                 raise
-            flavor = "leidenalg"
         case _:
-            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed"
+            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
             raise ValueError(msg)
     return flavor

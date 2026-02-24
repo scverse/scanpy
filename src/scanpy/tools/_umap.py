@@ -235,8 +235,7 @@ def umap(  # noqa: PLR0913, PLR0915
         )
     elif method == "rapids":
         msg = (
-            "`method='rapids'` is deprecated. "
-            "Use `rapids_singlecell.tl.louvain` instead."
+            "`method='rapids'` is deprecated. Use `rapids_singlecell.tl.umap` instead."
         )
         warn(msg, FutureWarning)
         metric = neigh_params.get("metric", "euclidean")

@@ -5,13 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import logging as logg
-from .. import preprocessing as pp
 from .._compat import CSBase, old_positionals
-from ._deprecated.highly_variable_genes import (
-    filter_genes_cv_deprecated,
-    filter_genes_dispersion,
-)
-from ._normalization import normalize_total
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -54,7 +48,9 @@ def recipe_weinreb17(
         Return a copy if true.
 
     """
+    from .. import pp
     from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
+    from ._deprecated.highly_variable_genes import filter_genes_cv_deprecated
 
     if isinstance(adata.X, CSBase):
         msg = "`recipe_weinreb16 does not support sparse matrices."
@@ -102,21 +98,20 @@ def recipe_seurat(
         Return a copy if true.
 
     """
+    from .. import pl, pp
+    from ._deprecated.highly_variable_genes import filter_genes_dispersion
+
     if copy:
         adata = adata.copy()
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
-    normalize_total(adata, target_sum=1e4)
+    pp.normalize_total(adata, target_sum=1e4)
     filter_result = filter_genes_dispersion(
         adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log
     )
     if plot:
-        from ..plotting import (
-            _preprocessing as ppp,
-        )
-
-        ppp.filter_genes_dispersion(filter_result, log=not log)
-    adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
+        pl.filter_genes_dispersion(filter_result, log=not log)
+    adata._inplace_subset_var(filter_result["gene_subset"])  # filter genes
     if log:
         pp.log1p(adata)
     pp.scale(adata, max_value=10)
@@ -175,24 +170,25 @@ def recipe_zheng17(
     Returns or updates `adata` depending on `copy`.
 
     """
+    from .. import pl, pp
+    from ._deprecated.highly_variable_genes import filter_genes_dispersion
+
     start = logg.info("running recipe zheng17")
     if copy:
         adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    normalize_total(adata, key_added="n_counts_all")
+    pp.normalize_total(adata, key_added="n_counts_all")
     filter_result = filter_genes_dispersion(
         adata.X, flavor="cell_ranger", n_top_genes=n_top_genes, log=False
     )
     if plot:  # should not import at the top of the file
-        from ..plotting import _preprocessing as ppp
-
-        ppp.filter_genes_dispersion(filter_result, log=True)
+        pl.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter_result.gene_subset]
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
-    normalize_total(adata)  # renormalize after filtering
+    pp.normalize_total(adata)  # renormalize after filtering
     if log:
         pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata)
