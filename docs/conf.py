@@ -264,6 +264,7 @@ qualname_overrides = {
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
     "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
     "numpy.typing.ArrayLike": ("py:data", "numpy.typing.ArrayLike"),
+    "numpy.typing.DTypeLike": ("py:data", "numpy.typing.DTypeLike"),
 }
 
 nitpick_ignore = [
