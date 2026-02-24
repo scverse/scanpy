@@ -244,7 +244,7 @@ def test_pca_transform_randomized(array_type):
     warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         patterns = (
-            r"Ignoring random_state=14 when using a sparse dask array",
+            r"Ignoring rng=14 when using a sparse dask array",
             r"Ignoring svd_solver='randomized' when using a sparse dask array",
         )
         ctx = _helpers.MultiContext(
@@ -338,7 +338,7 @@ def test_pca_reproducible(array_type):
     pbmc.X = array_type(pbmc.X)
 
     with (
-        pytest.warns(UserWarning, match=r"Ignoring random_state.*sparse dask array")
+        pytest.warns(UserWarning, match=r"Ignoring rng.*sparse dask array")
         if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
         else nullcontext()
     ):

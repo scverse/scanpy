@@ -21,6 +21,7 @@ __all__ = [
     "RNGLike",
     "SeedLike",
     "_LegacyRandom",
+    "_if_legacy_apply_global",
     "accepts_legacy_random_state",
     "ith_k_tuple",
     "legacy_random_state",
@@ -81,22 +82,38 @@ class _FakeRandomGen(np.random.Generator):
     _arg: _LegacyRandom
     _state: np.random.RandomState
 
-    def __init__(self, seed_or_state: _LegacyRandom) -> None:
-        self._arg = seed_or_state
-        self._state = np.random.RandomState(seed_or_state)
+    def __init__(
+        self, arg: _LegacyRandom, state: np.random.RandomState | None = None
+    ) -> None:
+        self._arg = arg
+        self._state = np.random.RandomState(arg) if state is None else state
+        super().__init__(self._state._bit_generator)
 
     @classmethod
-    def wrap_global(cls, random_state: _LegacyRandom | None = None) -> Self:
+    def wrap_global(
+        cls,
+        arg: _LegacyRandom = None,
+        state: np.random.RandomState | None = None,
+    ) -> Self:
         """Create a generator that wraps the global `RandomState` backing the legacy `np.random` functions."""
-        if random_state is not None:
-            if isinstance(random_state, np.random.RandomState):
-                np.random.set_state(random_state.get_state(legacy=False))
-                return _FakeRandomGen(random_state)
-            np.random.seed(random_state)
-        return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
+        if arg is not None:
+            if isinstance(arg, np.random.RandomState):
+                np.random.set_state(arg.get_state(legacy=False))
+                return _FakeRandomGen(arg, state)
+            np.random.seed(arg)
+        return _FakeRandomGen(arg, np.random.RandomState(np.random.get_bit_generator()))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _FakeRandomGen):
+            return False
+        return self._arg == other._arg
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._arg))
 
     @classmethod
     def _delegate(cls) -> None:
+        names = dict(integers="randint")
         for name, meth in np.random.Generator.__dict__.items():
             if name.startswith("_") or not callable(meth):
                 continue
@@ -109,19 +126,33 @@ class _FakeRandomGen(np.random.Generator):
 
                 return wrapper
 
-            setattr(cls, name, mk_wrapper(name, meth))
+            setattr(cls, names.get(name, name), mk_wrapper(name, meth))
 
 
 _FakeRandomGen._delegate()
 
 
-def legacy_random_state(rng: SeedLike | RNGLike | None) -> _LegacyRandom:
+def _if_legacy_apply_global(rng: np.random.Generator) -> np.random.Generator:
+    """Re-apply legacy `random_state` semantics when `rng` is a `_FakeRandomGen`.
+
+    This resets the global legacy RNG from the original `_arg` and returns a
+    generator which continues drawing from the same internal state.
+    """
+    if not isinstance(rng, _FakeRandomGen):
+        return rng
+
+    return _FakeRandomGen.wrap_global(rng._arg, rng._state)
+
+
+def legacy_random_state(
+    rng: SeedLike | RNGLike | None, *, always_state: bool = False
+) -> _LegacyRandom:
     """Convert a np.random.Generator into a legacy `random_state` argument.
 
     If `rng` is already a `_FakeRandomGen`, return its original `_arg` attribute.
     """
     if isinstance(rng, _FakeRandomGen):
-        return rng._arg
+        return rng._state if always_state else rng._arg
     rng = np.random.default_rng(rng)
     return np.random.RandomState(rng.bit_generator.spawn(1)[0])
 

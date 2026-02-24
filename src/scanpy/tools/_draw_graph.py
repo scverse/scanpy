@@ -9,7 +9,11 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _choose_graph, get_literal_vals
-from .._utils.random import accepts_legacy_random_state, set_igraph_rng
+from .._utils.random import (
+    _if_legacy_apply_global,
+    accepts_legacy_random_state,
+    set_igraph_rng,
+)
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -125,6 +129,7 @@ def draw_graph(  # noqa: PLR0913
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     rng = np.random.default_rng(rng)
+    rng = _if_legacy_apply_global(rng)
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)

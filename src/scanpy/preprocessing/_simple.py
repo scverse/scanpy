@@ -30,7 +30,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from .._utils.random import accepts_legacy_random_state
+from .._utils.random import _if_legacy_apply_global, accepts_legacy_random_state
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
@@ -1040,6 +1040,7 @@ def downsample_counts(
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
     rng = np.random.default_rng(rng)
+    rng = _if_legacy_apply_global(rng)
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
@@ -1134,7 +1135,6 @@ def _downsample_total_counts(
 
 
 # TODO: can/should this be parallelized?
-@numba.njit(cache=True)  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
@@ -1142,7 +1142,7 @@ def _downsample_array(
     rng: np.random.Generator,
     replace: bool = True,
     inplace: bool = False,
-):
+) -> np.ndarray:
     """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
@@ -1150,13 +1150,20 @@ def _downsample_array(
     * total counts in cell must be less than target
     """
     cumcounts = col.cumsum()
+    total = np.int_(cumcounts[-1])
+    sample = rng.choice(total, target, replace=replace)
+    sample.sort()
+    return _downsample_array_inner(col, cumcounts, sample, inplace=inplace)
+
+
+@numba.njit(cache=True)  # noqa: TID251
+def _downsample_array_inner(
+    col: np.ndarray, cumcounts: np.ndarray, sample: np.ndarray, *, inplace: bool
+) -> np.ndarray:
     if inplace:
         col[:] = 0
     else:
         col = np.zeros_like(col)
-    total = np.int_(cumcounts[-1])
-    sample = rng.choice(total, target, replace=replace)
-    sample.sort()
     geneptr = 0
     for count in sample:
         while count >= cumcounts[geneptr]:

@@ -11,7 +11,11 @@ from scipy import sparse
 from ... import logging as logg
 from ... import preprocessing as pp
 from ..._compat import old_positionals
-from ..._utils.random import accepts_legacy_random_state
+from ..._utils.random import (
+    _if_legacy_apply_global,
+    accepts_legacy_random_state,
+    legacy_random_state,
+)
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -181,6 +185,7 @@ def scrublet(  # noqa: PLR0913
 
     """
     rng = np.random.default_rng(rng)
+    rng = _if_legacy_apply_global(rng)
     if threshold is None and not find_spec("skimage"):  # pragma: no cover
         # Scrublet.call_doublets requires `skimage` with `threshold=None` but PCA
         # is called early, which is wasteful if there is not `skimage`
@@ -444,10 +449,14 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
-        pipeline.pca(scrub, n_prin_comps=n_prin_comps, rng=scrub._rng)
+        pipeline.pca(
+            scrub, n_prin_comps=n_prin_comps, svd_solver="arpack", rng=scrub._rng
+        )
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
-        pipeline.truncated_svd(scrub, n_prin_comps=n_prin_comps, rng=scrub._rng)
+        pipeline.truncated_svd(
+            scrub, n_prin_comps=n_prin_comps, algorithm="arpack", rng=scrub._rng
+        )
 
     # Score the doublets
 
@@ -479,7 +488,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
                 .get("sim_doublet_ratio", None)
             ),
             "n_neighbors": n_neighbors,
-            "rng": rng,
+            "random_state": legacy_random_state(rng),
         },
     }
 
@@ -557,6 +566,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
+    rng = _if_legacy_apply_global(rng)
     x = _get_obs_rep(adata, layer=layer)
     scrub = Scrublet(x, rng=rng)
 

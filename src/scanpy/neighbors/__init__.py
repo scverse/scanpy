@@ -17,7 +17,11 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
-from .._utils.random import accepts_legacy_random_state, legacy_random_state
+from .._utils.random import (
+    _FakeRandomGen,
+    accepts_legacy_random_state,
+    legacy_random_state,
+)
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -225,17 +229,20 @@ def neighbors(  # noqa: PLR0913
         )
     else:
         params = locals()
-        if ignored := {
+        ignored = {
             p.name
             for p in signature(neighbors).parameters.values()
-            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "rng"}
+            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
-        }:
+        }
+        if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
+            ignored.add("rng/random_state")
+            rng = _FakeRandomGen(0)
+        if ignored:
             warn(
                 f"Parameter(s) ignored if `distances` is given: {ignored}",
                 UserWarning,
             )
-            random_state = 0
         if callable(metric):
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
@@ -263,7 +270,7 @@ def neighbors(  # noqa: PLR0913
         key_added,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
-        random_state=rng,
+        random_state=legacy_random_state(rng),
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),

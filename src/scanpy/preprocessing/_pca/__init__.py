@@ -10,7 +10,11 @@ from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
-from ..._utils.random import accepts_legacy_random_state, legacy_random_state
+from ..._utils.random import (
+    _FakeRandomGen,
+    accepts_legacy_random_state,
+    legacy_random_state,
+)
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
@@ -243,19 +247,22 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         raise NotImplementedError(msg)
 
     # dask needs an int for random state
-    if not isinstance(x, DaskArray):
-        rng = np.random.default_rng(rng)
-    elif not isinstance(rng, int):
-        msg = f"rng needs to be an int, not a {type(rng).__name__} when passing a dask array"
+    rng = np.random.default_rng(rng)
+    if not isinstance(rng, _FakeRandomGen) and not isinstance(
+        rng._arg, int | np.random.RandomState
+    ):
+        # TODO: remove this error and if we don’t have a _FakeRandomGen,
+        #       just use rng.integers to make a seed farther down
+        msg = f"rng needs to be an int or a np.random.RandomState, not a {type(rng).__name__} when passing a dask array"
         raise TypeError(msg)
 
     if chunked:
         if (
             not zero_center
-            or rng is not None
+            or (not isinstance(rng, _FakeRandomGen) or rng._arg != 0)
             or (svd_solver is not None and svd_solver != "arpack")
         ):
-            logg.debug("Ignoring zero_center, random_state, svd_solver")
+            logg.debug("Ignoring zero_center, rng, svd_solver")
 
         incremental_pca_kwargs = dict()
         if isinstance(x, DaskArray):
@@ -303,8 +310,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
-                if rng is not None:
-                    msg = f"Ignoring {rng=} when using a sparse dask array"
+                if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
+                    msg = f"Ignoring rng={legacy_random_state(rng)} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"

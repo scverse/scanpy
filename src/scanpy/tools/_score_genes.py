@@ -10,6 +10,7 @@ import pandas as pd
 from .. import logging as logg
 from .._compat import CSBase, old_positionals
 from .._utils import check_use_raw, is_backed_type
+from .._utils.random import _if_legacy_apply_global, accepts_legacy_random_state
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -53,6 +54,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @old_positionals(
     "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
 )
+@accepts_legacy_random_state(0)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
@@ -120,7 +122,10 @@ def score_genes(  # noqa: PLR0913
 
     """
     start = logg.info(f"computing score {score_name!r}")
+    rng_was_passed = rng is not None
     rng = np.random.default_rng(rng)
+    if rng_was_passed:  # backwards compatibility: call np.random.seed() by default
+        rng = _if_legacy_apply_global(rng)
     adata = adata.copy() if copy else adata
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:

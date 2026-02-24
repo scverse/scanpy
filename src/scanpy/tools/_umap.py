@@ -10,7 +10,7 @@ from .. import logging as logg
 from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView
-from .._utils.random import legacy_random_state
+from .._utils.random import accepts_legacy_random_state, legacy_random_state
 from ._utils import _choose_representation, get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -40,6 +40,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
     "method",
     "neighbors_key",
 )
+@accepts_legacy_random_state(0)
 def umap(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     *,
@@ -201,7 +202,7 @@ def umap(  # noqa: PLR0913, PLR0915
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     if rng is not None:
-        adata.uns[key_uns]["params"]["random_state"] = rng
+        adata.uns[key_uns]["params"]["random_state"] = legacy_random_state(rng)
 
     neigh_params = neighbors["params"]
     x = _choose_representation(
@@ -226,7 +227,7 @@ def umap(  # noqa: PLR0913, PLR0915
             negative_sample_rate=negative_sample_rate,
             n_epochs=n_epochs,
             init=init_coords,
-            random_state=legacy_random_state(rng),
+            random_state=legacy_random_state(rng, always_state=True),
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
             densmap=False,

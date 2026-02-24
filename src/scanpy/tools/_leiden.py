@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Hashable
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -10,7 +9,11 @@ from natsort import natsorted
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
-from .._utils.random import accepts_legacy_random_state, set_igraph_rng
+from .._utils.random import (
+    accepts_legacy_random_state,
+    legacy_random_state,
+    set_igraph_rng,
+)
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -162,8 +165,7 @@ def leiden(  # noqa: PLR0913
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
-        if isinstance(rng, Hashable):
-            clustering_args["seed"] = rng
+        clustering_args["seed"] = legacy_random_state(rng)
         part = cast(
             "MutableVertexPartition",
             leidenalg.find_partition(g, partition_type, **clustering_args),
