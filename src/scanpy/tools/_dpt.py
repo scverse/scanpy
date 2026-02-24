@@ -9,7 +9,7 @@ from natsort import natsorted
 
 from .. import logging as logg
 from .._compat import old_positionals
-from .._utils.random import legacy_numpy_gen
+from .._utils.random import _FakeRandomGen
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -151,7 +151,7 @@ def dpt(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
-        _diffmap(adata, neighbors_key=neighbors_key, rng=legacy_numpy_gen(0))
+        _diffmap(adata, neighbors_key=neighbors_key, rng=_FakeRandomGen(0))
     # start with the actual computation
     dpt = DPT(
         adata,

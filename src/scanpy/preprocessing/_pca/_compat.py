@@ -10,7 +10,7 @@ from sklearn.utils import check_array
 from sklearn.utils.extmath import svd_flip
 
 from ..._compat import pkg_version
-from ..._utils.random import legacy_random_state
+from ..._utils.random import accepts_legacy_random_state, legacy_random_state
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
+@accepts_legacy_random_state(None)
 def _pca_compat_sparse(
     x: CSBase,
     n_pcs: int,

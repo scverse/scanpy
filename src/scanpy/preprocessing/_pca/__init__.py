@@ -10,7 +10,7 @@ from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
-from ..._utils.random import legacy_random_state
+from ..._utils.random import accepts_legacy_random_state, legacy_random_state
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
@@ -54,6 +54,7 @@ type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 @_doc_params(
     mask_var_hvg=doc_mask_var_hvg,
 )
+@accepts_legacy_random_state(0)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,

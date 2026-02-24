@@ -30,6 +30,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
+from .._utils.random import accepts_legacy_random_state
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
@@ -991,6 +992,7 @@ def sample(  # noqa: PLR0912
 
 
 @renamed_arg("target_counts", "counts_per_cell")
+@accepts_legacy_random_state(0)
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,

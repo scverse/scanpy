@@ -10,7 +10,7 @@ from natsort import natsorted
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
-from .._utils.random import set_igraph_rng
+from .._utils.random import accepts_legacy_random_state, set_igraph_rng
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
+@accepts_legacy_random_state(0)
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,

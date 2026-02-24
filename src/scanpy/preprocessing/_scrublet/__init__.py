@@ -11,6 +11,7 @@ from scipy import sparse
 from ... import logging as logg
 from ... import preprocessing as pp
 from ..._compat import old_positionals
+from ..._utils.random import accepts_legacy_random_state
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     "copy",
     "random_state",
 )
+@accepts_legacy_random_state()
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -304,6 +306,7 @@ def scrublet(  # noqa: PLR0913
     return adata if copy else None
 
 
+@accepts_legacy_random_state()
 def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,

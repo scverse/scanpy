@@ -12,6 +12,7 @@ from . import ensure_igraph
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from typing import Self
 
     from numpy.typing import NDArray
 
@@ -20,8 +21,8 @@ __all__ = [
     "RNGLike",
     "SeedLike",
     "_LegacyRandom",
+    "accepts_legacy_random_state",
     "ith_k_tuple",
-    "legacy_numpy_gen",
     "legacy_random_state",
     "random_k_tuples",
     "random_str",
@@ -76,23 +77,23 @@ def set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
 ###################################
 
 
-def legacy_numpy_gen(
-    random_state: _LegacyRandom | None = None,
-) -> np.random.Generator:
-    """Return a random generator that behaves like the legacy one."""
-    if random_state is not None:
-        if isinstance(random_state, np.random.RandomState):
-            np.random.set_state(random_state.get_state(legacy=False))
-            return _FakeRandomGen(random_state)
-        np.random.seed(random_state)
-    return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
-
-
 class _FakeRandomGen(np.random.Generator):
+    _arg: _LegacyRandom
     _state: np.random.RandomState
 
-    def __init__(self, random_state: np.random.RandomState) -> None:
-        self._state = random_state
+    def __init__(self, seed_or_state: _LegacyRandom) -> None:
+        self._arg = seed_or_state
+        self._state = np.random.RandomState(seed_or_state)
+
+    @classmethod
+    def wrap_global(cls, random_state: _LegacyRandom | None = None) -> Self:
+        """Create a generator that wraps the global `RandomState` backing the legacy `np.random` functions."""
+        if random_state is not None:
+            if isinstance(random_state, np.random.RandomState):
+                np.random.set_state(random_state.get_state(legacy=False))
+                return _FakeRandomGen(random_state)
+            np.random.seed(random_state)
+        return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
 
     @classmethod
     def _delegate(cls) -> None:
@@ -114,11 +115,44 @@ class _FakeRandomGen(np.random.Generator):
 _FakeRandomGen._delegate()
 
 
-def legacy_random_state(rng: SeedLike | RNGLike | None) -> np.random.RandomState:
-    rng = np.random.default_rng(rng)
+def legacy_random_state(rng: SeedLike | RNGLike | None) -> _LegacyRandom:
+    """Convert a np.random.Generator into a legacy `random_state` argument.
+
+    If `rng` is already a `_FakeRandomGen`, return its original `_arg` attribute.
+    """
     if isinstance(rng, _FakeRandomGen):
-        return rng._state
+        return rng._arg
+    rng = np.random.default_rng(rng)
     return np.random.RandomState(rng.bit_generator.spawn(1)[0])
+
+
+def accepts_legacy_random_state[**P, R](
+    random_state_default: _LegacyRandom,
+) -> callable[[callable[P, R]], callable[P, R]]:
+    """Make a function accept `random_state: _LegacyRandom` and pass it as `rng`.
+
+    If the decorated function is called with a `random_state` argument,
+    it’ll be wrapped in a :class:`_FakeRandomGen`.
+    Passing both ``rng`` and ``random_state`` at the same time is an error.
+    If neither is given, ``random_state_default`` is used.
+    """
+
+    def decorator(func: callable[P, R]) -> callable[P, R]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            match "random_state" in kwargs, "rng" in kwargs:
+                case True, True:
+                    msg = "Specify at most one of `rng` and `random_state`."
+                    raise TypeError(msg)
+                case True, False:
+                    kwargs["rng"] = _FakeRandomGen(kwargs.pop("random_state"))
+                case False, False:
+                    kwargs["rng"] = _FakeRandomGen(random_state_default)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 ###################

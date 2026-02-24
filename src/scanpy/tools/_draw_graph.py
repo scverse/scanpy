@@ -9,7 +9,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import old_positionals
 from .._utils import _choose_graph, get_literal_vals
-from .._utils.random import set_igraph_rng
+from .._utils.random import accepts_legacy_random_state, set_igraph_rng
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular",
     "obsp",
     "copy",
 )
+@accepts_legacy_random_state(0)
 def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",

@@ -17,7 +17,7 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
-from .._utils.random import legacy_random_state
+from .._utils.random import accepts_legacy_random_state, legacy_random_state
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -78,6 +78,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@accepts_legacy_random_state(0)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
@@ -572,6 +573,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+    @accepts_legacy_random_state(0)
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
@@ -842,6 +844,7 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
+    @accepts_legacy_random_state(0)
     def compute_eigen(
         self,
         *,

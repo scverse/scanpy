@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..._compat import old_positionals
-from ..._utils.random import legacy_numpy_gen
+from ..._utils.random import _FakeRandomGen
 from .._simple import sample
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ def subsample(
     returns a subsampled copy of it (`copy == True`).
 
     """
-    rng = legacy_numpy_gen(random_state)
+    rng = _FakeRandomGen.wrap_global(random_state)
     return sample(
         data=data, fraction=fraction, n=n_obs, rng=rng, copy=copy, replace=False, axis=0
     )

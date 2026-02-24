@@ -6,7 +6,7 @@ from .. import logging as logg
 from .._compat import old_positionals, warn
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
-from .._utils.random import legacy_random_state
+from .._utils.random import accepts_legacy_random_state, legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     "n_jobs",
     "copy",
 )
+@accepts_legacy_random_state(0)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(  # noqa: PLR0913
     adata: AnnData,

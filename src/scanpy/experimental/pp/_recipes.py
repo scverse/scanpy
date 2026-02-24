@@ -17,6 +17,8 @@ from scanpy.experimental._docs import (
 )
 from scanpy.preprocessing import pca
 
+from ..._utils.random import accepts_legacy_random_state
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
+@accepts_legacy_random_state(0)
 def recipe_pearson_residuals(  # noqa: PLR0913
     adata: AnnData,
     *,

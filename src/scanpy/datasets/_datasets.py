@@ -12,7 +12,7 @@ from .. import _utils
 from .._compat import deprecated, old_positionals
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
-from .._utils.random import legacy_random_state
+from .._utils.random import accepts_legacy_random_state, legacy_random_state
 from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
@@ -58,6 +58,7 @@ HERE = Path(__file__).parent
 @old_positionals(
     "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
 )
+@accepts_legacy_random_state(0)
 def blobs(
     *,
     n_variables: int = 11,
