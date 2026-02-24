@@ -87,7 +87,6 @@ bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
-harmony = [ "harmonypy" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
@@ -137,6 +136,7 @@ doc = [
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
+    "pooch",
     "pytest",
     "pytest-cov",           # only for use from VS Code
     "pytest-mock",
