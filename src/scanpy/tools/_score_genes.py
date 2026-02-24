@@ -265,6 +265,7 @@ def score_genes_cell_cycle(
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
     copy: bool = False,
+    layer: str | None = None,
     **kwargs,
 ) -> AnnData | None:
     """Score cell cycle genes :cite:p:`Satija2015`.
@@ -283,6 +284,8 @@ def score_genes_cell_cycle(
         List of genes associated with G2M phase.
     copy
         Copy `adata` or modify it inplace.
+    layer
+        Key from `adata.layers` whose value will be used to perform tests on.
     **kwargs
         Are passed to :func:`~scanpy.tl.score_genes`. `ctrl_size` is not
         possible, as it's set as `min(len(s_genes), len(g2m_genes))`.
@@ -312,7 +315,9 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
-        score_genes(adata, genes, score_name=name, ctrl_size=ctrl_size, **kwargs)
+        score_genes(
+            adata, genes, score_name=name, ctrl_size=ctrl_size, layer=layer, **kwargs
+        )
     scores = adata.obs[["S_score", "G2M_score"]]
 
     # default phase is S
