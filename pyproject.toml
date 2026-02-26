@@ -55,7 +55,6 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.2.1",
     "h5py>=3.11",
     "joblib",
-    "legacy-api-wrap>=1.5",                     # for positional API deprecations
     "matplotlib>=3.9",
     "natsort",
     "networkx>=2.8.8",
@@ -214,7 +213,6 @@ lint.pylint.max-args = 10
 lint.pylint.max-positional-args = 5
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
 "numba.jit".msg = "Use `scanpy._compat.njit` instead"
 "numba.njit".msg = "Use `scanpy._compat.njit` instead"
 "numpy.bool_".msg = "Use `np.bool` instead"

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -15,20 +14,6 @@ if TYPE_CHECKING:
     from samalg import SAM
 
 
-@old_positionals(
-    "max_iter",
-    "num_norm_avg",
-    "k",
-    "distance",
-    "standardization",
-    "weight_pcs",
-    "sparse_pca",
-    "n_pcs",
-    "n_genes",
-    "projection",
-    "inplace",
-    "verbose",
-)
 @doctest_needs("samalg")
 def sam(  # noqa: PLR0913
     adata: AnnData,

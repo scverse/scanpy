@@ -8,7 +8,6 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
-from .._compat import old_positionals
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
@@ -20,17 +19,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "n_pcs",
-    "use_rep",
-    "var_names",
-    "use_raw",
-    "cor_method",
-    "linkage_method",
-    "optimal_ordering",
-    "key_added",
-    "inplace",
-)
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,

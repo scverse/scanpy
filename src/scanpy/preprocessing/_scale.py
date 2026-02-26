@@ -10,13 +10,12 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, warn
 from .._utils import (
     axis_mul_or_truediv,
     check_array_function_arguments,
     dematrix,
     raise_not_implemented_error_if_backed_type,
-    renamed_arg,
     view_to_actual,
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
@@ -67,8 +66,6 @@ def clip_array(
     return x
 
 
-@renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale[A: _Array](
     data: AnnData | A,

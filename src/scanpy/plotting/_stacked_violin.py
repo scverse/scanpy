@@ -8,7 +8,7 @@ from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
+from .._compat import warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -156,25 +156,6 @@ class StackedViolin(BasePlot):
             return object.__getattribute__(self, "DEFAULT_SCALE")
         return object.__getattribute__(self, name)
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "standard_scale",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -257,19 +238,6 @@ class StackedViolin(BasePlot):
         self.kwds.setdefault("linewidth", self.DEFAULT_LINE_WIDTH)
         self.kwds.setdefault("density_norm", self.DEFAULT_DENSITY_NORM)
 
-    @old_positionals(
-        "cmap",
-        "stripplot",
-        "jitter",
-        "jitter_size",
-        "linewidth",
-        "row_palette",
-        "density_norm",
-        "yticklabels",
-        "ylim",
-        "x_padding",
-        "y_padding",
-    )
     def style(  # noqa: PLR0913
         self,
         *,
@@ -641,23 +609,6 @@ class StackedViolin(BasePlot):
         )
 
 
-@old_positionals(
-    "log",
-    "use_raw",
-    "num_categories",
-    "title",
-    "colorbar_title",
-    "figsize",
-    "dendrogram",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "standard_scale",
-    "var_group_rotation",
-    "layer",
-    "stripplot",
-    # 17 positionals are enough for backwards compatibility
-)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
