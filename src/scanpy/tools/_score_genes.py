@@ -76,6 +76,8 @@ def score_genes(  # noqa: PLR0913
     programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
 
+    .. array-support:: tl.score_genes
+
     Parameters
     ----------
     adata
@@ -272,6 +274,8 @@ def score_genes_cell_cycle(
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
     :func:`~scanpy.tl.score_genes` for more explanation.
+
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------
