@@ -196,6 +196,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
     "tl.paga": (["np", "sp"], []),
     "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.score_genes": (["np", "sp"], []),
     "tl.tsne": (["np", "sp"], []),
     "tl.umap": (["np", "sp"], []),
 }
