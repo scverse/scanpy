@@ -27,7 +27,7 @@ jobs:
         with: { enable-cache: false }
       - id: get-envs
         run: |
-          ENVS_JSON=$(NO_COLOR=1 uvx hatch '--with=virtualenv<21' env show --json | jq -c 'to_entries
+          ENVS_JSON=$(NO_COLOR=1 uvx '--with=virtualenv<21' hatch env show --json | jq -c 'to_entries
             | map(
               select(.key | startswith("hatch-test"))
               | {
