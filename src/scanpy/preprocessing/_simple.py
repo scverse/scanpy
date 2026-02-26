@@ -1020,7 +1020,6 @@ def downsample_counts(
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
     rng = np.random.default_rng(rng)
-    rng = _if_legacy_apply_global(rng)
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
@@ -1114,7 +1113,6 @@ def _downsample_total_counts(
     return x
 
 
-# TODO: can/should this be parallelized?
 def _downsample_array(
     col: np.ndarray,
     target: int,
@@ -1129,6 +1127,7 @@ def _downsample_array(
 
     * total counts in cell must be less than target
     """
+    rng = _if_legacy_apply_global(rng)
     cumcounts = col.cumsum()
     total = np.int_(cumcounts[-1])
     sample = rng.choice(total, target, replace=replace)
@@ -1136,6 +1135,7 @@ def _downsample_array(
     return _downsample_array_inner(col, cumcounts, sample, inplace=inplace)
 
 
+# TODO: can/should this be parallelized?
 @numba.njit(cache=True)  # noqa: TID251
 def _downsample_array_inner(
     col: np.ndarray, cumcounts: np.ndarray, sample: np.ndarray, *, inplace: bool
