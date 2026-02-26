@@ -24,7 +24,6 @@ import scipy as sp
 
 from .. import _utils, readwrite
 from .. import logging as logg
-from .._compat import old_positionals
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -34,17 +33,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "params_file",
-    "tmax",
-    "branching",
-    "nrRealizations",
-    "noiseObs",
-    "noiseDyn",
-    "step",
-    "seed",
-    "writedir",
-)
 def sim(
     model: Literal["krumsiek11", "toggleswitch"],
     *,

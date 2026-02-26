@@ -12,7 +12,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, njit, old_positionals
+from .._compat import CSBase, njit
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -488,21 +488,6 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
-@old_positionals(
-    "mask",
-    "use_raw",
-    "groups",
-    "reference",
-    "n_genes",
-    "rankby_abs",
-    "pts",
-    "key_added",
-    "copy",
-    "method",
-    "corr_method",
-    "tie_correct",
-    "layer",
-)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
@@ -773,16 +758,6 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
-@old_positionals(
-    "key",
-    "groupby",
-    "use_raw",
-    "key_added",
-    "min_in_group_fraction",
-    "min_fold_change",
-    "max_out_group_fraction",
-    "compare_abs",
-)
 def filter_rank_genes_groups(  # noqa: PLR0912
     adata: AnnData,
     *,

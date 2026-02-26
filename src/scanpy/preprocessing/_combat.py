@@ -7,7 +7,7 @@ import pandas as pd
 from numpy import linalg as la
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -133,7 +133,6 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
-@old_positionals("covariates", "inplace")
 def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",

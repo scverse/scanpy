@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging as logg
-from .._compat import old_positionals
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -33,7 +32,6 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
-@old_positionals("groupby", "key_added", "components")
 def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",

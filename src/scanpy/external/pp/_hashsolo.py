@@ -37,7 +37,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from ..._compat import old_positionals
 from ..._utils import check_nonnegative_integers
 from ..._utils._doctests import doctest_skip
 
@@ -292,9 +291,6 @@ def _calculate_bayes_rule(
     }
 
 
-@old_positionals(
-    "priors", "pre_existing_clusters", "number_of_noise_barcodes", "inplace"
-)
 @doctest_skip("Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,

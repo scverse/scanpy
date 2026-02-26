@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import colormaps
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
+from .._compat import warn
 from .._settings import settings
 from .._utils import _doc_params, _empty
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
@@ -113,29 +113,6 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "expression_cutoff",
-        "mean_only_expressed",
-        "standard_scale",
-        "dot_color_df",
-        "dot_size_df",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -333,20 +310,6 @@ class DotPlot(BasePlot):
 
         return dot_color_df, dot_size_df
 
-    @old_positionals(
-        "cmap",
-        "color_on",
-        "dot_max",
-        "dot_min",
-        "smallest_dot",
-        "largest_dot",
-        "dot_edge_color",
-        "dot_edge_lw",
-        "size_exponent",
-        "grid",
-        "x_padding",
-        "y_padding",
-    )
     def style(  # noqa: PLR0913
         self,
         *,
@@ -460,14 +423,6 @@ class DotPlot(BasePlot):
 
         return self
 
-    @old_positionals(
-        "show",
-        "show_size_legend",
-        "show_colorbar",
-        "size_title",
-        "colorbar_title",
-        "width",
-    )
     def legend(
         self,
         *,
@@ -990,22 +945,6 @@ class DotPlot(BasePlot):
         return normalize, dot_min, dot_max
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "expression_cutoff",
-    "mean_only_expressed",
-    "cmap",
-    "dot_max",
-    "dot_min",
-    "standard_scale",
-    "smallest_dot",
-    "title",
-    "colorbar_title",
-    "size_title",
-    # No need to have backwards compat for > 16 positional parameters
-)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,

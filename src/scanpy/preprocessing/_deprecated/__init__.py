@@ -3,11 +3,10 @@ from __future__ import annotations
 import numpy as np
 from scipy import sparse
 
-from ..._compat import CSBase, old_positionals
+from ..._compat import CSBase
 from ..._utils import dematrix
 
 
-@old_positionals("max_fraction", "mult_with_mean")
 def normalize_per_cell_weinreb16_deprecated(
     x: np.ndarray | CSBase,
     *,

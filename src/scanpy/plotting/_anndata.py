@@ -17,7 +17,7 @@ from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._settings import settings
 from .._utils import (
     _doc_params,
@@ -95,23 +95,6 @@ class VarGroups(NamedTuple):
         return None if len(labels) == 0 else cls(labels, positions)
 
 
-@old_positionals(
-    "color",
-    "use_raw",
-    "layers",
-    "sort_order",
-    "alpha",
-    "basis",
-    "groups",
-    "components",
-    "projection",
-    "legend_loc",
-    "legend_fontsize",
-    "legend_fontweight",
-    "legend_fontoutline",
-    "color_map",
-    # 17 positionals are enough for backwards compatibility
-)
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(  # noqa: PLR0913
     adata: AnnData,
@@ -577,16 +560,6 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     return axs[0]
 
 
-@old_positionals(
-    "dictionary",
-    "indices",
-    "labels",
-    "color",
-    "n_points",
-    "log",
-    "include_lowest",
-    "show",
-)
 def ranking(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     attr: Literal["var", "obs", "uns", "varm", "obsm"],
@@ -704,23 +677,6 @@ def ranking(  # noqa: PLR0912, PLR0913
     return gs
 
 
-@old_positionals(
-    "log",
-    "use_raw",
-    "stripplot",
-    "jitter",
-    "size",
-    "layer",
-    "scale",
-    "order",
-    "multi_panel",
-    "xlabel",
-    "ylabel",
-    "rotation",
-    "show",
-    "save",
-    "ax",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def violin(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -989,7 +945,6 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
-@old_positionals("use_raw", "show", "save")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
@@ -1068,27 +1023,6 @@ def clustermap(
     return g
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "dendrogram",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "var_group_rotation",
-    "layer",
-    "standard_scale",
-    "swap_axes",
-    "show_gene_labels",
-    "show",
-    "save",
-    "figsize",
-    "vmin",
-    "vmax",
-    "vcenter",
-    "norm",
-)
 @_doc_params(
     vminmax=doc_vboundnorm,
     show_save_ax=doc_show_save_ax,
@@ -1477,18 +1411,6 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     return return_ax_dict
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "dendrogram",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "layer",
-    "show",
-    "save",
-    "figsize",
-)
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -1815,18 +1737,6 @@ def dendrogram(
     return ax
 
 
-@old_positionals(
-    "show_correlation_numbers",
-    "dendrogram",
-    "figsize",
-    "show",
-    "save",
-    "ax",
-    "vmin",
-    "vmax",
-    "vcenter",
-    "norm",
-)
 @_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
