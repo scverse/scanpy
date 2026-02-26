@@ -10,7 +10,7 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._utils.random import accepts_legacy_random_state, legacy_random_state
+from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from ...neighbors import _Metric, _MetricFn
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -286,7 +286,7 @@ def scrublet(  # noqa: PLR0913
     return adata if copy else None
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def _scrublet_call_doublets(  # noqa: PLR0913
     adata_obs: AnnData,
     adata_sim: AnnData,
@@ -463,7 +463,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
                 .get("sim_doublet_ratio", None)
             ),
             "n_neighbors": n_neighbors,
-            "random_state": legacy_random_state(rng),
+            "random_state": _legacy_random_state(rng),
         },
     }
 
@@ -488,7 +488,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,

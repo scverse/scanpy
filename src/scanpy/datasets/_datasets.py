@@ -12,7 +12,7 @@ from .. import _utils
 from .._compat import deprecated
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
-from .._utils.random import accepts_legacy_random_state, legacy_random_state
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def blobs(
     *,
     n_variables: int = 11,
@@ -100,7 +100,7 @@ def blobs(
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
     )
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 

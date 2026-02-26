@@ -10,7 +10,7 @@ import pandas as pd
 from .. import logging as logg
 from .._compat import CSBase
 from .._utils import check_use_raw, is_backed_type
-from .._utils.random import _if_legacy_apply_global, accepts_legacy_random_state
+from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     return m
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],

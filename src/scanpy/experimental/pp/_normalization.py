@@ -9,7 +9,7 @@ from anndata import AnnData
 from ... import logging as logg
 from ..._compat import CSBase, warn
 from ..._utils import _doc_params, _empty, check_nonnegative_integers, view_to_actual
-from ..._utils.random import accepts_legacy_random_state
+from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -162,7 +162,7 @@ def normalize_pearson_residuals(
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,

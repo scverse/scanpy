@@ -29,7 +29,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from .._utils.random import _if_legacy_apply_global, accepts_legacy_random_state
+from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
@@ -972,7 +972,7 @@ def sample(  # noqa: PLR0912
     return subset, indices
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,

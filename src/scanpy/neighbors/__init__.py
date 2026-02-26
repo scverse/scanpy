@@ -18,9 +18,9 @@ from .._compat import CSBase, CSRBase, SpBase, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
+    _accepts_legacy_random_state,
     _FakeRandomGen,
-    accepts_legacy_random_state,
-    legacy_random_state,
+    _legacy_random_state,
 )
 from . import _connectivity
 from ._common import (
@@ -82,7 +82,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
@@ -270,7 +270,7 @@ def neighbors(  # noqa: PLR0913
         key_added,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
@@ -579,7 +579,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-    @accepts_legacy_random_state(0)
+    @_accepts_legacy_random_state(0)
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
@@ -627,7 +627,7 @@ class Neighbors:
             n_neighbors=n_neighbors,
             metric=metric,
             metric_params=metric_kwds,  # most use _params, not _kwds
-            random_state=legacy_random_state(rng),
+            random_state=_legacy_random_state(rng),
         )
         method, transformer, shortcut = self._handle_transformer(
             method, transformer, knn=knn, kwds=transformer_kwds_default
@@ -849,7 +849,7 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
-    @accepts_legacy_random_state(0)
+    @_accepts_legacy_random_state(0)
     def compute_eigen(
         self,
         *,

@@ -6,7 +6,7 @@ from .. import logging as logg
 from .._compat import warn
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
-from .._utils.random import accepts_legacy_random_state, legacy_random_state
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(  # noqa: PLR0913
     adata: AnnData,
@@ -110,7 +110,7 @@ def tsne(  # noqa: PLR0913
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
         perplexity=perplexity,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
         verbose=settings.verbosity > 3,
         early_exaggeration=early_exaggeration,
         learning_rate=learning_rate,

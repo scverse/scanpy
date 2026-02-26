@@ -11,9 +11,9 @@ from .. import logging as logg
 from .._compat import warn
 from .._utils import _doc_params
 from .._utils.random import (
-    accepts_legacy_random_state,
-    legacy_random_state,
-    set_igraph_rng,
+    _accepts_legacy_random_state,
+    _legacy_random_state,
+    _set_igraph_rng,
 )
 from ._docs import (
     doc_adata,
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
 )
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
@@ -169,7 +169,7 @@ def leiden(  # noqa: PLR0913
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
-        clustering_args["seed"] = legacy_random_state(rng)
+        clustering_args["seed"] = _legacy_random_state(rng)
         part = cast(
             "MutableVertexPartition",
             leidenalg.find_partition(g, partition_type, **clustering_args),
@@ -181,7 +181,7 @@ def leiden(  # noqa: PLR0913
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
-        with set_igraph_rng(rng):
+        with _set_igraph_rng(rng):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
@@ -204,7 +204,7 @@ def leiden(  # noqa: PLR0913
     adata.uns[key_added] = {}
     adata.uns[key_added]["params"] = dict(
         resolution=resolution,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
         n_iterations=n_iterations,
     )
     adata.uns[key_added]["modularity"] = part.modularity

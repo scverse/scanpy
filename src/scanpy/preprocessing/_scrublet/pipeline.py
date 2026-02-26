@@ -6,7 +6,7 @@ import numpy as np
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
-from ..._utils.random import legacy_random_state
+from ..._utils.random import _legacy_random_state
 from .sparse_utils import sparse_multiply, sparse_zscore
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ def truncated_svd(
 
     svd = TruncatedSVD(
         n_components=n_prin_comps,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
         algorithm=algorithm,
     ).fit(self._counts_obs_norm)
     self.set_manifold(
@@ -83,7 +83,7 @@ def pca(
 
     pca = PCA(
         n_components=n_prin_comps,
-        random_state=legacy_random_state(rng),
+        random_state=_legacy_random_state(rng),
         svd_solver=svd_solver,
     ).fit(x_obs)
     self.set_manifold(pca.transform(x_obs), pca.transform(x_sim))

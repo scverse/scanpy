@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from .. import logging as logg
 from .. import preprocessing as pp
 from .._compat import CSBase
-from .._utils.random import accepts_legacy_random_state
+from .._utils.random import _accepts_legacy_random_state
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def recipe_weinreb17(
     adata: AnnData,
     *,

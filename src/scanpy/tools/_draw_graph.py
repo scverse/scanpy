@@ -9,10 +9,10 @@ from .. import _utils
 from .. import logging as logg
 from .._utils import _choose_graph, get_literal_vals
 from .._utils.random import (
+    _accepts_legacy_random_state,
     _if_legacy_apply_global,
-    accepts_legacy_random_state,
-    legacy_random_state,
-    set_igraph_rng,
+    _legacy_random_state,
+    _set_igraph_rng,
 )
 from ._utils import get_init_pos_from_paga
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
@@ -144,7 +144,7 @@ def draw_graph(  # noqa: PLR0913
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
         g = _utils.get_igraph_from_adjacency(adjacency)
-        with set_igraph_rng(rng):
+        with _set_igraph_rng(rng):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
             elif "rt" in layout:
@@ -156,7 +156,7 @@ def draw_graph(  # noqa: PLR0913
         positions = np.array(ig_layout.coords)
     adata.uns["draw_graph"] = {}
     adata.uns["draw_graph"]["params"] = dict(
-        layout=layout, random_state=legacy_random_state(rng)
+        layout=layout, random_state=_legacy_random_state(rng)
     )
     key_added = f"X_draw_graph_{key_added_ext or layout}"
     adata.obsm[key_added] = positions

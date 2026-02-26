@@ -11,9 +11,9 @@ from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ..._utils.random import (
+    _accepts_legacy_random_state,
     _FakeRandomGen,
-    accepts_legacy_random_state,
-    legacy_random_state,
+    _legacy_random_state,
 )
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
@@ -58,7 +58,7 @@ type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 @_doc_params(
     mask_var_hvg=doc_mask_var_hvg,
 )
-@accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(0)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
@@ -305,13 +305,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
-                    random_state=legacy_random_state(rng),
+                    random_state=_legacy_random_state(rng),
                 )
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
                 if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
-                    msg = f"Ignoring rng={legacy_random_state(rng)} when using a sparse dask array"
+                    msg = f"Ignoring rng={_legacy_random_state(rng)} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
@@ -324,7 +324,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 pca_ = PCA(
                     n_components=n_comps,
                     svd_solver=svd_solver,
-                    random_state=legacy_random_state(rng),
+                    random_state=_legacy_random_state(rng),
                 )
             x_pca = pca_.fit_transform(x)
     else:
@@ -351,7 +351,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         )
         pca_ = TruncatedSVD(
             n_components=n_comps,
-            random_state=legacy_random_state(rng),
+            random_state=_legacy_random_state(rng),
             algorithm=svd_solver,
         )
         x_pca = pca_.fit_transform(x)

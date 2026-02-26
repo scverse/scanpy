@@ -10,7 +10,7 @@ from sklearn.utils import check_array
 from sklearn.utils.extmath import svd_flip
 
 from ..._compat import pkg_version
-from ..._utils.random import accepts_legacy_random_state, legacy_random_state
+from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
-@accepts_legacy_random_state(None)
+@_accepts_legacy_random_state(None)
 def _pca_compat_sparse(
     x: CSBase,
     n_pcs: int,
@@ -72,7 +72,7 @@ def _pca_compat_sparse(
     from sklearn.decomposition import PCA
 
     pca = PCA(
-        n_components=n_pcs, svd_solver=solver, random_state=legacy_random_state(rng)
+        n_components=n_pcs, svd_solver=solver, random_state=_legacy_random_state(rng)
     )
     pca.explained_variance_ = ev
     pca.explained_variance_ratio_ = ev_ratio

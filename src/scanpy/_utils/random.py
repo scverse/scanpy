@@ -7,12 +7,11 @@ from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.random._generator import Generator
 
 from . import ensure_igraph
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from typing import Self
 
     from numpy.typing import NDArray
@@ -22,10 +21,11 @@ __all__ = [
     "RNGLike",
     "SeedLike",
     "_LegacyRandom",
+    "_accepts_legacy_random_state",
     "_if_legacy_apply_global",
-    "accepts_legacy_random_state",
+    "_legacy_random_state",
+    "_set_igraph_rng",
     "ith_k_tuple",
-    "legacy_random_state",
     "random_k_tuples",
     "random_str",
 ]
@@ -66,7 +66,7 @@ class _RNGIgraph:
 
 
 @contextmanager
-def set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
+def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
     ensure_igraph()
     import igraph
 
@@ -141,7 +141,7 @@ def _if_legacy_apply_global(rng: np.random.Generator) -> np.random.Generator:
     return _FakeRandomGen.wrap_global(rng._arg, rng._state)
 
 
-def legacy_random_state(
+def _legacy_random_state(
     rng: SeedLike | RNGLike | None, *, always_state: bool = False
 ) -> _LegacyRandom:
     """Convert a np.random.Generator into a legacy `random_state` argument.
@@ -154,9 +154,9 @@ def legacy_random_state(
     return np.random.RandomState(rng.bit_generator.spawn(1)[0])
 
 
-def accepts_legacy_random_state[**P, R](
+def _accepts_legacy_random_state[**P, R](
     random_state_default: _LegacyRandom,
-) -> callable[[callable[P, R]], callable[P, R]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Make a function accept `random_state: _LegacyRandom` and pass it as `rng`.
 
     If the decorated function is called with a `random_state` argument,
@@ -165,7 +165,7 @@ def accepts_legacy_random_state[**P, R](
     If neither is given, ``random_state_default`` is used.
     """
 
-    def decorator(func: callable[P, R]) -> callable[P, R]:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             match "random_state" in kwargs, "rng" in kwargs:
