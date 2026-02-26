@@ -40,7 +40,7 @@ type _LegacyRandom = int | np.random.RandomState | None
 
 
 class _RNGIgraph:
-    """Random number generator for igraph so global seed is not changed.
+    """Random number generator for igraph so global random state is not changed.
 
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
@@ -49,8 +49,11 @@ class _RNGIgraph:
         self._rng = np.random.default_rng(rng)
 
     def getrandbits(self, k: int) -> int:
-        lims = np.iinfo(np.uint64)
-        i = int(self._rng.integers(0, lims.max, dtype=np.uint64))
+        if isinstance(self._rng, _FakeRandomGen):
+            i = self._rng._state.tomaxint()
+        else:
+            lims = np.iinfo(np.uint64)
+            i = int(self._rng.integers(0, lims.max, dtype=np.uint64))
         return i & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
@@ -127,6 +130,9 @@ class _FakeRandomGen(np.random.Generator):
                 return wrapper
 
             setattr(cls, names.get(name, name), mk_wrapper(name, meth))
+
+    def __getattribute__(self, name: str) -> object:
+        return super().__getattribute__(name)
 
 
 _FakeRandomGen._delegate()
