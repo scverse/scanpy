@@ -13,8 +13,8 @@ from .. import logging as logg
 from .._compat import deprecated, old_positionals, pkg_version, warn
 from .._utils import _choose_graph, _doc_params, dematrix
 from ._docs import (
-    doc_adjacency,
     doc_adata,
+    doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
     doc_random_state,

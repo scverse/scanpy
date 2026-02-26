@@ -12,8 +12,8 @@ from .._compat import warn
 from .._utils import _doc_params
 from .._utils.random import set_igraph_random_state
 from ._docs import (
-    doc_adjacency,
     doc_adata,
+    doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
     doc_random_state,
