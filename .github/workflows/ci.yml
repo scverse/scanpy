@@ -27,7 +27,7 @@ jobs:
         with: { enable-cache: false }
       - id: get-envs
         run: |
-          ENVS_JSON=$(NO_COLOR=1 uvx --with "virtualenv<21" hatch env show --json | jq -c 'to_entries
+          ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
             | map(
               select(.key | startswith("hatch-test"))
               | {
@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           echo "::group::Install hatch"
-          uv tool install hatch --with "virtualenv<21"
+          uv tool install hatch
           echo "::endgroup::"
           echo "::group::Create environment"
           hatch -v env create ${{ matrix.env.name }}
