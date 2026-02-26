@@ -11,6 +11,7 @@ from .._utils import _choose_graph, get_literal_vals
 from .._utils.random import (
     _if_legacy_apply_global,
     accepts_legacy_random_state,
+    legacy_random_state,
     set_igraph_rng,
 )
 from ._utils import get_init_pos_from_paga
@@ -154,7 +155,9 @@ def draw_graph(  # noqa: PLR0913
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
     adata.uns["draw_graph"] = {}
-    adata.uns["draw_graph"]["params"] = dict(layout=layout, random_state=rng)
+    adata.uns["draw_graph"]["params"] = dict(
+        layout=layout, random_state=legacy_random_state(rng)
+    )
     key_added = f"X_draw_graph_{key_added_ext or layout}"
     adata.obsm[key_added] = positions
     logg.info(

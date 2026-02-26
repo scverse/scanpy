@@ -7,6 +7,7 @@ from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
+from numpy.random._generator import Generator
 
 from . import ensure_igraph
 
@@ -106,14 +107,6 @@ class _FakeRandomGen(np.random.Generator):
                 return _FakeRandomGen(arg, state)
             np.random.seed(arg)
         return _FakeRandomGen(arg, np.random.RandomState(np.random.get_bit_generator()))
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, _FakeRandomGen):
-            return False
-        return self._arg == other._arg
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._arg))
 
     @classmethod
     def _delegate(cls) -> None:

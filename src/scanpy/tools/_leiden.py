@@ -204,7 +204,7 @@ def leiden(  # noqa: PLR0913
     adata.uns[key_added] = {}
     adata.uns[key_added]["params"] = dict(
         resolution=resolution,
-        random_state=rng,
+        random_state=legacy_random_state(rng),
         n_iterations=n_iterations,
     )
     adata.uns[key_added]["modularity"] = part.modularity
