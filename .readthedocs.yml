@@ -16,8 +16,8 @@ build:
       - asdf global uv latest
     pre_build:
       # run towncrier to preview the next version’s release notes
-      - ( find docs/release-notes -regex '[^.]+[.][^.]+.md' | grep -q . ) && uvx hatch run towncrier build --keep || true
+      - ( find docs/release-notes -regex '[^.]+[.][^.]+.md' | grep -q . ) && uvx "--with=virtualenv<21" hatch run towncrier build --keep || true
     build:
       html:
-        - uvx hatch run docs:build
+        - uvx "--with=virtualenv<21" hatch run docs:build
         - mv docs/_build $READTHEDOCS_OUTPUT

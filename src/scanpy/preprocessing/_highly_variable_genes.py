@@ -313,7 +313,7 @@ class _Cutoffs:
         self,
         mean: NDArray[np.floating] | DaskArray,
         dispersion_norm: NDArray[np.floating] | DaskArray,
-    ) -> NDArray[np.bool_] | DaskArray:
+    ) -> NDArray[np.bool] | DaskArray:
         return (
             (mean > self.min_mean)
             & (mean < self.max_mean)
@@ -482,7 +482,7 @@ def _subset_genes(
     mean: NDArray[np.float64] | DaskArray,
     dispersion_norm: NDArray[np.float64] | DaskArray,
     cutoff: _Cutoffs | int,
-) -> NDArray[np.bool_] | DaskArray:
+) -> NDArray[np.bool] | DaskArray:
     """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
         dispersion_norm = np.nan_to_num(dispersion_norm)  # similar to Seurat
