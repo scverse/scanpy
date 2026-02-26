@@ -53,10 +53,11 @@ class _RNGIgraph:
             i = self._rng._state.tomaxint()
         else:
             lims = np.iinfo(np.uint64)
-            i = int(self._rng.integers(0, lims.max, dtype=np.uint64))
+            i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
         return i & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
+        """Can’t use `endpoint` here as _FakeRandomGen doesn’t support it."""
         return self._rng.integers(a, b + 1)
 
     def __getattr__(self, attr: str):
@@ -130,9 +131,6 @@ class _FakeRandomGen(np.random.Generator):
                 return wrapper
 
             setattr(cls, names.get(name, name), mk_wrapper(name, meth))
-
-    def __getattribute__(self, name: str) -> object:
-        return super().__getattribute__(name)
 
 
 _FakeRandomGen._delegate()
