@@ -10,7 +10,7 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, old_positionals, pkg_version, warn
+from .._compat import deprecated, pkg_version, warn
 from .._utils import _choose_graph, dematrix
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -31,20 +31,6 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
-@old_positionals(
-    "random_state",
-    "restrict_to",
-    "key_added",
-    "adjacency",
-    "flavor",
-    "directed",
-    "use_weights",
-    "partition_type",
-    "partition_kwargs",
-    "neighbors_key",
-    "obsp",
-    "copy",
-)
 @deprecated("Use `scanpy.tl.leiden` instead")
 def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,

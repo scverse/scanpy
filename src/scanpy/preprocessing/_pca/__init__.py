@@ -71,7 +71,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     return_info: bool = False,
-    mask_var: NDArray[np.bool_] | str | None | Empty = _empty,
+    mask_var: NDArray[np.bool] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
     key_added: str | None = None,
@@ -410,7 +410,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
 def _handle_mask_var(
     adata: AnnData,
-    mask_var: NDArray[np.bool_] | str | Empty | None,
+    mask_var: NDArray[np.bool] | str | Empty | None,
     *,
     obsm: str | None = None,
     use_highly_variable: bool | None,

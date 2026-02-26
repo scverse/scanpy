@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("basis", "adjusted_basis")
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,

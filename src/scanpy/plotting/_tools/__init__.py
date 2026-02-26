@@ -14,7 +14,6 @@ from matplotlib import pyplot as plt
 from scanpy.get import obs_df
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, sanitize_anndata, with_cat_dtype
 from ...get import rank_genes_groups_df
@@ -107,7 +106,6 @@ def pca_overview(adata: AnnData, **params):
 pca_scatter = pca
 
 
-@old_positionals("include_lowest", "n_points", "show", "save")
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,
@@ -181,7 +179,6 @@ def pca_loadings(
     savefig_or_show("pca_loadings", show=show, save=save)
 
 
-@old_positionals("log", "show", "save")
 def pca_variance_ratio(
     adata: AnnData,
     n_pcs: int = 30,
@@ -225,7 +222,6 @@ def pca_variance_ratio(
 # ------------------------------------------------------------------------------
 
 
-@old_positionals("color_map", "show", "save", "as_heatmap", "marker")
 def dpt_timeseries(
     adata: AnnData,
     *,
@@ -271,7 +267,6 @@ def dpt_timeseries(
     savefig_or_show("dpt_timeseries", save=save, show=show)
 
 
-@old_positionals("color_map", "palette", "show", "save", "marker")
 @_doc_params(cm_palette=doc_cm_palette, show_save=doc_show_save)
 def dpt_groups_pseudotime(
     adata: AnnData,
@@ -329,17 +324,6 @@ def dpt_groups_pseudotime(
         return fig
 
 
-@old_positionals(
-    "n_genes",
-    "gene_symbols",
-    "key",
-    "fontsize",
-    "ncols",
-    "sharey",
-    "show",
-    "save",
-    "ax",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -689,16 +673,6 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
 
-@old_positionals(
-    "n_genes",
-    "groupby",
-    "gene_symbols",
-    "var_names",
-    "min_logfoldchange",
-    "key",
-    "show",
-    "save",
-)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
@@ -772,16 +746,6 @@ def rank_genes_groups_heatmap(
     )
 
 
-@old_positionals(
-    "n_genes",
-    "groupby",
-    "var_names",
-    "gene_symbols",
-    "min_logfoldchange",
-    "key",
-    "show",
-    "save",
-)
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
@@ -834,18 +798,6 @@ def rank_genes_groups_tracksplot(
     )
 
 
-@old_positionals(
-    "n_genes",
-    "groupby",
-    "values_to_plot",
-    "var_names",
-    "gene_symbols",
-    "min_logfoldchange",
-    "key",
-    "show",
-    "save",
-    "return_fig",
-)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -997,7 +949,6 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     )
 
 
-@old_positionals("n_genes", "groupby", "gene_symbols")
 @_doc_params(params=doc_rank_genes_groups_plot_args, show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     adata: AnnData,
@@ -1061,18 +1012,6 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     )
 
 
-@old_positionals(
-    "n_genes",
-    "groupby",
-    "values_to_plot",
-    "var_names",
-    "gene_symbols",
-    "min_logfoldchange",
-    "key",
-    "show",
-    "save",
-    "return_fig",
-)
 @_doc_params(
     params=doc_rank_genes_groups_plot_args,
     vals_to_plot=doc_rank_genes_groups_values_to_plot,
@@ -1206,21 +1145,6 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     )
 
 
-@old_positionals(
-    "n_genes",
-    "gene_names",
-    "gene_symbols",
-    "use_raw",
-    "key",
-    "split",
-    "density_norm",
-    "strip",
-    "jitter",
-    "size",
-    "ax",
-    "show",
-    "save",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_violin(  # noqa: PLR0913
     adata: AnnData,
@@ -1349,7 +1273,6 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     return axs
 
 
-@old_positionals("tmax_realization", "as_heatmap", "shuffle", "show", "save", "marker")
 def sim(
     adata: AnnData,
     *,
@@ -1424,26 +1347,6 @@ def sim(
         savefig_or_show("sim_shuffled", save=save, show=show)
 
 
-@old_positionals(
-    "key",
-    "groupby",
-    "group",
-    "color_map",
-    "bg_dotsize",
-    "fg_dotsize",
-    "vmax",
-    "vmin",
-    "vcenter",
-    "norm",
-    "ncols",
-    "hspace",
-    "wspace",
-    "title",
-    "show",
-    "save",
-    "ax",
-    "return_fig",
-)
 @_doc_params(
     vminmax=doc_vbound_percentile, panels=doc_panels, show_save_ax=doc_show_save_ax
 )

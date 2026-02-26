@@ -7,7 +7,6 @@ import numpy as np
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
 from .._utils import _choose_graph, get_literal_vals
 from .._utils.random import (
     _if_legacy_apply_global,
@@ -28,17 +27,6 @@ if TYPE_CHECKING:
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
-@old_positionals(
-    "init_pos",
-    "root",
-    "random_state",
-    "n_jobs",
-    "adjacency",
-    "key_added_ext",
-    "neighbors_key",
-    "obsp",
-    "copy",
-)
 @accepts_legacy_random_state(0)
 def draw_graph(  # noqa: PLR0913
     adata: AnnData,

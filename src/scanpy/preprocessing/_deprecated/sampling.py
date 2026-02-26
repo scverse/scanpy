@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..._compat import old_positionals
 from ..._utils.random import _FakeRandomGen
 from .._simple import sample
 
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
     from ..._utils.random import _LegacyRandom
 
 
-@old_positionals("n_obs", "random_state", "copy")
 def subsample(
     data: AnnData | np.ndarray | CSBase,
     fraction: float | None = None,

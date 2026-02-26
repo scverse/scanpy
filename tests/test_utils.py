@@ -173,7 +173,7 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
         # compute
         received = received.compute()
         assert not isinstance(received, DaskArray)
-    if isinstance(received, np.bool_):
+    if isinstance(received, np.bool):
         # convert to python bool
         received = received.item()
     assert received is expected

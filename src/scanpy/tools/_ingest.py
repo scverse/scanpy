@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
@@ -22,14 +22,6 @@ if TYPE_CHECKING:
     from ..neighbors import RPForestDict
 
 
-@old_positionals(
-    "obs",
-    "embedding_method",
-    "labeling_method",
-    "neighbors_key",
-    "neighbors_key",
-    "inplace",
-)
 @doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
@@ -452,7 +444,6 @@ class Ingest:
             msg = "Ingest supports knn labeling for now."
             raise NotImplementedError(msg)
 
-    @old_positionals("inplace")
     def to_adata(self, *, inplace: bool = False) -> AnnData | None:
         """Return `adata_new` with mapped embeddings and labels.
 

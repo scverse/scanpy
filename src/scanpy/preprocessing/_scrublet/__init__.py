@@ -10,7 +10,6 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._compat import old_positionals
 from ..._utils.random import (
     _if_legacy_apply_global,
     accepts_legacy_random_state,
@@ -25,25 +24,6 @@ if TYPE_CHECKING:
     from ...neighbors import _Metric, _MetricFn
 
 
-@old_positionals(
-    "batch_key",
-    "sim_doublet_ratio",
-    "expected_doublet_rate",
-    "stdev_doublet_rate",
-    "synthetic_doublet_umi_subsampling",
-    "knn_dist_metric",
-    "normalize_variance",
-    "log_transform",
-    "mean_center",
-    "n_prin_comps",
-    "use_approx_neighbors",
-    "get_doublet_neighbor_parents",
-    "n_neighbors",
-    "threshold",
-    "verbose",
-    "copy",
-    "random_state",
-)
 @accepts_legacy_random_state(0)
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
@@ -513,9 +493,6 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
-@old_positionals(
-    "layer", "sim_doublet_ratio", "synthetic_doublet_umi_subsampling", "random_seed"
-)
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,

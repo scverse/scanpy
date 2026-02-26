@@ -80,12 +80,6 @@ def test_log1p(tmp_path):
     assert np.allclose(ad4.X, a_log / np.log(2))
 
 
-def test_log1p_deprecated_arg():
-    a = np.random.rand(200, 10).astype(np.float32)
-    with pytest.warns(FutureWarning, match=r".*`X` was renamed to `data`"):
-        sc.pp.log1p(X=a)
-
-
 @pytest.fixture(params=[None, 2])
 def base(request):
     return request.param
@@ -164,7 +158,7 @@ def test_sample(
     axis: Literal[0, 1],
     f_or_n: float | int,  # noqa: PYI041
     replace: bool,
-    ps: dict[Literal["obs", "var"], NDArray[np.bool_] | None],
+    ps: dict[Literal["obs", "var"], NDArray[np.bool] | None],
 ):
     adata = AnnData(array_type(np.ones((200, 10))))
     p = ps["obs" if axis == 0 else "var"]

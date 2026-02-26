@@ -8,7 +8,6 @@ import scipy as sp
 from natsort import natsorted
 
 from .. import logging as logg
-from .._compat import old_positionals
 from .._utils.random import _FakeRandomGen
 from ..neighbors import Neighbors, OnFlySymMatrix
 
@@ -42,9 +41,6 @@ def _diffmap(
     )
 
 
-@old_positionals(
-    "n_branchings", "min_group_size", "allow_kendall_tau_shift", "neighbors_key", "copy"
-)
 def dpt(
     adata: AnnData,
     n_dcs: int = 10,

@@ -9,7 +9,7 @@ import pandas as pd
 from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs
 from .._utils.random import accepts_legacy_random_state, legacy_random_state
@@ -55,9 +55,6 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@old_positionals(
-    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
-)
 @accepts_legacy_random_state(0)
 def blobs(
     *,

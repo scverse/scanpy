@@ -801,7 +801,7 @@ def select_groups(
     adata: AnnData,
     groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
-) -> tuple[list[str], NDArray[np.bool_]]:
+) -> tuple[list[str], NDArray[np.bool]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if f"{key}_masks" in adata.uns:

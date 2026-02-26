@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .._compat import old_positionals
 from .._utils.random import accepts_legacy_random_state
 from ._dpt import _diffmap
 
@@ -14,7 +13,6 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
-@old_positionals("neighbors_key", "random_state", "copy")
 @accepts_legacy_random_state(0)
 def diffmap(
     adata: AnnData,

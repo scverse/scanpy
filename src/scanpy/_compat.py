@@ -7,7 +7,6 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-import legacy_api_wrap
 from packaging.version import Version
 from scipy import sparse
 
@@ -26,7 +25,6 @@ __all__ = [
     "deprecated",
     "fullname",
     "njit",
-    "old_positionals",
     "pkg_metadata",
     "pkg_version",
     "warn",
@@ -79,17 +77,7 @@ def pkg_version(package: str) -> Version:
 
 
 # File prefixes for us and decorators we use
-_FILE_PREFIXES: tuple[str, ...] = (
-    str(Path(__file__).parent),
-    str(Path(legacy_api_wrap.__file__).parent),
-)
-
-
-old_positionals = partial(
-    legacy_api_wrap.legacy_api,  # noqa: TID251
-    category=FutureWarning,
-    skip_file_prefixes=_FILE_PREFIXES,
-)
+_FILE_PREFIXES: tuple[str, ...] = (str(Path(__file__).parent),)
 
 
 # we’re not using _FILE_PREFIXES here,

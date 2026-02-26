@@ -14,7 +14,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, old_positionals, warn
+from .._compat import CSBase, CSRBase, SpBase, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -424,14 +424,13 @@ class Neighbors:
 
     """
 
-    @old_positionals("n_dcs", "neighbors_key")
     def __init__(  # noqa: PLR0912, PLR0915
         self,
         adata: AnnData,
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
-    ):
+    ) -> None:
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
@@ -811,8 +810,7 @@ class Neighbors:
         # else `transformer` is probably an instance
         return conn_method, transformer, shortcut
 
-    @old_positionals("density_normalize")
-    def compute_transitions(self, *, density_normalize: bool = True):
+    def compute_transitions(self, *, density_normalize: bool = True) -> None:
         """Compute transition matrix.
 
         Parameters
