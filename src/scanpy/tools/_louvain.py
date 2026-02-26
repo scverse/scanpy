@@ -86,7 +86,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
         See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
-    {random_state}
+    random_state
+        Change the initialization of the optimization.
     {restrict_to}
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
