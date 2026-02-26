@@ -84,8 +84,8 @@ def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
 def _ranks(
     x: NDArray[np.number] | CSBase,
     /,
-    mask_obs: NDArray[np.bool_] | None = None,
-    mask_obs_rest: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
+    mask_obs_rest: NDArray[np.bool] | None = None,
 ) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = x.shape[1]
 
@@ -125,7 +125,7 @@ class _RankGenes:
         groups: Iterable[str] | Literal["all"],
         groupby: str,
         *,
-        mask_var: NDArray[np.bool_] | None = None,
+        mask_var: NDArray[np.bool] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
         layer: str | None = None,
@@ -507,7 +507,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool_] | str | None = None,
+    mask_var: NDArray[np.bool] | str | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
