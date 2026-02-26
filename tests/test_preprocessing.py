@@ -164,7 +164,7 @@ def test_sample(
     axis: Literal[0, 1],
     f_or_n: float | int,  # noqa: PYI041
     replace: bool,
-    ps: dict[Literal["obs", "var"], NDArray[np.bool_] | None],
+    ps: dict[Literal["obs", "var"], NDArray[np.bool] | None],
 ):
     adata = AnnData(array_type(np.ones((200, 10))))
     p = ps["obs" if axis == 0 else "var"]

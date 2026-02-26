@@ -853,11 +853,11 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -869,7 +869,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample[A: np.ndarray | CSBase | DaskArray](
@@ -881,7 +881,7 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
@@ -892,7 +892,7 @@ def sample(  # noqa: PLR0912
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 

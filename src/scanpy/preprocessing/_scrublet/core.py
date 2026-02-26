@@ -89,7 +89,7 @@ class Scrublet:
 
     # Fields set by methods
 
-    predicted_doublets_: NDArray[np.bool_] | None = field(init=False)
+    predicted_doublets_: NDArray[np.bool] | None = field(init=False)
     """(shape: n_cells)
     Boolean mask of predicted doublets in the observed transcriptomes.
     """
@@ -354,7 +354,7 @@ class Scrublet:
         if use_approx_neighbors:
             neighbors = neighbors[:, 1:]
         # Calculate doublet score based on ratio of simulated cell neighbors vs. observed cell neighbors
-        doub_neigh_mask: NDArray[np.bool_] = (
+        doub_neigh_mask: NDArray[np.bool] = (
             manifold.obs["doub_labels"].to_numpy()[neighbors] == "sim"
         )
         n_sim_neigh: NDArray[np.int64] = doub_neigh_mask.sum(axis=1)
@@ -403,7 +403,7 @@ class Scrublet:
 
     def call_doublets(
         self, *, threshold: float | None = None, verbose: bool = True
-    ) -> NDArray[np.bool_] | None:
+    ) -> NDArray[np.bool] | None:
         """Call trancriptomes as doublets or singlets.
 
         Parameters
