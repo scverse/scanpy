@@ -271,7 +271,7 @@ def score_genes_cell_cycle(
     scores and assigns a cell cycle phase (G1, S or G2M). See
     :func:`~scanpy.tl.score_genes` for more explanation.
 
-    .. array-support:: score_genes
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------
