@@ -9,7 +9,16 @@ from natsort import natsorted
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
+from .._utils import _doc_params
 from .._utils.random import set_igraph_random_state
+from ._docs import (
+    doc_adata,
+    doc_adjacency,
+    doc_neighbors_key,
+    doc_obsp,
+    doc_random_state,
+    doc_restrict_to,
+)
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -29,6 +38,14 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
 
 
+@_doc_params(
+    doc_adata=doc_adata,
+    random_state=doc_random_state,
+    restrict_to=doc_restrict_to,
+    adjacency=doc_adjacency,
+    neighbors_key=doc_neighbors_key.format(method="leiden"),
+    obsp=doc_obsp,
+)
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
@@ -60,22 +77,17 @@ def leiden(  # noqa: PLR0913
 
     Parameters
     ----------
-    adata
-        The annotated data matrix.
+    {doc_adata}
     resolution
         A parameter value controlling the coarseness of the clustering.
         Higher values lead to more clusters.
         Set to `None` if overriding `partition_type`
         to one that doesn’t accept a `resolution_parameter`.
-    random_state
-        Change the initialization of the optimization.
-    restrict_to
-        Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain `(obs_key, list_of_categories)`.
+    {random_state}
+    {restrict_to}
     key_added
         `adata.obs` key under which to add the cluster labels.
-    adjacency
-        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
+    {adjacency}
     directed
         Whether to treat the graph as directed or undirected.
     use_weights
@@ -91,15 +103,8 @@ def leiden(  # noqa: PLR0913
         Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
         For the available options, consult the documentation for
         :func:`~leidenalg.find_partition`.
-    neighbors_key
-        Use neighbors connectivities as adjacency.
-        If not specified, leiden looks at .obsp['connectivities'] for connectivities
-        (default storage place for pp.neighbors).
-        If specified, leiden looks at
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    obsp
-        Use .obsp[obsp] as adjacency. You can't specify both
-        `obsp` and `neighbors_key` at the same time.
+    {neighbors_key}
+    {obsp}
     copy
         Whether to copy `adata` or modify it inplace.
     flavor
