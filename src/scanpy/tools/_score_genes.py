@@ -121,10 +121,8 @@ def score_genes(  # noqa: PLR0913
 
     """
     start = logg.info(f"computing score {score_name!r}")
-    rng_was_passed = rng is not None
     rng = np.random.default_rng(rng)
-    if rng_was_passed:  # backwards compatibility: call np.random.seed() by default
-        rng = _if_legacy_apply_global(rng)
+    rng = _if_legacy_apply_global(rng)
     adata = adata.copy() if copy else adata
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
@@ -240,7 +238,8 @@ def _score_genes_bins(
     keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[gene_list]):
+    cuts = np.unique(obs_cut.loc[gene_list])
+    for cut, sub_rng in zip(cuts, rng.spawn(len(cuts)), strict=True):
         r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
         if len(r_genes) == 0:
             msg = (
@@ -249,7 +248,7 @@ def _score_genes_bins(
             )
             logg.warning(msg)
         if ctrl_size < len(r_genes):
-            r_genes = r_genes.to_series().sample(ctrl_size, random_state=rng).index
+            r_genes = r_genes.to_series().sample(ctrl_size, random_state=sub_rng).index
         if ctrl_as_ref:  # otherwise `r_genes` is already filtered
             r_genes = r_genes.difference(gene_list)
         yield r_genes

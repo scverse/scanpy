@@ -108,11 +108,19 @@ class _FakeRandomGen(np.random.Generator):
             np.random.seed(arg)
         return _FakeRandomGen(arg, np.random.RandomState(np.random.get_bit_generator()))
 
+    def spawn(self, n_children: int) -> list[Self]:
+        """Return `self` `n_children` times.
+
+        In a real generator, the spawned children are independent,
+        but for backwards compatibility we return the same instance.
+        """
+        return [self] * n_children
+
     @classmethod
     def _delegate(cls) -> None:
         names = dict(integers="randint")
         for name, meth in np.random.Generator.__dict__.items():
-            if name.startswith("_") or not callable(meth):
+            if name.startswith("_") or not callable(meth) or name in cls.__dict__:
                 continue
 
             def mk_wrapper(name: str, meth):
@@ -129,11 +137,11 @@ class _FakeRandomGen(np.random.Generator):
 _FakeRandomGen._delegate()
 
 
-def _if_legacy_apply_global(rng: np.random.Generator) -> np.random.Generator:
-    """Re-apply legacy `random_state` semantics when `rng` is a `_FakeRandomGen`.
+def _if_legacy_apply_global(rng: np.random.Generator, /) -> np.random.Generator:
+    """Wrap the global legacy RNG if `rng` is a `_FakeRandomGen`.
 
-    This resets the global legacy RNG from the original `_arg` and returns a
-    generator which continues drawing from the same internal state.
+    This is used where our code used to  call `np.random.seed()`.
+    It’s a no-op if `rng` is not a `_FakeRandomGen`.
     """
     if not isinstance(rng, _FakeRandomGen):
         return rng
@@ -142,7 +150,7 @@ def _if_legacy_apply_global(rng: np.random.Generator) -> np.random.Generator:
 
 
 def _legacy_random_state(
-    rng: SeedLike | RNGLike | None, *, always_state: bool = False
+    rng: SeedLike | RNGLike | None, /, *, always_state: bool = False
 ) -> _LegacyRandom:
     """Convert a np.random.Generator into a legacy `random_state` argument.
 
@@ -150,12 +158,12 @@ def _legacy_random_state(
     """
     if isinstance(rng, _FakeRandomGen):
         return rng._state if always_state else rng._arg
-    rng = np.random.default_rng(rng)
-    return np.random.RandomState(rng.bit_generator.spawn(1)[0])
+    [bitgen] = np.random.default_rng(rng).bit_generator.spawn(1)
+    return np.random.RandomState(bitgen)
 
 
 def _accepts_legacy_random_state[**P, R](
-    random_state_default: _LegacyRandom,
+    random_state_default: _LegacyRandom, /
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Make a function accept `random_state: _LegacyRandom` and pass it as `rng`.
 

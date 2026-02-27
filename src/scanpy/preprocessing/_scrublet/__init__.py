@@ -10,7 +10,7 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
+from ..._utils.random import _accepts_legacy_random_state, _FakeRandomGen
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -177,10 +177,12 @@ def scrublet(  # noqa: PLR0913
 
     adata_obs = adata.copy()
 
-    def _run_scrublet(ad_obs: AnnData, ad_sim: AnnData | None = None):
+    def _run_scrublet(
+        ad_obs: AnnData, ad_sim: AnnData | None, *, rng: np.random.Generator
+    ):
+        rng_sim, rng_call = rng.spawn(2)
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
-
         if ad_sim is None:
             pp.filter_genes(ad_obs, min_cells=3)
             pp.filter_cells(ad_obs, min_genes=3)
@@ -207,7 +209,7 @@ def scrublet(  # noqa: PLR0913
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                rng=rng,
+                rng=rng_sim,
             )
             del ad_obs.layers["raw"]
             if log_transform:
@@ -232,7 +234,7 @@ def scrublet(  # noqa: PLR0913
             knn_dist_metric=knn_dist_metric,
             get_doublet_neighbor_parents=get_doublet_neighbor_parents,
             threshold=threshold,
-            rng=rng,
+            rng=rng_call,
             verbose=verbose,
         )
 
@@ -249,12 +251,14 @@ def scrublet(  # noqa: PLR0913
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
         batches = np.unique(adata.obs[batch_key])
+        sub_rngs = rng.spawn(len(batches))
         scrubbed = [
             _run_scrublet(
                 adata_obs[adata_obs.obs[batch_key] == batch].copy(),
                 adata_sim,
+                rng=sub_rng,
             )
-            for batch in batches
+            for batch, sub_rng in zip(batches, sub_rngs, strict=True)
         ]
         scrubbed_obs = pd.concat([scrub["obs"] for scrub in scrubbed]).astype(
             adata.obs.dtypes
@@ -274,7 +278,7 @@ def scrublet(  # noqa: PLR0913
         adata.uns["scrublet"]["batched_by"] = batch_key
 
     else:
-        scrubbed = _run_scrublet(adata_obs, adata_sim)
+        scrubbed = _run_scrublet(adata_obs, adata_sim, rng=rng)
 
         # Copy outcomes to input object from our processed version
         adata.obs["doublet_score"] = scrubbed["obs"]["doublet_score"]
@@ -385,6 +389,12 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         Dictionary of Scrublet parameters
 
     """
+    meta_random_state = (
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+    )
+    rng_scrub, rng_pca = rng.spawn(2)
+    del rng
+
     # Estimate n_neighbors if not provided, and create scrublet object.
 
     if n_neighbors is None:
@@ -398,7 +408,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
         stdev_doublet_rate=stdev_doublet_rate,
-        rng=rng,
+        rng=rng_scrub,
     )
 
     # Ensure normalised matrix sparseness as Scrublet does
@@ -424,13 +434,11 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
-        pipeline.pca(
-            scrub, n_prin_comps=n_prin_comps, svd_solver="arpack", rng=scrub._rng
-        )
+        pipeline.pca(scrub, n_prin_comps=n_prin_comps, svd_solver="arpack", rng=rng_pca)
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
         pipeline.truncated_svd(
-            scrub, n_prin_comps=n_prin_comps, algorithm="arpack", rng=scrub._rng
+            scrub, n_prin_comps=n_prin_comps, algorithm="arpack", rng=rng_pca
         )
 
     # Score the doublets
@@ -463,7 +471,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
                 .get("sim_doublet_ratio", None)
             ),
             "n_neighbors": n_neighbors,
-            "random_state": _legacy_random_state(rng),
+            **meta_random_state,
         },
     }
 

@@ -12,6 +12,7 @@ from .._compat import warn
 from .._utils import _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
+    _FakeRandomGen,
     _legacy_random_state,
     _set_igraph_rng,
 )
@@ -140,6 +141,10 @@ def leiden(  # noqa: PLR0913
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
 
+    meta_random_state = (
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+    )
+
     start = logg.info("running Leiden clustering")
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
@@ -203,9 +208,7 @@ def leiden(  # noqa: PLR0913
     # store information on the clustering parameters
     adata.uns[key_added] = {}
     adata.uns[key_added]["params"] = dict(
-        resolution=resolution,
-        random_state=_legacy_random_state(rng),
-        n_iterations=n_iterations,
+        resolution=resolution, n_iterations=n_iterations, **meta_random_state
     )
     adata.uns[key_added]["modularity"] = part.modularity
     logg.info(

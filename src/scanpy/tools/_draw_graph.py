@@ -10,8 +10,8 @@ from .. import logging as logg
 from .._utils import _choose_graph, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
+    _FakeRandomGen,
     _if_legacy_apply_global,
-    _legacy_random_state,
     _set_igraph_rng,
 )
 from ._utils import get_init_pos_from_paga
@@ -118,7 +118,12 @@ def draw_graph(  # noqa: PLR0913
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     rng = np.random.default_rng(rng)
+    meta_random_state = (
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+    )
     rng = _if_legacy_apply_global(rng)
+    rng_init, rng_layout = rng.spawn(2)
+    del rng
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
@@ -132,19 +137,19 @@ def draw_graph(  # noqa: PLR0913
         init_coords = get_init_pos_from_paga(
             adata,
             adjacency,
-            rng=rng,
+            rng=rng_init,
             neighbors_key=neighbors_key,
             obsp=obsp,
         )
     else:
-        init_coords = rng.random((adjacency.shape[0], 2))
+        init_coords = rng_init.random((adjacency.shape[0], 2))
     layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
         g = _utils.get_igraph_from_adjacency(adjacency)
-        with _set_igraph_rng(rng):
+        with _set_igraph_rng(rng_layout):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
             elif "rt" in layout:
@@ -155,9 +160,7 @@ def draw_graph(  # noqa: PLR0913
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
     adata.uns["draw_graph"] = {}
-    adata.uns["draw_graph"]["params"] = dict(
-        layout=layout, random_state=_legacy_random_state(rng)
-    )
+    adata.uns["draw_graph"]["params"] = dict(layout=layout, **meta_random_state)
     key_added = f"X_draw_graph_{key_added_ext or layout}"
     adata.obsm[key_added] = positions
     logg.info(

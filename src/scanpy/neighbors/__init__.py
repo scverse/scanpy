@@ -10,11 +10,12 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import scipy
+from packaging.version import Version
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, warn
+from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -46,9 +47,8 @@ if TYPE_CHECKING:
     # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
     RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
-N_DCS: int = 15  # default number of diffusion components
-# Backwards compat, constants should be defined in only one place.
-N_PCS: int = settings.N_PCS
+
+SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 
 
 class KwdsForTransformer(TypedDict):
@@ -208,6 +208,10 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    meta_random_state = (
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+    )
+
     if distances is None:
         if metric is None:
             metric = "euclidean"
@@ -235,9 +239,8 @@ def neighbors(  # noqa: PLR0913
             if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
         }
-        if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
+        if meta_random_state.get("random_state") != 0:  # rng or random_state was passed
             ignored.add("rng/random_state")
-            rng = _FakeRandomGen(0)
         if ignored:
             warn(
                 f"Parameter(s) ignored if `distances` is given: {ignored}",
@@ -270,8 +273,8 @@ def neighbors(  # noqa: PLR0913
         key_added,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
-        random_state=_legacy_random_state(rng),
         metric=metric,
+        **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
@@ -849,15 +852,13 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
-    @_accepts_legacy_random_state(0)
     def compute_eigen(
         self,
         *,
         n_comps: int = 15,
-        sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
         rng: np.random.Generator,
-    ):
+    ) -> None:
         """Compute eigen decomposition of transition matrix.
 
         Parameters
@@ -886,6 +887,9 @@ class Neighbors:
             plotting.
 
         """
+        [rng_init, rng_eigsh] = np.random.default_rng(rng).spawn(2)
+        del rng
+
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
             msg = "Run `.compute_transitions` first."
@@ -903,9 +907,14 @@ class Neighbors:
             matrix = matrix.astype(np.float64)
 
             # Setting the random initial vector
-            v0 = rng.standard_normal(matrix.shape[0])
+            v0 = rng_init.standard_normal(matrix.shape[0])
             evals, evecs = sparse.linalg.eigsh(
-                matrix, k=n_comps, which=which, ncv=ncv, v0=v0
+                matrix,
+                k=n_comps,
+                which=which,
+                ncv=ncv,
+                v0=v0,
+                **(dict(rng=rng_eigsh) if SCIPY_1_17 else {}),
             )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == "decrease":
