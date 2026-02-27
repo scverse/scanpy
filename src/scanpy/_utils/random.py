@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from typing import Self
 
+    from numpy.random import BitGenerator
     from numpy.typing import NDArray
 
 
@@ -84,6 +85,13 @@ def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
 
 
 class _FakeRandomGen(np.random.Generator):
+    """A `Generator` that wraps a legacy `RandomState` instance.
+
+    To behave like a `RandomState`, it’s not enough to just use a MT19937 `bit_generator`
+    (as in `Generator(RandomState(seed).bit_generator)`),
+    so instead this hack uses the exact same random numbers as `RandomState(seed)`.
+    """
+
     _arg: _LegacyRandom
     _state: np.random.RandomState
 
@@ -92,7 +100,11 @@ class _FakeRandomGen(np.random.Generator):
     ) -> None:
         self._arg = arg
         self._state = np.random.RandomState(arg) if state is None else state
-        super().__init__(self._state._bit_generator)
+
+    @property
+    def bit_generator(self) -> BitGenerator:
+        msg = "A _FakeRandomGen instance has no `bit_generator` attribute."
+        raise AttributeError(msg)
 
     @classmethod
     def wrap_global(
