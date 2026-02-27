@@ -852,12 +852,15 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
+    @_accepts_legacy_random_state(0)
     def compute_eigen(
         self,
         *,
         n_comps: int = 15,
         sort: Literal["decrease", "increase"] = "decrease",
         rng: np.random.Generator,
+        # unused
+        sym: None = None,
     ) -> None:
         """Compute eigen decomposition of transition matrix.
 
@@ -866,10 +869,6 @@ class Neighbors:
         n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        sym
-            Instead of computing the eigendecomposition of the assymetric
-            transition matrix, computed the eigendecomposition of the symmetric
-            Ktilde matrix.
         rng
             A numpy random number generator
 

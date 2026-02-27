@@ -248,7 +248,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     # dask needs an int for random state
     rng = np.random.default_rng(rng)
-    if not isinstance(rng, _FakeRandomGen) and not isinstance(
+    if not isinstance(rng, _FakeRandomGen) or not isinstance(
         rng._arg, int | np.random.RandomState
     ):
         # TODO: remove this error and if we don’t have a _FakeRandomGen,
