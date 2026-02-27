@@ -13,7 +13,6 @@ from .._utils import _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
     _FakeRandomGen,
-    _legacy_random_state,
     _set_igraph_rng,
 )
 from ._docs import (
@@ -127,8 +126,8 @@ def leiden(  # noqa: PLR0913
         (``'0'``, ``'1'``, ...) for each cell.
 
     `adata.uns['leiden' | key_added]['params']` : :class:`dict`
-        A dict with the values for the parameters `resolution`, `random_state`,
-        and `n_iterations`.
+        A dict with the values for the parameters `resolution`, `n_iterations`,
+        and `random_state` (if applicable).
 
     `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
         The modularity score of the final clustering,
@@ -140,7 +139,7 @@ def leiden(  # noqa: PLR0913
     flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
-
+    rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
     )
@@ -174,10 +173,16 @@ def leiden(  # noqa: PLR0913
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
-        clustering_args["seed"] = _legacy_random_state(rng)
+        seed = (
+            rng._arg
+            if isinstance(rng, _FakeRandomGen)
+            and isinstance(rng._arg, int | np.integer)
+            # for some reason leidenalg only accepts int32 (signed) seeds …
+            else rng.integers((i := np.iinfo(np.int32)).min, i.max, dtype=np.int32)
+        )
         part = cast(
             "MutableVertexPartition",
-            leidenalg.find_partition(g, partition_type, **clustering_args),
+            leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)

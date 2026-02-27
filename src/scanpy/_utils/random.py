@@ -7,6 +7,7 @@ from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
+from sklearn.utils.random import check_random_state
 
 from . import ensure_igraph
 
@@ -99,7 +100,7 @@ class _FakeRandomGen(np.random.Generator):
         self, arg: _LegacyRandom, state: np.random.RandomState | None = None
     ) -> None:
         self._arg = arg
-        self._state = np.random.RandomState(arg) if state is None else state
+        self._state = check_random_state(arg) if state is None else state
 
     @property
     def bit_generator(self) -> BitGenerator:

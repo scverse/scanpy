@@ -311,7 +311,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 from ._dask import PCAEighDask
 
                 if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
-                    msg = f"Ignoring rng={_legacy_random_state(rng)} when using a sparse dask array"
+                    msg = f"Ignoring random_state={_legacy_random_state(rng)} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"

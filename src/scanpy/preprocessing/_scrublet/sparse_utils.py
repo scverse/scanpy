@@ -52,7 +52,7 @@ def subsample_counts(
         e.data = rng.binomial(np.round(e.data).astype(int), rate)
         current_totals = np.asarray(e.sum(1)).squeeze()
         unsampled_orig_totals = original_totals - current_totals
-        unsampled_downsamp_totals = np.random.binomial(
+        unsampled_downsamp_totals = rng.binomial(
             np.round(unsampled_orig_totals).astype(int), rate
         )
         final_downsamp_totals = current_totals + unsampled_downsamp_totals

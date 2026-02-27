@@ -333,7 +333,10 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
 
 
-def test_pca_reproducible(array_type):
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_pca_reproducible(
+    subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
+):
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
@@ -342,18 +345,21 @@ def test_pca_reproducible(array_type):
         if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
         else nullcontext()
     ):
-        a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        b = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        c = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=0)
+        a, b, c = (
+            sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
+            for seed in (42, 42, 0)
+        )
 
-    assert_equal(a, b)
+    with subtests.test("reproducible"):
+        assert_equal(a, b)
 
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
         a, c = map(AnnData.to_memory, [a, c])
-        assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+        with subtests.test("different embedding"):
+            assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
 def test_pca_chunked() -> None:

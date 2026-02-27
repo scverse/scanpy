@@ -104,7 +104,7 @@ def umap(  # noqa: PLR0913, PLR0915
         * A numpy array of initial embedding positions.
     rng
         If `int`, `rng` is the seed used by the random number generator;
-        If `Generator`, `random_state` is the random number generator;
+        If `np.random.Generator`, `rng` is the random number generator;
         If `None`, the random number generator is not reproducible.
     a
         More specific parameters controlling the embedding. If `None` these
@@ -150,7 +150,7 @@ def umap(  # noqa: PLR0913, PLR0915
     """
     rng_init, rng_umap = np.random.default_rng(rng).spawn(2)
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else None
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
     )
     del rng
 

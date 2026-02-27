@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
-SCIPY_1_15 = pkg_version("scikit-learn") >= Version("1.5.0rc1")
+SCIPY_1_15 = pkg_version("scipy") >= Version("1.5.0rc1")
 
 
 @_accepts_legacy_random_state(None)
