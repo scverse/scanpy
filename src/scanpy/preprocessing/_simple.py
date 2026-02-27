@@ -6,6 +6,8 @@ Compositions of these functions are found in sc.preprocess.recipes.
 from __future__ import annotations
 
 import warnings
+from contextlib import AbstractContextManager
+from dataclasses import dataclass, field
 from functools import singledispatch
 from itertools import repeat
 from typing import TYPE_CHECKING, overload
@@ -15,6 +17,7 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
+from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
 
@@ -29,18 +32,19 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
+from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
     from numbers import Number
-    from typing import Literal
+    from typing import Literal, Self
 
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
 def filter_cells(
@@ -971,12 +975,13 @@ def sample(  # noqa: PLR0912
     return subset, indices
 
 
+@_accepts_legacy_random_state(0)
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1000,7 +1005,7 @@ def downsample_counts(
     total_counts
         Target total counts. If the count matrix has more than `total_counts`
         it will be downsampled to have this number.
-    random_state
+    rng
         Random seed for subsampling.
     replace
         Whether to sample the counts with replacement.
@@ -1017,143 +1022,137 @@ def downsample_counts(
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
-    total_counts_call = total_counts is not None
-    counts_per_cell_call = counts_per_cell is not None
-    if total_counts_call is counts_per_cell_call:
+    rng = np.random.default_rng(rng)
+    if (total_counts is not None) is (counts_per_cell is not None):
         msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
         raise ValueError(msg)
     if copy:
         adata = adata.copy()
-    if total_counts_call:
+    if total_counts is not None:
         adata.X = _downsample_total_counts(
-            adata.X, total_counts, random_state=random_state, replace=replace
+            adata.X, total_counts, rng=rng, replace=replace
         )
-    elif counts_per_cell_call:
+    elif counts_per_cell is not None:
         adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, random_state=random_state, replace=replace
+            adata.X, counts_per_cell, rng=rng, replace=replace
         )
-    if copy:
-        return adata
+    return adata if copy else None
 
 
-def _downsample_per_cell(
-    x: np.ndarray | CSBase,
+def _downsample_per_cell[T: (np.ndarray, CSBase)](
+    x: T,
     /,
-    counts_per_cell: int,
+    counts_per_cell: int | Collection[int],
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
-) -> CSBase:
+) -> T:
     n_obs = x.shape[0]
-    if isinstance(counts_per_cell, int):
-        counts_per_cell = np.full(n_obs, counts_per_cell)
-    else:
-        counts_per_cell = np.asarray(counts_per_cell)
-    # np.random.choice needs int arguments in numba code:
-    counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
-    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
+    counts_per_cell = (
+        np.full(n_obs, counts_per_cell)
+        if isinstance(counts_per_cell, int)
+        else np.asarray(counts_per_cell, np.int_)
+    )
+    if counts_per_cell.shape != (n_obs,):
         msg = (
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
             " by `np.asarray(counts_per_cell)`."
         )
         raise ValueError(msg)
-    if isinstance(x, CSBase):
-        original_type = type(x)
-        if not isinstance(x, CSRBase):
-            x = x.tocsr()
-        totals = stats.sum(x, axis=1)  # Faster for csr matrix
-        under_target = np.nonzero(totals > counts_per_cell)[0]
-        rows = np.split(x.data, x.indptr[1:-1])
-        for rowidx in under_target:
-            row = rows[rowidx]
-            _downsample_array(
-                row,
-                counts_per_cell[rowidx],
-                random_state=random_state,
-                replace=replace,
-                inplace=True,
-            )
-        x.eliminate_zeros()
-        if not issubclass(original_type, CSRBase):  # Put it back
-            x = original_type(x)
-    else:
+    with sparse_as_csr(x) as spc:
+        x = spc.x  # we only mutate x, so spc.x receives the changes
+        rows = np.split(x.data, x.indptr[1:-1]) if isinstance(x, CSRBase) else x
         totals = stats.sum(x, axis=1)
-        under_target = np.nonzero(totals > counts_per_cell)[0]
-        for rowidx in under_target:
-            row = x[rowidx, :]
+        under_target = np.flatnonzero(totals > counts_per_cell)
+        for rowidx, sub_rng in zip(
+            under_target, rng.spawn(len(under_target)), strict=True
+        ):
             _downsample_array(
-                row,
+                rows[rowidx],
                 counts_per_cell[rowidx],
-                random_state=random_state,
+                rng=sub_rng,
                 replace=replace,
                 inplace=True,
             )
-    return x
+    return spc.x  # use x that was converted back
 
 
-def _downsample_total_counts(
-    x: np.ndarray | CSBase,
+def _downsample_total_counts[T: (np.ndarray, CSBase)](
+    x: T,
     /,
     total_counts: int,
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
-) -> CSBase:
+) -> T:
     total_counts = int(total_counts)
     total = x.sum()
     if total < total_counts:
         return x
-    if isinstance(x, CSBase):
-        original_type = type(x)
-        if not isinstance(x, CSRBase):
-            x = x.tocsr()
-        _downsample_array(
-            x.data,
-            total_counts,
-            random_state=random_state,
-            replace=replace,
-            inplace=True,
-        )
-        x.eliminate_zeros()
-        if not issubclass(original_type, CSRBase):
-            x = original_type(x)
-    else:
-        v = x.reshape(np.multiply(*x.shape))
-        _downsample_array(
-            v, total_counts, random_state=random_state, replace=replace, inplace=True
-        )
-    return x
+    with sparse_as_csr(x) as spc:
+        x = spc.x  # we only mutate x, so spc.x receives the changes
+        v = x.data if isinstance(x, CSBase) else x.reshape(-1)
+        _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
+    return spc.x  # use x that was converted back
 
 
-# TODO: can/should this be parallelized?
-@numba.njit(cache=True)  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: np.random.Generator,
     replace: bool = True,
     inplace: bool = False,
-):
+) -> np.ndarray:
     """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
 
     * total counts in cell must be less than target
     """
-    np.random.seed(random_state)
+    rng = _if_legacy_apply_global(rng)
     cumcounts = col.cumsum()
+    total = np.int_(cumcounts[-1])
+    sample = rng.choice(total, target, replace=replace)
+    sample.sort()
+    return _downsample_array_inner(col, cumcounts, sample, inplace=inplace)
+
+
+# TODO: can/should this be parallelized?
+@numba.njit(cache=True)  # noqa: TID251
+def _downsample_array_inner(
+    col: np.ndarray, cumcounts: np.ndarray, sample: np.ndarray, *, inplace: bool
+) -> np.ndarray:
     if inplace:
         col[:] = 0
     else:
         col = np.zeros_like(col)
-    total = np.int_(cumcounts[-1])
-    sample = np.random.choice(total, target, replace=replace)
-    sample.sort()
     geneptr = 0
     for count in sample:
         while count >= cumcounts[geneptr]:
             geneptr += 1
         col[geneptr] += 1
     return col
+
+
+@dataclass
+class sparse_as_csr[T: (np.ndarray | CSBase)](AbstractContextManager):  # noqa: N801
+    """Context manager that converts to CSR while active."""
+
+    x: T
+    _original_type: type[T] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._original_type = type(self.x)
+        if isinstance(self.x, CSBase) and not isinstance(self.x, CSRBase):
+            self.x = self.x.tocsr()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *args: object) -> bool | None:
+        if isinstance(self.x, CSBase):
+            self.x.eliminate_zeros()
+            if not issubclass(self._original_type, CSRBase):
+                self.x = self._original_type(self.x)

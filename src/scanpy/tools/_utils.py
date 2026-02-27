@@ -11,6 +11,7 @@ from .._utils import _choose_graph
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from numpy.typing import NDArray
 
     from .._compat import CSRBase, SpBase
 
@@ -77,12 +78,12 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
 
 def get_init_pos_from_paga(
     adata: AnnData,
+    *,
+    rng: np.random.Generator,
     adjacency: SpBase | None = None,
-    random_state=0,
     neighbors_key: str | None = None,
     obsp: str | None = None,
-):
-    np.random.seed(random_state)
+) -> NDArray[np.float64]:
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     if "pos" not in adata.uns.get("paga", {}):
@@ -93,13 +94,15 @@ def get_init_pos_from_paga(
     pos = adata.uns["paga"]["pos"]
     connectivities_coarse = adata.uns["paga"]["connectivities"]
     init_pos = np.ones((adjacency.shape[0], 2))
-    for i, group_pos in enumerate(pos):
+    for i, group_pos, sub_rng in zip(
+        range(len(pos)), pos, rng.spawn(len(pos)), strict=True
+    ):
         subset = (groups == groups.cat.categories[i]).values
         neighbors = connectivities_coarse[i].nonzero()
         if len(neighbors[1]) > 0:
             connectivities = connectivities_coarse[i][neighbors]
             nearest_neighbor = neighbors[1][np.argmax(connectivities)]
-            noise = np.random.random((len(subset[subset]), 2))
+            noise = sub_rng.random((len(subset[subset]), 2))
             dist = group_pos - pos[nearest_neighbor]
             noise = noise * dist
             init_pos[subset] = group_pos - 0.5 * dist + noise

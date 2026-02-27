@@ -17,7 +17,6 @@ from ._docs import (
     doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
-    doc_random_state,
     doc_restrict_to,
 )
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -42,7 +41,6 @@ if TYPE_CHECKING:
 @deprecated("Use `scanpy.tl.leiden` instead")
 @_doc_params(
     doc_adata=doc_adata,
-    random_state=doc_random_state,
     restrict_to=doc_restrict_to,
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="louvain"),
@@ -88,7 +86,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
         See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
-    {random_state}
+    random_state
+        Change the initialization of the optimization.
     {restrict_to}
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)

@@ -10,13 +10,16 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import warn
 from .._utils import _doc_params
-from .._utils.random import set_igraph_random_state
+from .._utils.random import (
+    _accepts_legacy_random_state,
+    _FakeRandomGen,
+    _set_igraph_rng,
+)
 from ._docs import (
     doc_adata,
     doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
-    doc_random_state,
     doc_restrict_to,
 )
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -28,7 +31,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._compat import CSBase
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
     try:  # sphinx-autodoc-typehints + optional dependency
         from leidenalg.VertexPartition import MutableVertexPartition
@@ -40,18 +43,18 @@ if TYPE_CHECKING:
 
 @_doc_params(
     doc_adata=doc_adata,
-    random_state=doc_random_state,
     restrict_to=doc_restrict_to,
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
 )
+@_accepts_legacy_random_state(0)
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,
     *,
     restrict_to: tuple[str, Sequence[str]] | None = None,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     key_added: str = "leiden",
     adjacency: CSBase | None = None,
     directed: bool | None = None,
@@ -83,7 +86,8 @@ def leiden(  # noqa: PLR0913
         Higher values lead to more clusters.
         Set to `None` if overriding `partition_type`
         to one that doesn’t accept a `resolution_parameter`.
-    {random_state}
+    rng
+        Change the initialization of the optimization.
     {restrict_to}
     key_added
         `adata.obs` key under which to add the cluster labels.
@@ -122,8 +126,8 @@ def leiden(  # noqa: PLR0913
         (``'0'``, ``'1'``, ...) for each cell.
 
     `adata.uns['leiden' | key_added]['params']` : :class:`dict`
-        A dict with the values for the parameters `resolution`, `random_state`,
-        and `n_iterations`.
+        A dict with the values for the parameters `resolution`, `n_iterations`,
+        and `random_state` (if applicable).
 
     `adata.uns['leiden' | key_added]['modularity']` : :class:`float`
         The modularity score of the final clustering,
@@ -135,6 +139,10 @@ def leiden(  # noqa: PLR0913
     flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     _utils.ensure_igraph()
     clustering_args = dict(clustering_args)
+    rng = np.random.default_rng(rng)
+    meta_random_state = (
+        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+    )
 
     start = logg.info("running Leiden clustering")
     adata = adata.copy() if copy else adata
@@ -165,10 +173,16 @@ def leiden(  # noqa: PLR0913
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
-        clustering_args["seed"] = random_state
+        seed = (
+            rng._arg
+            if isinstance(rng, _FakeRandomGen)
+            and isinstance(rng._arg, int | np.integer)
+            # for some reason leidenalg only accepts int32 (signed) seeds …
+            else rng.integers((i := np.iinfo(np.int32)).min, i.max, dtype=np.int32)
+        )
         part = cast(
             "MutableVertexPartition",
-            leidenalg.find_partition(g, partition_type, **clustering_args),
+            leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
@@ -177,7 +191,7 @@ def leiden(  # noqa: PLR0913
         if resolution is not None:
             clustering_args["resolution"] = resolution
         clustering_args.setdefault("objective_function", "modularity")
-        with set_igraph_random_state(random_state):
+        with _set_igraph_rng(rng):
             part = g.community_leiden(**clustering_args)
     # store output into adata.obs
     groups = np.array(part.membership)
@@ -199,9 +213,7 @@ def leiden(  # noqa: PLR0913
     # store information on the clustering parameters
     adata.uns[key_added] = {}
     adata.uns[key_added]["params"] = dict(
-        resolution=resolution,
-        random_state=random_state,
-        n_iterations=n_iterations,
+        resolution=resolution, n_iterations=n_iterations, **meta_random_state
     )
     adata.uns[key_added]["modularity"] = part.modularity
     logg.info(

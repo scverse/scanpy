@@ -278,6 +278,8 @@ filterwarnings = [
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
+    # joblib fallback to serial mode in restricted multiprocessing environments
+    "ignore:.*joblib will operate in serial mode:UserWarning",
 ]
 
 [tool.coverage]

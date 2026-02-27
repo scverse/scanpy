@@ -6,15 +6,17 @@ from .. import logging as logg
 from .._compat import warn
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
+@_accepts_legacy_random_state(0)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(  # noqa: PLR0913
     adata: AnnData,
@@ -26,7 +28,7 @@ def tsne(  # noqa: PLR0913
     metric: str = "euclidean",
     early_exaggeration: float = 12,
     learning_rate: float = 1000,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
     key_added: str | None = None,
@@ -74,7 +76,7 @@ def tsne(  # noqa: PLR0913
         optimization, the early exaggeration factor or the learning rate
         might be too high. If the cost function gets stuck in a bad local
         minimum increasing the learning rate helps sometimes.
-    random_state
+    rng
         Change this to use different intial states for the optimization.
         If `None`, the initial state is not reproducible.
     n_jobs
@@ -108,7 +110,7 @@ def tsne(  # noqa: PLR0913
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
         perplexity=perplexity,
-        random_state=random_state,
+        random_state=_legacy_random_state(rng),
         verbose=settings.verbosity > 3,
         early_exaggeration=early_exaggeration,
         learning_rate=learning_rate,

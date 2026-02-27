@@ -18,8 +18,8 @@ from scanpy._utils import (
     descend_classes_and_funcs,
 )
 from scanpy._utils.random import (
+    _FakeRandomGen,
     ith_k_tuple,
-    legacy_numpy_gen,
     random_k_tuples,
     random_str,
 )
@@ -206,7 +206,7 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
 def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
         np.random.seed(seed)
-    gen = np.random if direct else legacy_numpy_gen(seed)
+    gen = np.random if direct else _FakeRandomGen.wrap_global(seed)
     match func:
         case "choice":
             arr = np.arange(1000)
