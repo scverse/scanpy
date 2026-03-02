@@ -29,8 +29,8 @@ def harmony_integrate(  # noqa: PLR0913
     ridge_lambda: float = 1.0,
     correction_method: Literal["fast", "original"] = "original",
     block_proportion: float = 0.05,
+    tau: int = 0,
     random_state: int | None = 0,
-    sparse: bool = False,
 ) -> None:
     """
     Integrate different experiments using the Harmony algorithm.
@@ -74,10 +74,12 @@ def harmony_integrate(  # noqa: PLR0913
         original method, ``fast`` for improved method.
     block_proportion
         Fraction of cells processed per clustering iteration. Default 0.05.
+    tau
+        Discounting factor on ``theta``. Larger batches are penalized less
+        when ``tau > 0``: ``theta *= 1 - exp(-N_b / (n_clusters * tau))^2``.
+        By default (0), no discounting is applied.
     random_state
         Random seed for reproducibility.
-    sparse
-        Use sparse matrices for batch encoding. Reduces memory for large datasets.
 
     Returns
     -------
@@ -129,8 +131,8 @@ def harmony_integrate(  # noqa: PLR0913
         ridge_lambda=ridge_lambda,
         correction_method=correction_method,
         block_proportion=block_proportion,
+        tau=tau,
         random_state=random_state,
-        sparse=sparse,
     )
     harmony_out = harmony.fit(x)
 

@@ -46,8 +46,8 @@ class Harmony:
     ridge_lambda: float
     correction_method: Literal["fast", "original"]
     block_proportion: float
+    tau: int
     random_state: int | None
-    sparse: bool
 
     batch_codes: np.ndarray = field(init=False)
     n_batches: int = field(init=False)
@@ -93,12 +93,16 @@ class Harmony:
             theta_arr = np.array(self.theta, dtype=x.dtype)
         theta_arr = theta_arr.reshape(1, -1)
 
-        # Set default n_clusters
+        # Set default n_clusters (needed before tau discounting)
         if self.n_clusters is None:
             n_clusters = int(min(100, n_cells / 30))
             n_clusters = max(n_clusters, 2)
         else:
             n_clusters = self.n_clusters
+
+        # Apply tau discounting to theta
+        if self.tau > 0:
+            theta_arr = theta_arr * (1 - np.exp(-n_b / (n_clusters * self.tau)) ** 2)
 
         # Initialize centroids and state arrays
         r, e, o, obj_init = _initialize_centroids(
