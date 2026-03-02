@@ -13,7 +13,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
+from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._settings import Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
@@ -313,7 +313,7 @@ class _Cutoffs:
         self,
         mean: NDArray[np.floating] | DaskArray,
         dispersion_norm: NDArray[np.floating] | DaskArray,
-    ) -> NDArray[np.bool_] | DaskArray:
+    ) -> NDArray[np.bool] | DaskArray:
         return (
             (mean > self.min_mean)
             & (mean < self.max_mean)
@@ -482,7 +482,7 @@ def _subset_genes(
     mean: NDArray[np.float64] | DaskArray,
     dispersion_norm: NDArray[np.float64] | DaskArray,
     cutoff: _Cutoffs | int,
-) -> NDArray[np.bool_] | DaskArray:
+) -> NDArray[np.bool] | DaskArray:
     """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
         dispersion_norm = np.nan_to_num(dispersion_norm)  # similar to Seurat
@@ -592,21 +592,6 @@ def _highly_variable_genes_batched(
     return df
 
 
-@old_positionals(
-    "layer",
-    "n_top_genes",
-    "min_disp",
-    "max_disp",
-    "min_mean",
-    "max_mean",
-    "span",
-    "n_bins",
-    "flavor",
-    "subset",
-    "inplace",
-    "batch_key",
-    "check_values",
-)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,

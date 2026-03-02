@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from .. import logging as logg
 from .. import preprocessing as pp
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -19,15 +19,6 @@ if TYPE_CHECKING:
     from .._utils.random import _LegacyRandom
 
 
-@old_positionals(
-    "log",
-    "mean_threshold",
-    "cv_threshold",
-    "n_pcs",
-    "svd_solver",
-    "random_state",
-    "copy",
-)
 def recipe_weinreb17(
     adata: AnnData,
     *,
@@ -79,7 +70,6 @@ def recipe_weinreb17(
     return adata if copy else None
 
 
-@old_positionals("log", "plot", "copy")
 def recipe_seurat(
     adata: AnnData, *, log: bool = True, plot: bool = False, copy: bool = False
 ) -> AnnData | None:
@@ -123,7 +113,6 @@ def recipe_seurat(
     return adata if copy else None
 
 
-@old_positionals("n_top_genes", "log", "plot", "copy")
 def recipe_zheng17(
     adata: AnnData,
     *,

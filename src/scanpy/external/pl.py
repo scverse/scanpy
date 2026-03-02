@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
 from ..plotting import _scrublet, _utils, embedding
@@ -162,7 +162,6 @@ def harmony_timeseries(
     return axes
 
 
-@old_positionals("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
@@ -257,17 +256,6 @@ def sam(
     return axes
 
 
-@old_positionals(
-    "no_bins",
-    "smoothing_factor",
-    "min_delta",
-    "show_variance",
-    "figsize",
-    "return_fig",
-    "show",
-    "save",
-    "ax",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(  # noqa: PLR0913
     adata: AnnData,

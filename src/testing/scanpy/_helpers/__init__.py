@@ -186,7 +186,7 @@ def maybe_dask_process_context():
         dask.config.set(scheduler=prev_scheduler)
 
 
-def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
+def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool]:
     """Generate a random mask.
 
     Makes sure that at least 2 mask entries are True and at least 2 are False.

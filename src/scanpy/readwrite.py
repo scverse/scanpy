@@ -17,7 +17,7 @@ from matplotlib.image import imread
 from packaging.version import Version
 
 from . import logging as logg
-from ._compat import deprecated, old_positionals, pkg_version, warn
+from ._compat import deprecated, pkg_version, warn
 from ._settings import AnnDataFileFormat, settings
 from ._utils import _empty
 
@@ -79,15 +79,6 @@ assert set(get_args(AnnDataFileFormat)) <= avail_exts
 # --------------------------------------------------------------------------------
 
 
-@old_positionals(
-    "sheet",
-    "ext",
-    "delimiter",
-    "first_column_names",
-    "backup_url",
-    "cache",
-    "cache_compression",
-)
 def read(
     filename: PathLike[str] | str,
     backed: Literal["r", "r+"] | None = None,
@@ -174,7 +165,6 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
-@old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
     filename: PathLike[str] | str,
     *,
@@ -533,7 +523,6 @@ def read_visium(
     return adata
 
 
-@old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: PathLike[str] | str,
     *,
@@ -646,7 +635,6 @@ def _read_10x_mtx(
     return adata
 
 
-@old_positionals("ext", "compression", "compression_opts")
 def write(
     filename: PathLike[str] | str,
     adata: AnnData,
@@ -746,7 +734,6 @@ def write(
 # -------------------------------------------------------------------------------
 
 
-@old_positionals("as_header")
 def read_params(
     filename: PathLike[str] | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:

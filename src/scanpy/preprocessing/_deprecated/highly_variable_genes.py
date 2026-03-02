@@ -9,7 +9,7 @@ from anndata import AnnData
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, deprecated, old_positionals, warn
+from ..._compat import CSBase, deprecated, warn
 from .._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -17,18 +17,6 @@ if TYPE_CHECKING:
 
 
 @deprecated("Use sc.pp.highly_variable_genes instead")
-@old_positionals(
-    "flavor",
-    "min_disp",
-    "max_disp",
-    "min_mean",
-    "max_mean",
-    "n_bins",
-    "n_top_genes",
-    "log",
-    "subset",
-    "copy",
-)
 def filter_genes_dispersion(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | CSBase | np.ndarray,
     *,

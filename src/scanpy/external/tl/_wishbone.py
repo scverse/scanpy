@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from ... import logging
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -16,7 +15,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("branch", "k", "components", "num_waypoints")
 @doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,

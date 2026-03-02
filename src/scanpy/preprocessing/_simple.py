@@ -19,14 +19,13 @@ from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
+from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit
 from .._settings import settings as sett
 from .._utils import (
     _resolve_axis,
     check_array_function_arguments,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
-    renamed_arg,
     sanitize_anndata,
     view_to_actual,
 )
@@ -44,9 +43,6 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike, _LegacyRandom
 
 
-@old_positionals(
-    "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
-)
 def filter_cells(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -193,9 +189,6 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
-@old_positionals(
-    "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
-)
 def filter_genes(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -306,7 +299,6 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
-@renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
     data: AnnData | np.ndarray | CSBase,
@@ -424,7 +416,6 @@ def log1p_anndata(
         return adata
 
 
-@old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
     data: AnnData | CSBase | np.ndarray,
     *,
@@ -468,15 +459,6 @@ def sqrt(
 
 
 @deprecated("Use `sc.pp.normalize_total` instead.")
-@old_positionals(
-    "counts_per_cell_after",
-    "counts_per_cell",
-    "key_n_counts",
-    "copy",
-    "layers",
-    "use_rep",
-    "min_counts",
-)
 def normalize_per_cell(
     data: AnnData | np.ndarray | CSBase,
     *,
@@ -672,7 +654,6 @@ def numpy_regress_out(
     return data
 
 
-@old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
     keys: str | Sequence[str],
@@ -853,11 +834,11 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -869,7 +850,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample[A: np.ndarray | CSBase | DaskArray](
@@ -881,7 +862,7 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
@@ -892,7 +873,7 @@ def sample(  # noqa: PLR0912
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 
@@ -990,7 +971,6 @@ def sample(  # noqa: PLR0912
     return subset, indices
 
 
-@renamed_arg("target_counts", "counts_per_cell")
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,

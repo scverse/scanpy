@@ -55,7 +55,7 @@ class Aggregate:
         groupby: pd.Categorical,
         data: Array,
         *,
-        mask: NDArray[np.bool_] | None = None,
+        mask: NDArray[np.bool] | None = None,
     ) -> None:
         self.groupby = groupby
         if (missing := groupby.isna()).any():
@@ -188,7 +188,7 @@ def aggregate(  # noqa: PLR0912
     func: AggType | Iterable[AggType],
     *,
     axis: Literal["obs", 0, "var", 1] | None = None,
-    mask: NDArray[np.bool_] | str | None = None,
+    mask: NDArray[np.bool] | str | None = None,
     dof: int = 1,
     layer: str | None = None,
     obsm: str | None = None,
@@ -337,7 +337,7 @@ def _aggregate(
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> dict[AggType, np.ndarray | DaskArray]:
     msg = f"Data type {type(data)} not supported for aggregation"
@@ -353,7 +353,7 @@ def aggregate_dask_mean_var(
     data: DaskArray,
     by: pd.Categorical,
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> MeanVarDict:
     mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
@@ -374,7 +374,7 @@ def aggregate_dask(
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> dict[AggType, DaskArray]:
     if not isinstance(data._meta, CSBase | np.ndarray):
@@ -465,7 +465,7 @@ def aggregate_array(
     by: pd.Categorical,
     func: AggType | Iterable[AggType],
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> dict[AggType, np.ndarray]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
@@ -549,7 +549,7 @@ def _combine_categories(
 def sparse_indicator(
     categorical: pd.Categorical,
     *,
-    mask: NDArray[np.bool_] | None = None,
+    mask: NDArray[np.bool] | None = None,
     weight: NDArray[np.floating] | None = None,
 ) -> sparse.coo_matrix:
     if mask is not None and weight is None:
