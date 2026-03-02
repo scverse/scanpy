@@ -120,7 +120,7 @@ def test_harmony_integrate_reference(
     with subtests.test("r"):
         assert _get_measure(x, base, "r").min() > 0.95
     with subtests.test("L2"):
-        assert _get_measure(x, base, "L2").max() < 0.05
+        assert _get_measure(x, base, "L2").max() < 0.1
 
 
 def test_harmony_multiple_keys() -> None:

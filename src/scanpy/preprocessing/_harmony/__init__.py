@@ -5,7 +5,6 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import numpy as np
-from scipy.sparse import csr_matrix  # noqa: TID251
 from sklearn.cluster import KMeans
 from tqdm.auto import tqdm
 
@@ -18,8 +17,6 @@ if TYPE_CHECKING:
     from typing import Literal
 
     import pandas as pd
-
-    from ..._compat import CSBase
 
 
 @dataclass
@@ -83,13 +80,8 @@ class Harmony:
         # Normalize input for clustering
         z_norm = _normalize_rows_l2(x)
 
-        # Build phi matrix (one-hot encoding of batches)
-        if self.sparse:
-            phi = _one_hot_encode_sparse(self.batch_codes, self.n_batches, x.dtype)
-            n_b = np.asarray(phi.sum(axis=0)).ravel()
-        else:
-            phi = _one_hot_encode(self.batch_codes, self.n_batches, x.dtype)
-            n_b = phi.sum(axis=0)
+        # Compute batch proportions
+        n_b = np.bincount(self.batch_codes, minlength=self.n_batches).astype(x.dtype)
         pr_b = (n_b / n_cells).reshape(-1, 1)
 
         # Set default theta
@@ -111,7 +103,8 @@ class Harmony:
         # Initialize centroids and state arrays
         r, e, o, obj_init = _initialize_centroids(
             z_norm,
-            phi,
+            self.batch_codes,
+            self.n_batches,
             pr_b,
             n_clusters=n_clusters,
             sigma=self.sigma,
@@ -218,31 +211,6 @@ def _get_batch_codes(
     return codes.astype(np.int32), n_batches
 
 
-def _one_hot_encode(
-    codes: np.ndarray,
-    n_categories: int,
-    dtype: np.dtype,
-) -> np.ndarray:
-    """One-hot encode category codes."""
-    n = len(codes)
-    phi = np.zeros((n, n_categories), dtype=dtype)
-    phi[np.arange(n), codes] = 1.0
-    return phi
-
-
-def _one_hot_encode_sparse(
-    codes: np.ndarray,
-    n_categories: int,
-    dtype: np.dtype,
-):
-    """One-hot encode category codes as sparse CSR matrix."""
-    n = len(codes)
-    data = np.ones(n, dtype=dtype)
-    indices = codes.astype(np.int32)
-    indptr = np.arange(n + 1, dtype=np.int32)
-    return csr_matrix((data, indices, indptr), shape=(n, n_categories))
-
-
 def _normalize_rows_l2(x: np.ndarray) -> np.ndarray:
     """L2 normalize each row of x."""
     norms = np.linalg.norm(x, axis=1, keepdims=True)
@@ -259,7 +227,8 @@ def _normalize_rows_l1(r: np.ndarray) -> None:
 
 def _initialize_centroids(
     z_norm: np.ndarray,
-    phi: np.ndarray | CSBase,
+    batch_codes: np.ndarray,
+    n_batches: int,
     pr_b: np.ndarray,
     *,
     n_clusters: int,
@@ -285,7 +254,9 @@ def _initialize_centroids(
     # Initialize e (expected) and o (observed)
     r_sum = r.sum(axis=0)
     e = pr_b @ r_sum.reshape(1, -1)
-    o = phi.T @ r
+    # o[b, k] = sum of r[i, k] for cells i in batch b
+    o = np.zeros((n_batches, n_clusters), dtype=z_norm.dtype)
+    np.add.at(o, batch_codes, r)
 
     # Compute initial objective
     obj = _compute_objective(y_norm, z_norm, r, theta=theta, sigma=sigma, o=o, e=e)
@@ -403,7 +374,7 @@ def _correction_original(
     _, d = x.shape
 
     # Ridge regularization matrix (don't penalize intercept)
-    id_mat = np.eye(n_batches + 1)
+    id_mat = np.eye(n_batches + 1, dtype=x.dtype)
     id_mat[0, 0] = 0
     lambda_mat = ridge_lambda * id_mat
 
@@ -453,18 +424,19 @@ def _correction_fast(
     _, d = x.shape
 
     z = x.copy()
-    p = np.eye(n_batches + 1)
+    dtype = x.dtype
+    p = np.eye(n_batches + 1, dtype=dtype)
 
     for o_k, r_k in zip(o.T, r.T, strict=True):
         n_k = np.sum(o_k)
 
-        factor = 1.0 / (o_k + ridge_lambda)
+        factor = (1.0 / (o_k + ridge_lambda)).astype(dtype)
         c = n_k + np.sum(-factor * o_k**2)
-        c_inv = 1.0 / c
+        c_inv = dtype.type(1.0 / c)
 
         p[0, 1:] = -factor * o_k
 
-        p_t_b_inv = np.zeros((n_batches + 1, n_batches + 1))
+        p_t_b_inv = np.zeros((n_batches + 1, n_batches + 1), dtype=dtype)
         p_t_b_inv[0, 0] = c_inv
         p_t_b_inv[1:, 1:] = np.diag(factor)
         p_t_b_inv[1:, 0] = p[0, 1:] * c_inv
