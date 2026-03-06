@@ -206,6 +206,22 @@ def combat(  # noqa: PLR0915
     batch_info = model.groupby(key, observed=True).indices.values()
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
+
+    # check for batches with fewer than 2 cells
+    small_batches = [
+        batch
+        for batch, size in zip(
+            model.groupby(key, observed=True).indices, n_batches, strict=True
+        )
+        if size < 2
+    ]
+    if small_batches:
+        msg = (
+            f"Batches {small_batches!r} have fewer than 2 cells. "
+            "ComBat requires at least 2 cells per batch to estimate "
+            "within-batch variance. Filter these batches before running combat."
+        )
+        raise ValueError(msg)
     n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator

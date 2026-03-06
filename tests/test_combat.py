@@ -75,6 +75,20 @@ def test_combat_obs_names():
     assert_equal(a, b)
 
 
+def test_combat_single_cell_batch():
+    """Test that combat raises an error when a batch has fewer than 2 cells.
+
+    Regression test for https://github.com/scverse/scanpy/issues/1175
+    """
+    adata = sc.datasets.blobs()
+    # Create a batch where one category has only 1 cell
+    batch = pd.Categorical(["single"] + ["other"] * (adata.n_obs - 1))
+    adata.obs["batch"] = batch
+
+    with pytest.raises(ValueError, match="fewer than 2 cells"):
+        sc.pp.combat(adata, key="batch")
+
+
 def test_silhouette():
     # this test checks wether combat can align data from several gaussians
     # it checks this by computing the silhouette coefficient in a pca embedding
