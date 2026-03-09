@@ -8,7 +8,7 @@ import scipy as sp
 from natsort import natsorted
 
 from .. import logging as logg
-from .._utils.random import _FakeRandomGen
+from .._utils.random import _LegacyRng
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -147,7 +147,7 @@ def dpt(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
-        _diffmap(adata, neighbors_key=neighbors_key, rng=_FakeRandomGen(0))
+        _diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
     # start with the actual computation
     dpt = DPT(
         adata,

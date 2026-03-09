@@ -10,7 +10,7 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._utils.random import _accepts_legacy_random_state, _FakeRandomGen
+from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get import _get_obs_rep
 from . import pipeline
 from .core import Scrublet
@@ -390,7 +390,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
     """
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
     rng_scrub, rng_pca = rng.spawn(2)
     del rng

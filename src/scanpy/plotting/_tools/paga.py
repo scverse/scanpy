@@ -23,7 +23,7 @@ from ..._compat import CSBase
 from ..._settings import settings
 from ..._utils.random import (
     _accepts_legacy_random_state,
-    _FakeRandomGen,
+    _LegacyRng,
     _set_igraph_rng,
 )
 from .. import _utils
@@ -225,7 +225,7 @@ def _compute_pos(  # noqa: PLR0912
             )
             raise ValueError(msg)
     else:  # igraph layouts
-        if isinstance(rng, _FakeRandomGen):  # backwards compat
+        if isinstance(rng, _LegacyRng):  # backwards compat
             random.seed(rng.bytes(8))
             ctx = nullcontext()
         else:

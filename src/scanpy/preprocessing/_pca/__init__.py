@@ -12,8 +12,8 @@ from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ..._utils.random import (
     _accepts_legacy_random_state,
-    _FakeRandomGen,
     _legacy_random_state,
+    _LegacyRng,
 )
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
@@ -248,10 +248,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     # dask needs an int for random state
     rng = np.random.default_rng(rng)
-    if not isinstance(rng, _FakeRandomGen) or not isinstance(
-        rng._arg, int | np.random.RandomState
+    if not isinstance(rng, _LegacyRng) or not isinstance(
+        rng.arg, int | np.random.RandomState
     ):
-        # TODO: remove this error and if we don’t have a _FakeRandomGen,
+        # TODO: remove this error and if we don’t have a _LegacyRng,
         #       just use rng.integers to make a seed farther down
         msg = f"rng needs to be an int or a np.random.RandomState, not a {type(rng).__name__} when passing a dask array"
         raise TypeError(msg)
@@ -259,7 +259,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     if chunked:
         if (
             not zero_center
-            or (not isinstance(rng, _FakeRandomGen) or rng._arg != 0)
+            or (not isinstance(rng, _LegacyRng) or rng.arg != 0)
             or (svd_solver is not None and svd_solver != "arpack")
         ):
             logg.debug("Ignoring zero_center, rng, svd_solver")
@@ -310,7 +310,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
-                if not isinstance(rng, _FakeRandomGen) or rng._arg != 0:
+                if not isinstance(rng, _LegacyRng) or rng.arg != 0:
                     msg = f"Ignoring random_state={_legacy_random_state(rng)} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:

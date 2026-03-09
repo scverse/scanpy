@@ -20,8 +20,8 @@ from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
-    _FakeRandomGen,
     _legacy_random_state,
+    _LegacyRng,
 )
 from . import _connectivity
 from ._common import (
@@ -209,7 +209,7 @@ def neighbors(  # noqa: PLR0913
 
     """
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
 
     if distances is None:

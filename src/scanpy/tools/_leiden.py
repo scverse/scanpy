@@ -10,11 +10,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import warn
 from .._utils import _doc_params
-from .._utils.random import (
-    _accepts_legacy_random_state,
-    _FakeRandomGen,
-    _set_igraph_rng,
-)
+from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ._docs import (
     doc_adata,
     doc_adjacency,
@@ -141,7 +137,7 @@ def leiden(  # noqa: PLR0913
     clustering_args = dict(clustering_args)
     rng = np.random.default_rng(rng)
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
 
     start = logg.info("running Leiden clustering")
@@ -174,9 +170,8 @@ def leiden(  # noqa: PLR0913
         if use_weights:
             clustering_args["weights"] = np.array(g.es["weight"]).astype(np.float64)
         seed = (
-            rng._arg
-            if isinstance(rng, _FakeRandomGen)
-            and isinstance(rng._arg, int | np.integer)
+            rng.arg
+            if isinstance(rng, _LegacyRng) and isinstance(rng.arg, int | np.integer)
             # for some reason leidenalg only accepts int32 (signed) seeds …
             else rng.integers((i := np.iinfo(np.int32)).min, i.max, dtype=np.int32)
         )

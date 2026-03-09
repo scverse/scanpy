@@ -12,7 +12,7 @@ from .._compat import CSBase
 from .._settings import settings
 from .._utils import NeighborsView, _empty, raise_not_implemented_error_if_backed_type
 from .._utils._doctests import doctest_skip
-from .._utils.random import _FakeRandomGen, _legacy_random_state
+from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
@@ -244,7 +244,7 @@ class Ingest:
         if self._rng is None:  # indicates we want non-determinism
             return None
         random_state = params.get("random_state", 0)
-        return _FakeRandomGen(random_state)
+        return _LegacyRng(random_state)
 
     def _init_umap(self, adata: AnnData) -> None:
         from umap import UMAP

@@ -10,8 +10,8 @@ from .. import logging as logg
 from .._utils import _choose_graph, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
-    _FakeRandomGen,
     _if_legacy_apply_global,
+    _LegacyRng,
     _set_igraph_rng,
 )
 from ._utils import get_init_pos_from_paga
@@ -119,7 +119,7 @@ def draw_graph(  # noqa: PLR0913
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     rng = np.random.default_rng(rng)
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
     rng = _if_legacy_apply_global(rng)
     rng_init, rng_layout = rng.spawn(2)

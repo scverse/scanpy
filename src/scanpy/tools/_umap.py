@@ -12,8 +12,8 @@ from .._settings import settings
 from .._utils import NeighborsView
 from .._utils.random import (
     _accepts_legacy_random_state,
-    _FakeRandomGen,
     _legacy_random_state,
+    _LegacyRng,
 )
 from ._utils import _choose_representation, get_init_pos_from_paga
 
@@ -150,7 +150,7 @@ def umap(  # noqa: PLR0913, PLR0915
     """
     rng_init, rng_umap = np.random.default_rng(rng).spawn(2)
     meta_random_state = (
-        dict(random_state=rng._arg) if isinstance(rng, _FakeRandomGen) else {}
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
     del rng
 

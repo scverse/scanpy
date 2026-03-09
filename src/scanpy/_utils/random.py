@@ -52,15 +52,15 @@ class _RNGIgraph:
         self._rng = np.random.default_rng(rng)
 
     def getrandbits(self, k: int) -> int:
-        if isinstance(self._rng, _FakeRandomGen):
-            i = self._rng._state.tomaxint()
+        if isinstance(self._rng, _LegacyRng):
+            i = self._rng.state.tomaxint()
         else:
             lims = np.iinfo(np.uint64)
             i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
         return i & ((1 << k) - 1)
 
     def randint(self, a: int, b: int) -> np.int64:
-        """Can’t use `endpoint` here as _FakeRandomGen doesn’t support it."""
+        """Can’t use `endpoint` here as _LegacyRng doesn’t support it."""
         return self._rng.integers(a, b + 1)
 
     def __getattr__(self, attr: str):
@@ -85,7 +85,7 @@ def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
 ###################################
 
 
-class _FakeRandomGen(np.random.Generator):
+class _LegacyRng(np.random.Generator):
     """A `Generator` that wraps a legacy `RandomState` instance.
 
     To behave like a `RandomState`, it’s not enough to just use a MT19937 `bit_generator`
@@ -93,18 +93,18 @@ class _FakeRandomGen(np.random.Generator):
     so instead this hack uses the exact same random numbers as `RandomState(seed)`.
     """
 
-    _arg: _LegacyRandom
-    _state: np.random.RandomState
+    arg: _LegacyRandom
+    state: np.random.RandomState
 
     def __init__(
         self, arg: _LegacyRandom, state: np.random.RandomState | None = None
     ) -> None:
-        self._arg = arg
-        self._state = check_random_state(arg) if state is None else state
+        self.arg = arg
+        self.state = check_random_state(arg) if state is None else state
 
     @property
     def bit_generator(self) -> BitGenerator:
-        msg = "A _FakeRandomGen instance has no `bit_generator` attribute."
+        msg = "A _LegacyRng instance has no `bit_generator` attribute."
         raise AttributeError(msg)
 
     @classmethod
@@ -117,9 +117,9 @@ class _FakeRandomGen(np.random.Generator):
         if arg is not None:
             if isinstance(arg, np.random.RandomState):
                 np.random.set_state(arg.get_state(legacy=False))
-                return _FakeRandomGen(arg, state)
+                return _LegacyRng(arg, state)
             np.random.seed(arg)
-        return _FakeRandomGen(arg, np.random.RandomState(np.random.get_bit_generator()))
+        return _LegacyRng(arg, np.random.RandomState(np.random.get_bit_generator()))
 
     def spawn(self, n_children: int) -> list[Self]:
         """Return `self` `n_children` times.
@@ -139,27 +139,27 @@ class _FakeRandomGen(np.random.Generator):
             def mk_wrapper(name: str, meth):
                 # Old pytest versions try to run the doctests
                 @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
-                def wrapper(self: _FakeRandomGen, *args, **kwargs):
-                    return getattr(self._state, name)(*args, **kwargs)
+                def wrapper(self: _LegacyRng, *args, **kwargs):
+                    return getattr(self.state, name)(*args, **kwargs)
 
                 return wrapper
 
             setattr(cls, names.get(name, name), mk_wrapper(name, meth))
 
 
-_FakeRandomGen._delegate()
+_LegacyRng._delegate()
 
 
 def _if_legacy_apply_global(rng: np.random.Generator, /) -> np.random.Generator:
-    """Wrap the global legacy RNG if `rng` is a `_FakeRandomGen`.
+    """Wrap the global legacy RNG if `rng` is a `_LegacyRng`.
 
     This is used where our code used to  call `np.random.seed()`.
-    It’s a no-op if `rng` is not a `_FakeRandomGen`.
+    It’s a no-op if `rng` is not a `_LegacyRng`.
     """
-    if not isinstance(rng, _FakeRandomGen):
+    if not isinstance(rng, _LegacyRng):
         return rng
 
-    return _FakeRandomGen.wrap_global(rng._arg, rng._state)
+    return _LegacyRng.wrap_global(rng.arg, rng.state)
 
 
 def _legacy_random_state(
@@ -167,10 +167,10 @@ def _legacy_random_state(
 ) -> _LegacyRandom:
     """Convert a np.random.Generator into a legacy `random_state` argument.
 
-    If `rng` is already a `_FakeRandomGen`, return its original `_arg` attribute.
+    If `rng` is already a `_LegacyRng`, return its original `arg` attribute.
     """
-    if isinstance(rng, _FakeRandomGen):
-        return rng._state if always_state else rng._arg
+    if isinstance(rng, _LegacyRng):
+        return rng.state if always_state else rng.arg
     [bitgen] = np.random.default_rng(rng).bit_generator.spawn(1)
     return np.random.RandomState(bitgen)
 
@@ -181,9 +181,9 @@ def _accepts_legacy_random_state[**P, R](
     """Make a function accept `random_state: _LegacyRandom` and pass it as `rng`.
 
     If the decorated function is called with a `random_state` argument,
-    it’ll be wrapped in a :class:`_FakeRandomGen`.
-    Passing both ``rng`` and ``random_state`` at the same time is an error.
-    If neither is given, ``random_state_default`` is used.
+    it’ll be wrapped in a `_LegacyRng`.
+    Passing both `rng` and `random_state` at the same time is an error.
+    If neither is given, `random_state_default` is used.
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
@@ -194,9 +194,9 @@ def _accepts_legacy_random_state[**P, R](
                     msg = "Specify at most one of `rng` and `random_state`."
                     raise TypeError(msg)
                 case True, False:
-                    kwargs["rng"] = _FakeRandomGen(kwargs.pop("random_state"))
+                    kwargs["rng"] = _LegacyRng(kwargs.pop("random_state"))
                 case False, False:
-                    kwargs["rng"] = _FakeRandomGen(random_state_default)
+                    kwargs["rng"] = _LegacyRng(random_state_default)
             return func(*args, **kwargs)
 
         return wrapper
