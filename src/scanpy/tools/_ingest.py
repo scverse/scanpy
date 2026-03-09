@@ -9,8 +9,14 @@ from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import CSBase
+from .._docs import doc_rng
 from .._settings import settings
-from .._utils import NeighborsView, _empty, raise_not_implemented_error_if_backed_type
+from .._utils import (
+    NeighborsView,
+    _doc_params,
+    _empty,
+    raise_not_implemented_error_if_backed_type,
+)
 from .._utils._doctests import doctest_skip
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
@@ -197,6 +203,7 @@ class _DimDict(MutableMapping):
         return f"{type(self).__name__}({self._data})"
 
 
+@_doc_params(rng=doc_rng)
 class Ingest:
     """Class to map labels and embeddings from existing data to new data.
 
@@ -208,10 +215,7 @@ class Ingest:
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`
         with embeddings and labels.
-    rng
-        Random number generator.
-        `None` means non-determinism.
-        By default uses the tools’ seeds if available, else seed `0`.
+    {rng}
 
     """
 

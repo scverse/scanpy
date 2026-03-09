@@ -9,6 +9,8 @@ from anndata import AnnData, concat
 from scipy import sparse
 
 from ... import logging as logg
+from ..._docs import doc_rng
+from ..._utils import _doc_params
 from ...neighbors import (
     Neighbors,
     _get_indices_distances_from_sparse_matrix,
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
 __all__ = ["Scrublet"]
 
 
+@_doc_params(rng=doc_rng)
 @dataclass(kw_only=True)
 class Scrublet:
     """Initialize Scrublet object with counts matrix and doublet prediction parameters.
@@ -56,9 +59,9 @@ class Scrublet:
     stdev_doublet_rate
         Uncertainty in the expected doublet rate.
 
-    rng
-        Random number generator for doublet simulation, approximate
-        nearest neighbor search, and PCA/TruncatedSVD.
+    {rng}
+
+        Used for doublet simulation, nearest neighbor search, and PCA/TruncatedSVD.
 
     """
 

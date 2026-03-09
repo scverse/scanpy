@@ -9,6 +9,7 @@ from natsort import natsorted
 from .. import _utils
 from .. import logging as logg
 from .._compat import warn
+from .._docs import doc_rng
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ._docs import (
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="leiden"),
     obsp=doc_obsp,
+    rng=doc_rng,
 )
 @_accepts_legacy_random_state(0)
 def leiden(  # noqa: PLR0913
@@ -82,8 +84,7 @@ def leiden(  # noqa: PLR0913
         Higher values lead to more clusters.
         Set to `None` if overriding `partition_type`
         to one that doesn’t accept a `resolution_parameter`.
-    rng
-        Change the initialization of the optimization.
+    {rng}
     {restrict_to}
     key_added
         `adata.obs` key under which to add the cluster labels.

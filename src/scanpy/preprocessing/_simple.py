@@ -23,8 +23,10 @@ from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit
+from .._docs import doc_rng
 from .._settings import settings as sett
 from .._utils import (
+    _doc_params,
     _resolve_axis,
     check_array_function_arguments,
     is_backed_type,
@@ -868,6 +870,9 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
+
+
+@_doc_params(rng=doc_rng)
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
@@ -895,8 +900,7 @@ def sample(  # noqa: PLR0912
         See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
-    rng
-        Random seed to change subsampling.
+    {rng}
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
@@ -976,6 +980,7 @@ def sample(  # noqa: PLR0912
 
 
 @_accepts_legacy_random_state(0)
+@_doc_params(rng=doc_rng)
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,
@@ -1005,8 +1010,7 @@ def downsample_counts(
     total_counts
         Target total counts. If the count matrix has more than `total_counts`
         it will be downsampled to have this number.
-    rng
-        Random seed for subsampling.
+    {rng}
     replace
         Whether to sample the counts with replacement.
     copy

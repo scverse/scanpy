@@ -10,7 +10,9 @@ from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
 from .._compat import deprecated
+from .._docs import doc_rng
 from .._settings import settings
+from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..readwrite import read, read_h5ad, read_visium
@@ -55,6 +57,7 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
+@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def blobs(
     *,
@@ -77,8 +80,7 @@ def blobs(
     n_observations
         Number of observations. By default, this is the same observation number
         as in :func:`scanpy.datasets.krumsiek11`.
-    rng
-        Determines random number generation for dataset creation.
+    {rng}
 
     Returns
     -------

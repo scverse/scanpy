@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from .. import logging as logg
 from .._compat import warn
+from .._docs import doc_rng
 from .._settings import settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 
 
 @_accepts_legacy_random_state(0)
-@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
@@ -76,9 +77,7 @@ def tsne(  # noqa: PLR0913
         optimization, the early exaggeration factor or the learning rate
         might be too high. If the cost function gets stuck in a bad local
         minimum increasing the learning rate helps sometimes.
-    rng
-        Change this to use different intial states for the optimization.
-        If `None`, the initial state is not reproducible.
+    {rng}
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy.settings.n_jobs`.

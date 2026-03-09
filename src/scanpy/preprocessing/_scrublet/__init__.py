@@ -10,6 +10,8 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._docs import doc_rng
+from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get import _get_obs_rep
 from . import pipeline
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 
 
 @_accepts_legacy_random_state(0)
+@_doc_params(rng=doc_rng)
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
     adata_sim: AnnData | None = None,
@@ -129,8 +132,7 @@ def scrublet(  # noqa: PLR0913
     copy
         If :data:`True`, return a copy of the input ``adata`` with Scrublet results
         added. Otherwise, Scrublet results are added in place.
-    rng
-        Initial state for doublet simulation and nearest neighbors.
+    {rng}
 
     Returns
     -------

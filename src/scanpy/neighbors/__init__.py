@@ -16,6 +16,7 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
+from .._docs import doc_rng
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -81,7 +82,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_pcs: NotRequired[int]
 
 
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
@@ -163,8 +164,7 @@ def neighbors(  # noqa: PLR0913
         Options for the metric.
 
         *ignored if ``transformer`` is an instance.*
-    rng
-        A numpy random number generator.
+    {rng}
 
         *ignored if ``transformer`` is an instance.*
     key_added
@@ -852,6 +852,7 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
+    @_doc_params(rng=doc_rng)
     @_accepts_legacy_random_state(0)
     def compute_eigen(
         self,
@@ -869,8 +870,7 @@ class Neighbors:
         n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        rng
-            A numpy random number generator
+        {rng}
 
         Returns
         -------

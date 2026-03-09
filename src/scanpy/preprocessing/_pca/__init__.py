@@ -8,6 +8,7 @@ from packaging.version import Version
 
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
+from ..._docs import doc_rng
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ..._utils.random import (
@@ -55,9 +56,7 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-@_doc_params(
-    mask_var_hvg=doc_mask_var_hvg,
-)
+@_doc_params(mask_var_hvg=doc_mask_var_hvg, rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
@@ -162,8 +161,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
-    rng
-        Change to use different initial states for the optimization.
+    {rng}
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.

@@ -20,7 +20,9 @@ from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 from ... import _utils as _sc_utils
 from ... import logging as logg
 from ..._compat import CSBase
+from ..._docs import doc_rng
 from ..._settings import settings
+from ..._utils import _doc_params
 from ..._utils.random import (
     _accepts_legacy_random_state,
     _LegacyRng,
@@ -334,6 +336,7 @@ def hierarchy_pos(
     return make_pos({})
 
 
+@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -426,10 +429,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     init_pos
         Two-column array storing the x and y coordinates for initializing the
         layout.
-    rng
-        For layouts with random initialization like `'fr'`, change this to use
-        different intial states for the optimization. If `None`, the initial
-        state is not reproducible.
+    {rng}
+
+        Applies to layouts with random initialization like `'fr'`.
     root
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied

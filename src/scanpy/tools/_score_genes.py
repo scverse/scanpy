@@ -9,7 +9,8 @@ import pandas as pd
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._utils import check_use_raw, is_backed_type
+from .._docs import doc_rng
+from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _get_obs_rep
 
@@ -51,6 +52,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     return m
 
 
+@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
@@ -96,8 +98,7 @@ def score_genes(  # noqa: PLR0913
         Number of expression level bins for sampling.
     score_name
         Name of the field to be added in `.obs`.
-    rng
-        The random number generator for sampling.
+    {rng}
     copy
         Copy `adata` or modify it inplace.
     use_raw

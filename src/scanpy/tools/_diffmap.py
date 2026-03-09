@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .._docs import doc_rng
+from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
 from ._dpt import _diffmap
 
@@ -13,6 +15,7 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
+@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def diffmap(
     adata: AnnData,
@@ -52,8 +55,7 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
-    rng
-        A numpy random number generator
+    {rng}
     copy
         Return a copy instead of writing to adata.
 
