@@ -17,6 +17,7 @@ from .._utils.random import (
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
     from typing import LiteralString
 
     from anndata import AnnData
@@ -121,7 +122,6 @@ def draw_graph(  # noqa: PLR0913
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    rng = _if_legacy_apply_global(rng)
     rng_init, rng_layout = rng.spawn(2)
     del rng
     if layout not in (layouts := get_literal_vals(_Layout)):
@@ -133,7 +133,7 @@ def draw_graph(  # noqa: PLR0913
     # init coordinates
     if init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
-    elif init_pos == "paga" or init_pos:
+    elif init_pos:  # "paga" or True
         init_coords = get_init_pos_from_paga(
             adata,
             adjacency,
@@ -142,6 +142,7 @@ def draw_graph(  # noqa: PLR0913
             obsp=obsp,
         )
     else:
+        _if_legacy_apply_global(rng_init)
         init_coords = rng_init.random((adjacency.shape[0], 2))
     layout = coerce_fa2_layout(layout)
     # actual drawing
@@ -149,7 +150,7 @@ def draw_graph(  # noqa: PLR0913
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
         g = _utils.get_igraph_from_adjacency(adjacency)
-        with _set_igraph_rng(rng_layout):
+        with _igraph_rng_compat(rng_layout):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
             elif "rt" in layout:
@@ -217,3 +218,17 @@ def coerce_fa2_layout[S: LiteralString](layout: S) -> S | Literal["fa", "fr"]:
         return "fr"
 
     return "fa"
+
+
+def _igraph_rng_compat(rng: SeedLike | RNGLike | None) -> AbstractContextManager[None]:
+    """Context manager that sets the igraph RNG to the given RNG.
+
+    For legacy code, this just calls `random.seed()`.
+    """
+    import random
+    from contextlib import nullcontext
+
+    if isinstance(rng, _LegacyRng):
+        random.seed(rng.arg)
+        return nullcontext()
+    return _set_igraph_rng(rng)
