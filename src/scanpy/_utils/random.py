@@ -125,7 +125,7 @@ class _LegacyRng(np.random.Generator):
         """Return `self` `n_children` times.
 
         In a real generator, the spawned children are independent,
-        but for backwards compatibility we return the same instance.
+        but for backwards compatibility we return the same instance so that its internal state is advanced by each child.
         """
         return [self] * n_children
 
