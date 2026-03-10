@@ -13,5 +13,5 @@ rng
     If :data:`None`, a non-reproducible random number generator is used.
     See :func:`numpy.random.default_rng` for more details.
 
-    The default value matches legacy scanpy behavior and will change to `None` in scanpy 2.0.
+    The default value matches legacy scanpy behavior and will change to `None` in scanpy 2.0.\
 """

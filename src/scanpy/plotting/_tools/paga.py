@@ -403,10 +403,10 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     color
         Gene name or `obs` annotation defining the node colors.
         Also plots the degree of the abstracted graph when
-        passing {`'degree_dashed'`, `'degree_solid'`}.
+        passing {{`'degree_dashed'`, `'degree_solid'`}}.
 
         Can be also used to visualize pie chart at each node in the following form:
-        `{<group name or index>: {<color>: <fraction>, ...}, ...}`. If the fractions
+        `{{<group name or index>: {{<color>: <fraction>, ...}}, ...}}`. If the fractions
         do not sum to 1, a new category called `'rest'` colored grey will be created.
     labels
         The node labels. If `None`, this defaults to the group labels stored in
@@ -493,7 +493,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     ax
         A matplotlib axes object.
 
