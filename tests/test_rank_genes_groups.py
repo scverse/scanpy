@@ -355,7 +355,9 @@ def test_pts_ordering_matches_names(method):
                 col = np.asarray(col).ravel()
             expected_frac = np.count_nonzero(col[in_group]) / np.sum(in_group)
             np.testing.assert_allclose(
-                pts_values[i], expected_frac, rtol=1e-5,
+                pts_values[i],
+                expected_frac,
+                rtol=1e-5,
                 err_msg=f"pts mismatch for group={group}, gene={gene} at position {i}",
             )
 

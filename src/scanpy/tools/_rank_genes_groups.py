@@ -731,17 +731,18 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         # stored in the names structured array, so pts aligns positionally
         # with names, scores, pvals, etc.
         names_rec = adata.uns[key_added]["names"]
-        adata.uns[key_added]["pts"] = pd.DataFrame(
-            {group: pts_df[group].loc[names_rec[group]].values for group in groups_names}
-        )
+        adata.uns[key_added]["pts"] = pd.DataFrame({
+            group: pts_df[group].loc[names_rec[group]].values for group in groups_names
+        })
     if test_obj.pts_rest is not None:
         pts_rest_df = pd.DataFrame(
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
         names_rec = adata.uns[key_added]["names"]
-        adata.uns[key_added]["pts_rest"] = pd.DataFrame(
-            {group: pts_rest_df[group].loc[names_rec[group]].values for group in groups_names}
-        )
+        adata.uns[key_added]["pts_rest"] = pd.DataFrame({
+            group: pts_rest_df[group].loc[names_rec[group]].values
+            for group in groups_names
+        })
 
     logg.info(
         "    finished",
@@ -890,12 +891,12 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
         if use_fraction:
             # pts columns are already ordered by significance, matching names
-            fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].values
-            )
-            fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].values
-            )
+            fraction_in_cluster_matrix.loc[:, cluster] = adata.uns[key]["pts"][
+                cluster
+            ].values
+            fraction_out_cluster_matrix.loc[:, cluster] = adata.uns[key]["pts_rest"][
+                cluster
+            ].values
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
             fraction_out_cluster_matrix.loc[:, cluster] = _calc_frac(x_out)

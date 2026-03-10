@@ -99,11 +99,13 @@ def rank_genes_groups_df(
             names_rec = adata.uns[key]["names"]
             frames = []
             for g in group:
-                frames.append(pd.DataFrame({
-                    "names": names_rec[g],
-                    "group": g,
-                    name: adata.uns[key][pts][g].values,
-                }))
+                frames.append(
+                    pd.DataFrame({
+                        "names": names_rec[g],
+                        "group": g,
+                        name: adata.uns[key][pts][g].values,
+                    })
+                )
             pts_df = pd.concat(frames, ignore_index=True)
             d = d.merge(pts_df)
 
