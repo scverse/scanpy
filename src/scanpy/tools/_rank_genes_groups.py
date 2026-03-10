@@ -707,16 +707,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         **kwds,
     )
 
-    if test_obj.pts is not None:
-        groups_names = [str(name) for name in test_obj.groups_order]
-        adata.uns[key_added]["pts"] = pd.DataFrame(
-            test_obj.pts.T, index=test_obj.var_names, columns=groups_names
-        )
-    if test_obj.pts_rest is not None:
-        adata.uns[key_added]["pts_rest"] = pd.DataFrame(
-            test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
-        )
-
     test_obj.stats.columns = test_obj.stats.columns.swaplevel()
 
     dtypes = {
@@ -730,6 +720,27 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     for col in test_obj.stats.columns.levels[0]:
         adata.uns[key_added][col] = test_obj.stats[col].to_records(
             index=False, column_dtypes=dtypes[col]
+        )
+
+    if test_obj.pts is not None:
+        groups_names = [str(name) for name in test_obj.groups_order]
+        pts_df = pd.DataFrame(
+            test_obj.pts.T, index=test_obj.var_names, columns=groups_names
+        )
+        # Reindex each group's pts values to match the significance ordering
+        # stored in the names structured array, so pts aligns positionally
+        # with names, scores, pvals, etc.
+        names_rec = adata.uns[key_added]["names"]
+        adata.uns[key_added]["pts"] = pd.DataFrame(
+            {group: pts_df[group].loc[names_rec[group]].values for group in groups_names}
+        )
+    if test_obj.pts_rest is not None:
+        pts_rest_df = pd.DataFrame(
+            test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
+        )
+        names_rec = adata.uns[key_added]["names"]
+        adata.uns[key_added]["pts_rest"] = pd.DataFrame(
+            {group: pts_rest_df[group].loc[names_rec[group]].values for group in groups_names}
         )
 
     logg.info(
@@ -878,11 +889,12 @@ def filter_rank_genes_groups(  # noqa: PLR0912
             x_out = sub_x[~in_group]
 
         if use_fraction:
+            # pts columns are already ordered by significance, matching names
             fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].values
+                adata.uns[key]["pts"][cluster].values
             )
             fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].values
+                adata.uns[key]["pts_rest"][cluster].values
             )
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)
