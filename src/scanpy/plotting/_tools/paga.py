@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from numpy.typing import NDArray
 
-    from ..._compat import SpBase
     from ..._utils.random import RNGLike, SeedLike
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
@@ -193,7 +192,7 @@ def paga_compare(  # noqa: PLR0912, PLR0913
 
 
 def _compute_pos(  # noqa: PLR0912
-    adjacency_solid: SpBase | np.ndarray,
+    adjacency_solid: CSBase | np.ndarray,
     *,
     layout: _Layout | None,
     rng: np.random.Generator,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 
@@ -22,8 +22,9 @@ if TYPE_CHECKING:
     from typing import LiteralString
 
     from anndata import AnnData
+    from colour.hints import NDArray
 
-    from .._compat import SpBase
+    from .._compat import CSBase
     from .._utils.random import RNGLike, SeedLike
 
 
@@ -40,7 +41,7 @@ def draw_graph(  # noqa: PLR0913
     root: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
-    adjacency: SpBase | None = None,
+    adjacency: CSBase | None = None,
     key_added_ext: str | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
@@ -124,8 +125,6 @@ def draw_graph(  # noqa: PLR0913
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    rng_init, rng_layout = rng.spawn(2)
-    del rng
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
@@ -134,25 +133,25 @@ def draw_graph(  # noqa: PLR0913
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
     if init_pos in adata.obsm:
-        init_coords = adata.obsm[init_pos]
+        init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
     elif init_pos:  # "paga" or True
         init_coords = get_init_pos_from_paga(
             adata,
-            adjacency,
-            rng=rng_init,
+            adjacency=adjacency,
+            rng=rng,
             neighbors_key=neighbors_key,
             obsp=obsp,
         )
     else:
-        _if_legacy_apply_global(rng_init)
-        init_coords = rng_init.random((adjacency.shape[0], 2))
+        _if_legacy_apply_global(rng)
+        init_coords = rng.random((adjacency.shape[0], 2))
     layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
         g = _utils.get_igraph_from_adjacency(adjacency)
-        with _igraph_rng_compat(rng_layout):
+        with _igraph_rng_compat(rng):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
             elif "rt" in layout:
@@ -175,7 +174,7 @@ def draw_graph(  # noqa: PLR0913
 
 
 def fa2_positions(
-    adjacency: SpBase | np.ndarray, init_coords: np.ndarray, **kwds
+    adjacency: CSBase | np.ndarray, init_coords: np.ndarray, **kwds
 ) -> list[tuple[float, float]]:
     from fa2_modified import ForceAtlas2
 

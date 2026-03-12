@@ -31,7 +31,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
 
 @_accepts_legacy_random_state(0)
 @_doc_params(rng=doc_rng)
-def umap(  # noqa: PLR0913, PLR0915
+def umap(  # noqa: PLR0913
     adata: AnnData,
     *,
     min_dist: float = 0.5,
@@ -147,12 +147,7 @@ def umap(  # noqa: PLR0913, PLR0915
         UMAP parameters.
 
     """
-    rng_init, rng_umap = np.random.default_rng(rng).spawn(2)
-    meta_random_state = (
-        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
-    )
-    del rng
-
+    rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
     key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
@@ -181,12 +176,15 @@ def umap(  # noqa: PLR0913, PLR0915
 
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
+    meta_random_state = (
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
+    )
     adata.uns[key_uns] = dict(params=dict(a=a, b=b, **meta_random_state))
     if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
         init_coords = get_init_pos_from_paga(
-            adata, rng=rng_init, neighbors_key=neighbors_key
+            adata, rng=rng, neighbors_key=neighbors_key
         )
     else:
         init_coords = init_pos  # Let umap handle it
@@ -216,7 +214,7 @@ def umap(  # noqa: PLR0913, PLR0915
             negative_sample_rate=negative_sample_rate,
             n_epochs=n_epochs,
             init=init_coords,
-            random_state=_legacy_random_state(rng_umap, always_state=True),
+            random_state=_legacy_random_state(rng, always_state=True),
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
             densmap=False,
@@ -256,7 +254,7 @@ def umap(  # noqa: PLR0913, PLR0915
             a=a,
             b=b,
             verbose=settings.verbosity > 3,
-            random_state=_legacy_random_state(rng_umap),
+            random_state=_legacy_random_state(rng),
         )
         x_umap = umap.fit_transform(x_contiguous)
     adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates

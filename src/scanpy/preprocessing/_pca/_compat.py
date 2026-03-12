@@ -13,7 +13,7 @@ from ..._compat import pkg_version
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
     from numpy.typing import NDArray
     from sklearn.decomposition import PCA
@@ -38,8 +38,6 @@ def _pca_compat_sparse(
     rng = np.random.default_rng(rng)
     # this exists only to be stored in our PCA container object
     random_state_meta = _legacy_random_state(rng)
-    [rng_init, rng_svds] = rng.spawn(2)
-    del rng
 
     x = check_array(x, accept_sparse=["csr", "csc"])
 
@@ -62,11 +60,9 @@ def _pca_compat_sparse(
         rmatmat=rmat_op,
     )
 
-    random_init = rng_init.uniform(size=np.min(x.shape))
-    kw = (
-        dict(rng=rng_svds)
-        if SCIPY_1_15
-        else dict(random_state=_legacy_random_state(rng_svds))
+    random_init = rng.uniform(size=np.min(x.shape))
+    kw: Any = (
+        dict(rng=rng) if SCIPY_1_15 else dict(random_state=_legacy_random_state(rng))
     )
     u, s, v = svds(linop, solver=solver, k=n_pcs, v0=random_init, **kw)
     # u_based_decision was changed in https://github.com/scikit-learn/scikit-learn/pull/27491

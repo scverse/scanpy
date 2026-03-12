@@ -886,9 +886,7 @@ class Neighbors:
             plotting.
 
         """
-        [rng_init, rng_eigsh] = np.random.default_rng(rng).spawn(2)
-        del rng
-
+        rng = np.random.default_rng(rng)
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
             msg = "Run `.compute_transitions` first."
@@ -906,14 +904,10 @@ class Neighbors:
             matrix = matrix.astype(np.float64)
 
             # Setting the random initial vector
-            v0 = rng_init.standard_normal(matrix.shape[0])
+            v0 = rng.standard_normal(matrix.shape[0])
+            kw: Any = dict(rng=rng) if SCIPY_1_17 else {}
             evals, evecs = sparse.linalg.eigsh(
-                matrix,
-                k=n_comps,
-                which=which,
-                ncv=ncv,
-                v0=v0,
-                **(dict(rng=rng_eigsh) if SCIPY_1_17 else {}),
+                matrix, k=n_comps, which=which, ncv=ncv, v0=v0, **kw
             )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == "decrease":

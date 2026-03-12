@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._compat import CSRBase, SpBase
+    from .._compat import CSBase, CSRBase
 
 
 def _choose_representation(
@@ -80,7 +80,7 @@ def get_init_pos_from_paga(
     adata: AnnData,
     *,
     rng: np.random.Generator,
-    adjacency: SpBase | None = None,
+    adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
 ) -> NDArray[np.float64]:

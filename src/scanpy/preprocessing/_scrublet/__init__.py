@@ -182,7 +182,6 @@ def scrublet(  # noqa: PLR0913
     def _run_scrublet(
         ad_obs: AnnData, ad_sim: AnnData | None, *, rng: np.random.Generator
     ):
-        rng_sim, rng_call = rng.spawn(2)
         # With no adata_sim we assume the regular use case, starting with raw
         # counts and simulating doublets
         if ad_sim is None:
@@ -211,7 +210,7 @@ def scrublet(  # noqa: PLR0913
                 layer="raw",
                 sim_doublet_ratio=sim_doublet_ratio,
                 synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                rng=rng_sim,
+                rng=rng,
             )
             del ad_obs.layers["raw"]
             if log_transform:
@@ -236,7 +235,7 @@ def scrublet(  # noqa: PLR0913
             knn_dist_metric=knn_dist_metric,
             get_doublet_neighbor_parents=get_doublet_neighbor_parents,
             threshold=threshold,
-            rng=rng_call,
+            rng=rng,
             verbose=verbose,
         )
 
@@ -394,8 +393,6 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    rng_scrub, rng_pca = rng.spawn(2)
-    del rng
 
     # Estimate n_neighbors if not provided, and create scrublet object.
 
@@ -410,7 +407,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
         n_neighbors=n_neighbors,
         expected_doublet_rate=expected_doublet_rate,
         stdev_doublet_rate=stdev_doublet_rate,
-        rng=rng_scrub,
+        rng=rng,
     )
 
     # Ensure normalised matrix sparseness as Scrublet does
@@ -436,11 +433,11 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
     if mean_center:
         logg.info("Embedding transcriptomes using PCA...")
-        pipeline.pca(scrub, n_prin_comps=n_prin_comps, svd_solver="arpack", rng=rng_pca)
+        pipeline.pca(scrub, n_prin_comps=n_prin_comps, svd_solver="arpack", rng=rng)
     else:
         logg.info("Embedding transcriptomes using Truncated SVD...")
         pipeline.truncated_svd(
-            scrub, n_prin_comps=n_prin_comps, algorithm="arpack", rng=rng_pca
+            scrub, n_prin_comps=n_prin_comps, algorithm="arpack", rng=rng
         )
 
     # Score the doublets

@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from scanpy import experimental
-from scanpy._utils import _doc_params
-from scanpy.experimental._docs import (
+from ... import experimental
+from ..._utils import _doc_params
+from ..._utils.random import _accepts_legacy_random_state
+from ...experimental._docs import (
     doc_adata,
     doc_check_values,
     doc_dist_params,
@@ -15,9 +16,7 @@ from scanpy.experimental._docs import (
     doc_inplace,
     doc_pca_chunk,
 )
-from scanpy.preprocessing import pca
-
-from ..._utils.random import _accepts_legacy_random_state
+from ...preprocessing import pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
