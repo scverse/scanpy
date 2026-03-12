@@ -75,7 +75,6 @@ class PreprocessingCountsRngSuite:  # noqa: D101
     params: tuple[list[Dataset], list[str], list[str]] = (
         ["pbmc68k_reduced", "pbmc3k"],
         ["rng", "random_state"],
-        ["spawn", "reuse"],
     )
     param_names = ("dataset", "layer")
 
@@ -83,18 +82,14 @@ class PreprocessingCountsRngSuite:  # noqa: D101
         for dataset in self.params[0]:
             cache_adata(dataset, "counts")
 
-    def setup(self, dataset, rng_arg, spawn) -> None:
+    def setup(self, dataset, rng_arg) -> None:
         if (
             rng_arg == "rng"
             and "rng" not in signature(sc.pp.downsample_counts).parameters
         ):
             raise NotImplementedError
-        if rng_arg == "random_state" and spawn == "spawn":
-            raise NotImplementedError
         self.adata = ad.read_h5ad(f"{dataset}_counts.h5ad")
         self.rng_kw: Any = {rng_arg: 0}
-        if spawn == "spawn" and rng_arg == "rng":
-            self.rng_kw["spawn"] = True
 
     def time_downsample_per_cell(self, *_) -> None:
         sc.pp.downsample_counts(self.adata, counts_per_cell=3, **self.rng_kw)
