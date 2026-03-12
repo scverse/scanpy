@@ -989,6 +989,7 @@ def downsample_counts(
     rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
     copy: bool = False,
+    spawn: bool = False,
 ) -> AnnData | None:
     """Downsample counts from count matrix.
 
@@ -1038,7 +1039,7 @@ def downsample_counts(
         )
     elif counts_per_cell is not None:
         adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, rng=rng, replace=replace
+            adata.X, counts_per_cell, rng=rng, replace=replace, spawn=spawn
         )
     return adata if copy else None
 
@@ -1050,6 +1051,7 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
     *,
     rng: np.random.Generator,
     replace: bool,
+    spawn: bool,
 ) -> T:
     n_obs = x.shape[0]
     counts_per_cell = (
@@ -1069,9 +1071,8 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
         rows = np.split(x.data, x.indptr[1:-1]) if isinstance(x, CSRBase) else x
         totals = stats.sum(x, axis=1)
         under_target = np.flatnonzero(totals > counts_per_cell)
-        for rowidx, sub_rng in zip(
-            under_target, rng.spawn(len(under_target)), strict=True
-        ):
+        rngs = rng.spawn(len(under_target)) if spawn else ([rng] * len(under_target))
+        for rowidx, sub_rng in zip(under_target, rngs, strict=True):
             _downsample_array(
                 rows[rowidx],
                 counts_per_cell[rowidx],
