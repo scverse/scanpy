@@ -124,16 +124,12 @@ class Preset(StrEnum):
     ScanpyV2Preview = auto()
     """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
 
-    SeuratV5 = auto()
-    """: Try to match Seurat 5.* as closely as possible."""
-
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
         """Flavor for :func:`~scanpy.pp.highly_variable_genes`."""
         return {
             Preset.ScanpyV1: HVGPreset(flavor="seurat", return_df=False),
             Preset.ScanpyV2Preview: HVGPreset(flavor="seurat_v3_paper", return_df=True),
-            Preset.SeuratV5: HVGPreset(flavor="seurat_v3_paper", return_df=True),
         }
 
     @preset_property
@@ -142,7 +138,6 @@ class Preset(StrEnum):
         return {
             Preset.ScanpyV1: PcaPreset(key_added=None),
             Preset.ScanpyV2Preview: PcaPreset(key_added="pca"),
-            Preset.SeuratV5: PcaPreset(key_added="pca"),
         }
 
     @preset_property
@@ -153,9 +148,6 @@ class Preset(StrEnum):
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
                 method="wilcoxon", mask_var=None
             ),
-            Preset.SeuratV5: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var="highly_variable"
-            ),
         }
 
     @preset_property
@@ -164,7 +156,6 @@ class Preset(StrEnum):
         return {
             Preset.ScanpyV1: ScalePreset(zero_center=True),
             Preset.ScanpyV2Preview: ScalePreset(zero_center=None),
-            Preset.SeuratV5: ScalePreset(zero_center=None),
         }
 
     @preset_property
@@ -173,7 +164,6 @@ class Preset(StrEnum):
         return {
             Preset.ScanpyV1: ScoreGenesPreset(ctrl_as_ref=True),
             Preset.ScanpyV2Preview: ScoreGenesPreset(ctrl_as_ref=False),
-            Preset.SeuratV5: ScoreGenesPreset(ctrl_as_ref=False),
         }
 
     @preset_property
@@ -182,7 +172,6 @@ class Preset(StrEnum):
         return {
             Preset.ScanpyV1: LeidenPreset(flavor="leidenalg"),
             Preset.ScanpyV2Preview: LeidenPreset(flavor="igraph"),
-            Preset.SeuratV5: LeidenPreset(flavor="leidenalg"),
         }
 
     @contextmanager
@@ -191,11 +180,11 @@ class Preset(StrEnum):
 
         >>> import scanpy as sc
         >>> sc.settings.preset = sc.Preset.ScanpyV1
-        >>> with sc.settings.preset.override(sc.Preset.SeuratV5):
+        >>> with sc.settings.preset.override(sc.Preset.ScanpyV2Preview):
         ...     sc.settings.preset
-        <Preset.SeuratV5: 'seuratv5'>
+        <Preset.ScanpyV2Preview: 'scanpy-v2-preview'>
         >>> sc.settings.preset
-        <Preset.ScanpyV1: 'scanpyv1'>
+        <Preset.ScanpyV1: 'scanpy-v1'>
         """
         from scanpy import settings
 
