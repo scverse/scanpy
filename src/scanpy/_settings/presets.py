@@ -42,6 +42,10 @@ class RankGenesGroupsPreset(NamedTuple):
     mask_var: str | None
 
 
+class ScoreGenesPreset(NamedTuple):
+    ctrl_as_ref: bool
+
+
 class LeidenPreset(NamedTuple):
     flavor: LeidenFlavor
 
@@ -148,6 +152,15 @@ class Preset(StrEnum):
             Preset.SeuratV5: RankGenesGroupsPreset(
                 method="wilcoxon", mask_var="highly_variable"
             ),
+        }
+
+    @preset_property
+    def score_genes() -> Mapping[Preset, ScoreGenesPreset]:
+        """Flavor for :func:`~scanpy.tl.score_genes`."""
+        return {
+            Preset.ScanpyV1: ScoreGenesPreset(ctrl_as_ref=True),
+            Preset.ScanpyV2Preview: ScoreGenesPreset(ctrl_as_ref=False),
+            Preset.SeuratV5: ScoreGenesPreset(ctrl_as_ref=False),
         }
 
     @preset_property
