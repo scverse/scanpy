@@ -97,7 +97,7 @@ def preset_property[NT: NamedTuple](
         return get_map()[self]
 
     prop = cached_property(get)
-    preset_postprocessors.append(partial(postprocess_preset_prop, prop, get_map))
+    preset_postprocessors.append(partial(postprocess_preset_prop, prop, get_map))  # noqa: F821
     return prop
 
 
@@ -195,3 +195,4 @@ class Preset(StrEnum):
 
 for postprocess in preset_postprocessors:
     postprocess()
+del postprocess, preset_postprocessors
