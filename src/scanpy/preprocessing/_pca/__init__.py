@@ -206,6 +206,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     logg_start = logg.info("computing PCA")
+    rng = np.random.default_rng(rng)
+    rng_is_default = isinstance(rng, _LegacyRng) and rng.arg == 0
     if (layer is not None or obsm is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
@@ -244,22 +246,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
-    # dask needs an int for random state
-    rng = np.random.default_rng(rng)
-    if not isinstance(rng, _LegacyRng) or not isinstance(
-        rng.arg, int | np.random.RandomState
-    ):
-        # TODO: remove this error and if we don’t have a _LegacyRng,
-        #       just use rng.integers to make a seed farther down
-        msg = f"rng needs to be an int or a np.random.RandomState, not a {type(rng).__name__} when passing a dask array"
-        raise TypeError(msg)
-
     if chunked:
-        if (
-            not zero_center
-            or (not isinstance(rng, _LegacyRng) or rng.arg != 0)
-            or (svd_solver is not None and svd_solver != "arpack")
-        ):
+        if not zero_center or not rng_is_default or svd_solver not in {None, "arpack"}:
             logg.debug("Ignoring zero_center, rng, svd_solver")
 
         incremental_pca_kwargs = dict()
@@ -308,8 +296,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
-                if not isinstance(rng, _LegacyRng) or rng.arg != 0:
-                    msg = f"Ignoring random_state={_legacy_random_state(rng)} when using a sparse dask array"
+                if not rng_is_default:
+                    dbg = (
+                        f"random_state={_legacy_random_state(rng)!r}"
+                        if isinstance(rng, _LegacyRng)
+                        else f"rng={rng!r}"
+                    )
+                    msg = f"Ignoring {dbg} when using a sparse dask array"
                     warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"

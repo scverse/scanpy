@@ -341,7 +341,7 @@ def test_pca_reproducible(
     pbmc.X = array_type(pbmc.X)
 
     with (
-        pytest.warns(UserWarning, match=r"Ignoring rng.*sparse dask array")
+        pytest.warns(UserWarning, match=rf"Ignoring {rng_arg}=.*sparse dask array")
         if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
         else nullcontext()
     ):
