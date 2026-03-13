@@ -475,7 +475,7 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
-def _check_mask[M: NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None](
+def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
     mask: str | M,
     dim: Literal["obs", "var"],

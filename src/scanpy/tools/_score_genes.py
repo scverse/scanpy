@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._utils import check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
@@ -49,9 +49,6 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     return m
 
 
-@old_positionals(
-    "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
-)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
@@ -75,6 +72,8 @@ def score_genes(  # noqa: PLR0913
     This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
     programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
+
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------
@@ -258,7 +257,6 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
-@old_positionals("s_genes", "g2m_genes", "copy")
 def score_genes_cell_cycle(
     adata: AnnData,
     *,
@@ -272,6 +270,8 @@ def score_genes_cell_cycle(
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
     :func:`~scanpy.tl.score_genes` for more explanation.
+
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------

@@ -124,7 +124,7 @@ def _(val: pd.DataFrame | pd.Series) -> NDArray:
 
 def _vals_heterogeneous[V: NDArray | CSRBase](
     vals: V,
-) -> tuple[V, NDArray[np.bool_] | slice, NDArray[np.float64]]:
+) -> tuple[V, NDArray[np.bool] | slice, NDArray[np.float64]]:
     """Check that values wont cause issues in computation.
 
     Returns new set of vals, and indexer to put values back into result.

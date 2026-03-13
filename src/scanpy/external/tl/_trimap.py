@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import CSBase, old_positionals
+from ..._compat import CSBase
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -15,17 +15,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "n_inliers",
-    "n_outliers",
-    "n_random",
-    "metric",
-    "weight_adj",
-    "lr",
-    "n_iters",
-    "verbose",
-    "copy",
-)
 @doctest_needs("trimap")
 def trimap(  # noqa: PLR0913
     adata: AnnData,

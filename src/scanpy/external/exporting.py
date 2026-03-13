@@ -14,7 +14,6 @@ import scipy.sparse
 from fast_array_utils.stats import mean_var
 from pandas.api.types import CategoricalDtype
 
-from .._compat import old_positionals
 from .._utils import NeighborsView
 
 if TYPE_CHECKING:
@@ -25,14 +24,6 @@ if TYPE_CHECKING:
 __all__ = ["cellbrowser", "spring_project"]
 
 
-@old_positionals(
-    "subplot_name",
-    "cell_groupings",
-    "custom_color_tracks",
-    "total_counts_key",
-    "neighbors_key",
-    "overwrite",
-)
 def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
@@ -472,16 +463,6 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     Path(outpath).write_text(json.dumps(paga_data, indent=4))
 
 
-@old_positionals(
-    "embedding_keys",
-    "annot_keys",
-    "cluster_field",
-    "nb_marker",
-    "skip_matrix",
-    "html_dir",
-    "port",
-    "do_debug",
-)
 def cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,
