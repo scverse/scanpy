@@ -17,12 +17,7 @@ from scanpy._utils import (
     check_nonnegative_integers,
     descend_classes_and_funcs,
 )
-from scanpy._utils.random import (
-    ith_k_tuple,
-    legacy_numpy_gen,
-    random_k_tuples,
-    random_str,
-)
+from scanpy._utils.random import _LegacyRng, ith_k_tuple, random_k_tuples, random_str
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
@@ -206,7 +201,7 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
 def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
         np.random.seed(seed)
-    gen = np.random if direct else legacy_numpy_gen(seed)
+    gen = np.random if direct else _LegacyRng.wrap_global(seed)
     match func:
         case "choice":
             arr = np.arange(1000)

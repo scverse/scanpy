@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Collection, Mapping, Sequence
+from contextlib import nullcontext
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, TypedDict
@@ -13,14 +14,20 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
-from sklearn.utils import check_random_state
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
 from ..._compat import CSBase
+from ..._docs import doc_rng
 from ..._settings import settings
+from ..._utils import _doc_params
+from ..._utils.random import (
+    _accepts_legacy_random_state,
+    _LegacyRng,
+    _set_igraph_rng,
+)
 from .. import _utils
 from .._utils import matrix
 
@@ -30,9 +37,9 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
+    from numpy.typing import NDArray
 
-    from ..._compat import SpBase
-    from ..._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
@@ -185,29 +192,26 @@ def paga_compare(  # noqa: PLR0912, PLR0913
 
 
 def _compute_pos(  # noqa: PLR0912
-    adjacency_solid: SpBase | np.ndarray,
+    adjacency_solid: CSBase | np.ndarray,
     *,
-    layout: _Layout | None = None,
-    random_state: _LegacyRandom = 0,
-    init_pos: np.ndarray | None = None,
-    adj_tree=None,
-    root: int = 0,
+    layout: _Layout | None,
+    rng: np.random.Generator,
+    init_pos: np.ndarray | None,
+    adj_tree,
+    root: int,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
-):
+) -> NDArray[np.float64]:
     import random
 
     import networkx as nx
-
-    random_state = check_random_state(random_state)
 
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = "fr"
     layout = coerce_fa2_layout(layout)
     if layout == "fa":
-        # np.random.seed(random_state)
         if init_pos is None:
-            init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
+            init_coords = rng.random((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
         pos_list = fa2_positions(adjacency_solid, init_coords, **layout_kwds)
@@ -221,41 +225,41 @@ def _compute_pos(  # noqa: PLR0912
                 "Try another `layout`, e.g., {'fr'}."
             )
             raise ValueError(msg)
-    else:
-        # igraph layouts
-        random.seed(random_state.bytes(8))
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
-        if "rt" in layout:
-            g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
-            pos_list = g_tree.layout(
-                layout, root=root if isinstance(root, list) else [root]
-            ).coords
-        elif layout == "circle":
-            pos_list = g.layout(layout).coords
+    else:  # igraph layouts
+        if isinstance(rng, _LegacyRng):  # backwards compat
+            random.seed(rng.bytes(8))
+            ctx = nullcontext()
         else:
-            # I don't know why this is necessary
-            # np.random.seed(random_state)
-            if init_pos is None:
-                init_coords = random_state.random_sample((
-                    adjacency_solid.shape[0],
-                    2,
-                )).tolist()
-            else:
-                init_pos = init_pos.copy()
-                # this is a super-weird hack that is necessary as igraph’s
-                # layout function seems to do some strange stuff here
-                init_pos[:, 1] *= -1
-                init_coords = init_pos.tolist()
-            try:
-                pos_list = g.layout(
-                    layout, seed=init_coords, weights="weight", **layout_kwds
+            ctx = _set_igraph_rng(rng)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        with ctx:
+            if "rt" in layout:
+                g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
+                pos_list = g_tree.layout(
+                    layout, root=root if isinstance(root, list) else [root]
                 ).coords
-            except AttributeError:  # hack for empty graphs...
-                pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
+            elif layout == "circle":
+                pos_list = g.layout(layout).coords
+            else:
+                # I don't know why this is necessary
+                if init_pos is None:
+                    init_coords = rng.random((adjacency_solid.shape[0], 2)).tolist()
+                else:
+                    init_pos = init_pos.copy()
+                    # this is a super-weird hack that is necessary as igraph’s
+                    # layout function seems to do some strange stuff here
+                    init_pos[:, 1] *= -1
+                    init_coords = init_pos.tolist()
+                try:
+                    pos_list = g.layout(
+                        layout, seed=init_coords, weights="weight", **layout_kwds
+                    ).coords
+                except AttributeError:  # hack for empty graphs...
+                    pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
         pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     if len(pos) == 1:
         pos[0] = (0.5, 0.5)
-    pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
+    pos_array = np.array([pos[n] for n in nx_g_solid])
     return pos_array
 
 
@@ -331,6 +335,8 @@ def hierarchy_pos(
     return make_pos({})
 
 
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
@@ -357,7 +363,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     arrowsize: int = 30,
     title: str | None = None,
     left_margin: float = 0.01,
-    random_state: int | None = 0,
+    rng: SeedLike | RNGLike | None = None,
     pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
     cmap: str | Colormap | None = None,
@@ -396,10 +402,10 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     color
         Gene name or `obs` annotation defining the node colors.
         Also plots the degree of the abstracted graph when
-        passing {`'degree_dashed'`, `'degree_solid'`}.
+        passing {{`'degree_dashed'`, `'degree_solid'`}}.
 
         Can be also used to visualize pie chart at each node in the following form:
-        `{<group name or index>: {<color>: <fraction>, ...}, ...}`. If the fractions
+        `{{<group name or index>: {{<color>: <fraction>, ...}}, ...}}`. If the fractions
         do not sum to 1, a new category called `'rest'` colored grey will be created.
     labels
         The node labels. If `None`, this defaults to the group labels stored in
@@ -422,10 +428,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     init_pos
         Two-column array storing the x and y coordinates for initializing the
         layout.
-    random_state
-        For layouts with random initialization like `'fr'`, change this to use
-        different intial states for the optimization. If `None`, the initial
-        state is not reproducible.
+    {rng}
+
+        Applies to layouts with random initialization like `'fr'`.
     root
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied
@@ -487,7 +492,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     ax
         A matplotlib axes object.
 
@@ -529,6 +534,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     pl.paga_path
 
     """
+    rng = np.random.default_rng(rng)
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning("`groups` is deprecated in `pl.paga`: use `labels` instead")
@@ -607,7 +613,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         pos = _compute_pos(
             adjacency_solid,
             layout=layout,
-            random_state=random_state,
+            rng=rng,
             init_pos=init_pos,
             layout_kwds=layout_kwds,
             adj_tree=adj_tree,

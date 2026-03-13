@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from .. import logging as logg
 from .. import preprocessing as pp
 from .._compat import CSBase
+from .._utils.random import _accepts_legacy_random_state
 from ._deprecated.highly_variable_genes import (
     filter_genes_cv_deprecated,
     filter_genes_dispersion,
@@ -16,9 +17,10 @@ from ._normalization import normalize_total
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
+@_accepts_legacy_random_state(0)
 def recipe_weinreb17(
     adata: AnnData,
     *,
@@ -27,7 +29,7 @@ def recipe_weinreb17(
     cv_threshold: int = 2,
     n_pcs: int = 50,
     svd_solver="randomized",
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """Normalize and filter as of :cite:p:`Weinreb2017`.
@@ -63,7 +65,7 @@ def recipe_weinreb17(
         zscore_deprecated(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
-        random_state=random_state,
+        rng=rng,
     )
     # update adata
     adata.obsm["X_pca"] = x_pca
