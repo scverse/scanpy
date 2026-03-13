@@ -20,7 +20,7 @@ from .._utils import (
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask
+from ..get import _check_mask, _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -771,6 +771,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     *,
     key: str | None = None,
     groupby: str | None = None,
+    layer: str | None = None,
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
@@ -797,6 +798,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     adata
     key
     groupby
+    layer
     use_raw
     key_added
     min_in_group_fraction
@@ -807,8 +809,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
     Returns
     -------
-    Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to
-    `nan`
+    Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to `nan`.
 
     Examples
     --------
@@ -829,7 +830,9 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         groupby = adata.uns[key]["params"]["groupby"]
 
     if use_raw is None:
-        use_raw = adata.uns[key]["params"]["use_raw"]
+        use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
+
+    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby
@@ -880,7 +883,8 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         var_names = gene_names[cluster].values
 
         if not use_logfolds or not use_fraction:
-            sub_x = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
+            var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
+            sub_x = x[:, var_idx]
             in_group = (adata.obs[groupby] == cluster).to_numpy()
             x_in = sub_x[in_group]
             x_out = sub_x[~in_group]
