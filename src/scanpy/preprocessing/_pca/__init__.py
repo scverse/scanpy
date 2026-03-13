@@ -11,11 +11,7 @@ from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._docs import doc_rng
 from ..._settings import settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
-from ..._utils.random import (
-    _accepts_legacy_random_state,
-    _legacy_random_state,
-    _LegacyRng,
-)
+from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
 from ._compat import _pca_compat_sparse
@@ -207,7 +203,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     """
     logg_start = logg.info("computing PCA")
     rng = np.random.default_rng(rng)
-    rng_is_default = isinstance(rng, _LegacyRng) and rng.arg == 0
     if (layer is not None or obsm is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
@@ -247,7 +242,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         raise NotImplementedError(msg)
 
     if chunked:
-        if not zero_center or not rng_is_default or svd_solver not in {None, "arpack"}:
+        if not zero_center or svd_solver not in {None, "arpack"}:
             logg.debug("Ignoring zero_center, rng, svd_solver")
 
         incremental_pca_kwargs = dict()
@@ -296,14 +291,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             elif isinstance(x._meta, CSBase) or svd_solver == "covariance_eigh":
                 from ._dask import PCAEighDask
 
-                if not rng_is_default:
-                    dbg = (
-                        f"random_state={_legacy_random_state(rng)!r}"
-                        if isinstance(rng, _LegacyRng)
-                        else f"rng={rng!r}"
-                    )
-                    msg = f"Ignoring {dbg} when using a sparse dask array"
-                    warn(msg, UserWarning)
                 if svd_solver not in {None, "covariance_eigh"}:
                     msg = f"Ignoring {svd_solver=} when using a sparse dask array"
                     warn(msg, UserWarning)

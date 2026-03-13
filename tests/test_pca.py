@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import ExitStack, nullcontext
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -242,19 +242,17 @@ def test_pca_transform_randomized(array_type):
     a_pca_abs = np.abs(A_pca)
 
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
-        patterns = (
-            r"Ignoring random_state=14 when using a sparse dask array",
-            r"Ignoring svd_solver='randomized' when using a sparse dask array",
+        ctx = pytest.warns(
+            UserWarning,
+            match=r"Ignoring svd_solver='randomized' when using a sparse dask array",
         )
     elif isinstance(adata.X, CSBase):
-        patterns = [r"Ignoring.*'randomized"]
+        ctx = pytest.warns(UserWarning, match=r"Ignoring.*'randomized")
     else:
-        patterns = []
+        ctx = nullcontext()
 
     warnings.filterwarnings("error")
-    with ExitStack() as stack:
-        for pat in patterns:
-            stack.enter_context(pytest.warns(UserWarning, match=pat))
+    with ctx:
         sc.pp.pca(
             adata,
             n_comps=4,
@@ -339,15 +337,10 @@ def test_pca_reproducible(
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
-    with (
-        pytest.warns(UserWarning, match=rf"Ignoring {rng_arg}=.*sparse dask array")
-        if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
-        else nullcontext()
-    ):
-        a, b, c = (
-            sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
-            for seed in (42, 42, 0)
-        )
+    a, b, c = (
+        sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
+        for seed in (42, 42, 0)
+    )
 
     with subtests.test("reproducible"):
         assert_equal(a, b)
