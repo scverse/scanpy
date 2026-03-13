@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -241,21 +241,20 @@ def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     a_pca_abs = np.abs(A_pca)
 
-    warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
         patterns = (
-            r"Ignoring rng=14 when using a sparse dask array",
+            r"Ignoring random_state=14 when using a sparse dask array",
             r"Ignoring svd_solver='randomized' when using a sparse dask array",
         )
-        ctx = _helpers.MultiContext(
-            *(pytest.warns(UserWarning, match=pattern) for pattern in patterns)
-        )
     elif isinstance(adata.X, CSBase):
-        ctx = pytest.warns(UserWarning, match=r"Ignoring.*'randomized")
+        patterns = [r"Ignoring.*'randomized"]
     else:
-        ctx = nullcontext()
+        patterns = []
 
-    with ctx:
+    warnings.filterwarnings("error")
+    with ExitStack() as stack:
+        for pat in patterns:
+            stack.enter_context(pytest.warns(UserWarning, match=pat))
         sc.pp.pca(
             adata,
             n_comps=4,
