@@ -90,12 +90,19 @@ class PreprocessingCountsRngSuite:  # noqa: D101
             raise NotImplementedError
         self.adata = ad.read_h5ad(f"{dataset}_counts.h5ad")
         self.rng_kw: Any = {rng_arg: 0}
+        self.total = self.adata.X.sum() / 10
 
     def time_downsample_per_cell(self, *_) -> None:
         sc.pp.downsample_counts(self.adata, counts_per_cell=3, **self.rng_kw)
 
     def peakmem_downsample_per_cell(self, *_) -> None:
         sc.pp.downsample_counts(self.adata, counts_per_cell=3, **self.rng_kw)
+
+    def time_downsample_total(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, total_counts=self.total, **self.rng_kw)
+
+    def peakmem_downsample_total(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, total_counts=self.total, **self.rng_kw)
 
 
 class FastSuite:

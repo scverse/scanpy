@@ -23,6 +23,7 @@ __all__ = [
     "RNGLike",
     "SeedLike",
     "_LegacyRandom",
+    "_LegacyRng",
     "_accepts_legacy_random_state",
     "_if_legacy_apply_global",
     "_legacy_random_state",
