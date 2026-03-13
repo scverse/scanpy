@@ -5,13 +5,11 @@ import re
 from contextlib import contextmanager
 from enum import StrEnum, auto
 from functools import cached_property, partial, wraps
-from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
 
-
-NT = TypeVar("NT", bound=NamedTuple)
 
 __all__ = [
     "DETest",
@@ -61,7 +59,7 @@ def named_tuple_non_defaults(
             yield param, value
 
 
-def postprocess_preset_prop(
+def postprocess_preset_prop[NT: NamedTuple](
     prop: cached_property[NT], get_map: Callable[[], Mapping[Preset, NT]]
 ) -> None:
     map = get_map()
@@ -87,7 +85,9 @@ def postprocess_preset_prop(
     prop.func.__annotations__["return"] = value_type
 
 
-def preset_property(get_map: Callable[[], Mapping[Preset, NT]]) -> cached_property[NT]:
+def preset_property[NT: NamedTuple](
+    get_map: Callable[[], Mapping[Preset, NT]],
+) -> cached_property[NT]:
     @wraps(get_map)
     def get(self: Preset) -> NT:
         return get_map()[self]
@@ -103,14 +103,21 @@ class Preset(StrEnum):
     See properties below for details.
     """
 
+    @staticmethod
+    def _generate_next_value_(
+        name: str, start: int, count: int, last_values: list[str]
+    ):
+        # lower-kebap-case
+        return "-".join(part.lower() for part in re.split(r"(?=[A-Z])", name) if part)
+
     ScanpyV1 = auto()
-    """Scanpy 1.*’s default settings."""
+    """: Scanpy 1.*’s default settings."""
 
     ScanpyV2Preview = auto()
-    """Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+    """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
 
     SeuratV5 = auto()
-    """Try to match Seurat 5.* as closely as possible."""
+    """: Try to match Seurat 5.* as closely as possible."""
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
