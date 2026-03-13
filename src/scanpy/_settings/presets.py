@@ -42,6 +42,10 @@ class RankGenesGroupsPreset(NamedTuple):
     mask_var: str | None
 
 
+class ScalePreset(NamedTuple):
+    zero_center: bool | None
+
+
 class ScoreGenesPreset(NamedTuple):
     ctrl_as_ref: bool
 
@@ -155,8 +159,17 @@ class Preset(StrEnum):
         }
 
     @preset_property
+    def scale() -> Mapping[Preset, ScalePreset]:
+        """Flavor for :func:`~scanpy.pp.scale`."""
+        return {
+            Preset.ScanpyV1: ScalePreset(zero_center=True),
+            Preset.ScanpyV2Preview: ScalePreset(zero_center=None),
+            Preset.SeuratV5: ScalePreset(zero_center=None),
+        }
+
+    @preset_property
     def score_genes() -> Mapping[Preset, ScoreGenesPreset]:
-        """Flavor for :func:`~scanpy.tl.score_genes`."""
+        """Settings for :func:`~scanpy.tl.score_genes`."""  # noqa: D401
         return {
             Preset.ScanpyV1: ScoreGenesPreset(ctrl_as_ref=True),
             Preset.ScanpyV2Preview: ScoreGenesPreset(ctrl_as_ref=False),

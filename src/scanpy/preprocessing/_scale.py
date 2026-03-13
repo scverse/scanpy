@@ -11,6 +11,7 @@ from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, warn
+from .._settings import settings
 from .._utils import (
     axis_mul_or_truediv,
     check_array_function_arguments,
@@ -70,7 +71,7 @@ def clip_array(
 def scale[A: _Array](
     data: AnnData | A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | None = None,
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
@@ -94,6 +95,7 @@ def scale[A: _Array](
     zero_center
         If `False`, omit zero-centering variables, which allows to handle sparse
         input efficiently.
+        The default will be removed in scanpy 2.0.
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
@@ -141,7 +143,7 @@ def scale[A: _Array](
 def scale_array[A: _Array](
     x: A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | None = None,
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
@@ -157,6 +159,11 @@ def scale_array[A: _Array](
     if copy:
         x = x.copy()
 
+    if zero_center is None:
+        zero_center = settings.preset.scale.zero_center
+        if zero_center is None:
+            msg = "scale() missing 1 required keyword argument: 'zero_center'"
+            raise TypeError(msg)
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
@@ -281,7 +288,7 @@ def scale_and_clip_csr(
 def scale_anndata(
     adata: AnnData,
     *,
-    zero_center: bool = True,
+    zero_center: bool | None = None,
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
