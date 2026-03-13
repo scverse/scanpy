@@ -9,6 +9,7 @@ import pandas as pd
 
 from .. import logging as logg
 from .._compat import CSBase
+from .._settings import settings
 from .._utils import check_use_raw, is_backed_type
 from ..get import _get_obs_rep
 
@@ -53,7 +54,7 @@ def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
-    ctrl_as_ref: bool = True,
+    ctrl_as_ref: bool | None = None,
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
@@ -119,6 +120,8 @@ def score_genes(  # noqa: PLR0913
     """
     start = logg.info(f"computing score {score_name!r}")
     adata = adata.copy() if copy else adata
+    if ctrl_as_ref is None:
+        ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
