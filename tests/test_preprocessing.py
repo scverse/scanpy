@@ -521,22 +521,29 @@ def test_regress_out_constants_equivalent():
 
 
 @pytest.mark.parametrize("replace", [True, False], ids=["replace", "no_replace"])
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_downsample_counts_per_cell(
-    *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
+    *, count_matrix_format: _MatrixFormat, rng_arg: str, replace: bool, dtype: DTypeLike
 ) -> None:
+    rng = np.random.default_rng()
     target = 1000
-    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    x = rng.integers(0, 100, (1000, 100)) * rng.binomial(1, 0.3, (1000, 100))
     x = x.astype(dtype)
     adata = AnnData(X=count_matrix_format(x).astype(dtype))
+    rng_kw: Any = {rng_arg: 0}
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
         sc.pp.downsample_counts(
-            adata, counts_per_cell=target, total_counts=target, replace=replace
+            adata,
+            counts_per_cell=target,
+            total_counts=target,
+            replace=replace,
+            **rng_kw,
         )
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
-        sc.pp.downsample_counts(adata, replace=replace)
+        sc.pp.downsample_counts(adata, replace=replace, **rng_kw)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     adata = sc.pp.downsample_counts(
-        adata, counts_per_cell=target, replace=replace, copy=True
+        adata, counts_per_cell=target, replace=replace, copy=True, **rng_kw
     )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if isinstance(adata.X, CSBase):
