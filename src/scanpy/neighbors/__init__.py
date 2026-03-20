@@ -239,9 +239,8 @@ def neighbors(  # noqa: PLR0913
             if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
         }
-        if (
-            meta_random_state.get("random_state") != 0
-        ):  # rng was not passed in or random_state was passed
+        if meta_random_state.pop("random_state", 0) != 0:
+            # rng was not passed in or random_state was passed
             ignored.add("rng/random_state")
         if ignored:
             warn(
