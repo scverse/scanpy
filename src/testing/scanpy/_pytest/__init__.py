@@ -7,6 +7,7 @@ import sys
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+import pooch
 import pytest
 from packaging.version import Version
 
@@ -26,6 +27,7 @@ def original_settings(
     request: pytest.FixtureRequest,
     cache: pytest.Cache,
     tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[Mapping[str, object], None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
@@ -51,6 +53,9 @@ def original_settings(
     cache.mkdir("debug")
     # reuse data files between test runs (unless overwritten in the test)
     sc.settings.datasetdir = cache.mkdir("scanpy-data")
+    pooch.os_cache = pooch.utils.os_cache = pooch.core.os_cache = lambda p: (
+        sc.settings.datasetdir / p
+    )
     # create new writedir for each test run
     sc.settings.writedir = tmp_path_factory.mktemp("scanpy_write")
 
