@@ -1076,11 +1076,10 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
             else x
         )
         totals = stats.sum(x, axis=1)
-        under_target = totals > counts_per_cell
         _downsample_arrays(
             rows,
             counts_per_cell,
-            mask=under_target,
+            mask=totals > counts_per_cell,
             rngs=None
             if isinstance(rng, _LegacyRng)
             else numba.typed.List(rng.spawn(numba.get_num_threads())),
@@ -1147,7 +1146,7 @@ def _downsample_array(
 
     * total counts in cell must be less than target
     """
-    return _downsample_array_inner(
+    return _downsample_array_parallel(
         col,
         target,
         rng=None if isinstance(rng, _LegacyRng) else rng,
@@ -1157,6 +1156,7 @@ def _downsample_array(
     )
 
 
+# don’t parallelize, since it’s used per thread in `_downsample_arrays`
 @numba.njit(cache=True)  # noqa: TID251
 def _downsample_array_inner(  # noqa: PLR0917
     col: np.ndarray,
@@ -1187,6 +1187,9 @@ def _downsample_array_inner(  # noqa: PLR0917
             geneptr += 1
         col[geneptr] += 1
     return col
+
+
+_downsample_array_parallel = njit(_downsample_array_inner.py_func)
 
 
 @dataclass
