@@ -28,6 +28,7 @@ def _register_np_generator_choice():
 
     @overload_method(nb.types.NumPyRandomGeneratorType, "choice")
     def NumPyRandomGeneratorType_choice(inst, a, size=None, replace=True):  # noqa: FBT002, N802
+        """Naive, limited implementation of `np.random.Generator.choice`."""
         if is_nonelike(size):
 
             def impl(inst, a, size=None, replace=True):  # noqa: FBT002
