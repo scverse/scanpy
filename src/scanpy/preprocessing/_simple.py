@@ -1069,12 +1069,12 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
         rows = np.split(x.data, x.indptr[1:-1]) if isinstance(x, CSRBase) else x
         totals = stats.sum(x, axis=1)
         under_target = np.flatnonzero(totals > counts_per_cell)
-        rngs = rng.spawn(len(under_target))
-        for rowidx, sub_rng in zip(under_target, rngs, strict=True):
+        # when parallelizing this, the results will change due to having to spawn `rngs` (e.g. per thread)
+        for rowidx in under_target:
             _downsample_array(
                 rows[rowidx],
                 counts_per_cell[rowidx],
-                rng=sub_rng,
+                rng=rng,
                 replace=replace,
                 inplace=True,
             )

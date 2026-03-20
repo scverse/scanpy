@@ -252,6 +252,7 @@ def scrublet(  # noqa: PLR0913
         # Run Scrublet independently on batches and return just the
         # scrublet-relevant parts of the objects to add to the input object
         batches = np.unique(adata.obs[batch_key])
+        # spawn sub-rngs so this can maybe be parallelized without changing random number generation
         sub_rngs = rng.spawn(len(batches))
         scrubbed = [
             _run_scrublet(

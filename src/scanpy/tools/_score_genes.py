@@ -240,6 +240,7 @@ def _score_genes_bins(
 
     # now pick `ctrl_size` genes from every cut
     cuts = np.unique(obs_cut.loc[gene_list])
+    # spawn sub-rngs so this can maybe be parallelized without changing random number generation
     for cut, sub_rng in zip(cuts, rng.spawn(len(cuts)), strict=True):
         r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
         if len(r_genes) == 0:
