@@ -1132,14 +1132,14 @@ def _downsample_arrays(  # noqa: PLR0917
         )
 
 
-def _downsample_array(
-    col: np.ndarray,
+def _downsample_array[T: NDArray](
+    col: T,
     target: int,
     *,
     rng: np.random.Generator,
     replace: bool,
     inplace: bool,
-) -> None:
+) -> T:
     """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
@@ -1158,15 +1158,15 @@ def _downsample_array(
 
 # don’t parallelize, since it’s used per thread in `_downsample_arrays`
 @numba.njit(cache=True)  # noqa: TID251
-def _downsample_array_inner(  # noqa: PLR0917
-    col: np.ndarray,
+def _downsample_array_inner[T: NDArray](  # noqa: PLR0917
+    col: T,
     target: int,
     # *,  # numba kwarg handling is broken: https://github.com/numba/numba/issues/5655
     rng: np.random.Generator | None,
     seed: _LegacyRandom,
     replace: bool,  # noqa: FBT001
     inplace: bool,  # noqa: FBT001
-) -> np.ndarray:
+) -> T:
     cumcounts = col.cumsum()
     total = np.int64(cumcounts[-1])
     if inplace:
