@@ -83,7 +83,7 @@ class NeighborsParams(TypedDict):  # noqa: D101
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
-@_accepts_legacy_random_state(0)
+@_accepts_legacy_random_state(_DEFAULT_SEED := 0)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
@@ -239,9 +239,10 @@ def neighbors(  # noqa: PLR0913
             if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
         }
-        if meta_random_state.pop("random_state", 0) != 0:
-            # rng was not passed in or random_state was passed
+        if meta_random_state.get("random_state") != _DEFAULT_SEED:
+            # `random_state` different from default (or any `rng`) was passed
             ignored.add("rng/random_state")
+            meta_random_state.pop("random_state", None)
         if ignored:
             warn(
                 f"Parameter(s) ignored if `distances` is given: {ignored}",
