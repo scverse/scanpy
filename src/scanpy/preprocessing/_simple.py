@@ -13,6 +13,7 @@ from itertools import repeat
 from typing import TYPE_CHECKING, overload
 
 import numba
+import numba.typed
 import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
@@ -20,6 +21,8 @@ from fast_array_utils.conv import to_dense
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
+
+from scanpy._utils.numba import add_np_generator_choice
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit
@@ -1025,6 +1028,7 @@ def downsample_counts(
 
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
+    add_np_generator_choice()
     # This logic is all dispatch
     rng = np.random.default_rng(rng)
     if (total_counts is not None) is (counts_per_cell is not None):
@@ -1079,7 +1083,7 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
             mask=under_target,
             rngs=None
             if isinstance(rng, _LegacyRng)
-            else rng.spawn(numba.get_num_threads()),
+            else numba.typed.List(rng.spawn(numba.get_num_threads())),
             seed=rng.arg if isinstance(rng, _LegacyRng) else None,
             replace=replace,
         )
@@ -1174,7 +1178,7 @@ def _downsample_array_inner(  # noqa: PLR0917
     if rng is None:
         sample = np.random.choice(total, target, replace=replace)
     else:
-        sample = gen(rng).choice(total, target, replace=replace)
+        sample = rng.choice(total, target, replace=replace)
     sample.sort()
 
     geneptr = 0
@@ -1183,13 +1187,6 @@ def _downsample_array_inner(  # noqa: PLR0917
             geneptr += 1
         col[geneptr] += 1
     return col
-
-
-@numba.njit("npy_rng(optional(npy_rng))", cache=True)  # noqa: TID251
-def gen(rng: np.random.Generator | None) -> np.random.Generator:
-    if rng is not None:
-        return rng
-    raise NotImplementedError
 
 
 @dataclass
