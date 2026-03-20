@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
@@ -7,6 +9,9 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 @pytest.mark.parametrize(
@@ -75,16 +80,18 @@ def test_umap_init_paga(layout):
     sc.tl.umap(pbmc, init_pos="paga")
 
 
-def test_diffmap():
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_diffmap(
+    subtests: pytest.Subtests, rng_arg: Literal["rng", "random_state"]
+) -> None:
     pbmc = pbmc68k_reduced()
 
-    sc.tl.diffmap(pbmc)
-    d1 = pbmc.obsm["X_diffmap"].copy()
-    sc.tl.diffmap(pbmc)
-    d2 = pbmc.obsm["X_diffmap"].copy()
-    assert_array_equal(d1, d2)
+    d1, d2, d3 = (
+        sc.tl.diffmap(pbmc, copy=True, **{rng_arg: seed}).obsm["X_diffmap"].copy()
+        for seed in (0, 0, 1234)
+    )
 
-    # Checking if specifying random_state  works, arrays shouldn't be equal
-    sc.tl.diffmap(pbmc, random_state=1234)
-    d3 = pbmc.obsm["X_diffmap"].copy()
-    assert_raises(AssertionError, assert_array_equal, d1, d3)
+    with subtests.test("reproducible"):
+        assert_array_equal(d1, d2)
+    with subtests.test("different embedding"):
+        assert_raises(AssertionError, assert_array_equal, d1, d3)

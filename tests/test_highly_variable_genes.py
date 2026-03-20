@@ -667,7 +667,12 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
     ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
-def test_subset_inplace_consistency(flavor, array_type, batch_key):
+def test_subset_inplace_consistency(
+    subtests: pytest.Subtests,
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    array_type,
+    batch_key: Literal["batch"] | None,
+) -> None:
     """Tests `n_top_genes=n`.
 
     - if `inplace` and `subset` interact correctly
@@ -675,12 +680,12 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
+    rng = np.random.default_rng(0)
     adata = (
-        sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+        sc.datasets.blobs(n_observations=20, n_variables=80, rng=rng)
         if "seurat_v3" not in flavor
         else pbmc3k()[:1500, :1000].copy()
     )
-    rng = np.random.default_rng(0)
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
@@ -705,32 +710,35 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
             inplace=inplace,
         )
 
-        assert (output_df is None) == inplace
-        assert len(adata_copy.var if inplace else output_df) == (
-            15 if subset else n_genes
-        )
-        assert sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
+        with subtests.test(subset=subset, inplace=inplace):
+            assert (output_df is None) == inplace
+            assert len(adata_copy.var if inplace else output_df) == (
+                15 if subset else n_genes
+            )
+            assert (
+                sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
+            )
 
-        if not inplace:
-            assert isinstance(output_df, pd.DataFrame)
+            if not inplace:
+                assert isinstance(output_df, pd.DataFrame)
 
-        if inplace:
-            assert subset not in adatas
-            adatas[subset] = adata_copy
-        else:
-            assert subset not in dfs
-            dfs[subset] = output_df
+            if inplace:
+                assert subset not in adatas
+                adatas[subset] = adata_copy
+            else:
+                assert subset not in dfs
+                dfs[subset] = output_df
 
-    # check that the results are consistent for subset True/False: inplace True
-    adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
-    assert adata_subset.var_names.equals(adatas[True].var_names)
+    with subtests.test("consistency", inplace=True):
+        adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
+        assert adata_subset.var_names.equals(adatas[True].var_names)
 
-    # check that the results are consistent for subset True/False: inplace False
-    df_subset = dfs[False][dfs[False]["highly_variable"]]
-    assert df_subset.index.equals(dfs[True].index)
+    with subtests.test("consistency", inplace=False):
+        df_subset = dfs[False][dfs[False]["highly_variable"]]
+        assert df_subset.index.equals(dfs[True].index)
 
-    # check that the results are consistent for inplace True/False: subset True
-    assert adatas[True].var_names.equals(dfs[True].index)
+    with subtests.test("consistency", subset=True):
+        assert adatas[True].var_names.equals(dfs[True].index)
 
 
 @pytest.mark.parametrize(

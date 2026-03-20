@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import AbstractContextManager, contextmanager
-from dataclasses import dataclass
+from contextlib import contextmanager
 from importlib.metadata import version
 from importlib.util import find_spec
 from itertools import permutations
@@ -20,7 +19,7 @@ import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, MutableSequence
+    from collections.abc import Iterable
 
     from numpy.typing import NDArray
 
@@ -147,22 +146,6 @@ def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
         from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
 
     return as_sparse_dask_matrix(*args, **kwargs)
-
-
-@dataclass(init=False)
-class MultiContext(AbstractContextManager):
-    contexts: MutableSequence[AbstractContextManager]
-
-    def __init__(self, *contexts: AbstractContextManager):
-        self.contexts = list(contexts)
-
-    def __enter__(self):
-        for ctx in self.contexts:
-            ctx.__enter__()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        for ctx in reversed(self.contexts):
-            ctx.__exit__(exc_type, exc_value, traceback)
 
 
 @contextmanager

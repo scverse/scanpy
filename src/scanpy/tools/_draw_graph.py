@@ -1,37 +1,47 @@
 from __future__ import annotations
 
-import random
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 
 from .. import _utils
 from .. import logging as logg
-from .._utils import _choose_graph, get_literal_vals
+from .._docs import doc_rng
+from .._utils import _choose_graph, _doc_params, get_literal_vals
+from .._utils.random import (
+    _accepts_legacy_random_state,
+    _if_legacy_apply_global,
+    _LegacyRng,
+    _set_igraph_rng,
+)
 from ._utils import get_init_pos_from_paga
 
 if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
     from typing import LiteralString
 
     from anndata import AnnData
+    from colour.hints import NDArray
 
-    from .._compat import SpBase
-    from .._utils.random import _LegacyRandom
+    from .._compat import CSBase
+    from .._utils.random import RNGLike, SeedLike
 
 
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",
     *,
     init_pos: str | bool | None = None,
     root: int | None = None,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
-    adjacency: SpBase | None = None,
+    adjacency: CSBase | None = None,
     key_added_ext: str | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
@@ -71,9 +81,9 @@ def draw_graph(  # noqa: PLR0913
         'rt' (Reingold Tilford tree layout).
     root
         Root for tree layouts.
-    random_state
-        For layouts with random initialization like 'fr', change this to use
-        different intial states for the optimization. If `None`, no seed is set.
+    {rng}
+
+        Applies to layouts with random initialization like `'fr'`.
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     key_added_ext
@@ -111,6 +121,10 @@ def draw_graph(  # noqa: PLR0913
 
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
+    rng = np.random.default_rng(rng)
+    meta_random_state = (
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
+    )
     if layout not in (layouts := get_literal_vals(_Layout)):
         msg = f"Provide a valid layout, one of {layouts}."
         raise ValueError(msg)
@@ -119,38 +133,36 @@ def draw_graph(  # noqa: PLR0913
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     # init coordinates
     if init_pos in adata.obsm:
-        init_coords = adata.obsm[init_pos]
-    elif init_pos == "paga" or init_pos:
+        init_coords = cast("NDArray[np.floating]", adata.obsm[init_pos])
+    elif init_pos:  # "paga" or True
         init_coords = get_init_pos_from_paga(
             adata,
-            adjacency,
-            random_state=random_state,
+            adjacency=adjacency,
+            rng=rng,
             neighbors_key=neighbors_key,
             obsp=obsp,
         )
     else:
-        np.random.seed(random_state)
-        init_coords = np.random.random((adjacency.shape[0], 2))
+        _if_legacy_apply_global(rng)
+        init_coords = rng.random((adjacency.shape[0], 2))
     layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
-        # igraph doesn't use numpy seed
-        random.seed(random_state)
-
         g = _utils.get_igraph_from_adjacency(adjacency)
-        if layout in {"fr", "drl", "kk", "grid_fr"}:
-            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif "rt" in layout:
-            if root is not None:
-                root = [root]
-            ig_layout = g.layout(layout, root=root, **kwds)
-        else:
-            ig_layout = g.layout(layout, **kwds)
+        with _igraph_rng_compat(rng):
+            if layout in {"fr", "drl", "kk", "grid_fr"}:
+                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+            elif "rt" in layout:
+                if root is not None:
+                    root = [root]
+                ig_layout = g.layout(layout, root=root, **kwds)
+            else:
+                ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
     adata.uns["draw_graph"] = {}
-    adata.uns["draw_graph"]["params"] = dict(layout=layout, random_state=random_state)
+    adata.uns["draw_graph"]["params"] = dict(layout=layout, **meta_random_state)
     key_added = f"X_draw_graph_{key_added_ext or layout}"
     adata.obsm[key_added] = positions
     logg.info(
@@ -162,7 +174,7 @@ def draw_graph(  # noqa: PLR0913
 
 
 def fa2_positions(
-    adjacency: SpBase | np.ndarray, init_coords: np.ndarray, **kwds
+    adjacency: CSBase | np.ndarray, init_coords: np.ndarray, **kwds
 ) -> list[tuple[float, float]]:
     from fa2_modified import ForceAtlas2
 
@@ -207,3 +219,17 @@ def coerce_fa2_layout[S: LiteralString](layout: S) -> S | Literal["fa", "fr"]:
         return "fr"
 
     return "fa"
+
+
+def _igraph_rng_compat(rng: SeedLike | RNGLike | None) -> AbstractContextManager[None]:
+    """Context manager that sets the igraph RNG to the given RNG.
+
+    For legacy code, this just calls `random.seed()`.
+    """
+    import random
+    from contextlib import nullcontext
+
+    if isinstance(rng, _LegacyRng):
+        random.seed(rng.arg)
+        return nullcontext()
+    return _set_igraph_rng(rng)
