@@ -19,7 +19,10 @@
             "purpose": ["debug-test"],
             "console": "internalConsole",
             "justMyCode": false,
-            "env": { "PYTEST_ADDOPTS": "--color=yes" },
+            "env": {
+                "PYTEST_ADDOPTS": "--color=yes",
+                "NUMBA_DEBUG_TYPEINFER": "1",
+            },
             "presentation": { "hidden": true },
         },
     ],

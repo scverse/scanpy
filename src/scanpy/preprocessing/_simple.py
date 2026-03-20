@@ -13,6 +13,7 @@ from itertools import repeat
 from typing import TYPE_CHECKING, overload
 
 import numba
+import numba.typed
 import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
@@ -20,6 +21,8 @@ from fast_array_utils.conv import to_dense
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
+
+from scanpy._utils.numba import add_np_generator_choice
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit
@@ -34,7 +37,7 @@ from .._utils import (
     sanitize_anndata,
     view_to_actual,
 )
-from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
+from .._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
@@ -46,7 +49,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._utils.random import RNGLike, SeedLike
+    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
 
 
 def filter_cells(
@@ -1025,6 +1028,7 @@ def downsample_counts(
 
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
+    add_np_generator_choice()
     # This logic is all dispatch
     rng = np.random.default_rng(rng)
     if (total_counts is not None) is (counts_per_cell is not None):
@@ -1055,7 +1059,7 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
     counts_per_cell = (
         np.full(n_obs, counts_per_cell)
         if isinstance(counts_per_cell, int)
-        else np.asarray(counts_per_cell, np.int_)
+        else np.asarray(counts_per_cell, np.int64)
     )
     if counts_per_cell.shape != (n_obs,):
         msg = (
@@ -1066,18 +1070,22 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
         raise ValueError(msg)
     with sparse_as_csr(x) as spc:
         x = spc.x  # we only mutate x, so spc.x receives the changes
-        rows = np.split(x.data, x.indptr[1:-1]) if isinstance(x, CSRBase) else x
+        rows = (
+            numba.typed.List(np.split(x.data, x.indptr[1:-1]))
+            if isinstance(x, CSRBase)
+            else x
+        )
         totals = stats.sum(x, axis=1)
-        under_target = np.flatnonzero(totals > counts_per_cell)
-        # when parallelizing this, the results will change due to having to spawn `rngs` (e.g. per thread)
-        for rowidx in under_target:
-            _downsample_array(
-                rows[rowidx],
-                counts_per_cell[rowidx],
-                rng=rng,
-                replace=replace,
-                inplace=True,
-            )
+        _downsample_arrays(
+            rows,
+            counts_per_cell,
+            mask=totals > counts_per_cell,
+            rngs=None
+            if isinstance(rng, _LegacyRng)
+            else numba.typed.List(rng.spawn(numba.get_num_threads())),
+            seed=rng.arg if isinstance(rng, _LegacyRng) else None,
+            replace=replace,
+        )
     return spc.x  # use x that was converted back
 
 
@@ -1100,43 +1108,88 @@ def _downsample_total_counts[T: (np.ndarray, CSBase)](
     return spc.x  # use x that was converted back
 
 
-def _downsample_array(
-    col: np.ndarray,
+@njit
+def _downsample_arrays(  # noqa: PLR0917
+    rows: Sequence[NDArray] | NDArray,
+    targets: NDArray[np.integer],
+    # *,  # numba kwarg handling is broken: https://github.com/numba/numba/issues/5655
+    mask: NDArray[np.bool],
+    rngs: Sequence[np.random.Generator] | None,
+    seed: _LegacyRandom,
+    replace: bool,  # noqa: FBT001
+) -> None:
+    for i in numba.prange(len(rows)):
+        if not mask[i]:
+            continue
+        thread = numba.get_thread_id()
+        _downsample_array_inner(
+            rows[i],
+            targets[i],
+            rng=rngs[thread] if rngs is not None else None,
+            seed=seed,
+            replace=replace,
+            inplace=True,
+        )
+
+
+def _downsample_array[T: NDArray](
+    col: T,
     target: int,
     *,
     rng: np.random.Generator,
-    replace: bool = True,
-    inplace: bool = False,
-) -> np.ndarray:
+    replace: bool,
+    inplace: bool,
+) -> T:
     """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
 
     * total counts in cell must be less than target
     """
-    rng = _if_legacy_apply_global(rng)
-    cumcounts = col.cumsum()
-    total = np.int_(cumcounts[-1])
-    sample = rng.choice(total, target, replace=replace)
-    sample.sort()
-    return _downsample_array_inner(col, cumcounts, sample, inplace=inplace)
+    return _downsample_array_parallel(
+        col,
+        target,
+        rng=None if isinstance(rng, _LegacyRng) else rng,
+        seed=rng.arg if isinstance(rng, _LegacyRng) else None,
+        replace=replace,
+        inplace=inplace,
+    )
 
 
-# TODO: can/should this be parallelized?
+# don’t parallelize, since it’s used per thread in `_downsample_arrays`
 @numba.njit(cache=True)  # noqa: TID251
-def _downsample_array_inner(
-    col: np.ndarray, cumcounts: np.ndarray, sample: np.ndarray, *, inplace: bool
-) -> np.ndarray:
+def _downsample_array_inner[T: NDArray](  # noqa: PLR0917
+    col: T,
+    target: int,
+    # *,  # numba kwarg handling is broken: https://github.com/numba/numba/issues/5655
+    rng: np.random.Generator | None,
+    seed: _LegacyRandom,
+    replace: bool,  # noqa: FBT001
+    inplace: bool,  # noqa: FBT001
+) -> T:
+    cumcounts = col.cumsum()
+    total = np.int64(cumcounts[-1])
     if inplace:
         col[:] = 0
     else:
         col = np.zeros_like(col)
+    if seed is not None:
+        np.random.seed(seed)
+    if rng is None:
+        sample = np.random.choice(total, target, replace=replace)
+    else:
+        sample = rng.choice(total, target, replace=replace)
+    sample.sort()
+
     geneptr = 0
     for count in sample:
         while count >= cumcounts[geneptr]:
             geneptr += 1
         col[geneptr] += 1
     return col
+
+
+_downsample_array_parallel = njit(_downsample_array_inner.py_func)
 
 
 @dataclass
