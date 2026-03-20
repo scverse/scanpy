@@ -94,8 +94,9 @@ def get_init_pos_from_paga(
     pos = adata.uns["paga"]["pos"]
     connectivities_coarse = adata.uns["paga"]["connectivities"]
     init_pos = np.ones((adjacency.shape[0], 2))
-    for i, group_pos, sub_rng in zip(
-        range(len(pos)), pos, rng.spawn(len(pos)), strict=True
+    # spawn sub-rngs so this can maybe be parallelized without changing random number generation
+    for i, (group_pos, sub_rng) in enumerate(
+        zip(pos, rng.spawn(len(pos)), strict=True)
     ):
         subset = (groups == groups.cat.categories[i]).values
         neighbors = connectivities_coarse[i].nonzero()
