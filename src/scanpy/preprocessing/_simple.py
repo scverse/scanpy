@@ -1059,7 +1059,7 @@ def _downsample_per_cell[T: (np.ndarray, CSBase)](
     counts_per_cell = (
         np.full(n_obs, counts_per_cell)
         if isinstance(counts_per_cell, int)
-        else np.asarray(counts_per_cell, np.int_)
+        else np.asarray(counts_per_cell, np.int64)
     )
     if counts_per_cell.shape != (n_obs,):
         msg = (
