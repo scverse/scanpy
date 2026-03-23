@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -13,6 +14,10 @@ import scanpy as sc
 from scanpy._compat import pkg_version
 from testing.scanpy._helpers.data import pbmc3k_processed, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from typing import Literal
+
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE / "_images"
@@ -111,7 +116,10 @@ def test_paga_compare(image_comparer):
     save_and_compare_images("paga_compare_pbmc3k")
 
 
-def test_paga_positions_reproducible():
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_paga_positions_reproducible(
+    subtests: pytest.Subtests, rng_arg: Literal["rng", "random_state"]
+) -> None:
     """Check exact reproducibility and effect of random_state on paga positions."""
     # https://github.com/scverse/scanpy/issues/1859
     pbmc = pbmc68k_reduced()
@@ -121,9 +129,11 @@ def test_paga_positions_reproducible():
     b = pbmc.copy()
     c = pbmc.copy()
 
-    sc.pl.paga(a, show=False, random_state=42)
-    sc.pl.paga(b, show=False, random_state=42)
-    sc.pl.paga(c, show=False, random_state=13)
+    sc.pl.paga(a, show=False, **{rng_arg: 42})
+    sc.pl.paga(b, show=False, **{rng_arg: 42})
+    sc.pl.paga(c, show=False, **{rng_arg: 13})
 
-    np.testing.assert_array_equal(a.uns["paga"]["pos"], b.uns["paga"]["pos"])
-    assert a.uns["paga"]["pos"].tolist() != c.uns["paga"]["pos"].tolist()
+    with subtests.test("reproducible"):
+        np.testing.assert_array_equal(a.uns["paga"]["pos"], b.uns["paga"]["pos"])
+    with subtests.test("different positions"):
+        assert a.uns["paga"]["pos"].tolist() != c.uns["paga"]["pos"].tolist()

@@ -7,13 +7,15 @@ from functools import WRAPPER_ASSIGNMENTS, wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
-from sklearn.utils import check_random_state
+from sklearn.utils.random import check_random_state
 
 from . import ensure_igraph
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+    from typing import Self
 
+    from numpy.random import BitGenerator
     from numpy.typing import NDArray
 
 
@@ -21,8 +23,12 @@ __all__ = [
     "RNGLike",
     "SeedLike",
     "_LegacyRandom",
+    "_LegacyRng",
+    "_accepts_legacy_random_state",
+    "_if_legacy_apply_global",
+    "_legacy_random_state",
+    "_set_igraph_rng",
     "ith_k_tuple",
-    "legacy_numpy_gen",
     "random_k_tuples",
     "random_str",
 ]
@@ -38,34 +44,38 @@ type _LegacyRandom = int | np.random.RandomState | None
 
 
 class _RNGIgraph:
-    """Random number generator for igraph so global seed is not changed.
+    """Random number generator for igraph so global random state is not changed.
 
     See :func:`igraph.set_random_number_generator` for the requirements.
     """
 
-    def __init__(self, random_state: int | np.random.RandomState = 0) -> None:
-        self._rng = check_random_state(random_state)
+    def __init__(self, rng: SeedLike | RNGLike | None) -> None:
+        self._rng = np.random.default_rng(rng)
 
     def getrandbits(self, k: int) -> int:
-        return self._rng.tomaxint() & ((1 << k) - 1)
+        if isinstance(self._rng, _LegacyRng):
+            i = self._rng.state.tomaxint()
+        else:
+            lims = np.iinfo(np.uint64)
+            i = int(self._rng.integers(0, lims.max, dtype=np.uint64, endpoint=True))
+        return i & ((1 << k) - 1)
 
-    def randint(self, a: int, b: int) -> int:
-        return self._rng.randint(a, b + 1)
+    def randint(self, a: int, b: int) -> np.int64:
+        """Can’t use `endpoint` here as _LegacyRng doesn’t support it."""
+        return self._rng.integers(a, b + 1)
 
     def __getattr__(self, attr: str):
         return getattr(self._rng, "normal" if attr == "gauss" else attr)
 
 
 @contextmanager
-def set_igraph_random_state(
-    random_state: int | np.random.RandomState,
-) -> Generator[None, None, None]:
+def _set_igraph_rng(rng: SeedLike | RNGLike | None) -> Generator[None]:
     ensure_igraph()
     import igraph
 
-    rng = _RNGIgraph(random_state)
+    ig_rng = _RNGIgraph(rng)
     try:
-        igraph.set_random_number_generator(rng)
+        igraph.set_random_number_generator(ig_rng)
         yield None
     finally:
         igraph.set_random_number_generator(random)
@@ -76,42 +86,123 @@ def set_igraph_random_state(
 ###################################
 
 
-def legacy_numpy_gen(
-    random_state: _LegacyRandom | None = None,
-) -> np.random.Generator:
-    """Return a random generator that behaves like the legacy one."""
-    if random_state is not None:
-        if isinstance(random_state, np.random.RandomState):
-            np.random.set_state(random_state.get_state(legacy=False))
-            return _FakeRandomGen(random_state)
-        np.random.seed(random_state)
-    return _FakeRandomGen(np.random.RandomState(np.random.get_bit_generator()))
+class _LegacyRng(np.random.Generator):
+    """A `Generator` that wraps a legacy `RandomState` instance.
 
+    To behave like a `RandomState`, it’s not enough to just use a MT19937 `bit_generator`
+    (as in `Generator(RandomState(seed).bit_generator)`),
+    so instead this hack uses the exact same random numbers as `RandomState(seed)`.
+    """
 
-class _FakeRandomGen(np.random.Generator):
-    _state: np.random.RandomState
+    arg: _LegacyRandom
+    state: np.random.RandomState
 
-    def __init__(self, random_state: np.random.RandomState) -> None:
-        self._state = random_state
+    def __init__(
+        self, arg: _LegacyRandom, state: np.random.RandomState | None = None
+    ) -> None:
+        self.arg = arg
+        self.state = check_random_state(arg) if state is None else state
+
+    @property
+    def bit_generator(self) -> BitGenerator:
+        msg = "A _LegacyRng instance has no `bit_generator` attribute."
+        raise AttributeError(msg)
+
+    @classmethod
+    def wrap_global(
+        cls,
+        arg: _LegacyRandom = None,
+        state: np.random.RandomState | None = None,
+    ) -> Self:
+        """Create a generator that wraps the global `RandomState` backing the legacy `np.random` functions."""
+        if arg is not None:
+            if isinstance(arg, np.random.RandomState):
+                np.random.set_state(arg.get_state(legacy=False))
+                return _LegacyRng(arg, state)
+            np.random.seed(arg)
+        return _LegacyRng(arg, np.random.RandomState(np.random.get_bit_generator()))
+
+    def spawn(self, n_children: int) -> list[Self]:
+        """Return `self` `n_children` times.
+
+        In a real generator, the spawned children are independent,
+        but for backwards compatibility we return the same instance so that its internal state is advanced by each child.
+        """
+        return [self] * n_children
 
     @classmethod
     def _delegate(cls) -> None:
+        names = dict(integers="randint")
         for name, meth in np.random.Generator.__dict__.items():
-            if name.startswith("_") or not callable(meth):
+            if name.startswith("_") or not callable(meth) or name in cls.__dict__:
                 continue
 
             def mk_wrapper(name: str, meth):
                 # Old pytest versions try to run the doctests
                 @wraps(meth, assigned=set(WRAPPER_ASSIGNMENTS) - {"__doc__"})
-                def wrapper(self: _FakeRandomGen, *args, **kwargs):
-                    return getattr(self._state, name)(*args, **kwargs)
+                def wrapper(self: _LegacyRng, *args, **kwargs):
+                    return getattr(self.state, name)(*args, **kwargs)
 
                 return wrapper
 
-            setattr(cls, name, mk_wrapper(name, meth))
+            setattr(cls, names.get(name, name), mk_wrapper(name, meth))
 
 
-_FakeRandomGen._delegate()
+_LegacyRng._delegate()
+
+
+def _if_legacy_apply_global(rng: np.random.Generator, /) -> np.random.Generator:
+    """Wrap the global legacy RNG if `rng` is a `_LegacyRng`.
+
+    This is used where our code used to  call `np.random.seed()`.
+    It’s a no-op if `rng` is not a `_LegacyRng`.
+    """
+    if not isinstance(rng, _LegacyRng):
+        return rng
+
+    return _LegacyRng.wrap_global(rng.arg, rng.state)
+
+
+def _legacy_random_state(
+    rng: SeedLike | RNGLike | None, /, *, always_state: bool = False
+) -> _LegacyRandom:
+    """Convert a np.random.Generator into a legacy `random_state` argument.
+
+    If `rng` is already a `_LegacyRng`, return its original `arg` attribute.
+    """
+    if isinstance(rng, _LegacyRng):
+        return rng.state if always_state else rng.arg
+    [bitgen] = np.random.default_rng(rng).bit_generator.spawn(1)
+    return np.random.RandomState(bitgen)
+
+
+def _accepts_legacy_random_state[**P, R](
+    random_state_default: _LegacyRandom, /
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Make a function accept `random_state: _LegacyRandom` and pass it as `rng`.
+
+    If the decorated function is called with a `random_state` argument,
+    it’ll be wrapped in a `_LegacyRng`.
+    Passing both `rng` and `random_state` at the same time is an error.
+    If neither is given, `random_state_default` is used.
+    """
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            match "random_state" in kwargs, "rng" in kwargs:
+                case True, True:
+                    msg = "Specify at most one of `rng` and `random_state`."
+                    raise TypeError(msg)
+                case True, False:
+                    kwargs["rng"] = _LegacyRng(kwargs.pop("random_state"))
+                case False, False:
+                    kwargs["rng"] = _LegacyRng(random_state_default)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 ###################

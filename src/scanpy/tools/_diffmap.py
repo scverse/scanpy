@@ -2,20 +2,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
+from .._docs import doc_rng
+from .._utils import _doc_params
+from .._utils.random import _accepts_legacy_random_state
 from ._dpt import _diffmap
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
     *,
     neighbors_key: str | None = None,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """Diffusion Maps :cite:p:`Coifman2005,Haghverdi2015,Wolf2018`.
@@ -48,8 +55,7 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
-    random_state
-        A numpy random seed
+    {rng}
     copy
         Return a copy instead of writing to adata.
 
@@ -73,6 +79,7 @@ def diffmap(
     e.g. `adata.obsm["X_diffmap"][:,1]`
 
     """
+    rng = np.random.default_rng(rng)
     if neighbors_key is None:
         neighbors_key = "neighbors"
 
@@ -83,7 +90,5 @@ def diffmap(
         msg = "Provide any value greater than 2 for `n_comps`. "
         raise ValueError(msg)
     adata = adata.copy() if copy else adata
-    _diffmap(
-        adata, n_comps=n_comps, neighbors_key=neighbors_key, random_state=random_state
-    )
+    _diffmap(adata, n_comps=n_comps, neighbors_key=neighbors_key, rng=rng)
     return adata if copy else None
