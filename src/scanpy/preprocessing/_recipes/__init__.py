@@ -93,11 +93,8 @@ def recipe_seurat(
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
     normalize_total(adata, target_sum=1e4)
-    layer_log = None
-    if log:
-        layer_log = "log1p"
-        adata.layers[layer_log] = adata.X
-        pp.log1p(adata, layer=layer_log)
+    adata.layers[layer_log := "log1p"] = adata.X
+    pp.log1p(adata, layer=layer_log)
     filter_result = pp.highly_variable_genes(
         adata, min_mean=0.0125, max_mean=3, min_disp=0.5, layer=layer_log, inplace=False
     )
@@ -109,7 +106,7 @@ def recipe_seurat(
     adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
     if log:
         adata.X = adata.layers[layer_log]
-        del adata.layers[layer_log]
+    del adata.layers[layer_log]
     pp.scale(adata, max_value=10)
     return adata if copy else None
 
@@ -156,10 +153,7 @@ def recipe_zheng17(
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
     normalize_total(adata, key_added="n_counts_all")
-    layer_log = None
-    if log:
-        layer_log = "log1p"
-        adata.layers[layer_log] = adata.X
+    adata.layers[layer_log := "log1p"] = adata.X
     pp.log1p(adata, layer=layer_log)
     filter_result = pp.highly_variable_genes(
         adata,
@@ -179,7 +173,7 @@ def recipe_zheng17(
     normalize_total(adata)  # renormalize after filtering
     if log:
         adata.X = adata.layers[layer_log]
-        del adata.layers[layer_log]
+    del adata.layers[layer_log]
     pp.scale(adata)
     logg.info("    finished", time=start)
     return adata if copy else None
