@@ -723,10 +723,6 @@ def highly_variable_genes(  # noqa: PLR0913
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
 
-    Notes
-    -----
-    This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
-
     """
     if flavor is None:
         from .. import settings

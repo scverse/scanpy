@@ -15,7 +15,7 @@ Any transformation of the data matrix that is not a *tool*. Other than *tools*, 
 ## Basic Preprocessing
 
 For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
-{func}`~scanpy.pl.filter_genes_dispersion` in {mod}`scanpy.pl`.
+{func}`~scanpy.pl.highly_variable_genes` in {mod}`scanpy.pl`.
 
 ```{eval-rst}
 .. autosummary::

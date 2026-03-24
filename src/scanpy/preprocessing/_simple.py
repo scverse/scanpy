@@ -19,10 +19,10 @@ from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
-from sklearn.utils import check_array, sparsefuncs
+from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit
+from .._compat import CSBase, CSRBase, DaskArray, njit
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (
@@ -39,7 +39,7 @@ from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sequence
+    from collections.abc import Collection, Sequence
     from numbers import Number
     from typing import Literal, Self
 
@@ -462,160 +462,6 @@ def sqrt(
         return adata if copy else None
     x = data  # proceed with data matrix
     return x.sqrt() if isinstance(x, CSBase) else np.sqrt(x)
-
-
-@deprecated("Use `sc.pp.normalize_total` instead.")
-def normalize_per_cell(
-    data: AnnData | np.ndarray | CSBase,
-    *,
-    counts_per_cell_after: float | None = None,
-    counts_per_cell: np.ndarray | None = None,
-    key_n_counts: str = "n_counts",
-    copy: bool = False,
-    layers: Literal["all"] | Iterable[str] = (),
-    use_rep: Literal["after", "X"] | None = None,
-    min_counts: int = 1,
-) -> AnnData | np.ndarray | CSBase | None:
-    """Normalize total counts per cell.
-
-    .. deprecated:: 1.3.7
-
-       Use :func:`~scanpy.pp.normalize_total` instead.
-       The new function is equivalent to the present
-       function, except that
-
-       * the new function doesn't filter cells based on `min_counts`,
-         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-       * some arguments were renamed
-       * `copy` is replaced by `inplace`
-
-    Normalize each cell by total counts over all genes, so that every cell has
-    the same total count after normalization.
-
-    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
-    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
-
-    Parameters
-    ----------
-    data
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    counts_per_cell_after
-        If `None`, after normalization, each cell has a total count equal
-        to the median of the *counts_per_cell* before normalization.
-    counts_per_cell
-        Precomputed counts per cell.
-    key_n_counts
-        Name of the field in `adata.obs` where the total counts per cell are
-        stored.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
-    min_counts
-        Cells with counts less than `min_counts` are filtered out during
-        normalization.
-
-    Returns
-    -------
-    Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
-
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Normalized count data matrix.
-
-    Examples
-    --------
-    >>> import scanpy as sc
-    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
-    >>> print(adata.X.sum(axis=1))
-    [ 1.  3. 11.]
-    >>> sc.pp.normalize_per_cell(adata)
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(adata)
-    >>> print(adata.obs)
-       n_counts
-    0       1.0
-    1       3.0
-    2      11.0
-    >>> print(adata.X.sum(axis=1))
-    [3. 3. 3.]
-    >>> sc.pp.normalize_per_cell(
-    ...     adata,
-    ...     counts_per_cell_after=1,
-    ...     key_n_counts="n_counts2",
-    ... )
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(
-    >>> print(adata.obs)
-       n_counts  n_counts2
-    0       1.0        3.0
-    1       3.0        3.0
-    2      11.0        3.0
-    >>> print(adata.X.sum(axis=1))
-    [1. 1. 1.]
-
-    """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", r".*sc\.pp\.normalize_total", FutureWarning)
-
-        if isinstance(data, AnnData):
-            start = logg.info("normalizing by total count per cell")
-            adata = data.copy() if copy else data
-            if counts_per_cell is None:
-                cell_subset, counts_per_cell = materialize_as_ndarray(
-                    filter_cells(adata.X, min_counts=min_counts)
-                )
-                adata.obs[key_n_counts] = counts_per_cell
-                adata._inplace_subset_obs(cell_subset)
-                counts_per_cell = counts_per_cell[cell_subset]
-            normalize_per_cell(
-                adata.X,
-                counts_per_cell_after=counts_per_cell_after,
-                counts_per_cell=counts_per_cell,
-            )
-
-            layers = adata.layers.keys() if layers == "all" else layers
-            if use_rep == "after":
-                after = counts_per_cell_after
-            elif use_rep == "X":
-                after = np.median(counts_per_cell[cell_subset])
-            elif use_rep is None:
-                after = None
-            else:
-                msg = 'use_rep should be "after", "X" or None'
-                raise ValueError(msg)
-            for layer in layers:
-                _subset, counts = filter_cells(
-                    adata.layers[layer], min_counts=min_counts
-                )
-                temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
-                adata.layers[layer] = temp
-
-            logg.info(
-                "    finished ({time_passed}): normalized adata.X and added\n"
-                f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
-                time=start,
-            )
-            return adata if copy else None
-        # proceed with data matrix
-        x = data.copy() if copy else data
-        if counts_per_cell is None:
-            if not copy:
-                msg = "Can only be run with copy=True"
-                raise ValueError(msg)
-            cell_subset, counts_per_cell = filter_cells(x, min_counts=min_counts)
-            x = x[cell_subset]
-            counts_per_cell = counts_per_cell[cell_subset]
-        if counts_per_cell_after is None:
-            counts_per_cell_after = np.median(counts_per_cell)
-
-        warnings.simplefilter("ignore")  # division by zero I guess
-        counts_per_cell += counts_per_cell == 0
-        counts_per_cell /= counts_per_cell_after
-        if not isinstance(x, CSBase):
-            x /= counts_per_cell[:, np.newaxis]
-        else:
-            sparsefuncs.inplace_row_scale(x, 1 / counts_per_cell)
-    return x if copy else None
 
 
 @njit

@@ -17,7 +17,7 @@ from ._anndata import (
 from ._dotplot import DotPlot, dotplot
 from ._easter_egg import dogplot
 from ._matrixplot import MatrixPlot, matrixplot
-from ._preprocessing import filter_genes_dispersion, highly_variable_genes
+from ._preprocessing import highly_variable_genes
 from ._qc import highest_expr_genes
 from ._rcmod import set_rcParams_defaults, set_rcParams_scanpy
 from ._scrublet import scrublet_score_distribution
@@ -71,7 +71,6 @@ __all__ = [
     "draw_graph",
     "embedding",
     "embedding_density",
-    "filter_genes_dispersion",
     "heatmap",
     "highest_expr_genes",
     "highly_variable_genes",

@@ -37,7 +37,6 @@ Note that the fundamental limitations of imputation are still under [debate](htt
 .. autosummary::
    :toctree: ../generated/
 
-   pp.dca
    pp.magic
 
 ```
