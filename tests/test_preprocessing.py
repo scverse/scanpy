@@ -93,31 +93,6 @@ def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -
     check_rep_results(sc.pp.log1p, x, base=base)
 
 
-def test_normalize_per_cell() -> None:
-    x = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
-    adata = AnnData(x.copy())
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(
-            adata, counts_per_cell_after=1, key_n_counts="n_counts2"
-        )
-    assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
-    # now with copy option
-    adata = AnnData(x.copy())
-    # note that sc.pp.normalize_per_cell is also used in
-    # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
-    assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
-    # now sparse
-    adata = AnnData(x.copy())
-    adata_sparse = AnnData(sparse.csr_matrix(x.copy()))  # noqa: TID251
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata)
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata_sparse)
-    assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
-
-
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
     """Generate a random probability distribution of `n` values between 0 and 1."""
     probs = np.random.randint(0, 10000, n).astype(np.float64)
@@ -376,10 +351,8 @@ def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
     # These shouldn't throw an error
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
-        sc.pp.recipe_seurat(adata.copy(), plot=True)
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
-        sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    sc.pp.recipe_seurat(adata.copy(), plot=True)
+    sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():

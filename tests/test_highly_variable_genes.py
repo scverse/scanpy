@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from contextlib import nullcontext
 from pathlib import Path
 from string import ascii_letters
@@ -24,7 +23,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Literal
+    from typing import Any, Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -368,7 +367,6 @@ def test_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
-@pytest.mark.parametrize("func", ["hvg", "fgd"])
 @pytest.mark.parametrize(
     ("flavor", "params", "ref_path"),
     [
@@ -384,15 +382,11 @@ def test_pearson_residuals_batch(
 def test_compare_to_upstream(
     *,
     request: pytest.FixtureRequest,
-    func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
-    params: dict[str, float | int],
+    params: Any,
     ref_path: Path,
     array_type: Callable,
 ):
-    if func == "fgd" and flavor == "cell_ranger":
-        reason = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
-        request.applymarker(pytest.mark.xfail(reason=reason))
     hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
@@ -401,21 +395,8 @@ def test_compare_to_upstream(
     pbmc.var_names_make_unique()
     sc.pp.filter_cells(pbmc, min_counts=1)
     sc.pp.normalize_total(pbmc, target_sum=1e4)
-
-    if func == "hvg":
-        sc.pp.log1p(pbmc)
-        sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
-    elif func == "fgd":
-        with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):  # noqa: PT031
-            # https://github.com/pandas-dev/pandas/issues/61928
-            warnings.filterwarnings(
-                "ignore", r"invalid value encountered in cast", RuntimeWarning
-            )
-            sc.pp.filter_genes_dispersion(
-                pbmc, flavor=flavor, **params, log=True, subset=False
-            )
-    else:
-        pytest.fail(f"Unknown func {func}")
+    sc.pp.log1p(pbmc)
+    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
 
     np.testing.assert_array_equal(
         hvg_info["highly_variable"], pbmc.var["highly_variable"]

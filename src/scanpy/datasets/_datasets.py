@@ -336,7 +336,7 @@ def pbmc68k_reduced() -> AnnData:
     UMAP coordinates, louvain clustering and gene rankings based on the
     `bulk_labels`.
 
-    .. [#norm] Back when the dataset was created, :func:`~scanpy.pp.normalize_per_cell` was used instead.
+    .. [#norm] Back when the dataset was created, ``sc.pp.normalize_per_cell`` was used instead.
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
