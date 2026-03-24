@@ -23,7 +23,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Literal
+    from typing import Any, Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -383,7 +383,7 @@ def test_compare_to_upstream(
     *,
     request: pytest.FixtureRequest,
     flavor: Literal["seurat", "cell_ranger"],
-    params: dict[str, float | int],
+    params: Any,
     ref_path: Path,
     array_type: Callable,
 ):
@@ -395,7 +395,6 @@ def test_compare_to_upstream(
     pbmc.var_names_make_unique()
     sc.pp.filter_cells(pbmc, min_counts=1)
     sc.pp.normalize_total(pbmc, target_sum=1e4)
-
     sc.pp.log1p(pbmc)
     sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
 
