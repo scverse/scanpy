@@ -6,6 +6,7 @@ from ..neighbors import neighbors
 from ._combat import combat
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
 from ._deprecated.sampling import subsample
+from ._harmony_integrate import harmony_integrate
 from ._highly_variable_genes import highly_variable_genes
 from ._normalization import normalize_total
 from ._pca import pca
@@ -31,6 +32,7 @@ __all__ = [
     "filter_cells",
     "filter_genes",
     "filter_genes_dispersion",
+    "harmony_integrate",
     "highly_variable_genes",
     "log1p",
     "neighbors",
