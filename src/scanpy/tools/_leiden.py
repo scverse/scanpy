@@ -10,6 +10,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import warn
 from .._docs import doc_rng
+from .._settings import Default
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng, _set_igraph_rng
 from ._docs import (
@@ -63,7 +64,7 @@ def leiden(  # noqa: PLR0913
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: LeidenFlavor | None = None,
+    flavor: LeidenFlavor | Default = Default("leiden", "flavor"),
     **clustering_args,
 ) -> AnnData | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.
@@ -227,7 +228,7 @@ def leiden(  # noqa: PLR0913
 def _validate_flavor(
     flavor: str | None, *, partition_type: object | None, directed: bool | None
 ) -> Literal["igraph", "leidenalg"]:
-    if was_default := (flavor is None):
+    if was_default := (flavor is None or isinstance(flavor, Default)):
         from scanpy import settings
 
         flavor = settings.preset.leiden.flavor

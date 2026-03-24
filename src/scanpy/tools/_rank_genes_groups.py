@@ -13,9 +13,9 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, njit
+from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
-    _empty,
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
-    from .._utils import Empty
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
 
@@ -496,7 +495,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool] | str | None | Empty = _empty,
+    mask_var: NDArray[np.bool] | str | None | Default = Default(
+        "rank_genes_groups", "mask_var"
+    ),
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -505,7 +506,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     key_added: str | None = None,
     copy: bool = False,
-    method: DETest | None = None,
+    method: DETest | Default = Default("rank_genes_groups", "method"),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
@@ -622,9 +623,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     """
     from scanpy import settings
 
-    if mask_var is _empty:
+    if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
-    if method is None:
+    if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
 
     mask_var = _check_mask(adata, mask_var, "var")

@@ -10,7 +10,7 @@ import pandas as pd
 from .. import logging as logg
 from .._compat import CSBase
 from .._docs import doc_rng
-from .._settings import settings
+from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _get_obs_rep
@@ -59,7 +59,7 @@ def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
-    ctrl_as_ref: bool | None = None,
+    ctrl_as_ref: bool | Default = Default("score_genes", "ctrl_as_ref"),
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
@@ -126,7 +126,7 @@ def score_genes(  # noqa: PLR0913
     rng = np.random.default_rng(rng)
     rng = _if_legacy_apply_global(rng)
     adata = adata.copy() if copy else adata
-    if ctrl_as_ref is None:
+    if isinstance(ctrl_as_ref, Default):
         ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:

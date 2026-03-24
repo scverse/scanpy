@@ -9,7 +9,7 @@ from packaging.version import Version
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._docs import doc_rng
-from ..._settings import settings
+from ..._settings import Default, settings
 from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
@@ -69,7 +69,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     mask_var: NDArray[np.bool] | str | None | Empty = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
-    key_added: str | None | Empty = _empty,
+    key_added: str | None | Default = Default("pca", "key_added"),
     copy: bool = False,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
@@ -207,7 +207,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
-    if key_added is _empty:
+    if isinstance(key_added, Default):
         key_added = settings.preset.pca.key_added
 
     # chunked calculation is not randomized, anyways

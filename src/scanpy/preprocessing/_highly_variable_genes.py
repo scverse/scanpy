@@ -14,7 +14,7 @@ from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
-from .._settings import Verbosity, settings
+from .._settings import Default, Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
     raise_if_dask_feature_axis_chunked,
@@ -603,7 +603,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: HVGFlavor | None = None,
+    flavor: HVGFlavor | Default = Default("highly_variable_genes", "flavor"),
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -724,7 +724,7 @@ def highly_variable_genes(  # noqa: PLR0913
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
 
     """
-    if flavor is None:
+    if isinstance(flavor, Default):
         from .. import settings
 
         flavor = settings.preset.highly_variable_genes.flavor

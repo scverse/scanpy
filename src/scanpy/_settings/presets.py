@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import enum
 import inspect
 import re
 from contextlib import contextmanager
-from enum import StrEnum, auto
+from dataclasses import dataclass
 from functools import cached_property, partial, wraps
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "DETest",
+    "Default",
     "HVGFlavor",
     "HVGPreset",
     "LeidenFlavor",
@@ -23,9 +25,23 @@ __all__ = [
 ]
 
 
-DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
-HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
-LeidenFlavor = Literal["leidenalg", "igraph"]
+type DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
+type LeidenFlavor = Literal["leidenalg", "igraph"]
+
+
+@dataclass
+class Default:
+    func: str
+    param: str
+
+    def __repr__(self) -> str:
+        import scanpy as sc
+
+        qualname = enum.Enum.__str__(sc.settings.preset)
+        params = getattr(sc.settings.preset, self.func)
+        value = getattr(params, self.param)
+        return f"{value!r} ({qualname})"
 
 
 class HVGPreset(NamedTuple):
@@ -105,7 +121,7 @@ def preset_property[NT: NamedTuple](
     return prop
 
 
-class Preset(StrEnum):
+class Preset(enum.StrEnum):
     """Presets for :attr:`scanpy.settings.preset`.
 
     See properties below for details.
@@ -118,10 +134,10 @@ class Preset(StrEnum):
         # lower-kebap-case
         return "-".join(part.lower() for part in re.split(r"(?=[A-Z])", name) if part)
 
-    ScanpyV1 = auto()
+    ScanpyV1 = enum.auto()
     """: Scanpy 1.*’s default settings."""
 
-    ScanpyV2Preview = auto()
+    ScanpyV2Preview = enum.auto()
     """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
 
     @preset_property

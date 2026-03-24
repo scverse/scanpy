@@ -11,7 +11,7 @@ from .. import logging
 from .._compat import deprecated
 from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
-from .presets import Preset
+from .presets import Default, Preset
 from .verbosity import Verbosity
 
 if TYPE_CHECKING:
@@ -27,6 +27,9 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
+
+
+__all__ = ["AnnDataFileFormat", "Default", "Preset", "Verbosity"]
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
