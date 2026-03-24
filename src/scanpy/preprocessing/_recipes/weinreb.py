@@ -6,35 +6,20 @@ from scipy import sparse
 from ..._compat import CSBase
 from ..._utils import dematrix
 
+__all__ = [
+    "filter_genes_cv",
+    "filter_genes_fano",
+    "normalize_per_cell",
+    "zscore",
+]
 
-def normalize_per_cell_weinreb16_deprecated(
+
+def normalize_per_cell(
     x: np.ndarray | CSBase,
     *,
     max_fraction: float = 1,
     mult_with_mean: bool = False,
 ) -> np.ndarray:
-    """Normalize each cell :cite:p:`Weinreb2017`.
-
-    This is a deprecated version. See `normalize_per_cell` instead.
-
-    Normalize each cell by UMI count, so that every cell has the same total
-    count.
-
-    Parameters
-    ----------
-    X
-        Expression matrix. Rows correspond to cells and columns to genes.
-    max_fraction
-        Only use genes that make up more than max_fraction of the total
-        reads in every cell.
-    mult_with_mean
-        Multiply the result with the mean of total counts.
-
-    Returns
-    -------
-    Normalized version of the original expression matrix.
-
-    """
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
         raise ValueError(msg)
@@ -56,7 +41,7 @@ def normalize_per_cell_weinreb16_deprecated(
     return x_norm
 
 
-def zscore_deprecated(x: np.ndarray, /) -> np.ndarray:
+def zscore(x: np.ndarray, /) -> np.ndarray:
     """Z-score standardize each variable/gene in X :cite:p:`Weinreb2017`.
 
     Use `scale` instead.
@@ -74,3 +59,23 @@ def zscore_deprecated(x: np.ndarray, /) -> np.ndarray:
     means = np.tile(np.mean(x, axis=0)[None, :], (x.shape[0], 1))
     stds = np.tile(np.std(x, axis=0)[None, :], (x.shape[0], 1))
     return (x - means) / (stds + 0.0001)
+
+
+def filter_genes_cv(x, /, e_cutoff, cv_filter):
+    """Filter genes by coefficient of variance and mean."""
+    return _filter_genes(x, e_cutoff, cv_filter, np.std)
+
+
+def filter_genes_fano(x, /, e_cutoff, v_cutoff):
+    """Filter genes by fano factor and mean."""
+    return _filter_genes(x, e_cutoff, v_cutoff, np.var)
+
+
+def _filter_genes(x, /, e_cutoff, v_cutoff, meth):
+    if isinstance(x, CSBase):
+        msg = "Not defined for sparse input."
+        raise ValueError(msg)
+    mean_filter = np.mean(x, axis=0) > e_cutoff
+    var_filter = meth(x, axis=0) / (np.mean(x, axis=0) + 0.0001) > v_cutoff
+    gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
+    return gene_subset

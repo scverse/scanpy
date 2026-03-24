@@ -14,7 +14,6 @@ import scanpy.cli
 from scanpy._utils import _docs, descend_classes_and_funcs, import_name
 
 if TYPE_CHECKING:
-    from types import FunctionType
     from typing import Any
 
 mod_dir = Path(scanpy.__file__).parent
@@ -74,15 +73,6 @@ def param_is_pos(p: Parameter) -> bool:
     }
 
 
-def is_deprecated(f: FunctionType) -> bool:
-    # TODO: use deprecated decorator instead
-    # https://github.com/scverse/scanpy/issues/2505
-    return f.__name__ in {
-        "normalize_per_cell",
-        "filter_genes_dispersion",
-    }
-
-
 class ExpectedSig(TypedDict):
     first_name: str
     copy_default: Any
@@ -94,14 +84,12 @@ copy_sigs: defaultdict[str, ExpectedSig | None] = defaultdict(
 )
 # full exceptions
 copy_sigs["sc.external.tl.phenograph"] = None  # external
-copy_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
 copy_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.subsample"] = None  # returns indices along matrix
 copy_sigs["sc.pp.sample"] = None  # returns indices along matrix
 # partial exceptions: “data” instead of “adata”
 copy_sigs["sc.pp.log1p"]["first_name"] = "data"
-copy_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
 copy_sigs["sc.pp.pca"]["first_name"] = "data"
 copy_sigs["sc.pp.scale"]["first_name"] = "data"
 copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
@@ -117,9 +105,8 @@ def test_sig_conventions(f, qualname):
     sig = signature(f)
 
     # TODO: replace the following check with lint rule for all funtions eventually
-    if not is_deprecated(f):
-        n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
-        assert n_pos <= 3, "Public functions should have <= 3 positional parameters"
+    n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
+    assert n_pos <= 3, "Public functions should have <= 3 positional parameters"
 
     first_param = next(iter(sig.parameters.values()), None)
     if first_param is None:
@@ -145,8 +132,7 @@ def test_sig_conventions(f, qualname):
         if expected_sig["return_ann"] is None:
             expected_sig["return_ann"] = f"{first_param.annotation} | None"
         assert s == expected_sig
-        if not is_deprecated(f):
-            assert not param_is_pos(copy_param)
+        assert not param_is_pos(copy_param)
 
 
 def getsourcefile(obj):

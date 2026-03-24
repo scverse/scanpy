@@ -6,7 +6,6 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._compat import deprecated
 from .._settings import settings
 from ._utils import savefig_or_show
 
@@ -97,40 +96,7 @@ def highly_variable_genes(  # noqa: PLR0912
         )
 
     show = settings.autoshow if show is None else show
-    savefig_or_show("filter_genes_dispersion", show=show, save=save)
+    savefig_or_show("highly_variable_genes", show=show, save=save)
     if show:
         return None
     return plt.gca()
-
-
-# backwards compat
-@deprecated("Use sc.pl.highly_variable_genes instead")
-def filter_genes_dispersion(
-    result: np.recarray,
-    *,
-    log: bool = False,
-    show: bool | None = None,
-    # deprecated
-    save: bool | str | None = None,
-) -> None:
-    """Plot dispersions versus means for genes.
-
-    Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
-
-    Parameters
-    ----------
-    result
-        Result of :func:`~scanpy.pp.filter_genes_dispersion`.
-    log
-        Plot on logarithmic axes.
-    show
-         Show the plot, do not return axis.
-    save
-        If `True` or a `str`, save the figure.
-        A string is appended to the default filename.
-        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
-
-    """
-    highly_variable_genes(
-        result, log=log, show=show, save=save, highly_variable_genes=False
-    )

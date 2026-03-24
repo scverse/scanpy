@@ -150,7 +150,7 @@ def phenograph(  # noqa: PLR0913
     With annotated data as input:
 
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
 
     Then do PCA:
 
