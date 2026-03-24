@@ -52,17 +52,17 @@ def highly_variable_genes(  # noqa: PLR0912
         else:
             seurat_v3_flavor = False
     if highly_variable_genes:
-        gene_subset = result.highly_variable
+        gene_subset = result["highly_variable"]
     else:
-        gene_subset = result.gene_subset
-    means = result.means
+        gene_subset = result["gene_subset"]
+    means = result["means"]
 
     if seurat_v3_flavor:
-        var_or_disp = result.variances
-        var_or_disp_norm = result.variances_norm
+        var_or_disp = result["variances"]
+        var_or_disp_norm = result["variances_norm"]
     else:
-        var_or_disp = result.dispersions
-        var_or_disp_norm = result.dispersions_norm
+        var_or_disp = result["dispersions"]
+        var_or_disp_norm = result["dispersions_norm"]
     size = rcParams["figure.figsize"]
     plt.figure(figsize=(2 * size[0], size[1]))
     plt.subplots_adjust(wspace=0.3)

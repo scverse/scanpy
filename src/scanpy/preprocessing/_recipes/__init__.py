@@ -168,7 +168,7 @@ def recipe_zheng17(
 
         ppp.highly_variable_genes(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
-    #     adata = adata[:, filter_result["gene_subset"]]
+    #     adata = adata[:, filter_result["highly_variable"]]
     adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
     normalize_total(adata)  # renormalize after filtering
     if log:
