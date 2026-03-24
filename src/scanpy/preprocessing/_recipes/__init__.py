@@ -87,7 +87,7 @@ def recipe_seurat(
         Return a copy if true.
 
     """
-    from .. import pl, pp
+    from ... import pl, pp
 
     if copy:
         adata = adata.copy()
@@ -144,7 +144,7 @@ def recipe_zheng17(
     Returns or updates `adata` depending on `copy`.
 
     """
-    from .. import pl, pp
+    from ... import pl, pp
 
     start = logg.info("running recipe zheng17")
     if copy:
