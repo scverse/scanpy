@@ -127,7 +127,6 @@ def recipe_zheng17(
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
 
-
     Parameters
     ----------
     adata
