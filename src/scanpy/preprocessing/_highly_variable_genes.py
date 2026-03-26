@@ -603,7 +603,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: HVGFlavor | Default = Default("highly_variable_genes", "flavor"),
+    flavor: HVGFlavor | Default = Default(preset=("highly_variable_genes", "flavor")),
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,

@@ -496,7 +496,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     groupby: str,
     *,
     mask_var: NDArray[np.bool] | str | None | Default = Default(
-        "rank_genes_groups", "mask_var"
+        preset=("rank_genes_groups", "mask_var")
     ),
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
@@ -506,7 +506,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     key_added: str | None = None,
     copy: bool = False,
-    method: DETest | Default = Default("rank_genes_groups", "method"),
+    method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,

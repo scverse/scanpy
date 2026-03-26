@@ -71,7 +71,7 @@ def clip_array(
 def scale[A: _Array](
     data: AnnData | A,
     *,
-    zero_center: bool | Default = Default("scale", "zero_center"),
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
@@ -143,7 +143,7 @@ def scale[A: _Array](
 def scale_array[A: _Array](
     x: A,
     *,
-    zero_center: bool | Default = Default("scale", "zero_center"),
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
@@ -288,7 +288,7 @@ def scale_and_clip_csr(
 def scale_anndata(
     adata: AnnData,
     *,
-    zero_center: bool | Default = Default("scale", "zero_center"),
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,

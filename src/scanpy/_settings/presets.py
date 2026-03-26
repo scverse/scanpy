@@ -32,14 +32,22 @@ type LeidenFlavor = Literal["leidenalg", "igraph"]
 
 @dataclass
 class Default:
-    func: str
-    param: str
+    repr: str | None = None
+    preset: tuple[str, str] | None = None
+
+    def __post_init__(self):
+        if self.preset and self.repr:
+            msg = "Cannot provide both preset and repr."
+            raise TypeError(msg)
 
     def __repr__(self) -> str:
+        if not self.preset:
+            return self.repr or "default"
         import scanpy as sc
 
-        params = getattr(sc.settings.preset, self.func)
-        value = getattr(params, self.param)
+        func, param = self.preset
+        params = getattr(sc.settings.preset, func)
+        value = getattr(params, param)
         return f"{value!r} ({sc.settings.preset=} – changes in 2.0)"
 
 

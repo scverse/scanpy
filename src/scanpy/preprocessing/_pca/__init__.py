@@ -10,7 +10,7 @@ from ... import logging as logg
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._docs import doc_rng
 from ..._settings import Default, settings
-from ..._utils import _doc_params, _empty, get_literal_vals, is_backed_type
+from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var_hvg
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     import sklearn.decomposition as skld
     from numpy.typing import DTypeLike, NDArray
 
-    from ..._utils import Empty
     from ..._utils.random import RNGLike, SeedLike
 
 
@@ -66,10 +65,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     return_info: bool = False,
-    mask_var: NDArray[np.bool] | str | None | Empty = _empty,
+    mask_var: NDArray[np.bool] | str | None | Default = Default("'highly_variable'"),
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
-    key_added: str | None | Default = Default("pca", "key_added"),
+    key_added: str | None | Default = Default(preset=("pca", "key_added")),
     copy: bool = False,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
@@ -390,7 +389,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
 def _handle_mask_var(
     adata: AnnData,
-    mask_var: NDArray[np.bool] | str | Empty | None,
+    mask_var: NDArray[np.bool] | str | None | Default,
     *,
     obsm: str | None = None,
     use_highly_variable: bool | None,
@@ -400,7 +399,7 @@ def _handle_mask_var(
     Returns both the normalized mask parameter and the validated mask array.
     """
     if obsm:
-        if mask_var is not _empty and mask_var is not None:
+        if not isinstance(mask_var, Default) and mask_var is not None:
             msg = "Argument `mask_var` is incompatible with `obsm`."
             raise ValueError(msg)
         return None, None
@@ -413,20 +412,20 @@ def _handle_mask_var(
         )
         msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
         warn(msg, FutureWarning)
-        if mask_var is not _empty:
+        if not isinstance(mask_var, Default):
             msg = f"These arguments are incompatible. {hint}"
             raise ValueError(msg)
 
     # Handle default case and explicit use_highly_variable=True
     if use_highly_variable or (
         use_highly_variable is None
-        and mask_var is _empty
+        and isinstance(mask_var, Default)
         and "highly_variable" in adata.var.columns
     ):
         mask_var = "highly_variable"
 
     # Without highly variable genes, we don’t use a mask by default
-    if mask_var is _empty or mask_var is None:
+    if isinstance(mask_var, Default) or mask_var is None:
         return None, None
     return mask_var, _check_mask(adata, mask_var, "var")
 

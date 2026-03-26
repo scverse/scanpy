@@ -64,7 +64,7 @@ def leiden(  # noqa: PLR0913
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
-    flavor: LeidenFlavor | Default = Default("leiden", "flavor"),
+    flavor: LeidenFlavor | Default = Default(preset=("leiden", "flavor")),
     **clustering_args,
 ) -> AnnData | None:
     r"""Cluster cells into subgroups :cite:p:`Traag2019`.

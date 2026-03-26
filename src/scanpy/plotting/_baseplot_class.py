@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 
 from .. import logging as logg
 from .._compat import warn
-from .._utils import _empty
+from .._settings import Default
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
-    from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
     type _VarNames = str | Sequence[str]
@@ -388,7 +387,9 @@ class BasePlot:
         }
         return self
 
-    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
+    def style(
+        self, *, cmap: Colormap | str | None | Default = Default("no change")
+    ) -> Self:
         r"""Set visual style parameters.
 
         Parameters
@@ -402,7 +403,7 @@ class BasePlot:
         Returns `self` for method chaining.
 
         """
-        if cmap is not _empty:
+        if not isinstance(cmap, Default):
             self.cmap = cmap
         return self
 

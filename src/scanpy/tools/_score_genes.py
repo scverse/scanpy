@@ -59,7 +59,7 @@ def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
-    ctrl_as_ref: bool | Default = Default("score_genes", "ctrl_as_ref"),
+    ctrl_as_ref: bool | Default = Default(preset=("score_genes", "ctrl_as_ref")),
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
