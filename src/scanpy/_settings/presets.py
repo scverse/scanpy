@@ -38,10 +38,9 @@ class Default:
     def __repr__(self) -> str:
         import scanpy as sc
 
-        qualname = enum.Enum.__str__(sc.settings.preset)
         params = getattr(sc.settings.preset, self.func)
         value = getattr(params, self.param)
-        return f"{value!r} ({qualname})"
+        return f"{value!r} ({sc.settings.preset=} – changes in 2.0)"
 
 
 class HVGPreset(NamedTuple):
