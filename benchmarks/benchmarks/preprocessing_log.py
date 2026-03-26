@@ -80,10 +80,20 @@ class HVGSuite:  # noqa: D101
     def time_highly_variable_genes(self, *_) -> None:
         # the default flavor runs on log-transformed data
         sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5, flavor=self.flavor
+            self.adata,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+            flavor=self.flavor,
+            **({"layer": "counts"} if self.self.flavor == "seurat_v3" else {}),
         )
 
     def peakmem_highly_variable_genes(self, *_) -> None:
         sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5, flavor=self.flavor
+            self.adata,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+            flavor=self.flavor,
+            **({"layer": "counts"} if self.self.flavor == "seurat_v3" else {}),
         )
