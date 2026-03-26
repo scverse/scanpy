@@ -800,15 +800,15 @@ def write_params(path: PathLike[str] | str, *args, **maps):
 def _read(  # noqa: PLR0912, PLR0915
     filename: Path,
     *,
-    backed=None,
-    sheet=None,
-    ext=None,
-    delimiter=None,
-    first_column_names=None,
-    backup_url=None,
-    cache=False,
-    cache_compression=None,
-    suppress_cache_warning=False,
+    backed: Literal["r", "r+"] | None,
+    sheet: str | None,
+    ext: str | None,
+    delimiter: str | None,
+    first_column_names: bool,
+    backup_url: str | None,
+    cache: bool,
+    cache_compression: Literal["gzip", "lzf"] | None | Empty,
+    suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
