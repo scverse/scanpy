@@ -69,11 +69,11 @@ class HVGSuite:  # noqa: D101
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
-        adata, _ = get_dataset("pbmc3k")
-        adata.write_h5ad("pbmc3k.h5ad")
+        adata, _ = get_dataset("lung93k")
+        adata.write_h5ad("lung93k.h5ad")
 
     def setup(self, flavor) -> None:
-        self.adata = ad.read_h5ad("pbmc3k.h5ad")
+        self.adata = ad.read_h5ad("lung93k.h5ad")
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 
@@ -85,7 +85,8 @@ class HVGSuite:  # noqa: D101
             max_mean=3,
             min_disp=0.5,
             flavor=self.flavor,
-            **({"layer": "counts"} if self.self.flavor == "seurat_v3" else {}),
+            batch_key="PatientNumber",
+            **({"layer": "counts"} if self.flavor == "seurat_v3" else {}),
         )
 
     def peakmem_highly_variable_genes(self, *_) -> None:
@@ -95,5 +96,6 @@ class HVGSuite:  # noqa: D101
             max_mean=3,
             min_disp=0.5,
             flavor=self.flavor,
+            batch_key="PatientNumber",
             **({"layer": "counts"} if self.self.flavor == "seurat_v3" else {}),
         )
