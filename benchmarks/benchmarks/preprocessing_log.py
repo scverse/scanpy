@@ -97,5 +97,5 @@ class HVGSuite:  # noqa: D101
             min_disp=0.5,
             flavor=self.flavor,
             batch_key="PatientNumber",
-            **({"layer": "counts"} if self.self.flavor == "seurat_v3" else {}),
+            **({"layer": "counts"} if self.flavor == "seurat_v3" else {}),
         )
