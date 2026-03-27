@@ -52,6 +52,7 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.10.8",
+    "certifi",
     "fast-array-utils[accel,sparse]>=1.2.1",
     "h5py>=3.11",
     "joblib",
