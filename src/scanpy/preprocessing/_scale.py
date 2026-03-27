@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._settings import Default, settings
 from .._utils import (
     axis_mul_or_truediv,
