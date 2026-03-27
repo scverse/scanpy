@@ -1048,9 +1048,10 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from urllib.error import URLError
+    from ssl import create_default_context
     from urllib.request import Request, urlopen
 
+    from certifi import contents
     from tqdm.auto import tqdm
 
     blocksize = 1024 * 8
@@ -1059,26 +1060,7 @@ def _download(url: str, path: Path):
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
-        try:
-            open_url = urlopen(req)
-        except URLError:
-            if not url.startswith("https://"):
-                raise  # No need to try using certifi
-
-            msg = "Failed to open the url with default certificates."
-            try:
-                from certifi import where
-            except ImportError as e:
-                e.add_note(f"{msg} Please install `certifi` and try again.")
-                raise
-            else:
-                logg.warning(f"{msg} Trying to use certifi.")
-
-            from ssl import create_default_context
-
-            open_url = urlopen(req, context=create_default_context(cafile=where()))
-
-        with open_url as resp:
+        with urlopen(req, context=create_default_context(cadata=contents())) as resp:
             total = resp.info().get("content-length", None)
             with (
                 tqdm(
