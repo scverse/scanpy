@@ -95,13 +95,18 @@ def rank_genes_groups_df(
 
     for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
-            pts_df = (
-                adata
-                .uns[key][pts][group]
-                .rename_axis(index="names")
-                .reset_index()
-                .melt(id_vars="names", var_name="group", value_name=name)
-            )
+            # pts columns are ordered by significance, matching names
+            names_rec = adata.uns[key]["names"]
+            frames = []
+            for g in group:
+                frames.append(
+                    pd.DataFrame({
+                        "names": names_rec[g],
+                        "group": g,
+                        name: adata.uns[key][pts][g].values,
+                    })
+                )
+            pts_df = pd.concat(frames, ignore_index=True)
             d = d.merge(pts_df)
 
     # remove group column for backward compat if len(group) == 1
