@@ -264,7 +264,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     # load the last simulation file
     filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
-    adata = readwrite._read(
+    adata = readwrite.read(
         filename, first_column_names=True, suppress_cache_warning=True
     )
     adata.uns["tmax_write"] = tmax / step

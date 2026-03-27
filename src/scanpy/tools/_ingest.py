@@ -10,11 +10,10 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .._compat import CSBase
 from .._docs import doc_rng
-from .._settings import settings
+from .._settings import Default, settings
 from .._utils import (
     NeighborsView,
     _doc_params,
-    _empty,
     raise_not_implemented_error_if_backed_type,
 )
 from .._utils._doctests import doctest_skip
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from pynndescent import NNDescent
     from umap import UMAP
 
-    from .._utils import Empty
     from ..neighbors import RPForestDict
 
 
@@ -357,7 +355,9 @@ class Ingest:
         adata: AnnData,
         neighbors_key: str | None = None,
         *,
-        rng: np.random.Generator | None | Empty = _empty,
+        rng: np.random.Generator | None | Default = Default(
+            "adata.uns['umap']['params'].get('random_state', 0)"
+        ),
     ) -> None:
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
@@ -366,7 +366,7 @@ class Ingest:
         self._rng = (
             None
             if rng is None
-            else np.random.default_rng(None if rng is _empty else rng)
+            else np.random.default_rng(None if isinstance(rng, Default) else rng)
         )
 
         self._n_pcs = None

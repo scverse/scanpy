@@ -288,6 +288,7 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
+    ("py:class", "scanpy._settings.presets.Default"),
 ]
 
 # Options for plot examples

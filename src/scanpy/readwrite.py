@@ -18,8 +18,7 @@ from packaging.version import Version
 
 from . import logging as logg
 from ._compat import deprecated, pkg_version, warn
-from ._settings import AnnDataFileFormat, settings
-from ._utils import _empty
+from ._settings import AnnDataFileFormat, Default, settings
 
 if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -48,8 +47,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from os import PathLike
     from typing import IO, Literal
-
-    from ._utils import Empty
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -89,7 +86,9 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+        "sc.settings.cache_compression"
+    ),
     **kwargs,
 ) -> AnnData:
     """Read file and return :class:`~anndata.AnnData` object.
@@ -529,7 +528,9 @@ def read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+        "sc.settings.cache_compression"
+    ),
     gex_only: bool = True,
     prefix: str | None = None,
     compressed: bool = True,
@@ -595,13 +596,13 @@ def read_10x_mtx(
 def _read_10x_mtx(
     path: Path,
     *,
-    var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
-    make_unique: bool = True,
-    cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
-    prefix: str = "",
+    var_names: Literal["gene_symbols", "gene_ids"],
+    make_unique: bool,
+    cache: bool,
+    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    prefix: str,
     is_legacy: bool,
-    compressed: bool = True,
+    compressed: bool,
 ) -> AnnData:
     """Read mex from output from Cell Ranger v2- or v3+."""
     # Only append .gz if not a legacy file AND compression is requested
@@ -800,15 +801,15 @@ def write_params(path: PathLike[str] | str, *args, **maps):
 def _read(  # noqa: PLR0912, PLR0915
     filename: Path,
     *,
-    backed=None,
-    sheet=None,
-    ext=None,
-    delimiter=None,
-    first_column_names=None,
-    backup_url=None,
-    cache=False,
-    cache_compression=None,
-    suppress_cache_warning=False,
+    backed: Literal["r", "r+"] | None,
+    sheet: str | None,
+    ext: str | None,
+    delimiter: str | None,
+    first_column_names: bool,
+    backup_url: str | None,
+    cache: bool,
+    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
@@ -884,7 +885,7 @@ def _read(  # noqa: PLR0912, PLR0915
             f"... writing an {settings.file_format_data} "
             "cache file to speedup reading next time"
         )
-        if cache_compression is _empty:
+        if isinstance(cache_compression, Default):
             cache_compression = settings.cache_compression
         if not path_cache.parent.is_dir():
             path_cache.parent.mkdir(parents=True)

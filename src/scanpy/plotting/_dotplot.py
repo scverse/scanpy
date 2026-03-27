@@ -7,8 +7,8 @@ from matplotlib import colormaps
 
 from .. import logging as logg
 from .._compat import warn
-from .._settings import settings
-from .._utils import _doc_params, _empty
+from .._settings import Default, settings
+from .._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
-    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
@@ -313,18 +312,18 @@ class DotPlot(BasePlot):
     def style(  # noqa: PLR0913
         self,
         *,
-        cmap: Colormap | str | None | Empty = _empty,
-        color_on: Literal["dot", "square"] | Empty = _empty,
-        dot_max: float | None | Empty = _empty,
-        dot_min: float | None | Empty = _empty,
-        smallest_dot: float | Empty = _empty,
-        largest_dot: float | Empty = _empty,
-        dot_edge_color: ColorLike | None | Empty = _empty,
-        dot_edge_lw: float | None | Empty = _empty,
-        size_exponent: float | Empty = _empty,
-        grid: bool | Empty = _empty,
-        x_padding: float | Empty = _empty,
-        y_padding: float | Empty = _empty,
+        cmap: Colormap | str | None | Default = Default("no change"),
+        color_on: Literal["dot", "square"] | Default = Default("no change"),
+        dot_max: float | None | Default = Default("no change"),
+        dot_min: float | None | Default = Default("no change"),
+        smallest_dot: float | Default = Default("no change"),
+        largest_dot: float | Default = Default("no change"),
+        dot_edge_color: ColorLike | None | Default = Default("no change"),
+        dot_edge_lw: float | None | Default = Default("no change"),
+        size_exponent: float | Default = Default("no change"),
+        grid: bool | Default = Default("no change"),
+        x_padding: float | Default = Default("no change"),
+        y_padding: float | Default = Default("no change"),
     ) -> Self:
         r"""Modify plot visual parameters.
 
@@ -398,27 +397,27 @@ class DotPlot(BasePlot):
         """
         super().style(cmap=cmap)
 
-        if dot_max is not _empty:
+        if not isinstance(dot_max, Default):
             self.dot_max = dot_max
-        if dot_min is not _empty:
+        if not isinstance(dot_min, Default):
             self.dot_min = dot_min
-        if smallest_dot is not _empty:
+        if not isinstance(smallest_dot, Default):
             self.smallest_dot = smallest_dot
-        if largest_dot is not _empty:
+        if not isinstance(largest_dot, Default):
             self.largest_dot = largest_dot
-        if color_on is not _empty:
+        if not isinstance(color_on, Default):
             self.color_on = color_on
-        if size_exponent is not _empty:
+        if not isinstance(size_exponent, Default):
             self.size_exponent = size_exponent
-        if dot_edge_color is not _empty:
+        if not isinstance(dot_edge_color, Default):
             self.dot_edge_color = dot_edge_color
-        if dot_edge_lw is not _empty:
+        if not isinstance(dot_edge_lw, Default):
             self.dot_edge_lw = dot_edge_lw
-        if grid is not _empty:
+        if not isinstance(grid, Default):
             self.grid = grid
-        if x_padding is not _empty:
+        if not isinstance(x_padding, Default):
             self.plot_x_padding = x_padding
-        if y_padding is not _empty:
+        if not isinstance(y_padding, Default):
             self.plot_y_padding = y_padding
 
         return self
@@ -1148,7 +1147,7 @@ def dotplot(  # noqa: PLR0913
         dot_max=dot_max,
         dot_min=dot_min,
         smallest_dot=smallest_dot,
-        dot_edge_lw=kwds.pop("linewidth", _empty),
+        dot_edge_lw=kwds.pop("linewidth", Default()),
     ).legend(
         colorbar_title=colorbar_title, size_title=size_title, width=2.0
     )  # Width 2.0 to avoid size legend circles to overlap

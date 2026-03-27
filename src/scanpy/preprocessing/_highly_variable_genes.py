@@ -14,7 +14,7 @@ from fast_array_utils import stats
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
-from .._settings import Verbosity, settings
+from .._settings import Default, Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
     raise_if_dask_feature_axis_chunked,
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from .._types import HVGFlavor
+    from .._settings.presets import HVGFlavor
 
 
 @singledispatch
@@ -603,7 +603,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: HVGFlavor = "seurat",
+    flavor: HVGFlavor | Default = Default(preset=("highly_variable_genes", "flavor")),
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -675,9 +675,10 @@ def highly_variable_genes(  # noqa: PLR0913
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
     flavor
-        Choose the flavor for identifying highly variable genes. For the dispersion
-        based methods in their default workflows, Seurat passes the cutoffs whereas
-        Cell Ranger passes `n_top_genes`.
+        Choose the flavor for identifying highly variable genes
+        (default depends on :attr:`scanpy.settings.preset` property :attr:`~scanpy.Preset.highly_variable_genes`).
+        For the dispersion based methods in their default workflows,
+        `'seurat'` passes the cutoffs whereas `'cell_ranger'` passes `n_top_genes`.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
@@ -723,6 +724,11 @@ def highly_variable_genes(  # noqa: PLR0913
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
 
     """
+    if isinstance(flavor, Default):
+        from .. import settings
+
+        flavor = settings.preset.highly_variable_genes.flavor
+
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):

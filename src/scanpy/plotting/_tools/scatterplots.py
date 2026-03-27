@@ -19,8 +19,8 @@ from matplotlib.markers import MarkerStyle
 
 from ... import logging as logg
 from ..._compat import deprecated
-from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata
+from ..._settings import Default, settings
+from ..._utils import _doc_params, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from .. import _utils
@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from numpy.typing import NDArray
 
-    from ..._utils import Empty
     from ...tools._draw_graph import _Layout
     from .._utils import ColorLike, VBound, _FontSize, _FontWeight, _LegendLoc
 
@@ -961,8 +960,8 @@ def spatial(  # noqa: PLR0913
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
-    img_key: str | None | Empty = _empty,
-    library_id: str | None | Empty = _empty,
+    img_key: str | None | Default = Default("'hires' | 'lowres'"),
+    library_id: str | None | Default = Default("uns['spatial'][key] if only one key"),
     crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
@@ -1349,14 +1348,14 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: str | None | Empty
+    uns: Mapping, library_id: str | None | Default
 ) -> tuple[str | None, Mapping | None]:
     """Given a mapping, try and extract a library id/ mapping with spatial data.
 
     Assumes this is `.uns` from how we parse visium data.
     """
     spatial_mapping = uns.get("spatial", {})
-    if library_id is _empty:
+    if isinstance(library_id, Default):
         if len(spatial_mapping) > 1:
             msg = (
                 "Found multiple possible libraries in `.uns['spatial']. Please specify."
@@ -1374,12 +1373,12 @@ def _check_spatial_data(
 def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
-    img_key: None | str | Empty,
+    img_key: None | str | Default,
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
     """Resolve image for spatial plots."""
-    if img is None and spatial_data is not None and img_key is _empty:
+    if img is None and spatial_data is not None and isinstance(img_key, Default):
         img_key = next(
             (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
         )  # Throws StopIteration Error if keys not present
