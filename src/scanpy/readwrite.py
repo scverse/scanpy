@@ -612,6 +612,7 @@ def _read_10x_mtx(
         cache=cache,
         cache_compression=cache_compression,
     ).T  # transpose the data
+    adata.X = adata.X.tocsr()
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
         header=None,

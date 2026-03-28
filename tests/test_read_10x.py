@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.sparse import csr_matrix
 
 import scanpy as sc
 
@@ -62,6 +63,9 @@ def test_read_10x(
     # Drop genome column for comparing v3
     if "3.0.0" in str(h5_path):
         h5.var.drop(columns="genome", inplace=True)
+
+    # Verify CSR format (not CSC from transpose)
+    assert isinstance(mtx.X, csr_matrix), f"Expected CSR matrix, got {type(mtx.X)}"
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)
