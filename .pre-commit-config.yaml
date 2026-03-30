@@ -3,7 +3,7 @@ ci:
 
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.7
+    rev: v0.15.8
     hooks:
     -   id: ruff-check
         args: ["--fix"]
@@ -20,7 +20,7 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v2.4.8
+    rev: v2.4.9
     hooks:
     -   id: biome-format
 -   repo: https://github.com/tox-dev/pyproject-fmt
