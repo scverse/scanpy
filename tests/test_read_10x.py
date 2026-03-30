@@ -9,9 +9,9 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.sparse import csr_matrix
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -65,7 +65,7 @@ def test_read_10x(
         h5.var.drop(columns="genome", inplace=True)
 
     # Verify CSR format (not CSC from transpose)
-    assert isinstance(mtx.X, csr_matrix), f"Expected CSR matrix, got {type(mtx.X)}"
+    assert isinstance(mtx.X, CSRBase), f"Expected CSR matrix, got {type(mtx.X)}"
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)
