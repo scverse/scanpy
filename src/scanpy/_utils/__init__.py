@@ -847,7 +847,7 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def check_presence_download(filename: Path, backup_url):
+def check_presence_download(filename: Path, backup_url: str):
     """Check if file is present otherwise download."""
     if not filename.is_file():
         from ..readwrite import _download
