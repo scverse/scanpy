@@ -15,11 +15,12 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
+from fast_array_utils.numba import njit
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
+from .._compat import CSBase, CSRBase, DaskArray, deprecated, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _resolve_axis,

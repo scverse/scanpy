@@ -53,7 +53,7 @@ dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.10.8",
     "certifi",
-    "fast-array-utils[accel,sparse]>=1.2.1",
+    "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
     "legacy-api-wrap>=1.5",                     # for positional API deprecations
@@ -215,8 +215,8 @@ lint.pylint.max-positional-args = 5
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "legacy_api_wrap.legacy_api".msg = "Use scanpy._compat.old_positionals instead"
-"numba.jit".msg = "Use `scanpy._compat.njit` instead"
-"numba.njit".msg = "Use `scanpy._compat.njit` instead"
+"numba.jit".msg = "Use `fast_array_utils.numba.njit` instead"
+"numba.njit".msg = "Use `fast_array_utils.numba.njit` instead"
 "numpy.bool_".msg = "Use `np.bool` instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
@@ -291,7 +291,7 @@ run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268
-    "@(numba\\.|nb\\.)?njit.*",
+    "@([\\w.]+.)?njit.*",
     "@deprecated.*",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",

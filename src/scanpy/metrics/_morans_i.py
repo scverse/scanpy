@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
+from fast_array_utils.numba import njit
 
-from .._compat import CSRBase, njit
+from .._compat import CSRBase
 from .._utils import _doc_params
 from ..get import _get_obs_rep
 from ..neighbors._doc import doc_neighbors_key

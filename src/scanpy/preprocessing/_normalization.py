@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from fast_array_utils import stats
+from fast_array_utils.numba import njit
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, old_positionals, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
