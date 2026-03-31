@@ -41,6 +41,23 @@ def highly_variable_genes(  # noqa: PLR0912
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
 
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pp.highly_variable_genes(adata)
+        sc.pl.highly_variable_genes(adata)
+
+    Plot on log axes
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.highly_variable_genes(adata, log=True)
+
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
