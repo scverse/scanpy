@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           flags: ${{ matrix.env.name }}
           files: test-data/coverage.xml
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           report_type: test_results
           flags: ${{ matrix.env.name }}
