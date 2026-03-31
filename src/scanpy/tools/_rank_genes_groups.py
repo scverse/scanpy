@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING, Literal
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, njit, old_positionals
+from .._compat import CSBase, old_positionals
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
