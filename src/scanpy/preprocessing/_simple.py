@@ -17,12 +17,13 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
+from fast_array_utils.numba import njit
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, njit
+from .._compat import CSBase, CSRBase, DaskArray
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (

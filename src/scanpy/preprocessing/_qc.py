@@ -7,12 +7,13 @@ import numba
 import numpy as np
 import pandas as pd
 from fast_array_utils import stats
+from fast_array_utils.numba import njit
 from scipy import sparse
 
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
-from .._compat import CSBase, CSRBase, DaskArray, njit, warn
+from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,

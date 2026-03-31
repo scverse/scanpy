@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, njit
+from .._compat import CSBase
 from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
