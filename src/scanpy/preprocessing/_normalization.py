@@ -38,7 +38,7 @@ def _normalize_csr(
 ):
     """For sparse CSR matrix, compute the normalization factors."""
     counts_per_cell = np.zeros(rows, dtype=mat.data.dtype)
-    for i in numba.prange(rows):
+    for i in range(rows):
         count = 0.0
         for j in range(mat.indptr[i], mat.indptr[i + 1]):
             count += mat.data[j]
@@ -47,16 +47,16 @@ def _normalize_csr(
         counts_per_cols_t = np.zeros((n_threads, columns), dtype=np.int32)
         counts_per_cols = np.zeros(columns, dtype=np.int32)
 
-        for i in numba.prange(n_threads):
+        for i in range(n_threads):
             for r in range(i, rows, n_threads):
                 for j in range(mat.indptr[r], mat.indptr[r + 1]):
                     if mat.data[j] > max_fraction * counts_per_cell[r]:
                         minor_index = mat.indices[j]
                         counts_per_cols_t[i, minor_index] += 1
-        for c in numba.prange(columns):
+        for c in range(columns):
             counts_per_cols[c] = counts_per_cols_t[:, c].sum()
 
-        for i in numba.prange(rows):
+        for i in range(rows):
             count = 0.0
             for j in range(mat.indptr[i], mat.indptr[i + 1]):
                 if counts_per_cols[mat.indices[j]] == 0:

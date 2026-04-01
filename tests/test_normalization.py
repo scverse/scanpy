@@ -334,6 +334,29 @@ def test_normalize_pearson_residuals_recipe(
     assert sum(np.sum(np.abs(adata.varm["PCs"]), axis=1) == 0) == n_genes - n_hvgs
 
 
+def test_normalize_total_csr_no_prange():
+    """Regression test for GH#4026: _normalize_csr must not use numba.prange.
+
+    Using prange triggers Numba's OpenMP threading layer which conflicts with
+    torch's OpenMP on Apple Silicon, causing a segmentation fault.
+    """
+    import inspect
+
+    from scanpy.preprocessing._normalization import _normalize_csr
+
+    src = inspect.getsource(_normalize_csr)
+    assert "prange" not in src, (
+        "_normalize_csr must not use numba.prange to avoid OpenMP segfaults on Apple Silicon (GH#4026)"
+    )
+    # Also verify normalize_total runs correctly with a simple CSR matrix
+    x = sparse.eye(10, format="csr", dtype=np.float32)
+    adata = AnnData(x)
+    sc.pp.normalize_total(adata, target_sum=1.0)
+    np.testing.assert_allclose(
+        adata.X.toarray().sum(axis=1), np.ones(10), rtol=1e-5
+    )
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_DENSE)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_compute_nnz_median(array_type, dtype):
