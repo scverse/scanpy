@@ -352,9 +352,7 @@ def test_normalize_total_csr_no_prange():
     x = sparse.eye(10, format="csr", dtype=np.float32)
     adata = AnnData(x)
     sc.pp.normalize_total(adata, target_sum=1.0)
-    np.testing.assert_allclose(
-        adata.X.toarray().sum(axis=1), np.ones(10), rtol=1e-5
-    )
+    np.testing.assert_allclose(adata.X.toarray().sum(axis=1), np.ones(10), rtol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_DENSE)
