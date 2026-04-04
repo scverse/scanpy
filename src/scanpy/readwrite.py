@@ -27,7 +27,6 @@ if pkg_version("anndata") >= Version("0.11.0rc2"):
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -38,7 +37,6 @@ else:
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -599,22 +597,7 @@ def _read_mtx(
     dtype: str = "float32",
     sparse_format: Literal["csr", "csc", "coo"] = "csc",
 ) -> AnnData:
-    """Read `.mtx` file with configurable sparse format.
-
-    Inlines the logic from :func:`anndata.read_mtx` to allow choosing the
-    sparse format directly, avoiding unnecessary conversions when the result
-    will be transposed (e.g., for 10x data where ``CSC.T → CSR``).
-
-    Parameters
-    ----------
-    filename
-        Path to the ``.mtx`` file.
-    dtype
-        Numpy data type.
-    sparse_format
-        Sparse matrix format for the output. Defaults to ``'csc'`` so that
-        a subsequent ``.T`` produces a CSR matrix with no extra conversion.
-    """
+    """Read ``.mtx`` file, choosing sparse format to avoid extra conversions."""
     from scipy.io import mmread
     from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
 
@@ -642,28 +625,11 @@ def _read_10x_mtx(
     """Read mex from output from Cell Ranger v2- or v3+."""
     # Only append .gz if not a legacy file AND compression is requested
     suffix = "" if is_legacy else (".gz" if compressed else "")
-    mtx_file = path / f"{prefix}matrix.mtx{suffix}"
-    ext = f"mtx{suffix}"
-
-    if cache:
-        path_cache: Path = settings.cachedir / _slugify(mtx_file).replace(
-            f".{ext}", ".h5ad"
-        )
-        if path_cache.is_file():
-            logg.info(f"... reading from cache file {path_cache}")
-            adata = read_h5ad(path_cache)
-        else:
-            adata = _read_mtx(mtx_file, sparse_format="csc")
-            if isinstance(cache_compression, Default):
-                cache_compression = settings.cache_compression
-            if not path_cache.parent.is_dir():
-                path_cache.parent.mkdir(parents=True)
-            adata.write(path_cache, compression=cache_compression)
-    else:
-        # Read MTX as CSC so that .T yields CSR (one conversion, not two)
-        adata = _read_mtx(mtx_file, sparse_format="csc")
-
-    adata = adata.T  # transpose: 10x stores var×obs, anndata uses obs×var
+    adata = read(
+        path / f"{prefix}matrix.mtx{suffix}",
+        cache=cache,
+        cache_compression=cache_compression,
+    ).T  # transpose the data
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
         header=None,
@@ -911,7 +877,7 @@ def _read(  # noqa: PLR0912, PLR0915
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
-        adata = read_mtx(filename)
+        adata = _read_mtx(filename)
     elif ext == "csv":
         if delimiter is None:
             delimiter = ","
