@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -62,6 +63,9 @@ def test_read_10x(
     # Drop genome column for comparing v3
     if "3.0.0" in str(h5_path):
         h5.var.drop(columns="genome", inplace=True)
+
+    # Verify CSR format (not CSC from transpose)
+    assert isinstance(mtx.X, CSRBase), f"Expected CSR matrix, got {type(mtx.X)}"
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)

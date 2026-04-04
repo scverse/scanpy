@@ -27,7 +27,6 @@ if pkg_version("anndata") >= Version("0.11.0rc2"):
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -38,7 +37,6 @@ else:
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -593,6 +591,26 @@ def read_10x_mtx(
     return adata[:, gex_rows].copy()
 
 
+def _read_mtx(
+    filename: Path,
+    *,
+    dtype: str = "float32",
+    sparse_format: Literal["csr", "csc", "coo"] = "csc",
+) -> AnnData:
+    """Read ``.mtx`` file, choosing sparse format to avoid extra conversions."""
+    from scipy.io import mmread
+    from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
+
+    x = mmread(filename)
+    if x.dtype != np.dtype(dtype):
+        x = x.astype(dtype)
+    if sparse_format == "csr":
+        x = csr_matrix(x)
+    elif sparse_format == "csc":
+        x = csc_matrix(x)
+    return AnnData(x)
+
+
 def _read_10x_mtx(
     path: Path,
     *,
@@ -859,7 +877,7 @@ def _read(  # noqa: PLR0912, PLR0915
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
-        adata = read_mtx(filename)
+        adata = _read_mtx(filename)
     elif ext == "csv":
         if delimiter is None:
             delimiter = ","
