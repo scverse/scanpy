@@ -534,6 +534,7 @@ def read_10x_mtx(
     gex_only: bool = True,
     prefix: str | None = None,
     compressed: bool = True,
+    sparse_format: Literal["csr", "csc", "coo"] = "csr",
 ) -> AnnData:
     """Read 10x-Genomics-formatted mtx directory.
 
@@ -565,6 +566,8 @@ def read_10x_mtx(
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
+    sparse_format
+        The sparse matrix format.
 
     Returns
     -------
@@ -586,6 +589,7 @@ def read_10x_mtx(
             prefix=prefix,
             is_legacy=is_legacy,
             compressed=compressed,
+            sparse_format=sparse_format,
         )
     if is_legacy or not gex_only:
         return adata
@@ -623,6 +627,7 @@ def _read_10x_mtx(
     prefix: str,
     is_legacy: bool,
     compressed: bool,
+    sparse_format: Literal["csr", "csc", "coo"],
 ) -> AnnData:
     """Read mex from output from Cell Ranger v2- or v3+."""
     # Only append .gz if not a legacy file AND compression is requested
@@ -631,7 +636,8 @@ def _read_10x_mtx(
         path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
-        sparse_format="csc",
+        # transposing will convert e.g. CSR to CSC and vice versa
+        sparse_format=dict(csr="csc", csc="csr", coo="coo")[sparse_format],
     ).T  # transpose the data
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
