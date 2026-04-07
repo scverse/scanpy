@@ -69,6 +69,22 @@ def highest_expr_genes(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`.
 
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k()
+        sc.pl.highest_expr_genes(adata)
+
+    Show only the top 10 genes
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.highest_expr_genes(adata, n_top=10)
+
     """
     import seaborn as sns  # Slow import, only import if called
 
