@@ -19,6 +19,7 @@ from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
@@ -311,3 +312,64 @@ def test_mask_not_equal():
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
+
+
+@pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])
+@pytest.mark.parametrize("exp_post_agg", [True, False])
+# Beause illico does not add 1e-9 to its values before log?
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
+@needs.illico
+def test_illico(test, corr_method, exp_post_agg):
+    from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
+
+    pbmc = pbmc68k_reduced()
+    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else None
+
+    asy_results = asymptotic_wilcoxon(
+        adata=pbmc.copy(),
+        group_keys="bulk_labels",
+        is_log1p=True,  # Scanpy assumes log1p
+        exp_post_agg=exp_post_agg,  # Post-aggregation exponentiation is needed to match Scanpy's fold change output
+        reference=reference,
+        use_continuity=False,  # False because scanpy does not apply continuity correction
+        tie_correct=False,  # False because scanpy takes a lot of time to adjust
+        n_threads=1,
+        batch_size=16,
+        alternative="two-sided",  # Scanpy only implments two-sided test
+        use_rust=False,
+        return_as_scanpy=True,
+        corr_method=corr_method,
+    )
+
+    sc.tl.rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        method="wilcoxon",
+        reference=reference if test == "ovo" else "rest",
+        n_genes=pbmc.n_vars,
+        tie_correct=False,
+        corr_method=corr_method,
+        exp_post_agg=exp_post_agg,
+    )
+    scanpy_results = pbmc.uns["rank_genes_groups"]
+    assert set(asy_results.keys()) == set(scanpy_results.keys()), (
+        "Output keys do not match Scanpy's output format."
+    )
+
+    for k, ref in scanpy_results.items():
+        if k in ["params", "names"]:
+            # We can skip names ordering check as if incorrect, other values will mismatch
+            continue
+        res = np.array(asy_results[k].tolist())
+        ref_arr = np.array(ref.tolist())
+        mask = np.isfinite(ref_arr) * np.isfinite(
+            res
+        )  # Mask to ignore inf values in the comparison
+        np.testing.assert_allclose(
+            ref_arr[mask],
+            res[mask],
+            rtol=0,
+            atol=1e-2,
+            err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+        )
