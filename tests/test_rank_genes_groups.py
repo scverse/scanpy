@@ -254,6 +254,25 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
 
+def test_rank_gene_groups_violin_gene_symbols():
+    adata = sc.read_h5ad(DATA_PATH / "t-cells.h5ad")
+
+    t_celltypes = ["Naive CD4+ T cells", "Naive CD8+ T cells"]
+    sc.tl.rank_genes_groups(
+        adata,
+        groupby="cell_type",
+        groups=t_celltypes,
+        reference="rest",
+        method="wilcoxon",
+        use_raw=False,
+    )
+
+    # We get the KeyError here
+    sc.pl.rank_genes_groups_violin(
+        adata, groups=t_celltypes, n_genes=15, strip=False, gene_symbols="gene_symbols"
+    )
+
+
 def test_wilcoxon_huge_data(monkeypatch):
     max_size = 300
     adata = pbmc68k_reduced()
