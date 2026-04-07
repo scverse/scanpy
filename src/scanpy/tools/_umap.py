@@ -216,7 +216,7 @@ def umap(  # noqa: PLR0913, PLR0915
         n_epochs = default_epochs if maxiter is None else maxiter
         x_umap, _ = simplicial_set_embedding(
             data=x,
-            graph=neighbors["connectivities"].tocoo(),
+            graph=neighbors["connectivities"].tocoo(copy=True),
             n_components=n_components,
             initial_alpha=alpha,
             a=a,
