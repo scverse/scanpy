@@ -99,6 +99,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
+illico = [ "illico" ]
 
 [dependency-groups]
 dev = [
@@ -108,6 +109,7 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
