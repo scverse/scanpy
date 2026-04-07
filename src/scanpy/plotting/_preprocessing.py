@@ -43,6 +43,27 @@ def highly_variable_genes(  # noqa: PLR0912
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
 
+    Examples
+    --------
+    Compute and plot highly variable genes from raw PBMC data.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k()
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        sc.pl.highly_variable_genes(adata)
+
+    Plot on logarithmic axes.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.highly_variable_genes(adata, log=True)
+
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
