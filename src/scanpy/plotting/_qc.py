@@ -75,7 +75,7 @@ def highest_expr_genes(
         :context: close-figs
 
         import scanpy as sc
-        adata = sc.datasets.pbmc3k_processed()
+        adata = sc.datasets.pbmc3k()
         sc.pl.highest_expr_genes(adata)
 
     Show only the top 10 genes
