@@ -80,6 +80,21 @@ def test_umap_init_paga(layout):
     sc.tl.umap(pbmc, init_pos="paga")
 
 
+def test_umap_preserves_connectivities():
+    # https://github.com/scverse/scanpy/issues/4028
+    pbmc = pbmc68k_reduced()[:100, :].copy()
+    conn = pbmc.obsp["connectivities"]
+    data_before = conn.data.copy()
+    nnz_before = conn.nnz
+
+    sc.tl.umap(pbmc)
+
+    assert_array_equal(data_before, conn.data)
+    assert conn.nnz == nnz_before
+    assert (conn.data == 0).sum() == 0, "CSR should have no explicit zeros"
+    assert "X_umap" in pbmc.obsm
+
+
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_diffmap(
     subtests: pytest.Subtests, rng_arg: Literal["rng", "random_state"]
