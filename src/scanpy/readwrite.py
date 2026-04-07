@@ -27,7 +27,6 @@ if pkg_version("anndata") >= Version("0.11.0rc2"):
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -38,7 +37,6 @@ else:
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -47,6 +45,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from os import PathLike
     from typing import IO, Literal
+
+    from numpy.typing import DTypeLike
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -128,7 +128,7 @@ def read(
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
-        Parameters passed to :func:`~anndata.io.read_loom`.
+        Parameters passed to the underlying function.
 
     Returns
     -------
@@ -534,6 +534,7 @@ def read_10x_mtx(
     gex_only: bool = True,
     prefix: str | None = None,
     compressed: bool = True,
+    sparse_format: Literal["csr", "csc", "coo"] = "csr",
 ) -> AnnData:
     """Read 10x-Genomics-formatted mtx directory.
 
@@ -565,6 +566,8 @@ def read_10x_mtx(
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
+    sparse_format
+        The sparse matrix format.
 
     Returns
     -------
@@ -586,11 +589,32 @@ def read_10x_mtx(
             prefix=prefix,
             is_legacy=is_legacy,
             compressed=compressed,
+            sparse_format=sparse_format,
         )
     if is_legacy or not gex_only:
         return adata
     gex_rows = adata.var["feature_types"] == "Gene Expression"
     return adata[:, gex_rows].copy()
+
+
+def _read_mtx(
+    filename: Path,
+    *,
+    dtype: DTypeLike,
+    sparse_format: Literal["csr", "csc", "coo"],
+) -> AnnData:
+    """Read ``.mtx`` file, choosing sparse format to avoid extra conversions."""
+    from scipy.io import mmread
+    from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
+
+    x = mmread(filename)
+    if x.dtype != np.dtype(dtype):
+        x = x.astype(dtype)
+    if sparse_format == "csr":
+        x = csr_matrix(x)
+    elif sparse_format == "csc":
+        x = csc_matrix(x)
+    return AnnData(x)
 
 
 def _read_10x_mtx(
@@ -603,6 +627,7 @@ def _read_10x_mtx(
     prefix: str,
     is_legacy: bool,
     compressed: bool,
+    sparse_format: Literal["csr", "csc", "coo"],
 ) -> AnnData:
     """Read mex from output from Cell Ranger v2- or v3+."""
     # Only append .gz if not a legacy file AND compression is requested
@@ -611,6 +636,8 @@ def _read_10x_mtx(
         path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
+        # transposing will convert e.g. CSR to CSC and vice versa
+        sparse_format=dict(csr="csc", csc="csr", coo="coo")[sparse_format],
     ).T  # transpose the data
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
@@ -859,7 +886,9 @@ def _read(  # noqa: PLR0912, PLR0915
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
-        adata = read_mtx(filename)
+        kwargs.setdefault("sparse_format", "csr")
+        kwargs.setdefault("dtype", "float32")
+        adata = _read_mtx(filename, **kwargs)
     elif ext == "csv":
         if delimiter is None:
             delimiter = ","
