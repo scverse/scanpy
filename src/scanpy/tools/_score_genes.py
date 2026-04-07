@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 from numba import prange
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, njit
+from .._compat import CSBase, CSCBase
 from .._docs import doc_rng
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
