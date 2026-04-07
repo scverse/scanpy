@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     from os import PathLike
     from typing import IO, Literal
 
+    from numpy.typing import DTypeLike
+
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
     "csv",
@@ -126,7 +128,7 @@ def read(
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
-        Parameters passed to :func:`~anndata.io.read_loom`.
+        Parameters passed to the underlying function.
 
     Returns
     -------
@@ -594,8 +596,8 @@ def read_10x_mtx(
 def _read_mtx(
     filename: Path,
     *,
-    dtype: str = "float32",
-    sparse_format: Literal["csr", "csc", "coo"] = "csc",
+    dtype: DTypeLike,
+    sparse_format: Literal["csr", "csc", "coo"],
 ) -> AnnData:
     """Read ``.mtx`` file, choosing sparse format to avoid extra conversions."""
     from scipy.io import mmread
@@ -629,6 +631,7 @@ def _read_10x_mtx(
         path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
+        sparse_format="csc",
     ).T  # transpose the data
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
@@ -877,7 +880,9 @@ def _read(  # noqa: PLR0912, PLR0915
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
-        adata = _read_mtx(filename)
+        kwargs.setdefault("sparse_format", "csr")
+        kwargs.setdefault("dtype", "float32")
+        adata = _read_mtx(filename, **kwargs)
     elif ext == "csv":
         if delimiter is None:
             delimiter = ","
