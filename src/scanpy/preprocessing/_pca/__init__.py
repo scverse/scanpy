@@ -13,7 +13,7 @@ from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
-from .._docs import doc_mask_var_hvg
+from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-@_doc_params(mask_var_hvg=doc_mask_var_hvg, rng=doc_rng)
+@_doc_params(mask_var=doc_mask_var, rng=doc_rng)
 @_accepts_legacy_random_state(0)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
@@ -65,8 +65,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     return_info: bool = False,
-    mask_var: NDArray[np.bool] | str | None | Default = Default("'highly_variable'"),
-    use_highly_variable: bool | None = None,
+    mask_var: NDArray[np.bool] | str | None | Default = Default(
+        "adata.var.get('highly_variable')"
+    ),
     dtype: DTypeLike = "float32",
     key_added: str | None | Default = Default(preset=("pca", "key_added")),
     copy: bool = False,
@@ -160,7 +161,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     return_info
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.
-    {mask_var_hvg}
+    {mask_var}
     layer
         Layer of `adata` to use as expression values.
     dtype
@@ -224,11 +225,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         adata = AnnData(data)
 
-    # Unify new mask argument and deprecated use_highly_varible argument
-    mask_var_param, mask_var = _handle_mask_var(
-        adata, mask_var, obsm=obsm, use_highly_variable=use_highly_variable
-    )
-    del use_highly_variable
+    if isinstance(mask_var, Default):
+        mask_var = "highly_variable" if "highly_variable" in adata.var else None
+    mask_var_param, mask_var = mask_var, _check_mask(adata, mask_var, "var")
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
     if n_comps is None:
@@ -355,7 +354,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         adata.uns[key_uns] = dict(
             params=dict(
                 zero_center=zero_center,
-                use_highly_variable=mask_var_param == "highly_variable",
                 mask_var=mask_var_param,
                 **(dict(layer=layer) if layer is not None else {}),
                 **(dict(obsm=obsm) if obsm is not None else {}),
@@ -385,49 +383,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             )
         else:
             return x_pca
-
-
-def _handle_mask_var(
-    adata: AnnData,
-    mask_var: NDArray[np.bool] | str | None | Default,
-    *,
-    obsm: str | None = None,
-    use_highly_variable: bool | None,
-) -> tuple[np.ndarray | str | None, np.ndarray | None]:
-    """Unify new mask argument and deprecated use_highly_varible argument.
-
-    Returns both the normalized mask parameter and the validated mask array.
-    """
-    if obsm:
-        if not isinstance(mask_var, Default) and mask_var is not None:
-            msg = "Argument `mask_var` is incompatible with `obsm`."
-            raise ValueError(msg)
-        return None, None
-
-    # First, verify and possibly warn
-    if use_highly_variable is not None:
-        hint = (
-            'Use_highly_variable=True can be called through mask_var="highly_variable". '
-            "Use_highly_variable=False can be called through mask_var=None"
-        )
-        msg = f"Argument `use_highly_variable` is deprecated, consider using the mask argument. {hint}"
-        warn(msg, FutureWarning)
-        if not isinstance(mask_var, Default):
-            msg = f"These arguments are incompatible. {hint}"
-            raise ValueError(msg)
-
-    # Handle default case and explicit use_highly_variable=True
-    if use_highly_variable or (
-        use_highly_variable is None
-        and isinstance(mask_var, Default)
-        and "highly_variable" in adata.var.columns
-    ):
-        mask_var = "highly_variable"
-
-    # Without highly variable genes, we don’t use a mask by default
-    if isinstance(mask_var, Default) or mask_var is None:
-        return None, None
-    return mask_var, _check_mask(adata, mask_var, "var")
 
 
 @overload
