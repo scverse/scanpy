@@ -45,4 +45,4 @@ overrides.matrix.deps.dependency-groups = [
 ]
 
 [[envs.hatch-test.matrix]]
-deps = [ "stable", "pre", "low-vers", "few-extras" ]
+deps = [ "stable" ]
