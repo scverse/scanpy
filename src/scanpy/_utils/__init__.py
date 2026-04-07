@@ -10,7 +10,6 @@ import importlib.util
 import inspect
 import re
 from contextlib import suppress
-from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import indent
@@ -56,11 +55,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AssoResult",
-    "Empty",
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
-    "_empty",
     "_resolve_axis",
     "annotate_doc_types",
     "axis_mul_or_truediv",
@@ -86,16 +83,6 @@ __all__ = [
 
 
 LegacyUnionType: type = type(Union[int, str])  # noqa: UP007
-
-
-class Empty(Enum):
-    token = 0
-
-    def __repr__(self) -> str:
-        return "_empty"
-
-
-_empty = Empty.token
 
 
 def ensure_igraph() -> None:
@@ -801,7 +788,7 @@ def select_groups(
     adata: AnnData,
     groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
-) -> tuple[list[str], NDArray[np.bool_]]:
+) -> tuple[list[str], NDArray[np.bool]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if f"{key}_masks" in adata.uns:
@@ -847,7 +834,7 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def check_presence_download(filename: Path, backup_url):
+def check_presence_download(filename: Path, backup_url: str):
     """Check if file is present otherwise download."""
     if not filename.is_file():
         from ..readwrite import _download
@@ -883,20 +870,25 @@ class NeighborsView:
         This defines where to look for neighbors dictionary,
         connectivities, distances.
 
-        neigh = NeighborsView(adata, key)
-        neigh['distances']
-        neigh['connectivities']
-        neigh['params']
-        'connectivities' in neigh
-        'params' in neigh
+    Examples
+    --------
+    >>> import scanpy as sc
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> key = "neighbors"
 
-        is the same as
+    >>> neigh = NeighborsView(adata, key)
+    >>> d = neigh["distances"]
+    >>> c = neigh["connectivities"]
+    >>> p = neigh["params"]
 
-        adata.obsp[adata.uns[key]['distances_key']]
-        adata.obsp[adata.uns[key]['connectivities_key']]
-        adata.uns[key]['params']
-        adata.uns[key]['connectivities_key'] in adata.obsp
-        'params' in adata.uns[key]
+    is the same as doing this manually
+
+    >>> d_key = adata.uns[key].get("distances_key", "distances")
+    >>> c_key = adata.uns[key].get("connectivities_key", "connectivities")
+    >>> assert d is adata.obsp[d_key]
+    >>> assert c is adata.obsp[c_key]
+    >>> assert p is adata.uns[key]["params"]
+    >>> assert c_key in adata.obsp
 
     """
 

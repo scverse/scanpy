@@ -5,7 +5,6 @@ from __future__ import annotations
 from ..._compat import deprecated
 from ...preprocessing import _scrublet
 from ._bbknn import bbknn
-from ._dca import dca
 from ._harmony_integrate import harmony_integrate
 from ._hashsolo import hashsolo
 from ._magic import magic
@@ -19,7 +18,6 @@ scrublet_simulate_doublets = deprecated("Import from sc.pp instead")(
 
 __all__ = [
     "bbknn",
-    "dca",
     "harmony_integrate",
     "hashsolo",
     "magic",

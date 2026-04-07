@@ -17,11 +17,10 @@ from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
 from .. import get
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
-from .._settings import settings
+from .._compat import CSBase
+from .._settings import Default, settings
 from .._utils import (
     _doc_params,
-    _empty,
     check_use_raw,
     get_literal_vals,
     sanitize_anndata,
@@ -36,6 +35,7 @@ from ._docs import (
 from ._utils import (
     _deprecated_scale,
     _dk,
+    _obs_vector_compat,
     check_colornorm,
     scatter_base,
     scatter_group,
@@ -54,14 +54,7 @@ if TYPE_CHECKING:
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
-    from .._utils import Empty
-    from ._utils import (
-        ColorLike,
-        DensityNorm,
-        _FontSize,
-        _FontWeight,
-        _LegendLoc,
-    )
+    from ._utils import ColorLike, DensityNorm, _FontSize, _FontWeight, _LegendLoc
 
 # TODO: is that all?
 type _Basis = Literal["pca", "tsne", "umap", "diffmap", "draw_graph_fr"]
@@ -100,23 +93,6 @@ class VarGroups(NamedTuple):
         return None if len(labels) == 0 else cls(labels, positions)
 
 
-@old_positionals(
-    "color",
-    "use_raw",
-    "layers",
-    "sort_order",
-    "alpha",
-    "basis",
-    "groups",
-    "components",
-    "projection",
-    "legend_loc",
-    "legend_fontsize",
-    "legend_fontweight",
-    "legend_fontoutline",
-    "color_map",
-    # 17 positionals are enough for backwards compatibility
-)
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(  # noqa: PLR0913
     adata: AnnData,
@@ -234,7 +210,7 @@ def _check_if_annotations(
         other_ax_obj, "var" if axis_name == "obs" else "obs"
     ).index
 
-    def is_annotation(needle: pd.Index) -> NDArray[np.bool_]:
+    def is_annotation(needle: pd.Index) -> NDArray[np.bool]:
         return needle.isin({None}) | needle.isin(annotations) | needle.isin(names)
 
     if not is_annotation(pd.Index([x, y])).all():
@@ -242,8 +218,8 @@ def _check_if_annotations(
 
     color_idx = pd.Index(colors if colors is not None else [])
     # Colors are valid
-    color_valid: NDArray[np.bool_] = np.fromiter(
-        map(is_color_like, color_idx), dtype=np.bool_, count=len(color_idx)
+    color_valid: NDArray[np.bool] = np.fromiter(
+        map(is_color_like, color_idx), dtype=np.bool, count=len(color_idx)
     )
     # Annotation names are valid too
     color_valid[~color_valid] = is_annotation(color_idx[~color_valid])
@@ -324,7 +300,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             # ignore the '0th' diffusion component
             if basis == "diffmap":
                 components += 1
-            xy = adata.obsm["X_" + basis][:, components]
+            xy = adata.obsm[f"X_{basis}"][:, components]
             # correct the component vector for use in labeling etc.
             if basis == "diffmap":
                 components -= 1
@@ -332,19 +308,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             msg = f"compute coordinates using visualization tool {basis} first"
             raise KeyError(msg) from None
     elif x is not None and y is not None:
-        if use_raw:
-            if x in adata.obs.columns:
-                x_arr = adata.obs_vector(x)
-            else:
-                x_arr = adata.raw.obs_vector(x)
-            if y in adata.obs.columns:
-                y_arr = adata.obs_vector(y)
-            else:
-                y_arr = adata.raw.obs_vector(y)
-        else:
-            x_arr = adata.obs_vector(x, layer=layers[0])
-            y_arr = adata.obs_vector(y, layer=layers[1])
-
+        x_arr, y_arr = (
+            _obs_vector_compat(adata, k, use_raw=use_raw, layer=layer)
+            for layer, k in zip(layers, [x, y], strict=False)
+        )
         xy = np.c_[x_arr, y_arr]
     else:
         msg = "Either provide a `basis` or `x` and `y`."
@@ -399,10 +366,10 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
             else:
                 c = adata.obs[key].to_numpy()
         # coloring according to gene expression
-        elif use_raw and adata.raw is not None and key in adata.raw.var_names:
-            c = adata.raw.obs_vector(key)
-        elif key in adata.var_names:
-            c = adata.obs_vector(key, layer=layers[2])
+        elif (use_raw and adata.raw is not None and key in adata.raw.var_names) or (
+            key in adata.var_names
+        ):
+            c = _obs_vector_compat(adata, key, use_raw=use_raw, layer=layers[2])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False
@@ -591,16 +558,6 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
     return axs[0]
 
 
-@old_positionals(
-    "dictionary",
-    "indices",
-    "labels",
-    "color",
-    "n_points",
-    "log",
-    "include_lowest",
-    "show",
-)
 def ranking(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     attr: Literal["var", "obs", "uns", "varm", "obsm"],
@@ -718,23 +675,6 @@ def ranking(  # noqa: PLR0912, PLR0913
     return gs
 
 
-@old_positionals(
-    "log",
-    "use_raw",
-    "stripplot",
-    "jitter",
-    "size",
-    "layer",
-    "scale",
-    "order",
-    "multi_panel",
-    "xlabel",
-    "ylabel",
-    "rotation",
-    "show",
-    "save",
-    "ax",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def violin(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -757,7 +697,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ax: Axes | None = None,
     # deprecated
     save: bool | str | None = None,
-    scale: DensityNorm | Empty = _empty,
+    scale: DensityNorm | Default = Default("density_norm"),
     **kwds,
 ) -> Axes | FacetGrid | None:
     """Violin plot.
@@ -1003,7 +943,6 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     return axs
 
 
-@old_positionals("use_raw", "show", "save")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
@@ -1082,27 +1021,6 @@ def clustermap(
     return g
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "dendrogram",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "var_group_rotation",
-    "layer",
-    "standard_scale",
-    "swap_axes",
-    "show_gene_labels",
-    "show",
-    "save",
-    "figsize",
-    "vmin",
-    "vmax",
-    "vcenter",
-    "norm",
-)
 @_doc_params(
     vminmax=doc_vboundnorm,
     show_save_ax=doc_show_save_ax,
@@ -1491,18 +1409,6 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     return return_ax_dict
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "dendrogram",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "layer",
-    "show",
-    "save",
-    "figsize",
-)
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -1829,18 +1735,6 @@ def dendrogram(
     return ax
 
 
-@old_positionals(
-    "show_correlation_numbers",
-    "dendrogram",
-    "figsize",
-    "show",
-    "save",
-    "ax",
-    "vmin",
-    "vmax",
-    "vcenter",
-    "norm",
-)
 @_doc_params(show_save_ax=doc_show_save_ax, vminmax=doc_vboundnorm)
 def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,

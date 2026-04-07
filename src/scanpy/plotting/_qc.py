@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._settings import settings
 from .._utils import _doc_params
 from ..preprocessing._normalization import normalize_total
@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
 
 
-@old_positionals("show", "save", "ax", "gene_symbols", "log")
 @_doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
     adata: AnnData,
@@ -69,6 +68,22 @@ def highest_expr_genes(
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k()
+        sc.pl.highest_expr_genes(adata)
+
+    Show only the top 10 genes
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.highest_expr_genes(adata, n_top=10)
 
     """
     import seaborn as sns  # Slow import, only import if called

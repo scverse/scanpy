@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("basis", "adjusted_basis")
 @doctest_needs("harmonypy")
 def harmony_integrate(
     adata: AnnData,
@@ -90,8 +88,8 @@ def harmony_integrate(
     try:
         import harmonypy
     except ImportError as e:
-        msg = "\nplease install harmonypy:\n\n\tpip install harmonypy"
-        raise ImportError(msg) from e
+        e.add_note("Please install `harmonypy` and try again.")
+        raise
 
     x = adata.obsm[basis].astype(np.float64)
 

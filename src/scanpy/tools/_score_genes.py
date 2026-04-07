@@ -9,8 +9,11 @@ import pandas as pd
 from numba import prange
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, njit, old_positionals
-from .._utils import check_use_raw, is_backed_type
+from .._compat import CSBase, CSCBase, njit
+from .._docs import doc_rng
+from .._settings import Default, settings
+from .._utils import _doc_params, check_use_raw, is_backed_type
+from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _get_obs_rep
 
 if TYPE_CHECKING:
@@ -20,7 +23,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import DTypeLike, NDArray
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
+
 
 type _StrIdx = pd.Index[str]
 type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
@@ -82,6 +86,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
+
     algo_shape = x.shape
     algo_axis = axis
     # in CSC ans CSR we have "transposed" form of data storaging (indices is colums/rows, indptr is row/columns)
@@ -97,19 +102,18 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     )
 
 
-@old_positionals(
-    "ctrl_size", "gene_pool", "n_bins", "score_name", "random_state", "copy", "use_raw"
-)
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
     *,
-    ctrl_as_ref: bool = True,
+    ctrl_as_ref: bool | Default = Default(preset=("score_genes", "ctrl_as_ref")),
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     score_name: str = "score",
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
     use_raw: bool | None = None,
     layer: str | None = None,
@@ -123,6 +127,8 @@ def score_genes(  # noqa: PLR0913
     This reproduces the approach in Seurat :cite:p:`Tirosh2016` ("MITF and AXL expression
     programs and cell scores" in materials and methods) and has been implemented
     for Scanpy by Davide Cittaro.
+
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------
@@ -142,8 +148,7 @@ def score_genes(  # noqa: PLR0913
         Number of expression level bins for sampling.
     score_name
         Name of the field to be added in `.obs`.
-    random_state
-        The random seed for sampling.
+    {rng}
     copy
         Copy `adata` or modify it inplace.
     use_raw
@@ -167,19 +172,20 @@ def score_genes(  # noqa: PLR0913
 
     """
     start = logg.info(f"computing score {score_name!r}")
+    rng = np.random.default_rng(rng)
+    rng = _if_legacy_apply_global(rng)
     adata = adata.copy() if copy else adata
+    if isinstance(ctrl_as_ref, Default):
+        ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
         raise NotImplementedError(msg)
 
-    if random_state is not None:
-        np.random.seed(random_state)
-
     gene_list, gene_pool, get_subset = _check_score_genes_args(
         adata, gene_list, gene_pool, use_raw=use_raw, layer=layer
     )
-    del use_raw, layer, random_state
+    del use_raw, layer
 
     # Trying here to match the Seurat approach in scoring cells.
     # Basically we need to compare genes against random genes in a matched
@@ -193,6 +199,7 @@ def score_genes(  # noqa: PLR0913
         ctrl_size=ctrl_size,
         n_bins=n_bins,
         get_subset=get_subset,
+        rng=rng,
     ):
         control_genes = control_genes.union(r_genes)
 
@@ -272,6 +279,7 @@ def _score_genes_bins(
     ctrl_size: int,
     n_bins: int,
     get_subset: _GetSubset,
+    rng: np.random.Generator,
 ) -> Generator[pd.Index[str], None, None]:
     # average expression of genes
     obs_avg = pd.Series(_nan_means(get_subset(gene_pool), axis=0), index=gene_pool)
@@ -283,7 +291,9 @@ def _score_genes_bins(
     keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
     # now pick `ctrl_size` genes from every cut
-    for cut in np.unique(obs_cut.loc[gene_list]):
+    cuts = np.unique(obs_cut.loc[gene_list])
+    # spawn sub-rngs so this can maybe be parallelized without changing random number generation
+    for cut, sub_rng in zip(cuts, rng.spawn(len(cuts)), strict=True):
         r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
         if len(r_genes) == 0:
             msg = (
@@ -292,7 +302,7 @@ def _score_genes_bins(
             )
             logg.warning(msg)
         if ctrl_size < len(r_genes):
-            r_genes = r_genes.to_series().sample(ctrl_size).index
+            r_genes = r_genes.to_series().sample(ctrl_size, random_state=sub_rng).index
         if ctrl_as_ref:  # otherwise `r_genes` is already filtered
             r_genes = r_genes.difference(gene_list)
         yield r_genes
@@ -306,7 +316,6 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
-@old_positionals("s_genes", "g2m_genes", "copy")
 def score_genes_cell_cycle(
     adata: AnnData,
     *,
@@ -320,6 +329,8 @@ def score_genes_cell_cycle(
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
     :func:`~scanpy.tl.score_genes` for more explanation.
+
+    .. array-support:: tl.score_genes
 
     Parameters
     ----------

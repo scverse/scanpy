@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -17,21 +16,6 @@ if TYPE_CHECKING:
     from ..._utils.random import _LegacyRandom
 
 
-@old_positionals(
-    "k",
-    "a",
-    "n_landmark",
-    "t",
-    "gamma",
-    "n_pca",
-    "knn_dist",
-    "mds_dist",
-    "mds",
-    "n_jobs",
-    "random_state",
-    "verbose",
-    "copy",
-)
 @doctest_needs("phate")
 def phate(  # noqa: PLR0913
     adata: AnnData,
@@ -152,11 +136,8 @@ def phate(  # noqa: PLR0913
     try:
         import phate
     except ImportError as e:
-        msg = (
-            "You need to install the package `phate`: please run `pip install "
-            "--user phate` in a terminal."
-        )
-        raise ImportError(msg) from e
+        e.add_note("Please install `phate` and try again.")
+        raise
     x_phate = phate.PHATE(
         n_components=n_components,
         k=k,

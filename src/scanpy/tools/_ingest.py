@@ -8,28 +8,28 @@ import pandas as pd
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
-from .._settings import settings
-from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
+from .._compat import CSBase
+from .._docs import doc_rng
+from .._settings import Default, settings
+from .._utils import (
+    NeighborsView,
+    _doc_params,
+    raise_not_implemented_error_if_backed_type,
+)
 from .._utils._doctests import doctest_skip
+from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
     from anndata import AnnData
+    from pynndescent import NNDescent
+    from umap import UMAP
 
     from ..neighbors import RPForestDict
 
 
-@old_positionals(
-    "obs",
-    "embedding_method",
-    "labeling_method",
-    "neighbors_key",
-    "neighbors_key",
-    "inplace",
-)
 @doctest_skip("illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
@@ -201,6 +201,7 @@ class _DimDict(MutableMapping):
         return f"{type(self).__name__}({self._data})"
 
 
+@_doc_params(rng=doc_rng)
 class Ingest:
     """Class to map labels and embeddings from existing data to new data.
 
@@ -209,19 +210,53 @@ class Ingest:
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix of shape `n_obs` × `n_vars`
         with embeddings and labels.
+    {rng}
 
     """
 
-    def _init_umap(self, adata):
+    # rng
+    _rng: np.random.Generator | None
+    # neighbors
+    _rep: np.ndarray
+    _use_rep: str
+    _metric: str
+    _metric_kwds: dict[str, object]
+    _n_neighbors: int
+    _n_pcs: int | None
+    _nnd_idx: NNDescent
+    # umap
+    _umap: UMAP
+    # pca
+    _pca_centered: bool
+    _pca_use_hvg: bool
+    _pca_basis: np.ndarray
+    # adata
+    _adata_ref: AnnData
+    _adata_new: AnnData | None
+    _obs: pd.DataFrame | None
+    _obsm: _DimDict | None
+    _labels: pd.Series | None
+    _indices: np.ndarray | None
+    _distances: np.ndarray | None
+
+    def _get_rng(self, params: dict[str, object]) -> np.random.Generator | None:
+        if self._rng is None:  # indicates we want non-determinism
+            return None
+        random_state = params.get("random_state", 0)
+        return _LegacyRng(random_state)
+
+    def _init_umap(self, adata: AnnData) -> None:
         from umap import UMAP
 
+        rng = self._get_rng(adata.uns["umap"]["params"])
         self._umap = UMAP(
             metric=self._metric,
-            random_state=adata.uns["umap"]["params"].get("random_state", 0),
-            n_jobs=1,  # umap can’t be run in parallel with random_state != None
+            random_state=_legacy_random_state(rng),
+            # umap can’t be run in parallel with `random_state is not None`
+            n_jobs=-1 if rng is None else 1,
         )
 
         self._umap._initial_alpha = self._umap.learning_rate
@@ -245,7 +280,9 @@ class Ingest:
 
         self._umap._input_hash = None
 
-    def _init_pynndescent(self, distances):
+    def _init_pynndescent(
+        self, distances: CSBase, rng: np.random.Generator | None
+    ) -> None:
         from pynndescent import NNDescent
 
         first_col = np.arange(distances.shape[0])[:, None]
@@ -257,7 +294,7 @@ class Ingest:
             metric_kwds=self._metric_kwds,
             n_neighbors=self._n_neighbors,
             init_graph=init_indices,
-            random_state=self._neigh_random_state,
+            random_state=_legacy_random_state(rng),
         )
 
         # temporary hack for the broken forest storage
@@ -275,7 +312,7 @@ class Ingest:
             self._nnd_idx._angular_trees,
         )
 
-    def _init_neighbors(self, adata, neighbors_key):
+    def _init_neighbors(self, adata: AnnData, neighbors_key: str | None) -> None:
         neighbors = NeighborsView(adata, neighbors_key)
 
         self._n_neighbors = neighbors["params"]["n_neighbors"]
@@ -295,10 +332,11 @@ class Ingest:
         self._metric_kwds = neighbors["params"].get("metric_kwds", {})
         self._metric = neighbors["params"]["metric"]
 
-        self._neigh_random_state = neighbors["params"].get("random_state", 0)
-        self._init_pynndescent(neighbors["distances"])
+        self._init_pynndescent(
+            neighbors["distances"], rng=self._get_rng(neighbors["params"])
+        )
 
-    def _init_pca(self, adata):
+    def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
 
@@ -312,10 +350,24 @@ class Ingest:
         else:
             self._pca_basis = adata.varm["PCs"]
 
-    def __init__(self, adata: AnnData, neighbors_key: str | None = None):
+    def __init__(
+        self,
+        adata: AnnData,
+        neighbors_key: str | None = None,
+        *,
+        rng: np.random.Generator | None | Default = Default(
+            "adata.uns['umap']['params'].get('random_state', 0)"
+        ),
+    ) -> None:
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
         self._use_rep = "X"
+
+        self._rng = (
+            None
+            if rng is None
+            else np.random.default_rng(None if isinstance(rng, Default) else rng)
+        )
 
         self._n_pcs = None
 
@@ -452,7 +504,6 @@ class Ingest:
             msg = "Ingest supports knn labeling for now."
             raise NotImplementedError(msg)
 
-    @old_positionals("inplace")
     def to_adata(self, *, inplace: bool = False) -> AnnData | None:
         """Return `adata_new` with mapped embeddings and labels.
 

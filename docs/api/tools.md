@@ -1,4 +1,4 @@
-## Tools: `tl`
+# Tools: `tl`
 
 ```{eval-rst}
 .. module:: scanpy.tl
@@ -10,7 +10,7 @@
 
 Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
-### Embeddings
+## Embeddings
 
 ```{eval-rst}
 .. autosummary::
@@ -34,7 +34,7 @@ Compute densities on embeddings.
    tl.embedding_density
 ```
 
-### Clustering and trajectory inference
+## Clustering and trajectory inference
 
 ```{eval-rst}
 .. autosummary::
@@ -49,7 +49,7 @@ Compute densities on embeddings.
 
 (data-integration)=
 
-### Data integration
+## Data integration
 
 ```{eval-rst}
 .. autosummary::
@@ -59,7 +59,7 @@ Compute densities on embeddings.
    tl.ingest
 ```
 
-### Marker genes
+## Marker genes
 
 ```{eval-rst}
 .. autosummary::
@@ -71,7 +71,7 @@ Compute densities on embeddings.
    tl.marker_gene_overlap
 ```
 
-### Gene scores, Cell cycle
+## Gene scores, Cell cycle
 
 ```{eval-rst}
 .. autosummary::
@@ -82,7 +82,7 @@ Compute densities on embeddings.
    tl.score_genes_cell_cycle
 ```
 
-### Simulations
+## Simulations
 
 ```{eval-rst}
 .. autosummary::

@@ -1,6 +1,4 @@
-
-
-## Experimental
+# Experimental
 
 ```{eval-rst}
 .. module:: scanpy.experimental

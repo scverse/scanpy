@@ -10,8 +10,8 @@ from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
-from .._utils import _empty
+from .._compat import warn
+from .._settings import Default
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
-    from .._utils import Empty
     from ._utils import ColorLike, _AxesSubplot
 
     type _VarNames = str | Sequence[str]
@@ -92,24 +91,6 @@ class BasePlot:
 
     var_groups: VarGroups | None
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -209,7 +190,6 @@ class BasePlot:
         self.ax_dict = None
         self.ax = ax
 
-    @old_positionals("swap_axes")
     def swap_axes(self, *, swap_axes: bool | None = True) -> Self:
         """Plot a transposed image.
 
@@ -236,7 +216,6 @@ class BasePlot:
         self.are_axes_swapped = swap_axes
         return self
 
-    @old_positionals("show", "dendrogram_key", "size")
     def add_dendrogram(
         self,
         *,
@@ -325,7 +304,6 @@ class BasePlot:
         }
         return self
 
-    @old_positionals("show", "sort", "size", "color")
     def add_totals(
         self,
         *,
@@ -409,8 +387,9 @@ class BasePlot:
         }
         return self
 
-    @old_positionals("cmap")
-    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
+    def style(
+        self, *, cmap: Colormap | str | None | Default = Default("no change")
+    ) -> Self:
         r"""Set visual style parameters.
 
         Parameters
@@ -424,11 +403,10 @@ class BasePlot:
         Returns `self` for method chaining.
 
         """
-        if cmap is not _empty:
+        if not isinstance(cmap, Default):
             self.cmap = cmap
         return self
 
-    @old_positionals("show", "title", "width")
     def legend(
         self,
         *,
@@ -808,7 +786,6 @@ class BasePlot:
 
         self.ax_dict = return_ax_dict
 
-    @old_positionals("return_axes")
     def show(self, *, return_axes: bool | None = None) -> dict[str, Axes] | None:
         """Show the figure.
 

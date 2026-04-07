@@ -1,4 +1,4 @@
-## Plotting: `pl`
+# Plotting: `pl`
 
 ```{eval-rst}
 .. module:: scanpy.pl
@@ -19,7 +19,7 @@ See the {ref}`settings` section for all important plotting configurations.
 
 (pl-generic)=
 
-### Generic
+## Generic
 
 ```{eval-rst}
 .. autosummary::
@@ -39,7 +39,7 @@ See the {ref}`settings` section for all important plotting configurations.
 
 ```
 
-### Classes
+## Classes
 
 These classes allow fine tuning of visual parameters.
 
@@ -54,7 +54,7 @@ These classes allow fine tuning of visual parameters.
 
 ```
 
-### Preprocessing
+## Preprocessing
 
 Methods for visualizing quality control and results of preprocessing functions.
 
@@ -69,13 +69,13 @@ Methods for visualizing quality control and results of preprocessing functions.
 
 ```
 
-### Tools
+## Tools
 
 Methods that extract and visualize tool-specific annotation in an
 {class}`~anndata.AnnData` object.  For any method in module `tl`, there is
 a method with the same name in `pl`.
 
-#### PCA
+### PCA
 
 ```{eval-rst}
 .. autosummary::
@@ -90,7 +90,7 @@ a method with the same name in `pl`.
 
 (pl-embeddings)=
 
-#### Embeddings
+### Embeddings
 
 ```{eval-rst}
 .. autosummary::
@@ -115,7 +115,7 @@ Compute densities on embeddings.
    pl.embedding_density
 ```
 
-#### Branching trajectories and pseudotime, clustering
+### Branching trajectories and pseudotime, clustering
 
 Visualize clusters using one of the embedding methods passing e.g. `color='leiden'`.
 
@@ -141,7 +141,7 @@ Visualize hierarchical clustering results as a heatmap.
    pl.correlation_matrix
 ```
 
-#### Marker genes
+### Marker genes
 
 ```{eval-rst}
 .. autosummary::
@@ -157,7 +157,7 @@ Visualize hierarchical clustering results as a heatmap.
    pl.rank_genes_groups_tracksplot
 ```
 
-#### Simulations
+### Simulations
 
 ```{eval-rst}
 .. autosummary::

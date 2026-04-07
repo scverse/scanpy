@@ -8,14 +8,12 @@ import numpy as np
 import pandas as pd
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("n_neighbors", "n_components", "n_jobs", "copy")
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
@@ -135,8 +133,8 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError as e:
-        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
-        raise ImportError(msg) from e
+        e.add_note("Please install `harmonyTS` and try again.")
+        raise
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")

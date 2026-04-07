@@ -39,14 +39,15 @@ jobs:
           cache: 'pip'
 
       - name: Cache datasets
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache
           key: benchmark-state-${{ hashFiles('benchmarks/**') }}
 
       - name: Install dependencies
-        run: pip install 'asv>=0.6.4' py-rattler
+        # https://github.com/airspeed-velocity/asv/issues/1577
+        run: pip install 'asv>=0.6.4' 'py-rattler<0.22'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}

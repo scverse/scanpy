@@ -24,7 +24,6 @@ import scipy as sp
 
 from .. import _utils, readwrite
 from .. import logging as logg
-from .._compat import old_positionals
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -34,17 +33,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "params_file",
-    "tmax",
-    "branching",
-    "nrRealizations",
-    "noiseObs",
-    "noiseDyn",
-    "step",
-    "seed",
-    "writedir",
-)
 def sim(
     model: Literal["krumsiek11", "toggleswitch"],
     *,
@@ -276,7 +264,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     # load the last simulation file
     filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
-    adata = readwrite._read(
+    adata = readwrite.read(
         filename, first_column_names=True, suppress_cache_warning=True
     )
     adata.uns["tmax_write"] = tmax / step

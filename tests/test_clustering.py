@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -10,32 +12,52 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from anndata import AnnData
+
 
 @pytest.fixture
-def adata_neighbors():
+def adata_neighbors() -> AnnData:
     return pbmc68k_reduced()
 
 
-FLAVORS = [
-    pytest.param("igraph", marks=needs.igraph),
-    pytest.param("leidenalg", marks=needs.leidenalg),
-]
+@pytest.fixture(
+    params=[
+        pytest.param("igraph", marks=needs.igraph),
+        pytest.param("leidenalg", marks=needs.leidenalg),
+    ]
+)
+def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+    return request.param
 
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
 @pytest.mark.parametrize("resolution", [1, 2])
 @pytest.mark.parametrize("n_iterations", [-1, 3])
-def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
-    sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        resolution=resolution,
-        n_iterations=n_iterations,
-        directed=(flavor == "leidenalg"),
-        key_added="leiden_custom",
-    )
+def test_leiden_basic(
+    adata_neighbors: AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    resolution: float,
+    n_iterations: int,
+) -> None:
+    with (
+        nullcontext()
+        if flavor == "igraph"
+        else pytest.warns(
+            UserWarning, match=r"The `igraph` implementation of leiden clustering"
+        )
+    ):
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            resolution=resolution,
+            n_iterations=n_iterations,
+            directed=(flavor == "leidenalg"),
+            key_added="leiden_custom",
+        )
     assert adata_neighbors.uns["leiden_custom"]["params"]["resolution"] == resolution
     assert (
         adata_neighbors.uns["leiden_custom"]["params"]["n_iterations"] == n_iterations
@@ -44,36 +66,40 @@ def test_leiden_basic(adata_neighbors, flavor, resolution, n_iterations):
 
 @needs.leidenalg
 @needs.igraph
-@pytest.mark.parametrize("flavor", FLAVORS)
-def test_leiden_random_state(adata_neighbors, flavor):
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_leiden_random_state(
+    subtests: pytest.Subtests,
+    adata_neighbors: AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    rng_arg: Literal["rng", "random_state"],
+) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
-    adata_1 = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=1,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
+    adata_1, adata_1_again, adata_2 = (
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            copy=True,
+            directed=is_leiden_alg,
+            n_iterations=n_iterations,
+            **{rng_arg: seed},
+        )
+        for seed in (1, 1, 42)
     )
-    adata_1_again = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=1,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
-    )
-    adata_2 = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=3,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
-    )
-    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
-    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+    with subtests.test("reproducible"):
+        pd.testing.assert_series_equal(
+            adata_1.obs["leiden"], adata_1_again.obs["leiden"]
+        )
+        assert (
+            pytest.approx(adata_1.uns["leiden"]["modularity"])
+            == adata_1_again.uns["leiden"]["modularity"]
+        )
+    with subtests.test("different clustering"):
+        assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+        assert (
+            pytest.approx(adata_2.uns["leiden"]["modularity"])
+            != adata_1_again.uns["leiden"]["modularity"]
+        )
 
 
 @needs.igraph

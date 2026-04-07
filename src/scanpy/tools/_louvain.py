@@ -10,8 +10,15 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, old_positionals, pkg_version, warn
-from .._utils import _choose_graph, dematrix
+from .._compat import deprecated, pkg_version, warn
+from .._utils import _choose_graph, _doc_params, dematrix
+from ._docs import (
+    doc_adata,
+    doc_adjacency,
+    doc_neighbors_key,
+    doc_obsp,
+    doc_restrict_to,
+)
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -31,21 +38,14 @@ if TYPE_CHECKING:
             MutableVertexPartition.__module__ = "louvain.VertexPartition"
 
 
-@old_positionals(
-    "random_state",
-    "restrict_to",
-    "key_added",
-    "adjacency",
-    "flavor",
-    "directed",
-    "use_weights",
-    "partition_type",
-    "partition_kwargs",
-    "neighbors_key",
-    "obsp",
-    "copy",
-)
 @deprecated("Use `scanpy.tl.leiden` instead")
+@_doc_params(
+    doc_adata=doc_adata,
+    restrict_to=doc_restrict_to,
+    adjacency=doc_adjacency,
+    neighbors_key=doc_neighbors_key.format(method="louvain"),
+    obsp=doc_obsp,
+)
 def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     resolution: float | None = None,
@@ -80,8 +80,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
 
     Parameters
     ----------
-    adata
-        The annotated data matrix.
+    {doc_adata}
     resolution
         For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
         resolution (higher resolution means finding more and smaller clusters),
@@ -89,13 +88,10 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
     random_state
         Change the initialization of the optimization.
-    restrict_to
-        Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
+    {restrict_to}
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
-    adjacency
-        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
+    {adjacency}
     flavor
         Choose between to packages for computing the clustering.
 
@@ -118,15 +114,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     partition_kwargs
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
-    neighbors_key
-        Use neighbors connectivities as adjacency.
-        If not specified, louvain looks .obsp['connectivities'] for connectivities
-        (default storage place for pp.neighbors).
-        If specified, louvain looks
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    obsp
-        Use .obsp[obsp] as adjacency. You can't specify both
-        `obsp` and `neighbors_key` at the same time.
+    {neighbors_key}
+    {obsp}
     copy
         Copy adata or modify it inplace.
 

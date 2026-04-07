@@ -8,9 +8,10 @@ from time import time
 from typing import TYPE_CHECKING, Literal, get_args
 
 from .. import logging
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated
 from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
+from .presets import Default, Preset
 from .verbosity import Verbosity
 
 if TYPE_CHECKING:
@@ -26,6 +27,9 @@ if TYPE_CHECKING:
         | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
         | Literal["raw", "rgba"]
     )
+
+
+__all__ = ["AnnDataFileFormat", "Default", "Preset", "Verbosity"]
 
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
@@ -61,6 +65,7 @@ def _type_check_arg2[S, T, R, **P](
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
 class SettingsMeta(SingletonMeta, type):
+    _preset: Preset
     # logging
     _root_logger: _RootLogger
     _logfile: TextIO
@@ -92,6 +97,15 @@ class SettingsMeta(SingletonMeta, type):
     """Variable for timing program parts."""
     _previous_memory_usage: int
     """Stores the previous memory usage."""
+
+    @property
+    def preset(cls) -> Preset:
+        """Preset to use."""
+        return cls._preset
+
+    @preset.setter
+    def preset(cls, preset: Preset | str) -> None:
+        cls._preset = Preset(preset)
 
     @property
     def verbosity(cls) -> Verbosity:
@@ -334,20 +348,6 @@ class SettingsMeta(SingletonMeta, type):
     def set_figure_params(cls, *args, **kwargs) -> None:
         cls._set_figure_params(*args, **kwargs)
 
-    @old_positionals(
-        "scanpy",
-        "dpi",
-        "dpi_save",
-        "frameon",
-        "vector_friendly",
-        "fontsize",
-        "figsize",
-        "color_map",
-        "format",
-        "facecolor",
-        "transparent",
-        "ipython_format",
-    )
     def _set_figure_params(  # noqa: PLR0913
         cls,
         *,
@@ -455,6 +455,7 @@ class settings(metaclass=SettingsMeta):  # noqa: N801
     def __new__(cls) -> type[Self]:
         return cls
 
+    _preset = Preset.ScanpyV1
     # logging
     _root_logger: ClassVar = _RootLogger(logging.WARNING)
     _logfile: ClassVar = SettingsMeta._default_logfile()

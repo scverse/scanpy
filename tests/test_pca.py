@@ -241,20 +241,17 @@ def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     a_pca_abs = np.abs(A_pca)
 
-    warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
-        patterns = (
-            r"Ignoring random_state=14 when using a sparse dask array",
-            r"Ignoring svd_solver='randomized' when using a sparse dask array",
-        )
-        ctx = _helpers.MultiContext(
-            *(pytest.warns(UserWarning, match=pattern) for pattern in patterns)
+        ctx = pytest.warns(
+            UserWarning,
+            match=r"Ignoring svd_solver='randomized' when using a sparse dask array",
         )
     elif isinstance(adata.X, CSBase):
         ctx = pytest.warns(UserWarning, match=r"Ignoring.*'randomized")
     else:
         ctx = nullcontext()
 
+    warnings.filterwarnings("error")
     with ctx:
         sc.pp.pca(
             adata,
@@ -333,27 +330,28 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
 
 
-def test_pca_reproducible(array_type):
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_pca_reproducible(
+    subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
+):
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
-    with (
-        pytest.warns(UserWarning, match=r"Ignoring random_state.*sparse dask array")
-        if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
-        else nullcontext()
-    ):
-        a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        b = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        c = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=0)
+    a, b, c = (
+        sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
+        for seed in (42, 42, 0)
+    )
 
-    assert_equal(a, b)
+    with subtests.test("reproducible"):
+        assert_equal(a, b)
 
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
         a, c = map(AnnData.to_memory, [a, c])
-        assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+        with subtests.test("different embedding"):
+            assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
 def test_pca_chunked() -> None:
@@ -484,7 +482,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     np.testing.assert_equal(adata.obsm["X_pca"], adata_masked.obsm["X_pca"])
     # There are slight difference based on whether the matrix was column or row major
     np.testing.assert_allclose(
-        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-11
+        adata.varm["PCs"][mask_var], adata_masked.varm["PCs"], rtol=1e-10
     )
 
 

@@ -76,24 +76,18 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
-
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
-        filter_result = sc.pp.filter_genes_dispersion(
-            adata.X,
-            min_mean=0.0125,
-            max_mean=3,
-            min_disp=0.5,
-        )
-
-    with subtests.test("filter_genes_dispersion"):
-        with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
-            sc.pl.filter_genes_dispersion(filter_result, show=False)
-        save_and_compare_images("filter_genes_dispersion")
-
-    adata = adata[:, filter_result.gene_subset].copy()
+    sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
+    filter_result = sc.pp.highly_variable_genes(
+        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=False
+    )
+    assert filter_result is not None
+
+    with subtests.test("highly_variable_genes"):
+        sc.pl.highly_variable_genes(filter_result, show=False)
+        save_and_compare_images("highly_variable_genes")
+
+    adata = adata[:, filter_result["highly_variable"]].copy()
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
     sc.pp.scale(adata, max_value=10)
 

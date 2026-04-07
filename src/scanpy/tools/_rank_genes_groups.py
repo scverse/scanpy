@@ -2,32 +2,36 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, njit, old_positionals
+from .._compat import CSBase
+from .._settings import Default
+from .._settings.presets import DETest
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask
+from ..get import _check_mask, _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import NDArray
 
+
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
-type _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
 _CONST_MAX_SIZE: int = 10_000_000
 
@@ -84,8 +88,8 @@ def _tiecorrect(rankvals: NDArray[np.number]) -> NDArray[np.float64]:
 def _ranks(
     x: NDArray[np.number] | CSBase,
     /,
-    mask_obs: NDArray[np.bool_] | None = None,
-    mask_obs_rest: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
+    mask_obs_rest: NDArray[np.bool] | None = None,
 ) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
     n_genes = x.shape[1]
 
@@ -125,7 +129,7 @@ class _RankGenes:
         groups: Iterable[str] | Literal["all"],
         groupby: str,
         *,
-        mask_var: NDArray[np.bool_] | None = None,
+        mask_var: NDArray[np.bool] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
         layer: str | None = None,
@@ -419,7 +423,7 @@ class _RankGenes:
 
     def compute_statistics(  # noqa: PLR0912
         self,
-        method: _Method,
+        method: DETest,
         *,
         corr_method: _CorrMethod = "benjamini-hochberg",
         n_genes_user: int | None = None,
@@ -488,26 +492,13 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
-@old_positionals(
-    "mask",
-    "use_raw",
-    "groups",
-    "reference",
-    "n_genes",
-    "rankby_abs",
-    "pts",
-    "key_added",
-    "copy",
-    "method",
-    "corr_method",
-    "tie_correct",
-    "layer",
-)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool_] | str | None = None,
+    mask_var: NDArray[np.bool] | str | None | Default = Default(
+        preset=("rank_genes_groups", "mask_var")
+    ),
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -516,7 +507,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     key_added: str | None = None,
     copy: bool = False,
-    method: _Method | None = None,
+    method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
@@ -631,6 +622,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    from scanpy import settings
+
+    if isinstance(mask_var, Default):
+        mask_var = settings.preset.rank_genes_groups.mask_var
+    if method is None or isinstance(method, Default):
+        method = settings.preset.rank_genes_groups.method
+
     mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
@@ -639,14 +637,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = "Received `use_raw=True`, but `adata.raw` is empty."
         raise ValueError(msg)
 
-    if method is None:
-        method = "t-test"
-
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    if method not in (avail_methods := get_literal_vals(_Method)):
+    if method not in (avail_methods := get_literal_vals(DETest)):
         msg = f"Method must be one of {avail_methods}."
         raise ValueError(msg)
 
@@ -773,21 +768,12 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
-@old_positionals(
-    "key",
-    "groupby",
-    "use_raw",
-    "key_added",
-    "min_in_group_fraction",
-    "min_fold_change",
-    "max_out_group_fraction",
-    "compare_abs",
-)
 def filter_rank_genes_groups(  # noqa: PLR0912
     adata: AnnData,
     *,
     key: str | None = None,
     groupby: str | None = None,
+    layer: str | None = None,
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
     min_in_group_fraction: float = 0.25,
@@ -814,6 +800,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     adata
     key
     groupby
+    layer
     use_raw
     key_added
     min_in_group_fraction
@@ -824,8 +811,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
     Returns
     -------
-    Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to
-    `nan`
+    Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to `nan`.
 
     Examples
     --------
@@ -846,7 +832,9 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         groupby = adata.uns[key]["params"]["groupby"]
 
     if use_raw is None:
-        use_raw = adata.uns[key]["params"]["use_raw"]
+        use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
+
+    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby
@@ -897,7 +885,8 @@ def filter_rank_genes_groups(  # noqa: PLR0912
         var_names = gene_names[cluster].values
 
         if not use_logfolds or not use_fraction:
-            sub_x = adata.raw[:, var_names].X if use_raw else adata[:, var_names].X
+            var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
+            sub_x = x[:, var_idx]
             in_group = (adata.obs[groupby] == cluster).to_numpy()
             x_in = sub_x[in_group]
             x_out = sub_x[~in_group]

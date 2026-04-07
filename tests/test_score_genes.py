@@ -63,8 +63,7 @@ def test_score_with_reference():
     and stored as a pickle object in `./data`.
     """
     adata = paul15()
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
+    sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
@@ -79,8 +78,7 @@ def test_add_score():
     # TODO: write a test that costs less resources and is more meaningful
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
 
     # the actual genes names are all 6 letters
@@ -233,8 +231,7 @@ def test_use_raw_none() -> None:
 def test_layer():
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
 
     # score X

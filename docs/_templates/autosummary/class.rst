@@ -4,32 +4,28 @@
 
 .. add toctree option to make autodoc generate the pages
 
-.. autoclass:: {{ objname }}
+..  autoclass:: {{ objname }}
 
-   {% block attributes %}
-   {% if attributes %}
-   .. rubric:: Attributes
+    {% block attributes %}
+    {%- for item in attributes %}
+    {%- if loop.first %}
+    .. rubric:: Attributes
 
-   .. autosummary::
-      :toctree: .
-   {% for item in attributes %}
-      {% if has_member(fullname, item) %}
-      ~{{ name }}.{{ item }}
-      {% endif %}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+    ..  autosummary::
+        :toctree: .
+    {% endif %}
+        ~{{ name }}.{{ item }}
+    {%- endfor %}
+    {% endblock %}
 
-   {% block methods %}
-   {% if methods %}
-   .. rubric:: Methods
+    {% block methods %}
+    {%- for item in methods if item != '__init__' %}
+    {%- if loop.first %}
+    .. rubric:: Methods
 
-   .. autosummary::
-      :toctree: .
-   {% for item in methods %}
-      {%- if item != '__init__' %}
-      ~{{ name }}.{{ item }}
-      {%- endif -%}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+    ..  autosummary::
+        :toctree: .
+    {% endif %}
+        ~{{ name }}.{{ item }}
+    {%- endfor %}
+    {% endblock %}

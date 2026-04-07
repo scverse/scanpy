@@ -13,8 +13,8 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, old_positionals, warn
-from .._settings import Verbosity, settings
+from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._settings import Default, Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
     raise_if_dask_feature_axis_chunked,
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from .._types import HVGFlavor
+    from .._settings.presets import HVGFlavor
 
 
 @singledispatch
@@ -157,8 +157,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     try:
         from skmisc.loess import loess
     except ImportError as e:
-        msg = "Please install skmisc package via `pip install --user scikit-misc"
-        raise ImportError(msg) from e
+        e.add_note("Please install `scikit-misc` and try again.")
+        raise
     df = pd.DataFrame(index=adata.var_names)
     data = _get_obs_rep(adata, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
@@ -183,14 +183,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         # These get computed anyway for loess
         if isinstance(mean, DaskArray):
             mean, var = mean.compute(), var.compute()
-        not_const = var > 0
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
-
-        y = np.log10(var[not_const])
-        x = np.log10(mean[not_const])
-        model = loess(x, y, span=span, degree=2)
-        model.fit()
-        estimat_var[not_const] = model.outputs.fitted_values
+        if (not_const := var > 0).any():
+            y = np.log10(var[not_const])
+            x = np.log10(mean[not_const])
+            model = loess(x, y, span=span, degree=2)
+            model.fit()
+            estimat_var[not_const] = model.outputs.fitted_values
         reg_std = np.sqrt(10**estimat_var)
 
         # clip large values as in Seurat
@@ -314,7 +313,7 @@ class _Cutoffs:
         self,
         mean: NDArray[np.floating] | DaskArray,
         dispersion_norm: NDArray[np.floating] | DaskArray,
-    ) -> NDArray[np.bool_] | DaskArray:
+    ) -> NDArray[np.bool] | DaskArray:
         return (
             (mean > self.min_mean)
             & (mean < self.max_mean)
@@ -483,7 +482,7 @@ def _subset_genes(
     mean: NDArray[np.float64] | DaskArray,
     dispersion_norm: NDArray[np.float64] | DaskArray,
     cutoff: _Cutoffs | int,
-) -> NDArray[np.bool_] | DaskArray:
+) -> NDArray[np.bool] | DaskArray:
     """Get boolean mask of genes with normalized dispersion in bounds."""
     if isinstance(cutoff, _Cutoffs):
         dispersion_norm = np.nan_to_num(dispersion_norm)  # similar to Seurat
@@ -593,21 +592,6 @@ def _highly_variable_genes_batched(
     return df
 
 
-@old_positionals(
-    "layer",
-    "n_top_genes",
-    "min_disp",
-    "max_disp",
-    "min_mean",
-    "max_mean",
-    "span",
-    "n_bins",
-    "flavor",
-    "subset",
-    "inplace",
-    "batch_key",
-    "check_values",
-)
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -619,7 +603,7 @@ def highly_variable_genes(  # noqa: PLR0913
     max_mean: float = 3,
     span: float = 0.3,
     n_bins: int = 20,
-    flavor: HVGFlavor = "seurat",
+    flavor: HVGFlavor | Default = Default(preset=("highly_variable_genes", "flavor")),
     subset: bool = False,
     inplace: bool = True,
     batch_key: str | None = None,
@@ -691,9 +675,10 @@ def highly_variable_genes(  # noqa: PLR0913
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
     flavor
-        Choose the flavor for identifying highly variable genes. For the dispersion
-        based methods in their default workflows, Seurat passes the cutoffs whereas
-        Cell Ranger passes `n_top_genes`.
+        Choose the flavor for identifying highly variable genes
+        (default depends on :attr:`scanpy.settings.preset` property :attr:`~scanpy.Preset.highly_variable_genes`).
+        For the dispersion based methods in their default workflows,
+        `'seurat'` passes the cutoffs whereas `'cell_ranger'` passes `n_top_genes`.
     subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
@@ -738,11 +723,12 @@ def highly_variable_genes(  # noqa: PLR0913
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
 
-    Notes
-    -----
-    This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
-
     """
+    if isinstance(flavor, Default):
+        from .. import settings
+
+        flavor = settings.preset.highly_variable_genes.flavor
+
     start = logg.info("extracting highly variable genes")
 
     if not isinstance(adata, AnnData):

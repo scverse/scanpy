@@ -1,4 +1,4 @@
-## Exporting
+# Exporting
 
 ```{eval-rst}
 .. module:: scanpy.external.exporting

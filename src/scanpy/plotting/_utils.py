@@ -16,22 +16,22 @@ from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
-from .._settings import settings
-from .._utils import NeighborsView, _empty
+from .._compat import warn
+from .._settings import Default, settings
+from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
     from collections.abc import Collection
 
     from anndata import AnnData
-    from matplotlib.colors import Colormap
+    from matplotlib.colors import Colormap, ListedColormap
     from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
+    from pandas.api.extensions import ExtensionArray
     from PIL.Image import Image
 
-    from .._utils import Empty
 
 __all__ = [
     "ColorLike",
@@ -41,8 +41,10 @@ __all__ = [
     "_FontSize",
     "_FontWeight",
     "_LegendLoc",
+    "_create_white_to_color_gradient",
     "_deprecated_scale",
     "_dk",
+    "_obs_vector_compat",
     "add_colors_for_categorical_sample_annotation",
     "check_colornorm",
     "check_projection",
@@ -93,7 +95,7 @@ type _LegendLoc = Literal[
     "upper center",
     "center",
 ]
-type ColorLike = str | tuple[float, ...]
+type ColorLike = str | tuple[float, float, float] | tuple[float, float, float, float]
 
 
 class _AxesSubplot(Axes, axes.SubplotBase):
@@ -105,18 +107,6 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
-@old_positionals(
-    "xlabel",
-    "ylabel",
-    "xticks",
-    "yticks",
-    "title",
-    "colorbar_shrink",
-    "color_map",
-    "show",
-    "save",
-    "ax",
-)
 def matrix(  # noqa: PLR0913
     matrix: ArrayLike | Image,
     *,
@@ -1071,7 +1061,7 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 @overload
 def _deprecated_scale(
     density_norm: DensityNorm,
-    scale: DensityNorm | Empty,
+    scale: DensityNorm | Default,
     *,
     default: DensityNorm,
 ) -> DensityNorm: ...
@@ -1079,20 +1069,20 @@ def _deprecated_scale(
 
 @overload
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty: ...
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default: ...
 
 
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty:
-    if scale is _empty:
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default:
+    if isinstance(scale, Default):
         return density_norm
     if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
@@ -1105,3 +1095,84 @@ def _deprecated_scale(
 def _dk(dendrogram: bool | str | None) -> str | None:  # noqa: FBT001
     """Convert the `dendrogram` parameter to a `dendrogram_key` parameter."""
     return None if isinstance(dendrogram, bool) else dendrogram
+
+
+def _create_white_to_color_gradient(
+    color: ColorLike, n_steps: int = 256
+) -> ListedColormap:
+    """Generate a perceptually uniform colormap from white to a target color.
+
+    This function uses the OKLab color space for interpolation to ensure that
+    the brightness of the generated colormap changes uniformly.
+
+    Parameters
+    ----------
+    color
+        The target color for the gradient. Can be any valid matplotlib color.
+    n_steps
+        The number of steps in the colormap.
+
+    Returns
+    -------
+    A `matplotlib.colors.ListedColormap` object.
+    """
+    popt = np.get_printoptions()
+    try:
+        import colour
+    except ImportError as e:
+        e.add_note(
+            "`colour-science` is required for using `group_colors`. "
+            "Please install `scanpy[plotting]` (or `colour-science` directly) and try again."
+        )
+        raise
+    finally:  # https://github.com/colour-science/colour/issues/1388
+        np.set_printoptions(legacy=popt["legacy"])
+
+    from matplotlib.colors import ListedColormap, to_hex
+
+    # Convert the input color to a hex string
+    hex_color = to_hex(color, keep_alpha=False)
+
+    # Define the color space for interpolation
+    space = "OKLab"
+
+    # Convert start (white) and end (target color) to the OKLab color space
+    target_oklab = colour.convert(hex_color, "Hexadecimal", space)
+    white_oklab = colour.convert("#ffffff", "Hexadecimal", space)
+
+    # Create the gradient through linear interpolation in OKLab
+    gradient = colour.algebra.lerp(
+        np.linspace(0, 1, n_steps)[..., np.newaxis],
+        white_oklab,
+        target_oklab,
+    )
+
+    # Convert the gradient back to sRGB for display
+    rgb_gradient = colour.convert(gradient, space, "sRGB")
+
+    # Clip values to be within the valid [0, 1] range for RGB
+    clipped_rgb = np.clip(rgb_gradient, 0, 1)
+
+    return ListedColormap(
+        clipped_rgb, name=color if isinstance(color, str) else hex_color
+    )
+
+
+def _obs_vector_compat(
+    adata: AnnData, k: str, *, use_raw: bool, layer: str | None
+) -> np.ndarray | ExtensionArray:
+    try:
+        from anndata.acc import A
+    except ImportError:
+        return (
+            adata.raw.obs_vector(k)
+            if use_raw and k not in adata.obs.columns
+            else adata.obs_vector(k, layer=layer)
+        )
+
+    if k in adata.obs.columns:
+        return adata[A.obs[k]]
+    elif not use_raw:
+        return adata[A.layers[layer][:, k]]
+    else:
+        return adata.raw[A.X[:, k]]

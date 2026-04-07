@@ -17,9 +17,8 @@ from matplotlib.image import imread
 from packaging.version import Version
 
 from . import logging as logg
-from ._compat import deprecated, old_positionals, pkg_version, warn
-from ._settings import AnnDataFileFormat, settings
-from ._utils import _empty
+from ._compat import deprecated, pkg_version, warn
+from ._settings import AnnDataFileFormat, Default, settings
 
 if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -28,7 +27,6 @@ if pkg_version("anndata") >= Version("0.11.0rc2"):
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -39,7 +37,6 @@ else:
         read_h5ad,
         read_hdf,
         read_loom,
-        read_mtx,
         read_text,
         read_zarr,
     )
@@ -49,7 +46,7 @@ if TYPE_CHECKING:
     from os import PathLike
     from typing import IO, Literal
 
-    from ._utils import Empty
+    from numpy.typing import DTypeLike
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -79,15 +76,6 @@ assert set(get_args(AnnDataFileFormat)) <= avail_exts
 # --------------------------------------------------------------------------------
 
 
-@old_positionals(
-    "sheet",
-    "ext",
-    "delimiter",
-    "first_column_names",
-    "backup_url",
-    "cache",
-    "cache_compression",
-)
 def read(
     filename: PathLike[str] | str,
     backed: Literal["r", "r+"] | None = None,
@@ -98,7 +86,9 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+        "sc.settings.cache_compression"
+    ),
     **kwargs,
 ) -> AnnData:
     """Read file and return :class:`~anndata.AnnData` object.
@@ -138,7 +128,7 @@ def read(
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
-        Parameters passed to :func:`~anndata.io.read_loom`.
+        Parameters passed to the underlying function.
 
     Returns
     -------
@@ -174,7 +164,6 @@ def read(
     return read_h5ad(filename, backed=backed)
 
 
-@old_positionals("genome", "gex_only", "backup_url")
 def read_10x_h5(
     filename: PathLike[str] | str,
     *,
@@ -533,17 +522,19 @@ def read_visium(
     return adata
 
 
-@old_positionals("var_names", "make_unique", "cache", "cache_compression", "gex_only")
 def read_10x_mtx(
     path: PathLike[str] | str,
     *,
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+        "sc.settings.cache_compression"
+    ),
     gex_only: bool = True,
     prefix: str | None = None,
     compressed: bool = True,
+    sparse_format: Literal["csr", "csc", "coo"] = "csr",
 ) -> AnnData:
     """Read 10x-Genomics-formatted mtx directory.
 
@@ -575,6 +566,8 @@ def read_10x_mtx(
         to be gzipped. If True, '.gz' suffix is appended to filenames.
         Set to False for STARsolo output.
         Has no effect on legacy (v2-) files.
+    sparse_format
+        The sparse matrix format.
 
     Returns
     -------
@@ -596,6 +589,7 @@ def read_10x_mtx(
             prefix=prefix,
             is_legacy=is_legacy,
             compressed=compressed,
+            sparse_format=sparse_format,
         )
     if is_legacy or not gex_only:
         return adata
@@ -603,16 +597,37 @@ def read_10x_mtx(
     return adata[:, gex_rows].copy()
 
 
+def _read_mtx(
+    filename: Path,
+    *,
+    dtype: DTypeLike,
+    sparse_format: Literal["csr", "csc", "coo"],
+) -> AnnData:
+    """Read ``.mtx`` file, choosing sparse format to avoid extra conversions."""
+    from scipy.io import mmread
+    from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
+
+    x = mmread(filename)
+    if x.dtype != np.dtype(dtype):
+        x = x.astype(dtype)
+    if sparse_format == "csr":
+        x = csr_matrix(x)
+    elif sparse_format == "csc":
+        x = csc_matrix(x)
+    return AnnData(x)
+
+
 def _read_10x_mtx(
     path: Path,
     *,
-    var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
-    make_unique: bool = True,
-    cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
-    prefix: str = "",
+    var_names: Literal["gene_symbols", "gene_ids"],
+    make_unique: bool,
+    cache: bool,
+    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    prefix: str,
     is_legacy: bool,
-    compressed: bool = True,
+    compressed: bool,
+    sparse_format: Literal["csr", "csc", "coo"],
 ) -> AnnData:
     """Read mex from output from Cell Ranger v2- or v3+."""
     # Only append .gz if not a legacy file AND compression is requested
@@ -621,6 +636,8 @@ def _read_10x_mtx(
         path / f"{prefix}matrix.mtx{suffix}",
         cache=cache,
         cache_compression=cache_compression,
+        # transposing will convert e.g. CSR to CSC and vice versa
+        sparse_format=dict(csr="csc", csc="csr", coo="coo")[sparse_format],
     ).T  # transpose the data
     genes = pd.read_csv(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
@@ -646,7 +663,6 @@ def _read_10x_mtx(
     return adata
 
 
-@old_positionals("ext", "compression", "compression_opts")
 def write(
     filename: PathLike[str] | str,
     adata: AnnData,
@@ -746,7 +762,6 @@ def write(
 # -------------------------------------------------------------------------------
 
 
-@old_positionals("as_header")
 def read_params(
     filename: PathLike[str] | str, *, as_header: bool = False
 ) -> dict[str, int | float | bool | str | None]:
@@ -813,15 +828,15 @@ def write_params(path: PathLike[str] | str, *args, **maps):
 def _read(  # noqa: PLR0912, PLR0915
     filename: Path,
     *,
-    backed=None,
-    sheet=None,
-    ext=None,
-    delimiter=None,
-    first_column_names=None,
-    backup_url=None,
-    cache=False,
-    cache_compression=None,
-    suppress_cache_warning=False,
+    backed: Literal["r", "r+"] | None,
+    sheet: str | None,
+    ext: str | None,
+    delimiter: str | None,
+    first_column_names: bool,
+    backup_url: str | None,
+    cache: bool,
+    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):
     if ext is not None and ext not in avail_exts:
@@ -871,7 +886,9 @@ def _read(  # noqa: PLR0912, PLR0915
         else:
             adata = read_excel(filename, sheet)
     elif ext in {"mtx", "mtx.gz"}:
-        adata = read_mtx(filename)
+        kwargs.setdefault("sparse_format", "csr")
+        kwargs.setdefault("dtype", "float32")
+        adata = _read_mtx(filename, **kwargs)
     elif ext == "csv":
         if delimiter is None:
             delimiter = ","
@@ -897,7 +914,7 @@ def _read(  # noqa: PLR0912, PLR0915
             f"... writing an {settings.file_format_data} "
             "cache file to speedup reading next time"
         )
-        if cache_compression is _empty:
+        if isinstance(cache_compression, Default):
             cache_compression = settings.cache_compression
         if not path_cache.parent.is_dir():
             path_cache.parent.mkdir(parents=True)
@@ -1061,9 +1078,10 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 
 def _download(url: str, path: Path):
-    from urllib.error import URLError
+    from ssl import create_default_context
     from urllib.request import Request, urlopen
 
+    from certifi import contents
     from tqdm.auto import tqdm
 
     blocksize = 1024 * 8
@@ -1072,26 +1090,7 @@ def _download(url: str, path: Path):
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
-        try:
-            open_url = urlopen(req)
-        except URLError:
-            if not url.startswith("https://"):
-                raise  # No need to try using certifi
-
-            msg = "Failed to open the url with default certificates."
-            try:
-                from certifi import where
-            except ImportError as e:
-                e.add_note(f"{msg} Please install `certifi` and try again.")
-                raise
-            else:
-                logg.warning(f"{msg} Trying to use certifi.")
-
-            from ssl import create_default_context
-
-            open_url = urlopen(req, context=create_default_context(cafile=where()))
-
-        with open_url as resp:
+        with urlopen(req, context=create_default_context(cadata=contents())) as resp:
             total = resp.info().get("content-length", None)
             with (
                 tqdm(
@@ -1157,7 +1156,7 @@ def is_valid_filename(
             raise ValueError(msg)
         return ext if return_ext else True
     if len(ext_from_file) > 2:
-        logg.warning(
+        logg.debug(
             f"Your filename has more than two extensions: {ext_from_file}.\n"
             f"Only considering the two last: {ext_from_file[-2:]}."
         )

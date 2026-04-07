@@ -6,7 +6,6 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._compat import deprecated, old_positionals
 from .._settings import settings
 from ._utils import savefig_or_show
 
@@ -15,7 +14,6 @@ from ._utils import savefig_or_show
 # --------------------------------------------------------------------------------
 
 
-@old_positionals("log", "show", "save", "highly_variable_genes")
 def highly_variable_genes(  # noqa: PLR0912
     adata_or_result: AnnData | pd.DataFrame | np.recarray,
     *,
@@ -43,6 +41,27 @@ def highly_variable_genes(  # noqa: PLR0912
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
 
+    Examples
+    --------
+    Compute and plot highly variable genes from raw PBMC data.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k()
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        sc.pl.highly_variable_genes(adata)
+
+    Plot on logarithmic axes.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.highly_variable_genes(adata, log=True)
+
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
@@ -54,17 +73,17 @@ def highly_variable_genes(  # noqa: PLR0912
         else:
             seurat_v3_flavor = False
     if highly_variable_genes:
-        gene_subset = result.highly_variable
+        gene_subset = result["highly_variable"]
     else:
-        gene_subset = result.gene_subset
-    means = result.means
+        gene_subset = result["gene_subset"]
+    means = result["means"]
 
     if seurat_v3_flavor:
-        var_or_disp = result.variances
-        var_or_disp_norm = result.variances_norm
+        var_or_disp = result["variances"]
+        var_or_disp_norm = result["variances_norm"]
     else:
-        var_or_disp = result.dispersions
-        var_or_disp_norm = result.dispersions_norm
+        var_or_disp = result["dispersions"]
+        var_or_disp_norm = result["dispersions_norm"]
     size = rcParams["figure.figsize"]
     plt.figure(figsize=(2 * size[0], size[1]))
     plt.subplots_adjust(wspace=0.3)
@@ -98,41 +117,7 @@ def highly_variable_genes(  # noqa: PLR0912
         )
 
     show = settings.autoshow if show is None else show
-    savefig_or_show("filter_genes_dispersion", show=show, save=save)
+    savefig_or_show("highly_variable_genes", show=show, save=save)
     if show:
         return None
     return plt.gca()
-
-
-# backwards compat
-@deprecated("Use sc.pl.highly_variable_genes instead")
-@old_positionals("log", "show", "save")
-def filter_genes_dispersion(
-    result: np.recarray,
-    *,
-    log: bool = False,
-    show: bool | None = None,
-    # deprecated
-    save: bool | str | None = None,
-) -> None:
-    """Plot dispersions versus means for genes.
-
-    Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
-
-    Parameters
-    ----------
-    result
-        Result of :func:`~scanpy.pp.filter_genes_dispersion`.
-    log
-        Plot on logarithmic axes.
-    show
-         Show the plot, do not return axis.
-    save
-        If `True` or a `str`, save the figure.
-        A string is appended to the default filename.
-        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
-
-    """
-    highly_variable_genes(
-        result, log=log, show=show, save=save, highly_variable_genes=False
-    )

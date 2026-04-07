@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from functools import partial
 from importlib.metadata import version as get_version
+from itertools import product
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -31,10 +32,6 @@ if TYPE_CHECKING:
 
 nitpicky = True  # Warn about broken links. This is here for a reason: Do not change.
 needs_sphinx = "4.0"  # Nicer param docs
-suppress_warnings = [
-    "myst.header",  # https://github.com/executablebooks/MyST-Parser/issues/262
-    "mystnb.unknown_mime_type",  # application/vnd.microsoft.datawrangler.viewer.v0+json
-]
 
 # General information
 project = "Scanpy"
@@ -85,13 +82,13 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_issues",
-    "sphinx_tabs.tabs",
     "sphinxext.opengraph",
     *[p.stem for p in (HERE / "extensions").glob("*.py") if p.stem not in {"git_ref"}],
 ]
 
 # Generate the API documentation when building
 autosummary_generate = True
+autodoc_typehints = "none"
 autodoc_member_order = "bysource"
 autodoc_default_options = {
     # Don’t show members in addition to the autosummary table added by `_templates/class.rst`
@@ -117,6 +114,9 @@ myst_enable_extensions = [
 ]
 myst_url_schemes = ("http", "https", "mailto", "ftp")
 myst_heading_anchors = 3
+myst_ignore_mime_types = [  # from custom extension patch_myst_nb
+    "application/vnd.microsoft.datawrangler.viewer.v0+json",
+]
 nb_output_stderr = "remove"
 nb_execution_mode = "off"
 nb_merge_streams = True
@@ -196,6 +196,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
     "tl.paga": (["np", "sp"], []),
     "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.score_genes": (["np", "sp"], []),
     "tl.tsne": (["np", "sp"], []),
     "tl.umap": (["np", "sp"], []),
 }
@@ -261,7 +262,12 @@ qualname_overrides = {
     "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
     "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
-    "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
+    # https://github.com/pandas-dev/pandas/issues/63810
+    "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
+    **{
+        f"numpy.{prefix}typing.{name}": ("py:data", f"numpy.typing.{name}")
+        for name, prefix in product(["ArrayLike", "DTypeLike"], ["", "_"])
+    },
 }
 
 nitpick_ignore = [
@@ -282,6 +288,7 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
+    ("py:class", "scanpy._settings.presets.Default"),
 ]
 
 # Options for plot examples

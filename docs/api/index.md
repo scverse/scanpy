@@ -14,7 +14,8 @@ Additional functionality is available in the broader {doc}`ecosystem <../ecosyst
 ## Array type support
 
 Different APIs have different levels of support for array types,
-and this page lists the supported array types for each function:
+and this page lists the supported array types for each function
+(⚡ indicates support of the type as chunk in a dask {class}`~dask.array.Array`):
 
 ```{eval-rst}
 .. array-support:: all

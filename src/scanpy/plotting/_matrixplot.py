@@ -6,9 +6,8 @@ import numpy as np
 from matplotlib import colormaps, rcParams
 
 from .. import logging as logg
-from .._compat import old_positionals
-from .._settings import settings
-from .._utils import _doc_params, _empty
+from .._settings import Default, settings
+from .._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
-    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
@@ -96,26 +94,6 @@ class MatrixPlot(BasePlot):
     DEFAULT_EDGE_COLOR = "gray"
     DEFAULT_EDGE_LW = 0.1
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "standard_scale",
-        "ax",
-        "values_df",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -198,9 +176,9 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: Colormap | str | None | Empty = _empty,
-        edge_color: ColorLike | None | Empty = _empty,
-        edge_lw: float | None | Empty = _empty,
+        cmap: Colormap | str | None | Default = Default("no change"),
+        edge_color: ColorLike | None | Default = Default("no change"),
+        edge_lw: float | None | Default = Default("no change"),
     ) -> Self:
         r"""Modify plot visual parameters.
 
@@ -246,9 +224,9 @@ class MatrixPlot(BasePlot):
         """
         super().style(cmap=cmap)
 
-        if edge_color is not _empty:
+        if not isinstance(edge_color, Default):
             self.edge_color = edge_color
-        if edge_lw is not _empty:
+        if not isinstance(edge_lw, Default):
             self.edge_lw = edge_lw
 
         return self
@@ -312,23 +290,6 @@ class MatrixPlot(BasePlot):
         return normalize
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "figsize",
-    "dendrogram",
-    "title",
-    "cmap",
-    "colorbar_title",
-    "gene_symbols",
-    "var_group_positions",
-    "var_group_labels",
-    "var_group_rotation",
-    "layer",
-    "standard_scale",
-    # 17 positionals are enough for backwards compatibility
-)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,

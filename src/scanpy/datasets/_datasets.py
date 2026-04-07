@@ -9,16 +9,19 @@ import pandas as pd
 from anndata import AnnData, OldFormatWarning
 
 from .. import _utils
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated
+from .._docs import doc_rng
 from .._settings import settings
+from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
     type VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
@@ -54,16 +57,15 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@old_positionals(
-    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
-)
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def blobs(
     *,
     n_variables: int = 11,
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> AnnData:
     """Gaussian Blobs.
 
@@ -78,8 +80,7 @@ def blobs(
     n_observations
         Number of observations. By default, this is the same observation number
         as in :func:`scanpy.datasets.krumsiek11`.
-    random_state
-        Determines random number generation for dataset creation.
+    {rng}
 
     Returns
     -------
@@ -101,7 +102,7 @@ def blobs(
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
-        random_state=random_state,
+        random_state=_legacy_random_state(rng),
     )
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 
@@ -130,7 +131,7 @@ def burczynski06() -> AnnData:
 
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
-    url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
+    url = "https://exampledata.scverse.org/scanpy/GDS1615_full.soft.gz"
     return read(filename, backup_url=url)
 
 
@@ -206,7 +207,9 @@ def moignard15() -> AnnData:
 
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
-    backup_url = "https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
+    backup_url = (
+        "https://exampledata.scverse.org/scanpy/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
+    )
     adata = read(filename, sheet="dCt_values.txt", backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.isin(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
@@ -241,9 +244,8 @@ def paul15() -> AnnData:
 
     Non-logarithmized raw data.
 
-    The data has been sent out by Email from the Amit Lab. An R version for
-    loading the data can be found `here
-    <https://github.com/theislab/scAnalysisTutorial>`_.
+    The data has been sent out by Email from the Amit Lab.
+    An R version for loading the data can be found `here <https://github.com/theislab/scAnalysisTutorial>`_.
 
     Returns
     -------
@@ -262,7 +264,7 @@ def paul15() -> AnnData:
 
     filename = settings.datasetdir / "paul15/paul15.h5"
     filename.parent.mkdir(exist_ok=True)
-    backup_url = "https://falexwolf.de/data/paul15.h5"
+    backup_url = "https://exampledata.scverse.org/scanpy/paul15.h5"
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
@@ -332,10 +334,9 @@ def pbmc68k_reduced() -> AnnData:
     It was saved keeping only 724 cells and 221 highly variable genes.
 
     The saved file contains the annotation of cell types (key: `'bulk_labels'`),
-    UMAP coordinates, louvain clustering and gene rankings based on the
-    `bulk_labels`.
+    UMAP coordinates, louvain clustering and gene rankings based on the `bulk_labels`.
 
-    .. [#norm] Back when the dataset was created, :func:`~scanpy.pp.normalize_per_cell` was used instead.
+    .. [#norm] Back when the dataset was created, ``sc.pp.normalize_per_cell`` was used instead.
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
@@ -404,7 +405,7 @@ def pbmc3k() -> AnnData:
         var: 'gene_ids'
 
     """
-    url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
+    url = "https://exampledata.scverse.org/scanpy/pbmc3k_raw.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
@@ -444,7 +445,7 @@ def pbmc3k_processed() -> AnnData:
         obsp: 'distances', 'connectivities'
 
     """  # noqa: D401
-    url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
+    url = "https://exampledata.scverse.org/scanpy/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
@@ -475,7 +476,7 @@ def _download_visium_dataset(
     if base_dir is None:
         base_dir = settings.datasetdir
 
-    url_prefix = f"https://cf.10xgenomics.com/samples/spatial-exp/{spaceranger_version}/{sample_id}"
+    url_prefix = f"https://exampledata.scverse.org/scanpy/visium/{spaceranger_version}/{sample_id}"
 
     sample_dir = base_dir / sample_id
     sample_dir.mkdir(exist_ok=True)

@@ -19,8 +19,8 @@ from matplotlib.markers import MarkerStyle
 
 from ... import logging as logg
 from ..._compat import deprecated
-from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata
+from ..._settings import Default, settings
+from ..._utils import _doc_params, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from .. import _utils
@@ -31,7 +31,7 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import check_colornorm, check_projection, circles
+from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from numpy.typing import NDArray
 
-    from ..._utils import Empty
     from ...tools._draw_graph import _Layout
     from .._utils import ColorLike, VBound, _FontSize, _FontWeight, _LegendLoc
 
@@ -61,7 +60,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     basis: str,
     *,
     color: str | Sequence[str] | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool] | str | None = None,
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     sort_order: bool = True,
@@ -266,6 +265,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
+        # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because we have a lot of np.ndarray checks.
+        # Setting np.array here prevents the  `NumpyExtensionArray` from propagating.
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -275,6 +276,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             gene_symbols=gene_symbols,
             groups=groups,
         )
+        if isinstance(color_source_vector, pd.arrays.NumpyExtensionArray):
+            color_source_vector = color_source_vector.to_numpy()
         color_vector, color_type = _color_vector(
             adata,
             value_to_plot,
@@ -957,8 +960,8 @@ def spatial(  # noqa: PLR0913
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
-    img_key: str | None | Empty = _empty,
-    library_id: str | None | Empty = _empty,
+    img_key: str | None | Default = Default("'hires' | 'lowres'"),
+    library_id: str | None | Default = Default("uns['spatial'][key] if only one key"),
     crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
@@ -1200,7 +1203,7 @@ def _get_color_source_vector(
     adata: AnnData,
     value_to_plot: str,
     *,
-    mask_obs: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
     use_raw: bool = False,
     gene_symbols: str | None = None,
     layer: str | None = None,
@@ -1221,10 +1224,7 @@ def _get_color_source_vector(
         # We should probably just make an index for this, and share it over runs
         # TODO: Throw helpful error if this doesn't work
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
-    if use_raw and value_to_plot not in adata.obs.columns:
-        values = adata.raw.obs_vector(value_to_plot)
-    else:
-        values = adata.obs_vector(value_to_plot, layer=layer)
+    values = _obs_vector_compat(adata, value_to_plot, use_raw=use_raw, layer=layer)
     if mask_obs is not None:
         values = values.copy()
         values[~mask_obs] = np.nan
@@ -1348,14 +1348,14 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: str | None | Empty
+    uns: Mapping, library_id: str | None | Default
 ) -> tuple[str | None, Mapping | None]:
     """Given a mapping, try and extract a library id/ mapping with spatial data.
 
     Assumes this is `.uns` from how we parse visium data.
     """
     spatial_mapping = uns.get("spatial", {})
-    if library_id is _empty:
+    if isinstance(library_id, Default):
         if len(spatial_mapping) > 1:
             msg = (
                 "Found multiple possible libraries in `.uns['spatial']. Please specify."
@@ -1373,12 +1373,12 @@ def _check_spatial_data(
 def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
-    img_key: None | str | Empty,
+    img_key: None | str | Default,
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
     """Resolve image for spatial plots."""
-    if img is None and spatial_data is not None and img_key is _empty:
+    if img is None and spatial_data is not None and isinstance(img_key, Default):
         img_key = next(
             (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
         )  # Throws StopIteration Error if keys not present

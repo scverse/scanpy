@@ -1,11 +1,11 @@
-## Tools: TL
+# Tools: TL
 
 ```{eval-rst}
 .. module:: scanpy.external.tl
 .. currentmodule:: scanpy.external
 ```
 
-### Embeddings
+## Embeddings
 
 ```{eval-rst}
 .. autosummary::
@@ -17,7 +17,7 @@
    tl.sam
 ```
 
-### Clustering and trajectory inference
+## Clustering and trajectory inference
 
 ```{eval-rst}
 .. autosummary::
@@ -30,7 +30,7 @@
    tl.palantir_results
 ```
 
-### Gene scores, Cell cycle
+## Gene scores, Cell cycle
 
 ```{eval-rst}
 .. autosummary::
