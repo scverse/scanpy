@@ -88,12 +88,13 @@ class Aggregate:
         """
         return self._sum(data=self.data, power_of_2=power_of_2)
 
-    def _sum(self, *, data: np.ndarray | CSBase, power_of_2: bool = False) -> np.ndarray:
+    def _sum(
+        self, *, data: np.ndarray | CSBase, power_of_2: bool = False
+    ) -> np.ndarray:
 
         if isinstance(data, np.ndarray):
             return utils.asarray(
-                self.indicator_matrix
-                @ (_power(data, 2) if power_of_2 else data)
+                self.indicator_matrix @ (_power(data, 2) if power_of_2 else data)
             )
         return (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, (_power(data, 2) if power_of_2 else data)
