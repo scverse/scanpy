@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 def agg_sum_csr(
     indicator: CSRBase,
     data: CSRBase,
+    out: np.ndarray
 ):
     out = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
     for cat_num in numba.prange(indicator.shape[0]):
@@ -27,7 +28,7 @@ def agg_sum_csr(
 
             for j in range(start_obs, end_obs):
                 col = data.indices[j]
-                out[cat_num, col] += float(data.data[j])
+                out[cat_num, col] += data.data[j]
     return out
 
 
@@ -35,8 +36,8 @@ def agg_sum_csr(
 def agg_sum_csc(
     indicator: CSRBase,
     data: CSCBase,
+    out: np.ndarray
 ):
-    out = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
 
     obs_to_cat = np.full(data.shape[0], -1, dtype=np.int64)
 
@@ -53,6 +54,6 @@ def agg_sum_csc(
             cat = obs_to_cat[obs]
 
             if cat != -1:
-                out[cat, col] += float(data.data[j])
+                out[cat, col] += data.data[j]
 
     return out
