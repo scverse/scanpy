@@ -95,8 +95,9 @@ class Aggregate:
                 self.indicator_matrix
                 @ (_power(data, 2) if power_of_2 else data)
             )
+        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype="int64" if np.issubdtype(data, np.integer) else "float64")
         return (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
-            self.indicator_matrix, (_power(data, 2) if power_of_2 else data)
+            self.indicator_matrix, (_power(data, 2) if power_of_2 else data), out
         )
 
     def mean(self) -> Array:
