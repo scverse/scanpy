@@ -560,7 +560,7 @@ def sparse_indicator(
         mask = np.broadcast_to(True, len(categorical))  # noqa: FBT003
     mask = mask.astype("uint8")
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
-    codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
+    codes = np.where(mask, categorical.codes, 0)
     a = sparse.coo_array(
         (mask, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
