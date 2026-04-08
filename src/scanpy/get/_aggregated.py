@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData, utils
+from anndata import AnnData
 from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
@@ -91,12 +91,15 @@ class Aggregate:
     def _sum(
         self, *, data: np.ndarray | CSBase, power_of_2: bool = False
     ) -> np.ndarray:
-
         if isinstance(data, np.ndarray):
-            return utils.asarray(
+            res = (
                 self.indicator_matrix @ (_power(data, 2) if power_of_2 else data)
             )
-        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype="int64" if np.issubdtype(data, np.integer) else "float64")
+            if isinstance(res, CSBase):
+                return res.toarray()
+            return res
+        dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
+        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
         return (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, (_power(data, 2) if power_of_2 else data), out
         )
@@ -558,8 +561,10 @@ def sparse_indicator(
     mask: NDArray[np.bool] | None = None,
 ) -> CSRBase:
     if mask is None:
-        mask = np.broadcast_to(True, len(categorical))  # noqa: FBT003
-    mask = mask.astype("uint8")
+        # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
+        mask = np.broadcast_to(1.0, len(categorical))  # noqa: FBT003
+    else:
+        mask = mask.astype("uint8")
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
     codes = np.where(mask, categorical.codes, 0)
     a = sparse.coo_array(
