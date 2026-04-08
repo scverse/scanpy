@@ -1885,9 +1885,7 @@ def test_scatter_size_not_mutated_across_panels():
     sizes = rng.uniform(10, 200, size=pbmc.n_obs)
     sizes_original = sizes.copy()
 
-    axes = sc.pl.umap(
-        pbmc, color=["louvain", "n_genes"], size=sizes, show=False
-    )
+    axes = sc.pl.umap(pbmc, color=["louvain", "n_genes"], size=sizes, show=False)
     plt.close()
 
     # The input array must not be modified
