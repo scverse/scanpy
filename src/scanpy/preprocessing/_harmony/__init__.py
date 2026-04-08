@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
     import pandas as pd
 
+_SUPPRESS_PENALTY = 1e30
+
 
 @dataclass
 class Harmony:
@@ -36,7 +38,7 @@ class Harmony:
     batch_df: InitVar[pd.DataFrame]
     batch_key: InitVar[str | Sequence[str]]
     _: KW_ONLY
-    theta: float | Sequence[float] | None
+    theta: float | Sequence[float]
     sigma: float
     n_clusters: int | None
     max_iter_harmony: int
@@ -48,6 +50,10 @@ class Harmony:
     block_proportion: float
     tau: int
     random_state: int | None
+    stabilized_penalty: bool = True
+    dynamic_lambda: bool = True
+    alpha: float = 0.2
+    batch_prune_threshold: float | None = 1e-5
 
     batch_codes: np.ndarray = field(init=False)
     n_batches: int = field(init=False)
@@ -58,6 +64,16 @@ class Harmony:
         if self.max_iter_harmony < 1:
             msg = "max_iter_harmony must be >= 1"
             raise ValueError(msg)
+
+        if self.dynamic_lambda:
+            if not np.isfinite(self.alpha) or self.alpha <= 0:
+                msg = f"alpha must be a finite positive number when dynamic_lambda=True, got {self.alpha}."
+                raise ValueError(msg)
+            if self.batch_prune_threshold is not None and not (
+                0 <= self.batch_prune_threshold <= 1
+            ):
+                msg = f"batch_prune_threshold must be in [0, 1] or None, got {self.batch_prune_threshold}."
+                raise ValueError(msg)
 
         # Process batch keys
         self.batch_codes, self.n_batches = _get_batch_codes(batch_df, batch_key)
@@ -85,9 +101,7 @@ class Harmony:
         pr_b = (n_b / n_cells).reshape(-1, 1)
 
         # Set default theta
-        if self.theta is None:
-            theta_arr = np.ones(self.n_batches, dtype=x.dtype) * 2.0
-        elif isinstance(self.theta, (int, float)):
+        if isinstance(self.theta, (int, float)):
             theta_arr = np.ones(self.n_batches, dtype=x.dtype) * float(self.theta)
         else:
             theta_arr = np.array(self.theta, dtype=x.dtype)
@@ -114,6 +128,7 @@ class Harmony:
             sigma=self.sigma,
             theta=theta_arr,
             random_state=self.random_state,
+            stabilized_penalty=self.stabilized_penalty,
         )
 
         # Main Harmony loop
@@ -127,7 +142,19 @@ class Harmony:
                 )
                 if obj is not None:
                     objectives_harmony.append(obj)
-                z_hat = self._correct(x, r, o)
+
+                # Compute per-(k,b) ridge regularization
+                lambda_kb = _compute_lambda_kb(
+                    e,
+                    o=o,
+                    n_b=n_b,
+                    alpha=self.alpha,
+                    threshold=self.batch_prune_threshold,
+                    ridge_lambda=self.ridge_lambda,
+                    dynamic_lambda=self.dynamic_lambda,
+                )
+
+                z_hat = self._correct(x, r, o, lambda_kb=lambda_kb)
                 z_norm = _normalize_rows_l2(z_hat)
                 if self._is_convergent(objectives_harmony, self.tol_harmony):
                     log.info(f"Harmony converged in {i + 1} iterations")
@@ -172,9 +199,17 @@ class Harmony:
             max_iter=self.max_iter_clustering,
             tol=self.tol_clustering,
             block_proportion=self.block_proportion,
+            stabilized_penalty=self.stabilized_penalty,
         )
 
-    def _correct(self, x: np.ndarray, r: np.ndarray, o: np.ndarray) -> np.ndarray:
+    def _correct(
+        self,
+        x: np.ndarray,
+        r: np.ndarray,
+        o: np.ndarray,
+        *,
+        lambda_kb: np.ndarray,
+    ) -> np.ndarray:
         """Perform correction step."""
         if self.correction_method == "fast":
             return _correction_fast(
@@ -183,7 +218,7 @@ class Harmony:
                 self.n_batches,
                 r,
                 o,
-                ridge_lambda=self.ridge_lambda,
+                lambda_kb=lambda_kb,
             )
         else:
             return _correction_original(
@@ -191,7 +226,7 @@ class Harmony:
                 self.batch_codes,
                 self.n_batches,
                 r,
-                ridge_lambda=self.ridge_lambda,
+                lambda_kb=lambda_kb,
             )
 
 
@@ -239,6 +274,7 @@ def _initialize_centroids(
     sigma: float,
     theta: np.ndarray,
     random_state: int | None,
+    stabilized_penalty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Initialize cluster centroids using K-means."""
     kmeans = KMeans(
@@ -263,7 +299,16 @@ def _initialize_centroids(
     np.add.at(o, batch_codes, r)
 
     # Compute initial objective
-    obj = _compute_objective(y_norm, z_norm, r, theta=theta, sigma=sigma, o=o, e=e)
+    obj = _compute_objective(
+        y_norm,
+        z_norm,
+        r,
+        theta=theta,
+        sigma=sigma,
+        o=o,
+        e=e,
+        stabilized_penalty=stabilized_penalty,
+    )
 
     return r, e, o, obj
 
@@ -292,6 +337,7 @@ def _clustering(  # noqa: PLR0913
     max_iter: int,
     tol: float,
     block_proportion: float,
+    stabilized_penalty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
     """Run clustering iterations (modifies r, e, o in-place)."""
     n_cells = z_norm.shape[0]
@@ -335,8 +381,13 @@ def _clustering(  # noqa: PLR0913
             dots = z_norm[cell_idx, :] @ y_norm.T
             r_new = np.exp(term * (1.0 - dots))
 
-            # Apply penalty
-            penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
+            # Apply penalty (Harmony1 vs Harmony2)
+            if stabilized_penalty:
+                # Harmony2: denominator is (O + E + 1)
+                penalty = ((e[b, :] + 1.0) / (o[b, :] + e[b, :] + 1.0)) ** theta[0, b]
+            else:
+                # Harmony1: denominator is (O + 1)
+                penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
             r_new *= penalty
 
             # Normalize rows to sum to 1
@@ -353,7 +404,16 @@ def _clustering(  # noqa: PLR0913
             e += pr_b * r_new_sum
 
         # Compute objective
-        obj = _compute_objective(y_norm, z_norm, r, theta=theta, sigma=sigma, o=o, e=e)
+        obj = _compute_objective(
+            y_norm,
+            z_norm,
+            r,
+            theta=theta,
+            sigma=sigma,
+            o=o,
+            e=e,
+            stabilized_penalty=stabilized_penalty,
+        )
         objectives_clustering.append(obj)
 
         # Check convergence
@@ -366,25 +426,52 @@ def _clustering(  # noqa: PLR0913
     return r, e, o, obj
 
 
+def _compute_lambda_kb(
+    e: np.ndarray,
+    *,
+    o: np.ndarray,
+    n_b: np.ndarray,
+    alpha: float,
+    threshold: float | None,
+    ridge_lambda: float,
+    dynamic_lambda: bool,
+) -> np.ndarray:
+    """Compute per-(k,b) ridge regularization array."""
+    sentinel = e.dtype.type(_SUPPRESS_PENALTY)
+    if not dynamic_lambda:
+        lambda_kb = np.full_like(e, ridge_lambda)
+    else:
+        lambda_kb = (alpha * e).astype(e.dtype)
+        if threshold is not None:
+            safe_n_b = np.where(n_b > 0, n_b, np.ones_like(n_b))
+            prune_mask = (o / safe_n_b[:, None]) < threshold
+            prune_mask |= n_b[:, None] == 0
+            lambda_kb[prune_mask] = sentinel
+    # Where both O and lambda_kb are zero, the kernel computes 1/(O+lambda)
+    # which would divide by zero.
+    lambda_kb[(o + lambda_kb) == 0] = sentinel
+    return lambda_kb
+
+
 def _correction_original(
     x: np.ndarray,
     batch_codes: np.ndarray,
     n_batches: int,
     r: np.ndarray,
     *,
-    ridge_lambda: float,
+    lambda_kb: np.ndarray,
 ) -> np.ndarray:
     """Original correction method - per-cluster ridge regression."""
     _, d = x.shape
 
-    # Ridge regularization matrix (don't penalize intercept)
-    id_mat = np.eye(n_batches + 1, dtype=x.dtype)
-    id_mat[0, 0] = 0
-    lambda_mat = ridge_lambda * id_mat
-
     z = x.copy()
 
-    for r_k in r.T:
+    for k_idx, r_k in enumerate(r.T):
+        # Build per-cluster lambda diagonal
+        lambda_diag = np.zeros(n_batches + 1, dtype=x.dtype)
+        lambda_diag[1:] = lambda_kb[:, k_idx]
+        lambda_mat = np.diag(lambda_diag)
+
         r_sum_total = r_k.sum()
         r_sum_per_batch = np.zeros(n_batches, dtype=x.dtype)
         for b in range(n_batches):
@@ -422,7 +509,7 @@ def _correction_fast(
     r: np.ndarray,
     o: np.ndarray,
     *,
-    ridge_lambda: float,
+    lambda_kb: np.ndarray,
 ) -> np.ndarray:
     """Fast correction method using precomputed factors."""
     _, d = x.shape
@@ -431,11 +518,11 @@ def _correction_fast(
     dtype = x.dtype
     p = np.eye(n_batches + 1, dtype=dtype)
 
-    for o_k, r_k in zip(o.T, r.T, strict=True):
-        n_k = np.sum(o_k)
+    for k_idx, (o_k, r_k) in enumerate(zip(o.T, r.T, strict=True)):
+        lam_k = lambda_kb[:, k_idx]
 
-        factor = (1.0 / (o_k + ridge_lambda)).astype(dtype)
-        c = n_k + np.sum(-factor * o_k**2)
+        factor = (1.0 / (o_k + lam_k)).astype(dtype)
+        c = np.sum(o_k) + np.sum(-factor * o_k**2)
         c_inv = dtype.type(1.0 / c)
 
         p[0, 1:] = -factor * o_k
@@ -471,6 +558,7 @@ def _compute_objective(
     sigma: float,
     o: np.ndarray,
     e: np.ndarray,
+    stabilized_penalty: bool = True,
 ) -> float:
     """Compute Harmony objective function."""
     zy = z_norm @ y_norm.T
@@ -480,7 +568,12 @@ def _compute_objective(
     r_normalized = r / np.clip(r_row_sums, 1e-12, None)
     entropy = sigma * np.sum(r_normalized * np.log(r_normalized + 1e-12))
 
-    log_ratio = np.log((o + 1) / (e + 1))
+    if stabilized_penalty:
+        # Harmony2: numerator is (O + E + 1)
+        log_ratio = np.log((o + e + 1) / (e + 1))
+    else:
+        # Harmony1: numerator is (O + 1)
+        log_ratio = np.log((o + 1) / (e + 1))
     diversity_penalty = sigma * np.sum(theta @ (o * log_ratio))
 
     return kmeans_error + entropy + diversity_penalty
