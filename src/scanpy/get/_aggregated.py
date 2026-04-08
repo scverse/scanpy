@@ -558,6 +558,7 @@ def sparse_indicator(
 ) -> CSRBase:
     if mask is None:
         mask = np.broadcast_to(True, len(categorical))  # noqa: FBT003
+    mask = mask.astype("uint8")
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
     codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
     a = sparse.coo_array(
