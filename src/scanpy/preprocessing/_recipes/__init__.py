@@ -5,10 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ... import preprocessing as pp
 from ..._compat import CSBase
 from ..._utils.random import _accepts_legacy_random_state
-from .._normalization import normalize_total
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -43,6 +41,7 @@ def recipe_weinreb17(
         Return a copy if true.
 
     """
+    from ... import pp
     from .weinreb import filter_genes_cv, normalize_per_cell, zscore
 
     if isinstance(adata.X, CSBase):
@@ -88,11 +87,13 @@ def recipe_seurat(
         Return a copy if true.
 
     """
+    from ... import pl, pp
+
     if copy:
         adata = adata.copy()
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
-    normalize_total(adata, target_sum=1e4)
+    pp.normalize_total(adata, target_sum=1e4)
     adata.layers[layer_log := "log1p"] = adata.X
     pp.log1p(adata, layer=layer_log)
     filter_result = pp.highly_variable_genes(
@@ -100,9 +101,7 @@ def recipe_seurat(
     )
     assert filter_result is not None
     if plot:
-        from ...plotting import _preprocessing as ppp
-
-        ppp.highly_variable_genes(filter_result, log=not log)
+        pl.highly_variable_genes(filter_result, log=not log)
     adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
     if log:
         adata.X = adata.layers[layer_log]
@@ -145,13 +144,15 @@ def recipe_zheng17(
     Returns or updates `adata` depending on `copy`.
 
     """
+    from ... import pl, pp
+
     start = logg.info("running recipe zheng17")
     if copy:
         adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    normalize_total(adata, key_added="n_counts_all")
+    pp.normalize_total(adata, key_added="n_counts_all")
     adata.layers[layer_log := "log1p"] = adata.X
     pp.log1p(adata, layer=layer_log)
     filter_result = pp.highly_variable_genes(
@@ -163,13 +164,11 @@ def recipe_zheng17(
     )
     assert filter_result is not None
     if plot:  # should not import at the top of the file
-        from ...plotting import _preprocessing as ppp
-
-        ppp.highly_variable_genes(filter_result, log=True)
+        pl.highly_variable_genes(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter_result["highly_variable"]]
     adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
-    normalize_total(adata)  # renormalize after filtering
+    pp.normalize_total(adata)  # renormalize after filtering
     if log:
         adata.X = adata.layers[layer_log]
     del adata.layers[layer_log]

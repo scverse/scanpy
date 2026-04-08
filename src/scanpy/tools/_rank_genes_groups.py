@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, njit
+from .._compat import CSBase
+from .._settings import Default
+from .._settings.presets import DETest
 from .._utils import (
     check_nonnegative_integers,
     get_literal_vals,
@@ -22,12 +25,13 @@ from ..get import _check_mask, _get_obs_rep
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from typing import Literal
 
     from anndata import AnnData
     from numpy.typing import NDArray
 
+
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
-type _Method = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
 
 _CONST_MAX_SIZE: int = 10_000_000
 
@@ -419,7 +423,7 @@ class _RankGenes:
 
     def compute_statistics(  # noqa: PLR0912
         self,
-        method: _Method,
+        method: DETest,
         *,
         corr_method: _CorrMethod = "benjamini-hochberg",
         n_genes_user: int | None = None,
@@ -492,7 +496,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool] | str | None = None,
+    mask_var: NDArray[np.bool] | str | None | Default = Default(
+        preset=("rank_genes_groups", "mask_var")
+    ),
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -501,7 +507,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     pts: bool = False,
     key_added: str | None = None,
     copy: bool = False,
-    method: _Method | None = None,
+    method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
@@ -616,6 +622,13 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    from scanpy import settings
+
+    if isinstance(mask_var, Default):
+        mask_var = settings.preset.rank_genes_groups.mask_var
+    if method is None or isinstance(method, Default):
+        method = settings.preset.rank_genes_groups.method
+
     mask_var = _check_mask(adata, mask_var, "var")
 
     if use_raw is None:
@@ -624,14 +637,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         msg = "Received `use_raw=True`, but `adata.raw` is empty."
         raise ValueError(msg)
 
-    if method is None:
-        method = "t-test"
-
     if "only_positive" in kwds:
         rankby_abs = not kwds.pop("only_positive")  # backwards compat
 
     start = logg.info("ranking genes")
-    if method not in (avail_methods := get_literal_vals(_Method)):
+    if method not in (avail_methods := get_literal_vals(DETest)):
         msg = f"Method must be one of {avail_methods}."
         raise ValueError(msg)
 

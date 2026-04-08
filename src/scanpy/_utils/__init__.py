@@ -10,7 +10,6 @@ import importlib.util
 import inspect
 import re
 from contextlib import suppress
-from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import indent
@@ -56,11 +55,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AssoResult",
-    "Empty",
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
-    "_empty",
     "_resolve_axis",
     "annotate_doc_types",
     "axis_mul_or_truediv",
@@ -86,16 +83,6 @@ __all__ = [
 
 
 LegacyUnionType: type = type(Union[int, str])  # noqa: UP007
-
-
-class Empty(Enum):
-    token = 0
-
-    def __repr__(self) -> str:
-        return "_empty"
-
-
-_empty = Empty.token
 
 
 def ensure_igraph() -> None:
@@ -847,7 +834,7 @@ def select_groups(
     return groups_order_subset, groups_masks_obs
 
 
-def check_presence_download(filename: Path, backup_url):
+def check_presence_download(filename: Path, backup_url: str):
     """Check if file is present otherwise download."""
     if not filename.is_file():
         from ..readwrite import _download

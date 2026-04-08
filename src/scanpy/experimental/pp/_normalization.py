@@ -8,7 +8,8 @@ from anndata import AnnData
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
-from ..._utils import _doc_params, _empty, check_nonnegative_integers, view_to_actual
+from ..._settings import Default
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from ..._utils import Empty
     from ..._utils.random import RNGLike, SeedLike
 
 
@@ -171,7 +171,7 @@ def normalize_pearson_residuals_pca(
     n_comps: int | None = 50,
     rng: SeedLike | RNGLike | None = None,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Empty = _empty,
+    mask_var: np.ndarray | str | None | Default = Default("'highly_variable'"),
     use_highly_variable: bool | None = None,
     check_values: bool = True,
     inplace: bool = True,

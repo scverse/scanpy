@@ -2,15 +2,18 @@
 
 .. currentmodule:: {{ module }}
 
-.. add toctree option to make autodoc generate the pages
-
 ..  autoclass:: {{ objname }}
+    :show-inheritance:
 
     {% block attributes %}
-    {%- for item in attributes %}
+    .. rubric:: Members
+    {% for item in attributes if item[0] is upper %}
+    .. autoattribute:: {{ item }}
+    {%- endfor %}
+
+    {%- for item in attributes if item[0] is not upper %}
     {%- if loop.first %}
     .. rubric:: Attributes
-
     ..  autosummary::
         :toctree: .
     {% endif %}
@@ -19,7 +22,7 @@
     {% endblock %}
 
     {% block methods %}
-    {%- for item in methods if item != '__init__' %}
+    {%- for item in methods if item != "__init__" and item not in inherited_members %}
     {%- if loop.first %}
     .. rubric:: Methods
 
