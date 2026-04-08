@@ -13,6 +13,7 @@ from sklearn.utils.sparsefuncs import csc_median_axis_0
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
+from ._kernels import agg_sum_csc, agg_sum_csr
 from .get import _check_mask
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ class Aggregate:
     def __init__(
         self,
         groupby: pd.Categorical,
-        data: Array,
+        data: np.ndarray | CSBase,
         *,
         mask: NDArray[np.bool] | None = None,
     ) -> None:
@@ -64,7 +65,7 @@ class Aggregate:
         self.data = data
 
     groupby: pd.Categorical
-    indicator_matrix: sparse.coo_matrix
+    indicator_matrix: CSRBase
     data: Array
 
     def count_nonzero(self) -> NDArray[np.integer]:
@@ -79,7 +80,7 @@ class Aggregate:
         # return self.indicator_matrix @ pattern
         return utils.asarray(self.indicator_matrix @ (self.data != 0))
 
-    def sum(self) -> Array:
+    def sum(self, *, power_of_2: bool = False) -> Array:
         """Compute the sum per feature per group of observations.
 
         Returns
@@ -87,7 +88,14 @@ class Aggregate:
         Array of sum.
 
         """
-        return utils.asarray(self.indicator_matrix @ self.data)
+        if isinstance(self.data, np.ndarray):
+            return utils.asarray(
+                self.indicator_matrix
+                @ (_power(self.data, 2) if power_of_2 else self.data)
+            )
+        return (agg_sum_csr if isinstance(self.data, CSRBase) else agg_sum_csc)(
+            self.indicator_matrix, (_power(self.data, 2) if power_of_2 else self.data)
+        )
 
     def mean(self) -> Array:
         """Compute the mean per feature per group of observations.
@@ -97,10 +105,7 @@ class Aggregate:
         Array of mean.
 
         """
-        return (
-            utils.asarray(self.indicator_matrix @ self.data)
-            / np.bincount(self.groupby.codes)[:, None]
-        )
+        return self.sum() / np.bincount(self.groupby.codes)[:, None]
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
@@ -550,18 +555,13 @@ def sparse_indicator(
     categorical: pd.Categorical,
     *,
     mask: NDArray[np.bool] | None = None,
-    weight: NDArray[np.floating] | None = None,
-) -> sparse.coo_matrix:
-    if mask is not None and weight is None:
-        weight = mask.astype(np.float32)
-    elif mask is not None and weight is not None:
-        weight = mask * weight
-    elif mask is None and weight is None:
-        weight = np.broadcast_to(1.0, len(categorical))
+) -> CSRBase:
+    if mask is None:
+        mask = np.broadcast_to(True, len(categorical))  # noqa: FBT003
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
     codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
-    a = sparse.coo_matrix(
-        (weight, (codes, np.arange(len(categorical)))),
+    a = sparse.coo_array(
+        (mask, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
-    )
+    ).tocsr()
     return a
