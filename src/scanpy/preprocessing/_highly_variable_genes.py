@@ -180,7 +180,9 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             aggregated_mean_var.layers[l] for l in ["mean", "var"]
         )
         if isinstance(mean_global, DaskArray):
-            mean_global, var_global = mean_global.compute(), var_global.compute()
+            import dask.array as da
+
+            mean_global, var_global = da.compute(mean_global, var_global)
             aggregated_mean_var.layers["mean"] = mean_global
             aggregated_mean_var.layers["var"] = var_global
     batch_info = batch_info.to_numpy()
