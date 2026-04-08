@@ -11,11 +11,7 @@ if TYPE_CHECKING:
 
 
 @njit
-def agg_sum_csr(
-    indicator: CSRBase,
-    data: CSRBase,
-    out: np.ndarray
-):
+def agg_sum_csr(indicator: CSRBase, data: CSRBase, out: np.ndarray):
     out = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
     for cat_num in numba.prange(indicator.shape[0]):
         start_cat_idx = indicator.indptr[cat_num]
@@ -33,11 +29,7 @@ def agg_sum_csr(
 
 
 @njit
-def agg_sum_csc(
-    indicator: CSRBase,
-    data: CSCBase,
-    out: np.ndarray
-):
+def agg_sum_csc(indicator: CSRBase, data: CSCBase, out: np.ndarray):
 
     obs_to_cat = np.full(data.shape[0], -1, dtype=np.int64)
 

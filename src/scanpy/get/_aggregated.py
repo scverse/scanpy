@@ -92,9 +92,7 @@ class Aggregate:
         self, *, data: np.ndarray | CSBase, power_of_2: bool = False
     ) -> np.ndarray:
         if isinstance(data, np.ndarray):
-            res = (
-                self.indicator_matrix @ (_power(data, 2) if power_of_2 else data)
-            )
+            res = self.indicator_matrix @ (_power(data, 2) if power_of_2 else data)
             if isinstance(res, CSBase):
                 return res.toarray()
             return res
@@ -562,7 +560,7 @@ def sparse_indicator(
 ) -> CSRBase:
     if mask is None:
         # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
-        mask = np.broadcast_to(1.0, len(categorical))  # noqa: FBT003
+        mask = np.broadcast_to(1.0, len(categorical))
     else:
         mask = mask.astype("uint8")
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
