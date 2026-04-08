@@ -1875,6 +1875,25 @@ def test_umap_mask_no_modification():
     pd.testing.assert_series_equal(pbmc.obs["louvain"], data_copy)
 
 
+def test_scatter_size_not_mutated_across_panels():
+    """Per-point size array must not be cumulatively reordered across subplots.
+
+    Regression test for https://github.com/scverse/scanpy/issues/4024
+    """
+    pbmc = pbmc3k_processed()
+    rng = np.random.default_rng(0)
+    sizes = rng.uniform(10, 200, size=pbmc.n_obs)
+    sizes_original = sizes.copy()
+
+    axes = sc.pl.umap(
+        pbmc, color=["louvain", "n_genes"], size=sizes, show=False
+    )
+    plt.close()
+
+    # The input array must not be modified
+    np.testing.assert_array_equal(sizes, sizes_original)
+
+
 def test_string_mask(tmp_path, check_same_image):
     """Check that the same mask given as string or bool array provides the same result."""
     pbmc = pbmc3k_processed()
