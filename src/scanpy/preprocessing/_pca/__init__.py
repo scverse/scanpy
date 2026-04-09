@@ -227,6 +227,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     if isinstance(mask_var, Default):
         mask_var = "highly_variable" if "highly_variable" in adata.var else None
+    elif mask_var is not None and obsm is not None:
+        msg = "Argument `mask_var` is incompatible with `obsm`."
+        raise ValueError(msg)
     mask_var_param, mask_var = mask_var, _check_mask(adata, mask_var, "var")
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 
