@@ -60,7 +60,7 @@ jobs:
         id: changes
         with:
           filters: | # this is intentionally a string
-            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.*.md'
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.${{ (contains(github.event.pull_request.title, '!') && 'breaking') || needs.check-milestone.outputs.type }}.md'
       - name: Check if a relevant release fragment is added
         uses: flying-sheep/check@v1
         with:
