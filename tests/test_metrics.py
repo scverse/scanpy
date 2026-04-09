@@ -336,15 +336,14 @@ def test_modularity_adata(
         with subtests.test("bounds", score=name):
             assert 0 <= s <= 1
     for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
-        approx = {n0, n1} != {"update", "calculate"}
         with (
             subtests.test("equality", l=n0, r=n1),
             xfail(
-                approx and pkg_version("igraph") < Version("1"),
+                pkg_version("igraph") < Version("1"),
                 reason="igraph 0.x has different modularity behavior",
             ),
         ):
-            assert pytest.approx(s0, rel=1e-3 if approx else 1e-6) == s1
+            assert pytest.approx(s0, rel=1e-6) == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
 
