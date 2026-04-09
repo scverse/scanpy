@@ -186,7 +186,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             aggregated_mean_var.layers["mean"] = mean_global
             aggregated_mean_var.layers["var"] = var_global
     batch_info = batch_info.to_numpy()
-    for b in batch_info:
+    for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
         if can_aggregate:
             mean, var = (
