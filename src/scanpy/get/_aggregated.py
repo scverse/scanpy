@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData, utils
+from anndata import AnnData
 from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
@@ -13,6 +13,7 @@ from sklearn.utils.sparsefuncs import csc_median_axis_0
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
+from ._kernels import agg_sum_csc, agg_sum_csr, mean_var_csc, mean_var_csr
 from .get import _check_mask
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
 type AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
-class Aggregate:
+class Aggregate[ArrayT: np.ndarray | CSBase]:
     """Functionality for generic grouping and aggregating.
 
     There is currently support for count_nonzero, sum, mean, and variance.
@@ -53,7 +54,7 @@ class Aggregate:
     def __init__(
         self,
         groupby: pd.Categorical,
-        data: Array,
+        data: ArrayT,
         *,
         mask: NDArray[np.bool] | None = None,
     ) -> None:
@@ -64,8 +65,8 @@ class Aggregate:
         self.data = data
 
     groupby: pd.Categorical
-    indicator_matrix: sparse.coo_matrix
-    data: Array
+    indicator_matrix: CSRBase
+    data: ArrayT
 
     def count_nonzero(self) -> NDArray[np.integer]:
         """Count the number of observations in each group.
@@ -75,11 +76,22 @@ class Aggregate:
         Array of counts.
 
         """
-        # pattern = self.data._with_data(np.broadcast_to(1, len(self.data.data)))
-        # return self.indicator_matrix @ pattern
-        return utils.asarray(self.indicator_matrix @ (self.data != 0))
+        return self._sum(data=(self.data != 0).astype("uint8"))
 
-    def sum(self) -> Array:
+    def _sum(self, data: ArrayT):
+        if isinstance(data, np.ndarray):
+            res = self.indicator_matrix @ data
+            if isinstance(res, CSBase):
+                return res.toarray()
+            return res
+        dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
+        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
+        (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
+            self.indicator_matrix, data, out
+        )
+        return out
+
+    def sum(self) -> np.ndarray:
         """Compute the sum per feature per group of observations.
 
         Returns
@@ -87,7 +99,7 @@ class Aggregate:
         Array of sum.
 
         """
-        return utils.asarray(self.indicator_matrix @ self.data)
+        return self._sum(self.data)
 
     def mean(self) -> Array:
         """Compute the mean per feature per group of observations.
@@ -97,10 +109,7 @@ class Aggregate:
         Array of mean.
 
         """
-        return (
-            utils.asarray(self.indicator_matrix @ self.data)
-            / np.bincount(self.groupby.codes)[:, None]
-        )
+        return self.sum() / np.bincount(self.groupby.codes)[:, None]
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
@@ -124,14 +133,17 @@ class Aggregate:
         assert dof >= 0
 
         group_counts = np.bincount(self.groupby.codes)
-        mean_ = self.mean()
-        # sparse matrices do not support ** for elementwise power.
-        mean_sq = (
-            utils.asarray(self.indicator_matrix @ _power(self.data, 2))
-            / group_counts[:, None]
-        )
-        sq_mean = mean_**2
-        var_ = mean_sq - sq_mean
+        if isinstance(self.data, np.ndarray):
+            mean_ = self.mean()
+            # sparse matrices do not support ** for elementwise power.
+            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
+            sq_mean = mean_**2
+            var_ = mean_sq - sq_mean
+        else:
+            mean_, var_ = (
+                mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
+            )(self.indicator_matrix, self.data)
+            sq_mean = mean_**2
         # TODO: Why these values exactly? Because they are high relative to the datatype?
         # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         precision = 2 << (42 if self.data.dtype == np.float64 else 20)
@@ -550,18 +562,16 @@ def sparse_indicator(
     categorical: pd.Categorical,
     *,
     mask: NDArray[np.bool] | None = None,
-    weight: NDArray[np.floating] | None = None,
-) -> sparse.coo_matrix:
-    if mask is not None and weight is None:
-        weight = mask.astype(np.float32)
-    elif mask is not None and weight is not None:
-        weight = mask * weight
-    elif mask is None and weight is None:
-        weight = np.broadcast_to(1.0, len(categorical))
+) -> CSRBase:
+    if mask is None:
+        # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
+        mask = np.broadcast_to(1.0, len(categorical))
+    else:
+        mask = mask.astype("uint8")
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
-    codes = categorical.codes if mask is None else np.where(mask, categorical.codes, 0)
-    a = sparse.coo_matrix(
-        (weight, (codes, np.arange(len(categorical)))),
+    codes = np.where(mask, categorical.codes, 0)
+    a = sparse.coo_array(
+        (mask, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
-    )
+    ).tocsr()
     return a
