@@ -18,7 +18,6 @@ from testing.scanpy._helpers import (
     check_rep_mutation,
     check_rep_results,
 )
-from testing.scanpy._pytest.marks import skip_numba_0_63
 
 # TODO: Add support for sparse-in-dask
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
@@ -210,7 +209,6 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     ), "Wrong shape of PCA output in `X_pca`"
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
 @pytest.mark.parametrize(
@@ -283,7 +281,6 @@ def test_normalize_pearson_residuals_pca(
     np.testing.assert_array_equal(adata.obsm["X_pca"], adata_pca.obsm["X_pca"])
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
 def test_normalize_pearson_residuals_recipe(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -147,6 +146,7 @@ def umap(  # noqa: PLR0913
         UMAP parameters.
 
     """
+    non_deterministic = rng is None
     rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
@@ -166,11 +166,6 @@ def umap(  # noqa: PLR0913
         logg.warning(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
-
-    with warnings.catch_warnings():
-        # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
-        import umap
 
     from umap.umap_ import find_ab_params, simplicial_set_embedding
 
@@ -215,6 +210,7 @@ def umap(  # noqa: PLR0913
             n_epochs=n_epochs,
             init=init_coords,
             random_state=_legacy_random_state(rng, always_state=True),
+            parallel=non_deterministic,  # if True, random_state is ignored
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
             densmap=False,
