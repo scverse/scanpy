@@ -99,6 +99,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
+scanpy2 = [ "igraph>=0.10.8", "leidenalg>=0.10.1", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
