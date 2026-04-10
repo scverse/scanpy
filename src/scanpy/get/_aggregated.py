@@ -13,7 +13,7 @@ from sklearn.utils.sparsefuncs import csc_median_axis_0
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
-from ._kernels import agg_sum_csc, agg_sum_csr
+from ._kernels import agg_sum_csc, agg_sum_csr, mean_var_csc, mean_var_csr
 from .get import _check_mask
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ class Aggregate:
         """
         return self._sum(data=(self.data != 0).astype("uint8"), power_of_2=False)
 
-    def sum(self, *, power_of_2: bool = False) -> np.ndarray:
+    def sum(self) -> np.ndarray:
         """Compute the sum per feature per group of observations.
 
         Returns
@@ -86,21 +86,19 @@ class Aggregate:
         Array of sum.
 
         """
-        return self._sum(data=self.data, power_of_2=power_of_2)
-
-    def _sum(
-        self, *, data: np.ndarray | CSBase, power_of_2: bool = False
-    ) -> np.ndarray:
-        if isinstance(data, np.ndarray):
-            res = self.indicator_matrix @ (_power(data, 2) if power_of_2 else data)
+        if isinstance(self.data, np.ndarray):
+            res = self.indicator_matrix @ self.data
             if isinstance(res, CSBase):
                 return res.toarray()
             return res
-        dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
-        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
-        return (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
-            self.indicator_matrix, (_power(data, 2) if power_of_2 else data), out
+        dtype = np.int64 if np.issubdtype(self.data.dtype, np.integer) else np.float64
+        out = np.zeros(
+            (self.indicator_matrix.shape[0], self.data.shape[1]), dtype=dtype
         )
+        (agg_sum_csr if isinstance(self.data, CSRBase) else agg_sum_csc)(
+            self.indicator_matrix, self.data, out
+        )
+        return out
 
     def mean(self) -> Array:
         """Compute the mean per feature per group of observations.
@@ -134,11 +132,19 @@ class Aggregate:
         assert dof >= 0
 
         group_counts = np.bincount(self.groupby.codes)
-        mean_ = self.mean()
-        # sparse matrices do not support ** for elementwise power.
-        mean_sq = self.sum(power_of_2=True) / group_counts[:, None]
-        sq_mean = mean_**2
-        var_ = mean_sq - sq_mean
+        if isinstance(self.data, np.ndarray):
+            mean_ = self.mean()
+            # sparse matrices do not support ** for elementwise power.
+            mean_sq = (self.indicator_matrix @ _power(self.data, 2)) / group_counts[
+                :, None
+            ]
+            sq_mean = mean_**2
+            var_ = mean_sq - sq_mean
+        else:
+            mean_, var_ = (
+                mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
+            )(self.indicator_matrix, self.data)
+            sq_mean = mean_**2
         # TODO: Why these values exactly? Because they are high relative to the datatype?
         # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
         precision = 2 << (42 if self.data.dtype == np.float64 else 20)
