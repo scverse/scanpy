@@ -212,7 +212,7 @@ def modularity_array(
         raise
     igraph_mode: str = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
     graph: ig.Graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
-    return graph.modularity(_codes(labels))
+    return graph.modularity(_codes(labels), "weight")
 
 
 def _codes(labels: AnyArrayLike) -> AnyArrayLike:
