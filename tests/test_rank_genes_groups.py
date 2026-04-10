@@ -311,3 +311,58 @@ def test_mask_not_equal():
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
+
+
+@pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
+def test_pts_ordering_matches_names(method):
+    """Test that pts/pts_rest column ordering matches the significance ordering in names.
+
+    Regression test for https://github.com/scverse/scanpy/issues/3930
+    """
+    pbmc = pbmc68k_reduced()
+
+    rank_genes_groups(
+        pbmc,
+        "bulk_labels",
+        method=method,
+        pts=True,
+        n_genes=10,
+    )
+
+    results = pbmc.uns["rank_genes_groups"]
+    names_df = pd.DataFrame(results["names"])
+    pts_df = results["pts"]
+
+    # For each group, the i-th pts value should correspond to the i-th gene name
+    for group in names_df.columns:
+        gene_names = names_df[group].values
+        pts_values = pts_df[group].values
+        assert len(gene_names) == len(pts_values), (
+            f"Length mismatch for group {group}: "
+            f"names has {len(gene_names)}, pts has {len(pts_values)}"
+        )
+        # Verify pts values are correct by checking against a fresh computation
+        # from the raw data
+        in_group = (pbmc.obs["bulk_labels"] == group).to_numpy()
+        x = pbmc.raw.X if pbmc.raw is not None else pbmc.X
+        for i, gene in enumerate(gene_names):
+            var_names = pbmc.raw.var_names if pbmc.raw is not None else pbmc.var_names
+            gene_idx = np.where(var_names == gene)[0][0]
+            col = x[:, gene_idx]
+            if isinstance(col, CSBase):
+                col = col.toarray().ravel()
+            else:
+                col = np.asarray(col).ravel()
+            expected_frac = np.count_nonzero(col[in_group]) / np.sum(in_group)
+            np.testing.assert_allclose(
+                pts_values[i],
+                expected_frac,
+                rtol=1e-5,
+                err_msg=f"pts mismatch for group={group}, gene={gene} at position {i}",
+            )
+
+    # Also verify pts_rest if present
+    if "pts_rest" in results:
+        pts_rest_df = results["pts_rest"]
+        for group in names_df.columns:
+            assert len(names_df[group]) == len(pts_rest_df[group])
