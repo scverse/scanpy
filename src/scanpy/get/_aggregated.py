@@ -26,7 +26,7 @@ type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
 type AggType = ConstantDtypeAgg | Literal["mean", "var"]
 
 
-class Aggregate:
+class Aggregate[ArrayT: np.ndarray | CSBase]:
     """Functionality for generic grouping and aggregating.
 
     There is currently support for count_nonzero, sum, mean, and variance.
@@ -54,7 +54,7 @@ class Aggregate:
     def __init__(
         self,
         groupby: pd.Categorical,
-        data: np.ndarray | CSBase,
+        data: ArrayT,
         *,
         mask: NDArray[np.bool] | None = None,
     ) -> None:
@@ -66,7 +66,7 @@ class Aggregate:
 
     groupby: pd.Categorical
     indicator_matrix: CSRBase
-    data: Array
+    data: ArrayT
 
     def count_nonzero(self) -> NDArray[np.integer]:
         """Count the number of observations in each group.
@@ -78,6 +78,19 @@ class Aggregate:
         """
         return self._sum(data=(self.data != 0).astype("uint8"), power_of_2=False)
 
+    def _sum(self, data: ArrayT):
+        if isinstance(data, np.ndarray):
+            res = self.indicator_matrix @ data
+            if isinstance(res, CSBase):
+                return res.toarray()
+            return res
+        dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
+        out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
+        (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
+            self.indicator_matrix, data, out
+        )
+        return out
+
     def sum(self) -> np.ndarray:
         """Compute the sum per feature per group of observations.
 
@@ -86,19 +99,7 @@ class Aggregate:
         Array of sum.
 
         """
-        if isinstance(self.data, np.ndarray):
-            res = self.indicator_matrix @ self.data
-            if isinstance(res, CSBase):
-                return res.toarray()
-            return res
-        dtype = np.int64 if np.issubdtype(self.data.dtype, np.integer) else np.float64
-        out = np.zeros(
-            (self.indicator_matrix.shape[0], self.data.shape[1]), dtype=dtype
-        )
-        (agg_sum_csr if isinstance(self.data, CSRBase) else agg_sum_csc)(
-            self.indicator_matrix, self.data, out
-        )
-        return out
+        return self._sum(self.data)
 
     def mean(self) -> Array:
         """Compute the mean per feature per group of observations.
