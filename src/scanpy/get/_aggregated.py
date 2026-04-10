@@ -76,7 +76,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of counts.
 
         """
-        return self._sum(data=(self.data != 0).astype("uint8"), power_of_2=False)
+        return self._sum(data=(self.data != 0).astype("uint8"))
 
     def _sum(self, data: ArrayT):
         if isinstance(data, np.ndarray):
@@ -136,9 +136,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         if isinstance(self.data, np.ndarray):
             mean_ = self.mean()
             # sparse matrices do not support ** for elementwise power.
-            mean_sq = (self.indicator_matrix @ _power(self.data, 2)) / group_counts[
-                :, None
-            ]
+            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
             sq_mean = mean_**2
             var_ = mean_sq - sq_mean
         else:
