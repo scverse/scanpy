@@ -62,17 +62,17 @@ dependencies = [
     "numba>=0.60",
     "numpy>=2",
     "packaging>=25",
-    "pandas>=2.2.2",
+    "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
-    "scikit-learn>=1.4.2",
+    "scikit-learn>=1.6",
     "scipy>=1.13",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
     "tqdm",
     "typing-extensions; python_version<'3.13'",
-    "umap-learn>=0.5.7",
+    "umap-learn>=0.5.12",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
