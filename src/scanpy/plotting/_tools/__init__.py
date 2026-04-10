@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 from scanpy.get import obs_df
 
 from ... import logging as logg
-from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata, with_cat_dtype
+from ..._settings import Default, settings
+from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
 from ...get import rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
@@ -47,7 +47,6 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
-    from ..._utils import Empty
     from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
@@ -1164,7 +1163,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     show: bool | None = None,
     # deprecated
     save: bool | None = None,
-    scale: DensityNorm | Empty = _empty,
+    scale: DensityNorm | Default = Default("density_norm"),
 ):
     """Plot ranking of genes for all tested comparisons.
 

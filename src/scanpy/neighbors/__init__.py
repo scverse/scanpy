@@ -10,14 +10,20 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import scipy
+from packaging.version import Version
 from scipy import sparse
-from sklearn.utils import check_random_state
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, SpBase, warn
+from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
+from .._docs import doc_rng
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
+from .._utils.random import (
+    _accepts_legacy_random_state,
+    _legacy_random_state,
+    _LegacyRng,
+)
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -36,15 +42,14 @@ if TYPE_CHECKING:
     from igraph import Graph
     from numpy.typing import NDArray
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
     from ._types import KnnTransformerLike, _Metric, _MetricFn
 
     # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
     RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
 
-N_DCS: int = 15  # default number of diffusion components
-# Backwards compat, constants should be defined in only one place.
-N_PCS: int = settings.N_PCS
+
+SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 
 
 class KwdsForTransformer(TypedDict):
@@ -77,7 +82,8 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_pcs: NotRequired[int]
 
 
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@_accepts_legacy_random_state(_DEFAULT_SEED := 0)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
@@ -90,7 +96,7 @@ def neighbors(  # noqa: PLR0913
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn | None = None,
     metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     key_added: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -143,11 +149,6 @@ def neighbors(  # noqa: PLR0913
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'pynndescent'`
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
-        `'rapids'`
-            A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
-
-            .. deprecated:: 1.10.0
-               Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
         If `distances` is given, this parameter is simply stored in `.uns` (see below),
@@ -158,8 +159,7 @@ def neighbors(  # noqa: PLR0913
         Options for the metric.
 
         *ignored if ``transformer`` is an instance.*
-    random_state
-        A numpy random seed.
+    {rng}
 
         *ignored if ``transformer`` is an instance.*
     key_added
@@ -203,6 +203,10 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    meta_random_state = (
+        dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
+    )
+
     if distances is None:
         if metric is None:
             metric = "euclidean"
@@ -220,21 +224,25 @@ def neighbors(  # noqa: PLR0913
             transformer=transformer,
             metric=metric,
             metric_kwds=metric_kwds,
-            random_state=random_state,
+            rng=rng,
         )
     else:
         params = locals()
-        if ignored := {
+        ignored = {
             p.name
             for p in signature(neighbors).parameters.values()
-            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds", "random_state"}
+            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
-        }:
+        }
+        if meta_random_state.get("random_state") != _DEFAULT_SEED:
+            # `random_state` different from default (or any `rng`) was passed
+            ignored.add("rng/random_state")
+            meta_random_state.pop("random_state", None)
+        if ignored:
             warn(
                 f"Parameter(s) ignored if `distances` is given: {ignored}",
                 UserWarning,
             )
-            random_state = 0
         if callable(metric):
             msg = "`metric` must be a string if `distances` is given."
             raise TypeError(msg)
@@ -262,8 +270,8 @@ def neighbors(  # noqa: PLR0913
         key_added,
         n_neighbors=neighbors_.n_neighbors,
         method=method,
-        random_state=random_state,
         metric=metric,
+        **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
@@ -571,6 +579,7 @@ class Neighbors:
         return _utils.get_igraph_from_adjacency(self.connectivities)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+    @_accepts_legacy_random_state(0)
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
@@ -582,7 +591,7 @@ class Neighbors:
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
         metric_kwds: Mapping[str, Any] = MappingProxyType({}),
-        random_state: _LegacyRandom = 0,
+        rng: SeedLike | RNGLike | None = None,
     ) -> None:
         """Compute distances and connectivities of neighbors.
 
@@ -618,7 +627,7 @@ class Neighbors:
             n_neighbors=n_neighbors,
             metric=metric,
             metric_params=metric_kwds,  # most use _params, not _kwds
-            random_state=random_state,
+            random_state=_legacy_random_state(rng),
         )
         method, transformer, shortcut = self._handle_transformer(
             method, transformer, knn=knn, kwds=transformer_kwds_default
@@ -735,15 +744,7 @@ class Neighbors:
         )
 
         # Coerce `method` to 'gauss', 'umap', or 'jaccard'
-        if method == "rapids":
-            if transformer is not None:
-                msg = "Can’t specify both `method = 'rapids'` and `transformer`."
-                raise ValueError(msg)
-            method = "umap"
-            transformer = "rapids"
-        elif (
-            method not in (methods := get_literal_vals(_Method)) and method is not None
-        ):
+        if method not in (methods := get_literal_vals(_Method)) and method is not None:
             msg = f"`method` needs to be one of {methods}."
             raise ValueError(msg)
 
@@ -783,15 +784,6 @@ class Neighbors:
                     n_iters=max(5, round(np.log2(self._adata.n_obs))),
                 )
             transformer = PyNNDescentTransformer(**kwds)
-        elif transformer == "rapids":
-            msg = (
-                "`transformer='rapids'` is deprecated. "
-                "Use `rapids_singlecell.tl.neighbors` instead."
-            )
-            warn(msg, FutureWarning)
-            from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
-
-            transformer = RapidsKNNTransformer(**kwds)
         elif isinstance(transformer, str):
             msg = (
                 f"Unknown transformer: {transformer}. "
@@ -840,14 +832,17 @@ class Neighbors:
         self._transitions_sym = self.Z @ conn_norm @ self.Z
         logg.info("    finished", time=start)
 
+    @_doc_params(rng=doc_rng)
+    @_accepts_legacy_random_state(0)
     def compute_eigen(
         self,
         *,
         n_comps: int = 15,
-        sym: bool | None = None,
         sort: Literal["decrease", "increase"] = "decrease",
-        random_state: _LegacyRandom = 0,
-    ):
+        rng: np.random.Generator,
+        # unused
+        sym: None = None,
+    ) -> None:
         """Compute eigen decomposition of transition matrix.
 
         Parameters
@@ -855,12 +850,7 @@ class Neighbors:
         n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        sym
-            Instead of computing the eigendecomposition of the assymetric
-            transition matrix, computed the eigendecomposition of the symmetric
-            Ktilde matrix.
-        random_state
-            A numpy random seed
+        {rng}
 
         Returns
         -------
@@ -876,6 +866,7 @@ class Neighbors:
             plotting.
 
         """
+        rng = np.random.default_rng(rng)
         np.set_printoptions(precision=10)
         if self._transitions_sym is None:
             msg = "Run `.compute_transitions` first."
@@ -893,10 +884,10 @@ class Neighbors:
             matrix = matrix.astype(np.float64)
 
             # Setting the random initial vector
-            random_state = check_random_state(random_state)
-            v0 = random_state.standard_normal(matrix.shape[0])
+            v0 = rng.standard_normal(matrix.shape[0])
+            kw: Any = dict(rng=rng) if SCIPY_1_17 else {}
             evals, evecs = sparse.linalg.eigsh(
-                matrix, k=n_comps, which=which, ncv=ncv, v0=v0
+                matrix, k=n_comps, which=which, ncv=ncv, v0=v0, **kw
             )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == "decrease":

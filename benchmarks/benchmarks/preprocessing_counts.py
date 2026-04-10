@@ -5,6 +5,7 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.ht
 
 from __future__ import annotations
 
+from inspect import signature
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -15,10 +16,19 @@ import scanpy as sc
 from ._utils import get_count_dataset
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from ._utils import Dataset, KeyCount
 
 
-# ASV suite
+def cache_adata(dataset: Dataset, layer: KeyCount) -> None:
+    """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+    adata, batch_key = get_count_dataset(dataset, layer=layer)
+    assert "lop1p" not in adata.uns
+    adata.uns["batch_key"] = batch_key
+    adata.write_h5ad(f"{dataset}_{layer}.h5ad")
+
+
 class PreprocessingCountsSuite:  # noqa: D101
     params: tuple[list[Dataset], list[KeyCount]] = (
         ["pbmc68k_reduced", "pbmc3k"],
@@ -27,12 +37,8 @@ class PreprocessingCountsSuite:  # noqa: D101
     param_names = ("dataset", "layer")
 
     def setup_cache(self) -> None:
-        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         for dataset, layer in product(*self.params):
-            adata, batch_key = get_count_dataset(dataset, layer=layer)
-            assert "lop1p" not in adata.uns
-            adata.uns["batch_key"] = batch_key
-            adata.write_h5ad(f"{dataset}_{layer}.h5ad")
+            cache_adata(dataset, layer)
 
     def setup(self, dataset, layer) -> None:
         self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
@@ -65,6 +71,40 @@ class PreprocessingCountsSuite:  # noqa: D101
     #     sc.pp.highly_variable_genes(self.adata, flavor="seurat_v3_paper")
 
 
+class PreprocessingCountsRngSuite:  # noqa: D101
+    params: tuple[list[Dataset], list[str], list[str]] = (
+        ["pbmc68k_reduced", "pbmc3k"],
+        ["rng", "random_state"],
+    )
+    param_names = ("dataset", "layer")
+
+    def setup_cache(self) -> None:
+        for dataset in self.params[0]:
+            cache_adata(dataset, "counts")
+
+    def setup(self, dataset, rng_arg) -> None:
+        if (
+            rng_arg == "rng"
+            and "rng" not in signature(sc.pp.downsample_counts).parameters
+        ):
+            raise NotImplementedError
+        self.adata = ad.read_h5ad(f"{dataset}_counts.h5ad")
+        self.rng_kw: Any = {rng_arg: 0}
+        self.total = self.adata.X.sum() / 10
+
+    def time_downsample_per_cell(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, counts_per_cell=3, **self.rng_kw)
+
+    def peakmem_downsample_per_cell(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, counts_per_cell=3, **self.rng_kw)
+
+    def time_downsample_total(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, total_counts=self.total, **self.rng_kw)
+
+    def peakmem_downsample_total(self, *_) -> None:
+        sc.pp.downsample_counts(self.adata, total_counts=self.total, **self.rng_kw)
+
+
 class FastSuite:
     """Suite for fast preprocessing operations."""
 
@@ -75,11 +115,8 @@ class FastSuite:
     param_names = ("dataset", "layer")
 
     def setup_cache(self) -> None:
-        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         for dataset, layer in product(*self.params):
-            adata, _ = get_count_dataset(dataset, layer=layer)
-            assert "lop1p" not in adata.uns
-            adata.write_h5ad(f"{dataset}_{layer}.h5ad")
+            cache_adata(dataset, layer)
 
     def setup(self, dataset, layer) -> None:
         self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")

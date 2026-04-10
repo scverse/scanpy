@@ -18,10 +18,9 @@ from pandas.api.types import CategoricalDtype, is_numeric_dtype
 from .. import get
 from .. import logging as logg
 from .._compat import CSBase
-from .._settings import settings
+from .._settings import Default, settings
 from .._utils import (
     _doc_params,
-    _empty,
     check_use_raw,
     get_literal_vals,
     sanitize_anndata,
@@ -55,7 +54,6 @@ if TYPE_CHECKING:
     from seaborn import FacetGrid
     from seaborn.matrix import ClusterGrid
 
-    from .._utils import Empty
     from ._utils import ColorLike, DensityNorm, _FontSize, _FontWeight, _LegendLoc
 
 # TODO: is that all?
@@ -699,7 +697,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ax: Axes | None = None,
     # deprecated
     save: bool | str | None = None,
-    scale: DensityNorm | Empty = _empty,
+    scale: DensityNorm | Default = Default("density_norm"),
     **kwds,
 ) -> Axes | FacetGrid | None:
     """Violin plot.

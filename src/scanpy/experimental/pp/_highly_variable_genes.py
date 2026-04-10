@@ -8,10 +8,11 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, njit, warn
+from ..._compat import CSBase, warn
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (

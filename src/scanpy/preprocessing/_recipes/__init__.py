@@ -4,21 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import logging as logg
-from .. import preprocessing as pp
-from .._compat import CSBase
-from ._deprecated.highly_variable_genes import (
-    filter_genes_cv_deprecated,
-    filter_genes_dispersion,
-)
-from ._normalization import normalize_total
+from ... import logging as logg
+from ..._compat import CSBase
+from ..._utils.random import _accepts_legacy_random_state
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
 
 
+@_accepts_legacy_random_state(0)
 def recipe_weinreb17(
     adata: AnnData,
     *,
@@ -27,7 +23,7 @@ def recipe_weinreb17(
     cv_threshold: int = 2,
     n_pcs: int = 50,
     svd_solver="randomized",
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """Normalize and filter as of :cite:p:`Weinreb2017`.
@@ -45,7 +41,8 @@ def recipe_weinreb17(
         Return a copy if true.
 
     """
-    from ._deprecated import normalize_per_cell_weinreb16_deprecated, zscore_deprecated
+    from ... import pp
+    from .weinreb import filter_genes_cv, normalize_per_cell, zscore
 
     if isinstance(adata.X, CSBase):
         msg = "`recipe_weinreb16 does not support sparse matrices."
@@ -54,16 +51,14 @@ def recipe_weinreb17(
         adata = adata.copy()
     if log:
         pp.log1p(adata)
-    adata.X = normalize_per_cell_weinreb16_deprecated(
-        adata.X, max_fraction=0.05, mult_with_mean=True
-    )
-    gene_subset = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
+    adata.X = normalize_per_cell(adata.X, max_fraction=0.05, mult_with_mean=True)
+    gene_subset = filter_genes_cv(adata.X, mean_threshold, cv_threshold)
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
     x_pca = pp.pca(
-        zscore_deprecated(adata.X),
+        zscore(adata.X),
         n_comps=n_pcs,
         svd_solver=svd_solver,
-        random_state=random_state,
+        rng=rng,
     )
     # update adata
     adata.obsm["X_pca"] = x_pca
@@ -92,23 +87,25 @@ def recipe_seurat(
         Return a copy if true.
 
     """
+    from ... import pl, pp
+
     if copy:
         adata = adata.copy()
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
-    normalize_total(adata, target_sum=1e4)
-    filter_result = filter_genes_dispersion(
-        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log
+    pp.normalize_total(adata, target_sum=1e4)
+    adata.layers[layer_log := "log1p"] = adata.X
+    pp.log1p(adata, layer=layer_log)
+    filter_result = pp.highly_variable_genes(
+        adata, min_mean=0.0125, max_mean=3, min_disp=0.5, layer=layer_log, inplace=False
     )
+    assert filter_result is not None
     if plot:
-        from ..plotting import (
-            _preprocessing as ppp,
-        )
-
-        ppp.filter_genes_dispersion(filter_result, log=not log)
-    adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
+        pl.highly_variable_genes(filter_result, log=not log)
+    adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
     if log:
-        pp.log1p(adata)
+        adata.X = adata.layers[layer_log]
+    del adata.layers[layer_log]
     pp.scale(adata, max_value=10)
     return adata if copy else None
 
@@ -129,23 +126,6 @@ def recipe_zheng17(
     Expects non-logarithmized data.
     If using logarithmized data, pass `log=False`.
 
-    The recipe runs the following steps
-
-    .. code:: python
-
-        sc.pp.filter_genes(adata, min_counts=1)         # only consider genes with more than 1 count
-        sc.pp.normalize_per_cell(                       # normalize with total UMI count per cell
-             adata, key_n_counts='n_counts_all'
-        )
-        filter_result = sc.pp.filter_genes_dispersion(  # select highly-variable genes
-            adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False
-        )
-        adata = adata[:, filter_result.gene_subset]     # subset the genes
-        sc.pp.normalize_per_cell(adata)                 # renormalize after filtering
-        if log: sc.pp.log1p(adata)                      # log transform: adata.X = log(adata.X + 1)
-        sc.pp.scale(adata)                              # scale to unit variance and shift to zero mean
-
-
     Parameters
     ----------
     adata
@@ -164,26 +144,34 @@ def recipe_zheng17(
     Returns or updates `adata` depending on `copy`.
 
     """
+    from ... import pl, pp
+
     start = logg.info("running recipe zheng17")
     if copy:
         adata = adata.copy()
     # only consider genes with more than 1 count
     pp.filter_genes(adata, min_counts=1)
     # normalize with total UMI count per cell
-    normalize_total(adata, key_added="n_counts_all")
-    filter_result = filter_genes_dispersion(
-        adata.X, flavor="cell_ranger", n_top_genes=n_top_genes, log=False
+    pp.normalize_total(adata, key_added="n_counts_all")
+    adata.layers[layer_log := "log1p"] = adata.X
+    pp.log1p(adata, layer=layer_log)
+    filter_result = pp.highly_variable_genes(
+        adata,
+        flavor="cell_ranger",
+        n_top_genes=n_top_genes,
+        layer=layer_log,
+        inplace=False,
     )
+    assert filter_result is not None
     if plot:  # should not import at the top of the file
-        from ..plotting import _preprocessing as ppp
-
-        ppp.filter_genes_dispersion(filter_result, log=True)
+        pl.highly_variable_genes(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
-    #     adata = adata[:, filter_result.gene_subset]
-    adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
-    normalize_total(adata)  # renormalize after filtering
+    #     adata = adata[:, filter_result["highly_variable"]]
+    adata._inplace_subset_var(filter_result["highly_variable"])  # filter genes
+    pp.normalize_total(adata)  # renormalize after filtering
     if log:
-        pp.log1p(adata)  # log transform: X = log(X + 1)
+        adata.X = adata.layers[layer_log]
+    del adata.layers[layer_log]
     pp.scale(adata)
     logg.info("    finished", time=start)
     return adata if copy else None

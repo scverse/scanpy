@@ -52,7 +52,8 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.10.8",
-    "fast-array-utils[accel,sparse]>=1.2.1",
+    "certifi",
+    "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
     "matplotlib>=3.9",
@@ -61,17 +62,17 @@ dependencies = [
     "numba>=0.60",
     "numpy>=2",
     "packaging>=25",
-    "pandas>=2.2.2",
+    "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
-    "scikit-learn>=1.4.2",
+    "scikit-learn>=1.6",
     "scipy>=1.13",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
     "tqdm",
     "typing-extensions; python_version<'3.13'",
-    "umap-learn>=0.5.7",
+    "umap-learn>=0.5.12",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
@@ -91,8 +92,6 @@ louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
-# Neighbors acceleration
-rapids = [ "cudf>=0.9", "cugraph>=0.9", "cuml>=0.9" ]
 scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
@@ -204,6 +203,7 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "’", "α" ]
 lint.external = [ "PLR0917" ]
+lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
@@ -213,8 +213,8 @@ lint.pylint.max-args = 10
 lint.pylint.max-positional-args = 5
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"numba.jit".msg = "Use `scanpy._compat.njit` instead"
-"numba.njit".msg = "Use `scanpy._compat.njit` instead"
+"numba.jit".msg = "Use `fast_array_utils.numba.njit` instead"
+"numba.njit".msg = "Use `fast_array_utils.numba.njit` instead"
 "numpy.bool_".msg = "Use `np.bool` instead"
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
@@ -278,6 +278,8 @@ filterwarnings = [
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
     "ignore:Consolidated metadata is currently not part:UserWarning",
+    # joblib fallback to serial mode in restricted multiprocessing environments
+    "ignore:.*joblib will operate in serial mode:UserWarning",
 ]
 
 [tool.coverage]
@@ -289,7 +291,7 @@ run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268
-    "@(numba\\.|nb\\.)?njit.*",
+    "@([\\w.]+.)?njit.*",
     "@deprecated.*",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",

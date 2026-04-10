@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from ..._compat import deprecated
 from ._bbknn import bbknn
-from ._dca import dca
 from ._hashsolo import hashsolo
 from ._magic import magic
 from ._mnn_correct import mnn_correct
@@ -12,7 +11,6 @@ from ._scanorama_integrate import scanorama_integrate
 
 __all__ = [
     "bbknn",
-    "dca",
     "hashsolo",
     "magic",
     "mnn_correct",

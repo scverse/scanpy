@@ -51,16 +51,16 @@ jobs:
     name: Check for release notes
     runs-on: ubuntu-latest
     needs: check-milestone
-    if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","ci"]'), needs.check-milestone.outputs.type)
+    if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","docs","ci"]'), needs.check-milestone.outputs.type)
     steps:
       - uses: actions/checkout@v6
         with: { filter: 'blob:none', fetch-depth: 0 }
       - name: Find out if a relevant release fragment is added
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: | # this is intentionally a string
-            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.*.md'
+            relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.${{ (contains(github.event.pull_request.title, '!') && 'breaking') || needs.check-milestone.outputs.type }}.md'
       - name: Check if a relevant release fragment is added
         uses: flying-sheep/check@v1
         with:

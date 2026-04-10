@@ -17,8 +17,8 @@ from matplotlib.patches import Circle
 
 from .. import logging as logg
 from .._compat import warn
-from .._settings import settings
-from .._utils import NeighborsView, _empty
+from .._settings import Default, settings
+from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from pandas.api.extensions import ExtensionArray
     from PIL.Image import Image
 
-    from .._utils import Empty
 
 __all__ = [
     "ColorLike",
@@ -1062,7 +1061,7 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 @overload
 def _deprecated_scale(
     density_norm: DensityNorm,
-    scale: DensityNorm | Empty,
+    scale: DensityNorm | Default,
     *,
     default: DensityNorm,
 ) -> DensityNorm: ...
@@ -1070,20 +1069,20 @@ def _deprecated_scale(
 
 @overload
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty: ...
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default: ...
 
 
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty:
-    if scale is _empty:
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default:
+    if isinstance(scale, Default):
         return density_norm
     if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
