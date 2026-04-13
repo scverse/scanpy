@@ -317,29 +317,29 @@ def test_mask_not_equal():
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 @pytest.mark.parametrize("exp_post_agg", [True, False], ids=["post_exp", "pre_exp"])
+@pytest.mark.parametrize(
+    "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
+)
 # Beause illico does not add 1e-9 to its values before log?
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 @needs.illico
-def test_illico(test, corr_method, exp_post_agg):
-    from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
+def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
 
     pbmc = pbmc68k_reduced()
-    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else None
+    pbmc.raw.X.sum_duplicates()
+    pbmc.raw.X.sort_indices()
+    pbmc_illico = pbmc.copy()
 
-    asy_results = asymptotic_wilcoxon(
-        adata=pbmc.copy(),
-        group_keys="bulk_labels",
-        is_log1p=True,  # Scanpy assumes log1p
-        exp_post_agg=exp_post_agg,  # Post-aggregation exponentiation is needed to match Scanpy's fold change output
-        reference=reference,
-        use_continuity=False,  # False because scanpy does not apply continuity correction
-        tie_correct=False,  # False because scanpy takes a lot of time to adjust
-        n_threads=1,
-        batch_size=16,
-        alternative="two-sided",  # Scanpy only implments two-sided test
-        use_rust=False,
-        return_as_scanpy=True,
+    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else None
+    sc.tl.rank_genes_groups(
+        pbmc_illico,
+        groupby="bulk_labels",
+        method="wilcoxon_illico",
+        reference=reference if test == "ovo" else "rest",
+        n_genes=pbmc.n_vars,
+        tie_correct=tie_correct,
         corr_method=corr_method,
+        exp_post_agg=exp_post_agg,
     )
 
     sc.tl.rank_genes_groups(
@@ -348,30 +348,30 @@ def test_illico(test, corr_method, exp_post_agg):
         method="wilcoxon",
         reference=reference if test == "ovo" else "rest",
         n_genes=pbmc.n_vars,
-        tie_correct=False,
+        tie_correct=tie_correct,
         corr_method=corr_method,
         exp_post_agg=exp_post_agg,
     )
     scanpy_results = pbmc.uns["rank_genes_groups"]
-    assert set(asy_results.keys()) == set(scanpy_results.keys()), (
+    illico_results = pbmc_illico.uns["rank_genes_groups"]
+    assert set(illico_results.keys()) == set(scanpy_results.keys()), (
         "Output keys do not match Scanpy's output format."
     )
 
     for k, ref in scanpy_results.items():
-        if k in {"logfoldchanges"}:
-            continue
-        if k in ["params", "names"]:
-            # We can skip names ordering check as if incorrect, other values will mismatch
-            continue
-        res = np.array(asy_results[k].tolist())
-        ref_arr = np.array(ref.tolist())
-        mask = np.isfinite(ref_arr) * np.isfinite(
-            res
-        )  # Mask to ignore inf values in the comparison
-        np.testing.assert_allclose(
-            ref_arr[mask],
-            res[mask],
-            rtol=0,
-            atol=1e-2,
-            err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
-        )
+        with subtests.test(k):
+            if k in ["params", "names"]:
+                # We can skip names ordering check as if incorrect, other values will mismatch
+                continue
+            res = np.array(illico_results[k].tolist())
+            ref_arr = np.array(ref.tolist())
+            mask = np.isfinite(ref_arr) * np.isfinite(
+                res
+            )  # Mask to ignore inf values in the comparison
+            np.testing.assert_allclose(
+                ref_arr[mask],
+                res[mask],
+                rtol=0,
+                atol=1e-2,
+                err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+            )

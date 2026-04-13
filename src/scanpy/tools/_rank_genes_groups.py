@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Literal
 
-    from anndata import AnnData
     from numpy.typing import NDArray
 
 
@@ -423,7 +423,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(  # noqa: PLR0912
+    def compute_statistics(  # noqa: PLR0912, PLR0915
         self,
         method: DETest,
         *,
@@ -437,8 +437,49 @@ class _RankGenes:
         if method in {"t-test", "t-test_overestim_var"}:
             self._basic_stats(exponentiate_values=False)
             generate_test_results = self.t_test(method)
-        elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+        elif "wilcoxon" in method:
+            if "illico" in method:
+                from illico import asymptotic_wilcoxon
+
+                illico_df = asymptotic_wilcoxon(
+                    AnnData(
+                        X=self.X,
+                        var=pd.DataFrame(index=self.var_names),
+                        obs=pd.DataFrame(
+                            index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                            data={
+                                "group": pd.Categorical(
+                                    np.array(range(self.groups_masks_obs.shape[0]))[
+                                        self.groups_masks_obs.T.argmax(axis=1)
+                                    ],
+                                    categories=np.array(
+                                        range(self.groups_masks_obs.shape[0])
+                                    ),
+                                )
+                            },
+                        ),
+                    ),
+                    reference=self.ireference,
+                    group_keys="group",
+                    return_as_scanpy=False,
+                    is_log1p=True,
+                    tie_correct=tie_correct,
+                    use_continuity=False,
+                    alternative="two-sided",
+                )
+                generate_test_results = (
+                    (
+                        group_idx,
+                        group["z_score"].to_numpy(),
+                        group["p_value"].to_numpy(),
+                    )
+                    for group_idx, (_, group) in enumerate(
+                        illico_df.groupby(level="pert")
+                    )
+                    if group_idx != self.ireference
+                )
+            else:
+                generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             # If we're not exponentiating after the mean aggregation, then do it now.
             self._basic_stats(exponentiate_values=not exp_post_agg)
         elif method == "logreg":
@@ -447,7 +488,6 @@ class _RankGenes:
         self.stats = None
 
         n_genes = self.X.shape[1]
-
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
 
