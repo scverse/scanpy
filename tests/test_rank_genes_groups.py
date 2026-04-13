@@ -316,7 +316,7 @@ def test_mask_not_equal():
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-@pytest.mark.parametrize("exp_post_agg", [True, False])
+@pytest.mark.parametrize("exp_post_agg", [True, False], ids=["post_exp", "pre_exp"])
 # Beause illico does not add 1e-9 to its values before log?
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 @needs.illico
