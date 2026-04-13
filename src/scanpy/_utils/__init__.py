@@ -34,7 +34,6 @@ from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
-from .._settings import settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -340,6 +339,8 @@ def compute_association_matrix_of_groups(
         reference labels, entries are proportional to degree of association.
 
     """
+    from .._settings import settings
+
     if normalization not in {"prediction", "reference"}:
         msg = '`normalization` needs to be either "prediction" or "reference".'
         raise ValueError(msg)

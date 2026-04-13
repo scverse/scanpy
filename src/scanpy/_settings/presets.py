@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from functools import cached_property, partial, wraps
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
+from .._utils._doctests import doctest_needs
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
 
@@ -222,6 +224,7 @@ class Preset(enum.StrEnum):
         }
 
     @contextmanager
+    @doctest_needs("igraph")
     def override(self, preset: Preset) -> Generator[Preset, None, None]:
         """Temporarily override :attr:`scanpy.settings.preset`.
 
