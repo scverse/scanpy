@@ -99,7 +99,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-illico = [ "illico" ]
+illico = [ "illico==0.5.0rc1" ]
 
 [dependency-groups]
 dev = [
