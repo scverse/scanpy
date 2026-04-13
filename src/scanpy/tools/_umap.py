@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import warn
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params
@@ -45,7 +43,7 @@ def umap(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     a: float | None = None,
     b: float | None = None,
-    method: Literal["umap", "rapids"] = "umap",
+    method: Literal["umap"] = "umap",
     key_added: str | None = None,
     neighbors_key: str = "neighbors",
     copy: bool = False,
@@ -118,11 +116,6 @@ def umap(  # noqa: PLR0913
 
         ``'umap'``
             Umap’s simplical set embedding.
-        ``'rapids'``
-            GPU accelerated implementation.
-
-            .. deprecated:: 1.10.0
-                Use :func:`rapids_singlecell.tl.umap` instead.
     key_added
         If not specified, the embedding is stored as
         :attr:`~anndata.AnnData.obsm`\ `['X_umap']` and the the parameters in
@@ -147,6 +140,7 @@ def umap(  # noqa: PLR0913
         UMAP parameters.
 
     """
+    non_deterministic = rng is None
     rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
@@ -166,11 +160,6 @@ def umap(  # noqa: PLR0913
         logg.warning(
             f'.obsp["{neighbors["connectivities_key"]}"] have not been computed using umap'
         )
-
-    with warnings.catch_warnings():
-        # umap 0.5.0
-        warnings.filterwarnings("ignore", message=r"Tensorflow not installed")
-        import umap
 
     from umap.umap_ import find_ab_params, simplicial_set_embedding
 
@@ -215,6 +204,7 @@ def umap(  # noqa: PLR0913
             n_epochs=n_epochs,
             init=init_coords,
             random_state=_legacy_random_state(rng, always_state=True),
+            parallel=non_deterministic,  # if True, random_state is ignored
             metric=neigh_params.get("metric", "euclidean"),
             metric_kwds=neigh_params.get("metric_kwds", {}),
             densmap=False,
@@ -222,40 +212,9 @@ def umap(  # noqa: PLR0913
             output_dens=False,
             verbose=settings.verbosity > 3,
         )
-    elif method == "rapids":
-        msg = (
-            "`method='rapids'` is deprecated. Use `rapids_singlecell.tl.umap` instead."
-        )
-        warn(msg, FutureWarning)
-        metric = neigh_params.get("metric", "euclidean")
-        if metric != "euclidean":
-            msg = (
-                f"`sc.pp.neighbors` was called with `metric` {metric!r}, "
-                "but umap `method` 'rapids' only supports the 'euclidean' metric."
-            )
-            raise ValueError(msg)
-        from cuml import UMAP
-
-        n_neighbors = neighbors["params"]["n_neighbors"]
-        n_epochs = (
-            500 if maxiter is None else maxiter
-        )  # 0 is not a valid value for rapids, unlike original umap
-        x_contiguous = np.ascontiguousarray(x, dtype=np.float32)
-        umap = UMAP(
-            n_neighbors=n_neighbors,
-            n_components=n_components,
-            n_epochs=n_epochs,
-            learning_rate=alpha,
-            init=init_pos,
-            min_dist=min_dist,
-            spread=spread,
-            negative_sample_rate=negative_sample_rate,
-            a=a,
-            b=b,
-            verbose=settings.verbosity > 3,
-            random_state=_legacy_random_state(rng),
-        )
-        x_umap = umap.fit_transform(x_contiguous)
+    else:
+        msg = f"Unknown method {method}"
+        raise ValueError(msg)
     adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",

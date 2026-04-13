@@ -22,10 +22,10 @@ class ToolsSuite:  # noqa: D101
         self.adata = ad.read_h5ad("adata.h5ad")
 
     def time_umap(self) -> None:
-        sc.tl.umap(self.adata)
+        sc.tl.umap(self.adata, rng=None)
 
     def peakmem_umap(self) -> None:
-        sc.tl.umap(self.adata)
+        sc.tl.umap(self.adata, rng=None)
 
     def time_diffmap(self) -> None:
         sc.tl.diffmap(self.adata)
