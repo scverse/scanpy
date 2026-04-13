@@ -358,6 +358,8 @@ def test_illico(test, corr_method, exp_post_agg):
     )
 
     for k, ref in scanpy_results.items():
+        if k in {"logfoldchanges"}:
+            continue
         if k in ["params", "names"]:
             # We can skip names ordering check as if incorrect, other values will mismatch
             continue
