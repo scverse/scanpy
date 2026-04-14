@@ -470,8 +470,8 @@ class _RankGenes:
                 generate_test_results = (
                     (
                         group_idx,
-                        group["z_score"].to_numpy(),
-                        group["p_value"].to_numpy(),
+                        group["z_score"].to_numpy(copy=True),
+                        group["p_value"].to_numpy(copy=True),
                     )
                     for group_idx, (_, group) in enumerate(
                         illico_df.groupby(level="pert")
