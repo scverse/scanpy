@@ -466,6 +466,7 @@ class _RankGenes:
                     tie_correct=tie_correct,
                     use_continuity=False,
                     alternative="two-sided",
+                    use_rust=False,
                 )
                 generate_test_results = (
                     (

@@ -320,7 +320,6 @@ def test_mask_not_equal():
 @pytest.mark.parametrize(
     "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
 )
-# Beause illico does not add 1e-9 to its values before log?
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 @needs.illico
 def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
