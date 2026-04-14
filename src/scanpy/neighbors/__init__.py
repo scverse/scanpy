@@ -149,11 +149,6 @@ def neighbors(  # noqa: PLR0913
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
         `'pynndescent'`
             :class:`~pynndescent.pynndescent_.PyNNDescentTransformer`
-        `'rapids'`
-            A transformer based on :class:`cuml.neighbors.NearestNeighbors`.
-
-            .. deprecated:: 1.10.0
-               Use :func:`rapids_singlecell.pp.neighbors` instead.
     metric
         A known metric’s name or a callable that returns a distance.
         If `distances` is given, this parameter is simply stored in `.uns` (see below),
@@ -749,15 +744,7 @@ class Neighbors:
         )
 
         # Coerce `method` to 'gauss', 'umap', or 'jaccard'
-        if method == "rapids":
-            if transformer is not None:
-                msg = "Can’t specify both `method = 'rapids'` and `transformer`."
-                raise ValueError(msg)
-            method = "umap"
-            transformer = "rapids"
-        elif (
-            method not in (methods := get_literal_vals(_Method)) and method is not None
-        ):
+        if method not in (methods := get_literal_vals(_Method)) and method is not None:
             msg = f"`method` needs to be one of {methods}."
             raise ValueError(msg)
 
@@ -797,15 +784,6 @@ class Neighbors:
                     n_iters=max(5, round(np.log2(self._adata.n_obs))),
                 )
             transformer = PyNNDescentTransformer(**kwds)
-        elif transformer == "rapids":
-            msg = (
-                "`transformer='rapids'` is deprecated. "
-                "Use `rapids_singlecell.tl.neighbors` instead."
-            )
-            warn(msg, FutureWarning)
-            from scanpy.neighbors._backends.rapids import RapidsKNNTransformer
-
-            transformer = RapidsKNNTransformer(**kwds)
         elif isinstance(transformer, str):
             msg = (
                 f"Unknown transformer: {transformer}. "
