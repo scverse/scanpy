@@ -448,18 +448,18 @@ class _RankGenes:
                         obs=pd.DataFrame(
                             index=pd.RangeIndex(self.X.shape[0]).astype("str"),
                             data={
-                                "group": pd.Categorical(
-                                    np.array(range(self.groups_masks_obs.shape[0]))[
-                                        self.groups_masks_obs.T.argmax(axis=1)
-                                    ],
-                                    categories=np.array(
+                                "group": pd.Categorical.from_codes(
+                                    codes=np.array(
                                         range(self.groups_masks_obs.shape[0])
-                                    ),
+                                    )[self.groups_masks_obs.T.argmax(axis=1)],
+                                    categories=self.groups_order,
                                 )
                             },
                         ),
                     ),
-                    reference=self.ireference,
+                    reference=self.groups_order[self.ireference]
+                    if self.ireference is not None
+                    else None,
                     group_keys="group",
                     return_as_scanpy=False,
                     is_log1p=True,
@@ -470,14 +470,21 @@ class _RankGenes:
                 )
                 generate_test_results = (
                     (
-                        group_idx,
+                        self.groups_order.tolist().index(group_cat),
                         group["z_score"].to_numpy(copy=True),
                         group["p_value"].to_numpy(copy=True),
                     )
-                    for group_idx, (_, group) in enumerate(
-                        illico_df.groupby(level="pert")
+                    for (_, group) in illico_df.groupby(level="pert")
+                    if (
+                        group_cat := np.unique(
+                            group.index.get_level_values("pert").to_numpy(copy=True)
+                        ).item()
                     )
-                    if group_idx != self.ireference
+                    != (
+                        None
+                        if self.ireference is None
+                        else self.groups_order[self.ireference]
+                    )
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
