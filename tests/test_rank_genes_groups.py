@@ -371,7 +371,7 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
                 ref_arr[mask],
                 res[mask],
                 rtol=0,
-                atol=1e-2,
+                atol=1e-6,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
 
