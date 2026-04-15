@@ -62,7 +62,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         if (missing := groupby.isna()).any():
             mask = mask & ~missing if mask is not None else ~missing
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
-        if isinstance(self.data, CSBase):
+        if isinstance(data, CSBase):
             # TODO: Look into if this can be CSR and fast for dense
             self.indicator_matrix = self.indicator_matrix.tocsr()
         self.data = data
