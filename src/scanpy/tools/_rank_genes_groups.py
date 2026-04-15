@@ -468,9 +468,8 @@ class _RankGenes:
                     alternative="two-sided",
                     use_rust=False,
                 )
-                generate_test_results = (
-                    (
-                        self.groups_order.tolist().index(group_cat),
+                generate_test_results_map = {
+                    group_cat: (
                         group["z_score"].to_numpy(copy=True),
                         group["p_value"].to_numpy(copy=True),
                     )
@@ -485,6 +484,14 @@ class _RankGenes:
                         if self.ireference is None
                         else self.groups_order[self.ireference]
                     )
+                }
+                generate_test_results = (
+                    (
+                        self.groups_order.tolist().index(group_cat),
+                        *generate_test_results_map[group_cat],
+                    )
+                    for group_cat in self.groups_order
+                    if group_cat in generate_test_results_map
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
