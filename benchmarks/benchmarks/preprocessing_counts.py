@@ -164,7 +164,11 @@ class Agg:  # noqa: D101
         self.agg_name = agg_name
 
     def time_agg(self, *_) -> None:
-        sc.get.aggregate(self.adata, by="PatientNumber", func=self.agg_name)
+        sc.get.aggregate(
+            self.adata, by="PatientNumber", func=self.agg_name, layer="counts"
+        )
 
     def peakmem_agg(self, *_) -> None:
-        sc.get.aggregate(self.adata, by="PatientNumber", func=self.agg_name)
+        sc.get.aggregate(
+            self.adata, by="PatientNumber", func=self.agg_name, layer="counts"
+        )
