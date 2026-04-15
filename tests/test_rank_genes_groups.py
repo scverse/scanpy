@@ -375,6 +375,7 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
 
+
 @pytest.mark.parametrize(
     ("exp_post_agg", "expected_logfc"),
     [
