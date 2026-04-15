@@ -62,10 +62,13 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         if (missing := groupby.isna()).any():
             mask = mask & ~missing if mask is not None else ~missing
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
+        if isinstance(self.data, CSBase):
+            # TODO: Look into if this can be CSR and fast for dense
+            self.indicator_matrix = self.indicator_matrix.tocsr()
         self.data = data
 
     groupby: pd.Categorical
-    indicator_matrix: CSRBase
+    indicator_matrix: CSRBase | sparse.coo_array
     data: ArrayT
 
     def count_nonzero(self) -> NDArray[np.integer]:
@@ -562,7 +565,7 @@ def sparse_indicator(
     categorical: pd.Categorical,
     *,
     mask: NDArray[np.bool] | None = None,
-) -> CSRBase:
+) -> sparse.coo_array:
     if mask is None:
         # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
         mask = np.broadcast_to(1.0, len(categorical))
@@ -573,5 +576,5 @@ def sparse_indicator(
     a = sparse.coo_array(
         (mask, (codes, np.arange(len(categorical)))),
         shape=(len(categorical.categories), len(categorical)),
-    ).tocsr()
+    )
     return a
