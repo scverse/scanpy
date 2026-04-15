@@ -374,3 +374,42 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
                 atol=1e-2,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
+
+
+@pytest.mark.parametrize(
+    ("exp_post_agg", "expected_logfc"),
+    [
+        # exp after agg: log2(expm1(mean_log_a) / expm1(mean_log_b))
+        #              = log2(expm1(ln(9) * 5 / 10) / expm1(ln9)) = log2(2 / 8) = -2.0
+        (True, -2.0),
+        # exp before agg: log2(mean(expm1(linear_a)) / mean(expm1(linear_b)))
+        #               = log2(mean([0] * 5 + [8] * 5) / mean([8] * 10)) = log2(4 / 8) = -1.0
+        (False, -1.0),
+    ],
+)
+def test_exp_post_agg(
+    expected_logfc: float,
+    *,
+    exp_post_agg: bool,
+):
+    # group_a: 5 cells with log-space value 0, 5 cells with log(9)
+    # group_b: 10 cells all with log(9)  (used as reference)
+    n_genes = 5
+    group_a = np.zeros((10, n_genes))
+    group_a[5:] = np.log(9)
+    group_b = np.full((10, n_genes), np.log(9))
+    adata = AnnData(
+        X=np.concatenate([group_a, group_b]),
+        obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
+    )
+
+    rank_genes_groups(
+        adata,
+        groupby="bulk_labels",
+        groups=["a"],
+        reference="b",
+        method="wilcoxon",
+        exp_post_agg=exp_post_agg,
+    )
+    logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
+    np.testing.assert_equal(logfcs, expected_logfc)
