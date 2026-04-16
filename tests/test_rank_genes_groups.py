@@ -329,7 +329,7 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
     pbmc.raw.X.sort_indices()
     pbmc_illico = pbmc.copy()
 
-    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else None
+    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else "rest"
     sc.tl.rank_genes_groups(
         pbmc_illico,
         groupby="bulk_labels",
