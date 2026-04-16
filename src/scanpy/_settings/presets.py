@@ -229,18 +229,18 @@ class Preset(enum.StrEnum):
             case self.ScanpyV1:
                 return
             case self.ScanpyV2Preview:
-                dist_to_module = {
-                    d: m for m, ds in packages_distributions().items() for d in ds
+                dists = {
+                    d for m, ds in packages_distributions().items() for d in ds
                 }
                 missing = [
                     r.name
                     for r in map(Requirement, requires("scanpy"))
                     if r.marker
                     and r.marker.evaluate({"extra": "scanpy2"})
-                    and r.name in dist_to_module
+                    and r.name in dists
                 ]
                 if missing:
-                    missing_str = ", ".join(f"’{m}’" for m in missing)
+                    missing_str = ", ".join(f"‘{m}’" for m in missing)
                     msg = (
                         f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
                         f"dependencies that are not installed: {missing_str}. "
