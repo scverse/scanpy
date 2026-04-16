@@ -48,7 +48,7 @@ class Default:
         func, param = self.preset
         params = getattr(sc.settings.preset, func)
         value = getattr(params, param)
-        return f"{value!r} ({sc.settings.preset=} – changes in 2.0)"
+        return f"{value!r} (sc.settings.preset={str(sc.settings.preset)!r} – changes in 2.0)"
 
 
 class HVGPreset(NamedTuple):

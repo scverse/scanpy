@@ -524,7 +524,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     exp_post_agg: bool = Default(preset=("rank_genes_groups", "exp_post_agg")),
     **kwds,
 ) -> AnnData | None:
-    """Rank genes for characterizing groups.
+    r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -586,7 +586,10 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     copy
         Whether to copy `adata` or modify it inplace.
     exp_post_agg
-        Whether to do log(mean(exp(values))) (`False`) or log(exp(mean(values))) (`True`)
+        Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
+        or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
+        The former is accurate, while the latter is a faster approximation
+        that underestimates accurate result in the presence of many outliers.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
