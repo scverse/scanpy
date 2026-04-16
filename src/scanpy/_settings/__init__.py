@@ -105,11 +105,9 @@ class SettingsMeta(SingletonMeta, type):
 
     @preset.setter
     def preset(cls, preset: Preset | str) -> None:
-        from .presets import _check_scanpy_v2_deps
 
         new_preset = Preset(preset)
-        if new_preset is Preset.ScanpyV2Preview:
-            _check_scanpy_v2_deps()
+        new_preset.check_deps()
         cls._preset = new_preset
 
     @property

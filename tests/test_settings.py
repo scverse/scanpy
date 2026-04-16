@@ -24,9 +24,9 @@ def test_set_figure_params_warns() -> None:
 
 
 def test_preset_scanpy_v2_preview_checks_deps() -> None:
-    _dist_to_module = {d: m for m, ds in packages_distributions().items() for d in ds}
+    dist_to_module = {d: m for m, ds in packages_distributions().items() for d in ds}
     _scanpy2_deps_missing = any(
-        find_spec(_dist_to_module.get(r.name, r.name.replace("-", "_"))) is None
+        find_spec(dist_to_module.get(r.name, r.name.replace("-", "_"))) is None
         for r in map(Requirement, requires("scanpy"))
         if r.marker and r.marker.evaluate({"extra": "scanpy2"})
     )
