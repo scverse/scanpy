@@ -521,7 +521,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
-    exp_post_agg: bool = Default(preset=("rank_genes_groups", "exp_post_agg")),
+    exp_post_agg: bool | Default = Default(
+        preset=("rank_genes_groups", "exp_post_agg")
+    ),
     **kwds,
 ) -> AnnData | None:
     r"""Rank genes for characterizing groups.
