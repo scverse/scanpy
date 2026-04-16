@@ -204,14 +204,13 @@ class Preset(enum.StrEnum):
 
     @contextmanager
     @doctest_needs("igraph")
+    @doctest_needs("scikit-misc")
     def override(self, preset: Preset) -> Generator[Preset, None, None]:
         """Temporarily override :attr:`scanpy.settings.preset`.
 
         >>> import scanpy as sc
         >>> sc.settings.preset = sc.Preset.ScanpyV1
-        >>> with sc.settings.preset.override(
-        ...     sc.Preset.ScanpyV2Preview
-        ... ):  # doctest: +ELLIPSIS
+        >>> with sc.settings.preset.override(sc.Preset.ScanpyV2Preview):
         ...     sc.settings.preset
         <Preset.ScanpyV2Preview: 'scanpy-v2-preview'>
         >>> sc.settings.preset
