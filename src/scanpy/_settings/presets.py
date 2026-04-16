@@ -209,7 +209,9 @@ class Preset(enum.StrEnum):
 
         >>> import scanpy as sc
         >>> sc.settings.preset = sc.Preset.ScanpyV1
-        >>> with sc.settings.preset.override(sc.Preset.ScanpyV2Preview):
+        >>> with sc.settings.preset.override(
+        ...     sc.Preset.ScanpyV2Preview
+        ... ):  # doctest: +ELLIPSIS
         ...     sc.settings.preset
         <Preset.ScanpyV2Preview: 'scanpy-v2-preview'>
         >>> sc.settings.preset
