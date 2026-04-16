@@ -142,7 +142,7 @@ def _check_scanpy_v2_deps() -> None:
         for r in map(Requirement, requires("scanpy"))
         if r.marker
         and r.marker.evaluate({"extra": "scanpy2"})
-        and find_spec(dist_to_module.get(r.name, r.name.replace("-", "_"))) is None
+        and r.name in dist_to_module
     ]
     if missing:
         missing_str = ", ".join(f"’{m}’" for m in missing)
