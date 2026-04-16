@@ -93,8 +93,6 @@ louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
-# Neighbors acceleration
-rapids = [ "cudf>=0.9", "cugraph>=0.9", "cuml>=0.9" ]
 scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
