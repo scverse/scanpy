@@ -23,7 +23,7 @@ from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from typing import Any, Literal
 
     from numpy.lib.npyio import NpzFile
@@ -320,9 +320,18 @@ def test_mask_not_equal():
 @pytest.mark.parametrize(
     "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
 )
+@pytest.mark.parametrize("groups", [["CD14+ Monocyte", "Dendritic"], "all"])
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 @needs.illico
-def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
+def test_illico(
+    test: Literal["ovo", "ovr"],
+    corr_method: Literal["benjamini-hochberg", "bonferroni"],
+    subtests: pytest.Subtests,
+    groups: Literal["all"] | Sequence[str],
+    *,
+    exp_post_agg: bool,
+    tie_correct: bool,
+):
 
     pbmc = pbmc68k_reduced()
     pbmc.raw.X.sum_duplicates()
@@ -339,6 +348,7 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
         tie_correct=tie_correct,
         corr_method=corr_method,
         exp_post_agg=exp_post_agg,
+        groups=groups,
     )
 
     sc.tl.rank_genes_groups(
@@ -350,6 +360,7 @@ def test_illico(test, corr_method, exp_post_agg, tie_correct, subtests):
         tie_correct=tie_correct,
         corr_method=corr_method,
         exp_post_agg=exp_post_agg,
+        groups=groups,
     )
     scanpy_results = pbmc.uns["rank_genes_groups"]
     illico_results = pbmc_illico.uns["rank_genes_groups"]

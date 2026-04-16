@@ -140,6 +140,7 @@ class _RankGenes:
             self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
+        self.group_col = adata.obs[groupby].array
 
         self.groups_order, self.groups_masks_obs = _utils.select_groups(
             adata, groups, groupby
@@ -447,14 +448,7 @@ class _RankGenes:
                         var=pd.DataFrame(index=self.var_names),
                         obs=pd.DataFrame(
                             index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                            data={
-                                "group": pd.Categorical.from_codes(
-                                    codes=np.array(
-                                        range(self.groups_masks_obs.shape[0])
-                                    )[self.groups_masks_obs.T.argmax(axis=1)],
-                                    categories=self.groups_order,
-                                )
-                            },
+                            data={"group": self.group_col},
                         ),
                     ),
                     reference=self.groups_order[self.ireference]
