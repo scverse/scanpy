@@ -589,7 +589,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
         or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
         The former is accurate, while the latter is a faster approximation
-        that underestimates accurate result in the presence of many outliers.
+        that underestimates this accurate result in the presence of many outliers.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
