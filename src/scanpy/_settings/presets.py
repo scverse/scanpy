@@ -169,7 +169,7 @@ class Preset(enum.StrEnum):
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test", mask_var=None),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None
+                method="wilcoxon", mask_var="highly_variable"
             ),
         }
 

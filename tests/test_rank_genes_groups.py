@@ -311,3 +311,11 @@ def test_mask_not_equal():
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
+
+
+def test_v2preview_preset_mask_var() -> None:
+    """Test that ScanpyV2Preview preset sets mask_var='highly_variable'."""
+    from scanpy import Preset
+
+    assert Preset.ScanpyV2Preview.rank_genes_groups.mask_var == "highly_variable"
+    assert Preset.ScanpyV1.rank_genes_groups.mask_var is None
