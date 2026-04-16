@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property, partial, wraps
 from importlib.metadata import packages_distributions, requires
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from packaging.requirements import Requirement
@@ -230,13 +231,13 @@ class Preset(enum.StrEnum):
             case self.ScanpyV1:
                 return
             case self.ScanpyV2Preview:
-                dists = {d for m, ds in packages_distributions().items() for d in ds}
+                dists = {d: m for m, ds in packages_distributions().items() for d in ds}
                 missing = [
                     r.name
                     for r in map(Requirement, requires("scanpy"))
                     if r.marker
                     and r.marker.evaluate({"extra": "scanpy2"})
-                    and r.name in dists
+                    and find_spec(dists.get(r.name, r.name.replace("-", "_"))) is None
                 ]
                 if missing:
                     missing_str = ", ".join(f"‘{m}’" for m in missing)
