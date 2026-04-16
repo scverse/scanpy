@@ -614,7 +614,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
-        Note: this is an approximation calculated from mean-log values.
+        Note: if `exp_post_agg=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
     `adata.uns['rank_genes_groups' | key_added]['pvals_adj']` : structured :class:`numpy.ndarray` (dtype `float`)
