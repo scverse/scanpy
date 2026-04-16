@@ -132,7 +132,6 @@ def preset_property[NT: NamedTuple](
 
 def _check_scanpy_v2_deps() -> None:
     from importlib.metadata import packages_distributions, requires
-    from importlib.util import find_spec
 
     from packaging.requirements import Requirement
 
