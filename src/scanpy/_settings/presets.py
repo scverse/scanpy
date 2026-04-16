@@ -229,9 +229,7 @@ class Preset(enum.StrEnum):
             case self.ScanpyV1:
                 return
             case self.ScanpyV2Preview:
-                dists = {
-                    d for m, ds in packages_distributions().items() for d in ds
-                }
+                dists = {d for m, ds in packages_distributions().items() for d in ds}
                 missing = [
                     r.name
                     for r in map(Requirement, requires("scanpy"))

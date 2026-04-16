@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from importlib.metadata import packages_distributions, requires
-from importlib.util import find_spec
 
 import pytest
 from packaging.requirements import Requirement
