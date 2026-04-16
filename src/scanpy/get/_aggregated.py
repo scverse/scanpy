@@ -566,11 +566,10 @@ def sparse_indicator(
     *,
     mask: NDArray[np.bool] | None = None,
 ) -> sparse.coo_array:
-    if mask is None:
-        # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
-        mask = np.broadcast_to(1.0, len(categorical))
-    else:
-        mask = mask.astype("uint8")
+    # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
+    mask = (
+        np.broadcast_to(1.0, len(categorical)) if mask is None else mask.astype("uint8")
+    )
     # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
     codes = np.where(mask, categorical.codes, 0)
     a = sparse.coo_array(
