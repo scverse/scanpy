@@ -487,13 +487,12 @@ class _RankGenes:
                     mean_rest = self.means_rest[group_index]
                 else:
                     mean_rest = self.means[self.ireference]
-                # add small value to avoid zeros
-                if exp_post_agg:
-                    foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
-                        self.expm1_func(mean_rest) + 1e-9
-                    )
-                else:
-                    foldchanges = (mean_group + 1e-9) / (mean_rest + 1e-9)
+                foldchanges = (
+                    (self.expm1_func(mean_group) + 1e-9)
+                    / (self.expm1_func(mean_rest) + 1e-9)
+                    if exp_post_agg
+                    else (mean_group + 1e-9) / (mean_rest + 1e-9)
+                )  # add small value to avoid zeros
                 self.stats[group_name, "logfoldchanges"] = np.log2(
                     foldchanges[global_indices]
                 )
