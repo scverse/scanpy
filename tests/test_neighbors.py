@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from pytest_mock import MockerFixture
 
+
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
 n_neighbors = 3  # includes data points themselves
