@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -216,9 +215,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     [
         pytest.param(False, dict(), "n_genes", id="no_hvg"),
         pytest.param(True, dict(), "n_hvgs", id="hvg_default"),
-        pytest.param(
-            True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
-        ),
+        pytest.param(True, dict(mask_var=None), "n_genes", id="hvg_opt_out"),
         pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
     ],
 )
@@ -245,19 +242,14 @@ def test_normalize_pearson_residuals_pca(
             adata, flavor="pearson_residuals", n_top_genes=n_hvgs
         )
 
-    ctx = (
-        pytest.warns(FutureWarning, match=r"use_highly_variable.*deprecated")
-        if "use_highly_variable" in params
-        else nullcontext()
+    # inplace=False
+    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata.copy(), inplace=False, n_comps=n_comps, **params
     )
-    with ctx:  # inplace=False
-        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-            adata.copy(), inplace=False, n_comps=n_comps, **params
-        )
-    with ctx:  # inplace=True modifies the input adata object
-        sc.experimental.pp.normalize_pearson_residuals_pca(
-            adata, inplace=True, n_comps=n_comps, **params
-        )
+    # inplace=True modifies the input adata object
+    sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata, inplace=True, n_comps=n_comps, **params
+    )
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),
