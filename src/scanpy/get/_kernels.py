@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @njit
-def agg_sum_csr(indicator: CSRBase, data: CSRBase, out: NDArray):
+def agg_sum_csr(indicator: CSRBase, data: CSRBase, out: NDArray) -> None:
     for cat_num in numba.prange(indicator.shape[0]):
         start_cat_idx = indicator.indptr[cat_num]
         stop_cat_idx = indicator.indptr[cat_num + 1]
@@ -29,8 +29,7 @@ def agg_sum_csr(indicator: CSRBase, data: CSRBase, out: NDArray):
 
 
 @njit
-def agg_sum_csc(indicator: CSRBase, data: CSCBase, out: np.ndarray):
-
+def agg_sum_csc(indicator: CSRBase, data: CSCBase, out: np.ndarray) -> None:
     obs_to_cat = np.full(data.shape[0], -1, dtype=np.int64)
 
     for cat in range(indicator.shape[0]):
@@ -54,7 +53,6 @@ def mean_var_csr(
     indicator: CSRBase,
     data: CSCBase,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-
     mean = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
     var = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
 
@@ -85,7 +83,6 @@ def mean_var_csr(
 def mean_var_csc(
     indicator: CSRBase, data: CSCBase
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-
     obs_to_cat = np.full(data.shape[0], -1, dtype=np.int64)
 
     mean = np.zeros((indicator.shape[0], data.shape[1]), dtype="float64")
