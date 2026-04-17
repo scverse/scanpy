@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
+from numba import prange
 
 from .. import logging as logg
-from .._compat import CSBase
+from .._compat import CSBase, CSCBase
 from .._docs import doc_rng
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
@@ -29,28 +31,76 @@ type _StrIdx = pd.Index[str]
 type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
+@njit
+def _get_sparse_nanmean_indptr(
+    data: NDArray[np.float64], indptr: NDArray[np.int32], shape: tuple[int, int]
+) -> NDArray[np.float64]:
+    n_rows = len(indptr) - 1
+    result = np.empty(n_rows, dtype=np.float64)
+
+    for i in prange(n_rows):
+        start = indptr[i]
+        end = indptr[i + 1]
+        count = np.float64(shape[1])
+        total = 0.0
+        for j in prange(start, end):
+            val = data[j]
+            if not np.isnan(val):
+                total += val
+            else:
+                count -= 1
+        if count == 0:
+            result[i] = np.nan
+        else:
+            result[i] = total / count
+    return result
+
+
+@njit
+def _get_sparse_nanmean_indices(
+    data: NDArray[np.float64], indices: NDArray[np.int32], shape: tuple
+) -> NDArray[np.float64]:
+    num_bins = shape[1]
+    num_elements = np.float64(shape[0])
+    sum_arr = np.zeros(num_bins, dtype=np.float64)
+    count_arr = np.repeat(num_elements, num_bins)
+    result = np.zeros(num_bins, dtype=np.float64)
+
+    for i in range(data.size):
+        idx = indices[i]
+        val = data[i]
+        if not np.isnan(val):
+            sum_arr[idx] += val
+        else:
+            count_arr[idx] -= 1.0
+
+    for i in range(num_bins):
+        if count_arr[i] == 0:
+            result[i] = np.nan
+        else:
+            result[i] = sum_arr[i] / count_arr[i]
+    return result
+
+
 def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     """np.nanmean equivalent for sparse matrices."""
     if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
-    # count the number of nan elements per row/column (dep. on axis)
-    z = x.copy()
-    z.data = np.isnan(z.data)
-    z.eliminate_zeros()
-    n_elements = z.shape[axis] - z.sum(axis)
-
-    # set the nans to 0, so that a normal .sum() works
-    y = x.copy()
-    y.data[np.isnan(y.data)] = 0
-    y.eliminate_zeros()
-
-    # the average
-    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
-    m = s / n_elements
-
-    return m
+    algo_shape = x.shape
+    algo_axis = axis
+    # in CSC ans CSR we have "transposed" form of data storaging (indices is colums/rows, indptr is row/columns)
+    # as a result, algorythm for CSC is algorythm for CSR but with transposed shape (columns in CSC is equal rows in CSR)
+    # base algo for CSR, for csc we should "transpose" matrix size and use same logics
+    if isinstance(x, CSCBase):
+        algo_shape = x.shape[::-1]
+        algo_axis = 1 - axis
+    return (
+        _get_sparse_nanmean_indptr(x.data, x.indptr, algo_shape)
+        if algo_axis == 1
+        else _get_sparse_nanmean_indices(x.data, x.indices, algo_shape)
+    )
 
 
 @_doc_params(rng=doc_rng)
