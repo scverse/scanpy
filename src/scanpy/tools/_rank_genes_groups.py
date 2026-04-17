@@ -437,6 +437,9 @@ class _RankGenes:
         if method in {"t-test", "t-test_overestim_var"}:
             self._basic_stats(exponentiate_values=False)
             generate_test_results = self.t_test(method)
+            if not exp_post_agg:
+                # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
+                self._basic_stats(exponentiate_values=True)
         elif method == "wilcoxon":
             generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             # If we're not exponentiating after the mean aggregation, then do it now.
