@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from importlib.metadata import packages_distributions, requires
+from importlib.util import find_spec
 
 import pytest
 from packaging.requirements import Requirement
@@ -23,11 +24,13 @@ def test_set_figure_params_warns() -> None:
 
 
 def test_preset_scanpy_v2_preview_checks_deps() -> None:
-    dists = {d for m, ds in packages_distributions().items() for d in ds}
+    dists = {d: m for m, ds in packages_distributions().items() for d in ds}
     scanpy2_deps_missing = any(
-        r.name in dists
+        r.name
         for r in map(Requirement, requires("scanpy"))
-        if r.marker and r.marker.evaluate({"extra": "scanpy2"})
+        if r.marker
+        and r.marker.evaluate({"extra": "scanpy2"})
+        and find_spec(dists.get(r.name, r.name.replace("-", "_"))) is None
     )
 
     if scanpy2_deps_missing:
