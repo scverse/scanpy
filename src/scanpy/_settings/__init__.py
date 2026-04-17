@@ -105,7 +105,9 @@ class SettingsMeta(SingletonMeta, type):
 
     @preset.setter
     def preset(cls, preset: Preset | str) -> None:
-        cls._preset = Preset(preset)
+        new_preset = Preset(preset)
+        new_preset.check_deps()
+        cls._preset = new_preset
 
     @property
     def verbosity(cls) -> Verbosity:

@@ -97,6 +97,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
+scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -201,7 +202,7 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # D*: No need for docstrings for all test modules and test functions
 # PLR0913: Test may use many fixtures
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
-lint.allowed-confusables = [ "×", "–", "’", "α" ]
+lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
