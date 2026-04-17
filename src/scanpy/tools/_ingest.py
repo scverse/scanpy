@@ -231,7 +231,7 @@ class Ingest:
     _umap: UMAP
     # pca
     _pca_centered: bool
-    _pca_use_hvg: bool
+    _pca_mask: str | None
     _pca_basis: np.ndarray
     # adata
     _adata_ref: AnnData
@@ -338,15 +338,14 @@ class Ingest:
 
     def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
-        self._pca_use_hvg = adata.uns["pca"]["params"]["use_highly_variable"]
+        self._pca_mask = adata.uns["pca"]["params"]["mask_var"]
 
-        mask = "highly_variable"
-        if self._pca_use_hvg and mask not in adata.var.columns:
-            msg = f"Did not find `adata.var[{mask!r}']`."
+        if self._pca_mask and self._pca_mask not in adata.var.columns:
+            msg = f"Did not find `adata.var[{self._pca_mask!r}']`."
             raise ValueError(msg)
 
-        if self._pca_use_hvg:
-            self._pca_basis = adata.varm["PCs"][adata.var[mask]]
+        if self._pca_mask:
+            self._pca_basis = adata.varm["PCs"][adata.var[self._pca_mask]]
         else:
             self._pca_basis = adata.varm["PCs"]
 
@@ -402,7 +401,7 @@ class Ingest:
     def _pca(self, n_pcs=None):
         x = self._adata_new.X
         x = x.toarray() if isinstance(x, CSBase) else x.copy()
-        if self._pca_use_hvg:
+        if self._pca_mask:
             x = x[:, self._adata_ref.var["highly_variable"]]
         if self._pca_centered:
             x -= x.mean(axis=0)

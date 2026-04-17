@@ -438,6 +438,9 @@ class _RankGenes:
         if method in {"t-test", "t-test_overestim_var"}:
             self._basic_stats(exponentiate_values=False)
             generate_test_results = self.t_test(method)
+            if not exp_post_agg:
+                # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
+                self._basic_stats(exponentiate_values=True)
         elif "wilcoxon" in method:
             if "illico" in method:
                 from illico import asymptotic_wilcoxon
@@ -492,7 +495,6 @@ class _RankGenes:
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
-            # If we're not exponentiating after the mean aggregation, then do it now.
             self._basic_stats(exponentiate_values=not exp_post_agg)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
@@ -539,12 +541,12 @@ class _RankGenes:
                     mean_rest = self.means_rest[group_index]
                 else:
                     mean_rest = self.means[self.ireference]
-                if exp_post_agg:
-                    foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
-                        self.expm1_func(mean_rest) + 1e-9
-                    )  # add small value to remove 0's
-                else:
-                    foldchanges = (mean_group + 1e-9) / (mean_rest + 1e-9)
+                foldchanges = (
+                    (self.expm1_func(mean_group) + 1e-9)
+                    / (self.expm1_func(mean_rest) + 1e-9)
+                    if exp_post_agg
+                    else (mean_group + 1e-9) / (mean_rest + 1e-9)
+                )  # add small value to avoid zeros
                 self.stats[group_name, "logfoldchanges"] = np.log2(
                     foldchanges[global_indices]
                 )
@@ -572,10 +574,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
-    exp_post_agg: bool = Default(preset=("rank_genes_groups", "exp_post_agg")),
+    exp_post_agg: bool | Default = Default(
+        preset=("rank_genes_groups", "exp_post_agg")
+    ),
     **kwds,
 ) -> AnnData | None:
-    """Rank genes for characterizing groups.
+    r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -637,7 +641,10 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     copy
         Whether to copy `adata` or modify it inplace.
     exp_post_agg
-        Whether to do log(mean(exp(values))) (`False`) or log(exp(mean(values))) (`True`)
+        Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
+        or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
+        The former is accurate, while the latter is a faster approximation
+        that underestimates this accurate result in the presence of many outliers.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
@@ -660,7 +667,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
-        Note: this is an approximation calculated from mean-log values.
+        Note: if `exp_post_agg=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
     `adata.uns['rank_genes_groups' | key_added]['pvals_adj']` : structured :class:`numpy.ndarray` (dtype `float`)

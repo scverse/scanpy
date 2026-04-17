@@ -398,8 +398,10 @@ def test_illico(
         (False, -1.0),
     ],
 )
+@pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
 def test_exp_post_agg(
     expected_logfc: float,
+    method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
     *,
     exp_post_agg: bool,
 ):
@@ -419,7 +421,7 @@ def test_exp_post_agg(
         groupby="bulk_labels",
         groups=["a"],
         reference="b",
-        method="wilcoxon",
+        method=method,
         exp_post_agg=exp_post_agg,
     )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
