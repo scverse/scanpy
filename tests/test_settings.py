@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from importlib.metadata import packages_distributions, requires
-from importlib.util import find_spec
-
 import pytest
-from packaging.requirements import Requirement
 
 import scanpy as sc
+from scanpy._settings.presets import _missing_scanpy2_deps
 
 
 # TODO: reset everything
@@ -24,16 +21,7 @@ def test_set_figure_params_warns() -> None:
 
 
 def test_preset_scanpy_v2_preview_checks_deps() -> None:
-    dists = {d: m for m, ds in packages_distributions().items() for d in ds}
-    scanpy2_deps_missing = any(
-        r.name
-        for r in map(Requirement, requires("scanpy"))
-        if r.marker
-        and r.marker.evaluate({"extra": "scanpy2"})
-        and find_spec(dists.get(r.name, r.name.replace("-", "_"))) is None
-    )
-
-    if scanpy2_deps_missing:
+    if _missing_scanpy2_deps():
         with pytest.raises(ImportError, match=r"scanpy\[scanpy2\]"):
             sc.settings.preset = sc.Preset.ScanpyV2Preview
     else:
