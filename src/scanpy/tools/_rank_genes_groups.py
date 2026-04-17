@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Literal
 
-    from anndata import AnnData
     from numpy.typing import NDArray
 
 
@@ -140,6 +140,7 @@ class _RankGenes:
             self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
+        self.group_col = adata.obs[groupby].array
 
         self.groups_order, self.groups_masks_obs = _utils.select_groups(
             adata, groups, groupby
@@ -423,7 +424,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(  # noqa: PLR0912
+    def compute_statistics(  # noqa: PLR0912, PLR0915
         self,
         method: DETest,
         *,
@@ -440,9 +441,63 @@ class _RankGenes:
             if not exp_post_agg:
                 # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
                 self._basic_stats(exponentiate_values=True)
-        elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
-            # If we're not exponentiating after the mean aggregation, then do it now.
+        elif "wilcoxon" in method:
+            if "illico" in method:
+                from illico import asymptotic_wilcoxon
+
+                illico_df = asymptotic_wilcoxon(
+                    AnnData(
+                        X=self.X,
+                        var=pd.DataFrame(index=self.var_names),
+                        obs=pd.DataFrame(
+                            index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                            # This self.group_col means illico will run tests against *all* data
+                            # instead of what's in self.groups_order as controlled by the `groups` arg.
+                            # TODO: Only run the subset once illico supports a `groups` argument
+                            data={"group": self.group_col},
+                        ),
+                    ),
+                    reference=self.groups_order[self.ireference]
+                    if self.ireference is not None
+                    else None,
+                    group_keys="group",
+                    return_as_scanpy=False,
+                    is_log1p=True,
+                    tie_correct=tie_correct,
+                    use_continuity=False,
+                    alternative="two-sided",
+                    use_rust=False,
+                )
+                # Generate a lookup of category -> result excluding the refernece if it is present.
+                generate_test_results_map = {
+                    group_cat: (
+                        group["z_score"].to_numpy(copy=True),
+                        group["p_value"].to_numpy(copy=True),
+                    )
+                    for (_, group) in illico_df.groupby(level="pert")
+                    if (
+                        group_cat := np.unique(
+                            group.index.get_level_values("pert").to_numpy(copy=True)
+                        ).item()
+                    )
+                    != (
+                        None
+                        if self.ireference is None
+                        else self.groups_order[self.ireference]
+                    )
+                }
+                # Create the iterator that is expected by the other method-branches.
+                groups_order_list = self.groups_order.tolist()
+                generate_test_results = (
+                    (
+                        groups_order_list.index(group_cat),
+                        *generate_test_results_map[group_cat],
+                    )
+                    for group_cat in self.groups_order
+                    if group_cat in generate_test_results_map
+                )
+            else:
+                generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             self._basic_stats(exponentiate_values=not exp_post_agg)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
@@ -450,7 +505,6 @@ class _RankGenes:
         self.stats = None
 
         n_genes = self.X.shape[1]
-
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
 
