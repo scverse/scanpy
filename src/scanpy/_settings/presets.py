@@ -10,6 +10,7 @@ from importlib.metadata import distributions, requires
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 from .._utils._doctests import doctest_needs
 
@@ -254,13 +255,13 @@ class Preset(enum.StrEnum):
 
 
 def _missing_scanpy2_deps() -> list[Requirement]:
-    dist_names = {d.name for d in distributions()}
+    dist_names = {canonicalize_name(d.name) for d in distributions()}
     return [
         r
         for r in map(Requirement, requires("scanpy") or ())
         if r.marker
-        and r.marker.evaluate({"extra": "scanpy2"})
-        and r.name not in dist_names
+        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+        and canonicalize_name(r.name) not in dist_names
     ]
 
 
