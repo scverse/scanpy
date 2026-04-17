@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
-from typing import TYPE_CHECKING, Literal, TypedDict, get_args
+from functools import singledispatch
+from typing import TYPE_CHECKING, Literal, TypedDict
 
+import dask
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -395,29 +396,7 @@ def aggregate_dask(
     if not isinstance(data._meta, CSBase | np.ndarray):
         msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
         raise ValueError(msg)
-    chunked_axis, unchunked_axis = (
-        (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
-    )
-    if data.chunksize[unchunked_axis] != data.shape[unchunked_axis]:
-        msg = "Feature axis must be unchunked"
-        raise ValueError(msg)
-
-    def aggregate_chunk_sum_or_count_nonzero(
-        chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
-    ):
-        # only subset the mask and by if we need to i.e.,
-        # there is chunking along the same axis as by and mask
-        if chunked_axis == 0:
-            # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
-            # for what is contained in `block_info`.
-            subset = slice(*block_info[0]["array-location"][0])
-            by_subsetted = by[subset]
-            mask_subsetted = mask[subset] if mask is not None else mask
-        else:
-            by_subsetted = by
-            mask_subsetted = mask
-        res = _aggregate(chunk, by_subsetted, func, mask=mask_subsetted, dof=dof)[func]
-        return res[None, :] if unchunked_axis == 1 else res
+    chunked_axis, _ = (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
 
     funcs = set([func] if isinstance(func, str) else func)
     if "median" in funcs:
@@ -425,33 +404,60 @@ def aggregate_dask(
         raise NotImplementedError(msg)
     has_mean, has_var = (v in funcs for v in ["mean", "var"])
     funcs_no_var_or_mean = funcs - {"var", "mean"}
-    # aggregate each row chunk or column chunk individually,
-    # producing a #chunks × #categories × #features or a #categories × #chunks array,
-    # then aggregate the per-chunk results.
-    chunks = (
-        ((1,) * data.blocks.size, (len(by.categories),), data.shape[1])
-        if unchunked_axis == 1
-        else (len(by.categories), data.chunks[1])
-    )
-    aggregated = {
-        f: data.map_blocks(
-            partial(aggregate_chunk_sum_or_count_nonzero, func=func),
-            new_axis=(1,) if unchunked_axis == 1 else None,
-            chunks=chunks,
-            meta=np.array(
-                [],
-                dtype=np.float64
-                if func not in get_args(ConstantDtypeAgg)
-                else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
-            ),
-        )
-        for f in funcs_no_var_or_mean
-    }
-    # If we have row chunking, we need to handle the extra axis by summing over all category × feature matrices.
-    # Otherwise, dask internally concatenates the #categories × #chunks arrays i.e., the column chunks are concatenated together to get a #categories × #features matrix.
-    if unchunked_axis == 1:
-        for k, v in aggregated.items():
-            aggregated[k] = v.sum(axis=chunked_axis)
+
+    if funcs_no_var_or_mean:
+        funcs_list = list(funcs_no_var_or_mean)
+        by_codes = np.asarray(by.codes)
+        mask_arr = np.asarray(mask) if mask is not None else None
+
+        @dask.delayed
+        def aggregate_chunk(block, block_idx):
+            subset = slice(block_idx[0], block_idx[1])
+            by_subsetted = (
+                pd.Categorical.from_codes(by_codes[subset], categories=by.categories)
+                if chunked_axis == 0
+                else by
+            )
+            mask_subsetted = (
+                mask_arr[subset]
+                if (mask_arr is not None and chunked_axis == 0)
+                else mask_arr
+            )
+            return {
+                f: _aggregate(block, by_subsetted, f, mask=mask_subsetted, dof=dof)[f]
+                for f in funcs_list
+            }
+
+        @dask.delayed
+        def add_aggs(a, b):
+            return {f: a[f] + b[f] for f in funcs_list}
+
+        blocks = data.to_delayed().ravel()
+
+        offset = 0
+        delayed_chunks = []
+        for i, block in enumerate(blocks):
+            block_idx = (offset, offset + data.chunks[chunked_axis][i])
+            delayed_chunks.append(aggregate_chunk(block, block_idx))
+            offset += data.chunks[chunked_axis][i]
+
+        while len(delayed_chunks) > 1:
+            delayed_chunks = [
+                add_aggs(delayed_chunks[i], delayed_chunks[i + 1])
+                if i + 1 < len(delayed_chunks)
+                else delayed_chunks[i]
+                for i in range(0, len(delayed_chunks), 2)
+            ]
+
+        aggregated = {
+            f: dask.array.from_delayed(
+                dask.delayed(lambda r, f=f: r[f])(delayed_chunks[0]),
+                shape=(len(by.categories), data.shape[1]),
+                dtype=np.float64,
+            )
+            for f in funcs_list
+        }
+
     if has_var:
         aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
         aggregated["var"] = aggredated_mean_var["var"]
