@@ -6,7 +6,13 @@ import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property, partial, wraps
+from importlib.metadata import packages_distributions, requires
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, NamedTuple
+
+from packaging.requirements import Requirement
+
+from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
@@ -201,6 +207,8 @@ class Preset(enum.StrEnum):
         }
 
     @contextmanager
+    @doctest_needs("igraph")
+    @doctest_needs("scikit-misc")
     def override(self, preset: Preset) -> Generator[Preset, None, None]:
         """Temporarily override :attr:`scanpy.settings.preset`.
 
@@ -219,6 +227,29 @@ class Preset(enum.StrEnum):
             yield self
         finally:
             settings.preset = self
+
+    def check_deps(self) -> None:
+
+        match self:
+            case self.ScanpyV1:
+                return
+            case self.ScanpyV2Preview:
+                dists = {d: m for m, ds in packages_distributions().items() for d in ds}
+                missing = [
+                    r.name
+                    for r in map(Requirement, requires("scanpy"))
+                    if r.marker
+                    and r.marker.evaluate({"extra": "scanpy2"})
+                    and find_spec(dists.get(r.name, r.name.replace("-", "_"))) is None
+                ]
+                if missing:
+                    missing_str = ", ".join(f"‘{m}’" for m in missing)
+                    msg = (
+                        f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
+                        f"dependencies that are not installed: {missing_str}. "
+                        "Install them with: pip install `scanpy[scanpy2]`"
+                    )
+                    raise ImportError(msg)
 
 
 for postprocess in preset_postprocessors:

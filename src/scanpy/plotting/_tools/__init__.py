@@ -202,6 +202,24 @@ def pca_variance_ratio(
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 
+    Examples
+    --------
+    Plot the variance ratio for the first 30 PCs.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_variance_ratio(adata)
+
+    Plot on a logarithmic scale.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca_variance_ratio(adata, log=True)
+
     """
     ranking(
         adata,
@@ -985,13 +1003,15 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels")
+    Plot top marker genes per group as a stacked violin.
 
-    >>> sc.pl.rank_genes_groups_stacked_violin(
-    ...     adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6)
-    ... )
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, "bulk_labels")
+        sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6))
 
     """
     return _rank_genes_groups_plot(
@@ -1195,6 +1215,18 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     size
         Size of the jitter points.
     {show_save_ax}
+
+    Examples
+    --------
+    Plot violin distributions of top-ranked genes per group.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, "bulk_labels")
+        sc.pl.rank_genes_groups_violin(adata, groups=["CD34+"], n_genes=5)
 
     """
     if key is None:

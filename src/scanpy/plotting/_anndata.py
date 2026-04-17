@@ -1783,10 +1783,15 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, "bulk_labels")
-    >>> sc.pl.correlation_matrix(adata, "bulk_labels")
+    Plot correlation matrix between cell type groups.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, "bulk_labels")
+        sc.pl.correlation_matrix(adata, "bulk_labels")
 
     """
     dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
