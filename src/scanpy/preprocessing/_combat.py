@@ -105,8 +105,9 @@ def _standardize_data(
 
     design = _design_matrix(model, batch_key, batch_levels)
 
-    # compute pooled variance estimator
+    # use numpty .values extration only once to avoid pandas overhead
     design_arr = design.values
+    # compute pooled variance estimator
     b_hat = np.dot(np.dot(la.inv(np.dot(design_arr.T, design_arr)), design_arr.T), data.values.T)
     grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
     var_pooled = (data.values - np.dot(design_arr, b_hat).T) ** 2
