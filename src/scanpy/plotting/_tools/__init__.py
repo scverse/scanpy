@@ -1003,13 +1003,15 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels")
+    Plot top marker genes per group as a stacked violin.
 
-    >>> sc.pl.rank_genes_groups_stacked_violin(
-    ...     adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6)
-    ... )
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, "bulk_labels")
+        sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6))
 
     """
     return _rank_genes_groups_plot(
