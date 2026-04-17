@@ -46,7 +46,7 @@ class ToolsSuite:  # noqa: D101
         sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
 
 
-class CombatSuite:  # noqa: D101
+class CombatSuite:
     """Benchmark combat batch correction."""
 
     def setup_cache(self) -> None:
@@ -58,9 +58,7 @@ class CombatSuite:  # noqa: D101
         sc.pp.scale(adata, max_value=10)
         # assign cells to 3 batches deterministically
         np.random.seed(0)
-        adata.obs["batch"] = np.random.choice(
-            ["A", "B", "C"], size=adata.n_obs
-        )
+        adata.obs["batch"] = np.random.choice(["A", "B", "C"], size=adata.n_obs)
         adata.write_h5ad("adata_combat.h5ad")
 
     def setup(self) -> None:

@@ -108,7 +108,9 @@ def _standardize_data(
     # use numpty .values extration only once to avoid pandas overhead
     design_arr = design.values
     # compute pooled variance estimator
-    b_hat = np.dot(np.dot(la.inv(np.dot(design_arr.T, design_arr)), design_arr.T), data.values.T)
+    b_hat = np.dot(
+        np.dot(la.inv(np.dot(design_arr.T, design_arr)), design_arr.T), data.values.T
+    )
     grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
     var_pooled = (data.values - np.dot(design_arr, b_hat).T) ** 2
     var_pooled = np.mean(var_pooled, axis=1, keepdims=True)
@@ -278,7 +280,10 @@ def combat(  # noqa: PLR0915
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
         dsq = np.sqrt(delta_star[j, :])
-        numer = bayesdata_arr[:, batch_idxs] - np.dot(batch_design_arr[batch_idxs], gamma_star).T
+        numer = (
+            bayesdata_arr[:, batch_idxs]
+            - np.dot(batch_design_arr[batch_idxs], gamma_star).T
+        )
         bayesdata_arr[:, batch_idxs] = numer / dsq[:, np.newaxis]
 
     bayesdata_arr = bayesdata_arr * np.sqrt(var_pooled) + stand_mean
