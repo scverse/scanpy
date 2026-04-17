@@ -294,10 +294,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
         elif sort_order and color_type == "cat":
             # Null points go on bottom
             order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
-        # Set orders
-        # Copy size before reordering so the original array is preserved
-        # across loop iterations (fixes #4024)
-        _size = size[order] if isinstance(size, np.ndarray) else size
+        # `size` is not a loop variable, so don’t overwrite it here
+        size_plot = size[order] if isinstance(size, np.ndarray) else size
         color_source_vector = color_source_vector[order]
         color_vector = color_vector[order]
         coords = basis_values[:, dims][order, :]
@@ -349,11 +347,10 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             )
         else:
             scatter = (
-                partial(ax.scatter, s=_size, plotnonfinite=True)
+                partial(ax.scatter, s=size_plot, plotnonfinite=True)
                 if scale_factor is None
-                else partial(
-                    circles, s=_size, ax=ax, scale_factor=scale_factor
-                )  # size in circles is radius
+                # size in circles is radius
+                else partial(circles, s=size_plot, ax=ax, scale_factor=scale_factor)
             )
 
             if add_outline:
@@ -367,7 +364,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                 # with some transparency.
 
                 bg_width, gap_width = outline_width
-                point = np.sqrt(_size)
+                point = np.sqrt(size_plot)
                 gap_size = (point + (point * gap_width) * 2) ** 2
                 bg_size = (np.sqrt(gap_size) + (point * bg_width) * 2) ** 2
                 # the default black and white colors can be changes using
