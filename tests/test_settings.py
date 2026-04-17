@@ -28,4 +28,4 @@ def test_preset_scanpy_v2_preview_checks_deps() -> None:
         sc.settings.preset = sc.Preset.ScanpyV2Preview
         assert sc.settings.preset is sc.Preset.ScanpyV2Preview
         sc.settings.preset = sc.Preset.ScanpyV1
-    assert sc.settings.preset == sc.Preset.ScanpyV1
+    assert sc.settings.preset is sc.Preset.ScanpyV1

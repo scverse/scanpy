@@ -53,7 +53,7 @@ class Default:
         value = self._get_value(sc.settings.preset)
         suffix = (
             " – changes in 2.0"
-            if sc.settings.preset == Preset.ScanpyV1
+            if sc.settings.preset is Preset.ScanpyV1
             and value != self._get_value(Preset.ScanpyV2Preview)
             else ""
         )
