@@ -40,8 +40,6 @@ class PreprocessingSuite:  # noqa: D101
 
     def setup(self, dataset, layer) -> None:
         self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
-        if "X_pca" not in self.adata.obsm:
-            sc.pp.pca(self.adata)
 
     def time_pca(self, *_) -> None:
         sc.pp.pca(self.adata, svd_solver="arpack")
@@ -68,12 +66,6 @@ class PreprocessingSuite:  # noqa: D101
     @skip_when(dataset={"pbmc3k"})
     def peakmem_regress_out(self, *_) -> None:
         sc.pp.regress_out(self.adata, ["total_counts", "pct_counts_mt"])
-
-    def time_neighbors(self, *_) -> None:
-        sc.pp.neighbors(self.adata, n_neighbors=10, n_pcs=40)
-
-    def peakmem_neighbors(self, *_) -> None:
-        sc.pp.neighbors(self.adata, n_neighbors=10, n_pcs=40)
 
     def time_scale(self, *_) -> None:
         sc.pp.scale(self.adata, max_value=10)

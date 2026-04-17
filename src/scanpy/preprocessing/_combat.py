@@ -220,7 +220,6 @@ def combat(  # noqa: PLR0915
             "within-batch variance. Filter these batches before running combat."
         )
         raise ValueError(msg)
-    n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator
     logg.info("Standardizing Data across genes.\n")
@@ -273,7 +272,7 @@ def combat(  # noqa: PLR0915
 
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
-    bayesdata_arr = bayesdata.values
+    bayesdata_arr = bayesdata.to_numpy(copy=True)
     batch_design_arr = batch_design.values
     for j, batch_idxs in enumerate(batch_info.values()):
         # we basically subtract the additive batch effect, rescale by the ratio
