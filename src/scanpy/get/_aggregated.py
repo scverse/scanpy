@@ -80,7 +80,15 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of counts.
 
         """
-        return self._sum(data=(self.data != 0).astype("uint8"))
+        data = self.data
+        if isinstance(data, CSBase):
+            data = type(data)(
+                (np.ones(data.nnz, dtype="uint8"), data.indices, data.indptr),
+                shape=data.shape,
+            )
+        else:
+            data = (data != 0).astype("uint8")
+        return self._sum(data=data)
 
     def _sum(self, data: ArrayT):
         if isinstance(data, np.ndarray):
