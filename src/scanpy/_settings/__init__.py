@@ -106,7 +106,7 @@ class SettingsMeta(SingletonMeta, type):
     @preset.setter
     def preset(cls, preset: Preset | str) -> None:
         new_preset = Preset(preset)
-        new_preset.check_deps()
+        new_preset.check()
         cls._preset = new_preset
 
     @property
