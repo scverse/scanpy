@@ -69,6 +69,10 @@ class Default:
         return getattr(params, param)
 
 
+class Read10xPreset(NamedTuple):
+    layer: str | None
+
+
 class HVGPreset(NamedTuple):
     flavor: HVGFlavor
     return_df: bool
@@ -164,6 +168,14 @@ class Preset(enum.StrEnum):
 
     ScanpyV2Preview = enum.auto()
     """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+
+    @preset_property
+    def read_10x() -> Mapping[Preset, Read10xPreset]:
+        """Target for :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx`."""
+        return {
+            Preset.ScanpyV1: Read10xPreset(layer=None),
+            Preset.ScanpyV2Preview: Read10xPreset(layer="counts"),
+        }
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
