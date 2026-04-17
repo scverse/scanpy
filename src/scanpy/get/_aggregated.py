@@ -101,6 +101,10 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, data, out
         )
+        if isinstance(data, CSBase):
+            nnz = np.count_nonzero(out)
+            if nnz / out.size < 0.5:  # heuristic for when to return sparse vs dense
+                return type(data)(out)  # convert to sparse type of input
         return out
 
     def sum(self) -> np.ndarray:
