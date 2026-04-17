@@ -9,7 +9,7 @@ import anndata as ad
 
 import scanpy as sc
 
-from ._utils import pbmc68k_reduced
+from ._utils import pbmc3k, pbmc68k_reduced
 
 
 class ToolsSuite:  # noqa: D101
@@ -44,3 +44,28 @@ class ToolsSuite:  # noqa: D101
 
     def peakmem_rank_genes_groups(self) -> None:
         sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
+
+
+class CombatSuite:
+    """Benchmark combat batch correction."""
+
+    def setup_cache(self) -> None:
+        import numpy as np
+
+        adata = pbmc3k()
+        sc.pp.highly_variable_genes(adata, n_top_genes=500)
+        adata = adata[:, adata.var["highly_variable"]].copy()
+        sc.pp.scale(adata, max_value=10)
+        # assign cells to 3 batches deterministically
+        np.random.seed(0)
+        adata.obs["batch"] = np.random.choice(["A", "B", "C"], size=adata.n_obs)
+        adata.write_h5ad("adata_combat.h5ad")
+
+    def setup(self) -> None:
+        self.adata = ad.read_h5ad("adata_combat.h5ad")
+
+    def time_combat(self) -> None:
+        sc.pp.combat(self.adata, key="batch")
+
+    def peakmem_combat(self) -> None:
+        sc.pp.combat(self.adata, key="batch")
