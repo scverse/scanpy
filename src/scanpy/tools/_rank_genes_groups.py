@@ -468,6 +468,7 @@ class _RankGenes:
                     alternative="two-sided",
                     use_rust=False,
                 )
+                # Generate a lookup of category -> result excluding the refernece if it is present.
                 generate_test_results_map = {
                     group_cat: (
                         group["z_score"].to_numpy(copy=True),
@@ -485,9 +486,11 @@ class _RankGenes:
                         else self.groups_order[self.ireference]
                     )
                 }
+                # Create the iterator that is expected by the other method-branches.
+                groups_order_list = self.groups_order.tolist()
                 generate_test_results = (
                     (
-                        self.groups_order.tolist().index(group_cat),
+                        groups_order_list.index(group_cat),
                         *generate_test_results_map[group_cat],
                     )
                     for group_cat in self.groups_order
