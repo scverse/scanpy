@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-import dask
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -405,6 +404,8 @@ def aggregate_dask(
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> dict[AggType, DaskArray]:
+    import dask
+
     if not isinstance(data._meta, CSBase | np.ndarray):
         msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
         raise ValueError(msg)
