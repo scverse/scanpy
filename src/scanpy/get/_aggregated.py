@@ -418,58 +418,58 @@ def aggregate_dask(
     has_mean, has_var = (v in funcs for v in ["mean", "var"])
     funcs_no_var_or_mean = funcs - {"var", "mean"}
 
-    if funcs_no_var_or_mean:
-        funcs_list = list(funcs_no_var_or_mean)
-        by_codes = np.asarray(by.codes)
-        mask_arr = np.asarray(mask) if mask is not None else None
+    @dask.delayed
+    def aggregate_chunk(block, block_idx):
+        subset = slice(block_idx[0], block_idx[1])
+        by_subsetted = (
+            pd.Categorical.from_codes(by.codes[subset], categories=by.categories)
+            if chunked_axis == 0
+            else by
+        )
+        mask_subsetted = (
+            mask[subset] if (mask is not None and chunked_axis == 0) else mask
+        )
+        return {
+            f: _aggregate(block, by_subsetted, f, mask=mask_subsetted, dof=dof)[f]
+            for f in funcs_no_var_or_mean
+        }
 
-        @dask.delayed
-        def aggregate_chunk(block, block_idx):
-            subset = slice(block_idx[0], block_idx[1])
-            by_subsetted = (
-                pd.Categorical.from_codes(by_codes[subset], categories=by.categories)
-                if chunked_axis == 0
-                else by
-            )
-            mask_subsetted = (
-                mask_arr[subset]
-                if (mask_arr is not None and chunked_axis == 0)
-                else mask_arr
-            )
+    @dask.delayed
+    def combine_aggs(a, b):
+        if chunked_axis == 0:
+            return {f: a[f] + b[f] for f in funcs_no_var_or_mean}
+        else:
             return {
-                f: _aggregate(block, by_subsetted, f, mask=mask_subsetted, dof=dof)[f]
-                for f in funcs_list
+                f: sparse.hstack([a[f], b[f]])
+                if isinstance(a[f], CSBase)
+                else np.concatenate([a[f], b[f]], axis=1)
+                for f in funcs_no_var_or_mean
             }
 
-        @dask.delayed
-        def add_aggs(a, b):
-            return {f: a[f] + b[f] for f in funcs_list}
+    offset = 0
+    delayed_chunks = []
+    blocks = data.to_delayed().ravel()
+    for i, block in enumerate(blocks):
+        block_idx = (offset, offset + data.chunks[chunked_axis][i])
+        delayed_chunks.append(aggregate_chunk(block, block_idx))
+        offset += data.chunks[chunked_axis][i]
 
-        blocks = data.to_delayed().ravel()
+    while len(delayed_chunks) > 1:
+        delayed_chunks = [
+            combine_aggs(delayed_chunks[i], delayed_chunks[i + 1])
+            if i + 1 < len(delayed_chunks)
+            else delayed_chunks[i]
+            for i in range(0, len(delayed_chunks), 2)
+        ]
 
-        offset = 0
-        delayed_chunks = []
-        for i, block in enumerate(blocks):
-            block_idx = (offset, offset + data.chunks[chunked_axis][i])
-            delayed_chunks.append(aggregate_chunk(block, block_idx))
-            offset += data.chunks[chunked_axis][i]
-
-        while len(delayed_chunks) > 1:
-            delayed_chunks = [
-                add_aggs(delayed_chunks[i], delayed_chunks[i + 1])
-                if i + 1 < len(delayed_chunks)
-                else delayed_chunks[i]
-                for i in range(0, len(delayed_chunks), 2)
-            ]
-
-        aggregated = {
-            f: dask.array.from_delayed(
-                dask.delayed(lambda r, f=f: r[f])(delayed_chunks[0]),
-                shape=(len(by.categories), data.shape[1]),
-                dtype=np.float64,
-            )
-            for f in funcs_list
-        }
+    aggregated = {
+        f: dask.array.from_delayed(
+            dask.delayed(lambda r, f=f: r[f])(delayed_chunks[0]),
+            shape=(len(by.categories), data.shape[1]),
+            dtype=np.float64,
+        )
+        for f in funcs_no_var_or_mean
+    }
 
     if has_var:
         aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
