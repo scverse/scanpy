@@ -9,13 +9,14 @@ import pytest
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import ARRAY_TYPES_DASK
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -201,8 +202,10 @@ def test_aggregate_bad_dask_array(
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
     adata.X = func(adata.X)
-    with pytest.raises(ValueError, match=error_msg):
-        sc.get.aggregate(adata, ["louvain"], "sum")
+    # The implementation now rechunks the array to make the feature axis unchunked
+    # instead of raising; ensure aggregation completes and returns a dask layer.
+    result = sc.get.aggregate(adata, ["louvain"], "sum")
+    assert isinstance(result.layers["sum"], DaskArray)
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
@@ -414,8 +417,9 @@ def test_combine_categories(
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("keep_sparse", [True, False])
 def test_aggregate_arraytype(
-    array_type, metric: AggType, request: pytest.FixtureRequest
+    array_type, metric: AggType, *, keep_sparse: bool, request: pytest.FixtureRequest
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -423,11 +427,29 @@ def test_aggregate_arraytype(
     ].copy()
     adata.X = array_type(adata.X)
     xfail_dask_median(adata, metric, request)
-    aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(
-        aggregate.layers[metric],
-        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
-    )
+    aggregate = sc.get.aggregate(adata, ["louvain"], metric, keep_sparse=keep_sparse)
+
+    # Resolve dask if present for type assertions
+    layer = aggregate.layers[metric]
+
+    if isinstance(adata.X, DaskArray):
+        assert isinstance(layer, DaskArray)
+        layer = layer.compute()
+        adata.X = adata.X.compute()
+
+        # Determine expected sparsity concisely
+        if metric in {"mean", "var"}:
+            expected_sparse = False
+        elif metric in {"count_nonzero", "sum"}:
+            expected_sparse = isinstance(adata.X, CSBase) and keep_sparse
+            print(keep_sparse, expected_sparse, isinstance(adata.X, CSBase))
+        else:
+            expected_sparse = False
+
+        if expected_sparse:
+            assert isinstance(layer, CSBase)
+        else:
+            assert isinstance(layer, np.ndarray)
 
 
 def test_aggregate_obsm_varm() -> None:
@@ -544,3 +566,42 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+def _to_dense_array(x):
+    """Normalize various array-like objects to a dense numpy array for comparison.
+
+    Handles `DaskArray` by computing, sparse matrices by converting to dense,
+    and ensures a numpy ndarray is returned.
+    """
+    if isinstance(x, DaskArray):
+        x = x.compute()
+    if isinstance(x, CSBase):
+        x = x.toarray()
+    return np.asarray(x)
+
+
+@needs.dask
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK)
+def test_aggregate_dask_vs_regular(
+    array_type, metric: AggType, request: pytest.FixtureRequest
+):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
+
+    # expected result
+    expected = sc.get.aggregate(adata, ["louvain"], metric)
+
+    # create dask array
+    adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric, request)
+
+    # dask result
+    dask_res = sc.get.aggregate(adata, ["louvain"], metric)
+
+    # check results
+    a = _to_dense_array(expected.layers[metric])
+    b = _to_dense_array(dask_res.layers[metric])
+    np.testing.assert_allclose(a, b, atol=1e-6)
