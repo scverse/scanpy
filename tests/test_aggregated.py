@@ -16,6 +16,7 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import ARRAY_TYPES_DASK
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -565,3 +566,42 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+def _to_dense_array(x):
+    """Normalize various array-like objects to a dense numpy array for comparison.
+
+    Handles `DaskArray` by computing, sparse matrices by converting to dense,
+    and ensures a numpy ndarray is returned.
+    """
+    if isinstance(x, DaskArray):
+        x = x.compute()
+    if isinstance(x, CSBase):
+        x = x.toarray()
+    return np.asarray(x)
+
+
+@needs.dask
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_DASK)
+def test_aggregate_dask_vs_regular(
+    array_type, metric: AggType, request: pytest.FixtureRequest
+):
+    adata = pbmc3k_processed().raw.to_adata()
+    adata = adata[
+        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+    ].copy()
+
+    # expected result
+    expected = sc.get.aggregate(adata, ["louvain"], metric)
+
+    # create dask array
+    adata.X = array_type(adata.X)
+    xfail_dask_median(adata, metric, request)
+
+    # dask result
+    dask_res = sc.get.aggregate(adata, ["louvain"], metric)
+
+    # check results
+    a = _to_dense_array(expected.layers[metric])
+    b = _to_dense_array(dask_res.layers[metric])
+    np.testing.assert_allclose(a, b, atol=1e-6)
