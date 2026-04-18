@@ -71,8 +71,15 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
     indicator_matrix: CSRBase | sparse.coo_array
     data: ArrayT
 
-    def count_nonzero(self) -> NDArray[np.integer]:
+    def count_nonzero(self, *, keep_sparse: bool = True) -> NDArray[np.integer]:
         """Count the number of observations in each group.
+
+        Parameters
+        ----------
+        keep_sparse
+            If True and the input data is a sparse matrix, return a sparse matrix
+            of the same type for the aggregated counts. If False, always return
+            a dense :class:`numpy.ndarray`.
 
         Returns
         -------
@@ -87,9 +94,9 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
             )
         else:
             data = (data != 0).astype("uint8")
-        return self._sum(data=data)
+        return self._sum(data=data, keep_sparse=keep_sparse)
 
-    def _sum(self, data: ArrayT):
+    def _sum(self, data: ArrayT, *, keep_sparse: bool):
         if isinstance(data, np.ndarray):
             res = self.indicator_matrix @ data
             if isinstance(res, CSBase):
@@ -100,21 +107,26 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, data, out
         )
-        if isinstance(data, CSBase):
-            nnz = np.count_nonzero(out)
-            if nnz / out.size < 0.5:  # heuristic for when to return sparse vs dense
-                return type(data)(out)  # convert to sparse type of input
+        if keep_sparse and isinstance(data, CSBase):
+            return type(data)(out)  # convert to sparse type of input
         return out
 
-    def sum(self) -> np.ndarray:
+    def sum(self, *, keep_sparse: bool = True) -> np.ndarray:
         """Compute the sum per feature per group of observations.
+
+        Parameters
+        ----------
+        keep_sparse
+            If True and the input data is a sparse matrix, return a sparse matrix
+            of the same type for the aggregated sums. If False, always return
+            a dense :class:`numpy.ndarray`.
 
         Returns
         -------
         Array of sum.
 
         """
-        return self._sum(self.data)
+        return self._sum(self.data, keep_sparse=keep_sparse)
 
     def mean(self) -> Array:
         """Compute the mean per feature per group of observations.
@@ -124,7 +136,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of mean.
 
         """
-        return self.sum() / np.bincount(self.groupby.codes)[:, None]
+        return self.sum(keep_sparse=False) / np.bincount(self.groupby.codes)[:, None]
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
@@ -151,7 +163,10 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         if isinstance(self.data, np.ndarray):
             mean_ = self.mean()
             # sparse matrices do not support ** for elementwise power.
-            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
+            mean_sq = (
+                self._sum(_power(self.data, 2), keep_sparse=False)
+                / group_counts[:, None]
+            )
             sq_mean = mean_**2
             var_ = mean_sq - sq_mean
         else:
@@ -217,6 +232,7 @@ def aggregate(  # noqa: PLR0912
     axis: Literal["obs", 0, "var", 1] | None = None,
     mask: NDArray[np.bool] | str | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
     layer: str | None = None,
     obsm: str | None = None,
     varm: str | None = None,
@@ -247,6 +263,10 @@ def aggregate(  # noqa: PLR0912
         Boolean mask (or key to column containing mask) to apply along the axis.
     dof
         Degrees of freedom for variance. Defaults to 1.
+    keep_sparse
+        If True and the input data is a sparse matrix, preserve sparse outputs
+        for metrics that support it (for example, ``sum`` and ``count_nonzero``).
+        If False, force dense :class:`numpy.ndarray` outputs. Defaults to True.
     layer
         If not None, key for aggregation data.
     obsm
@@ -336,6 +356,7 @@ def aggregate(  # noqa: PLR0912
         func=func,
         mask=mask,
         dof=dof,
+        keep_sparse=keep_sparse,
     )
 
     # Define new var dataframe
@@ -366,6 +387,7 @@ def _aggregate(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
 ) -> dict[AggType, np.ndarray | DaskArray]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
@@ -382,9 +404,14 @@ def aggregate_dask_mean_var(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
+    keep_sparse: bool = False,
 ) -> MeanVarDict:
-    mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
-    sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
+    mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof, keep_sparse=False)[
+        "mean"
+    ]
+    sq_mean = aggregate_dask(
+        fau_power(data, 2), by, "mean", mask=mask, dof=dof, keep_sparse=False
+    )["mean"]
     # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
     if isinstance(data._meta, CSRBase):
         sq_mean = sq_mean.compute()
@@ -403,6 +430,7 @@ def aggregate_dask(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
 ) -> dict[AggType, DaskArray]:
     import dask
 
@@ -434,7 +462,14 @@ def aggregate_dask(
             mask[subset] if (mask is not None and chunked_axis == 0) else mask
         )
         return {
-            f: _aggregate(block, by_subsetted, f, mask=mask_subsetted, dof=dof)[f]
+            f: _aggregate(
+                block,
+                by_subsetted,
+                f,
+                mask=mask_subsetted,
+                dof=dof,
+                keep_sparse=keep_sparse,
+            )[f]
             for f in funcs_no_var_or_mean
         }
 
@@ -476,7 +511,10 @@ def aggregate_dask(
     }
 
     if has_var:
-        aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
+        # mean/var must be dense regardless of `keep_sparse`
+        aggredated_mean_var = aggregate_dask_mean_var(
+            data, by, mask=mask, dof=dof, keep_sparse=False
+        )
         aggregated["var"] = aggredated_mean_var["var"]
         if has_mean:
             aggregated["mean"] = aggredated_mean_var["mean"]
@@ -484,16 +522,23 @@ def aggregate_dask(
     # i.e., we can't just call map blocks over the mean function.
     elif has_mean:
         group_counts = np.bincount(by.codes)
+        # compute sum then divide; force sum to be dense here for mean
         aggregated["mean"] = (
-            aggregate_dask(data, by, "sum", mask=mask, dof=dof)["sum"]
+            aggregate_dask(data, by, "sum", mask=mask, dof=dof, keep_sparse=False)[
+                "sum"
+            ]
             / group_counts[:, None]
         )
     return aggregated
 
 
 @_aggregate.register(pd.DataFrame)
-def aggregate_df(data, by, func, *, mask=None, dof=1) -> dict[AggType, np.ndarray]:
-    return _aggregate(data.values, by, func, mask=mask, dof=dof)
+def aggregate_df(
+    data, by, func, *, mask=None, dof=1, keep_sparse=False
+) -> dict[AggType, np.ndarray]:
+    return _aggregate(
+        data.values, by, func, mask=mask, dof=dof, keep_sparse=keep_sparse
+    )
 
 
 @_aggregate.register(np.ndarray)
@@ -505,6 +550,7 @@ def aggregate_array(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
 ) -> dict[AggType, np.ndarray]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
     result = {}
@@ -515,22 +561,19 @@ def aggregate_array(
         raise ValueError(msg)
 
     if "sum" in funcs:  # sum is calculated separately from the rest
-        agg = groupby.sum()
-        result["sum"] = agg
+        result["sum"] = groupby.sum(keep_sparse=keep_sparse)
     # here and below for count, if var is present, these can be calculate alongside var
     if "mean" in funcs and "var" not in funcs:
-        agg = groupby.mean()
-        result["mean"] = agg
+        result["mean"] = groupby.mean()
     if "count_nonzero" in funcs:
-        result["count_nonzero"] = groupby.count_nonzero()
+        result["count_nonzero"] = groupby.count_nonzero(keep_sparse=keep_sparse)
     if "var" in funcs:
         mean_, var_ = groupby.mean_var(dof)
         result["var"] = var_
         if "mean" in funcs:
             result["mean"] = mean_
     if "median" in funcs:
-        agg = groupby.median()
-        result["median"] = agg
+        result["median"] = groupby.median()
     return result
 
 

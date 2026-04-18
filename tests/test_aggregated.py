@@ -9,7 +9,7 @@ import pytest
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -416,8 +416,9 @@ def test_combine_categories(
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("keep_sparse", [True, False])
 def test_aggregate_arraytype(
-    array_type, metric: AggType, request: pytest.FixtureRequest
+    array_type, metric: AggType, *, keep_sparse: bool, request: pytest.FixtureRequest
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
@@ -425,11 +426,29 @@ def test_aggregate_arraytype(
     ].copy()
     adata.X = array_type(adata.X)
     xfail_dask_median(adata, metric, request)
-    aggregate = sc.get.aggregate(adata, ["louvain"], metric)
-    assert isinstance(
-        aggregate.layers[metric],
-        DaskArray if isinstance(adata.X, DaskArray) else np.ndarray,
-    )
+    aggregate = sc.get.aggregate(adata, ["louvain"], metric, keep_sparse=keep_sparse)
+
+    # Resolve dask if present for type assertions
+    layer = aggregate.layers[metric]
+
+    if isinstance(adata.X, DaskArray):
+        assert isinstance(layer, DaskArray)
+        layer = layer.compute()
+        adata.X = adata.X.compute()
+
+        # Determine expected sparsity concisely
+        if metric in {"mean", "var"}:
+            expected_sparse = False
+        elif metric in {"count_nonzero", "sum"}:
+            expected_sparse = isinstance(adata.X, CSBase) and keep_sparse
+            print(keep_sparse, expected_sparse, isinstance(adata.X, CSBase))
+        else:
+            expected_sparse = False
+
+        if expected_sparse:
+            assert isinstance(layer, CSBase)
+        else:
+            assert isinstance(layer, np.ndarray)
 
 
 def test_aggregate_obsm_varm() -> None:
