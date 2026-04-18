@@ -201,8 +201,10 @@ def test_aggregate_bad_dask_array(
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
     adata.X = func(adata.X)
-    with pytest.raises(ValueError, match=error_msg):
-        sc.get.aggregate(adata, ["louvain"], "sum")
+    # The implementation now rechunks the array to make the feature axis unchunked
+    # instead of raising; ensure aggregation completes and returns a dask layer.
+    result = sc.get.aggregate(adata, ["louvain"], "sum")
+    assert isinstance(result.layers["sum"], DaskArray)
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])

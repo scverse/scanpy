@@ -409,7 +409,11 @@ def aggregate_dask(
     if not isinstance(data._meta, CSBase | np.ndarray):
         msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
         raise ValueError(msg)
-    chunked_axis, _ = (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
+    chunked_axis, unchunked_axis = (
+        (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
+    )
+    if data.chunksize[unchunked_axis] != data.shape[unchunked_axis]:
+        data = data.rechunk({unchunked_axis: -1})
 
     funcs = set([func] if isinstance(func, str) else func)
     if "median" in funcs:
