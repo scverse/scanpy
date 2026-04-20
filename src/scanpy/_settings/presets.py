@@ -6,11 +6,11 @@ import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property, partial, wraps
-from importlib.metadata import packages_distributions, requires
-from importlib.util import find_spec
+from importlib.metadata import distributions, requires
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 from .._utils._doctests import doctest_needs
 
@@ -53,10 +53,22 @@ class Default:
             return self.repr or "default"
         import scanpy as sc
 
+        value = self._get_value(sc.settings.preset)
+        suffix = (
+            " – changes in 2.0"
+            if sc.settings.preset is Preset.ScanpyV1
+            and value != self._get_value(Preset.ScanpyV2Preview)
+            else ""
+        )
+        return f"{value!r} (sc.settings.preset={str(sc.settings.preset)!r}{suffix})"
+
+    def _get_value(self, preset: Preset) -> object:
+        if not self.preset:
+            msg = "preset is not set"
+            raise AssertionError(msg)
         func, param = self.preset
-        params = getattr(sc.settings.preset, func)
-        value = getattr(params, param)
-        return f"{value!r} (sc.settings.preset={str(sc.settings.preset)!r} – changes in 2.0)"
+        params = getattr(preset, func)
+        return getattr(params, param)
 
 
 class HVGPreset(NamedTuple):
@@ -230,28 +242,32 @@ class Preset(enum.StrEnum):
         finally:
             settings.preset = self
 
-    def check_deps(self) -> None:
-
+    def check(self) -> None:
+        """Check if requirements for preset are met."""
         match self:
             case self.ScanpyV1:
                 return
             case self.ScanpyV2Preview:
-                dists = {d: m for m, ds in packages_distributions().items() for d in ds}
-                missing = [
-                    r.name
-                    for r in map(Requirement, requires("scanpy"))
-                    if r.marker
-                    and r.marker.evaluate({"extra": "scanpy2"})
-                    and find_spec(dists.get(r.name, r.name.replace("-", "_"))) is None
-                ]
-                if missing:
-                    missing_str = ", ".join(f"‘{m}’" for m in missing)
-                    msg = (
-                        f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
-                        f"dependencies that are not installed: {missing_str}. "
-                        "Install them with: pip install `scanpy[scanpy2]`"
-                    )
-                    raise ImportError(msg)
+                if not (missing := _missing_scanpy2_deps()):
+                    return
+                missing_str = ", ".join(f"‘{m.name}’" for m in missing)
+                msg = (
+                    f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
+                    f"dependencies that are not installed: {missing_str}. "
+                    "Install them with: pip install `scanpy[scanpy2]`"
+                )
+                raise ImportError(msg)
+
+
+def _missing_scanpy2_deps() -> list[Requirement]:
+    dist_names = {canonicalize_name(d.name) for d in distributions()}
+    return [
+        r
+        for r in map(Requirement, requires("scanpy") or ())
+        if r.marker
+        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+        and canonicalize_name(r.name) not in dist_names
+    ]
 
 
 for postprocess in preset_postprocessors:
