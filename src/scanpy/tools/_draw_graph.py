@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 
+from scanpy._compat import warn
+from scanpy._settings import Default
+
 from .. import _utils
 from .. import logging as logg
 from .._docs import doc_rng
@@ -42,10 +45,12 @@ def draw_graph(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
     adjacency: CSBase | None = None,
-    key_added_ext: str | None = None,
+    key_added: str | Default = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
+    # deprecated
+    key_added_ext: str | None = None,
     **kwds,
 ) -> AnnData | None:
     """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
@@ -86,10 +91,10 @@ def draw_graph(  # noqa: PLR0913
         Applies to layouts with random initialization like `'fr'`.
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
-    key_added_ext
-        By default, append `layout`.
+    key_added
+        Template for the key. If `None`, use `'X_draw_graph_{layout}'` for `obsm` (replacing `'{layout}'` with the passed `layout`).
     proceed
-        Continue computation, starting off with 'X_draw_graph_`layout`'.
+        Continue computation, starting off with `f'X_draw_graph_{layout}'`.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
@@ -113,7 +118,7 @@ def draw_graph(  # noqa: PLR0913
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_draw_graph_[layout | key_added_ext]']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm[('X_draw_graph_{layout}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
@@ -121,6 +126,7 @@ def draw_graph(  # noqa: PLR0913
 
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
+    key_obsm, key_uns = _get_keys_added(key_added, layout, key_added_ext)
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -161,16 +167,32 @@ def draw_graph(  # noqa: PLR0913
             else:
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
-    adata.uns["draw_graph"] = {}
-    adata.uns["draw_graph"]["params"] = dict(layout=layout, **meta_random_state)
-    key_added = f"X_draw_graph_{key_added_ext or layout}"
-    adata.obsm[key_added] = positions
+    adata.uns[key_uns] = {}
+    adata.uns[key_uns]["params"] = dict(layout=layout, **meta_random_state)
+    adata.obsm[key_obsm] = positions
     logg.info(
         "    finished",
         time=start,
-        deep=f"added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)",
+        deep="added"
+        f"\n    {key_obsm!r}, draw_graph coordinates (adata.obsm)"
+        f"\n    {key_uns!r}, draw_graph parameters (adata.uns)",
     )
     return adata if copy else None
+
+
+def _get_keys_added(
+    key_added: str | Default, layout: str, key_added_ext: str | None
+) -> tuple[str, str]:
+    if key_added_ext is not None:
+        msg = "Passing `key_added_ext` is deprecated, use `key_added`’s template functionality instead."
+        warn(msg, category=FutureWarning)
+        suffix = key_added_ext
+    else:
+        suffix = layout
+    if isinstance(key_added, Default):
+        return f"X_draw_graph_{suffix}", "draw_graph"
+    key_added = key_added.format(layout=suffix)
+    return key_added, key_added
 
 
 def fa2_positions(

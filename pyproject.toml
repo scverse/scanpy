@@ -272,7 +272,8 @@ filterwarnings = [
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                       # we should set init=obsm["X_pca"] or so
+    # we should set init=obsm["X_pca"] or so
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",
     # matplotlib <3.11 uses old pyparsing APIs
     "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
     # igraph vs leidenalg warning

@@ -74,8 +74,12 @@ class HVGPreset(NamedTuple):
     return_df: bool
 
 
-class PcaPreset(NamedTuple):
+class BasicEmbeddingPreset(NamedTuple):
     key_added: str | None
+
+
+# replace once they diverge
+PcaPreset = DiffmapPreset = DrawGraphPreset = BasicEmbeddingPreset
 
 
 class RankGenesGroupsPreset(NamedTuple):
@@ -179,6 +183,22 @@ class Preset(enum.StrEnum):
         return {
             Preset.ScanpyV1: PcaPreset(key_added=None),
             Preset.ScanpyV2Preview: PcaPreset(key_added="pca"),
+        }
+
+    @preset_property
+    def diffmap() -> Mapping[Preset, DiffmapPreset]:
+        """Settings for :func:`~scanpy.tl.diffmap`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="diffmap"),
+        }
+
+    @preset_property
+    def draw_graph() -> Mapping[Preset, DrawGraphPreset]:
+        """Settings for :func:`~scanpy.tl.draw_graph`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DrawGraphPreset(key_added=None),
+            Preset.ScanpyV2Preview: DrawGraphPreset(key_added="graph_{layout}"),
         }
 
     @preset_property
