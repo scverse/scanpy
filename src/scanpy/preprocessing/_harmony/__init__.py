@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import DTypeLike
 
+    from ..._utils.random import RNGLike, SeedLike
+
 
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
@@ -35,7 +37,7 @@ def harmony_integrate(  # noqa: PLR0913
     batch_prune_threshold: float | None = 1e-5,
     correction_method: Literal["fast", "original"] = "original",
     block_proportion: float = 0.05,
-    random_state: int | None = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> None:
     """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
@@ -135,8 +137,8 @@ def harmony_integrate(  # noqa: PLR0913
         Proportion of cells updated per clustering sub-iteration.
         Smaller values produce more stochastic updates. Larger values
         are faster but may converge to different solutions.
-    random_state
-        Random seed for reproducibility.
+    rng
+        Random number generator or seed for deterministic behavior.
 
     Returns
     -------
@@ -216,7 +218,7 @@ def harmony_integrate(  # noqa: PLR0913
         correction_method=correction_method,
         block_proportion=block_proportion,
         tau=tau,
-        random_state=random_state,
+        rng=rng,
         stabilized_penalty=stabilized_penalty,
         dynamic_lambda=dynamic_lambda,
         alpha=alpha,

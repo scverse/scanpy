@@ -8,6 +8,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 from tqdm.auto import tqdm
 
+from scanpy._utils.random import _legacy_random_state
+
 from ... import logging as log
 from ..._settings import settings
 from ..._settings.verbosity import Verbosity
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
     from typing import Literal
 
     import pandas as pd
+
+    from ..._utils.random import RNGLike, SeedLike
 
 
 __all__ = ["_SUPPRESS_PENALTY", "Harmony", "_compute_lambda_kb"]
@@ -53,7 +57,7 @@ class Harmony:
     correction_method: Literal["fast", "original"]
     block_proportion: float
     tau: int
-    random_state: int | None
+    rng: InitVar[SeedLike | RNGLike | None]
     stabilized_penalty: bool = True
     dynamic_lambda: bool = True
     alpha: float = 0.2
@@ -61,10 +65,16 @@ class Harmony:
 
     batch_codes: np.ndarray = field(init=False)
     n_batches: int = field(init=False)
+    _rng: np.random.Generator = field(init=False)
 
     def __post_init__(
-        self, batch_df: pd.DataFrame, batch_key: str | Sequence[str]
+        self,
+        batch_df: pd.DataFrame,
+        batch_key: str | Sequence[str],
+        rng: SeedLike | RNGLike | None,
     ) -> None:
+        self._rng = np.random.default_rng(rng)
+
         if self.max_iter_harmony < 1:
             msg = "max_iter_harmony must be >= 1"
             raise ValueError(msg)
@@ -90,9 +100,6 @@ class Harmony:
         z_corr
             Batch-corrected embedding matrix (n_cells x d).
         """
-        if self.random_state is not None:
-            np.random.seed(self.random_state)
-
         # Ensure input is C-contiguous float array (infer dtype from x)
         x = np.ascontiguousarray(x)
         n_cells = x.shape[0]
@@ -131,7 +138,7 @@ class Harmony:
             n_clusters=n_clusters,
             sigma=self.sigma,
             theta=theta_arr,
-            random_state=self.random_state,
+            rng=self._rng,
             stabilized_penalty=self.stabilized_penalty,
         )
 
@@ -277,12 +284,15 @@ def _initialize_centroids(
     n_clusters: int,
     sigma: float,
     theta: np.ndarray,
-    random_state: int | None,
+    rng: np.random.Generator,
     stabilized_penalty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Initialize cluster centroids using K-means."""
     kmeans = KMeans(
-        n_clusters=n_clusters, random_state=random_state, n_init=10, max_iter=25
+        n_clusters=n_clusters,
+        random_state=_legacy_random_state(rng, always_state=True),
+        n_init=10,
+        max_iter=25,
     )
     kmeans.fit(z_norm)
 

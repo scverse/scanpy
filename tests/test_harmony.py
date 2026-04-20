@@ -52,7 +52,7 @@ def _get_measure(
 
 
 @pytest.fixture(scope="module")
-def _adata_reference() -> AnnData:
+def adata_reference_module() -> AnnData:
     """Load reference data once per module (avoids re-reading CSV)."""
     paths = {
         f: pooch.retrieve(
@@ -72,9 +72,9 @@ def _adata_reference() -> AnnData:
 
 
 @pytest.fixture
-def adata_reference(_adata_reference: AnnData) -> AnnData:
+def adata_reference(adata_reference_module: AnnData) -> AnnData:
     """Return a fresh copy per test so tests don't mutate shared state."""
-    return _adata_reference.copy()
+    return adata_reference_module.copy()
 
 
 @pytest.mark.parametrize("correction_method", ["fast", "original"])
