@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..neighbors import neighbors
 from ._combat import combat
 from ._deprecated.sampling import subsample
-from ._harmony_integrate import harmony_integrate
+from ._harmony import harmony_integrate
 from ._highly_variable_genes import highly_variable_genes
 from ._normalization import normalize_total
 from ._pca import pca

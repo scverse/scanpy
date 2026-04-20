@@ -1,594 +1,228 @@
 from __future__ import annotations
 
-from dataclasses import KW_ONLY, InitVar, dataclass, field
-from itertools import product
 from typing import TYPE_CHECKING
 
 import numpy as np
-from sklearn.cluster import KMeans
-from tqdm.auto import tqdm
 
-from ... import logging as log
-from ..._settings import settings
-from ..._settings.verbosity import Verbosity
+from ..._compat import warn
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal
 
-    import pandas as pd
+    from anndata import AnnData
+    from numpy.typing import DTypeLike
 
-_SUPPRESS_PENALTY = 1e30
 
+def harmony_integrate(  # noqa: PLR0913
+    adata: AnnData,
+    key: str | Sequence[str],
+    *,
+    basis: str = "X_pca",
+    adjusted_basis: str = "X_pca_harmony",
+    dtype: DTypeLike = np.float64,
+    flavor: Literal["harmony2", "harmony1"] = "harmony2",
+    n_clusters: int | None = None,
+    max_iter_harmony: int = 10,
+    max_iter_clustering: int = 200,
+    tol_harmony: float = 1e-4,
+    tol_clustering: float = 1e-5,
+    sigma: float = 0.1,
+    theta: float | Sequence[float] = 2.0,
+    tau: int = 0,
+    ridge_lambda: float = 1.0,
+    alpha: float = 0.2,
+    batch_prune_threshold: float | None = 1e-5,
+    correction_method: Literal["fast", "original"] = "original",
+    block_proportion: float = 0.05,
+    random_state: int | None = 0,
+) -> None:
+    """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
-@dataclass
-class Harmony:
-    """Harmony batch correction algorithm.
+    This CPU implementation is based on the harmony-pytorch & rapids_singlecell
+    version, using NumPy for efficient computation. As Harmony works by adjusting
+    the principal components, this function should be run after performing PCA but
+    before computing the neighbor graph.
+
+    By default, the Harmony2 algorithm is used, which includes a stabilized
+    diversity penalty, dynamic per-cluster-per-batch ridge regularization,
+    and automatic batch pruning. To revert to the original Harmony behavior::
+
+        sc.pp.harmony_integrate(adata, key, flavor="harmony1")
 
     Parameters
     ----------
-    x
-        Data matrix (n_cells x d) - typically PCA embeddings.
-    batch_df
-        DataFrame containing batch information.
-    batch_key
-        Column name(s) in batch_df containing batch labels.
+    adata
+        The annotated data matrix.
+    key
+        The key(s) of the column(s) in ``adata.obs`` that differentiates
+        among experiments/batches. When multiple keys are provided, a
+        combined batch variable is created from all columns.
+    basis
+        The name of the field in ``adata.obsm`` where the PCA table is
+        stored. Defaults to ``'X_pca'``.
+    adjusted_basis
+        The name of the field in ``adata.obsm`` where the adjusted PCA
+        table will be stored. Defaults to ``X_pca_harmony``.
+    dtype
+        The data type to use for Harmony computation. If you use 32-bit
+        you may experience numerical instability.
+    flavor
+        Which version of the Harmony algorithm to use.
+        ``"harmony2"`` (default) enables the stabilized diversity penalty,
+        dynamic per-cluster-per-batch ridge regularization, and automatic
+        batch pruning from :cite:p:`Patikas2026`.
+        ``"harmony1"`` uses the original algorithm from
+        :cite:p:`Korsunsky2019`.
+    n_clusters
+        Number of clusters used for soft k-means in the Harmony algorithm.
+        If ``None``, uses ``min(100, N / 30)``. More clusters capture
+        finer-grained structure but increase computation time.
+    max_iter_harmony
+        Maximum number of outer Harmony iterations (each consisting of
+        a clustering step followed by a correction step).
+    max_iter_clustering
+        Maximum iterations for the clustering step within each Harmony
+        iteration.
+    tol_harmony
+        Convergence tolerance for the Harmony objective function.
+        The algorithm stops when the relative change in objective falls
+        below this value.
+    tol_clustering
+        Convergence tolerance for the clustering step within each
+        Harmony iteration.
+    sigma
+        Width of the soft-clustering kernel. Controls the entropy of
+        cluster assignments: smaller values produce harder assignments
+        (cells assigned to fewer clusters), while larger values produce
+        softer assignments (cells spread across more clusters).
+    theta
+        Diversity penalty weight per batch variable. Controls how
+        strongly Harmony encourages each cluster to contain a balanced
+        representation of all batches. Higher values (e.g. ``4``)
+        produce more aggressive mixing; lower values (e.g. ``0.5``)
+        allow more batch-specific clusters. Set to ``0`` to disable
+        batch correction entirely. A list can be provided to set
+        different weights per batch variable.
+    tau
+        Discounting factor on ``theta``. When ``tau > 0``, the
+        diversity penalty is down-weighted for batches with fewer cells,
+        preventing over-correction of small batches. By default (``0``),
+        there is no discounting.
+    ridge_lambda
+        Ridge regression regularization for the correction step.
+        Larger values produce more conservative (smaller) corrections,
+        preventing over-fitting. Only used with ``flavor="harmony1"``.
+    alpha
+        Scaling factor for the dynamic per-cluster-per-batch ridge
+        regularization. The effective regularization for each
+        cluster-batch pair is ``alpha * E_kb`` where ``E_kb`` is the
+        expected number of cells. Larger values produce more
+        conservative corrections. Only used with ``flavor="harmony2"``.
+    batch_prune_threshold
+        Fraction threshold below which a batch-cluster pair is pruned
+        (correction suppressed). When the fraction of a batch's cells
+        assigned to a cluster (``O_kb / N_b``) falls below this
+        threshold, that batch-cluster pair receives no correction,
+        preventing spurious adjustments. Only used with
+        ``flavor="harmony2"``. Set to ``None`` to disable pruning.
+    correction_method
+        Method for the correction step. ``"original"`` uses per-cluster
+        ridge regression with explicit matrix inversion. ``"fast"``
+        uses a precomputed factorization that avoids the full inversion,
+        which can be faster for datasets with many batches.
+    block_proportion
+        Proportion of cells updated per clustering sub-iteration.
+        Smaller values produce more stochastic updates. Larger values
+        are faster but may converge to different solutions.
+    random_state
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    Updates adata with the field ``adata.obsm[adjusted_basis]``, \
+    containing principal components adjusted by Harmony such that \
+    different experiments are integrated.
     """
+    from .core import Harmony
 
-    batch_df: InitVar[pd.DataFrame]
-    batch_key: InitVar[str | Sequence[str]]
-    _: KW_ONLY
-    theta: float | Sequence[float]
-    sigma: float
-    n_clusters: int | None
-    max_iter_harmony: int
-    max_iter_clustering: int
-    tol_harmony: float
-    tol_clustering: float
-    ridge_lambda: float
-    correction_method: Literal["fast", "original"]
-    block_proportion: float
-    tau: int
-    random_state: int | None
-    stabilized_penalty: bool = True
-    dynamic_lambda: bool = True
-    alpha: float = 0.2
-    batch_prune_threshold: float | None = 1e-5
+    # Resolve flavor into internal flags
+    if flavor not in {"harmony1", "harmony2"}:
+        msg = f"flavor must be 'harmony1' or 'harmony2', got {flavor!r}."
+        raise ValueError(msg)
+    stabilized_penalty = flavor == "harmony2"
+    dynamic_lambda = flavor == "harmony2"
 
-    batch_codes: np.ndarray = field(init=False)
-    n_batches: int = field(init=False)
-
-    def __post_init__(
-        self, batch_df: pd.DataFrame, batch_key: str | Sequence[str]
-    ) -> None:
-        if self.max_iter_harmony < 1:
-            msg = "max_iter_harmony must be >= 1"
-            raise ValueError(msg)
-
-        if self.dynamic_lambda:
-            if not np.isfinite(self.alpha) or self.alpha <= 0:
-                msg = f"alpha must be a finite positive number when dynamic_lambda=True, got {self.alpha}."
-                raise ValueError(msg)
-            if self.batch_prune_threshold is not None and not (
-                0 <= self.batch_prune_threshold <= 1
-            ):
-                msg = f"batch_prune_threshold must be in [0, 1] or None, got {self.batch_prune_threshold}."
-                raise ValueError(msg)
-
-        # Process batch keys
-        self.batch_codes, self.n_batches = _get_batch_codes(batch_df, batch_key)
-
-    def fit(self, x: np.ndarray) -> np.ndarray:
-        """Run Harmony.
-
-        Returns
-        -------
-        z_corr
-            Batch-corrected embedding matrix (n_cells x d).
-        """
-        if self.random_state is not None:
-            np.random.seed(self.random_state)
-
-        # Ensure input is C-contiguous float array (infer dtype from x)
-        x = np.ascontiguousarray(x)
-        n_cells = x.shape[0]
-
-        # Normalize input for clustering
-        z_norm = _normalize_rows_l2(x)
-
-        # Compute batch proportions
-        n_b = np.bincount(self.batch_codes, minlength=self.n_batches).astype(x.dtype)
-        pr_b = (n_b / n_cells).reshape(-1, 1)
-
-        # Set default theta
-        if isinstance(self.theta, (int, float)):
-            theta_arr = np.ones(self.n_batches, dtype=x.dtype) * float(self.theta)
-        else:
-            theta_arr = np.array(self.theta, dtype=x.dtype)
-        theta_arr = theta_arr.reshape(1, -1)
-
-        # Set default n_clusters (needed before tau discounting)
-        if self.n_clusters is None:
-            n_clusters = int(min(100, n_cells / 30))
-            n_clusters = max(n_clusters, 2)
-        else:
-            n_clusters = self.n_clusters
-
-        # Apply tau discounting to theta
-        if self.tau > 0:
-            theta_arr = theta_arr * (1 - np.exp(-n_b / (n_clusters * self.tau)) ** 2)
-
-        # Initialize centroids and state arrays
-        r, e, o, obj_init = _initialize_centroids(
-            z_norm,
-            self.batch_codes,
-            self.n_batches,
-            pr_b,
-            n_clusters=n_clusters,
-            sigma=self.sigma,
-            theta=theta_arr,
-            random_state=self.random_state,
-            stabilized_penalty=self.stabilized_penalty,
+    # Warn when flavor-incompatible parameters are explicitly set
+    if flavor == "harmony2" and ridge_lambda != 1.0:
+        warn(
+            "ridge_lambda is ignored when flavor='harmony2'; "
+            "use alpha to control regularization strength.",
+            UserWarning,
         )
-
-        # Main Harmony loop
-        objectives_harmony = [obj_init]
-        with tqdm(
-            range(self.max_iter_harmony), disable=settings.verbosity < Verbosity.info
-        ) as bar:
-            for i in bar:
-                r, e, o, obj = self._cluster(
-                    z_norm, pr_b, r=r, e=e, o=o, theta=theta_arr
-                )
-                if obj is not None:
-                    objectives_harmony.append(obj)
-
-                # Compute per-(k,b) ridge regularization
-                lambda_kb = _compute_lambda_kb(
-                    e,
-                    o=o,
-                    n_b=n_b,
-                    alpha=self.alpha,
-                    threshold=self.batch_prune_threshold,
-                    ridge_lambda=self.ridge_lambda,
-                    dynamic_lambda=self.dynamic_lambda,
-                )
-
-                z_hat = self._correct(x, r, o, lambda_kb=lambda_kb)
-                z_norm = _normalize_rows_l2(z_hat)
-                if self._is_convergent(objectives_harmony, self.tol_harmony):
-                    log.info(f"Harmony converged in {i + 1} iterations")
-                    break
-            else:
-                log.info(
-                    f"Harmony did not converge after {self.max_iter_harmony} iterations."
-                )
-
-        return z_hat
-
-    @staticmethod
-    def _is_convergent(objectives: list[float], tol: float) -> bool:
-        """Check Harmony convergence."""
-        if len(objectives) < 2:
-            return False
-        obj_old = objectives[-2]
-        obj_new = objectives[-1]
-        return (obj_old - obj_new) < tol * abs(obj_old)
-
-    def _cluster(
-        self,
-        z_norm: np.ndarray,
-        pr_b: np.ndarray,
-        *,
-        r: np.ndarray,
-        e: np.ndarray,
-        o: np.ndarray,
-        theta: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
-        """Perform clustering step. Modifies r, e, o in-place."""
-        return _clustering(
-            z_norm,
-            self.batch_codes,
-            self.n_batches,
-            pr_b,
-            r=r,
-            e=e,
-            o=o,
-            theta=theta,
-            sigma=self.sigma,
-            max_iter=self.max_iter_clustering,
-            tol=self.tol_clustering,
-            block_proportion=self.block_proportion,
-            stabilized_penalty=self.stabilized_penalty,
-        )
-
-    def _correct(
-        self,
-        x: np.ndarray,
-        r: np.ndarray,
-        o: np.ndarray,
-        *,
-        lambda_kb: np.ndarray,
-    ) -> np.ndarray:
-        """Perform correction step."""
-        if self.correction_method == "fast":
-            return _correction_fast(
-                x,
-                self.batch_codes,
-                self.n_batches,
-                r,
-                o,
-                lambda_kb=lambda_kb,
+    if flavor == "harmony1":
+        if alpha != 0.2:
+            warn(
+                "alpha is ignored when flavor='harmony1'; use ridge_lambda instead.",
+                UserWarning,
             )
-        else:
-            return _correction_original(
-                x,
-                self.batch_codes,
-                self.n_batches,
-                r,
-                lambda_kb=lambda_kb,
+        if batch_prune_threshold != 1e-5:
+            warn(
+                "batch_prune_threshold is ignored when flavor='harmony1'.",
+                UserWarning,
             )
 
+    # Ensure the basis exists in adata.obsm
+    if basis not in adata.obsm:
+        msg = (
+            f"The specified basis {basis!r} is not available in `adata.obsm`. "
+            f"Available bases: {list(adata.obsm.keys())}"
+        )
+        raise ValueError(msg)
 
-def _get_batch_codes(
-    batch_df: pd.DataFrame,
-    batch_key: str | Sequence[str],
-) -> tuple[np.ndarray, int]:
-    """Get batch codes from DataFrame."""
-    if isinstance(batch_key, str):
-        batch_vec = batch_df[batch_key]
-    elif len(batch_key) == 1:
-        batch_vec = batch_df[batch_key[0]]
-    else:
-        df = batch_df[list(batch_key)].astype("str")
-        batch_vec = df.apply(",".join, axis=1)
+    # Get the input data
+    input_data = adata.obsm[basis]
 
-    batch_cat = batch_vec.astype("category")
-    codes = batch_cat.cat.codes.to_numpy(copy=True)
-    n_batches = len(batch_cat.cat.categories)
+    # Convert to numpy array with specified dtype
+    try:
+        x = np.ascontiguousarray(input_data, dtype=dtype)
+    except Exception as e:
+        msg = (
+            f"Could not convert input of type {type(input_data).__name__} "
+            "to NumPy array."
+        )
+        raise TypeError(msg) from e
 
-    return codes.astype(np.int32), n_batches
+    # Check for NaN values
+    if np.isnan(x).any():
+        msg = (
+            "Input data contains NaN values. Please handle these before "
+            "running harmony_integrate."
+        )
+        raise ValueError(msg)
 
-
-def _normalize_rows_l2(x: np.ndarray) -> np.ndarray:
-    """L2 normalize each row of x."""
-    norms = np.linalg.norm(x, axis=1, keepdims=True)
-    norms = np.maximum(norms, 1e-12)
-    return x / norms
-
-
-def _normalize_rows_l1(r: np.ndarray) -> None:
-    """L1 normalize each row of r in-place (rows sum to 1)."""
-    row_sums = r.sum(axis=1, keepdims=True)
-    row_sums = np.maximum(row_sums, 1e-12)
-    r /= row_sums
-
-
-def _initialize_centroids(
-    z_norm: np.ndarray,
-    batch_codes: np.ndarray,
-    n_batches: int,
-    pr_b: np.ndarray,
-    *,
-    n_clusters: int,
-    sigma: float,
-    theta: np.ndarray,
-    random_state: int | None,
-    stabilized_penalty: bool = True,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
-    """Initialize cluster centroids using K-means."""
-    kmeans = KMeans(
-        n_clusters=n_clusters, random_state=random_state, n_init=10, max_iter=25
-    )
-    kmeans.fit(z_norm)
-
-    # Centroids
-    y = kmeans.cluster_centers_.copy()
-    y_norm = _normalize_rows_l2(y)
-
-    # Compute soft cluster assignments r
-    term = -2.0 / sigma
-    r = _compute_r(z_norm, y_norm, term)
-    _normalize_rows_l1(r)
-
-    # Initialize e (expected) and o (observed)
-    r_sum = r.sum(axis=0)
-    e = pr_b @ r_sum.reshape(1, -1)
-    # o[b, k] = sum of r[i, k] for cells i in batch b
-    o = np.zeros((n_batches, n_clusters), dtype=z_norm.dtype)
-    np.add.at(o, batch_codes, r)
-
-    # Compute initial objective
-    obj = _compute_objective(
-        y_norm,
-        z_norm,
-        r,
+    # Run Harmony
+    harmony = Harmony(
+        adata.obs,
+        key,
         theta=theta,
         sigma=sigma,
-        o=o,
-        e=e,
+        n_clusters=n_clusters,
+        max_iter_harmony=max_iter_harmony,
+        max_iter_clustering=max_iter_clustering,
+        tol_harmony=tol_harmony,
+        tol_clustering=tol_clustering,
+        ridge_lambda=ridge_lambda,
+        correction_method=correction_method,
+        block_proportion=block_proportion,
+        tau=tau,
+        random_state=random_state,
         stabilized_penalty=stabilized_penalty,
+        dynamic_lambda=dynamic_lambda,
+        alpha=alpha,
+        batch_prune_threshold=batch_prune_threshold,
     )
+    harmony_out = harmony.fit(x)
 
-    return r, e, o, obj
-
-
-def _compute_r(
-    z: np.ndarray,
-    y: np.ndarray,
-    term: float,
-) -> np.ndarray:
-    """Compute soft cluster assignments using NumPy dot."""
-    dots = z @ y.T
-    return np.exp(term * (1.0 - dots))
-
-
-def _clustering(  # noqa: PLR0913
-    z_norm: np.ndarray,
-    batch_codes: np.ndarray,
-    n_batches: int,
-    pr_b: np.ndarray,
-    *,
-    r: np.ndarray,
-    e: np.ndarray,
-    o: np.ndarray,
-    theta: np.ndarray,
-    sigma: float,
-    max_iter: int,
-    tol: float,
-    block_proportion: float,
-    stabilized_penalty: bool = True,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
-    """Run clustering iterations (modifies r, e, o in-place)."""
-    n_cells = z_norm.shape[0]
-    k = r.shape[1]
-    n_blocks = min(n_cells, 1 // block_proportion)
-    term = -2.0 / sigma
-
-    objectives_clustering = []
-
-    # Pre-allocate work arrays
-    y = np.empty((k, z_norm.shape[1]), dtype=z_norm.dtype)
-    y_norm = np.empty_like(y)
-
-    for _ in range(max_iter):
-        # Compute cluster centroids: y = r.T @ z_norm, then normalize
-        np.dot(r.T, z_norm, out=y)
-        norms = np.linalg.norm(y, axis=1, keepdims=True)
-        norms = np.maximum(norms, 1e-12)
-        np.divide(y, norms, out=y_norm)
-
-        # Randomly shuffle cell indices
-        idx_list = np.random.permutation(n_cells)
-
-        # Process blocks
-        for block_idx, b in product(
-            np.array_split(idx_list, n_blocks), range(n_batches)
-        ):
-            mask = batch_codes[block_idx] == b
-            if not np.any(mask):
-                continue
-
-            cell_idx = block_idx[mask]
-
-            # Remove old r contribution from o and e
-            r_old = r[cell_idx, :]
-            r_old_sum = r_old.sum(axis=0)
-            o[b, :] -= r_old_sum
-            e -= pr_b * r_old_sum
-
-            # Compute new r values
-            dots = z_norm[cell_idx, :] @ y_norm.T
-            r_new = np.exp(term * (1.0 - dots))
-
-            # Apply penalty (Harmony1 vs Harmony2)
-            if stabilized_penalty:
-                # Harmony2: denominator is (O + E + 1)
-                penalty = ((e[b, :] + 1.0) / (o[b, :] + e[b, :] + 1.0)) ** theta[0, b]
-            else:
-                # Harmony1: denominator is (O + 1)
-                penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
-            r_new *= penalty
-
-            # Normalize rows to sum to 1
-            row_sums = r_new.sum(axis=1, keepdims=True)
-            row_sums = np.maximum(row_sums, 1e-12)
-            r_new /= row_sums
-
-            # Store back
-            r[cell_idx, :] = r_new
-
-            # Add new r contribution to o and e
-            r_new_sum = r_new.sum(axis=0)
-            o[b, :] += r_new_sum
-            e += pr_b * r_new_sum
-
-        # Compute objective
-        obj = _compute_objective(
-            y_norm,
-            z_norm,
-            r,
-            theta=theta,
-            sigma=sigma,
-            o=o,
-            e=e,
-            stabilized_penalty=stabilized_penalty,
-        )
-        objectives_clustering.append(obj)
-
-        # Check convergence
-        if _is_convergent_clustering(objectives_clustering, tol):
-            obj = objectives_clustering[-1]
-            break
-    else:
-        obj = None
-
-    return r, e, o, obj
-
-
-def _compute_lambda_kb(
-    e: np.ndarray,
-    *,
-    o: np.ndarray,
-    n_b: np.ndarray,
-    alpha: float,
-    threshold: float | None,
-    ridge_lambda: float,
-    dynamic_lambda: bool,
-) -> np.ndarray:
-    """Compute per-(k,b) ridge regularization array."""
-    sentinel = e.dtype.type(_SUPPRESS_PENALTY)
-    if not dynamic_lambda:
-        lambda_kb = np.full_like(e, ridge_lambda)
-    else:
-        lambda_kb = (alpha * e).astype(e.dtype)
-        if threshold is not None:
-            safe_n_b = np.where(n_b > 0, n_b, np.ones_like(n_b))
-            prune_mask = (o / safe_n_b[:, None]) < threshold
-            prune_mask |= n_b[:, None] == 0
-            lambda_kb[prune_mask] = sentinel
-    # Where both O and lambda_kb are zero, the kernel computes 1/(O+lambda)
-    # which would divide by zero.
-    lambda_kb[(o + lambda_kb) == 0] = sentinel
-    return lambda_kb
-
-
-def _correction_original(
-    x: np.ndarray,
-    batch_codes: np.ndarray,
-    n_batches: int,
-    r: np.ndarray,
-    *,
-    lambda_kb: np.ndarray,
-) -> np.ndarray:
-    """Original correction method - per-cluster ridge regression."""
-    _, d = x.shape
-
-    z = x.copy()
-
-    for k_idx, r_k in enumerate(r.T):
-        # Build per-cluster lambda diagonal
-        lambda_diag = np.zeros(n_batches + 1, dtype=x.dtype)
-        lambda_diag[1:] = lambda_kb[:, k_idx]
-        lambda_mat = np.diag(lambda_diag)
-
-        r_sum_total = r_k.sum()
-        r_sum_per_batch = np.zeros(n_batches, dtype=x.dtype)
-        for b in range(n_batches):
-            r_sum_per_batch[b] = r_k[batch_codes == b].sum()
-
-        phi_t_phi = np.zeros((n_batches + 1, n_batches + 1), dtype=x.dtype)
-        phi_t_phi[0, 0] = r_sum_total
-        phi_t_phi[0, 1:] = r_sum_per_batch
-        phi_t_phi[1:, 0] = r_sum_per_batch
-        phi_t_phi[1:, 1:] = np.diag(r_sum_per_batch)
-        phi_t_phi += lambda_mat
-
-        phi_t_x = np.zeros((n_batches + 1, d), dtype=x.dtype)
-        phi_t_x[0, :] = r_k @ x
-        for b in range(n_batches):
-            mask = batch_codes == b
-            phi_t_x[b + 1, :] = r_k[mask] @ x[mask]
-
-        try:
-            w = np.linalg.solve(phi_t_phi, phi_t_x)
-        except np.linalg.LinAlgError:
-            w = np.linalg.lstsq(phi_t_phi, phi_t_x, rcond=None)[0]
-
-        w[0, :] = 0
-        w_batch = w[batch_codes + 1, :]
-        z -= r_k[:, np.newaxis] * w_batch
-
-    return z
-
-
-def _correction_fast(
-    x: np.ndarray,
-    batch_codes: np.ndarray,
-    n_batches: int,
-    r: np.ndarray,
-    o: np.ndarray,
-    *,
-    lambda_kb: np.ndarray,
-) -> np.ndarray:
-    """Fast correction method using precomputed factors."""
-    _, d = x.shape
-
-    z = x.copy()
-    dtype = x.dtype
-    p = np.eye(n_batches + 1, dtype=dtype)
-
-    for k_idx, (o_k, r_k) in enumerate(zip(o.T, r.T, strict=True)):
-        lam_k = lambda_kb[:, k_idx]
-
-        factor = (1.0 / (o_k + lam_k)).astype(dtype)
-        c = np.sum(o_k) + np.sum(-factor * o_k**2)
-        c_inv = dtype.type(1.0 / c)
-
-        p[0, 1:] = -factor * o_k
-
-        p_t_b_inv = np.zeros((n_batches + 1, n_batches + 1), dtype=dtype)
-        p_t_b_inv[0, 0] = c_inv
-        p_t_b_inv[1:, 1:] = np.diag(factor)
-        p_t_b_inv[1:, 0] = p[0, 1:] * c_inv
-
-        inv_mat = p_t_b_inv @ p
-
-        phi_t_x = np.zeros((n_batches + 1, d), dtype=x.dtype)
-        phi_t_x[0, :] = r_k @ x
-        for b in range(n_batches):
-            mask = batch_codes == b
-            phi_t_x[b + 1, :] = r_k[mask] @ x[mask]
-
-        w = inv_mat @ phi_t_x
-        w[0, :] = 0
-
-        w_batch = w[batch_codes + 1, :]
-        z -= r_k[:, np.newaxis] * w_batch
-
-    return z
-
-
-def _compute_objective(
-    y_norm: np.ndarray,
-    z_norm: np.ndarray,
-    r: np.ndarray,
-    *,
-    theta: np.ndarray,
-    sigma: float,
-    o: np.ndarray,
-    e: np.ndarray,
-    stabilized_penalty: bool = True,
-) -> float:
-    """Compute Harmony objective function."""
-    zy = z_norm @ y_norm.T
-    kmeans_error = np.sum(r * 2.0 * (1.0 - zy))
-
-    r_row_sums = r.sum(axis=1, keepdims=True)
-    r_normalized = r / np.clip(r_row_sums, 1e-12, None)
-    entropy = sigma * np.sum(r_normalized * np.log(r_normalized + 1e-12))
-
-    if stabilized_penalty:
-        # Harmony2: numerator is (O + E + 1)
-        log_ratio = np.log((o + e + 1) / (e + 1))
-    else:
-        # Harmony1: numerator is (O + 1)
-        log_ratio = np.log((o + 1) / (e + 1))
-    diversity_penalty = sigma * np.sum(theta @ (o * log_ratio))
-
-    return kmeans_error + entropy + diversity_penalty
-
-
-def _is_convergent_clustering(
-    objectives: list,
-    tol: float,
-    window_size: int = 3,
-) -> bool:
-    """Check clustering convergence using window."""
-    if len(objectives) < window_size + 1:
-        return False
-
-    obj_old = sum(objectives[-window_size - 1 : -1])
-    obj_new = sum(objectives[-window_size:])
-
-    return (obj_old - obj_new) < tol * abs(obj_old)
+    # Store result
+    adata.obsm[adjusted_basis] = harmony_out

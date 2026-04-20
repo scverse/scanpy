@@ -10,7 +10,7 @@ from anndata import AnnData
 from scipy.stats import pearsonr
 
 from scanpy.preprocessing import harmony_integrate
-from scanpy.preprocessing._harmony import _SUPPRESS_PENALTY, _compute_lambda_kb
+from scanpy.preprocessing._harmony.core import _SUPPRESS_PENALTY, _compute_lambda_kb
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
@@ -282,7 +282,7 @@ def test_harmony_flavor_warnings() -> None:
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_compute_lambda_kb_pruning(dtype: DTypeLike) -> None:
+def test_compute_lambda_kb_pruning(dtype: type[np.floating]) -> None:
     """_compute_lambda_kb suppresses correction for N_b==0 and below-threshold pairs."""
     n_batches, n_clusters = 4, 3
     alpha = 0.2
@@ -320,7 +320,7 @@ def test_compute_lambda_kb_pruning(dtype: DTypeLike) -> None:
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_compute_lambda_kb_dynamic_false(dtype: DTypeLike) -> None:
+def test_compute_lambda_kb_dynamic_false(dtype: type[np.floating]) -> None:
     """_compute_lambda_kb returns uniform ridge_lambda when dynamic_lambda=False."""
     n_batches, n_clusters = 3, 5
     e = np.ones((n_batches, n_clusters), dtype=dtype)
@@ -340,7 +340,7 @@ def test_compute_lambda_kb_dynamic_false(dtype: DTypeLike) -> None:
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_compute_lambda_kb_zero_denom(dtype: DTypeLike) -> None:
+def test_compute_lambda_kb_zero_denom(dtype: type[np.floating]) -> None:
     """_compute_lambda_kb guards against O==0 and E==0 (zero-denominator)."""
     sentinel = dtype(_SUPPRESS_PENALTY)
     e = np.array([[0.0, 5.0]], dtype=dtype)
