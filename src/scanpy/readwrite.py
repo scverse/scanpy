@@ -223,7 +223,7 @@ def read_10x_h5(
                 )
             adata = _read_10x_h5(path, _read_v3_10x_h5)
         if genome:
-            if genome not in adata.var["genome"].values:
+            if genome not in adata.var["genome"].array:
                 msg = (
                     f"Could not find data corresponding to genome {genome!r} in {path}. "
                     f"Available genomes are: {list(adata.var['genome'].unique())}."
@@ -506,10 +506,8 @@ def read_visium(
         adata.obsm["spatial"] = adata.obs[
             ["pxl_row_in_fullres", "pxl_col_in_fullres"]
         ].to_numpy()
-        adata.obs.drop(
-            columns=["pxl_row_in_fullres", "pxl_col_in_fullres"],
-            inplace=True,
-        )
+        del adata.obs["pxl_row_in_fullres"]
+        del adata.obs["pxl_col_in_fullres"]
 
         # put image path in uns
         if source_image_path is not None:

@@ -267,7 +267,7 @@ def scrublet(  # noqa: PLR0913
         )
 
         # Now reset the obs to get the scrublet scores
-        adata.obs = scrubbed_obs.loc[adata.obs_names.values]
+        adata.obs = scrubbed_obs.loc[adata.obs_names.array]
 
         # Save the .uns from each batch separately
         adata.uns["scrublet"] = {}

@@ -158,7 +158,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
-        batch_info = adata.obs[batch_key].values
+        batch_info = adata.obs[batch_key].to_numpy()
     n_batches = len(np.unique(batch_info))
 
     # Get pearson residuals for each batch separately
@@ -239,11 +239,10 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
 
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
-    df.sort_values(
+    df = df.sort_values(
         ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
         na_position="last",
-        inplace=True,
     )
 
     high_var = np.zeros(df.shape[0], dtype=bool)
@@ -263,18 +262,16 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'residual_variances', float vector (adata.var)"
         )
-        adata.var["means"] = df["means"].values
-        adata.var["variances"] = df["variances"].values
+        adata.var["means"] = df["means"].array
+        adata.var["variances"] = df["variances"].array
         adata.var["residual_variances"] = df["residual_variances"]
-        adata.var["highly_variable_rank"] = df["highly_variable_rank"].values
+        adata.var["highly_variable_rank"] = df["highly_variable_rank"].array
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df[
-                "highly_variable_nbatches"
-            ].values
+            adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"].array
             adata.var["highly_variable_intersection"] = df[
                 "highly_variable_intersection"
-            ].values
-        adata.var["highly_variable"] = df["highly_variable"].values
+            ].array
+        adata.var["highly_variable"] = df["highly_variable"].array
 
         if subset:
             adata._inplace_subset_var(df["highly_variable"].values)
@@ -285,7 +282,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
                 ["highly_variable_nbatches", "highly_variable_intersection"], axis=1
             )
         if subset:
-            df = df.iloc[df.highly_variable.values, :]
+            df = df.iloc[df.highly_variable.array, :]
 
         return df
 

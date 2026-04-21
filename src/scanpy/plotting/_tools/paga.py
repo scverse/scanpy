@@ -782,7 +782,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         from io import StringIO
 
         df = pd.read_csv(StringIO(s), header=-1)
-        pos_array = df[[4, 5]].values
+        pos_array = df[[4, 5]].to_numpy()
 
     # convert to dictionary
     pos = {n: [p[0], p[1]] for n, p in enumerate(pos_array)}
@@ -809,7 +809,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).values
+            subset = (cat == adata.obs[groups_key]).array
             if adata.raw is not None and use_raw:
                 adata_gene = adata.raw[:, colors]
             else:
@@ -826,7 +826,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).values
+            subset = (cat == adata.obs[groups_key]).array
             x_color.append(adata.obs.loc[subset, colors].mean())
         colors = x_color
 
@@ -1200,7 +1200,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
         x = []
         for igroup, group in enumerate(nodes_ints):
             idcs = np.arange(adata.n_obs)[
-                adata.obs[groups_key].values == nodes_strs[igroup]
+                adata.obs[groups_key].array == nodes_strs[igroup]
             ]
             if len(idcs) == 0:
                 msg = (
@@ -1211,14 +1211,15 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                 )
                 raise ValueError(msg)
             idcs_group = np.argsort(
-                adata.obs["dpt_pseudotime"].values[
-                    adata.obs[groups_key].values == nodes_strs[igroup]
-                ]
+                adata
+                .obs["dpt_pseudotime"]
+                .iloc[adata.obs[groups_key].array == nodes_strs[igroup]]
+                .to_numpy()
             )
             idcs = idcs[idcs_group]
-            values = (adata.obs[key].values if key in adata.obs else adata_x[:, key].X)[
-                idcs
-            ]
+            values = (
+                adata.obs[key].to_numpy() if key in adata.obs else adata_x[:, key].X
+            )[idcs]
             x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
@@ -1227,7 +1228,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                     series = adata.obs[anno]
                     if isinstance(series.dtype, CategoricalDtype):
                         series = series.cat.codes
-                    anno_dict[anno] += list(series.values[idcs])
+                    anno_dict[anno] += series.iloc[idcs].to_list()
         if n_avg > 1:
             x = moving_average(x)
             if ikey == 0:

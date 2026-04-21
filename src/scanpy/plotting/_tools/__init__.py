@@ -266,7 +266,7 @@ def dpt_timeseries(
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
         timeseries_as_heatmap(
-            adata.X[adata.obs["dpt_order_indices"].values],
+            adata.X[adata.obs["dpt_order_indices"].to_numpy()],
             var_names=adata.var_names,
             highlights_x=adata.uns["dpt_changepoints"],
             color_map=color_map,
@@ -274,7 +274,7 @@ def dpt_timeseries(
     else:
         # plot time series as gene expression vs time
         timeseries(
-            adata.X[adata.obs["dpt_order_indices"].values],
+            adata.X[adata.obs["dpt_order_indices"].to_numpy()],
             var_names=adata.var_names,
             highlights_x=adata.uns["dpt_changepoints"],
             xlim=[0, 1.3 * adata.X.shape[0]],
@@ -587,7 +587,7 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
 
-            genes_list = df.names[df.names.notnull()].tolist()
+            genes_list = df.names[df.names.notna()].tolist()
 
             if len(genes_list) == 0:
                 logg.warning(f"No genes found for group {group}")
@@ -1740,7 +1740,7 @@ def _get_values_to_plot(
             column = values_to_plot.replace("log10_", "")
         else:
             column = values_to_plot
-        values_df = pd.pivot(
+        values_df = pd.pivot_table(
             values_df, index="names", columns="group", values=column
         ).fillna(1)
 

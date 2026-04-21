@@ -394,7 +394,7 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     coords = [list(xy) for xy in paga_coords]
 
     sizes = list(adata.uns[f"{group_key}_sizes"])
-    clus_labels = adata.obs[group_key].cat.codes.values
+    clus_labels = adata.obs[group_key].cat.codes.to_numpy()
     cell_groups = [
         [int(j) for j in np.nonzero(clus_labels == i)[0]] for i in range(len(names))
     ]
