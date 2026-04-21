@@ -809,7 +809,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).array
+            subset = (cat == adata.obs[groups_key]).to_numpy()
             if adata.raw is not None and use_raw:
                 adata_gene = adata.raw[:, colors]
             else:
@@ -826,7 +826,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).array
+            subset = (cat == adata.obs[groups_key]).to_numpy()
             x_color.append(adata.obs.loc[subset, colors].mean())
         colors = x_color
 
@@ -1199,9 +1199,8 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes_ints):
-            idcs = np.arange(adata.n_obs)[
-                adata.obs[groups_key].array == nodes_strs[igroup]
-            ]
+            mask = (adata.obs[groups_key] == nodes_strs[igroup]).to_numpy()
+            idcs = np.flatnonzero(mask)
             if len(idcs) == 0:
                 msg = (
                     "Did not find data points that match "
@@ -1210,12 +1209,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                     "actually contains what you expect."
                 )
                 raise ValueError(msg)
-            idcs_group = np.argsort(
-                adata
-                .obs["dpt_pseudotime"]
-                .iloc[adata.obs[groups_key].array == nodes_strs[igroup]]
-                .to_numpy()
-            )
+            idcs_group = np.argsort(adata.obs["dpt_pseudotime"].iloc[mask].to_numpy())
             idcs = idcs[idcs_group]
             values = (
                 adata.obs[key].to_numpy() if key in adata.obs else adata_x[:, key].X

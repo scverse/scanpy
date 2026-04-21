@@ -630,7 +630,7 @@ def scatter_group(
     marker: MarkerType = ".",
 ):
     """Scatter of group using representation of data Y."""
-    mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].array
+    mask_obs = (adata.obs[key].cat.categories[cat_code] == adata.obs[key]).to_numpy()
     color = adata.uns[f"{key}_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex

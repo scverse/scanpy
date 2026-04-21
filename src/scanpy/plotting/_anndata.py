@@ -460,9 +460,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     raise ValueError(msg)
                 else:
-                    iname = np.flatnonzero(adata.obs[key].cat.categories.array == name)[
-                        0
-                    ]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories == name)[0]
                     mask = scatter_group(
                         axs[ikey],
                         key,
