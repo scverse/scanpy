@@ -97,7 +97,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-illico = [ "illico @ git+https://github.com/ilan-gold/illico.git@ig/illico_low_bounds" ]
+illico = [ "illico>=0.5.0rc2" ]
 scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
