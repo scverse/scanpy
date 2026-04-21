@@ -64,6 +64,7 @@ dependencies = [
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
+    "pydantic-settings",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.13",
@@ -206,6 +207,7 @@ lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
+lint.flake8-type-checking.runtime-evaluated-base-classes = [ "pydantic_settings.BaseSettings" ]
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
 lint.isort.required-imports = [ "from __future__ import annotations" ]

@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-import inspect
 import sys
-from functools import wraps
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Annotated, Literal, TextIO
+
+import pydantic_settings
+from pydantic import AfterValidator
 
 from .. import logging
 from .._compat import deprecated
-from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Default, Preset
 from .verbosity import Verbosity
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
-    from types import UnionType
-    from typing import ClassVar, Concatenate, Self, TextIO
+    from collections.abc import Iterable
 
     from .verbosity import _VerbosityName
 
@@ -34,57 +32,105 @@ __all__ = ["AnnDataFileFormat", "Default", "Preset", "Verbosity"]
 AnnDataFileFormat = Literal["h5ad", "zarr"]
 
 
-def _type_check(var: object, name: str, types: type | UnionType) -> None:
-    if isinstance(var, types):
-        return
-    if isinstance(types, type):
-        possible_types_str = types.__name__
-    else:
-        type_names = [t.__name__ for t in get_args(types)]
-        possible_types_str = f"{', '.join(type_names[:-1])} or {type_names[-1]}"
-    msg = f"{name} must be of type {possible_types_str}"
-    raise TypeError(msg)
+def _default_logfile() -> TextIO:
+    return sys.stdout if _is_run_from_ipython() else sys.stderr
 
 
-def _type_check_arg2[S, T, R, **P](
-    types: type | UnionType,
-) -> Callable[[Callable[Concatenate[S, T, P], R]], Callable[Concatenate[S, T, P], R]]:
-    def decorator(
-        func: Callable[Concatenate[S, T, P], R],
-    ) -> Callable[Concatenate[S, T, P], R]:
-        @wraps(func)
-        def wrapped(self: S, var: T, *args: P.args, **kwargs: P.kwargs) -> R:
-            __tracebackhide__ = True
-            _type_check(var, func.__name__, types)
-            return func(self, var, *args, **kwargs)
+def _is_run_from_ipython() -> bool:
+    """Determine whether we're currently in IPython."""
+    import builtins
 
-        return wrapped
-
-    return decorator
+    return getattr(builtins, "__IPYTHON__", False)
 
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
-class SettingsMeta(SingletonMeta, type):
-    _preset: Preset
+class Settings(pydantic_settings.BaseSettings):
+    def model_post_init(self, context: object) -> None:
+        # logging
+        self._verbosity = Verbosity.warning
+        self._root_logger = _RootLogger(logging.WARNING)
+        self._logfile = _default_logfile()
+        self._logpath = None
+        _set_log_level(self)
+        _set_log_file(self)
+
+        # figure
+        self._frameon = True
+        self._vector_friendly = False
+        self._low_resolution_warning = True
+        self._start = self._previous_time = time()
+        self._previous_memory_usage = -1
+
+    preset: Annotated[Preset, AfterValidator(Preset.check)] = Preset.ScanpyV1
+    """Preset to use."""
+
     # logging
+    _verbosity: Verbosity
     _root_logger: _RootLogger
     _logfile: TextIO
-    _verbosity: Verbosity
+    _logpath: Path | None
+
     # rest
-    _n_pcs: int
-    _plot_suffix: str
-    _file_format_data: AnnDataFileFormat
-    _file_format_figs: str
-    _autosave: bool
-    _autoshow: bool
-    _writedir: Path
-    _cachedir: Path
-    _datasetdir: Path
-    _figdir: Path
-    _cache_compression: Literal["lzf", "gzip"] | None
-    _max_memory: float
-    _n_jobs: int
-    _categories_to_ignore: list[str]
+    N_PCS: int = 50
+    """Default number of principal components to use."""
+
+    plot_suffix: str = ""
+    """Global suffix that is appended to figure filenames."""
+
+    file_format_data: AnnDataFileFormat = "h5ad"
+    """File format for saving AnnData objects."""
+
+    file_format_figs: str = "pdf"
+    """File format for saving figures.
+
+    For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
+    :func:`matplotlib.pyplot.savefig`).
+    """
+
+    autosave: bool = False
+    """Automatically save figures in :attr:`~scanpy.settings.figdir` (default `False`).
+
+    Do not show plots/figures interactively.
+    """
+
+    autoshow: bool = True
+    """Automatically show figures if `autosave == False` (default `True`).
+
+    There is no need to call the matplotlib pl.show() in this case.
+    """
+
+    writedir: Path = Path("./write")
+    """Directory where the function scanpy.write writes to by default."""
+
+    cachedir: Path = Path("./cache")
+    """Directory for cache files (default `'./cache/'`)."""
+
+    datasetdir: Annotated[Path, AfterValidator(Path.resolve)] = Path("./data")
+    """Directory for example :mod:`~scanpy.datasets` (default `'./data/'`)."""
+
+    figdir: Path = Path("./figures")
+    r"""Directory for `autosave`\ ing figures (default `'./figures/'`)."""
+
+    cache_compression: Literal["lzf", "gzip"] | None = "lzf"
+    """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
+
+    max_memory: float = 15.0
+    """Maximum memory usage in Gigabyte.
+
+    Is currently not well respected…
+    """
+
+    n_jobs: int = 1
+    """Default number of jobs/ CPUs to use for parallel computing.
+
+    Set to `-1` in order to use all available cores.
+    Not all algorithms support special behavior for numbers < `-1`,
+    so make sure to leave this setting as >= `-1`.
+    """
+
+    categories_to_ignore: list[str] = ["N/A", "dontknow", "no_gate", "?"]
+    """Categories that are omitted in plotting etc."""
+
     _frameon: bool
     """See set_figure_params."""
     _vector_friendly: bool
@@ -99,25 +145,14 @@ class SettingsMeta(SingletonMeta, type):
     """Stores the previous memory usage."""
 
     @property
-    def preset(cls) -> Preset:
-        """Preset to use."""
-        return cls._preset
-
-    @preset.setter
-    def preset(cls, preset: Preset | str) -> None:
-        new_preset = Preset(preset)
-        new_preset.check()
-        cls._preset = new_preset
-
-    @property
-    def verbosity(cls) -> Verbosity:
+    def verbosity(self) -> Verbosity:
         """Verbosity level (default :attr:`Verbosity.warning`)."""
-        return cls._verbosity
+        return self._verbosity
 
     @verbosity.setter
-    def verbosity(cls, verbosity: Verbosity | _VerbosityName | int) -> None:
+    def _set_verbosity(self, verbosity: Verbosity | _VerbosityName | int) -> None:
         try:
-            cls._verbosity = (
+            self._verbosity = (
                 Verbosity[verbosity.lower()]
                 if isinstance(verbosity, str)
                 else Verbosity(verbosity)
@@ -128,187 +163,25 @@ class SettingsMeta(SingletonMeta, type):
                 f"Accepted string values are: {Verbosity.__members__.keys()}"
             )
             raise ValueError(msg) from None
-        _set_log_level(cls, cls._verbosity.level)
+        _set_log_level(self)
 
     @property
-    def N_PCS(cls) -> int:  # noqa: N802
-        """Default number of principal components to use."""
-        return cls._n_pcs
-
-    @N_PCS.setter
-    @_type_check_arg2(int)
-    def N_PCS(cls, n_pcs: int) -> None:  # noqa: N802
-        cls._n_pcs = n_pcs
-
-    @property
-    def plot_suffix(cls) -> str:
-        """Global suffix that is appended to figure filenames."""
-        return cls._plot_suffix
-
-    @plot_suffix.setter
-    @_type_check_arg2(str)
-    def plot_suffix(cls, plot_suffix: str) -> None:
-        cls._plot_suffix = plot_suffix
-
-    @property
-    def file_format_data(cls) -> AnnDataFileFormat:
-        """File format for saving AnnData objects."""
-        return cls._file_format_data
-
-    @file_format_data.setter
-    @_type_check_arg2(str)
-    def file_format_data(cls, file_format: AnnDataFileFormat) -> None:
-        if file_format not in (file_format_options := get_args(AnnDataFileFormat)):
-            msg = (
-                f"Cannot set file_format_data to {file_format}. "
-                f"Must be one of {file_format_options}"
-            )
-            raise ValueError(msg)
-        cls._file_format_data: AnnDataFileFormat = file_format
-
-    @property
-    def file_format_figs(cls) -> str:
-        """File format for saving figures.
-
-        For example `'png'`, `'pdf'` or `'svg'`. Many other formats work as well (see
-        :func:`matplotlib.pyplot.savefig`).
-        """
-        return cls._file_format_figs
-
-    @file_format_figs.setter
-    @_type_check_arg2(str)
-    def file_format_figs(cls, figure_format: str) -> None:
-        cls._file_format_figs = figure_format
-
-    @property
-    def autosave(cls) -> bool:
-        """Automatically save figures in :attr:`~scanpy.settings.figdir` (default `False`).
-
-        Do not show plots/figures interactively.
-        """
-        return cls._autosave
-
-    @autosave.setter
-    @_type_check_arg2(bool)
-    def autosave(cls, autosave: bool) -> None:
-        cls._autosave = autosave
-
-    @property
-    def autoshow(cls) -> bool:
-        """Automatically show figures if `autosave == False` (default `True`).
-
-        There is no need to call the matplotlib pl.show() in this case.
-        """
-        return cls._autoshow
-
-    @autoshow.setter
-    @_type_check_arg2(bool)
-    def autoshow(cls, autoshow: bool) -> None:
-        cls._autoshow = autoshow
-
-    @property
-    def writedir(cls) -> Path:
-        """Directory where the function scanpy.write writes to by default."""
-        return cls._writedir
-
-    @writedir.setter
-    @_type_check_arg2(Path | str)
-    def writedir(cls, writedir: Path | str) -> None:
-        cls._writedir = Path(writedir)
-
-    @property
-    def cachedir(cls) -> Path:
-        """Directory for cache files (default `'./cache/'`)."""
-        return cls._cachedir
-
-    @cachedir.setter
-    @_type_check_arg2(Path | str)
-    def cachedir(cls, cachedir: Path | str) -> None:
-        cls._cachedir = Path(cachedir)
-
-    @property
-    def datasetdir(cls) -> Path:
-        """Directory for example :mod:`~scanpy.datasets` (default `'./data/'`)."""
-        return cls._datasetdir
-
-    @datasetdir.setter
-    @_type_check_arg2(Path | str)
-    def datasetdir(cls, datasetdir: Path | str) -> None:
-        cls._datasetdir = Path(datasetdir).resolve()
-
-    @property
-    def figdir(cls) -> Path:
-        r"""Directory for `autosave`\ ing figures (default `'./figures/'`)."""
-        return cls._figdir
-
-    @figdir.setter
-    @_type_check_arg2(Path | str)
-    def figdir(cls, figdir: Path | str) -> None:
-        cls._figdir = Path(figdir)
-
-    @property
-    def cache_compression(cls) -> Literal["lzf", "gzip"] | None:
-        """Compression for `sc.read(..., cache=True)` (default `'lzf'`)."""
-        return cls._cache_compression
-
-    @cache_compression.setter
-    def cache_compression(
-        cls, cache_compression: Literal["lzf", "gzip"] | None
-    ) -> None:
-        if cache_compression not in {"lzf", "gzip", None}:
-            msg = (
-                f"`cache_compression` ({cache_compression}) "
-                "must be in {'lzf', 'gzip', None}"
-            )
-            raise ValueError(msg)
-        cls._cache_compression = cache_compression
-
-    @property
-    def max_memory(cls) -> int | float:
-        """Maximum memory usage in Gigabyte.
-
-        Is currently not well respected…
-        """
-        return cls._max_memory
-
-    @max_memory.setter
-    @_type_check_arg2(int | float)
-    def max_memory(cls, max_memory: float) -> None:
-        cls._max_memory = max_memory
-
-    @property
-    def n_jobs(cls) -> int:
-        """Default number of jobs/ CPUs to use for parallel computing.
-
-        Set to `-1` in order to use all available cores.
-        Not all algorithms support special behavior for numbers < `-1`,
-        so make sure to leave this setting as >= `-1`.
-        """
-        return cls._n_jobs
-
-    @n_jobs.setter
-    @_type_check_arg2(int)
-    def n_jobs(cls, n_jobs: int) -> None:
-        cls._n_jobs = n_jobs
-
-    @property
-    def logpath(cls) -> Path | None:
+    def logpath(self) -> Path | None:
         """The file path `logfile` was set to."""
-        return cls._logpath
+        return self._logpath
 
     @logpath.setter
-    @_type_check_arg2(Path | str)
-    def logpath(cls, logpath: Path | str | None) -> None:
+    def logpath(self, logpath: Path | str | None) -> None:
         if logpath is None:
-            cls.logfile = None
-            cls._logpath = None
+            self.logfile = None
+            self._logpath = None
             return
         # set via “file object” branch of logfile.setter
-        cls.logfile = Path(logpath).open("a")  # noqa: SIM115
-        cls._logpath = Path(logpath)
+        self.logfile = Path(logpath).open("a")  # noqa: SIM115
+        self._logpath = Path(logpath)
 
     @property
-    def logfile(cls) -> TextIO:
+    def logfile(self) -> TextIO:
         """The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
@@ -317,41 +190,29 @@ class SettingsMeta(SingletonMeta, type):
 
         For backwards compatibility, setting it to `''` behaves like setting it to `None`.
         """
-        return cls._logfile
+        return self._logfile
 
     @logfile.setter
-    def logfile(cls, logfile: Path | str | TextIO | None) -> None:
+    def logfile(self, logfile: Path | str | TextIO | None) -> None:
         if not logfile:  # "" or None
-            logfile = cls._default_logfile()
+            logfile = _default_logfile()
         if isinstance(logfile, Path | str):
-            cls.logpath = logfile
+            self.logpath = logfile
             return
-        cls._logfile = logfile
-        cls._logpath = None
-        _set_log_file(cls)
-
-    @property
-    def categories_to_ignore(cls) -> list[str]:
-        """Categories that are omitted in plotting etc."""
-        return cls._categories_to_ignore
-
-    @categories_to_ignore.setter
-    def categories_to_ignore(cls, categories_to_ignore: Iterable[str]) -> None:
-        categories_to_ignore = list(categories_to_ignore)
-        for i, cat in enumerate(categories_to_ignore):
-            _type_check(cat, f"categories_to_ignore[{i}]", str)
-        cls._categories_to_ignore = categories_to_ignore
+        self._logfile = logfile
+        self._logpath = None
+        _set_log_file(self)
 
     # --------------------------------------------------------------------------------
     # Functions
     # --------------------------------------------------------------------------------
 
     @deprecated("Use `scanpy.set_figure_params` instead")
-    def set_figure_params(cls, *args, **kwargs) -> None:
-        cls._set_figure_params(*args, **kwargs)
+    def set_figure_params(self, *args, **kwargs) -> None:
+        self._set_figure_params(*args, **kwargs)
 
     def _set_figure_params(  # noqa: PLR0913
-        cls,
+        self,
         *,
         scanpy: bool = True,
         dpi: int = 80,
@@ -402,7 +263,7 @@ class SettingsMeta(SingletonMeta, type):
             for details.
 
         """
-        if cls._is_run_from_ipython():
+        if _is_run_from_ipython():
             # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
             from matplotlib_inline.backend_inline import set_matplotlib_formats
 
@@ -413,8 +274,8 @@ class SettingsMeta(SingletonMeta, type):
 
         from matplotlib import rcParams
 
-        cls._vector_friendly = vector_friendly
-        cls.file_format_figs = format
+        self._vector_friendly = vector_friendly
+        self.file_format_figs = format
         if dpi is not None:
             rcParams["figure.dpi"] = dpi
         if dpi_save is not None:
@@ -430,62 +291,10 @@ class SettingsMeta(SingletonMeta, type):
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         if figsize is not None:
             rcParams["figure.figsize"] = figsize
-        cls._frameon = frameon
+        self._frameon = frameon
 
-    @staticmethod
-    def _is_run_from_ipython() -> bool:
-        """Determine whether we're currently in IPython."""
-        import builtins
-
-        return getattr(builtins, "__IPYTHON__", False)
-
-    @classmethod
-    def _default_logfile(cls) -> TextIO:
-        return sys.stdout if cls._is_run_from_ipython() else sys.stderr
-
-    def __str__(cls) -> str:
-        return "\n".join(
-            f"{k} = {v!r}"
-            for k, v in inspect.getmembers(cls)
-            if not k.startswith("_") and k != "getdoc"
-        )
+    def __str__(self) -> str:
+        return "\n".join(f"{k} = {getattr(self, k)!r}" for k in type(self).model_fields)
 
 
-class settings(metaclass=SettingsMeta):  # noqa: N801
-    """Settings for scanpy."""
-
-    def __new__(cls) -> type[Self]:
-        return cls
-
-    _preset = Preset.ScanpyV1
-    # logging
-    _root_logger: ClassVar = _RootLogger(logging.WARNING)
-    _logfile: ClassVar = SettingsMeta._default_logfile()
-    _logpath: ClassVar = None
-    _verbosity: ClassVar = Verbosity.warning
-    # rest
-    _n_pcs: ClassVar = 50
-    _plot_suffix: ClassVar = ""
-    _file_format_data: ClassVar = "h5ad"
-    _file_format_figs: ClassVar = "pdf"
-    _autosave: ClassVar = False
-    _autoshow: ClassVar = True
-    _writedir: ClassVar = Path("./write")
-    _cachedir: ClassVar = Path("./cache")
-    _datasetdir: ClassVar = Path("./data")
-    _figdir: ClassVar = Path("./figures")
-    _cache_compression: ClassVar = "lzf"
-    _max_memory: ClassVar = 15
-    _n_jobs: ClassVar = 1
-    _categories_to_ignore: ClassVar = ["N/A", "dontknow", "no_gate", "?"]
-    _frameon: ClassVar = True
-    _vector_friendly: ClassVar = False
-    _low_resolution_warning: ClassVar = True
-    _start: ClassVar = time()
-    _previous_time: ClassVar = _start
-    _previous_memory_usage: ClassVar = -1
-
-
-if not documenting():  # finish initialization
-    _set_log_level(settings, settings.verbosity.level)
-    _set_log_file(settings)
+settings = Settings()
