@@ -19,6 +19,6 @@
     "python.testing.pytestArgs": ["-vv", "--color=yes", "--internet-tests"],
     "python.testing.pytestEnabled": true,
     "python.terminal.activateEnvironment": true,
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python-envs.defaultPackageManager": "ms-python.python:pip",
+    "python-envs.defaultEnvManager": "flying-sheep.hatch:hatch",
+    "python-envs.defaultPackageManager": "flying-sheep.hatch:hatch",
 }

@@ -296,5 +296,8 @@ class Settings(pydantic_settings.BaseSettings):
     def __str__(self) -> str:
         return "\n".join(f"{k} = {getattr(self, k)!r}" for k in type(self).model_fields)
 
+    def __hash__(self) -> int:
+        return hash((id(self),))
+
 
 settings = Settings()
