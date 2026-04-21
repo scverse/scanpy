@@ -102,12 +102,12 @@ def neighbors(  # noqa: PLR0913
 ) -> AnnData | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
-    The computation proceeds in two independent stages. First, a k-nearest
-    neighbor (kNN) search produces the distance matrix via the estimator
-    passed as ``transformer``. Second, connectivities are derived from the
-    kNN search output by the kernel selected via ``method``. The two stages
-    are controlled by independent parameters: ``transformer`` selects the
-    kNN search backend, ``method`` selects the connectivity kernel.
+    The computation proceeds in two independent stages.
+    First, a k-nearest neighbor (kNN) search produces the distance matrix via the estimator passed as ``transformer``.
+    Second, connectivities are derived from the kNN search output by the kernel selected via ``method``.
+    The two stages are controlled by independent parameters:
+    ``transformer`` selects the kNN search backend,
+    ``method`` selects the connectivity kernel.
 
     .. array-support:: pp.neighbors
 
@@ -134,8 +134,9 @@ def neighbors(  # noqa: PLR0913
         `n_neighbors` nearest neighbor.
     method
         Kernel that derives connectivities from the kNN search output.
-        The choice is independent of the kNN search backend, which is
-        controlled by ``transformer``. Use 'umap' :cite:p:`McInnes2018`,
+        The choice is independent of the kNN search backend,
+        which is controlled by ``transformer``.
+        Use 'umap' :cite:p:`McInnes2018`,
         'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
         or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`).
     transformer
