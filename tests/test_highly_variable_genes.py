@@ -510,7 +510,7 @@ def test_seurat_v3_degenerate() -> None:
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3")
 
 
-def test_batches():
+def test_batches() -> None:
     adata = pbmc68k_reduced()
     adata.X[:100, :100] = np.zeros((100, 100))
 
@@ -537,20 +537,22 @@ def test_batches():
     assert hvg2 is not None
 
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[100],
-        0.5 * hvg1["dispersions_norm"].iat[0] + 0.5 * hvg2["dispersions_norm"].iat[100],
+        adata.var["dispersions_norm"].iloc[100],
+        0.5 * hvg1["dispersions_norm"].iloc[0]
+        + 0.5 * hvg2["dispersions_norm"].iloc[100],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[101],
-        0.5 * hvg1["dispersions_norm"].iat[1] + 0.5 * hvg2["dispersions_norm"].iat[101],
+        adata.var["dispersions_norm"].iloc[101],
+        0.5 * hvg1["dispersions_norm"].iloc[1]
+        + 0.5 * hvg2["dispersions_norm"].iloc[101],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[0],
-        0.5 * hvg2["dispersions_norm"].iat[0],
+        adata.var["dispersions_norm"].iloc[0],
+        0.5 * hvg2["dispersions_norm"].iloc[0],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
