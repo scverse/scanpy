@@ -398,7 +398,7 @@ class _RankGenes:
         from sklearn.linear_model import LogisticRegression
 
         # Indexing with a series causes issues, possibly segfault
-        x = self.X[self.grouping_mask.values, :]
+        x = self.X[self.grouping_mask.to_numpy(), :]
 
         if len(self.groups_order) == 1:
             msg = "Cannot perform logistic regression on a single cluster."
@@ -905,7 +905,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
     for cluster in gene_names.columns:
         # iterate per column
-        var_names = gene_names[cluster].values
+        var_names = gene_names[cluster].array
 
         if not use_logfolds or not use_fraction:
             var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
@@ -916,10 +916,10 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
         if use_fraction:
             fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].values
+                adata.uns[key]["pts"][cluster].loc[var_names].array
             )
             fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].values
+                adata.uns[key]["pts_rest"][cluster].loc[var_names].array
             )
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)

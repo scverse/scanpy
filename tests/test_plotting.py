@@ -895,7 +895,7 @@ def test_rank_genes_groups(
 
 
 def test_rank_genes_group_axes(image_comparer):
-    fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")
+    fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")  # noqa: PD011
 
     save_and_compare_images = partial(image_comparer, ROOT, tol=23)
 
