@@ -16,7 +16,7 @@ from scanpy._compat import CSBase
 from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes
+from scanpy.tools._rank_genes_groups import _RankGenes, _numba_thread_limit
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
@@ -260,9 +260,22 @@ def test_wilcoxon_huge_data(monkeypatch):
     monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
     rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
 
+
+def test_numba_thread_limit_restores_previous_value(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+
+    with _numba_thread_limit(2):
+        pass
+
+    assert calls == [2, 8]
+
+
 def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
     calls = []
     old_n_jobs = sc.settings.n_jobs
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
     monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
 
     try:
@@ -272,7 +285,8 @@ def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
     finally:
         sc.settings.n_jobs = old_n_jobs
 
-    assert calls, "Wilcoxon path did not bound numba threads."
+    assert 2 in calls, "Wilcoxon path did not use scanpy.settings.n_jobs."
+    assert calls[-1] == 8
 
 
 @pytest.mark.parametrize(

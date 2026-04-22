@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 import numba
@@ -44,6 +45,21 @@ def _select_top_n(scores: NDArray, n_top: int):
     global_indices = reference_indices[partition][partial_indices]
 
     return global_indices
+
+
+@contextmanager
+def _numba_thread_limit(n_threads: int | None) -> Generator[None, None, None]:
+    if n_threads is None:
+        yield
+        return
+
+    previous = numba.get_num_threads()
+    n_threads = max(1, min(n_threads, numba.config.NUMBA_NUM_THREADS))
+    numba.set_num_threads(n_threads)
+    try:
+        yield
+    finally:
+        numba.set_num_threads(previous)
 
 
 @njit
@@ -708,14 +724,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     logg.debug(f"consider {groupby!r} groups:")
     logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks_obs, axis=1)}")
 
-    test_obj.compute_statistics(
-        method,
-        corr_method=corr_method,
-        n_genes_user=n_genes_user,
-        rankby_abs=rankby_abs,
-        tie_correct=tie_correct,
-        **kwds,
-    )
+    with _numba_thread_limit(settings.n_jobs if method == "wilcoxon" else None):
+        test_obj.compute_statistics(
+            method,
+            corr_method=corr_method,
+            n_genes_user=n_genes_user,
+            rankby_abs=rankby_abs,
+            tie_correct=tie_correct,
+            **kwds,
+        )
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
