@@ -260,6 +260,20 @@ def test_wilcoxon_huge_data(monkeypatch):
     monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
     rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
 
+def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
+    calls = []
+    old_n_jobs = sc.settings.n_jobs
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+
+    try:
+        sc.settings.n_jobs = 2
+        adata = get_example_data(np.asarray)
+        rank_genes_groups(adata, "true_groups", n_genes=5, method="wilcoxon")
+    finally:
+        sc.settings.n_jobs = old_n_jobs
+
+    assert calls, "Wilcoxon path did not bound numba threads."
+
 
 @pytest.mark.parametrize(
     ("n_genes_add", "n_genes_out_add"),
