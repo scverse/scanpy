@@ -81,7 +81,7 @@ class PcaPreset(NamedTuple):
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mask_var: str | None
-    exp_post_agg: bool
+    mean_in_log_space: bool
 
 
 class ScalePreset(NamedTuple):
@@ -187,10 +187,10 @@ class Preset(enum.StrEnum):
         """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
-                method="t-test", mask_var=None, exp_post_agg=True
+                method="t-test", mask_var=None, mean_in_log_space=True
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None, exp_post_agg=False
+                method="wilcoxon", mask_var=None, mean_in_log_space=False
             ),
         }
 
