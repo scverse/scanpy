@@ -67,7 +67,10 @@ def adata_reference_module() -> AnnData:
     return AnnData(
         X=None,
         obs=dfs["meta"],
-        obsm={"X_pca": dfs["pca"].values, "harmony_org": dfs["pca_harmonized"].values},
+        obsm={
+            "X_pca": dfs["pca"].to_numpy(),
+            "harmony_org": dfs["pca_harmonized"].to_numpy(),
+        },
     )
 
 
@@ -103,7 +106,12 @@ def test_harmony_integrate_algos(subtests: pytest.Subtests, dtype: DTypeLike) ->
     adata = pbmc68k_reduced()
 
     harmony_integrate(
-        adata, "bulk_labels", correction_method="fast", dtype=dtype, flavor="harmony1"
+        adata,
+        "bulk_labels",
+        correction_method="fast",
+        dtype=dtype,
+        flavor="harmony1",
+        rng=0,
     )
     fast = adata.obsm["X_pca_harmony"].copy()
     harmony_integrate(
@@ -112,6 +120,7 @@ def test_harmony_integrate_algos(subtests: pytest.Subtests, dtype: DTypeLike) ->
         correction_method="original",
         dtype=dtype,
         flavor="harmony1",
+        rng=0,
     )
     slow = adata.obsm["X_pca_harmony"].copy()
 
@@ -162,6 +171,7 @@ def test_harmony2_correction_methods_agree(
         correction_method=correction_method,
         dtype=dtype,
         max_iter_harmony=20,
+        rng=0,
     )
     h2 = adata_reference.obsm["X_pca_harmony"]
 
@@ -174,6 +184,7 @@ def test_harmony2_correction_methods_agree(
         correction_method=other,
         dtype=dtype,
         max_iter_harmony=20,
+        rng=0,
     )
     h2_ref = adata_ref2.obsm["X_pca_harmony"]
 

@@ -211,6 +211,7 @@ class Harmony:
             tol=self.tol_clustering,
             block_proportion=self.block_proportion,
             stabilized_penalty=self.stabilized_penalty,
+            rng=self._rng,
         )
 
     def _correct(
@@ -351,6 +352,7 @@ def _clustering(  # noqa: PLR0913
     max_iter: int,
     tol: float,
     block_proportion: float,
+    rng: np.random.Generator,
     stabilized_penalty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
     """Run clustering iterations (modifies r, e, o in-place)."""
@@ -373,7 +375,7 @@ def _clustering(  # noqa: PLR0913
         np.divide(y, norms, out=y_norm)
 
         # Randomly shuffle cell indices
-        idx_list = np.random.permutation(n_cells)
+        idx_list = rng.permutation(n_cells)
 
         # Process blocks
         for block_idx, b in product(
