@@ -118,7 +118,7 @@ test = [
 ]
 doc = [
     "ipython>=7.20",                        # for nbsphinx code highlighting
-    "myst-nb>=1",
+    "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
     "sam-algorithm",
