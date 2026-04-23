@@ -114,7 +114,7 @@ def _standardize_data(
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
-    stand_mean = np.asarray(grand_mean)[:, np.newaxis]
+    stand_mean = grand_mean[:, np.newaxis]
     tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
     stand_mean = stand_mean + np.dot(tmp, b_hat).T
@@ -124,7 +124,7 @@ def _standardize_data(
     s_data = np.where(
         var_pooled == 0,
         0,
-        (np.asarray(data) - stand_mean) / np.sqrt(var_pooled),
+        (data - stand_mean) / np.sqrt(var_pooled),
     )
     s_data = pd.DataFrame(s_data, index=data.index, columns=data.columns)
 
@@ -282,10 +282,11 @@ def combat(  # noqa: PLR0915
     bayesdata = bayesdata * np.sqrt(var_pooled) + stand_mean
 
     # put back into the adata object or return
+    x = bayesdata.to_numpy().transpose()
     if inplace:
-        adata.X = bayesdata.to_numpy().transpose()
+        adata.X = x
         return None
-    return bayesdata.to_numpy().transpose()
+    return x
 
 
 def _it_sol(

@@ -78,6 +78,9 @@ class PreprocessingSuite:  # noqa: D101
 class CombatSuite:
     """Benchmark combat batch correction."""
 
+    params = ()
+    param_names = ()
+
     def setup_cache(self) -> None:
         adata = pbmc3k()
         sc.pp.highly_variable_genes(adata, n_top_genes=500)
