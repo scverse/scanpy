@@ -49,6 +49,7 @@ def _select_top_n(scores: NDArray, n_top: int):
 
 @contextmanager
 def _numba_thread_limit(n_threads: int | None) -> Generator[None, None, None]:
+    """Temporarily set Numba's thread count and restore it on exit."""
     if n_threads is None:
         yield
         return

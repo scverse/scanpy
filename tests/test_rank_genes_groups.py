@@ -272,6 +272,31 @@ def test_numba_thread_limit_restores_previous_value(monkeypatch):
     assert calls == [2, 8]
 
 
+def test_numba_thread_limit_restores_previous_value_on_exception(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+
+    with pytest.raises(RuntimeError, match="synthetic failure"):
+        with _numba_thread_limit(2):
+            raise RuntimeError("synthetic failure")
+
+    assert calls == [2, 8]
+
+
+def test_numba_thread_limit_clamps_to_configured_maximum(monkeypatch):
+    calls = []
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 3)
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba.config, "NUMBA_NUM_THREADS", 4)
+
+    with _numba_thread_limit(99):
+        pass
+
+    assert calls[0] == 4
+    assert calls[-1] == 3
+
+
 def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
     calls = []
     old_n_jobs = sc.settings.n_jobs
@@ -287,6 +312,21 @@ def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
 
     assert 2 in calls, "Wilcoxon path did not use scanpy.settings.n_jobs."
     assert calls[-1] == 8
+
+
+def test_t_test_does_not_set_numba_threads_from_settings(monkeypatch):
+    calls = []
+    old_n_jobs = sc.settings.n_jobs
+    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+
+    try:
+        sc.settings.n_jobs = 2
+        adata = get_example_data(np.asarray)
+        rank_genes_groups(adata, "true_groups", n_genes=5, method="t-test")
+    finally:
+        sc.settings.n_jobs = old_n_jobs
+
+    assert calls == []
 
 
 @pytest.mark.parametrize(
