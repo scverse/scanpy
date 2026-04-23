@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sphinx.util.docutils import SphinxDirective
+from sphinx.util.typing import ExtensionMetadata
 
 if TYPE_CHECKING:
     from typing import ClassVar
@@ -22,6 +23,7 @@ class CanonicalTutorial(SphinxDirective):
         return []
 
 
-def setup(app: Sphinx) -> None:
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     app.add_directive("canonical-tutorial", CanonicalTutorial)
+    return ExtensionMetadata(parallel_read_safe=True)
