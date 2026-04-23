@@ -105,21 +105,17 @@ def _standardize_data(
 
     design = _design_matrix(model, batch_key, batch_levels)
 
-    # use numpty .values extration only once to avoid pandas overhead
-    design_arr = design.values
     # compute pooled variance estimator
-    b_hat = np.dot(
-        np.dot(la.inv(np.dot(design_arr.T, design_arr)), design_arr.T), data.values.T
-    )
+    b_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
     grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
-    var_pooled = (data.values - np.dot(design_arr, b_hat).T) ** 2
+    var_pooled = np.asarray((data - np.dot(design, b_hat).T) ** 2)
     var_pooled = np.mean(var_pooled, axis=1, keepdims=True)
 
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
-    stand_mean = grand_mean[:, np.newaxis]
-    tmp = design_arr.copy()
+    stand_mean = np.asarray(grand_mean)[:, np.newaxis]
+    tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
     stand_mean = stand_mean + np.dot(tmp, b_hat).T
 
@@ -128,7 +124,7 @@ def _standardize_data(
     s_data = np.where(
         var_pooled == 0,
         0,
-        (data.values - stand_mean) / np.sqrt(var_pooled),
+        (np.asarray(data) - stand_mean) / np.sqrt(var_pooled),
     )
     s_data = pd.DataFrame(s_data, index=data.index, columns=data.columns)
 
@@ -272,27 +268,24 @@ def combat(  # noqa: PLR0915
 
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
-    bayesdata_arr = bayesdata.to_numpy(copy=True)
-    batch_design_arr = batch_design.values
     for j, batch_idxs in enumerate(batch_info.values()):
         # we basically subtract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
         dsq = np.sqrt(delta_star[j, :])
-        numer = (
-            bayesdata_arr[:, batch_idxs]
-            - np.dot(batch_design_arr[batch_idxs], gamma_star).T
+        numer = np.array(
+            bayesdata.iloc[:, batch_idxs]
+            - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
         )
-        bayesdata_arr[:, batch_idxs] = numer / dsq[:, np.newaxis]
+        bayesdata.iloc[:, batch_idxs] = numer / dsq[:, np.newaxis]
 
-    bayesdata_arr = bayesdata_arr * np.sqrt(var_pooled) + stand_mean
+    bayesdata = bayesdata * np.sqrt(var_pooled) + stand_mean
 
     # put back into the adata object or return
-    x = bayesdata.to_numpy().transpose()
     if inplace:
-        adata.X = bayesdata_arr.T
+        adata.X = bayesdata.to_numpy().transpose()
         return None
-    return bayesdata_arr.T
+    return bayesdata.to_numpy().transpose()
 
 
 def _it_sol(
