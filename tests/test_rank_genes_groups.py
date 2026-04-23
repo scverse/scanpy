@@ -16,7 +16,7 @@ from scanpy._compat import CSBase
 from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes, _numba_thread_limit
+from scanpy.tools._rank_genes_groups import _numba_thread_limit, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
@@ -274,12 +274,15 @@ def test_numba_thread_limit_restores_previous_value(monkeypatch):
 
 def test_numba_thread_limit_restores_previous_value_on_exception(monkeypatch):
     calls = []
+    msg = "synthetic failure"
     monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
     monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
 
-    with pytest.raises(RuntimeError, match="synthetic failure"):
-        with _numba_thread_limit(2):
-            raise RuntimeError("synthetic failure")
+    with (
+        pytest.raises(RuntimeError, match=msg),
+        _numba_thread_limit(2),
+    ):
+        raise RuntimeError(msg)
 
     assert calls == [2, 8]
 
