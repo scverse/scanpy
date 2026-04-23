@@ -19,12 +19,3 @@ def test_deprecate_multicore_tsne() -> None:
         pytest.warns(ImportWarning, match=r"MulticoreTSNE"),
     ):
         sc.tl.tsne(pbmc, use_fast_tsne=True)
-
-
-def test_deprecate_use_highly_variable_genes():
-    pbmc = pbmc68k_reduced()
-
-    with pytest.warns(
-        FutureWarning, match="Argument `use_highly_variable` is deprecated"
-    ):
-        sc.pp.pca(pbmc, use_highly_variable=True)

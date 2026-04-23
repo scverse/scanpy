@@ -43,10 +43,10 @@ def _design_matrix(
         return_type="dataframe",
     )
     model = model.drop([batch_key], axis=1)
-    numerical_covariates = model.select_dtypes("number").columns.values
+    numerical_covariates = model.select_dtypes("number").columns.array
 
     logg.info(f"Found {design.shape[1]} batches\n")
-    other_cols = [c for c in model.columns.values if c not in numerical_covariates]
+    other_cols = [c for c in model.columns.array if c not in numerical_covariates]
 
     if other_cols:
         col_repr = " + ".join(f"Q('{x}')" for x in other_cols)
@@ -231,7 +231,7 @@ def combat(  # noqa: PLR0915
     # first estimate of the additive batch effect
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
-    ).values
+    ).to_numpy()
     # first estimate for the multiplicative batch effect
     delta_hat = [
         s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info.values()
@@ -288,10 +288,11 @@ def combat(  # noqa: PLR0915
     bayesdata_arr = bayesdata_arr * np.sqrt(var_pooled) + stand_mean
 
     # put back into the adata object or return
+    x = bayesdata.to_numpy().transpose()
     if inplace:
         adata.X = bayesdata_arr.T
-    else:
-        return bayesdata_arr.T
+        return None
+    return bayesdata_arr.T
 
 
 def _it_sol(

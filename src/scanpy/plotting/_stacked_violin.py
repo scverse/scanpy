@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from typing import Literal, Self
 
+    import pandas as pd
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
@@ -440,7 +440,7 @@ class StackedViolin(BasePlot):
     def _make_rows_of_violinplots(
         self,
         ax,
-        _matrix,
+        _matrix: pd.DataFrame,
         colormap_array,
         _color_df,
         x_spacer_size: float,
@@ -466,18 +466,9 @@ class StackedViolin(BasePlot):
         # the expression value
         # This format is convenient to aggregate per gene or per category
         # while making the violin plots.
-        df = (
-            pd
-            .DataFrame(_matrix.stack(future_stack=True))
-            .reset_index()
-            .rename(
-                columns={
-                    "level_1": "genes",
-                    _matrix.index.name: "categories",
-                    0: "values",
-                }
-            )
-        )
+        df = _matrix.melt(
+            var_name="genes", value_name="values", ignore_index=False
+        ).reset_index(names="categories")
         df["genes"] = (
             df["genes"].astype("category").cat.reorder_categories(_matrix.columns)
         )
@@ -514,7 +505,7 @@ class StackedViolin(BasePlot):
 
             if not self.are_axes_swapped:
                 x = "genes"
-                _df = df[df.categories == row_label]
+                _df = df[df["categories"] == row_label]
             else:
                 x = "categories"
                 # because of the renamed matrix columns here
