@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
 from importlib.abc import MetaPathFinder
 from importlib.metadata import Distribution, EntryPoint, EntryPoints
 from types import MappingProxyType
@@ -56,7 +55,6 @@ class _IgnoreMimeDist(Distribution):
         return EntryPoints([ep])
 
 
-@dataclass
 class _IgnoreMimeFinder(MetaPathFinder):
     def find_spec(
         self,
