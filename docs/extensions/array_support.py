@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from docutils import nodes
 from sphinx.util.docutils import SphinxDirective
+from sphinx.util.typing import ExtensionMetadata
 
 from scanpy._utils import _docs
 
@@ -179,7 +180,8 @@ def one[T](arg: Collection[T]) -> T | None:
     return item
 
 
-def setup(app: Sphinx) -> None:
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     app.add_directive("array-support", ArraySupport)
     app.add_config_value("array_support", {}, "env")
+    return ExtensionMetadata(parallel_read_safe=True)
