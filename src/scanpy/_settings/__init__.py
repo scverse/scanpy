@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import sys
+from itertools import chain
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING, Annotated, Literal, TextIO
+from typing import TYPE_CHECKING, Annotated, Literal, Protocol, runtime_checkable
 
 import pydantic_settings
-from pydantic import AfterValidator
+from pydantic import (
+    AfterValidator,
+    ConfigDict,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from .. import logging
 from .._compat import deprecated
@@ -14,8 +21,20 @@ from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Default, Preset
 from .verbosity import Verbosity
 
+if sys.version_info >= (3, 14):
+    from io import Writer
+else:
+
+    @runtime_checkable
+    class Writer[T: str | bytes](Protocol):
+        def write(self, data: T, /) -> int: ...
+
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import Self, TextIO
+
+    from pydantic import ModelWrapValidatorHandler
 
     from .verbosity import _VerbosityName
 
@@ -45,12 +64,11 @@ def _is_run_from_ipython() -> bool:
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
 class Settings(pydantic_settings.BaseSettings):
+    model_config = ConfigDict(validate_assignment=True)
+
     def model_post_init(self, context: object) -> None:
         # logging
-        self._verbosity = Verbosity.warning
         self._root_logger = _RootLogger(logging.WARNING)
-        self._logfile = _default_logfile()
-        self._logpath = None
         _set_log_level(self)
         _set_log_file(self)
 
@@ -65,10 +83,20 @@ class Settings(pydantic_settings.BaseSettings):
     """Preset to use."""
 
     # logging
-    _verbosity: Verbosity
+    verbosity: Verbosity = Verbosity.warning
+    """Verbosity level (default :attr:`Verbosity.warning`)."""
+
     _root_logger: _RootLogger
-    _logfile: TextIO
-    _logpath: Path | None
+
+    logfile: Writer[str] = _default_logfile()
+    """The open file to write logs to.
+
+    Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
+    The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
+    and to :obj:`sys.stderr` otherwise.
+
+    For backwards compatibility, setting it to `''` behaves like setting it to `None`.
+    """
 
     # rest
     N_PCS: int = 50
@@ -144,15 +172,28 @@ class Settings(pydantic_settings.BaseSettings):
     _previous_memory_usage: int
     """Stores the previous memory usage."""
 
+    @computed_field
     @property
-    def verbosity(self) -> Verbosity:
-        """Verbosity level (default :attr:`Verbosity.warning`)."""
-        return self._verbosity
+    def logpath(self) -> Path | None:
+        """The file path `logfile` was set to."""
+        if self.logfile is _default_logfile():
+            return None
+        if (name := getattr(self.logfile, "name", None)) is None:
+            return None
+        return Path(name)
 
-    @verbosity.setter
-    def _set_verbosity(self, verbosity: Verbosity | _VerbosityName | int) -> None:
+    @logpath.setter
+    def logpath(self, path: Path | None) -> None:
+        self.logfile = _default_logfile() if path is None else path.open("a")
+
+    @field_validator("verbosity", mode="before")
+    @classmethod
+    def _check_verbosity(
+        cls, verbosity: Verbosity | _VerbosityName | int, /
+    ) -> Verbosity:
+        """Lenient conversion of verbosity from `int` or level name."""
         try:
-            self._verbosity = (
+            return (
                 Verbosity[verbosity.lower()]
                 if isinstance(verbosity, str)
                 else Verbosity(verbosity)
@@ -163,45 +204,28 @@ class Settings(pydantic_settings.BaseSettings):
                 f"Accepted string values are: {Verbosity.__members__.keys()}"
             )
             raise ValueError(msg) from None
-        _set_log_level(self)
 
-    @property
-    def logpath(self) -> Path | None:
-        """The file path `logfile` was set to."""
-        return self._logpath
+    @model_validator(mode="wrap")
+    @classmethod
+    def _set_verbosity(
+        cls, data: object, handler: ModelWrapValidatorHandler[Self]
+    ) -> Self:
+        """Side effect of setting the verbosity."""
+        self = handler(data)
+        if isinstance(data, dict) and "verbosity" in data:
+            _set_log_level(self)
+        return self
 
-    @logpath.setter
-    def logpath(self, logpath: Path | str | None) -> None:
-        if logpath is None:
-            self.logfile = None
-            self._logpath = None
-            return
-        # set via “file object” branch of logfile.setter
-        self.logfile = Path(logpath).open("a")  # noqa: SIM115
-        self._logpath = Path(logpath)
-
-    @property
-    def logfile(self) -> TextIO:
-        """The open file to write logs to.
-
-        Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
-        The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
-        and to :obj:`sys.stderr` otherwise.
-
-        For backwards compatibility, setting it to `''` behaves like setting it to `None`.
-        """
-        return self._logfile
-
-    @logfile.setter
-    def logfile(self, logfile: Path | str | TextIO | None) -> None:
-        if not logfile:  # "" or None
-            logfile = _default_logfile()
-        if isinstance(logfile, Path | str):
-            self.logpath = logfile
-            return
-        self._logfile = logfile
-        self._logpath = None
-        _set_log_file(self)
+    @model_validator(mode="wrap")
+    @classmethod
+    def _set_log_file(
+        cls, data: object, handler: ModelWrapValidatorHandler[Self]
+    ) -> Self:
+        """Side effect of setting the logfile."""
+        self = handler(data)
+        if isinstance(data, dict) and "logfile" in data:
+            _set_log_file(self)
+        return self
 
     # --------------------------------------------------------------------------------
     # Functions
@@ -294,7 +318,10 @@ class Settings(pydantic_settings.BaseSettings):
         self._frameon = frameon
 
     def __str__(self) -> str:
-        return "\n".join(f"{k} = {getattr(self, k)!r}" for k in type(self).model_fields)
+        return "\n".join(
+            f"{k} = {getattr(self, k)!r}"
+            for k in chain(type(self).model_fields, type(self).model_computed_fields)
+        )
 
     def __hash__(self) -> int:
         return hash((id(self),))
