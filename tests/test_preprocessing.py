@@ -363,7 +363,9 @@ def test_recipe_plotting() -> None:
 
 def test_regress_out_ordinal():
     rng = np.random.default_rng()
-    adata = AnnData(sparse.random(1000, 100, density=0.6, format="csr", rng=rng))
+    adata = AnnData(
+        sparse.random(1000, 100, density=0.6, format="csr", random_state=rng)
+    )
     adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
 
@@ -404,7 +406,7 @@ def test_regress_out_layer(dtype):
     rng = np.random.default_rng()
     adata = AnnData(
         sparse.random(
-            1000, 100, density=0.6, format="csr", dtype=np.uint16, rng=rng
+            1000, 100, density=0.6, format="csr", dtype=np.uint16, random_state=rng
         ).astype(dtype)
     )
     adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
@@ -430,7 +432,9 @@ def test_regress_out_layer(dtype):
 
 def test_regress_out_view():
     rng = np.random.default_rng()
-    adata = AnnData(sparse.random(500, 1100, density=0.2, format="csr", rng=rng))
+    adata = AnnData(
+        sparse.random(500, 1100, density=0.2, format="csr", random_state=rng)
+    )
     adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
@@ -446,7 +450,9 @@ def test_regress_out_view():
 
 def test_regress_out_categorical():
     rng = np.random.default_rng()
-    adata = AnnData(sparse.random(1000, 100, density=0.6, format="csr", rng=rng))
+    adata = AnnData(
+        sparse.random(1000, 100, density=0.6, format="csr", random_state=rng)
+    )
     # create a categorical column
     adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
