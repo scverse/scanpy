@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 import numba
@@ -18,6 +17,7 @@ from .._compat import CSBase
 from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
+    _numba_thread_limit,
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -45,22 +45,6 @@ def _select_top_n(scores: NDArray, n_top: int):
     global_indices = reference_indices[partition][partial_indices]
 
     return global_indices
-
-
-@contextmanager
-def _numba_thread_limit(n_threads: int | None) -> Generator[None, None, None]:
-    """Temporarily set Numba's thread count and restore it on exit."""
-    if n_threads is None:
-        yield
-        return
-
-    previous = numba.get_num_threads()
-    n_threads = max(1, min(n_threads, numba.config.NUMBA_NUM_THREADS))
-    numba.set_num_threads(n_threads)
-    try:
-        yield
-    finally:
-        numba.set_num_threads(previous)
 
 
 @njit

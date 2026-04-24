@@ -4,6 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import numba
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,7 +17,7 @@ from scanpy._compat import CSBase
 from scanpy._utils import select_groups
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _numba_thread_limit, _RankGenes
+from scanpy.tools._rank_genes_groups import _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
@@ -254,82 +255,39 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
 
-def test_wilcoxon_huge_data(monkeypatch):
+def test_wilcoxon_huge_data(monkeypatch: pytest.MonkeyPatch) -> None:
     max_size = 300
     adata = pbmc68k_reduced()
     monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
     rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
 
 
-def test_numba_thread_limit_restores_previous_value(monkeypatch):
-    calls = []
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
-
-    with _numba_thread_limit(2):
-        pass
-
-    assert calls == [2, 8]
-
-
-def test_numba_thread_limit_restores_previous_value_on_exception(monkeypatch):
-    calls = []
-    msg = "synthetic failure"
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
-
-    with (
-        pytest.raises(RuntimeError, match=msg),
-        _numba_thread_limit(2),
-    ):
-        raise RuntimeError(msg)
-
-    assert calls == [2, 8]
-
-
-def test_numba_thread_limit_clamps_to_configured_maximum(monkeypatch):
-    calls = []
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 3)
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba.config, "NUMBA_NUM_THREADS", 4)
-
-    with _numba_thread_limit(99):
-        pass
-
-    assert calls[0] == 4
-    assert calls[-1] == 3
-
-
-def test_wilcoxon_sets_numba_threads_from_settings(monkeypatch):
-    calls = []
+@pytest.mark.parametrize(
+    "method",
+    [
+        pytest.param(
+            "t-test", marks=pytest.mark.xfail(reason="t-test doesn’t use numba (yet)")
+        ),
+        "wilcoxon",
+    ],
+)
+def test_set_numba_threads_from_settings(
+    monkeypatch: pytest.MonkeyPatch, method: Literal["t-test", "wilcoxon"]
+) -> None:
+    was_set_to = []
     old_n_jobs = sc.settings.n_jobs
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "get_num_threads", lambda: 8)
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
+    monkeypatch.setattr(numba, "get_num_threads", lambda: 8)
+    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
 
     try:
         sc.settings.n_jobs = 2
         adata = get_example_data(np.asarray)
-        rank_genes_groups(adata, "true_groups", n_genes=5, method="wilcoxon")
+        rank_genes_groups(adata, "true_groups", n_genes=5, method=method)
     finally:
         sc.settings.n_jobs = old_n_jobs
 
-    assert 2 in calls, "Wilcoxon path did not use scanpy.settings.n_jobs."
-    assert calls[-1] == 8
-
-
-def test_t_test_does_not_set_numba_threads_from_settings(monkeypatch):
-    calls = []
-    old_n_jobs = sc.settings.n_jobs
-    monkeypatch.setattr(sc.tl._rank_genes_groups.numba, "set_num_threads", calls.append)
-
-    try:
-        sc.settings.n_jobs = 2
-        adata = get_example_data(np.asarray)
-        rank_genes_groups(adata, "true_groups", n_genes=5, method="t-test")
-    finally:
-        sc.settings.n_jobs = old_n_jobs
-
-    assert calls == []
+    assert 2 in was_set_to, "Wilcoxon path did not use scanpy.settings.n_jobs."
+    assert was_set_to[-1] == 8
 
 
 @pytest.mark.parametrize(
