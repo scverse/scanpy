@@ -148,7 +148,7 @@ class _LegacyRng(np.random.Generator):
 
                 return wrapper
 
-            setattr(cls, names.get(name, name), mk_wrapper(name, meth))
+            setattr(cls, name, mk_wrapper(names.get(name, name), meth))
 
 
 _LegacyRng._delegate()
