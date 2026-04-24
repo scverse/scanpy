@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.10.8",
+    "anndata>=0.11",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
@@ -97,6 +97,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
+illico = [ "illico>=0.5.0rc2" ]
 scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
@@ -107,6 +108,7 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
