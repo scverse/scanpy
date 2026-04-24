@@ -114,10 +114,9 @@ def _standardize_data(
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
-    stand_mean = grand_mean[:, np.newaxis]
     tmp = np.array(design.copy())
     tmp[:, :n_batch] = 0
-    stand_mean = stand_mean + np.dot(tmp, b_hat).T
+    stand_mean = grand_mean[:, np.newaxis] + np.dot(tmp, b_hat).T
 
     # need to be a bit careful with the zero variance genes
     # just set the zero variance genes to zero in the standardized data
