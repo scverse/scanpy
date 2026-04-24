@@ -17,6 +17,7 @@ from .._compat import CSBase
 from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
+    _numba_thread_limit,
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -708,14 +709,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     logg.debug(f"consider {groupby!r} groups:")
     logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks_obs, axis=1)}")
 
-    test_obj.compute_statistics(
-        method,
-        corr_method=corr_method,
-        n_genes_user=n_genes_user,
-        rankby_abs=rankby_abs,
-        tie_correct=tie_correct,
-        **kwds,
-    )
+    with _numba_thread_limit(settings.n_jobs if method == "wilcoxon" else None):
+        test_obj.compute_statistics(
+            method,
+            corr_method=corr_method,
+            n_genes_user=n_genes_user,
+            rankby_abs=rankby_abs,
+            tie_correct=tie_correct,
+            **kwds,
+        )
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
