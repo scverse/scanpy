@@ -12,7 +12,8 @@ pytestmark = [needs.phenograph]
 
 
 def test_phenograph():
-    df = np.random.rand(1000, 40)
+    rng = np.random.default_rng()
+    df = rng.random((1000, 40))
     dframe = pd.DataFrame(df)
     dframe.index, dframe.columns = (map(str, dframe.index), map(str, dframe.columns))
     adata = AnnData(dframe)
