@@ -169,6 +169,7 @@ lint.select = [
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
     "N",      # Naming conventions
+    "PD",     # Pandas
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint

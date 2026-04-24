@@ -388,7 +388,7 @@ def test_illico(
 
 
 @pytest.mark.parametrize(
-    ("exp_post_agg", "expected_logfc"),
+    ("mean_in_log_space", "expected_logfc"),
     [
         # exp after agg: log2(expm1(mean_log_a) / expm1(mean_log_b))
         #              = log2(expm1(ln(9) * 5 / 10) / expm1(ln9)) = log2(2 / 8) = -2.0
@@ -399,11 +399,11 @@ def test_illico(
     ],
 )
 @pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
-def test_exp_post_agg(
+def test_mean_in_log_space(
     expected_logfc: float,
     method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
     *,
-    exp_post_agg: bool,
+    mean_in_log_space: bool,
 ):
     # group_a: 5 cells with log-space value 0, 5 cells with log(9)
     # group_b: 10 cells all with log(9)  (used as reference)
@@ -422,7 +422,7 @@ def test_exp_post_agg(
         groups=["a"],
         reference="b",
         method=method,
-        exp_post_agg=exp_post_agg,
+        mean_in_log_space=mean_in_log_space,
     )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)

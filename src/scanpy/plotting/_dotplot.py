@@ -608,8 +608,8 @@ class DotPlot(BasePlot):
         )
 
         # Create a dedicated normalizer for the legend
-        vmin = self.dot_color_df.values.min()
-        vmax = self.dot_color_df.values.max()
+        vmin = self.dot_color_df.to_numpy().min()
+        vmax = self.dot_color_df.to_numpy().max()
         legend_norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
         for i, group_name in enumerate(groups_to_plot):
@@ -799,8 +799,8 @@ class DotPlot(BasePlot):
         y, x = np.indices(dot_color.shape)
         y = y.flatten() + 0.5
         x = x.flatten() + 0.5
-        frac = dot_size.values.flatten()
-        mean_flat = dot_color.values.flatten()
+        frac = dot_size.to_numpy().flatten()
+        mean_flat = dot_color.to_numpy().flatten()
         cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
