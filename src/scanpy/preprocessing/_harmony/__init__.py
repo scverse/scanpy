@@ -54,6 +54,8 @@ def harmony_integrate(  # noqa: PLR0913
 
         sc.pp.harmony_integrate(adata, key, flavor="harmony1")
 
+    .. array-support:: pp.harmony_integrate
+
     Parameters
     ----------
     adata
@@ -186,10 +188,7 @@ def harmony_integrate(  # noqa: PLR0913
     try:
         x = np.ascontiguousarray(input_data, dtype=dtype)
     except Exception as e:
-        msg = (
-            f"Could not convert input of type {type(input_data).__name__} "
-            "to NumPy array."
-        )
+        msg = f"Could not convert input of type {type(input_data).__name__} to NumPy array."
         raise TypeError(msg) from e
 
     # Check for NaN values

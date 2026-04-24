@@ -8,11 +8,10 @@ import numpy as np
 from sklearn.cluster import KMeans
 from tqdm.auto import tqdm
 
-from scanpy._utils.random import _legacy_random_state
-
 from ... import logging as log
 from ..._settings import settings
 from ..._settings.verbosity import Verbosity
+from ..._utils.random import _legacy_random_state
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
