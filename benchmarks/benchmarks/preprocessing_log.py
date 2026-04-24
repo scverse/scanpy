@@ -9,11 +9,10 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
-import numpy as np
 
 import scanpy as sc
 
-from ._utils import get_dataset, param_skipper, pbmc3k
+from ._utils import get_dataset, param_skipper
 
 if TYPE_CHECKING:
     from ._utils import Dataset, KeyX
@@ -73,29 +72,3 @@ class PreprocessingSuite:  # noqa: D101
 
     def peakmem_scale(self, *_) -> None:
         sc.pp.scale(self.adata, max_value=10)
-
-
-class CombatSuite:
-    """Benchmark combat batch correction."""
-
-    params = ()
-    param_names = ()
-
-    def setup_cache(self) -> None:
-        adata = pbmc3k()
-        sc.pp.highly_variable_genes(adata, n_top_genes=500)
-        adata = adata[:, adata.var["highly_variable"]].copy()
-        sc.pp.scale(adata, max_value=10)
-        # assign cells to 3 batches deterministically
-        rng = np.random.default_rng(0)
-        adata.obs["batch"] = rng.choice(["A", "B", "C"], size=adata.n_obs)
-        adata.write_h5ad("adata_combat.h5ad")
-
-    def setup(self) -> None:
-        self.adata = ad.read_h5ad("adata_combat.h5ad")
-
-    def time_combat(self) -> None:
-        sc.pp.combat(self.adata, key="batch")
-
-    def peakmem_combat(self) -> None:
-        sc.pp.combat(self.adata, key="batch")
