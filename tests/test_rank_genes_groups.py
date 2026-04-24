@@ -4,6 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import numba
 import numpy as np
 import pandas as pd
 import pytest
@@ -254,11 +255,39 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
 
-def test_wilcoxon_huge_data(monkeypatch):
+def test_wilcoxon_huge_data(monkeypatch: pytest.MonkeyPatch) -> None:
     max_size = 300
     adata = pbmc68k_reduced()
     monkeypatch.setattr(sc.tl._rank_genes_groups, "_CONST_MAX_SIZE", max_size)
     rank_genes_groups(adata, groupby="bulk_labels", method="wilcoxon")
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        pytest.param(
+            "t-test", marks=pytest.mark.xfail(reason="t-test doesn’t use numba (yet)")
+        ),
+        "wilcoxon",
+    ],
+)
+def test_set_numba_threads_from_settings(
+    monkeypatch: pytest.MonkeyPatch, method: Literal["t-test", "wilcoxon"]
+) -> None:
+    was_set_to = []
+    old_n_jobs = sc.settings.n_jobs
+    monkeypatch.setattr(numba, "get_num_threads", lambda: 8)
+    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
+
+    try:
+        sc.settings.n_jobs = 2
+        adata = get_example_data(np.asarray)
+        rank_genes_groups(adata, "true_groups", n_genes=5, method=method)
+    finally:
+        sc.settings.n_jobs = old_n_jobs
+
+    assert 2 in was_set_to, "Wilcoxon path did not use scanpy.settings.n_jobs."
+    assert was_set_to[-1] == 8
 
 
 @pytest.mark.parametrize(
