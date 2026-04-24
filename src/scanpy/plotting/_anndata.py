@@ -157,6 +157,17 @@ def scatter(  # noqa: PLR0913
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
+    Examples
+    --------
+    Plot per-cell total counts versus detected genes, colored by mitochondrial fraction.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.scatter(adata, x="n_counts", y="n_genes", color="percent_mito")
+
     """
     # color can be a obs column name or a matplotlib color specification (or a collection thereof)
     if color is not None:
