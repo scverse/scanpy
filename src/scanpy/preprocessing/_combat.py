@@ -108,13 +108,14 @@ def _standardize_data(
     # compute pooled variance estimator
     b_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
     grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
-    var_pooled = np.asarray((data - np.dot(design, b_hat).T) ** 2)
-    var_pooled = np.mean(var_pooled, axis=1, keepdims=True)
+    var_pooled = (
+        (data - np.dot(design, b_hat).T).pow(2).to_numpy().mean(axis=1, keepdims=True)
+    )
 
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
-    tmp = np.array(design.copy())
+    tmp = design.to_numpy(copy=True)
     tmp[:, :n_batch] = 0
     stand_mean = grand_mean[:, np.newaxis] + np.dot(tmp, b_hat).T
 
