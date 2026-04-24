@@ -33,7 +33,8 @@ ROOT = HERE / "_images_pbmc3k"
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
-    np.random.seed(0)
+    # TODO: rework this test for scanpy 2.0 so this is no longer necessary
+    np.random.seed(0)  # noqa: NPY002
     save_and_compare_images = partial(image_comparer, ROOT, tol=20)
     adata = sc.datasets.pbmc3k()
 

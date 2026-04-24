@@ -11,8 +11,9 @@ pytestmark = [needs.samalg]
 
 
 def test_sam():
+    rng = np.random.default_rng()
     adata_ref = pbmc3k()
-    ix = np.random.choice(adata_ref.shape[0], size=200, replace=False)
+    ix = rng.choice(adata_ref.shape[0], size=200, replace=False)
     adata = adata_ref[ix, :].copy()
     sc.pp.normalize_total(adata, target_sum=10000)
     sc.pp.log1p(adata)
