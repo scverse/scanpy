@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import itertools
 import string
+from contextlib import suppress
 from operator import mul, truediv
 from types import ModuleType
 from typing import TYPE_CHECKING
 
+import numba
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
@@ -13,6 +15,7 @@ from scipy import sparse
 
 from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
+    _numba_thread_limit,
     axis_mul_or_truediv,
     check_nonnegative_integers,
     descend_classes_and_funcs,
@@ -245,3 +248,32 @@ def test_random_str() -> None:
     assert strings.dtype == np.dtype("U2")
     unique = np.unique(strings, axis=0)
     assert len(unique) == len(strings)
+
+
+@pytest.mark.parametrize("success", [True, False], ids=["success", "exception"])
+def test_numba_thread_limit_restores_previous_value(
+    *, monkeypatch: pytest.MonkeyPatch, success: bool
+) -> None:
+    was_set_to = []
+    monkeypatch.setattr(numba, "get_num_threads", lambda: 8)
+    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
+
+    with suppress(RuntimeError), _numba_thread_limit(2):
+        if not success:
+            raise RuntimeError
+
+    assert was_set_to == [2, 8]
+
+
+def test_numba_thread_limit_clamps_to_configured_maximum(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    was_set_to = []
+    monkeypatch.setattr(numba, "get_num_threads", lambda: 3)
+    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
+    monkeypatch.setattr(numba.config, "NUMBA_NUM_THREADS", 4)
+
+    with _numba_thread_limit(99):
+        pass
+
+    assert was_set_to == [4, 3]
