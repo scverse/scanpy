@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import warnings
-from functools import partial
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, cast, get_args, overload
 
@@ -44,9 +43,10 @@ else:
 if TYPE_CHECKING:
     from collections.abc import Callable
     from os import PathLike
-    from typing import IO, Literal
+    from typing import IO, Concatenate, Literal
 
     from numpy.typing import DTypeLike
+
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -166,6 +166,7 @@ def read(
 
 def read_10x_h5(
     filename: PathLike[str] | str,
+    layer: str | None | Default = Default(preset=("read_10x", "layer")),
     *,
     genome: str | None = None,
     gex_only: bool = True,
@@ -208,6 +209,8 @@ def read_10x_h5(
 
     """
     path = Path(filename)
+    if isinstance(layer, Default):
+        layer = settings.preset.read_10x.layer
     start = logg.info(f"reading {path}")
     is_present = _check_datafile_present_and_download(path, backup_url=backup_url)
     if not is_present:
@@ -221,7 +224,7 @@ def read_10x_h5(
                 warnings.filterwarnings(
                     "ignore", r".*names are not unique", UserWarning
                 )
-            adata = _read_10x_h5(path, _read_v3_10x_h5)
+            adata = _read_10x_h5(path, _read_v3_10x_h5, layer=layer)
         if genome:
             if genome not in adata.var["genome"].array:
                 msg = (
@@ -235,16 +238,21 @@ def read_10x_h5(
         if adata.is_view:
             adata = adata.copy()
     else:
-        adata = _read_10x_h5(path, partial(_read_legacy_10x_h5, genome=genome))
+        adata = _read_10x_h5(path, _read_legacy_10x_h5, layer=layer, genome=genome)
     logg.info("", time=start)
     return adata
 
 
-def _read_10x_h5(path: Path, cb: Callable[[h5py.File], AnnData]) -> AnnData:
+def _read_10x_h5[**P](
+    path: Path,
+    cb: Callable[Concatenate[h5py.File, P], AnnData],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> AnnData:
     """Read hdf5 file from Cell Ranger v3 or later versions."""
     with h5py.File(str(path), "r") as f:
         try:
-            return cb(f)
+            return cb(f, *args, **kwargs)
         except KeyError as e:
             msg = "File is missing one or more required datasets."
             raise Exception(msg) from e
@@ -258,7 +266,7 @@ def _collect_datasets(dsets: dict, group: h5py.Group) -> None:
             _collect_datasets(dsets, v)
 
 
-def _read_v3_10x_h5(f: h5py.File) -> AnnData:
+def _read_v3_10x_h5(f: h5py.File, *, layer: str | None) -> AnnData:
     dsets = {}
     _collect_datasets(dsets, f["matrix"])
 
@@ -307,10 +315,13 @@ def _read_v3_10x_h5(f: h5py.File) -> AnnData:
     else:
         msg = "10x h5 has no features group"
         raise ValueError(msg)
-    return AnnData(matrix, obs=obs_dict, var=var_dict)
+    x, layers = (matrix, None) if layer is None else (None, {layer: matrix})
+    return AnnData(x, layers=layers, obs=obs_dict, var=var_dict)
 
 
-def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
+def _read_legacy_10x_h5(
+    f: h5py.File, *, layer: str | None, genome: str | None
+) -> AnnData:
     children = list(f.keys())
     if not genome:
         if len(children) > 1:
@@ -347,8 +358,10 @@ def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
     )
     # the csc matrix is automatically the transposed csr matrix
     # as scanpy expects it, so, no need for a further transpostion
+    x, layers = (matrix, None) if layer is None else (None, {layer: matrix})
     adata = AnnData(
-        matrix,
+        x,
+        layers=layers,
         obs=dict(obs_names=dsets["barcodes"].astype(str)),
         var=dict(
             var_names=dsets["gene_names"].astype(str),
@@ -523,6 +536,7 @@ def read_visium(
 def read_10x_mtx(
     path: PathLike[str] | str,
     *,
+    layer: str | None | Default = Default(preset=("read_10x", "layer")),
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
@@ -573,6 +587,8 @@ def read_10x_mtx(
 
     """
     path = Path(path)
+    if isinstance(layer, Default):
+        layer = settings.preset.read_10x.layer
     prefix = "" if prefix is None else prefix
     is_legacy = (path / f"{prefix}genes.tsv").is_file()
     with warnings.catch_warnings():
@@ -580,6 +596,7 @@ def read_10x_mtx(
         warnings.filterwarnings("ignore", r".*names are not unique", UserWarning)
         adata = _read_10x_mtx(
             path,
+            layer=layer,
             var_names=var_names,
             make_unique=make_unique,
             cache=cache,
@@ -598,6 +615,7 @@ def read_10x_mtx(
 def _read_mtx(
     filename: Path,
     *,
+    layer: str | None,
     dtype: DTypeLike,
     sparse_format: Literal["csr", "csc", "coo"],
 ) -> AnnData:
@@ -612,12 +630,14 @@ def _read_mtx(
         x = csr_matrix(x)
     elif sparse_format == "csc":
         x = csc_matrix(x)
-    return AnnData(x)
+    x, layers = (x, None) if layer is None else (None, {layer: x})
+    return AnnData(x, layers=layers)
 
 
 def _read_10x_mtx(
     path: Path,
     *,
+    layer: str | None,
     var_names: Literal["gene_symbols", "gene_ids"],
     make_unique: bool,
     cache: bool,
@@ -632,6 +652,7 @@ def _read_10x_mtx(
     suffix = "" if is_legacy else (".gz" if compressed else "")
     adata = read(
         path / f"{prefix}matrix.mtx{suffix}",
+        layer=layer,
         cache=cache,
         cache_compression=cache_compression,
         # transposing will convert e.g. CSR to CSC and vice versa
