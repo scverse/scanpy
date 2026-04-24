@@ -103,6 +103,9 @@ class _LegacyRng(np.random.Generator):
         self.arg = arg
         self.state = check_random_state(arg) if state is None else state
 
+    def __str__(self) -> str:
+        return f"LegacyRng({self.arg!r})"
+
     @property
     def bit_generator(self) -> BitGenerator:
         msg = "A _LegacyRng instance has no `bit_generator` attribute."
@@ -117,9 +120,9 @@ class _LegacyRng(np.random.Generator):
         """Create a generator that wraps the global `RandomState` backing the legacy `np.random` functions."""
         if arg is not None:
             if isinstance(arg, np.random.RandomState):
-                np.random.set_state(arg.get_state(legacy=False))
+                np.random.set_state(arg.get_state(legacy=False))  # noqa: NPY002
                 return _LegacyRng(arg, state)
-            np.random.seed(arg)
+            np.random.seed(arg)  # noqa: NPY002
         return _LegacyRng(arg, np.random.RandomState(np.random.get_bit_generator()))
 
     def spawn(self, n_children: int) -> list[Self]:

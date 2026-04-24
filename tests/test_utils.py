@@ -143,24 +143,29 @@ def test_scale_rechunk(array_type, axis, op):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    ("array_value", "expected"),
+    ("mk_array", "expected"),
     [
         pytest.param(
-            np.random.poisson(size=(100, 100)).astype(np.float64),
+            lambda rng: rng.poisson(size=(100, 100)).astype(np.float64),
             True,
             id="poisson-float64",
         ),
         pytest.param(
-            np.random.poisson(size=(100, 100)).astype(np.uint32),
+            lambda rng: rng.poisson(size=(100, 100)).astype(np.uint32),
             True,
             id="poisson-uint32",
         ),
-        pytest.param(np.random.normal(size=(100, 100)), False, id="normal"),
-        pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"),
+        pytest.param(lambda rng: rng.normal(size=(100, 100)), False, id="normal"),
+        pytest.param(
+            lambda _: np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"
+        ),
     ],
 )
-def test_check_nonnegative_integers(array_type, array_value, expected):
-    x = array_type(array_value)
+def test_check_nonnegative_integers(
+    array_type, mk_array: Callable[[np.random.Generator], np.ndarray], expected
+):
+    rng = np.random.default_rng()
+    x = array_type(mk_array(rng))
 
     received = check_nonnegative_integers(x)
     if isinstance(x, DaskArray):
@@ -178,16 +183,18 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
 @pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
 @pytest.mark.parametrize("func", ["choice"])
 def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
-    np.random.seed(seed)
-    state_before = np.random.get_state(legacy=False)
+    np.random.seed(seed)  # noqa: NPY002
+    state_before = np.random.get_state(legacy=False)  # noqa: NPY002
 
     arrs: dict[bool, np.ndarray] = {}
     states_after: dict[bool, dict[str, Any]] = {}
     for direct in [True, False]:
         if not pass_seed:
-            np.random.seed(seed)
-        arrs[direct] = _mk_random(func, direct=direct, seed=seed if pass_seed else None)
-        states_after[direct] = np.random.get_state(legacy=False)
+            np.random.seed(seed)  # noqa: NPY002
+        arrs[direct] = _mk_legacy_random(
+            func, direct=direct, seed=seed if pass_seed else None
+        )
+        states_after[direct] = np.random.get_state(legacy=False)  # noqa: NPY002
 
     np.testing.assert_array_equal(arrs[True], arrs[False])
     np.testing.assert_equal(
@@ -198,9 +205,9 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
         np.testing.assert_equal(states_after[True], state_before)
 
 
-def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
+def _mk_legacy_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
-        np.random.seed(seed)
+        np.random.seed(seed)  # noqa: NPY002
     gen = np.random if direct else _LegacyRng.wrap_global(seed)
     match func:
         case "choice":
