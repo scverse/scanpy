@@ -366,11 +366,11 @@ class _RankGenes:
                 tc_coef = np.zeros((n_groups, n_genes))
 
             for ranks, left, right in _ranks(self.X):
+                if tie_correct:
+                    tc_coef[:, left:right] = _tiecorrect(ranks)
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
                     scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
-                    if tie_correct:
-                        tc_coef[group_index, left:right] = _tiecorrect(ranks)
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
