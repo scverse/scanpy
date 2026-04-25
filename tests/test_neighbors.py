@@ -249,7 +249,8 @@ def test_metrics_argument():
 
 
 def test_use_rep_argument():
-    adata = AnnData(np.random.randn(30, 300))
+    rng = np.random.default_rng()
+    adata = AnnData(rng.standard_normal((30, 300)))
     sc.pp.pca(adata)
     neigh_pca = Neighbors(adata)
     neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")

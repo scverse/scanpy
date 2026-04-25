@@ -19,6 +19,7 @@ from packaging.version import Version
 from . import logging as logg
 from ._compat import deprecated, pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
+from ._utils.random import _LegacyRng
 
 if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -815,7 +816,11 @@ def write_params(path: PathLike[str] | str, *args, **maps):
             if header is not None:
                 f.write(f"[{header}]\n")
             for key, val in map.items():
-                f.write(f"{key} = {val}\n")
+                if key == "rng":
+                    if isinstance(val, _LegacyRng) and val.arg is not None:
+                        f.write(f"seed = {val.arg}\n")
+                else:
+                    f.write(f"{key} = {val}\n")
 
 
 # -------------------------------------------------------------------------------
