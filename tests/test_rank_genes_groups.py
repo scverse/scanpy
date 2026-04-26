@@ -343,3 +343,44 @@ def test_mask_not_equal():
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
+
+
+@pytest.mark.parametrize(
+    ("mean_in_log_space", "expected_logfc"),
+    [
+        # exp after agg: log2(expm1(mean_log_a) / expm1(mean_log_b))
+        #              = log2(expm1(ln(9) * 5 / 10) / expm1(ln9)) = log2(2 / 8) = -2.0
+        (True, -2.0),
+        # exp before agg: log2(mean(expm1(linear_a)) / mean(expm1(linear_b)))
+        #               = log2(mean([0] * 5 + [8] * 5) / mean([8] * 10)) = log2(4 / 8) = -1.0
+        (False, -1.0),
+    ],
+)
+@pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
+def test_mean_in_log_space(
+    expected_logfc: float,
+    method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
+    *,
+    mean_in_log_space: bool,
+):
+    # group_a: 5 cells with log-space value 0, 5 cells with log(9)
+    # group_b: 10 cells all with log(9)  (used as reference)
+    n_genes = 5
+    group_a = np.zeros((10, n_genes))
+    group_a[5:] = np.log(9)
+    group_b = np.full((10, n_genes), np.log(9))
+    adata = AnnData(
+        X=np.concatenate([group_a, group_b]),
+        obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
+    )
+
+    rank_genes_groups(
+        adata,
+        groupby="bulk_labels",
+        groups=["a"],
+        reference="b",
+        method=method,
+        mean_in_log_space=mean_in_log_space,
+    )
+    logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
+    np.testing.assert_equal(logfcs, expected_logfc)

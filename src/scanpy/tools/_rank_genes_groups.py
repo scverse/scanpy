@@ -202,7 +202,7 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(self) -> None:
+    def _basic_stats(self, *, exponentiate_values: bool = False) -> None:
         """Set self.{means,vars,pts}{,_rest} depending on X."""
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
@@ -218,6 +218,8 @@ class _RankGenes:
         else:
             mask_rest = self.groups_masks_obs[self.ireference]
             x_rest = self.X[mask_rest]
+            if exponentiate_values:
+                x_rest = self.expm1_func(x_rest)
             self.means[self.ireference], self.vars[self.ireference] = mean_var(
                 x_rest, axis=0, correction=1
             )
@@ -231,6 +233,8 @@ class _RankGenes:
 
         for group_index, mask_obs in enumerate(self.groups_masks_obs):
             x_mask = self.X[mask_obs]
+            if exponentiate_values:
+                x_mask = self.expm1_func(x_mask)
 
             if self.comp_pts:
                 self.pts[group_index] = get_nonzeros(x_mask) / x_mask.shape[0]
@@ -245,6 +249,8 @@ class _RankGenes:
             if self.ireference is None:
                 mask_rest = ~mask_obs
                 x_rest = self.X[mask_rest]
+                if exponentiate_values:
+                    x_rest = self.expm1_func(x_rest)
                 (
                     self.means_rest[group_index],
                     self.vars_rest[group_index],
@@ -259,8 +265,6 @@ class _RankGenes:
         self, method: Literal["t-test", "t-test_overestim_var"]
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
-
-        self._basic_stats()
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
             zip(self.groups_masks_obs, self.means, self.vars, strict=True)
@@ -312,8 +316,6 @@ class _RankGenes:
         self, *, tie_correct: bool
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from scipy import stats
-
-        self._basic_stats()
 
         n_genes = self.X.shape[1]
         # First loop: Loop over all genes
@@ -430,12 +432,19 @@ class _RankGenes:
         n_genes_user: int | None = None,
         rankby_abs: bool = False,
         tie_correct: bool = False,
+        mean_in_log_space: bool = True,
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
+            self._basic_stats(exponentiate_values=False)
             generate_test_results = self.t_test(method)
+            if not mean_in_log_space:
+                # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
+                self._basic_stats(exponentiate_values=True)
         elif method == "wilcoxon":
             generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+            # If we're not exponentiating after the mean aggregation, then do it now.
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
@@ -482,9 +491,12 @@ class _RankGenes:
                     mean_rest = self.means_rest[group_index]
                 else:
                     mean_rest = self.means[self.ireference]
-                foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
-                    self.expm1_func(mean_rest) + 1e-9
-                )  # add small value to remove 0's
+                foldchanges = (
+                    (self.expm1_func(mean_group) + 1e-9)
+                    / (self.expm1_func(mean_rest) + 1e-9)
+                    if mean_in_log_space
+                    else (mean_group + 1e-9) / (mean_rest + 1e-9)
+                )  # add small value to avoid zeros
                 self.stats[group_name, "logfoldchanges"] = np.log2(
                     foldchanges[global_indices]
                 )
@@ -512,9 +524,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
+    mean_in_log_space: bool | Default = Default(
+        preset=("rank_genes_groups", "mean_in_log_space")
+    ),
     **kwds,
 ) -> AnnData | None:
-    """Rank genes for characterizing groups.
+    r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -575,6 +590,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         The key in `adata.uns` information is saved to.
     copy
         Whether to copy `adata` or modify it inplace.
+    mean_in_log_space
+        Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
+        or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
+        The former is accurate, while the latter is a faster approximation
+        that underestimates this accurate result in the presence of many outliers.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
@@ -597,7 +617,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
-        Note: this is an approximation calculated from mean-log values.
+        Note: if `mean_in_log_space=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
     `adata.uns['rank_genes_groups' | key_added]['pvals_adj']` : structured :class:`numpy.ndarray` (dtype `float`)
@@ -627,6 +647,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
+    if isinstance(mean_in_log_space, Default):
+        mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
 
