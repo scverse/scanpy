@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Container
 from itertools import chain
 from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Annotated, Literal, Protocol, runtime_checkable
 
-import pydantic_settings
-from pydantic import (
-    AfterValidator,
-    ConfigDict,
-    computed_field,
-    field_validator,
-    model_validator,
-)
+import scverse_misc
+from pydantic import AfterValidator, computed_field, field_validator, model_validator
 
 from .. import logging
 from .._compat import deprecated
@@ -63,9 +58,9 @@ def _is_run_from_ipython() -> bool:
 
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
-class Settings(pydantic_settings.BaseSettings):
-    model_config = ConfigDict(validate_assignment=True)
-
+class Settings(
+    scverse_misc.Settings, exported_object_name="settings", docstring_style="numpy"
+):
     def model_post_init(self, context: object) -> None:
         # logging
         self._root_logger = _RootLogger(logging.WARNING)
@@ -156,7 +151,12 @@ class Settings(pydantic_settings.BaseSettings):
     so make sure to leave this setting as >= `-1`.
     """
 
-    categories_to_ignore: list[str] = ["N/A", "dontknow", "no_gate", "?"]
+    categories_to_ignore: Container[str] = frozenset({
+        "N/A",
+        "dontknow",
+        "no_gate",
+        "?",
+    })
     """Categories that are omitted in plotting etc."""
 
     _frameon: bool
