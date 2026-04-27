@@ -1615,10 +1615,11 @@ def test_no_copy():
     # https://github.com/scverse/scanpy/issues/1000
     # Tests that plotting functions don't make a copy from a view unless they
     # actually have to
+    rng = np.random.default_rng()
     actual = pbmc68k_reduced()
     sc.pl.umap(actual, color=["bulk_labels", "louvain"], show=False)  # Set colors
 
-    view = actual[np.random.choice(actual.obs_names, size=actual.shape[0] // 5), :]
+    view = actual[rng.choice(actual.obs_names, size=actual.shape[0] // 5), :]
 
     sc.pl.umap(view, color=["bulk_labels", "louvain"], show=False)
     assert view.is_view
@@ -1676,18 +1677,18 @@ def test_groupby_index(image_comparer):
     save_and_compare_images("dotplot_groupby_index")
 
 
-# test category order when groupby is a list (#1735)
-def test_groupby_list(image_comparer):
+def test_groupby_list(image_comparer) -> None:
+    """Test category order when groupby is a list.
+
+    See <https://github.com/scverse/scanpy/issues/1735>
+    """
     save_and_compare_images = partial(image_comparer, ROOT, tol=30)
-
+    rng = np.random.default_rng()
     adata = krumsiek11()
-
-    np.random.seed(1)
-
     cat_val = adata.obs.cell_type.tolist()
-    np.random.shuffle(cat_val)
+    rng.shuffle(cat_val)
     cats = adata.obs.cell_type.cat.categories.tolist()
-    np.random.shuffle(cats)
+    rng.shuffle(cats)
     adata.obs["rand_cat"] = pd.Categorical(cat_val, categories=cats)
 
     with mpl.rc_context({"figure.subplot.bottom": 0.5}):
@@ -1698,7 +1699,8 @@ def test_groupby_list(image_comparer):
             swap_axes=True,
             show=False,
         )
-        save_and_compare_images("dotplot_groupby_list_catorder")
+
+    save_and_compare_images("dotplot_groupby_list_catorder")
 
 
 def test_color_cycler(caplog):
@@ -1721,12 +1723,14 @@ def test_color_cycler(caplog):
 
 def test_repeated_colors_w_missing_value():
     # https://github.com/scverse/scanpy/issues/2133
+    rng = np.random.default_rng()
+
     v = pd.Series(np.arange(10).astype(str))
     v[0] = np.nan
     v = v.astype("category")
 
     ad = sc.AnnData(obs=dict(value=v))
-    ad.obsm["X_umap"] = np.random.normal(size=(ad.n_obs, 2))
+    ad.obsm["X_umap"] = rng.standard_normal((ad.n_obs, 2))
 
     sc.pl.umap(ad, color="value", show=False)
 

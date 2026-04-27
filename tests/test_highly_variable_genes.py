@@ -569,8 +569,9 @@ def test_batches() -> None:
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 def test_degenerate_batches():
+    rng = np.random.default_rng()
     adata = AnnData(
-        X=np.random.randn(10, 100),
+        X=rng.standard_normal((10, 100)),
         obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
     )
     sc.pp.highly_variable_genes(adata, batch_key="batch")
@@ -595,7 +596,8 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 
 def test_cellranger_n_top_genes_warning():
-    x = np.random.poisson(2, (100, 30))
+    rng = np.random.default_rng()
+    x = rng.poisson(2, (100, 30))
     adata = AnnData(x)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)

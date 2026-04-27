@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
-from numpy.random import binomial, negative_binomial, seed
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
 from scanpy._compat import CSBase
 from scanpy._utils import select_groups
+from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
 from scanpy.tools._rank_genes_groups import _RankGenes
@@ -40,14 +40,17 @@ DATA_PATH = HERE / "_data"
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-def get_example_data(array_type: Callable[[np.ndarray], Any]) -> AnnData:
+def get_example_data(
+    array_type: Callable[[np.ndarray], Any], *, rng: np.random.Generator | None = None
+) -> AnnData:
+    rng = np.random.default_rng(rng)
     # create test object
     adata = AnnData(
-        np.multiply(binomial(1, 0.15, (100, 20)), negative_binomial(2, 0.25, (100, 20)))
+        rng.binomial(1, 0.15, (100, 20)) * rng.negative_binomial(2, 0.25, (100, 20))
     )
     # adapt marker_genes for cluster (so as to have some form of reasonable input
-    adata.X[0:10, 0:5] = np.multiply(
-        binomial(1, 0.9, (10, 5)), negative_binomial(1, 0.5, (10, 5))
+    adata.X[0:10, 0:5] = rng.binomial(1, 0.9, (10, 5)) * rng.negative_binomial(
+        1, 0.5, (10, 5)
     )
 
     adata.X = array_type(adata.X)
@@ -81,8 +84,7 @@ def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
 def test_results(
     subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
 ) -> None:
-    seed(1234)
-    adata = get_example_data(array_type)
+    adata = get_example_data(array_type, rng=_LegacyRng(1234))
     assert adata.raw is None  # Assumption for later checks
     expected = get_true_scores(method)
     # no clue why we did this: https://github.com/scverse/scanpy/commit/7f10fa3138374bbc664776c6aae1c0e05cf2c5cf
@@ -93,8 +95,10 @@ def test_results(
 
     for g in range(expected["names"].shape[0]):
         with subtests.test(group=g):
-            assert np.allclose(expected["scores"][g, :n], results["scores"][str(g)][:n])
-            assert np.array_equal(
+            np.testing.assert_allclose(
+                expected["scores"][g, :n], results["scores"][str(g)][:n], rtol=1e-5
+            )
+            np.testing.assert_array_equal(
                 expected["names"][g, :n], results["names"][str(g)][:n]
             )
     assert results["params"]["use_raw"] is False
@@ -105,11 +109,10 @@ def test_results(
 def test_results_layers(
     subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
 ) -> None:
-    seed(1234)
-    adata = get_example_data(array_type)
+    adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
     x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
-    mask = np.random.randint(0, 2, adata.shape, dtype=bool)
+    mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
     x[mask] = 0
     adata.X = array_type(x)
     scores = get_true_scores(method)["scores"]
