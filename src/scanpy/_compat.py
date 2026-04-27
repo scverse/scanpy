@@ -5,12 +5,14 @@ import warnings
 from functools import cache, partial
 from importlib.util import find_spec
 from pathlib import Path
+from types import FunctionType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
 from scipy import sparse
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from importlib.metadata import PackageMetadata
 
 
@@ -24,6 +26,7 @@ __all__ = [
     "fullname",
     "pkg_metadata",
     "pkg_version",
+    "set_module",
     "warn",
 ]
 
@@ -48,8 +51,7 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-    DaskArray = type("Array", (), {})
-    DaskArray.__module__ = "dask.array"
+    DaskArray = type("Array", (), dict(__module__="dask.array"))
 
 
 def fullname(typ: type) -> str:
@@ -71,6 +73,14 @@ def pkg_version(package: str) -> Version:
     from importlib.metadata import version
 
     return Version(version(package))
+
+
+def set_module[T: FunctionType | type](module: str) -> Callable[[T], T]:
+    def decorator(obj: T) -> T:
+        obj.__module__ = module
+        return obj
+
+    return decorator
 
 
 # File prefixes for us and decorators we use

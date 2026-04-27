@@ -35,10 +35,8 @@ def test_descend_classes_and_funcs():
     a.b = ModuleType("a.b")
 
     # populate with classes
-    a.A = type("A", (), {})
-    a.A.__module__ = a.__name__
-    a.b.B = type("B", (), {})
-    a.b.B.__module__ = a.b.__name__
+    a.A = type("A", (), dict(__module__=a.__name__))
+    a.b.B = type("B", (), dict(__module__=a.b.__name__))
 
     # create a loop to check if that gets caught
     a.b.a = a

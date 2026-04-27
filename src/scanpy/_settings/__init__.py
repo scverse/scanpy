@@ -11,7 +11,7 @@ import scverse_misc
 from pydantic import AfterValidator, computed_field, field_validator, model_validator
 
 from .. import logging
-from .._compat import deprecated
+from .._compat import deprecated, set_module
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Default, Preset
 from .verbosity import Verbosity
@@ -20,6 +20,7 @@ if sys.version_info >= (3, 14):
     from io import Writer
 else:
 
+    @set_module("io")
     @runtime_checkable
     class Writer[T: str | bytes](Protocol):
         def write(self, data: T, /) -> int: ...
@@ -59,7 +60,7 @@ def _is_run_from_ipython() -> bool:
 
 # `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
 class Settings(
-    scverse_misc.Settings, exported_object_name="settings", docstring_style="numpy"
+    scverse_misc.Settings, exported_object_name="settings", docstring_style="scverse"
 ):
     def model_post_init(self, context: object) -> None:
         # logging
