@@ -56,7 +56,8 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    "matplotlib>=3.9",
+    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.9,!=3.11.0rc1",
     "natsort",
     "networkx>=2.8.8",
     "numba>=0.60",
