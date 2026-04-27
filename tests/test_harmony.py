@@ -198,7 +198,8 @@ def test_harmony_multiple_keys() -> None:
     """Test Harmony with multiple batch keys."""
     adata = pbmc68k_reduced()
     # Create a second batch key
-    adata.obs["batch2"] = np.random.choice(["A", "B", "C"], size=adata.n_obs)
+    rng = np.random.default_rng()
+    adata.obs["batch2"] = rng.choice(["A", "B", "C"], size=adata.n_obs)
 
     harmony_integrate(adata, ["bulk_labels", "batch2"], correction_method="original")
 
