@@ -1292,8 +1292,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
             cmap=matplotlib.colors.ListedColormap(
                 # the following line doesn't work because of normalization
                 # adata.uns['paga_groups_colors'])
-                palette_groups[np.min(groups).astype(int) :],
-                N=int(np.max(groups) + 1 - np.min(groups)),
+                palette_groups[int(np.min(groups)) : int(np.max(groups)) + 1]
             ),
         )
         if show_yticks:
