@@ -4,7 +4,6 @@ import inspect
 import re
 import textwrap
 from collections.abc import Sequence
-from copy import copy
 from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
@@ -168,8 +167,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             raise ValueError(msg)
         else:
             cmap = color_map
-    cmap = copy(colormaps.get_cmap(cmap))
-    cmap.set_bad(na_color)
+    cmap = colormaps.get_cmap(cmap).with_extremes(bad=na_color)
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
