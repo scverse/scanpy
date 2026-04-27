@@ -55,17 +55,24 @@ def pbmc3k_parametrized_small(pbmc3ks_parametrized_session) -> Callable[[], AnnD
     return pbmc3ks_parametrized_session[True].copy
 
 
-def random_csr(m: int, n: int) -> CSRBase:
-    return sparse.random(m, n, format="csr")
+def random_csr(rng: np.random.Generator, size: tuple[int, int]) -> CSRBase:
+    m, n = size
+    return sparse.random(m, n, format="csr", random_state=rng)
 
 
-@pytest.fixture(params=[np.random.randn, random_csr], ids=["sparse", "dense"])
+@pytest.fixture(
+    params=[np.random.Generator.standard_normal, random_csr], ids=["sparse", "dense"]
+)
 def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
-    rand_func = cast("Callable[[int, int], np.ndarray | CSRBase]", request.param)
-    x = rand_func(200, 10).astype(np.float32)
-    cat = np.random.randint(0, 3, (x.shape[0],)).ravel()
+    rng = np.random.default_rng()
+    rand_func = cast(
+        "Callable[[np.random.Generator, tuple[int, int]], np.ndarray | CSRBase]",
+        request.param,
+    )
+    x = rand_func(rng, (200, 10)).astype(np.float32)
+    cat = rng.integers(0, 3, (x.shape[0],)).ravel()
     adata = AnnData(x, obs={"cat": cat})
-    adata.obs["percent_mito"] = np.random.rand(x.shape[0])
+    adata.obs["percent_mito"] = rng.random(x.shape[0])
     adata.obs["n_counts"] = x.sum(axis=1)
     adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.layers["X_copy"] = adata.X[...]
@@ -102,8 +109,8 @@ def _prepare_pbmc_testdata(
     if small:
         adata = adata[:1000, :500].copy()
         sc.pp.filter_cells(adata, min_genes=1)
-    np.random.seed(42)
-    adata.obs["batch"] = np.random.randint(0, 3, size=adata.shape[0])
+    rng = np.random.default_rng()
+    adata.obs["batch"] = rng.integers(0, 3, size=adata.shape[0])
     sc.pp.filter_genes(adata, min_cells=1)
     adata.X = sparsity_func(adata.X.astype(dtype))
     return adata

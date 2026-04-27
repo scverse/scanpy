@@ -11,12 +11,11 @@ import pandas as pd
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
 
-from scanpy.get import obs_df
-
 from ... import logging as logg
 from ..._settings import Default, settings
 from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
-from ...get import rank_genes_groups_df
+from ..._utils.random import _LegacyRng
+from ...get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
     doc_cm_palette,
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
+    from ..._utils.random import RNGLike, SeedLike
     from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
@@ -1312,6 +1312,7 @@ def sim(
     shuffle: bool = False,
     show: bool | None = None,
     marker: str | Sequence[str] = ".",
+    rng: SeedLike | RNGLike | None | Default = Default("0 (legacy)"),
     # deprecated
     save: bool | str | None = None,
 ) -> None:
@@ -1364,8 +1365,12 @@ def sim(
         )
         savefig_or_show("sim", save=save, show=show)
     else:  # shuffle data
-        np.random.seed(1)
-        rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
+        rng = (
+            _LegacyRng.wrap_global(1)
+            if isinstance(rng, Default)
+            else np.random.default_rng(rng)
+        )
+        rows = rng.choice(adata.shape[0], size=adata.shape[0], replace=False)
         x = adata[rows].X
         timeseries(
             x,
@@ -1554,8 +1559,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     color_map.set_under("lightgray")
     # a name to store the density values is needed. To avoid
     # overwriting a user name a new random name is created
+    rng = np.random.default_rng()
     while True:
-        col_id = np.random.randint(1000, 10000)
+        col_id = rng.integers(1000, 10000)
         density_col_name = f"_tmp_embedding_density_column_{col_id}_"
         if density_col_name not in adata.obs.columns:
             break

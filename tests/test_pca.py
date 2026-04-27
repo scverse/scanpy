@@ -283,11 +283,13 @@ def test_pca_shapes():
 
     See <https://github.com/scverse/scanpy/issues/1051>
     """
-    adata = AnnData(np.random.randn(30, 20))
+    rng = np.random.default_rng()
+
+    adata = AnnData(rng.standard_normal((30, 20)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
 
-    adata = AnnData(np.random.randn(20, 30))
+    adata = AnnData(rng.standard_normal((20, 30)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (20, 19)
 
@@ -438,8 +440,9 @@ def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None
 
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
-    adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask_var = _helpers.random_mask(adata_base.shape[1])
+    rng = np.random.default_rng()
+    adata_base = AnnData(array_type(rng.random((100, 10))).astype(float_dtype))
+    mask_var = _helpers.random_mask(adata_base.shape[1], rng=rng)
 
     adata = adata_base.copy()
     sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)
