@@ -1013,7 +1013,7 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
-    FutureWarning: Use `squidpy.datasets.visium` instead.
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")

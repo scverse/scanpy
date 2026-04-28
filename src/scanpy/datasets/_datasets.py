@@ -539,7 +539,7 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
-    FutureWarning: Use `squidpy.datasets.visium` instead.
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
         ...
