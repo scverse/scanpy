@@ -15,9 +15,9 @@ from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
-from ..._compat import deprecated
 from ..._settings import Default, settings
 from ..._utils import _doc_params, sanitize_anndata
 from ..._utils._doctests import doctest_internet
@@ -944,7 +944,7 @@ def pca(
     return axs
 
 
-@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.pl.spatial_scatter` instead."))
 @doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
@@ -973,9 +973,6 @@ def spatial(  # noqa: PLR0913
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in spatial coordinates.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background

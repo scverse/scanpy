@@ -5,7 +5,7 @@ from enum import EnumMeta, IntEnum
 from logging import getLevelNamesMapping
 from typing import TYPE_CHECKING
 
-from .._compat import deprecated
+from scverse_misc import Deprecation, deprecated
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -67,6 +67,9 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         m = getLevelNamesMapping()
         return m[_VERBOSITY_TO_LOGLEVEL[self.name]]
 
+    @deprecated(
+        Deprecation("1.13.0", "Use `scanpy.settings.override(verbosity=...)` instead")
+    )
     @contextmanager
     def override(
         self, verbosity: Verbosity | _VerbosityName | int
