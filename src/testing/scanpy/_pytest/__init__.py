@@ -39,7 +39,10 @@ def original_settings(
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
-        _original_settings = MappingProxyType(sc.settings.__dict__.copy())
+        _original_settings = MappingProxyType({
+            **sc.settings.__dict__,
+            "logpath": sc.settings.logpath,
+        })
 
     setup()
     if pkg_version("anndata") >= Version("0.12"):
