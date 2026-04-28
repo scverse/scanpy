@@ -429,11 +429,11 @@ class _RankGenes:
         self,
         method: DETest,
         *,
-        corr_method: _CorrMethod = "benjamini-hochberg",
-        n_genes_user: int | None = None,
-        rankby_abs: bool = False,
-        tie_correct: bool = False,
-        mean_in_log_space: bool = True,
+        corr_method: _CorrMethod,
+        n_genes_user: int | None,
+        rankby_abs: bool,
+        tie_correct: bool,
+        mean_in_log_space: bool,
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
@@ -793,6 +793,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             n_genes_user=n_genes_user,
             rankby_abs=rankby_abs,
             tie_correct=tie_correct,
+            mean_in_log_space=mean_in_log_space,
             **kwds,
         )
 
