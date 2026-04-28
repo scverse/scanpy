@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
+from .._compat import set_module
 from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -147,6 +148,7 @@ def preset_property[NT: NamedTuple](
     return prop
 
 
+@set_module("scanpy")
 class Preset(enum.StrEnum):
     """Presets for :attr:`scanpy.settings.preset`.
 

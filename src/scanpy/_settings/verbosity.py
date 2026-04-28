@@ -5,7 +5,7 @@ from enum import EnumMeta, IntEnum
 from logging import getLevelNamesMapping
 from typing import TYPE_CHECKING
 
-from .._compat import deprecated
+from .._compat import deprecated, set_module
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -34,6 +34,7 @@ class VerbosityMeta(EnumMeta):
         return Verbosity.warning
 
 
+@set_module("scanpy")
 class Verbosity(IntEnum, metaclass=VerbosityMeta):
     """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
 
