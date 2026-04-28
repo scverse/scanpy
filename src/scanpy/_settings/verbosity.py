@@ -29,7 +29,7 @@ _VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values(
 
 class VerbosityMeta(EnumMeta):
     @property
-    @deprecated(Deprecation("1.13.0", "Use `Verbosity.warning` instead"))
+    @deprecated(Deprecation("1.11.3", "Use :attr:`~scanpy.Verbosity.warning` instead"))
     def warn(cls) -> Verbosity:
         return Verbosity.warning
 
