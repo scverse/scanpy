@@ -428,11 +428,11 @@ class _RankGenes:
         self,
         method: DETest,
         *,
-        corr_method: _CorrMethod = "benjamini-hochberg",
-        n_genes_user: int | None = None,
-        rankby_abs: bool = False,
-        tie_correct: bool = False,
-        mean_in_log_space: bool = True,
+        corr_method: _CorrMethod,
+        n_genes_user: int | None,
+        rankby_abs: bool,
+        tie_correct: bool,
+        mean_in_log_space: bool,
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:

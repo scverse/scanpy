@@ -253,7 +253,14 @@ def test_wilcoxon_tie_correction(*, reference: bool) -> None:
     pvals[np.isnan(pvals)] = 1.0
 
     test_obj = _RankGenes(pbmc, groups, groupby, reference=ref)
-    test_obj.compute_statistics("wilcoxon", tie_correct=True)
+    test_obj.compute_statistics(
+        "wilcoxon",
+        tie_correct=True,
+        corr_method="benjamini-hochberg",
+        n_genes_user=None,
+        rankby_abs=False,
+        mean_in_log_space=True,
+    )
 
     np.testing.assert_allclose(test_obj.stats[groups[0]]["pvals"], pvals, atol=1e-5)
 
