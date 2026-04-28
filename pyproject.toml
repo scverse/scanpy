@@ -56,7 +56,8 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    "matplotlib>=3.9",
+    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.9,!=3.11.0rc1",
     "natsort",
     "networkx>=2.8.8",
     "numba>=0.60",
@@ -117,7 +118,7 @@ test = [
 ]
 doc = [
     "ipython>=7.20",                        # for nbsphinx code highlighting
-    "myst-nb>=1",
+    "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
     "numpy>=2.4",                           # type aliases
@@ -168,6 +169,8 @@ lint.select = [
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
     "N",      # Naming conventions
+    "NPY",    # Numpy-specific rules
+    "PD",     # Pandas
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint
@@ -260,8 +263,11 @@ filterwarnings = [
     "error",
     # Umap warns when tensorflow isn’t installed.
     "ignore::ImportWarning:umap",
+    # matplotlib<3.10.7 uses old pyparsing APIs
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
     # seaborn≤0.13.2 causes some matplotlib warnings
     "ignore::PendingDeprecationWarning:seaborn",
+    "ignore:vert.*bool was deprecated:matplotlib.MatplotlibDeprecationWarning:seaborn",
     # matplotlib<3.10.4 causes a Pillow warning
     "ignore:.*Pillow:DeprecationWarning",
     # networkx 2.x warns about scipy.sparse changes
@@ -274,9 +280,7 @@ filterwarnings = [
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                       # we should set init=obsm["X_pca"] or so
-    # matplotlib <3.11 uses old pyparsing APIs
-    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",                                    # we should set init=obsm["X_pca"] or so
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …

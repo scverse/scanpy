@@ -4,7 +4,6 @@ import inspect
 import re
 import textwrap
 from collections.abc import Sequence
-from copy import copy
 from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
@@ -168,8 +167,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             raise ValueError(msg)
         else:
             cmap = color_map
-    cmap = copy(colormaps.get_cmap(cmap))
-    cmap.set_bad(na_color)
+    cmap = colormaps.get_cmap(cmap).with_extremes(bad=na_color)
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -293,7 +291,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             order = np.argsort(-color_vector, kind="stable")[::-1]
         elif sort_order and color_type == "cat":
             # Null points go on bottom
-            order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
+            order = np.argsort(~pd.isna(color_source_vector), kind="stable")
         # Set orders — use a local to avoid cumulative reordering across
         # subplots when multiple color keys are given.
         _size = np.array(size)[order] if isinstance(size, np.ndarray) else size
@@ -1130,7 +1128,7 @@ def _add_categorical_legend(  # noqa: PLR0913
     scatter_array=None,
 ):
     """Add a legend to the passed Axes."""
-    if na_in_legend and pd.isnull(color_source_vector).any():
+    if na_in_legend and pd.isna(color_source_vector).any():
         if "NA" in color_source_vector:
             msg = "No fallback for null labels has been defined if NA already in categories."
             raise NotImplementedError(msg)

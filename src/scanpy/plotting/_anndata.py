@@ -460,9 +460,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     raise ValueError(msg)
                 else:
-                    iname = np.flatnonzero(
-                        adata.obs[key].cat.categories.values == name
-                    )[0]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories == name)[0]
                     mask = scatter_group(
                         axs[ikey],
                         key,
@@ -1992,7 +1990,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     if groupby_index is not None:
         # reset index to treat all columns the same way.
-        obs_tidy.reset_index(inplace=True)
+        obs_tidy = obs_tidy.reset_index()
         groupby.append(groupby_index)
 
     if groupby is None:

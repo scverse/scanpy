@@ -452,7 +452,7 @@ def _postprocess_dispersions_seurat(
     # retrieve those genes that have nan std, these are the ones where
     # only a single gene fell in the bin and implicitly set them to have
     # a normalized disperion of 1
-    one_gene_per_bin = disp_bin_stats["dev"].isnull()
+    one_gene_per_bin = disp_bin_stats["dev"].isna()
     gen_indices = np.flatnonzero(one_gene_per_bin.loc[mean_bin])
     if len(gen_indices) == 0:
         return
@@ -577,11 +577,10 @@ def _highly_variable_genes_batched(
         # break ties with normalized dispersion across batches
 
         df_orig_ind = adata.var.index.copy()
-        df.sort_values(
+        df = df.sort_values(
             ["highly_variable_nbatches", "dispersions_norm"],
             ascending=False,
             na_position="last",
-            inplace=True,
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
         df = df.loc[df_orig_ind]

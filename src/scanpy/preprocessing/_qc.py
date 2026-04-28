@@ -111,7 +111,7 @@ def describe_obs(  # noqa: PLR0913
             )
     for qc_var in qc_vars:
         obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
-            x[:, adata.var[qc_var].values], axis=1
+            x[:, adata.var[qc_var].to_numpy()], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(

@@ -19,6 +19,7 @@ from packaging.version import Version
 from . import logging as logg
 from ._compat import deprecated, pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
+from ._utils.random import _LegacyRng
 
 if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -223,7 +224,7 @@ def read_10x_h5(
                 )
             adata = _read_10x_h5(path, _read_v3_10x_h5)
         if genome:
-            if genome not in adata.var["genome"].values:
+            if genome not in adata.var["genome"].array:
                 msg = (
                     f"Could not find data corresponding to genome {genome!r} in {path}. "
                     f"Available genomes are: {list(adata.var['genome'].unique())}."
@@ -506,10 +507,8 @@ def read_visium(
         adata.obsm["spatial"] = adata.obs[
             ["pxl_row_in_fullres", "pxl_col_in_fullres"]
         ].to_numpy()
-        adata.obs.drop(
-            columns=["pxl_row_in_fullres", "pxl_col_in_fullres"],
-            inplace=True,
-        )
+        del adata.obs["pxl_row_in_fullres"]
+        del adata.obs["pxl_col_in_fullres"]
 
         # put image path in uns
         if source_image_path is not None:
@@ -817,7 +816,11 @@ def write_params(path: PathLike[str] | str, *args, **maps):
             if header is not None:
                 f.write(f"[{header}]\n")
             for key, val in map.items():
-                f.write(f"{key} = {val}\n")
+                if key == "rng":
+                    if isinstance(val, _LegacyRng) and val.arg is not None:
+                        f.write(f"seed = {val.arg}\n")
+                else:
+                    f.write(f"{key} = {val}\n")
 
 
 # -------------------------------------------------------------------------------

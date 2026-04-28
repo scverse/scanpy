@@ -10,14 +10,13 @@ import scanpy.external as sce
 
 
 def test_cell_demultiplexing():
-    import random
-
     from scipy import stats
 
-    random.seed(52)
-    signal = stats.poisson.rvs(1000, 1, 990)
-    doublet_signal = stats.poisson.rvs(1000, 1, 10)
-    x = np.reshape(stats.poisson.rvs(500, 1, 10000), (1000, 10))
+    rng = np.random.default_rng()
+
+    signal = stats.poisson.rvs(1000, 1, 990, random_state=rng)
+    doublet_signal = stats.poisson.rvs(1000, 1, 10, random_state=rng)
+    x = np.reshape(stats.poisson.rvs(500, 1, 10000, random_state=rng), (1000, 10))
     for idx, signal_count in enumerate(signal):
         col_pos = idx % 10
         x[idx, col_pos] = signal_count
@@ -28,9 +27,7 @@ def test_cell_demultiplexing():
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
-        test_data = AnnData(
-            np.random.randint(0, 100, size=x.shape), obs=pd.DataFrame(x)
-        )
+        test_data = AnnData(rng.integers(0, 100, size=x.shape), obs=pd.DataFrame(x))
     sce.pp.hashsolo(test_data, test_data.obs.columns)
 
     doublets = ["Doublet"] * 10
