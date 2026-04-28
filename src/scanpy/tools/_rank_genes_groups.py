@@ -738,6 +738,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             n_genes_user=n_genes_user,
             rankby_abs=rankby_abs,
             tie_correct=tie_correct,
+            mean_in_log_space=mean_in_log_space,
             **kwds,
         )
 
