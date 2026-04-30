@@ -87,10 +87,7 @@ class Settings(
     """The open file to write logs to.
 
     Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
-    The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
-    and to :obj:`sys.stderr` otherwise.
-
-    For backwards compatibility, setting it to `''` behaves like setting it to `None`.
+    By default uses :obj:`sys.stdout` in jupyter notebooks and :obj:`sys.stderr` otherwise.
     """
 
     # rest
@@ -143,12 +140,15 @@ class Settings(
     Is currently not well respected…
     """
 
-    n_jobs: int = 1
+    n_jobs: int = 4
     """Default number of jobs/ CPUs to use for parallel computing.
 
     Set to `-1` in order to use all available cores.
     Not all algorithms support special behavior for numbers < `-1`,
     so make sure to leave this setting as >= `-1`.
+
+    .. version-changed:: 1.13.0
+        The default changed from `1` to `4`.
     """
 
     categories_to_ignore: Container[str] = frozenset({
