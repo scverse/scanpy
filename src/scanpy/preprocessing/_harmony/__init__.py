@@ -35,7 +35,7 @@ def harmony_integrate(  # noqa: PLR0913
     ridge_lambda: float = 1.0,
     alpha: float = 0.2,
     batch_prune_threshold: float | None = 1e-5,
-    correction_method: Literal["fast", "original"] = "original",
+    correction_method: Literal["fast", "original"] = "fast",
     block_proportion: float = 0.05,
     rng: SeedLike | RNGLike | None = None,
 ) -> None:
