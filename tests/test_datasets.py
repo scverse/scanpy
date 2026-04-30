@@ -111,7 +111,7 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets():
     """Tests that reading/ downloading works and is does not have global effects."""
@@ -122,7 +122,7 @@ def test_visium_datasets():
     assert_adata_equal(hheart, hheart_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_dir_change(tmp_path: Path):
     """Test that changing the dataset dir doesn't break reading."""
@@ -134,7 +134,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     assert_adata_equal(mbrain, mbrain_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
