@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Annotated, Literal, Protocol, runtime_checkabl
 import scverse_misc
 from pydantic import AfterValidator, computed_field, field_validator, model_validator
 
-from .. import logging
 from .._compat import deprecated, set_module
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Default, Preset
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Self, TextIO
 
-    from pydantic import ModelWrapValidatorHandler
+    from pydantic import ValidationInfo
 
     from .verbosity import _VerbosityName
 
@@ -64,7 +63,7 @@ class Settings(
 ):
     def model_post_init(self, context: object) -> None:
         # logging
-        self._root_logger = _RootLogger(logging.WARNING)
+        self._root_logger = _RootLogger(self.verbosity.level)
         _set_log_level(self)
         _set_log_file(self)
 
@@ -206,26 +205,14 @@ class Settings(
             )
             raise ValueError(msg) from None
 
-    @model_validator(mode="wrap")
-    @classmethod
-    def _set_verbosity(
-        cls, data: object, handler: ModelWrapValidatorHandler[Self]
-    ) -> Self:
+    @model_validator(mode="after")
+    def _logging_side_effects(self, info: ValidationInfo) -> Self:
         """Side effect of setting the verbosity."""
-        self = handler(data)
-        if isinstance(data, dict) and "verbosity" in data:
-            _set_log_level(self)
-        return self
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def _set_log_file(
-        cls, data: object, handler: ModelWrapValidatorHandler[Self]
-    ) -> Self:
-        """Side effect of setting the logfile."""
-        self = handler(data)
-        if isinstance(data, dict) and "logfile" in data:
-            _set_log_file(self)
+        match info.field_name:
+            case "verbosity":
+                _set_log_level(self)
+            case "logfile":
+                _set_log_file(self)
         return self
 
     # --------------------------------------------------------------------------------

@@ -68,6 +68,7 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
         m = getLevelNamesMapping()
         return m[_VERBOSITY_TO_LOGLEVEL[self.name]]
 
+    @deprecated("Use `scanpy.settings.override(verbosity=...)` instead")
     @contextmanager
     def override(
         self, verbosity: Verbosity | _VerbosityName | int
