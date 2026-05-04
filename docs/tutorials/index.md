@@ -23,7 +23,7 @@ plotting/index
 ## Trajectory inference
 
 ```{seealso}
-For more powerful tools for analysing single cell dynamics, check out the sScverse ecosystem packages:
+For more powerful tools for analysing single cell dynamics, check out the scverse ecosystem packages:
 
 * [CellRank](https://cellrank.readthedocs.io)
 * [Dynamo](https://dynamo-release.readthedocs.io/en/latest/)
