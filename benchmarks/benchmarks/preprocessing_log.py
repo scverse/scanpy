@@ -83,9 +83,14 @@ class HVGSuite:  # noqa: D101
         flavor: Literal["seurat_v3", "cell_ranger", "seurat"],
         use_dask: bool,  # noqa: FBT001
     ) -> None:
-        self.adata = ad.read_h5ad(
-            "lung93k_shuffled.h5ad" if use_dask else "lung93k.h5ad"
-        )
+        if use_dask:
+            self.adata = ad.experimental.read_lazy("lung93k_shuffled.h5ad")
+            self.adata.obs = self.adata.obs.to_memory()
+            self.adata.var = self.adata.var.to_memory()
+        else:
+            self.adata = ad.read_h5ad(
+                "lung93k_shuffled.h5ad" if use_dask else "lung93k.h5ad"
+            )
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 
