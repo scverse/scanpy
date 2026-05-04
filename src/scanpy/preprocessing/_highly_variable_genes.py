@@ -174,7 +174,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     if can_aggregate := (inplace or not adata.is_view):
         adata.obs["__hvg_v3_batch_info__"] = batch_info
         aggregated_mean_var = aggregate(
-            adata, by="__hvg_v3_batch_info__", func=["mean", "var"]
+            adata, by="__hvg_v3_batch_info__", func=["mean", "var"], layer=layer
         )
         mean_global, var_global = (
             aggregated_mean_var.layers[l] for l in ["mean", "var"]
