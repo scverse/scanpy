@@ -171,41 +171,38 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     )
     norm_gene_vars = []
 
-    if can_aggregate := (inplace or not adata.is_view):
-        adata.obs["__hvg_v3_batch_info__"] = batch_info
-        aggregated_mean_var = aggregate(
-            adata, by="__hvg_v3_batch_info__", func=["mean", "var"], layer=layer
-        )
-        mean_global, var_global = (
-            aggregated_mean_var.layers[l] for l in ["mean", "var"]
-        )
-        if isinstance(mean_global, DaskArray):
-            import dask.array as da
+    adata_agg = AnnData(
+        X=data,
+        var=pd.DataFrame(index=adata.var_names),
+        obs=pd.DataFrame(
+            index=adata.obs_names, data={"__hvg_v3_batch_info__": batch_info}
+        ),
+    )
+    aggregated_mean_var = aggregate(
+        adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"], layer=layer
+    )
+    mean_global, var_global = (aggregated_mean_var.layers[l] for l in ["mean", "var"])
+    if isinstance(mean_global, DaskArray):
+        import dask.array as da
 
-            mean_global, var_global = da.compute(mean_global, var_global)
-            aggregated_mean_var.layers["mean"] = mean_global
-            aggregated_mean_var.layers["var"] = var_global
+        mean_global, var_global = da.compute(mean_global, var_global)
+        aggregated_mean_var.layers["mean"] = mean_global
+        aggregated_mean_var.layers["var"] = var_global
     batch_info = batch_info.to_numpy()
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
-        if can_aggregate:
-            mean, var = (
-                aggregated_mean_var[
-                    aggregated_mean_var.obs["__hvg_v3_batch_info__"] == b
-                ].layers[l]
-                for l in ["mean", "var"]
-            )
-            if isinstance(mean, CSBase):
-                mean = mean.toarray()
-            mean = mean.ravel()
-            if isinstance(var, CSBase):
-                var = var.toarray()
-            var = var.ravel()
-        else:
-            mean, var = stats.mean_var(data_batch, axis=0, correction=1)
-            # These get computed anyway for loess
-            if isinstance(mean, DaskArray):
-                mean, var = mean.compute(), var.compute()
+        mean, var = (
+            aggregated_mean_var[
+                aggregated_mean_var.obs["__hvg_v3_batch_info__"] == b
+            ].layers[l]
+            for l in ["mean", "var"]
+        )
+        if isinstance(mean, CSBase):
+            mean = mean.toarray()
+        mean = mean.ravel()
+        if isinstance(var, CSBase):
+            var = var.toarray()
+        var = var.ravel()
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
         if (not_const := var > 0).any():
             y = np.log10(var[not_const])
@@ -228,8 +225,6 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             - 2 * batch_counts_sum * mean
         )
         norm_gene_vars.append(norm_gene_var)
-    if can_aggregate:
-        del adata.obs["__hvg_v3_batch_info__"]
     if any(isinstance(e, DaskArray) for e in norm_gene_vars):
         import dask.array as da
 
