@@ -95,9 +95,7 @@ class HVGSuite:  # noqa: D101
                 X=ad.experimental.read_elem_lazy(z["X"]),
             )
         else:
-            self.adata = ad.read_zarr(
-                "lung93k_shuffled.zarr" if use_dask else "lung93k.zarr"
-            )
+            self.adata = ad.read_zarr("lung93k.zarr")
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 

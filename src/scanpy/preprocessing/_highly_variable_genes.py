@@ -179,7 +179,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         ),
     )
     aggregated_mean_var = aggregate(
-        adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"], layer=layer
+        adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
     )
     mean_global, var_global = (aggregated_mean_var.layers[l] for l in ["mean", "var"])
     if isinstance(mean_global, DaskArray):
