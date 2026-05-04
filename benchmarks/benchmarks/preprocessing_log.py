@@ -9,12 +9,15 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
+import numpy as np
 
 import scanpy as sc
 
 from ._utils import get_dataset, param_skipper
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from ._utils import Dataset, KeyX
 
 
@@ -64,16 +67,25 @@ class PreprocessingSuite:  # noqa: D101
 
 
 class HVGSuite:  # noqa: D101
-    params = (["seurat_v3", "cell_ranger", "seurat"],)
-    param_names = ("flavor",)
+    params = (["seurat_v3", "cell_ranger", "seurat"], [True, False])
+    param_names = ("flavor", "use_dask")
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
         adata.write_h5ad("lung93k.h5ad")
+        obs = np.arange(adata.shape[0])
+        np.random.default_rng().shuffle(obs)
+        adata[obs].write_h5ad("lung93k_shuffled.h5ad")
 
-    def setup(self, flavor) -> None:
-        self.adata = ad.read_h5ad("lung93k.h5ad")
+    def setup(
+        self,
+        flavor: Literal["seurat_v3", "cell_ranger", "seurat"],
+        use_dask: bool,  # noqa: FBT001
+    ) -> None:
+        self.adata = ad.read_h5ad(
+            "lung93k_shuffled.h5ad" if use_dask else "lung93k.h5ad"
+        )
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 
