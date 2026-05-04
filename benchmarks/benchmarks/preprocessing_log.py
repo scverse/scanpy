@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import anndata as ad
 import numpy as np
+import zarr
 
 import scanpy as sc
 
@@ -73,10 +74,10 @@ class HVGSuite:  # noqa: D101
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
-        adata.write_h5ad("lung93k.h5ad")
+        adata.write_zarr("lung93k.zarr")
         obs = np.arange(adata.shape[0])
         np.random.default_rng().shuffle(obs)
-        adata[obs].write_h5ad("lung93k_shuffled.h5ad")
+        adata[obs].write_zarr("lung93k_shuffled.zarr")
 
     def setup(
         self,
@@ -84,12 +85,18 @@ class HVGSuite:  # noqa: D101
         use_dask: bool,  # noqa: FBT001
     ) -> None:
         if use_dask:
-            self.adata = ad.experimental.read_lazy("lung93k_shuffled.h5ad")
-            self.adata.obs = self.adata.obs.to_memory()
-            self.adata.var = self.adata.var.to_memory()
+            z = zarr.open("lung93k_shuffled.zarr")
+            self.adata = ad.AnnData(
+                obs=ad.io.read_elem(z["obs"]),
+                var=ad.io.read_elem(z["var"]),
+                layers={
+                    "counts": ad.experimental.read_elem_lazy(z["layers"]["counts"])
+                },
+                X=ad.experimental.read_elem_lazy(z["X"]),
+            )
         else:
-            self.adata = ad.read_h5ad(
-                "lung93k_shuffled.h5ad" if use_dask else "lung93k.h5ad"
+            self.adata = ad.read_zarr(
+                "lung93k_shuffled.zarr" if use_dask else "lung93k.zarr"
             )
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
