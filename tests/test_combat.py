@@ -29,15 +29,15 @@ def test_norm():
 
 
 def test_covariates():
+    rng = np.random.default_rng()
     adata = sc.datasets.blobs()
     key = "blobs"
 
     x1 = sc.pp.combat(adata, key=key, inplace=False)
 
-    np.random.seed(0)
-    adata.obs["cat1"] = np.random.binomial(3, 0.5, size=(adata.n_obs))
-    adata.obs["cat2"] = np.random.binomial(2, 0.1, size=(adata.n_obs))
-    adata.obs["num1"] = np.random.normal(size=(adata.n_obs))
+    adata.obs["cat1"] = rng.binomial(3, 0.5, size=adata.n_obs)
+    adata.obs["cat2"] = rng.binomial(2, 0.1, size=adata.n_obs)
+    adata.obs["num1"] = rng.standard_normal(adata.n_obs)
 
     x2 = sc.pp.combat(
         adata, key=key, covariates=["cat1", "cat2", "num1"], inplace=False
@@ -54,10 +54,11 @@ def test_covariates():
 
 
 def test_combat_obs_names():
-    # Test for fix to #1170
-    x = np.random.random((200, 100))
+    """Regression test for <https://github.com/scverse/scanpy/issues/1170>."""
+    rng = np.random.default_rng()
+    x = rng.random((200, 100))
     obs = pd.DataFrame(
-        {"batch": pd.Categorical(np.random.randint(0, 2, 200))},
+        {"batch": pd.Categorical(rng.integers(0, 2, (200,)))},
         index=np.repeat(np.arange(100), 2).astype(str),  # Non-unique index
     )
     with pytest.warns(UserWarning, match="Observation names are not unique"):

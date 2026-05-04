@@ -49,9 +49,10 @@ def test_validate_palette_no_mod(palette, typ):
 )
 def test_check_all_in_axis(
     *, axis_name: Literal["obs", "var"], args: dict[str, Any], expected: bool
-):
+) -> None:
+    rng = np.random.default_rng()
     raw = AnnData(
-        np.random.randn(10, 20),
+        rng.standard_normal((10, 20)),
         dict(obs_a=range(10), obs_names=list(ascii_lowercase[:10])),
         dict(var_a=range(20), var_names=list(ascii_uppercase[:20])),
     )

@@ -11,12 +11,11 @@ import pandas as pd
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
 
-from scanpy.get import obs_df
-
 from ... import logging as logg
 from ..._settings import Default, settings
 from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
-from ...get import rank_genes_groups_df
+from ..._utils.random import _LegacyRng
+from ...get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
     doc_cm_palette,
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
+    from ..._utils.random import RNGLike, SeedLike
     from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
@@ -202,6 +202,24 @@ def pca_variance_ratio(
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 
+    Examples
+    --------
+    Plot the variance ratio for the first 30 PCs.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_variance_ratio(adata)
+
+    Plot on a logarithmic scale.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.pca_variance_ratio(adata, log=True)
+
     """
     ranking(
         adata,
@@ -248,7 +266,7 @@ def dpt_timeseries(
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
         timeseries_as_heatmap(
-            adata.X[adata.obs["dpt_order_indices"].values],
+            adata.X[adata.obs["dpt_order_indices"].to_numpy()],
             var_names=adata.var_names,
             highlights_x=adata.uns["dpt_changepoints"],
             color_map=color_map,
@@ -256,7 +274,7 @@ def dpt_timeseries(
     else:
         # plot time series as gene expression vs time
         timeseries(
-            adata.X[adata.obs["dpt_order_indices"].values],
+            adata.X[adata.obs["dpt_order_indices"].to_numpy()],
             var_names=adata.var_names,
             highlights_x=adata.uns["dpt_changepoints"],
             xlim=[0, 1.3 * adata.X.shape[0]],
@@ -569,7 +587,7 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
             if gene_symbols is not None:
                 df["names"] = df[gene_symbols]
 
-            genes_list = df.names[df.names.notnull()].tolist()
+            genes_list = df.names[df.names.notna()].tolist()
 
             if len(genes_list) == 0:
                 logg.warning(f"No genes found for group {group}")
@@ -985,13 +1003,15 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(adata, "bulk_labels")
+    Plot top marker genes per group as a stacked violin.
 
-    >>> sc.pl.rank_genes_groups_stacked_violin(
-    ...     adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6)
-    ... )
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, "bulk_labels")
+        sc.pl.rank_genes_groups_stacked_violin(adata, n_genes=4, min_logfoldchange=4, figsize=(8, 6))
 
     """
     return _rank_genes_groups_plot(
@@ -1196,6 +1216,18 @@ def rank_genes_groups_violin(  # noqa: PLR0913
         Size of the jitter points.
     {show_save_ax}
 
+    Examples
+    --------
+    Plot violin distributions of top-ranked genes per group.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.rank_genes_groups(adata, "bulk_labels")
+        sc.pl.rank_genes_groups_violin(adata, groups=["CD34+"], n_genes=5)
+
     """
     if key is None:
         key = "rank_genes_groups"
@@ -1280,6 +1312,7 @@ def sim(
     shuffle: bool = False,
     show: bool | None = None,
     marker: str | Sequence[str] = ".",
+    rng: SeedLike | RNGLike | None | Default = Default("0 (legacy)"),
     # deprecated
     save: bool | str | None = None,
 ) -> None:
@@ -1332,8 +1365,12 @@ def sim(
         )
         savefig_or_show("sim", save=save, show=show)
     else:  # shuffle data
-        np.random.seed(1)
-        rows = np.random.choice(adata.shape[0], size=adata.shape[0], replace=False)
+        rng = (
+            _LegacyRng.wrap_global(1)
+            if isinstance(rng, Default)
+            else np.random.default_rng(rng)
+        )
+        rows = rng.choice(adata.shape[0], size=adata.shape[0], replace=False)
         x = adata[rows].X
         timeseries(
             x,
@@ -1522,8 +1559,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     color_map.set_under("lightgray")
     # a name to store the density values is needed. To avoid
     # overwriting a user name a new random name is created
+    rng = np.random.default_rng()
     while True:
-        col_id = np.random.randint(1000, 10000)
+        col_id = rng.integers(1000, 10000)
         density_col_name = f"_tmp_embedding_density_column_{col_id}_"
         if density_col_name not in adata.obs.columns:
             break
@@ -1708,7 +1746,7 @@ def _get_values_to_plot(
             column = values_to_plot.replace("log10_", "")
         else:
             column = values_to_plot
-        values_df = pd.pivot(
+        values_df = pd.pivot_table(
             values_df, index="names", columns="group", values=column
         ).fillna(1)
 

@@ -93,8 +93,9 @@ def test_krumsiek11():
 
 
 def test_blobs():
-    n_obs = np.random.randint(15, 30)
-    n_var = np.random.randint(500, 600)
+    rng = np.random.default_rng()
+    n_obs = rng.integers(15, 30)
+    n_var = rng.integers(500, 600)
     adata = sc.datasets.blobs(n_variables=n_var, n_observations=n_obs)
     assert adata.shape == (n_obs, n_var)
 

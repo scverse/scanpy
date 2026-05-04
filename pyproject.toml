@@ -56,7 +56,8 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    "matplotlib>=3.9",
+    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.9,!=3.11.0rc1",
     "natsort",
     "networkx>=2.8.8",
     "numba>=0.60",
@@ -87,7 +88,6 @@ bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
-harmony = [ "harmonypy" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
@@ -97,6 +97,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.23.1" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
+scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -115,7 +116,7 @@ test = [
 ]
 doc = [
     "ipython>=7.20",                        # for nbsphinx code highlighting
-    "myst-nb>=1",
+    "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
     "numpy>=2.4",                           # type aliases
@@ -135,6 +136,7 @@ doc = [
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
+    "pooch",
     "pytest",
     "pytest-cov",           # only for use from VS Code
     "pytest-mock",
@@ -166,6 +168,8 @@ lint.select = [
     "ICN",    # Follow import conventions
     "ISC",    # Implicit string concatenation
     "N",      # Naming conventions
+    "NPY",    # Numpy-specific rules
+    "PD",     # Pandas
     "PERF",   # Performance
     "PIE",    # Syntax simplifications
     "PL",     # Pylint
@@ -201,7 +205,7 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # D*: No need for docstrings for all test modules and test functions
 # PLR0913: Test may use many fixtures
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
-lint.allowed-confusables = [ "×", "–", "’", "α" ]
+lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
@@ -257,8 +261,11 @@ filterwarnings = [
     "error",
     # Umap warns when tensorflow isn’t installed.
     "ignore::ImportWarning:umap",
+    # matplotlib<3.10.7 uses old pyparsing APIs
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
     # seaborn≤0.13.2 causes some matplotlib warnings
     "ignore::PendingDeprecationWarning:seaborn",
+    "ignore:vert.*bool was deprecated:matplotlib.MatplotlibDeprecationWarning:seaborn",
     # matplotlib<3.10.4 causes a Pillow warning
     "ignore:.*Pillow:DeprecationWarning",
     # networkx 2.x warns about scipy.sparse changes
@@ -271,9 +278,7 @@ filterwarnings = [
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                       # we should set init=obsm["X_pca"] or so
-    # matplotlib <3.11 uses old pyparsing APIs
-    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",                                    # we should set init=obsm["X_pca"] or so
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …

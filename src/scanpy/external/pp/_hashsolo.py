@@ -363,7 +363,7 @@ def hashsolo(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
     adata = adata.copy() if not inplace else adata
-    data = adata.obs[cell_hashing_columns].values
+    data = adata.obs[cell_hashing_columns].to_numpy()
     if not check_nonnegative_integers(data):
         msg = "Cell hashing counts must be non-negative"
         raise ValueError(msg)

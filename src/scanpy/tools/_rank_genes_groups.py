@@ -17,6 +17,7 @@ from .._compat import CSBase
 from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
+    _numba_thread_limit,
     check_nonnegative_integers,
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
@@ -365,11 +366,11 @@ class _RankGenes:
                 tc_coef = np.zeros((n_groups, n_genes))
 
             for ranks, left, right in _ranks(self.X):
+                if tie_correct:
+                    tc_coef[:, left:right] = _tiecorrect(ranks)
                 # sum up adjusted_ranks to calculate W_m,n
                 for group_index, mask_obs in enumerate(self.groups_masks_obs):
                     scores[group_index, left:right] = ranks[mask_obs, :].sum(axis=0)
-                    if tie_correct:
-                        tc_coef[group_index, left:right] = _tiecorrect(ranks)
 
             for group_index, mask_obs in enumerate(self.groups_masks_obs):
                 n_active = np.count_nonzero(mask_obs)
@@ -396,7 +397,7 @@ class _RankGenes:
         from sklearn.linear_model import LogisticRegression
 
         # Indexing with a series causes issues, possibly segfault
-        x = self.X[self.grouping_mask.values, :]
+        x = self.X[self.grouping_mask.to_numpy(), :]
 
         if len(self.groups_order) == 1:
             msg = "Cannot perform logistic regression on a single cluster."
@@ -708,14 +709,15 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     logg.debug(f"consider {groupby!r} groups:")
     logg.debug(f"with sizes: {np.count_nonzero(test_obj.groups_masks_obs, axis=1)}")
 
-    test_obj.compute_statistics(
-        method,
-        corr_method=corr_method,
-        n_genes_user=n_genes_user,
-        rankby_abs=rankby_abs,
-        tie_correct=tie_correct,
-        **kwds,
-    )
+    with _numba_thread_limit(settings.n_jobs if method == "wilcoxon" else None):
+        test_obj.compute_statistics(
+            method,
+            corr_method=corr_method,
+            n_genes_user=n_genes_user,
+            rankby_abs=rankby_abs,
+            tie_correct=tie_correct,
+            **kwds,
+        )
 
     if test_obj.pts is not None:
         groups_names = [str(name) for name in test_obj.groups_order]
@@ -882,7 +884,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
     for cluster in gene_names.columns:
         # iterate per column
-        var_names = gene_names[cluster].values
+        var_names = gene_names[cluster].array
 
         if not use_logfolds or not use_fraction:
             var_idx = (adata.raw if use_raw else adata).var_names.get_indexer(var_names)
@@ -893,10 +895,10 @@ def filter_rank_genes_groups(  # noqa: PLR0912
 
         if use_fraction:
             fraction_in_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts"][cluster].loc[var_names].values
+                adata.uns[key]["pts"][cluster].loc[var_names].array
             )
             fraction_out_cluster_matrix.loc[:, cluster] = (
-                adata.uns[key]["pts_rest"][cluster].loc[var_names].values
+                adata.uns[key]["pts_rest"][cluster].loc[var_names].array
             )
         else:
             fraction_in_cluster_matrix.loc[:, cluster] = _calc_frac(x_in)

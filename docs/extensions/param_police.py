@@ -6,9 +6,11 @@ import warnings
 from typing import TYPE_CHECKING
 
 from sphinx.ext.napoleon import NumpyDocstring
+from sphinx.util.typing import ExtensionMetadata
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+
 
 _format_docutils_params_orig = NumpyDocstring._format_docutils_params
 param_warnings = {}
@@ -46,7 +48,8 @@ def show_param_warnings(app, exception):
         raise RuntimeError(msg)
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     NumpyDocstring._format_docutils_params = scanpy_log_param_types
     app.connect("build-finished", show_param_warnings)
+    return ExtensionMetadata(parallel_read_safe=True)

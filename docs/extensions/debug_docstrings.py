@@ -8,9 +8,11 @@ import os
 from typing import TYPE_CHECKING
 
 import sphinx.ext.napoleon
+from sphinx.util.typing import ExtensionMetadata
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
+
 
 _pd_orig = sphinx.ext.napoleon._process_docstring
 
@@ -21,7 +23,8 @@ def pd_new(app, what, name, obj, options, lines) -> None:  # noqa: PLR0917
     print(*lines, sep="\n")
 
 
-def setup(app: Sphinx) -> None:
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     if os.environ.get("DEBUG") is not None:
         sphinx.ext.napoleon._process_docstring = pd_new
+    return ExtensionMetadata(parallel_read_safe=True)

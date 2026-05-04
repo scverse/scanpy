@@ -44,7 +44,7 @@ def restrict_adjacency(
         if c not in adata.obs[restrict_key].cat.categories:
             msg = f"{c!r} is not a valid category for {restrict_key!r}"
             raise ValueError(msg)
-    restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
+    restrict_indices = adata.obs[restrict_key].isin(restrict_categories).to_numpy()
     adjacency = adjacency[restrict_indices, :]
     adjacency = adjacency[:, restrict_indices]
     return adjacency, restrict_indices

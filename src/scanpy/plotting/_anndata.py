@@ -460,9 +460,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     raise ValueError(msg)
                 else:
-                    iname = np.flatnonzero(
-                        adata.obs[key].cat.categories.values == name
-                    )[0]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories == name)[0]
                     mask = scatter_group(
                         axs[ikey],
                         key,
@@ -1783,10 +1781,15 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
 
     Examples
     --------
-    >>> import scanpy as sc
-    >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.dendrogram(adata, "bulk_labels")
-    >>> sc.pl.correlation_matrix(adata, "bulk_labels")
+    Plot correlation matrix between cell type groups.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.dendrogram(adata, "bulk_labels")
+        sc.pl.correlation_matrix(adata, "bulk_labels")
 
     """
     dendrogram_key = _get_dendrogram_key(adata, _dk(dendrogram), groupby)
@@ -1987,7 +1990,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     if groupby_index is not None:
         # reset index to treat all columns the same way.
-        obs_tidy.reset_index(inplace=True)
+        obs_tidy = obs_tidy.reset_index()
         groupby.append(groupby_index)
 
     if groupby is None:
