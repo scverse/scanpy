@@ -17,7 +17,7 @@ from scanpy._utils import select_groups
 from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes, _illico_results_to_iter
+from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -79,7 +79,9 @@ def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
     return Expected(names=expected["names"].astype("T"), scores=expected["scores"])
 
 
-def get_illico_results_df(n_groups: int, n_genes: int, *, seed: int = 0) -> pd.DataFrame:
+def get_illico_results_df(
+    n_groups: int, n_genes: int, *, seed: int = 0
+) -> pd.DataFrame:
     """Synthetic illico-shaped output used by the _illico_results_to_iter tests.
 
     Features are intentionally non-alphabetical so that any silent
@@ -94,9 +96,7 @@ def get_illico_results_df(n_groups: int, n_genes: int, *, seed: int = 0) -> pd.D
             "z_score": rng.normal(size=n_groups * n_genes),
             "p_value": rng.uniform(size=n_groups * n_genes),
         },
-        index=pd.MultiIndex.from_product(
-            [groups, features], names=["pert", "feature"]
-        ),
+        index=pd.MultiIndex.from_product([groups, features], names=["pert", "feature"]),
     )
 
 

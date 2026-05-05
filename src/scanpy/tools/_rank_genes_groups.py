@@ -456,7 +456,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(  # noqa: PLR0912, PLR0915
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: DETest,
         *,
