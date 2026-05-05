@@ -96,7 +96,7 @@ class HVGSuite:  # noqa: D101
             )
             # Times out on the benchmark machine with full dataset
             self.adata = self.adata[
-                self.adata.obs["PatientNumber"].isin(["1", "2"])
+                self.adata.obs["PatientNumber"].isin(["1", "2", "3"])
             ].copy()
         else:
             self.adata = ad.read_zarr("lung93k.zarr")
