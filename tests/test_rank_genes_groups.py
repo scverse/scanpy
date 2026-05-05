@@ -355,7 +355,9 @@ def test_mask_not_equal():
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-@pytest.mark.parametrize("exp_post_agg", [True, False], ids=["post_exp", "pre_exp"])
+@pytest.mark.parametrize(
+    "mean_in_log_space", [True, False], ids=["log_space_mean", "linear_space_mean"]
+)
 @pytest.mark.parametrize(
     "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
 )
@@ -368,7 +370,7 @@ def test_illico(
     subtests: pytest.Subtests,
     groups: Literal["all"] | Sequence[str],
     *,
-    exp_post_agg: bool,
+    mean_in_log_space: bool,
     tie_correct: bool,
 ):
 
@@ -386,7 +388,7 @@ def test_illico(
         n_genes=pbmc.n_vars,
         tie_correct=tie_correct,
         corr_method=corr_method,
-        exp_post_agg=exp_post_agg,
+        mean_in_log_space=mean_in_log_space,
         groups=groups,
     )
 
@@ -398,7 +400,7 @@ def test_illico(
         n_genes=pbmc.n_vars,
         tie_correct=tie_correct,
         corr_method=corr_method,
-        exp_post_agg=exp_post_agg,
+        mean_in_log_space=mean_in_log_space,
         groups=groups,
     )
     scanpy_results = pbmc.uns["rank_genes_groups"]
