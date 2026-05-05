@@ -94,6 +94,10 @@ class HVGSuite:  # noqa: D101
                 },
                 X=ad.experimental.read_elem_lazy(z["X"]),
             )
+            # Times out on the benchmark machine with full dataset
+            self.adata = self.adata[
+                self.adata.obs["PatientNumber"].isin(["1", "2"])
+            ].copy()
         else:
             self.adata = ad.read_zarr("lung93k.zarr")
         sc.pp.filter_genes(self.adata, min_cells=3)
