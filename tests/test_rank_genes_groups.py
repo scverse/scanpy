@@ -439,10 +439,18 @@ def test_illico(
         (False, -1.0),
     ],
 )
-@pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "wilcoxon",
+        "t-test",
+        "t-test_overestim_var",
+        pytest.param("wilcoxon_illico", marks=needs.illico),
+    ],
+)
 def test_mean_in_log_space(
     expected_logfc: float,
-    method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
+    method: Literal["wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var"],
     *,
     mean_in_log_space: bool,
 ):
