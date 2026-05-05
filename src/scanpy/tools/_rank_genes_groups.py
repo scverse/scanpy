@@ -47,6 +47,37 @@ def _select_top_n(scores: NDArray, n_top: int):
     return global_indices
 
 
+def _illico_results_to_iter(
+    illico_df: pd.DataFrame,
+    groups_order: NDArray,
+    ireference: int | None,
+    *,
+    feature_order,
+):
+    """Reshape illico's long-form output into per-group ``(index, z, p)`` tuples.
+
+    illico returns a DataFrame with a 2-level MultiIndex ``(group, feature)``
+    and columns including ``z_score`` and ``p_value``. We pivot to wide form
+    via :meth:`pandas.Series.unstack` (label-based, robust to row order or
+    level renaming), then ``reindex`` the columns to ``feature_order`` so
+    per-gene values stay aligned with the caller's gene axis (``unstack``
+    sorts the unstacked level by default, which would otherwise scramble the
+    gene→value mapping for non-alphabetical ``var_names``).
+
+    Yields rows in ``groups_order`` order with ``group_index`` set to each
+    group's position in ``groups_order``. Reference and any group illico
+    didn't see are filtered out.
+    """
+    z_wide = illico_df["z_score"].unstack().reindex(columns=feature_order)
+    p_wide = illico_df["p_value"].unstack().reindex(columns=feature_order)
+    ref_label = None if ireference is None else groups_order[ireference]
+    return (
+        (gi, z_wide.loc[g].to_numpy(), p_wide.loc[g].to_numpy())
+        for gi, g in enumerate(groups_order)
+        if g != ref_label and g in z_wide.index
+    )
+
+
 @njit
 def rankdata(data: NDArray[np.number]) -> NDArray[np.float64]:
     """Parallelized version of scipy.stats.rankdata."""
@@ -469,33 +500,14 @@ class _RankGenes:
                     alternative="two-sided",
                     use_rust=False,
                 )
-                # Generate a lookup of category -> result excluding the refernece if it is present.
-                generate_test_results_map = {
-                    group_cat: (
-                        group["z_score"].to_numpy(copy=True),
-                        group["p_value"].to_numpy(copy=True),
-                    )
-                    for (_, group) in illico_df.groupby(level="pert")
-                    if (
-                        group_cat := np.unique(
-                            group.index.get_level_values("pert").to_numpy(copy=True)
-                        ).item()
-                    )
-                    != (
-                        None
-                        if self.ireference is None
-                        else self.groups_order[self.ireference]
-                    )
-                }
-                # Create the iterator that is expected by the other method-branches.
-                groups_order_list = self.groups_order.tolist()
-                generate_test_results = (
-                    (
-                        groups_order_list.index(group_cat),
-                        *generate_test_results_map[group_cat],
-                    )
-                    for group_cat in self.groups_order
-                    if group_cat in generate_test_results_map
+                # Reshape illico's long-form output into the per-group iterator
+                # the rest of compute_statistics expects, aligning per-gene
+                # values to var_names so they stay consistent with self.X.
+                generate_test_results = _illico_results_to_iter(
+                    illico_df,
+                    self.groups_order,
+                    self.ireference,
+                    feature_order=self.var_names,
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)

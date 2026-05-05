@@ -17,7 +17,7 @@ from scanpy._utils import select_groups
 from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes
+from scanpy.tools._rank_genes_groups import _RankGenes, _illico_results_to_iter
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -77,6 +77,27 @@ def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
     ):
         expected = dict(z)
     return Expected(names=expected["names"].astype("T"), scores=expected["scores"])
+
+
+def get_illico_results_df(n_groups: int, n_genes: int, *, seed: int = 0) -> pd.DataFrame:
+    """Synthetic illico-shaped output used by the _illico_results_to_iter tests.
+
+    Features are intentionally non-alphabetical so that any silent
+    reordering by the helper (e.g., `unstack` defaulting to sort=True)
+    surfaces as a test failure.
+    """
+    rng = np.random.default_rng(seed)
+    groups = [f"g{i}" for i in range(n_groups)]
+    features = [f"f{n_genes - 1 - j}" for j in range(n_genes)]  # reversed -> not sorted
+    return pd.DataFrame(
+        {
+            "z_score": rng.normal(size=n_groups * n_genes),
+            "p_value": rng.uniform(size=n_groups * n_genes),
+        },
+        index=pd.MultiIndex.from_product(
+            [groups, features], names=["pert", "feature"]
+        ),
+    )
 
 
 # TODO: Make dask compatible
@@ -351,6 +372,64 @@ def test_mask_not_equal():
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
+
+
+@pytest.mark.parametrize(
+    ("groups_order", "ireference", "expected_indices"),
+    [
+        (["g0", "g1", "g2"], None, [0, 1, 2]),
+        (["g0", "g1", "g2"], 1, [0, 2]),
+        (["g2", "g0"], None, [0, 1]),
+    ],
+    ids=["vs_rest", "vs_reference", "subset"],
+)
+def test_illico_iter(groups_order, ireference, expected_indices):
+    df = get_illico_results_df(n_groups=3, n_genes=4)
+    feature_order = df.index.unique(level="feature")
+    out = list(
+        _illico_results_to_iter(
+            df, np.array(groups_order), ireference, feature_order=feature_order
+        )
+    )
+    assert [t[0] for t in out] == expected_indices
+    for gi, z, p in out:
+        sub = df.xs(groups_order[gi], level=0).reindex(feature_order)
+        np.testing.assert_array_equal(z, sub["z_score"].to_numpy())
+        np.testing.assert_array_equal(p, sub["p_value"].to_numpy())
+
+
+def test_illico_iter_missing_group():
+    df = get_illico_results_df(n_groups=3, n_genes=4)
+    out = list(
+        _illico_results_to_iter(
+            df,
+            np.array(["g0", "missing"]),
+            None,
+            feature_order=df.index.unique(level="feature"),
+        )
+    )
+    assert [t[0] for t in out] == [0]
+
+
+def test_illico_iter_row_order():
+    """Pivoting by label means shuffled rows must produce identical output."""
+    df = get_illico_results_df(n_groups=3, n_genes=4)
+    feature_order = df.index.unique(level="feature")
+    df_shuffled = df.sample(frac=1.0, random_state=42)
+    groups_order = np.array(["g0", "g1", "g2"])
+    out = list(
+        _illico_results_to_iter(df, groups_order, None, feature_order=feature_order)
+    )
+    out_shuffled = list(
+        _illico_results_to_iter(
+            df_shuffled, groups_order, None, feature_order=feature_order
+        )
+    )
+    assert len(out) == len(out_shuffled) == 3
+    for (gi_a, z_a, p_a), (gi_b, z_b, p_b) in zip(out, out_shuffled, strict=True):
+        assert gi_a == gi_b
+        np.testing.assert_array_equal(z_a, z_b)
+        np.testing.assert_array_equal(p_a, p_b)
 
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
