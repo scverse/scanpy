@@ -15,8 +15,9 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from scverse_misc import Deprecation, deprecated
 
-from .._compat import deprecated, set_module
+from .._compat import set_module
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .presets import Default, Preset
 from .verbosity import Verbosity
@@ -217,7 +218,7 @@ class Settings(
     # Functions
     # --------------------------------------------------------------------------------
 
-    @deprecated("Use `scanpy.set_figure_params` instead")
+    @deprecated(Deprecation("1.11.3", "Use :func:`scanpy.set_figure_params` instead"))
     def set_figure_params(self, *args, **kwargs) -> None:
         self._set_figure_params(*args, **kwargs)
 

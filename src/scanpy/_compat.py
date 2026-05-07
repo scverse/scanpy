@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import sys
 import warnings
-from functools import cache, partial
+from functools import cache
 from importlib.util import find_spec
 from pathlib import Path
 from types import FunctionType
@@ -22,7 +21,6 @@ __all__ = [
     "CSRBase",
     "DaskArray",
     "SpBase",
-    "deprecated",
     "fullname",
     "pkg_metadata",
     "pkg_version",
@@ -85,18 +83,6 @@ def set_module[T: FunctionType | type](module: str) -> Callable[[T], T]:
 
 # File prefixes for us and decorators we use
 _FILE_PREFIXES: tuple[str, ...] = (str(Path(__file__).parent),)
-
-
-# we’re not using _FILE_PREFIXES here,
-# since a wholesale deprecated function shouldn’t be used internally anyway
-if TYPE_CHECKING:
-    from warnings import deprecated
-else:
-    if sys.version_info >= (3, 13):
-        from warnings import deprecated as _deprecated
-    else:
-        from typing_extensions import deprecated as _deprecated
-    deprecated = partial(_deprecated, category=FutureWarning)
 
 
 def warn(

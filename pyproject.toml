@@ -233,6 +233,7 @@ lint.pylint.max-positional-args = 5
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"
 "warnings.warn".msg = "Use `scanpy._compat.warn` instead"
+"warnings.deprecated".msg = "Use `scverse_misc.deprecated` instead"
 
 [tool.pyproject-fmt]
 indent = 4

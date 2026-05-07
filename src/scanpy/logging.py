@@ -11,8 +11,7 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
 
 import anndata.logging
-
-from ._compat import deprecated
+from scverse_misc import Deprecation, deprecated
 
 if TYPE_CHECKING:
     from typing import IO
@@ -161,14 +160,9 @@ def print_header(*, file: IO[str] | None = None):
     return sinfo
 
 
-@deprecated("Use `print_header` instead")
+@deprecated(Deprecation("1.11.0", "Use :func:`print_header` instead."))
 def print_versions() -> SessionInfo:
-    """Alias for `print_header`.
-
-    .. deprecated:: 1.11.0
-
-       Use :func:`print_header` instead.
-    """
+    """Alias for `print_header`."""
     return print_header()
 
 
