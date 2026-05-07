@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from anndata import AnnData, OldFormatWarning
+from packaging.version import Version
 
 from .. import _utils
-from .._compat import deprecated, old_positionals
+from .._compat import deprecated, old_positionals, pkg_version
 from .._settings import settings
-from .._utils._doctests import doctest_internet, doctest_needs
+from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from ..readwrite import read, read_h5ad, read_visium
 from ._utils import check_datasetdir_exists
 
@@ -54,6 +55,12 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
+_doctest_skipif_old_anndata = doctest_skipif(
+    pkg_version("anndata") < Version("0.13.dev0"), reason="old anndata"
+)
+
+
+@_doctest_skipif_old_anndata
 @old_positionals(
     "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
 )
@@ -92,6 +99,7 @@ def blobs(
     >>> sc.datasets.blobs()
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'blobs'
+        layers: None
 
     """
     import sklearn.datasets
@@ -106,6 +114,7 @@ def blobs(
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def burczynski06() -> AnnData:
@@ -127,6 +136,7 @@ def burczynski06() -> AnnData:
         ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
+        layers: None
 
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
@@ -134,6 +144,7 @@ def burczynski06() -> AnnData:
     return read(filename, backup_url=url)
 
 
+@_doctest_skipif_old_anndata
 def krumsiek11() -> AnnData:
     r"""Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
@@ -159,6 +170,7 @@ def krumsiek11() -> AnnData:
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
+        layers: None
 
     """  # noqa: D401
     with settings.verbosity.override("error"):  # suppress output...
@@ -176,6 +188,7 @@ def krumsiek11() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @doctest_needs("openpyxl")
 @check_datasetdir_exists
@@ -203,6 +216,7 @@ def moignard15() -> AnnData:
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
+        layers: None
 
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
@@ -236,6 +250,7 @@ def moignard15() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def paul15() -> AnnData:
@@ -257,6 +272,7 @@ def paul15() -> AnnData:
     AnnData object with n_obs × n_vars = 2730 × 3451
         obs: 'paul15_clusters'
         uns: 'iroot'
+        layers: None
 
     """
     import h5py
@@ -296,6 +312,7 @@ def paul15() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 def toggleswitch() -> AnnData:
     """Simulated toggleswitch.
 
@@ -315,6 +332,7 @@ def toggleswitch() -> AnnData:
         ...
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
+        layers: None
 
     """  # noqa: D401
     filename = HERE / "toggleswitch.txt"
@@ -323,6 +341,7 @@ def toggleswitch() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 def pbmc68k_reduced() -> AnnData:
     r"""Subsampled and processed 68k PBMCs.
 
@@ -353,11 +372,13 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
+        layers: None
 
     """
     return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
@@ -402,6 +423,7 @@ def pbmc3k() -> AnnData:
     >>> sc.datasets.pbmc3k()
     AnnData object with n_obs × n_vars = 2700 × 32738
         var: 'gene_ids'
+        layers: None
 
     """
     url = "https://exampledata.scverse.org/scanpy/pbmc3k_raw.h5ad"
@@ -411,6 +433,7 @@ def pbmc3k() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
@@ -442,6 +465,7 @@ def pbmc3k_processed() -> AnnData:
         obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
         varm: 'PCs'
         obsp: 'distances', 'connectivities'
+        layers: None
 
     """  # noqa: D401
     url = "https://exampledata.scverse.org/scanpy/pbmc3k.h5ad"
@@ -509,6 +533,7 @@ def _download_visium_dataset(
 
 
 @deprecated("Use `squidpy.datasets.visium` instead.")
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def visium_sge(
@@ -550,6 +575,7 @@ def visium_sge(
         var: 'gene_ids', 'feature_types', 'genome'
         uns: 'spatial'
         obsm: 'spatial'
+        layers: None
 
     """  # noqa: D401
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
