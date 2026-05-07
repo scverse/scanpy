@@ -15,9 +15,10 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.image import imread
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from . import logging as logg
-from ._compat import deprecated, old_positionals, pkg_version, warn
+from ._compat import old_positionals, pkg_version, warn
 from ._settings import AnnDataFileFormat, settings
 from ._utils import _empty
 
@@ -369,7 +370,7 @@ def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
     return adata
 
 
-@deprecated("Use `squidpy.read.visium` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.read.visium` instead."))
 def read_visium(
     path: PathLike[str] | str,
     genome: str | None = None,
@@ -380,9 +381,6 @@ def read_visium(
     source_image_path: PathLike[str] | str | None = None,
 ) -> AnnData:
     r"""Read 10x-Genomics-formatted visum dataset.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.read.visium` instead.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,

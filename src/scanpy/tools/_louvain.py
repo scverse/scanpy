@@ -7,10 +7,11 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, old_positionals, pkg_version, warn
+from .._compat import old_positionals, pkg_version, warn
 from .._utils import _choose_graph, _doc_params, dematrix
 from ._docs import (
     doc_adata,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
     "obsp",
     "copy",
 )
-@deprecated("Use `scanpy.tl.leiden` instead")
+@deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
 @_doc_params(
     doc_adata=doc_adata,
     random_state=doc_random_state,
@@ -80,9 +81,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     copy: bool = False,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
-
-    .. deprecated:: 1.12.0
-       Use :func:`scanpy.tl.leiden` instead.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell

@@ -5,7 +5,7 @@ from enum import EnumMeta, IntEnum
 from logging import getLevelNamesMapping
 from typing import TYPE_CHECKING
 
-from .._compat import deprecated
+from scverse_misc import Deprecation, deprecated
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -29,7 +29,7 @@ _VERBOSITY_TO_LOGLEVEL.update(dict(enumerate(list(_VERBOSITY_TO_LOGLEVEL.values(
 
 class VerbosityMeta(EnumMeta):
     @property
-    @deprecated("Use `Verbosity.warning` instead")
+    @deprecated(Deprecation("1.11.3", "Use :attr:`~scanpy.Verbosity.warning` instead"))
     def warn(cls) -> Verbosity:
         return Verbosity.warning
 
