@@ -14,6 +14,7 @@ from .. import logging as logg
 from .._settings import settings
 from .._utils._doctests import doctest_internet
 from ..readwrite import _download
+from ._datasets import _doctest_skipif_old_anndata
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -107,6 +108,7 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
@@ -140,6 +142,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+        layers: None
 
     """
     experiment_dir = settings.datasetdir / accession

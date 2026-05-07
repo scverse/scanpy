@@ -37,8 +37,11 @@ if TYPE_CHECKING:
         from leidenalg.VertexPartition import MutableVertexPartition
     except ImportError:
         if not TYPE_CHECKING:
-            MutableVertexPartition = type("MutableVertexPartition", (), {})
-            MutableVertexPartition.__module__ = "leidenalg.VertexPartition"
+            MutableVertexPartition = type(
+                "MutableVertexPartition",
+                (),
+                dict(__module__="leidenalg.VertexPartition"),
+            )
 
 
 @_accepts_legacy_random_state(0)

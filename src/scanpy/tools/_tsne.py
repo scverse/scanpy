@@ -120,15 +120,6 @@ def tsne(  # noqa: PLR0913
         n_components=n_components,
     )
 
-    # Backwards compat handling: Remove in scanpy 1.9.0
-    if n_jobs != 1 and not use_fast_tsne:
-        msg = (
-            "In previous versions of scanpy, calling tsne with `n_jobs` > 1 would use MulticoreTSNE. "
-            "Now this uses the scikit-learn version of TSNE by default. "
-            "If you’d like the old behaviour (which is deprecated), pass `use_fast_tsne=True`. "
-            "Note, MulticoreTSNE is not actually faster anymore."
-        )
-        warn(msg, UserWarning)
     if use_fast_tsne:
         msg = (
             "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "

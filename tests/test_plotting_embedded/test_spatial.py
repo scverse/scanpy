@@ -16,7 +16,7 @@ DATA_DIR = HERE.parent / "_data"
 
 
 pytestmark = [
-    pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+    pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 ]
 
 
