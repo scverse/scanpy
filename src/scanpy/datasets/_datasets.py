@@ -12,7 +12,7 @@ from packaging.version import Version
 from .. import _utils
 from .._compat import deprecated, pkg_version
 from .._docs import doc_rng
-from .._settings import settings
+from .._settings import Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
@@ -174,7 +174,7 @@ def krumsiek11() -> AnnData:
         layers: None
 
     """  # noqa: D401
-    with settings.verbosity.override("error"):  # suppress output...
+    with settings.override(verbosity=Verbosity.error):  # suppress output...
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}

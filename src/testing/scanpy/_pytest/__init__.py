@@ -49,13 +49,19 @@ def original_settings(
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
-        _original_settings = MappingProxyType(sc.settings.__dict__.copy())
+        # can’t use `model_dump` here because of https://github.com/pydantic/pydantic/issues/8907
+        _original_settings = MappingProxyType({
+            s: getattr(sc.settings, s)
+            for s in (
+                type(sc.settings).model_fields | type(sc.settings).model_computed_fields
+            )
+        })
 
     setup()
     if pkg_version("anndata") >= Version("0.12"):
         ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
     sc.settings.logfile = sys.stderr
-    sc.settings.verbosity = "hint"
+    sc.settings.verbosity = sc.Verbosity.hint
     sc.settings.autoshow = True
     # create directory for debug data
     cache.mkdir("debug")

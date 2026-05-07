@@ -168,7 +168,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         x_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
 
         # Filter out zero genes
-        with settings.verbosity.override(Verbosity.error):
+        with settings.override(verbosity=Verbosity.error):
             nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
         x_batch = _get_obs_rep(adata_subset, layer=layer)
