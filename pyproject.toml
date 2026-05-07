@@ -60,7 +60,7 @@ dependencies = [
     "matplotlib>=3.10,!=3.11.0rc1",
     "natsort",
     "networkx>=3.4",
-    "numba>=0.60",
+    "numba>=0.61",
     "numpy>=2.1",
     "packaging>=25",
     "pandas>=2.3",
