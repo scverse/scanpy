@@ -8,7 +8,13 @@ from time import time
 from typing import TYPE_CHECKING, Annotated, Literal, Protocol, runtime_checkable
 
 import scverse_misc
-from pydantic import AfterValidator, computed_field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    PrivateAttr,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from .._compat import deprecated, set_module
 from ..logging import _RootLogger, _set_log_file, _set_log_level
@@ -61,17 +67,8 @@ class Settings(
     scverse_misc.Settings, exported_object_name="settings", docstring_style="scverse"
 ):
     def model_post_init(self, context: object) -> None:
-        # logging
-        self._root_logger = _RootLogger(self.verbosity.level)
         _set_log_level(self)
         _set_log_file(self)
-
-        # figure
-        self._frameon = True
-        self._vector_friendly = False
-        self._low_resolution_warning = True
-        self._start = self._previous_time = time()
-        self._previous_memory_usage = -1
 
     preset: Annotated[Preset, AfterValidator(Preset.check)] = Preset.ScanpyV1
     """Preset to use."""
@@ -80,7 +77,9 @@ class Settings(
     verbosity: Verbosity = Verbosity.warning
     """Verbosity level (default :attr:`Verbosity.warning`)."""
 
-    _root_logger: _RootLogger
+    _root_logger: Annotated[
+        _RootLogger, PrivateAttr(default=_RootLogger(Verbosity.warning.level))
+    ]
 
     logfile: Writer[str] = _default_logfile()
     """The open file to write logs to.
@@ -158,17 +157,17 @@ class Settings(
     })
     """Categories that are omitted in plotting etc."""
 
-    _frameon: bool
+    _frameon: Annotated[bool, PrivateAttr(default=True)]
     """See set_figure_params."""
-    _vector_friendly: bool
+    _vector_friendly: Annotated[bool, PrivateAttr(default=False)]
     """Set to true if you want to include pngs in svgs and pdfs."""
-    _low_resolution_warning: bool
+    _low_resolution_warning: Annotated[bool, PrivateAttr(default=True)]
     """Print warning when saving a figure with low resolution."""
-    _start: float
+    _start: Annotated[float, PrivateAttr(default_factory=time)]
     """Time when the settings module is first imported."""
-    _previous_time: float
+    _previous_time: Annotated[float, PrivateAttr(default_factory=time)]
     """Variable for timing program parts."""
-    _previous_memory_usage: int
+    _previous_memory_usage: Annotated[int, PrivateAttr(default=-1)]
     """Stores the previous memory usage."""
 
     @computed_field
