@@ -18,8 +18,12 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
 
 
-# TODO: we might have to adapt the `only_rerun` list
-FLAKY_CONN = pytest.mark.flaky(reruns=5, reruns_delay=2, only_rerun=[r".*HTTPError"])
+MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
+    reruns=5,
+    reruns_delay=2,
+    # The list of matches here probably needs to be expanded
+    only_rerun=[r"ConnectionError", r"HTTPError"],
+)
 
 
 _original_settings: Mapping[str, object] | None = None
@@ -122,7 +126,7 @@ def pytest_collection_modifyitems(
         # `--run-internet` passed
         if "internet" in item.keywords:
             item.add_marker(skipif_not_run_internet)
-            item.add_marker(FLAKY_CONN)
+            item.add_marker(MARK_RETRY_DOWNLOAD)
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
@@ -143,7 +147,7 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
     if getattr(func, "_doctest_internet", False):
         if not request.config.getoption("--internet-tests"):
             pytest.skip(reason="need --internet-tests option to run")
-        request.applymarker(FLAKY_CONN)
+        request.applymarker(MARK_RETRY_DOWNLOAD)
 
 
 assert "scanpy" not in sys.modules, (
