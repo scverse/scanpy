@@ -64,7 +64,11 @@ def _illico_results_to_iter(
     p_wide = illico_df["p_value"].unstack().reindex(columns=feature_order)
     ref_label = None if ireference is None else groups_order[ireference]
     return (
-        (group_index, z_wide.loc[group_name].to_numpy(), p_wide.loc[group_name].to_numpy())
+        (
+            group_index,
+            z_wide.loc[group_name].to_numpy(),
+            p_wide.loc[group_name].to_numpy(),
+        )
         for group_index, group_name in enumerate(groups_order)
         if group_name != ref_label and group_name in z_wide.index
     )
