@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .._backends import backend_dispatch
 from .._docs import doc_rng
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
@@ -15,8 +16,9 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
-@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
+@backend_dispatch
+@_doc_params(rng=doc_rng)
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,

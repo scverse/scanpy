@@ -10,6 +10,7 @@ from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
+from scanpy._backends import backend_dispatch
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
@@ -197,6 +198,7 @@ def _power(x: Array, power: float) -> Array:
     return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
+@backend_dispatch
 def aggregate(  # noqa: PLR0912
     adata: AnnData,
     by: str | Collection[str],

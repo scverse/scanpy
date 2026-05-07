@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
+@backend_dispatch
 def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",

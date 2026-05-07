@@ -292,6 +292,38 @@ class SettingsMeta(SingletonMeta, type):
         cls._n_jobs = n_jobs
 
     @property
+    def backend(cls) -> str:
+        """Active computational backend (default ``'cpu'``)."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.backend
+
+    @backend.setter
+    @_type_check_arg2(str)
+    def backend(cls, backend: str) -> None:
+        from .._backends import settings as backend_settings
+
+        backend_settings.backend = backend
+
+    def use_backend(cls, backend: str):
+        """Temporarily set the active computational backend."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.use_backend(backend)
+
+    def available_backends(cls) -> list[str]:
+        """Return canonical names of installed computational backends."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.available_backends()
+
+    def get_backend(cls, name: str):
+        """Look up an installed computational backend by name or alias."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.get_backend(name)
+
+    @property
     def logpath(cls) -> Path | None:
         """The file path `logfile` was set to."""
         return cls._logpath

@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.utils import check_array
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params
@@ -28,6 +29,7 @@ type _InitPos = Literal["paga", "spectral", "random"]
 
 
 @_accepts_legacy_random_state(0)
+@backend_dispatch
 @_doc_params(rng=doc_rng)
 def umap(  # noqa: PLR0913
     adata: AnnData,

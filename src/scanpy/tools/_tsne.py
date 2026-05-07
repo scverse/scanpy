@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import warn
 from .._docs import doc_rng
 from .._settings import settings
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 
 @_accepts_legacy_random_state(0)
+@backend_dispatch
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 def tsne(  # noqa: PLR0913
     adata: AnnData,

@@ -10,6 +10,7 @@ from packaging.version import Version
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import deprecated, pkg_version
 from .._utils import _choose_graph, _doc_params
 from ._docs import (
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 
 
 @deprecated("Use `scanpy.tl.leiden` instead")
+@backend_dispatch
 @_doc_params(
     doc_adata=doc_adata,
     restrict_to=doc_restrict_to,
