@@ -74,6 +74,9 @@ class _RootLogger(logging.RootLogger):
     def debug(self, msg, *, time=None, deep=None, extra=None) -> datetime:
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
+    def __reduce__(self) -> tuple[object, ...]:
+        return _RootLogger, (self.level,)
+
 
 def _set_log_file(settings: Settings) -> None:
     file = settings.logfile
