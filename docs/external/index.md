@@ -7,13 +7,7 @@
 
 ```{warning}
 We are no longer accepting new tools into `scanpy.external`.
-Instead, please submit your tool to the [scverse ecosystem package listing](https://scverse.org/packages/#ecosystem).
-```
-
-```{note}
-For tools that integrate well with scanpy and anndata, see:
-* The [scverse ecosystem](https://scverse.org/packages/#ecosystem)
-* Scanpy's ecosystem {doc}`ecosystem page <../ecosystem>`
+For tools that integrate well with scanpy and anndata, or to submit your own, see the [scverse ecosystem](https://scverse.org/packages/#ecosystem).
 ```
 
 Import Scanpy's wrappers to external tools as:
