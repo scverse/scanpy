@@ -5,8 +5,9 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
+from scverse_misc import Deprecation, deprecated
 
-from .._compat import deprecated, old_positionals
+from .._compat import old_positionals
 from .._settings import settings
 from ._utils import savefig_or_show
 
@@ -126,7 +127,7 @@ def highly_variable_genes(  # noqa: PLR0912
 
 
 # backwards compat
-@deprecated("Use sc.pl.highly_variable_genes instead")
+@deprecated(Deprecation("1.3.6", "Use sc.pl.highly_variable_genes instead"))
 @old_positionals("log", "show", "save")
 def filter_genes_dispersion(
     result: np.recarray,
