@@ -57,7 +57,6 @@ def _is_run_from_ipython() -> bool:
     return getattr(builtins, "__IPYTHON__", False)
 
 
-# `type` is only here because of https://github.com/astral-sh/ruff/issues/20225
 class Settings(
     scverse_misc.Settings, exported_object_name="settings", docstring_style="scverse"
 ):
