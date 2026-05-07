@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from scverse_misc import Deprecation, deprecated
 
+from .._compat import set_module
+
 if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import Literal
@@ -34,6 +36,7 @@ class VerbosityMeta(EnumMeta):
         return Verbosity.warning
 
 
+@set_module("scanpy")
 class Verbosity(IntEnum, metaclass=VerbosityMeta):
     """Logging verbosity levels for :attr:`scanpy.settings.verbosity`."""
 

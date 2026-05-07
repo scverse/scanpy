@@ -35,8 +35,9 @@ if TYPE_CHECKING:
         from louvain.VertexPartition import MutableVertexPartition
     except ImportError:
         if not TYPE_CHECKING:
-            MutableVertexPartition = type("MutableVertexPartition", (), {})
-            MutableVertexPartition.__module__ = "louvain.VertexPartition"
+            MutableVertexPartition = type(
+                "MutableVertexPartition", (), dict(__module__="louvain.VertexPartition")
+            )
 
 
 @deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
