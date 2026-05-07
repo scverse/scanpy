@@ -11,7 +11,7 @@ from .. import logging as logg
 from .._compat import CSBase, old_positionals
 from .._settings import settings
 from .._utils import NeighborsView, raise_not_implemented_error_if_backed_type
-from .._utils._doctests import doctest_skip
+from .._utils._doctests import doctest_skipif
 from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     "neighbors_key",
     "inplace",
 )
-@doctest_skip("illustrative short example but not runnable")
+@doctest_skipif(reason="illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
