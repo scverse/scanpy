@@ -1017,7 +1017,7 @@ def spatial(  # noqa: PLR0913
         adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
-    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+    FutureWarning: The function spatial is deprecated and will be removed in the future. Use :func:`squidpy.pl.spatial_scatter` instead.
         sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
