@@ -12,8 +12,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import assert_adata_equal
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
@@ -174,6 +176,7 @@ DS_DYNAMIC = frozenset({"ebi_expression_atlas"})
 DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 
 
+@pytest.mark.skipif(pkg_version("anndata") < Version("0.13.dev0"), reason="old anndata")
 @pytest.mark.parametrize(
     "ds_name",
     [
