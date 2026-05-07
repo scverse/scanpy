@@ -111,7 +111,7 @@ test = [
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
-    "zarr>=3",
+    "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
 doc = [
