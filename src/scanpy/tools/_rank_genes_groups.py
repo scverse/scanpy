@@ -58,23 +58,15 @@ def _illico_results_to_iter(
 
     illico returns a DataFrame with a 2-level MultiIndex ``(group, feature)``
     and columns including ``z_score`` and ``p_value``. We pivot to wide form
-    via :meth:`pandas.Series.unstack` (label-based, robust to row order or
-    level renaming), then ``reindex`` the columns to ``feature_order`` so
-    per-gene values stay aligned with the caller's gene axis (``unstack``
-    sorts the unstacked level by default, which would otherwise scramble the
-    gene→value mapping for non-alphabetical ``var_names``).
-
-    Yields rows in ``groups_order`` order with ``group_index`` set to each
-    group's position in ``groups_order``. Reference and any group illico
-    didn't see are filtered out.
+    via :meth:`pandas.Series.unstack`.
     """
     z_wide = illico_df["z_score"].unstack().reindex(columns=feature_order)
     p_wide = illico_df["p_value"].unstack().reindex(columns=feature_order)
     ref_label = None if ireference is None else groups_order[ireference]
     return (
-        (gi, z_wide.loc[g].to_numpy(), p_wide.loc[g].to_numpy())
-        for gi, g in enumerate(groups_order)
-        if g != ref_label and g in z_wide.index
+        (group_index, z_wide.loc[group_name].to_numpy(), p_wide.loc[group_name].to_numpy())
+        for group_index, group_name in enumerate(groups_order)
+        if group_name != ref_label and group_name in z_wide.index
     )
 
 
