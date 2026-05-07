@@ -16,7 +16,7 @@ from .._utils import (
     _doc_params,
     raise_not_implemented_error_if_backed_type,
 )
-from .._utils._doctests import doctest_skip
+from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ..neighbors import RPForestDict
 
 
-@doctest_skip("illustrative short example but not runnable")
+@doctest_skipif(reason="illustrative short example but not runnable")
 def ingest(
     adata: AnnData,
     adata_ref: AnnData,
