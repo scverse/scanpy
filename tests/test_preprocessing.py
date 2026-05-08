@@ -382,9 +382,9 @@ def test_recipe_plotting() -> None:
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
     # These shouldn't throw an error
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+    with pytest.warns(FutureWarning, match=r"p[pl]\.highly_variable_genes"):
         sc.pp.recipe_seurat(adata.copy(), plot=True)
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
+    with pytest.warns(FutureWarning, match=r"p[pl]\.highly_variable_genes"):
         sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
