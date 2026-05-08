@@ -203,7 +203,7 @@ def normalize_total(  # noqa: PLR0912
     >>> import scanpy as sc
     >>> sc.settings.verbosity = "info"
     >>> sc.settings.logfile = sys.stdout  # for doctests
-    >>> np.set_printoptions(precision=2)
+    >>> np.set_printoptions(precision=2) and None
     >>> adata = AnnData(
     ...     np.array(
     ...         [
