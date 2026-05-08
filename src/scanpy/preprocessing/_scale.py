@@ -11,6 +11,7 @@ from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._settings import Default, settings
 from .._utils import (
@@ -68,6 +69,7 @@ def clip_array(
     return x
 
 
+@backend_dispatch
 @singledispatch
 def scale[A: _Array](
     data: AnnData | A,

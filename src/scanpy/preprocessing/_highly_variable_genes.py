@@ -13,6 +13,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._settings import Default, Verbosity, settings
 from .._utils import (
@@ -591,6 +592,7 @@ def _highly_variable_genes_batched(
     return df
 
 
+@backend_dispatch
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,

@@ -13,6 +13,7 @@ from scipy import sparse
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
@@ -204,6 +205,7 @@ def describe_var(
     doc_obs_qc_returns=doc_obs_qc_returns,
     doc_var_qc_returns=doc_var_qc_returns,
 )
+@backend_dispatch
 def calculate_qc_metrics(
     adata: AnnData,
     *,

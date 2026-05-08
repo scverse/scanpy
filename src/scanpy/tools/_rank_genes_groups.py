@@ -13,6 +13,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase
 from .._settings import Default
 from .._settings.presets import DETest
@@ -493,6 +494,7 @@ class _RankGenes:
             self.stats.index = self.var_names
 
 
+@backend_dispatch
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,

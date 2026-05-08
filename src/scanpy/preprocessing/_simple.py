@@ -23,6 +23,7 @@ from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSRBase, DaskArray
 from .._docs import doc_rng
 from .._settings import settings
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from .._utils.random import RNGLike, SeedLike
 
 
+@backend_dispatch
 def filter_cells(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -196,6 +198,7 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
+@backend_dispatch
 def filter_genes(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -306,6 +309,7 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@backend_dispatch
 @singledispatch
 def log1p(
     data: AnnData | np.ndarray | CSBase,
@@ -507,6 +511,7 @@ def numpy_regress_out(
     return data
 
 
+@backend_dispatch
 def regress_out(
     adata: AnnData,
     keys: str | Sequence[str],

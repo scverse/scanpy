@@ -7,6 +7,7 @@ import numpy as np
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._docs import doc_rng
 from .._utils import _choose_graph, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -31,8 +32,9 @@ if TYPE_CHECKING:
 type _Layout = Literal["fr", "drl", "kk", "grid_fr", "lgl", "rt", "rt_circular", "fa"]
 
 
-@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
+@backend_dispatch
+@_doc_params(rng=doc_rng)
 def draw_graph(  # noqa: PLR0913
     adata: AnnData,
     layout: _Layout = "fa",

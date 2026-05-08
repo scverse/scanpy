@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase
 from .._docs import doc_rng
 from .._settings import Default, settings
@@ -53,8 +54,9 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     return m
 
 
-@_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
+@backend_dispatch
+@_doc_params(rng=doc_rng)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
@@ -267,6 +269,7 @@ def _nan_means(
     return np.nanmean(x, axis=axis, dtype=dtype)
 
 
+@backend_dispatch
 def score_genes_cell_cycle(
     adata: AnnData,
     *,

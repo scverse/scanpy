@@ -7,6 +7,7 @@ from anndata import AnnData
 from packaging.version import Version
 
 from ... import logging as logg
+from ..._backends import backend_dispatch
 from ..._compat import CSBase, DaskArray, pkg_version, warn
 from ..._docs import doc_rng
 from ..._settings import Default, settings
@@ -51,8 +52,9 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-@_doc_params(mask_var=doc_mask_var, rng=doc_rng)
 @_accepts_legacy_random_state(0)
+@backend_dispatch
+@_doc_params(mask_var=doc_mask_var, rng=doc_rng)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
