@@ -310,10 +310,13 @@ def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) ->
 
 
 @needs.igraph
+@pytest.mark.parametrize("preset", [sc.Preset.ScanpyV1, sc.Preset.ScanpyV2Preview])
 def test_modularity_adata(
-    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
+    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests, preset: sc.Preset
 ) -> None:
     """Test domain and API of modularity score."""
+    # get_igraph_from_adjacency works very slightly differently in scanpy 2
+    sc.settings.preset = preset
     adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
