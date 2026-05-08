@@ -180,7 +180,9 @@ class PAGA:
         ones = self._neighbors.distances.copy()
         ones.data = np.ones(len(ones.data))
         # should be directed if we deal with distances
-        g = _utils.get_igraph_from_adjacency(ones, directed=True)
+        g: igraph.Graph = igraph.Graph.Weighted_Adjacency(
+            ones, mode=igraph.ADJ_DIRECTED
+        )
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values
         )
@@ -212,7 +214,9 @@ class PAGA:
 
         ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
-        g = _utils.get_igraph_from_adjacency(ones)
+        g: igraph.Graph = igraph.Graph.Weighted_Adjacency(
+            ones, mode=igraph.ADJ_DIRECTED
+        )
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values
         )
@@ -289,9 +293,8 @@ class PAGA:
         #     raise ValueError(msg)
         import igraph
 
-        g = _utils.get_igraph_from_adjacency(
-            self._adata.uns[vkey].astype("bool"),
-            directed=True,
+        g: igraph.Graph = igraph.Graph.Adjacency(
+            self._adata.uns[vkey].astype("bool"), mode=igraph.ADJ_DIRECTED
         )
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values
@@ -324,9 +327,8 @@ class PAGA:
     def compute_transitions_old(self):
         import igraph
 
-        g = _utils.get_igraph_from_adjacency(
-            self._adata.uns["velocyto_transitions"],
-            directed=True,
+        g: igraph.Graph = igraph.Graph.Weighted_Adjacency(
+            self._adata.uns["velocyto_transitions"], mode=igraph.ADJ_DIRECTED
         )
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values
@@ -334,9 +336,9 @@ class PAGA:
         # this stores all single-cell edges in the cluster graph
         cg_full = vc.cluster_graph(combine_edges=False)
         # this is the boolean version that simply counts edges in the clustered graph
-        g_bool = _utils.get_igraph_from_adjacency(
+        g_bool = igraph.Graph.Adjacency(
             self._adata.uns["velocyto_transitions"].astype("bool"),
-            directed=True,
+            mode=igraph.ADJ_DIRECTED,
         )
         vc_bool = igraph.VertexClustering(
             g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values

@@ -238,15 +238,21 @@ def _compute_pos(  # noqa: PLR0912
             )
             raise ValueError(msg)
     else:  # igraph layouts
+        import igraph as ig
+
         if isinstance(rng, _LegacyRng):  # backwards compat
             random.seed(rng.bytes(8))
             ctx = nullcontext()
         else:
             ctx = _set_igraph_rng(rng)
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        g: ig.Graph = ig.Graph.Weighted_Adjacency(
+            adjacency_solid, mode=ig.ADJ_UNDIRECTED
+        )
         with ctx:
             if "rt" in layout:
-                g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
+                g_tree: ig.Graph = ig.Graph.Weighted_Adjacency(
+                    adj_tree, mode=ig.ADJ_UNDIRECTED
+                )
                 pos_list = g_tree.layout(
                     layout, root=root if isinstance(root, list) else [root]
                 ).coords

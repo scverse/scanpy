@@ -9,7 +9,6 @@ from natsort import natsorted
 from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
 
-from .. import _utils
 from .. import logging as logg
 from .._compat import pkg_version
 from .._utils import _choose_graph, _doc_params
@@ -143,13 +142,17 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
             adjacency=adjacency,
         )
     if flavor in {"vtraag", "igraph"}:
+        import igraph as ig
+
         if flavor == "igraph" and resolution is not None:
             logg.warning('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == "igraph":
             directed = False
         if not directed:
             logg.debug("    using the undirected graph")
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        g: ig.Graph = ig.Graph.Weighted_Adjacency(
+            adjacency, mode=ig.ADJ_DIRECTED if directed else ig.ADJ_UNDIRECTED
+        )
         weights = np.array(g.es["weight"]).astype(np.float64) if use_weights else None
         if flavor == "vtraag":
             import louvain

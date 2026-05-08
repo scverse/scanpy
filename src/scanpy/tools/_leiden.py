@@ -138,8 +138,10 @@ def leiden(  # noqa: PLR0913
         to calculate a score independent of `flavor`.
 
     """
-    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     _utils.ensure_igraph()
+    import igraph as ig
+
+    flavor = _validate_flavor(flavor, partition_type=partition_type, directed=directed)
     clustering_args = dict(clustering_args)
     rng = np.random.default_rng(rng)
     meta_random_state = (
@@ -170,7 +172,9 @@ def leiden(  # noqa: PLR0913
         if resolution is not None:
             clustering_args["resolution_parameter"] = resolution
         directed = True if directed is None else directed
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        g: ig.Graph = ig.Graph.Weighted_Adjacency(
+            adjacency, mode=ig.ADJ_DIRECTED if directed else ig.ADJ_UNDIRECTED
+        )
         if partition_type is None:
             partition_type = leidenalg.RBConfigurationVertexPartition
         if use_weights:
@@ -186,7 +190,7 @@ def leiden(  # noqa: PLR0913
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+        g: ig.Graph = ig.Graph.Weighted_Adjacency(adjacency, mode=ig.ADJ_UNDIRECTED)
         if use_weights:
             clustering_args["weights"] = "weight"
         if resolution is not None:

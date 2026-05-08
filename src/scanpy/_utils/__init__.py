@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from typing import Any
 
     from anndata import AnnData
-    from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
     from pandas._typing import Dtype as PdDtype
 
@@ -266,30 +265,6 @@ def check_use_raw(
     if layer is not None:
         return False
     return adata.raw is not None
-
-
-# --------------------------------------------------------------------------------
-# Graph stuff
-# --------------------------------------------------------------------------------
-
-
-def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
-    """Get igraph graph from adjacency matrix."""
-    import igraph as ig
-
-    sources, targets = adjacency.nonzero()
-    weights = dematrix(adjacency[sources, targets]).ravel() if len(sources) else []
-    g = ig.Graph(directed=directed)
-    g.add_vertices(adjacency.shape[0])  # this adds adjacency.shape[0] vertices
-    g.add_edges(list(zip(sources, targets, strict=True)))
-    with suppress(KeyError):
-        g.es["weight"] = weights
-    if g.vcount() != adjacency.shape[0]:
-        logg.warning(
-            f"The constructed graph has only {g.vcount()} nodes. "
-            "Your adjacency matrix contained redundant nodes."
-        )
-    return g
 
 
 # --------------------------------------------------------------------------------
