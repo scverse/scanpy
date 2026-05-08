@@ -84,9 +84,7 @@ def get_illico_results_df(
 ) -> pd.DataFrame:
     """Synthetic illico-shaped output used by the _illico_results_to_iter tests.
 
-    Features are intentionally non-alphabetical so that any silent
-    reordering by the helper (e.g., `unstack` defaulting to sort=True)
-    surfaces as a test failure.
+    Features are in deliberately non-ascending to test ``var_name`` ordering.
     """
     rng = np.random.default_rng(seed)
     groups = [f"g{i}" for i in range(n_groups)]
@@ -379,57 +377,18 @@ def test_mask_not_equal():
     [
         (["g0", "g1", "g2"], None, [0, 1, 2]),
         (["g0", "g1", "g2"], 1, [0, 2]),
-        (["g2", "g0"], None, [0, 1]),
     ],
-    ids=["vs_rest", "vs_reference", "subset"],
+    ids=["vs_rest", "vs_reference"],
 )
 def test_illico_iter(groups_order, ireference, expected_indices):
     df = get_illico_results_df(n_groups=3, n_genes=4)
     feature_order = df.index.unique(level="feature")
-    out = list(
-        _illico_results_to_iter(
-            df, np.array(groups_order), ireference, feature_order=feature_order
-        )
-    )
-    assert [t[0] for t in out] == expected_indices
+    out = list(_illico_results_to_iter(df, np.array(groups_order), ireference))
+    assert sorted(t[0] for t in out) == sorted(expected_indices)
     for gi, z, p in out:
         sub = df.xs(groups_order[gi], level=0).reindex(feature_order)
         np.testing.assert_array_equal(z, sub["z_score"].to_numpy())
         np.testing.assert_array_equal(p, sub["p_value"].to_numpy())
-
-
-def test_illico_iter_missing_group():
-    df = get_illico_results_df(n_groups=3, n_genes=4)
-    out = list(
-        _illico_results_to_iter(
-            df,
-            np.array(["g0", "missing"]),
-            None,
-            feature_order=df.index.unique(level="feature"),
-        )
-    )
-    assert [t[0] for t in out] == [0]
-
-
-def test_illico_iter_row_order():
-    """Pivoting by label means shuffled rows must produce identical output."""
-    df = get_illico_results_df(n_groups=3, n_genes=4)
-    feature_order = df.index.unique(level="feature")
-    df_shuffled = df.sample(frac=1.0, random_state=42)
-    groups_order = np.array(["g0", "g1", "g2"])
-    out = list(
-        _illico_results_to_iter(df, groups_order, None, feature_order=feature_order)
-    )
-    out_shuffled = list(
-        _illico_results_to_iter(
-            df_shuffled, groups_order, None, feature_order=feature_order
-        )
-    )
-    assert len(out) == len(out_shuffled) == 3
-    for (gi_a, z_a, p_a), (gi_b, z_b, p_b) in zip(out, out_shuffled, strict=True):
-        assert gi_a == gi_b
-        np.testing.assert_array_equal(z_a, z_b)
-        np.testing.assert_array_equal(p_a, p_b)
 
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])

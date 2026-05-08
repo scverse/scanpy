@@ -51,26 +51,26 @@ def _illico_results_to_iter(
     illico_df: pd.DataFrame,
     groups_order: NDArray,
     ireference: int | None,
-    *,
-    feature_order,
 ):
-    """Reshape illico's long-form output into per-group ``(index, z, p)`` tuples.
+    """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
 
-    illico returns a DataFrame with a 2-level MultiIndex ``(group, feature)``
-    and columns including ``z_score`` and ``p_value``. We pivot to wide form
-    via :meth:`pandas.Series.unstack`.
+    illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
+    and columns including ``z_score`` and ``p_value``. We stream one group
+    at a time via `pandas.Series.loc`, trusting illico_df groups are ordered
+    by ``var_name``.
     """
-    z_wide = illico_df["z_score"].unstack().reindex(columns=feature_order)
-    p_wide = illico_df["p_value"].unstack().reindex(columns=feature_order)
     ref_label = None if ireference is None else groups_order[ireference]
+    z_series = illico_df["z_score"]
+    p_series = illico_df["p_value"]
+    illico_groups = set(illico_df.index.unique(level="pert"))
     return (
         (
             group_index,
-            z_wide.loc[group_name].to_numpy(),
-            p_wide.loc[group_name].to_numpy(),
+            z_series.loc[group_name].to_numpy(),
+            p_series.loc[group_name].to_numpy(),
         )
         for group_index, group_name in enumerate(groups_order)
-        if group_name != ref_label and group_name in z_wide.index
+        if group_name != ref_label and group_name in illico_groups
     )
 
 
@@ -496,14 +496,10 @@ class _RankGenes:
                     alternative="two-sided",
                     use_rust=False,
                 )
-                # Reshape illico's long-form output into the per-group iterator
-                # the rest of compute_statistics expects, aligning per-gene
-                # values to var_names so they stay consistent with self.X.
                 generate_test_results = _illico_results_to_iter(
                     illico_df,
                     self.groups_order,
                     self.ireference,
-                    feature_order=self.var_names,
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
