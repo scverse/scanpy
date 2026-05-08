@@ -121,6 +121,25 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
+    Examples
+    --------
+    Plot a precomputed UMAP embedding coloured by the `'bulk_labels'` cell-type annotation.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.embedding(adata, basis="umap", color="bulk_labels")
+
+    Show several panels in a single call by passing a list of keys to `color`,
+    mixing categorical annotations and gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding(adata, basis="umap", color=["bulk_labels", "CD3D", "LYZ"])
+
     """
     #####################
     # Argument handling #
