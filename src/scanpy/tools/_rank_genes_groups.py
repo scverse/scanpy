@@ -230,13 +230,8 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(
-        self,
-        *,
-        exponentiate_values: bool = False,
-        calc_vars_rest: bool = True,
-    ) -> None:
-        """Set ``self.{means,vars,pts}{,_rest}`` depending on ``X``.
+    def _basic_stats(self, *, exponentiate_values: bool = False) -> None:
+        """Set ``self.{means,vars,means_rest,pts,pts_rest}`` depending on ``X``.
 
         Per-group mean/variance is computed in a single numba-batched pass
         via :func:`scanpy.get.aggregate` (`mean_var_csr`/`_csc` kernels
@@ -246,19 +241,16 @@ class _RankGenes:
         flagged as "costly for sparse data" and that dominated the runtime
         profile by 2+ orders of magnitude on large datasets.
 
-        Parameters
-        ----------
-        exponentiate_values
-            Apply ``expm1`` to ``X`` before computing stats (used for
-            log-space mean aggregation).
-        calc_vars_rest
-            Whether to populate ``self.vars_rest`` in ``vs_rest`` mode.
-            Wilcoxon paths (including ``wilcoxon_illico``) only consume
-            ``self.means`` / ``self.means_rest`` downstream, so they pass
-            ``False`` to skip the per-group ``X[~mask]`` slice that's
-            otherwise needed to keep ``vars_rest`` numerically aligned
-            with the legacy implementation. The t-test path consumes
-            ``vars_rest`` and keeps the default.
+        Leaves ``self.vars_rest`` at its zero-initialized state and
+        populates ``self.means_rest`` with the sum-decomposition fast
+        path. Callers that need bit-stable ``means_rest`` / ``vars_rest``
+        (i.e., the t-test path, whose golden-data tests are sensitive to
+        ~1 ULP rank flips) follow this with a separate
+        :meth:`_compute_rest_stats_direct` call that overwrites both
+        arrays via direct ``mean_var(X[~mask])``. Wilcoxon paths skip
+        that and keep the sum-decomposition values (fold-change tolerates
+        ~1e-11 noise; the ``test_illico`` parity tests pass at
+        ``atol=1e-6``).
         """
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
@@ -335,47 +327,72 @@ class _RankGenes:
                 np.zeros((n_groups, n_genes)) if self.comp_pts else None
             )
 
-            if calc_vars_rest:
-                # Bit-stable path for callers that consume `vars_rest`
-                # (t-test). Per-group `mean_var(X[~mask])` matches the
-                # legacy implementation exactly. `means_rest` is taken
-                # from this same call to avoid sum-decomposition's O(1e-15)
-                # cancellation noise that flips ranking on near-tied
-                # scores.
-                for g in range(n_groups):
-                    mask_obs = self.groups_masks_obs[g]
-                    x_rest = X[~mask_obs]
-                    self.means_rest[g], self.vars_rest[g] = mean_var(
-                        x_rest, axis=0, correction=1
-                    )
-                    if self.comp_pts:
-                        if isinstance(x_rest, CSBase):
-                            nnz_r = x_rest.getnnz(axis=0)
-                        else:
-                            nnz_r = np.count_nonzero(x_rest, axis=0)
-                        self.pts_rest[g] = nnz_r / x_rest.shape[0]
-                    del x_rest
-            else:
-                # Fast path for callers that only consume `means_rest`
-                # (wilcoxon-family methods). Derive from totals minus
-                # group totals — no `X[~mask]` slice needed, which is
-                # the dominant cost on large sparse data.
-                mean_global = mean_var(X, axis=0, correction=1)[0]
-                sum_global = mean_global * n_total
+            # Derive `means_rest` (and `pts_rest`) from totals minus group
+            # totals — no `X[~mask]` slice needed, which is the dominant
+            # cost on large sparse data. `vars_rest` is intentionally NOT
+            # populated here; see `_compute_rest_stats_direct`.
+            mean_global = mean_var(X, axis=0, correction=1)[0]
+            sum_global = mean_global * n_total
+            if self.comp_pts:
+                if isinstance(X, CSBase):
+                    nnz_global = X.getnnz(axis=0)
+                else:
+                    nnz_global = np.count_nonzero(X, axis=0)
+            for g in range(n_groups):
+                n_g = int(self.groups_masks_obs[g].sum())
+                n_rest = n_total - n_g
+                self.means_rest[g] = (
+                    sum_global - self.means[g] * n_g
+                ) / n_rest
                 if self.comp_pts:
-                    if isinstance(X, CSBase):
-                        nnz_global = X.getnnz(axis=0)
-                    else:
-                        nnz_global = np.count_nonzero(X, axis=0)
-                for g in range(n_groups):
-                    n_g = int(self.groups_masks_obs[g].sum())
-                    n_rest = n_total - n_g
-                    self.means_rest[g] = (
-                        sum_global - self.means[g] * n_g
-                    ) / n_rest
-                    if self.comp_pts:
-                        nnz_g_arr = self.pts[g] * n_g
-                        self.pts_rest[g] = (nnz_global - nnz_g_arr) / n_rest
+                    nnz_g_arr = self.pts[g] * n_g
+                    self.pts_rest[g] = (nnz_global - nnz_g_arr) / n_rest
+
+    def _compute_rest_stats_for_t_test(
+        self, *, exponentiate_values: bool = False
+    ) -> None:
+        """Populate ``self.means_rest`` and ``self.vars_rest`` via direct
+        per-group ``mean_var(X[~mask])``.
+
+        Only meaningful in ``vs_rest`` mode (``self.ireference is None``);
+        a no-op otherwise.
+
+        Kept separate from :meth:`_basic_stats` because it requires the
+        per-group ``X[~mask]`` complement slice — the dominant cost on
+        large sparse data — and only the t-test path consumes the
+        results downstream. The sum-decomposition fast path in
+        :meth:`_basic_stats` is ~2 orders of magnitude faster but
+        introduces ~1 ULP of cancellation noise in ``means_rest`` /
+        ``vars_rest`` that flips rank order on near-tied scores in the
+        t-test golden-data tests; this method **overwrites** those
+        fast-path values with bit-stable ones for callers that need
+        them. Wilcoxon paths don't call this and keep the fast
+        approximations (fold-change tolerates ~1e-11 noise; the
+        ``test_illico`` parity tests pass at ``atol=1e-6``).
+
+        Assumes :meth:`_basic_stats` has already allocated
+        ``self.means_rest`` / ``self.vars_rest``. The
+        ``exponentiate_values`` flag must match the most recent
+        ``_basic_stats`` call.
+        """
+        if self.ireference is not None:
+            return
+
+        if exponentiate_values:
+            if isinstance(self.X, CSBase):
+                X = self.X.copy()
+                X.data = self.expm1_func(X.data)
+            else:
+                X = self.expm1_func(self.X)
+        else:
+            X = self.X
+
+        for g in range(self.groups_masks_obs.shape[0]):
+            x_rest = X[~self.groups_masks_obs[g]]
+            self.means_rest[g], self.vars_rest[g] = mean_var(
+                x_rest, axis=0, correction=1
+            )
+            del x_rest
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
@@ -553,10 +570,12 @@ class _RankGenes:
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
             self._basic_stats(exponentiate_values=False)
+            self._compute_rest_stats_for_t_test(exponentiate_values=False)
             generate_test_results = self.t_test(method)
             if not mean_in_log_space:
                 # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
                 self._basic_stats(exponentiate_values=True)
+                self._compute_rest_stats_for_t_test(exponentiate_values=True)
         elif "wilcoxon" in method:
             if "illico" in method:
                 from illico import asymptotic_wilcoxon
@@ -592,12 +611,10 @@ class _RankGenes:
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             # If we're not exponentiating after the mean aggregation, then do it now.
-            # The wilcoxon paths only consume means/means_rest downstream
-            # (for fold-change), so skip the costly vars_rest direct compute.
-            self._basic_stats(
-                exponentiate_values=not mean_in_log_space,
-                calc_vars_rest=False,
-            )
+            # The wilcoxon paths only consume means/means_rest downstream (for
+            # fold-change); they don't read self.vars_rest, so we skip the
+            # per-group X[~mask] slice that _compute_vars_rest would do.
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
