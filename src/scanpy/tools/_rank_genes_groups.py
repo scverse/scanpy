@@ -304,9 +304,9 @@ class _RankGenes:
         self.vars[out_idx] = vars_arr
         if self.comp_pts:
             nnz_per_group = np.asarray(out.layers["count_nonzero"])
-            n_per_group = np.array(
-                [int(self.groups_masks_obs[g].sum()) for g in out_idx]
-            )
+            n_per_group = np.array([
+                int(self.groups_masks_obs[g].sum()) for g in out_idx
+            ])
             self.pts[out_idx] = nnz_per_group / n_per_group[:, None]
 
     def _derive_rest_stats(self, X) -> None:
@@ -319,9 +319,7 @@ class _RankGenes:
 
         self.means_rest = np.zeros((n_groups, n_genes))
         self.vars_rest = np.zeros((n_groups, n_genes))
-        self.pts_rest = (
-            np.zeros((n_groups, n_genes)) if self.comp_pts else None
-        )
+        self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
         mean_global = mean_var(X, axis=0, correction=1)[0]
         sum_global = mean_global * n_total
@@ -579,7 +577,9 @@ class _RankGenes:
             if "illico" in method:
                 illico_df = self._run_illico(tie_correct=tie_correct)
                 generate_test_results = _illico_results_to_iter(
-                    illico_df, self.groups_order, self.ireference,
+                    illico_df,
+                    self.groups_order,
+                    self.ireference,
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
@@ -639,9 +639,7 @@ def _build_stats_dataframe(
             df[group_name, "pvals"] = pvals[global_indices]
             if corr_method == "benjamini-hochberg":
                 pvals[np.isnan(pvals)] = 1
-                _, pvals_adj, _, _ = multipletests(
-                    pvals, alpha=0.05, method="fdr_bh"
-                )
+                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method="fdr_bh")
             elif corr_method == "bonferroni":
                 pvals_adj = np.minimum(pvals * n_genes_total, 1.0)
             df[group_name, "pvals_adj"] = pvals_adj[global_indices]
@@ -654,14 +652,11 @@ def _build_stats_dataframe(
                 else rg.means[rg.ireference]
             )
             foldchanges = (
-                (rg.expm1_func(mean_group) + 1e-9)
-                / (rg.expm1_func(mean_rest) + 1e-9)
+                (rg.expm1_func(mean_group) + 1e-9) / (rg.expm1_func(mean_rest) + 1e-9)
                 if mean_in_log_space
                 else (mean_group + 1e-9) / (mean_rest + 1e-9)
             )  # add small value to avoid zeros
-            df[group_name, "logfoldchanges"] = np.log2(
-                foldchanges[global_indices]
-            )
+            df[group_name, "logfoldchanges"] = np.log2(foldchanges[global_indices])
 
     if df is not None and n_genes_user is None:
         df.index = rg.var_names
