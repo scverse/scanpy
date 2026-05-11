@@ -47,6 +47,33 @@ def _select_top_n(scores: NDArray, n_top: int):
     return global_indices
 
 
+def _illico_results_to_iter(
+    illico_df: pd.DataFrame,
+    groups_order: NDArray,
+    ireference: int | None,
+):
+    """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
+
+    illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
+    and columns including ``z_score`` and ``p_value``. We stream one group
+    at a time via `pandas.Series.loc`, trusting illico_df groups are ordered
+    by ``var_name``.
+    """
+    ref_label = None if ireference is None else groups_order[ireference]
+    z_series = illico_df["z_score"]
+    p_series = illico_df["p_value"]
+    illico_groups = set(illico_df.index.unique(level="pert"))
+    return (
+        (
+            group_index,
+            z_series.loc[group_name].to_numpy(),
+            p_series.loc[group_name].to_numpy(),
+        )
+        for group_index, group_name in enumerate(groups_order)
+        if group_name != ref_label and group_name in illico_groups
+    )
+
+
 @njit
 def rankdata(data: NDArray[np.number]) -> NDArray[np.float64]:
     """Parallelized version of scipy.stats.rankdata."""
@@ -425,7 +452,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(  # noqa: PLR0912, PLR0915
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: DETest,
         *,
@@ -469,33 +496,10 @@ class _RankGenes:
                     alternative="two-sided",
                     use_rust=False,
                 )
-                # Generate a lookup of category -> result excluding the refernece if it is present.
-                generate_test_results_map = {
-                    group_cat: (
-                        group["z_score"].to_numpy(copy=True),
-                        group["p_value"].to_numpy(copy=True),
-                    )
-                    for (_, group) in illico_df.groupby(level="pert")
-                    if (
-                        group_cat := np.unique(
-                            group.index.get_level_values("pert").to_numpy(copy=True)
-                        ).item()
-                    )
-                    != (
-                        None
-                        if self.ireference is None
-                        else self.groups_order[self.ireference]
-                    )
-                }
-                # Create the iterator that is expected by the other method-branches.
-                groups_order_list = self.groups_order.tolist()
-                generate_test_results = (
-                    (
-                        groups_order_list.index(group_cat),
-                        *generate_test_results_map[group_cat],
-                    )
-                    for group_cat in self.groups_order
-                    if group_cat in generate_test_results_map
+                generate_test_results = _illico_results_to_iter(
+                    illico_df,
+                    self.groups_order,
+                    self.ireference,
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)

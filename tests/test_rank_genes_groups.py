@@ -17,7 +17,7 @@ from scanpy._utils import select_groups
 from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes
+from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -77,6 +77,25 @@ def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
     ):
         expected = dict(z)
     return Expected(names=expected["names"].astype("T"), scores=expected["scores"])
+
+
+def get_illico_results_df(
+    n_groups: int, n_genes: int, *, seed: int = 0
+) -> pd.DataFrame:
+    """Synthetic illico-shaped output used by the _illico_results_to_iter tests.
+
+    Features are in deliberately non-ascending to test ``var_name`` ordering.
+    """
+    rng = np.random.default_rng(seed)
+    groups = [f"g{i}" for i in range(n_groups)]
+    features = [f"f{n_genes - 1 - j}" for j in range(n_genes)]  # reversed -> not sorted
+    return pd.DataFrame(
+        {
+            "z_score": rng.normal(size=n_groups * n_genes),
+            "p_value": rng.uniform(size=n_groups * n_genes),
+        },
+        index=pd.MultiIndex.from_product([groups, features], names=["pert", "feature"]),
+    )
 
 
 # TODO: Make dask compatible
@@ -353,9 +372,30 @@ def test_mask_not_equal():
     assert not np.array_equal(no_mask, with_mask)
 
 
+@pytest.mark.parametrize(
+    ("groups_order", "ireference", "expected_indices"),
+    [
+        (["g0", "g1", "g2"], None, [0, 1, 2]),
+        (["g0", "g1", "g2"], 1, [0, 2]),
+    ],
+    ids=["vs_rest", "vs_reference"],
+)
+def test_illico_iter(groups_order, ireference, expected_indices):
+    df = get_illico_results_df(n_groups=3, n_genes=4)
+    feature_order = df.index.unique(level="feature")
+    out = list(_illico_results_to_iter(df, np.array(groups_order), ireference))
+    assert sorted(t[0] for t in out) == sorted(expected_indices)
+    for gi, z, p in out:
+        sub = df.xs(groups_order[gi], level=0).reindex(feature_order)
+        np.testing.assert_array_equal(z, sub["z_score"].to_numpy())
+        np.testing.assert_array_equal(p, sub["p_value"].to_numpy())
+
+
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-@pytest.mark.parametrize("exp_post_agg", [True, False], ids=["post_exp", "pre_exp"])
+@pytest.mark.parametrize(
+    "mean_in_log_space", [True, False], ids=["log_space_mean", "linear_space_mean"]
+)
 @pytest.mark.parametrize(
     "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
 )
@@ -368,7 +408,7 @@ def test_illico(
     subtests: pytest.Subtests,
     groups: Literal["all"] | Sequence[str],
     *,
-    exp_post_agg: bool,
+    mean_in_log_space: bool,
     tie_correct: bool,
 ):
 
@@ -386,7 +426,7 @@ def test_illico(
         n_genes=pbmc.n_vars,
         tie_correct=tie_correct,
         corr_method=corr_method,
-        exp_post_agg=exp_post_agg,
+        mean_in_log_space=mean_in_log_space,
         groups=groups,
     )
 
@@ -398,7 +438,7 @@ def test_illico(
         n_genes=pbmc.n_vars,
         tie_correct=tie_correct,
         corr_method=corr_method,
-        exp_post_agg=exp_post_agg,
+        mean_in_log_space=mean_in_log_space,
         groups=groups,
     )
     scanpy_results = pbmc.uns["rank_genes_groups"]
@@ -437,10 +477,18 @@ def test_illico(
         (False, -1.0),
     ],
 )
-@pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "wilcoxon",
+        "t-test",
+        "t-test_overestim_var",
+        pytest.param("wilcoxon_illico", marks=needs.illico),
+    ],
+)
 def test_mean_in_log_space(
     expected_logfc: float,
-    method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
+    method: Literal["wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var"],
     *,
     mean_in_log_space: bool,
 ):
