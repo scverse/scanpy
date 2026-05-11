@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 def _choose_representation(
     adata: AnnData,
     *,
-    use_rep: str | None = None,
-    n_pcs: int | None = None,
+    use_rep: str | None,
+    n_pcs: int | None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
     verbosity = settings.verbosity
@@ -55,12 +55,12 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
         logg.info("    using data matrix X directly")
         return adata.X
 
-    if "X_pca" in adata.obsm:
-        if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
-            msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    if key := next((b for b in ["X_pca", "pca"] if b in adata.obsm), None):
+        if n_pcs is not None and n_pcs > adata.obsm[key].shape[1]:
+            msg = f"adata.obsm[{key!r}] does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm["X_pca"][:, :n_pcs]
-        logg.info(f"    using 'X_pca' with n_pcs = {x.shape[1]}")
+        x = adata.obsm[key][:, :n_pcs]
+        logg.info(f"    using {key!r} with n_pcs = {x.shape[1]}")
         return x
 
     from ..preprocessing import pca
@@ -73,7 +73,7 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm["X_pca"]
+    return adata.obsm[settings.preset.pca.key_added or "X_pca"]
 
 
 def get_init_pos_from_paga(
