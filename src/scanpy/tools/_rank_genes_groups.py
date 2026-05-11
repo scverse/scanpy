@@ -23,7 +23,7 @@ from .._utils import (
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask, _get_obs_rep
+from ..get import _check_mask, _get_obs_rep, aggregate
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -230,64 +230,152 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(self, *, exponentiate_values: bool = False) -> None:
-        """Set self.{means,vars,pts}{,_rest} depending on X."""
+    def _basic_stats(
+        self,
+        *,
+        exponentiate_values: bool = False,
+        calc_vars_rest: bool = True,
+    ) -> None:
+        """Set ``self.{means,vars,pts}{,_rest}`` depending on ``X``.
+
+        Per-group mean/variance is computed in a single numba-batched pass
+        via :func:`scanpy.get.aggregate` (`mean_var_csr`/`_csc` kernels
+        added in PR #4062). In ``vs_rest`` mode the per-group "rest" mean
+        is derived algebraically from totals minus group totals, avoiding
+        the ``X[~mask]`` complement slice that the previous Python loop
+        flagged as "costly for sparse data" and that dominated the runtime
+        profile by 2+ orders of magnitude on large datasets.
+
+        Parameters
+        ----------
+        exponentiate_values
+            Apply ``expm1`` to ``X`` before computing stats (used for
+            log-space mean aggregation).
+        calc_vars_rest
+            Whether to populate ``self.vars_rest`` in ``vs_rest`` mode.
+            Wilcoxon paths (including ``wilcoxon_illico``) only consume
+            ``self.means`` / ``self.means_rest`` downstream, so they pass
+            ``False`` to skip the per-group ``X[~mask]`` slice that's
+            otherwise needed to keep ``vars_rest`` numerically aligned
+            with the legacy implementation. The t-test path consumes
+            ``vars_rest`` and keeps the default.
+        """
         n_genes = self.X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
+        n_total = self.X.shape[0]
 
         self.means = np.zeros((n_groups, n_genes))
         self.vars = np.zeros((n_groups, n_genes))
         self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
+        # `expm1` once over the whole matrix if requested. For sparse X this
+        # transforms only the nonzero `.data` array, preserving sparsity.
+        if exponentiate_values:
+            if isinstance(self.X, CSBase):
+                X = self.X.copy()
+                X.data = self.expm1_func(X.data)
+            else:
+                X = self.expm1_func(self.X)
+        else:
+            X = self.X
+
+        # Build a per-cell group-id column. Cells not in any selected group
+        # are flagged -1 and excluded from the aggregation. This handles the
+        # `groups != "all"` subset case where `groups_masks_obs` covers only
+        # a subset of cells.
+        cell_group = np.full(n_total, -1, dtype=np.int64)
+        for g, mask in enumerate(self.groups_masks_obs):
+            cell_group[mask] = g
+        in_any = cell_group >= 0
+        if in_any.all():
+            X_used = X
+            cell_group_used = cell_group
+        else:
+            X_used = X[in_any]
+            cell_group_used = cell_group[in_any]
+
+        funcs = ["mean", "var"]
+        if self.comp_pts:
+            funcs.append("count_nonzero")
+        cats = pd.Categorical(cell_group_used, categories=range(n_groups))
+        agg_adata = AnnData(
+            X=X_used,
+            obs=pd.DataFrame(
+                {"_g": cats},
+                index=pd.RangeIndex(len(cats)).astype(str),
+            ),
+        )
+        out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
+
+        # `aggregate` returns rows for present categories only, indexed by
+        # the categorical's category labels (we set those to 0..n_groups-1).
+        # When the input is float32 we cast the float64 aggregate output
+        # back to float32 so downstream stat tests see the same precision
+        # the previous per-group `mean_var` produced. (For int and float64
+        # inputs both code paths produce float64 already.)
+        out_idx = out.obs_names.astype(int).to_numpy()
+        means_arr = np.asarray(out.layers["mean"])
+        vars_arr = np.asarray(out.layers["var"])
+        if X_used.dtype == np.float32:
+            means_arr = means_arr.astype(np.float32)
+            vars_arr = vars_arr.astype(np.float32)
+        self.means[out_idx] = means_arr
+        self.vars[out_idx] = vars_arr
+        if self.comp_pts:
+            nnz_per_group = np.asarray(out.layers["count_nonzero"])
+            n_per_group = np.array(
+                [int(self.groups_masks_obs[g].sum()) for g in out_idx]
+            )
+            self.pts[out_idx] = nnz_per_group / n_per_group[:, None]
+
         if self.ireference is None:
             self.means_rest = np.zeros((n_groups, n_genes))
             self.vars_rest = np.zeros((n_groups, n_genes))
-            self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
-        else:
-            mask_rest = self.groups_masks_obs[self.ireference]
-            x_rest = self.X[mask_rest]
-            if exponentiate_values:
-                x_rest = self.expm1_func(x_rest)
-            self.means[self.ireference], self.vars[self.ireference] = mean_var(
-                x_rest, axis=0, correction=1
-            )
-            # deleting the next line causes a memory leak for some reason
-            del x_rest
-
-        if isinstance(self.X, CSBase):
-            get_nonzeros = lambda x: x.getnnz(axis=0)
-        else:
-            get_nonzeros = lambda x: np.count_nonzero(x, axis=0)
-
-        for group_index, mask_obs in enumerate(self.groups_masks_obs):
-            x_mask = self.X[mask_obs]
-            if exponentiate_values:
-                x_mask = self.expm1_func(x_mask)
-
-            if self.comp_pts:
-                self.pts[group_index] = get_nonzeros(x_mask) / x_mask.shape[0]
-
-            if self.ireference is not None and group_index == self.ireference:
-                continue
-
-            self.means[group_index], self.vars[group_index] = mean_var(
-                x_mask, axis=0, correction=1
+            self.pts_rest = (
+                np.zeros((n_groups, n_genes)) if self.comp_pts else None
             )
 
-            if self.ireference is None:
-                mask_rest = ~mask_obs
-                x_rest = self.X[mask_rest]
-                if exponentiate_values:
-                    x_rest = self.expm1_func(x_rest)
-                (
-                    self.means_rest[group_index],
-                    self.vars_rest[group_index],
-                ) = mean_var(x_rest, axis=0, correction=1)
-                # this can be costly for sparse data
+            if calc_vars_rest:
+                # Bit-stable path for callers that consume `vars_rest`
+                # (t-test). Per-group `mean_var(X[~mask])` matches the
+                # legacy implementation exactly. `means_rest` is taken
+                # from this same call to avoid sum-decomposition's O(1e-15)
+                # cancellation noise that flips ranking on near-tied
+                # scores.
+                for g in range(n_groups):
+                    mask_obs = self.groups_masks_obs[g]
+                    x_rest = X[~mask_obs]
+                    self.means_rest[g], self.vars_rest[g] = mean_var(
+                        x_rest, axis=0, correction=1
+                    )
+                    if self.comp_pts:
+                        if isinstance(x_rest, CSBase):
+                            nnz_r = x_rest.getnnz(axis=0)
+                        else:
+                            nnz_r = np.count_nonzero(x_rest, axis=0)
+                        self.pts_rest[g] = nnz_r / x_rest.shape[0]
+                    del x_rest
+            else:
+                # Fast path for callers that only consume `means_rest`
+                # (wilcoxon-family methods). Derive from totals minus
+                # group totals — no `X[~mask]` slice needed, which is
+                # the dominant cost on large sparse data.
+                mean_global = mean_var(X, axis=0, correction=1)[0]
+                sum_global = mean_global * n_total
                 if self.comp_pts:
-                    self.pts_rest[group_index] = get_nonzeros(x_rest) / x_rest.shape[0]
-                # deleting the next line causes a memory leak for some reason
-                del x_rest
+                    if isinstance(X, CSBase):
+                        nnz_global = X.getnnz(axis=0)
+                    else:
+                        nnz_global = np.count_nonzero(X, axis=0)
+                for g in range(n_groups):
+                    n_g = int(self.groups_masks_obs[g].sum())
+                    n_rest = n_total - n_g
+                    self.means_rest[g] = (
+                        sum_global - self.means[g] * n_g
+                    ) / n_rest
+                    if self.comp_pts:
+                        nnz_g_arr = self.pts[g] * n_g
+                        self.pts_rest[g] = (nnz_global - nnz_g_arr) / n_rest
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
@@ -504,7 +592,12 @@ class _RankGenes:
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             # If we're not exponentiating after the mean aggregation, then do it now.
-            self._basic_stats(exponentiate_values=not mean_in_log_space)
+            # The wilcoxon paths only consume means/means_rest downstream
+            # (for fold-change), so skip the costly vars_rest direct compute.
+            self._basic_stats(
+                exponentiate_values=not mean_in_log_space,
+                calc_vars_rest=False,
+            )
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
