@@ -79,7 +79,7 @@ def rank_genes_groups_df(
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    d = d.stack(level=1, future_stack=True).reset_index()
+    d = d.stack(level=1, future_stack=True).reset_index()  # noqa: PD013
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -106,7 +106,7 @@ def rank_genes_groups_df(
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop(columns="group", inplace=True)
+        del d["group"]
 
     return d.reset_index(drop=True)
 

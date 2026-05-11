@@ -12,8 +12,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import assert_adata_equal
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
@@ -93,8 +95,9 @@ def test_krumsiek11():
 
 
 def test_blobs():
-    n_obs = np.random.randint(15, 30)
-    n_var = np.random.randint(500, 600)
+    rng = np.random.default_rng()
+    n_obs = rng.integers(15, 30)
+    n_var = rng.integers(500, 600)
     adata = sc.datasets.blobs(n_variables=n_var, n_observations=n_obs)
     assert adata.shape == (n_obs, n_var)
 
@@ -110,7 +113,7 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets():
     """Tests that reading/ downloading works and is does not have global effects."""
@@ -121,7 +124,7 @@ def test_visium_datasets():
     assert_adata_equal(hheart, hheart_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_dir_change(tmp_path: Path):
     """Test that changing the dataset dir doesn't break reading."""
@@ -133,7 +136,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     assert_adata_equal(mbrain, mbrain_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
@@ -173,6 +176,7 @@ DS_DYNAMIC = frozenset({"ebi_expression_atlas"})
 DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 
 
+@pytest.mark.skipif(pkg_version("anndata") < Version("0.13.dev0"), reason="old anndata")
 @pytest.mark.parametrize(
     "ds_name",
     [

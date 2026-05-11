@@ -157,6 +157,31 @@ def scatter(  # noqa: PLR0913
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
+    Examples
+    --------
+    Plot two `.obs` annotations against each other and colour by a third.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.scatter(adata, x="n_counts", y="n_genes", color="bulk_labels")
+
+    Plot expression of two genes against each other.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.scatter(adata, x="CD79A", y="CD3D", color="bulk_labels")
+
+    Use a precomputed embedding via the `basis` argument.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.scatter(adata, basis="umap", color="bulk_labels")
+
     """
     # color can be a obs column name or a matplotlib color specification (or a collection thereof)
     if color is not None:
@@ -460,9 +485,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                     )
                     raise ValueError(msg)
                 else:
-                    iname = np.flatnonzero(
-                        adata.obs[key].cat.categories.values == name
-                    )[0]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories == name)[0]
                     mask = scatter_group(
                         axs[ikey],
                         key,
@@ -588,6 +611,27 @@ def ranking(  # noqa: PLR0912, PLR0913
     Returns
     -------
     Returns matplotlib gridspec with access to the axes.
+
+    Examples
+    --------
+    Show the genes with the highest loading on the first three principal components.
+    PCA in :func:`~scanpy.datasets.pbmc68k_reduced` was computed on highly-variable
+    genes only, so we subset to those genes before ranking.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        adata_hv = adata[:, adata.var["highly_variable"]].copy()
+        sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2])
+
+    Include the lowest-loading genes alongside the highest.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2], include_lowest=True)
 
     """
     if isinstance(keys, str) and indices is not None:
@@ -1992,7 +2036,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     if groupby_index is not None:
         # reset index to treat all columns the same way.
-        obs_tidy.reset_index(inplace=True)
+        obs_tidy = obs_tidy.reset_index()
         groupby.append(groupby_index)
 
     if groupby is None:

@@ -136,7 +136,7 @@ def dendrogram(  # noqa: PLR0913
                 ).astype("category")
         categorical.name = "_".join(groupby)
 
-        rep_df.set_index(categorical, inplace=True)
+        rep_df.index = categorical
         categories: pd.Index = rep_df.index.categories
     else:
         gene_names = adata.raw.var_names if use_raw else adata.var_names

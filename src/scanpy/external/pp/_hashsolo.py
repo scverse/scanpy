@@ -38,7 +38,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from ..._utils import check_nonnegative_integers
-from ..._utils._doctests import doctest_skip
+from ..._utils._doctests import doctest_skipif
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -291,7 +291,7 @@ def _calculate_bayes_rule(
     }
 
 
-@doctest_skip("Illustrative but not runnable doctest code")
+@doctest_skipif(reason="Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,
     cell_hashing_columns: Sequence[str],
@@ -363,7 +363,7 @@ def hashsolo(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
     adata = adata.copy() if not inplace else adata
-    data = adata.obs[cell_hashing_columns].values
+    data = adata.obs[cell_hashing_columns].to_numpy()
     if not check_nonnegative_integers(data):
         msg = "Cell hashing counts must be non-negative"
         raise ValueError(msg)

@@ -7,6 +7,7 @@ import sys
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+import pooch
 import pytest
 from packaging.version import Version
 
@@ -15,6 +16,14 @@ from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+
+
+MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
+    reruns=5,
+    reruns_delay=2,
+    # The list of matches here probably needs to be expanded
+    only_rerun=[r"ConnectionError", r"HTTPError"],
+)
 
 
 _original_settings: Mapping[str, object] | None = None
@@ -26,6 +35,7 @@ def original_settings(
     request: pytest.FixtureRequest,
     cache: pytest.Cache,
     tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[Mapping[str, object], None, None]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
@@ -39,18 +49,27 @@ def original_settings(
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
-        _original_settings = MappingProxyType(sc.settings.__dict__.copy())
+        # can’t use `model_dump` here because of https://github.com/pydantic/pydantic/issues/8907
+        _original_settings = MappingProxyType({
+            s: getattr(sc.settings, s)
+            for s in (
+                type(sc.settings).model_fields | type(sc.settings).model_computed_fields
+            )
+        })
 
     setup()
     if pkg_version("anndata") >= Version("0.12"):
         ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
     sc.settings.logfile = sys.stderr
-    sc.settings.verbosity = "hint"
+    sc.settings.verbosity = sc.Verbosity.hint
     sc.settings.autoshow = True
     # create directory for debug data
     cache.mkdir("debug")
     # reuse data files between test runs (unless overwritten in the test)
     sc.settings.datasetdir = cache.mkdir("scanpy-data")
+    pooch.os_cache = pooch.utils.os_cache = pooch.core.os_cache = lambda p: (
+        sc.settings.datasetdir / p
+    )
     # create new writedir for each test run
     sc.settings.writedir = tmp_path_factory.mktemp("scanpy_write")
 
@@ -107,7 +126,7 @@ def pytest_collection_modifyitems(
         # `--run-internet` passed
         if "internet" in item.keywords:
             item.add_marker(skipif_not_run_internet)
-            item.add_marker(pytest.mark.flaky(reruns=5, reruns_delay=2))
+            item.add_marker(MARK_RETRY_DOWNLOAD)
 
 
 def _modify_doctests(request: pytest.FixtureRequest) -> None:
@@ -128,7 +147,7 @@ def _modify_doctests(request: pytest.FixtureRequest) -> None:
     if getattr(func, "_doctest_internet", False):
         if not request.config.getoption("--internet-tests"):
             pytest.skip(reason="need --internet-tests option to run")
-        request.applymarker(pytest.mark.flaky(reruns=5, reruns_delay=2))
+        request.applymarker(MARK_RETRY_DOWNLOAD)
 
 
 assert "scanpy" not in sys.modules, (

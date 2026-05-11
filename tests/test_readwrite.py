@@ -73,7 +73,7 @@ def test_write(
         case "default", "csv":
             # check that it throws an error instead
             ff = sc.settings.file_format_data
-            with pytest.raises(ValueError, match=r"Cannot set file_format_data to csv"):
+            with pytest.raises(ValueError, match=r"should be 'h5ad' or 'zarr'.*'csv'"):
                 sc.settings.file_format_data = ext  # type: ignore[assignment]
             assert sc.settings.file_format_data == ff
             return  # return early

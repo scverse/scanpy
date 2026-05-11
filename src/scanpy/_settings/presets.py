@@ -12,10 +12,12 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
+from .._compat import set_module
 from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
+    from typing import Self
 
 
 __all__ = [
@@ -150,6 +152,7 @@ def preset_property[NT: NamedTuple](
     return prop
 
 
+@set_module("scanpy")
 class Preset(enum.StrEnum):
     """Presets for :attr:`scanpy.settings.preset`.
 
@@ -257,14 +260,12 @@ class Preset(enum.StrEnum):
         finally:
             settings.preset = self
 
-    def check(self) -> None:
+    def check(self) -> Self:
         """Check if requirements for preset are met."""
         match self:
-            case self.ScanpyV1:
-                return
             case self.ScanpyV2Preview:
                 if not (missing := _missing_scanpy2_deps()):
-                    return
+                    return self
                 missing_str = ", ".join(f"‘{m.name}’" for m in missing)
                 msg = (
                     f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
@@ -272,6 +273,8 @@ class Preset(enum.StrEnum):
                     "Install them with: pip install `scanpy[scanpy2]`"
                 )
                 raise ImportError(msg)
+            case _:
+                return self
 
 
 def _missing_scanpy2_deps() -> list[Requirement]:
