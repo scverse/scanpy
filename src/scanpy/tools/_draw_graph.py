@@ -92,20 +92,20 @@ def draw_graph(  # noqa: PLR0913
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     key_added
-        Template for the key. If `None`, use `'X_draw_graph_{layout}'` for `obsm` (replacing `'{layout}'` with the passed `layout`).
+        Template for the key. If `None`, uses `f'X_draw_graph_{{layout}}'` for `obsm`.
     proceed
-        Continue computation, starting off with `f'X_draw_graph_{layout}'`.
+        Continue computation, starting off with `f'X_draw_graph_{{layout}}'`.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
     neighbors_key
-        If not specified, draw_graph looks at .obsp['connectivities'] for connectivities
+        If not specified, draw_graph looks at `.obsp['connectivities']` for connectivities
         (default storage place for pp.neighbors).
         If specified, draw_graph looks at
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+        `.obsp[.uns[neighbors_key]['connectivities_key']]` for connectivities.
     obsp
-        Use .obsp[obsp] as adjacency. You can't specify both
+        Use `.obsp[obsp]` as adjacency. You can't specify both
         `obsp` and `neighbors_key` at the same time.
     copy
         Return a copy instead of writing to adata.
@@ -118,7 +118,7 @@ def draw_graph(  # noqa: PLR0913
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm[('X_draw_graph_{layout}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm[(f'X_draw_graph_{{layout}}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
