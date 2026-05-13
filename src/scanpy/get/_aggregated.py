@@ -139,7 +139,15 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         if isinstance(self.data, np.ndarray):
             mean_ = self.mean()
             # sparse matrices do not support ** for elementwise power.
-            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
+            # Cast to float64 before squaring so float32 input doesn't
+            # lose precision at the squaring step (errors there feed
+            # directly into the `mean_sq - sq_mean` variance calculation).
+            data_f64 = (
+                self.data
+                if self.data.dtype == np.float64
+                else self.data.astype(np.float64)
+            )
+            mean_sq = self._sum(_power(data_f64, 2)) / group_counts[:, None]
             sq_mean = mean_**2
             var_ = mean_sq - sq_mean
         else:
@@ -372,7 +380,10 @@ def aggregate_dask_mean_var(
     dof: int = 1,
 ) -> MeanVarDict:
     mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
-    sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
+    # Cast to float64 before squaring; float32 squaring at chunk level
+    # would lose precision before the variance calculation. Cast is lazy for dask.
+    data_f64 = data if data.dtype == np.float64 else data.astype(np.float64)
+    sq_mean = aggregate_dask(fau_power(data_f64, 2), by, "mean", mask=mask, dof=dof)["mean"]
     # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
     if isinstance(data._meta, CSRBase):
         sq_mean = sq_mean.compute()

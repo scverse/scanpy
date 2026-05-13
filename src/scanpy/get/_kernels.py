@@ -68,7 +68,6 @@ def mean_var_csr(
             for j in range(start_obs, end_obs):
                 col = data.indices[j]
                 value = np.float64(data.data[j])
-                value = data.data[j]
                 mean[cat_num, col] += value
                 var[cat_num, col] += value * value
 
@@ -102,7 +101,6 @@ def mean_var_csc(
 
             if cat != -1:
                 value = np.float64(data.data[j])
-                value = data.data[j]
                 mean[cat, col] += value
                 var[cat, col] += value * value
 
