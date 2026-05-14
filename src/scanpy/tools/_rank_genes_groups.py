@@ -241,10 +241,6 @@ class _RankGenes:
     def _basic_stats(self, *, exponentiate_values: bool = False) -> None:
         """Populate per-group stats, and (in vs_rest mode) the rest-group
         stats via sum-decomposition from totals.
-
-        ``vars_rest`` is left zero-initialized; the t-test path overrides
-        it via :meth:`_compute_rest_stats_for_t_test`. Wilcoxon paths
-        never read it.
         """
         X = (
             _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
@@ -292,16 +288,9 @@ class _RankGenes:
         out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
 
         # aggregate omits empty categories; index back into the full arrays.
-        # Cast float64 → input dtype to preserve legacy `mean_var` precision
-        # (near-ties otherwise rank differently and golden tests fail).
         out_idx = out.obs_names.astype(int).to_numpy()
-        means_arr = np.asarray(out.layers["mean"])
-        vars_arr = np.asarray(out.layers["var"])
-        if X_used.dtype == np.float32:
-            means_arr = means_arr.astype(np.float32)
-            vars_arr = vars_arr.astype(np.float32)
-        self.means[out_idx] = means_arr
-        self.vars[out_idx] = vars_arr
+        self.means[out_idx] = np.asarray(out.layers["mean"])
+        self.vars[out_idx] = np.asarray(out.layers["var"])
         if self.comp_pts:
             nnz_per_group = np.asarray(out.layers["count_nonzero"])
             n_per_group = np.array([
@@ -310,8 +299,9 @@ class _RankGenes:
             self.pts[out_idx] = nnz_per_group / n_per_group[:, None]
 
     def _derive_rest_stats(self, X) -> None:
-        """Populate ``self.means_rest`` (and ``self.pts_rest``) via
-        ``(sum_global - sum_g) / n_rest`` — no ``X[~mask]`` slice.
+        """Populate ``self.means_rest`` / ``self.vars_rest`` (and
+        ``self.pts_rest``) via sum-decomposition from group/global totals
+        — no ``X[~mask]`` slice.
         """
         n_total = X.shape[0]
         n_genes = X.shape[1]
@@ -321,8 +311,9 @@ class _RankGenes:
         self.vars_rest = np.zeros((n_groups, n_genes))
         self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
-        mean_global = mean_var(X, axis=0, correction=1)[0]
+        mean_global, var_global = mean_var(X, axis=0, correction=1)
         sum_global = mean_global * n_total
+        sumsq_global = var_global * (n_total - 1) + n_total * mean_global ** 2
         if self.comp_pts:
             if isinstance(X, CSBase):
                 nnz_global = X.getnnz(axis=0)
@@ -332,35 +323,18 @@ class _RankGenes:
             n_g = int(self.groups_masks_obs[g].sum())
             n_rest = n_total - n_g
             self.means_rest[g] = (sum_global - self.means[g] * n_g) / n_rest
+            sumsq_g = self.vars[g] * (n_g - 1) + n_g * self.means[g] ** 2
+            sumsq_rest = sumsq_global - sumsq_g
+            # Clamp to 0 for the "constant per-group" case where exact-zero
+            # variance becomes tiny negative through cancellation. Mirrors
+            # the band-aid in `Aggregate.mean_var`.
+            self.vars_rest[g] = np.maximum(
+                (sumsq_rest - n_rest * self.means_rest[g] ** 2) / max(n_rest - 1, 1),
+                0.0,
+            )
             if self.comp_pts:
                 nnz_g_arr = self.pts[g] * n_g
                 self.pts_rest[g] = (nnz_global - nnz_g_arr) / n_rest
-
-    def _compute_rest_stats_for_t_test(
-        self, *, exponentiate_values: bool = False
-    ) -> None:
-        """Compute ``means_rest`` and ``vars_rest`` directly via
-        ``mean_var(X[~mask])``.
-
-        The t-test needs accurate ``vars_rest``, which the fast
-        :meth:`_derive_rest_stats` can't produce (catastrophic
-        cancellation on high-mean low-variance genes). Wilcoxon never
-        reads ``vars_rest`` and skips this slow path.
-        """
-        if self.ireference is not None:
-            return
-
-        X = (
-            _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
-            if exponentiate_values
-            else self.X
-        )
-        for g in range(self.groups_masks_obs.shape[0]):
-            x_rest = X[~self.groups_masks_obs[g]]
-            self.means_rest[g], self.vars_rest[g] = mean_var(
-                x_rest, axis=0, correction=1
-            )
-            del x_rest
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
@@ -566,12 +540,7 @@ class _RankGenes:
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
-            # `t_test` is a lazy generator: it reads `self.means` etc.
-            # when iterated, so we compute stats once with the final
-            # exponentiation rather than twice.
-            exponentiate = not mean_in_log_space
-            self._basic_stats(exponentiate_values=exponentiate)
-            self._compute_rest_stats_for_t_test(exponentiate_values=exponentiate)
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
             if "illico" in method:
