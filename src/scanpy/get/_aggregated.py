@@ -383,7 +383,9 @@ def aggregate_dask_mean_var(
     # Cast to float64 before squaring; float32 squaring at chunk level
     # would lose precision before the variance calculation. Cast is lazy for dask.
     data_f64 = data if data.dtype == np.float64 else data.astype(np.float64)
-    sq_mean = aggregate_dask(fau_power(data_f64, 2), by, "mean", mask=mask, dof=dof)["mean"]
+    sq_mean = aggregate_dask(fau_power(data_f64, 2), by, "mean", mask=mask, dof=dof)[
+        "mean"
+    ]
     # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
     if isinstance(data._meta, CSRBase):
         sq_mean = sq_mean.compute()
