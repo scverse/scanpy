@@ -238,51 +238,51 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(self, *, exponentiate_values: bool = False) -> None:
-        """Populate per-group stats, and (in vs_rest mode) the rest-group
-        stats via sum-decomposition from totals.
+    def _basic_stats(
+        self, *, exponentiate_values: bool = False, need_var: bool = False
+    ) -> None:
+        """Populate per-group stats, and (in vs_rest mode) rest-group stats.
+
+        ``need_var`` controls whether variance (per-group and per-rest) is
+        computed. Only the t-test family reads variance; Wilcoxon paths skip it.
         """
         X = (
             _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
             if exponentiate_values
             else self.X
         )
-        self._aggregate_group_stats(X)
+        self._aggregate_group_stats(X, need_var=need_var)
         if self.ireference is None:
-            self._derive_rest_stats(X)
+            self._derive_rest_stats(X, need_var=need_var)
 
-    def _aggregate_group_stats(self, X) -> None:
+    def _aggregate_group_stats(self, X, *, need_var: bool) -> None:
         """Populate ``self.{means, vars, pts}`` via one batched
         :func:`scanpy.get.aggregate` call.
+
+        ``var`` is requested only when ``need_var`` is True; otherwise
+        ``self.vars`` is left as ``None``.
         """
-        n_total = X.shape[0]
         n_genes = X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
 
         self.means = np.zeros((n_groups, n_genes))
-        self.vars = np.zeros((n_groups, n_genes))
+        self.vars = np.zeros((n_groups, n_genes)) if need_var else None
         self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
-        cell_group = np.full(n_total, -1, dtype=np.int64)
-        for g, mask in enumerate(self.groups_masks_obs):
-            cell_group[mask] = g
-        in_any = cell_group >= 0
-        if in_any.all():
-            X_used = X
-            cell_group_used = cell_group
-        else:
-            X_used = X[in_any]
-            cell_group_used = cell_group[in_any]
+        mask = self.grouping_mask.to_numpy()
+        X_used = X if mask.all() else X[mask]
+        codes = pd.Categorical(self.grouping, categories=self.groups_order).codes
 
-        funcs = ["mean", "var"]
+        funcs = ["mean"]
+        if need_var:
+            funcs.append("var")
         if self.comp_pts:
             funcs.append("count_nonzero")
-        cats = pd.Categorical(cell_group_used, categories=range(n_groups))
         agg_adata = AnnData(
             X=X_used,
             obs=pd.DataFrame(
-                {"_g": cats},
-                index=pd.RangeIndex(len(cats)).astype(str),
+                {"_g": pd.Categorical(codes, categories=range(n_groups))},
+                index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
         out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
@@ -290,51 +290,62 @@ class _RankGenes:
         # aggregate omits empty categories; index back into the full arrays.
         out_idx = out.obs_names.astype(int).to_numpy()
         self.means[out_idx] = np.asarray(out.layers["mean"])
-        self.vars[out_idx] = np.asarray(out.layers["var"])
+        if need_var:
+            self.vars[out_idx] = np.asarray(out.layers["var"])
         if self.comp_pts:
             nnz_per_group = np.asarray(out.layers["count_nonzero"])
-            n_per_group = np.array([
-                int(self.groups_masks_obs[g].sum()) for g in out_idx
-            ])
+            n_per_group = self.groups_masks_obs[out_idx].sum(axis=1)
             self.pts[out_idx] = nnz_per_group / n_per_group[:, None]
 
-    def _derive_rest_stats(self, X) -> None:
-        """Populate ``self.means_rest`` / ``self.vars_rest`` (and
-        ``self.pts_rest``) via sum-decomposition from group/global totals
-        — no ``X[~mask]`` slice.
+    def _derive_rest_stats(self, X, *, need_var: bool) -> None:
+        """Populate ``self.means_rest`` / ``self.vars_rest`` /
+        ``self.pts_rest``.
+
+        Mean and pts are derived from per-group totals via stable subtraction
+        (no extra ``X`` pass when every cell falls in a selected group). Rest
+        variance, when requested, is computed directly per group via
+        :func:`mean_var` on ``X[~mask_g]`` — this avoids the cancellation that
+        a subtraction-based variance derivation would introduce.
         """
         n_total = X.shape[0]
         n_genes = X.shape[1]
         n_groups = self.groups_masks_obs.shape[0]
+        n = self.groups_masks_obs.sum(axis=1).astype(np.int64)
+        n_arr = n[:, None]
+        n_r = (n_total - n)[:, None]
+        mask_all = self.grouping_mask.to_numpy().all()
 
-        self.means_rest = np.zeros((n_groups, n_genes))
-        self.vars_rest = np.zeros((n_groups, n_genes))
-        self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
+        # Rest mean — stable subtraction. Global totals come from per-group
+        # output when every cell is in a selected group; otherwise we pay one
+        # X pass to include the outside-group cells.
+        sum_g = self.means * n_arr
+        sum_total = (
+            sum_g.sum(0) if mask_all else np.asarray(X.sum(axis=0)).ravel()
+        )
+        self.means_rest = (sum_total - sum_g) / n_r
 
-        mean_global, var_global = mean_var(X, axis=0, correction=1)
-        sum_global = mean_global * n_total
-        sumsq_global = var_global * (n_total - 1) + n_total * mean_global**2
+        # Rest var — t-test paths only. Direct per-group `mean_var(X[~mask_g])`
+        # to keep the numerics identical to the pre-refactor code.
+        if need_var:
+            self.vars_rest = np.zeros((n_groups, n_genes))
+            for g, mg in enumerate(self.groups_masks_obs):
+                _, self.vars_rest[g] = mean_var(X[~mg], axis=0, correction=1)
+        else:
+            self.vars_rest = None
+
+        # Rest nnz — stable integer subtraction.
         if self.comp_pts:
-            if isinstance(X, CSBase):
-                nnz_global = X.getnnz(axis=0)
+            nnz_g = self.pts * n_arr
+            if mask_all:
+                nnz_total = nnz_g.sum(0)
             else:
-                nnz_global = np.count_nonzero(X, axis=0)
-        for g in range(n_groups):
-            n_g = int(self.groups_masks_obs[g].sum())
-            n_rest = n_total - n_g
-            self.means_rest[g] = (sum_global - self.means[g] * n_g) / n_rest
-            sumsq_g = self.vars[g] * (n_g - 1) + n_g * self.means[g] ** 2
-            sumsq_rest = sumsq_global - sumsq_g
-            # Clamp to 0 for the "constant per-group" case where exact-zero
-            # variance becomes tiny negative through cancellation. Mirrors
-            # the band-aid in `Aggregate.mean_var`.
-            self.vars_rest[g] = np.maximum(
-                (sumsq_rest - n_rest * self.means_rest[g] ** 2) / max(n_rest - 1, 1),
-                0.0,
-            )
-            if self.comp_pts:
-                nnz_g_arr = self.pts[g] * n_g
-                self.pts_rest[g] = (nnz_global - nnz_g_arr) / n_rest
+                nnz_total = (
+                    X.getnnz(axis=0) if isinstance(X, CSBase)
+                    else np.count_nonzero(X, axis=0)
+                )
+            self.pts_rest = (nnz_total - nnz_g) / n_r
+        else:
+            self.pts_rest = None
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
@@ -540,7 +551,9 @@ class _RankGenes:
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
-            self._basic_stats(exponentiate_values=not mean_in_log_space)
+            self._basic_stats(
+                exponentiate_values=not mean_in_log_space, need_var=True
+            )
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
             if "illico" in method:
@@ -552,7 +565,10 @@ class _RankGenes:
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
-            self._basic_stats(exponentiate_values=not mean_in_log_space)
+            # Wilcoxon paths only need means (for fold-change); skip var.
+            self._basic_stats(
+                exponentiate_values=not mean_in_log_space, need_var=False
+            )
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
