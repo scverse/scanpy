@@ -319,9 +319,7 @@ class _RankGenes:
         # output when every cell is in a selected group; otherwise we pay one
         # X pass to include the outside-group cells.
         sum_g = self.means * n_arr
-        sum_total = (
-            sum_g.sum(0) if mask_all else np.asarray(X.sum(axis=0)).ravel()
-        )
+        sum_total = sum_g.sum(0) if mask_all else np.asarray(X.sum(axis=0)).ravel()
         self.means_rest = (sum_total - sum_g) / n_r
 
         # Rest var — t-test paths only. Direct per-group `mean_var(X[~mask_g])`
@@ -340,7 +338,8 @@ class _RankGenes:
                 nnz_total = nnz_g.sum(0)
             else:
                 nnz_total = (
-                    X.getnnz(axis=0) if isinstance(X, CSBase)
+                    X.getnnz(axis=0)
+                    if isinstance(X, CSBase)
                     else np.count_nonzero(X, axis=0)
                 )
             self.pts_rest = (nnz_total - nnz_g) / n_r
@@ -551,9 +550,7 @@ class _RankGenes:
         **kwds,
     ) -> None:
         if method in {"t-test", "t-test_overestim_var"}:
-            self._basic_stats(
-                exponentiate_values=not mean_in_log_space, need_var=True
-            )
+            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
             if "illico" in method:
@@ -566,9 +563,7 @@ class _RankGenes:
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
             # Wilcoxon paths only need means (for fold-change); skip var.
-            self._basic_stats(
-                exponentiate_values=not mean_in_log_space, need_var=False
-            )
+            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=False)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
