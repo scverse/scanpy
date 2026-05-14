@@ -313,7 +313,7 @@ class _RankGenes:
 
         mean_global, var_global = mean_var(X, axis=0, correction=1)
         sum_global = mean_global * n_total
-        sumsq_global = var_global * (n_total - 1) + n_total * mean_global ** 2
+        sumsq_global = var_global * (n_total - 1) + n_total * mean_global**2
         if self.comp_pts:
             if isinstance(X, CSBase):
                 nnz_global = X.getnnz(axis=0)
