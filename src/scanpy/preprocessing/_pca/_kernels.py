@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 from fast_array_utils.numba import njit
 
-from scanpy._compat import CSRBase
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
-
+    from scanpy._compat import CSRBase
 
 @njit
 def _csr_gram_upper_triangular(
