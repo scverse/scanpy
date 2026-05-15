@@ -7,6 +7,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import anndata as ad
 import pytest
 
 # just import for the IMPORTED check
@@ -155,3 +156,9 @@ def plt():
 def exit_stack() -> Generator[ExitStack]:
     with ExitStack() as stack:
         yield stack
+
+
+@pytest.fixture(autouse=True)
+def anndata_settings():
+    ad.settings.auto_shard_zarr_v3 = True
+    ad.settings.zarr_write_format = 3
