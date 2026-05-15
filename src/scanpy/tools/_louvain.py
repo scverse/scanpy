@@ -7,10 +7,11 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, pkg_version
+from .._compat import pkg_version
 from .._utils import _choose_graph, _doc_params
 from ._docs import (
     doc_adata,
@@ -34,11 +35,12 @@ if TYPE_CHECKING:
         from louvain.VertexPartition import MutableVertexPartition
     except ImportError:
         if not TYPE_CHECKING:
-            MutableVertexPartition = type("MutableVertexPartition", (), {})
-            MutableVertexPartition.__module__ = "louvain.VertexPartition"
+            MutableVertexPartition = type(
+                "MutableVertexPartition", (), dict(__module__="louvain.VertexPartition")
+            )
 
 
-@deprecated("Use `scanpy.tl.leiden` instead")
+@deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
 @_doc_params(
     doc_adata=doc_adata,
     restrict_to=doc_restrict_to,
@@ -64,9 +66,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     copy: bool = False,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
-
-    .. deprecated:: 1.12.0
-       Use :func:`scanpy.tl.leiden` instead.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell

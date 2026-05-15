@@ -1,10 +1,11 @@
 # Community
 
-Scanpy is a community driven project. There are multiple channels for users and developers to communicate and connect.
+Scanpy is a community driven project embedded in the [scverse consortium](https://scverse.org).
+There are multiple channels for users and developers to communicate and connect.
 
 ## [Discourse](https://discourse.scverse.org)
 
-The scverse Discourse forum is place to go to ask usage questions and for longer form discussions around the project.
+The scverse Discourse forum is the place to ask usage questions and for longer form discussions around the project.
 
 ## [Github Issue Tracker](https://github.com/scverse/scanpy/issues)
 

@@ -376,7 +376,7 @@ def _highly_variable_genes_single_batch(
 
     # Filter to genes that are expressed
     if filter_unexpressed_genes:
-        with settings.verbosity.override(Verbosity.error):
+        with settings.override(verbosity=Verbosity.error):
             # TODO use groupby or so instead of materialize_as_ndarray
             filt, _ = materialize_as_ndarray(
                 filter_genes(x, min_cells=1, inplace=False)

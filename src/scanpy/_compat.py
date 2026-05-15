@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import sys
 import warnings
-from functools import cache, partial
+from functools import cache
 from importlib.util import find_spec
 from pathlib import Path
+from types import FunctionType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
 from scipy import sparse
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from importlib.metadata import PackageMetadata
 
 
@@ -20,10 +21,10 @@ __all__ = [
     "CSRBase",
     "DaskArray",
     "SpBase",
-    "deprecated",
     "fullname",
     "pkg_metadata",
     "pkg_version",
+    "set_module",
     "warn",
 ]
 
@@ -48,8 +49,7 @@ if TYPE_CHECKING:
 elif find_spec("dask"):
     from dask.array import Array as DaskArray
 else:
-    DaskArray = type("Array", (), {})
-    DaskArray.__module__ = "dask.array"
+    DaskArray = type("Array", (), dict(__module__="dask.array"))
 
 
 def fullname(typ: type) -> str:
@@ -73,20 +73,16 @@ def pkg_version(package: str) -> Version:
     return Version(version(package))
 
 
+def set_module[T: FunctionType | type](module: str) -> Callable[[T], T]:
+    def decorator(obj: T) -> T:
+        obj.__module__ = module
+        return obj
+
+    return decorator
+
+
 # File prefixes for us and decorators we use
 _FILE_PREFIXES: tuple[str, ...] = (str(Path(__file__).parent),)
-
-
-# we’re not using _FILE_PREFIXES here,
-# since a wholesale deprecated function shouldn’t be used internally anyway
-if TYPE_CHECKING:
-    from warnings import deprecated
-else:
-    if sys.version_info >= (3, 13):
-        from warnings import deprecated as _deprecated
-    else:
-        from typing_extensions import deprecated as _deprecated
-    deprecated = partial(_deprecated, category=FutureWarning)
 
 
 def warn(

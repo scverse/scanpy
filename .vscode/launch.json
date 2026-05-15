@@ -12,6 +12,14 @@
             "justMyCode": false,
         },
         {
+            "name": "Python: Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "internalConsole",
+            "justMyCode": false,
+        },
+        {
             "name": "Python: Debug Test",
             "type": "debugpy",
             "request": "launch",

@@ -15,9 +15,9 @@ from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
-from ..._compat import deprecated
 from ..._settings import Default, settings
 from ..._utils import _doc_params, sanitize_anndata
 from ..._utils._doctests import doctest_internet
@@ -119,6 +119,25 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    Plot a precomputed UMAP embedding coloured by the `'bulk_labels'` cell-type annotation.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.embedding(adata, basis="umap", color="bulk_labels")
+
+    Show several panels in a single call by passing a list of keys to `color`,
+    mixing categorical annotations and gene expression.
+
+    .. plot::
+        :context: close-figs
+
+        sc.pl.embedding(adata, basis="umap", color=["bulk_labels", "CD3D", "LYZ"])
 
     """
     #####################
@@ -944,7 +963,7 @@ def pca(
     return axs
 
 
-@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.pl.spatial_scatter` instead."))
 @doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
@@ -973,9 +992,6 @@ def spatial(  # noqa: PLR0913
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in spatial coordinates.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
@@ -1016,11 +1032,11 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
-    FutureWarning: Use `squidpy.datasets.visium` instead.
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
-    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+    FutureWarning: The function spatial is deprecated and will be removed in the future. Use :func:`squidpy.pl.spatial_scatter` instead.
         sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
