@@ -49,7 +49,7 @@ def plotfunc(request):
 
         @wraps(request.param)
         def f(adata, **kwargs):
-            with pytest.warns(FutureWarning, match=r"Use `squidpy.*` instead"):
+            with pytest.warns(FutureWarning, match=r".*Use .*`squidpy.*` instead"):
                 return sc.pl.spatial(adata, **kwargs)
 
     else:

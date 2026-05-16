@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 from anndata import AnnData
-from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import CSBase, DaskArray, pkg_version, warn
+from ..._compat import CSBase, DaskArray, warn
 from ..._docs import doc_rng
 from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
@@ -35,10 +34,7 @@ type SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 type SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 type SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
-    type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
-else:
-    type SvdSolvPCASparseSklearn = Literal["arpack"]
+type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 type SvdSolvPCADenseSklearn = (
     Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 )
