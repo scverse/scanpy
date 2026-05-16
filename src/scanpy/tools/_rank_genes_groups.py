@@ -14,7 +14,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase
+from .._compat import CSBase, DaskArray
 from .._settings import Default
 from .._settings.presets import DETest
 from .._utils import (
@@ -151,7 +151,16 @@ def _ranks(
 
 
 def _apply_expm1_preserving_sparsity(X, expm1_func):
-    """Apply ``expm1`` to X. Uses ``expm1(0) == 0`` to keep sparse X sparse."""
+    """Apply ``expm1`` to X, lazily and chunk-wise for dask, keeping sparse
+    data sparse (``expm1(0) == 0``).
+    """
+    if isinstance(X, DaskArray):
+        return X.map_blocks(
+            _apply_expm1_preserving_sparsity,
+            expm1_func,
+            dtype=X.dtype,
+            meta=X._meta,
+        )
     if isinstance(X, CSBase):
         Xp = X.copy()
         Xp.data = expm1_func(Xp.data)
@@ -287,7 +296,7 @@ class _RankGenes:
         )
         out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
 
-        # aggregate omits empty categories; index back into the full arrays.
+        # assign computed means/vars/pts back to self objs.
         out_idx = out.obs_names.astype(int).to_numpy()
         self.means[out_idx] = np.asarray(out.layers["mean"])
         if need_var:
@@ -315,15 +324,20 @@ class _RankGenes:
         n_r = (n_total - n)[:, None]
         mask_all = self.grouping_mask.to_numpy().all()
 
-        # Rest mean — stable subtraction. Global totals come from per-group
-        # output when every cell is in a selected group; otherwise we pay one
-        # X pass to include the outside-group cells.
+        # Compute rest means without another pass
+        # TODO: can any cells not be part of a group? (will mask_all ever be False)
+        # If not, remove fallback
         sum_g = self.means * n_arr
         sum_total = sum_g.sum(0) if mask_all else np.asarray(X.sum(axis=0)).ravel()
         self.means_rest = (sum_total - sum_g) / n_r
 
-        # Rest var — t-test paths only. Direct per-group `mean_var(X[~mask_g])`
-        # to keep the numerics identical to the pre-refactor code.
+        # TODO: if `aggregate` exposed `sum_of_squares` (an additive
+        # primitive it already computes internally for `var`), rest variance
+        # could be derived from the (n_groups, n_genes) aggregate output via
+        # Chan's parallel/pairwise formula, replacing this n_groups-pass loop:
+        #     M2_rest = M2_total - M2_g - delta**2 * n_g * n_r / n_total
+        #     var_rest = M2_rest / (n_r - 1)
+        # Faster, and Dask-streamable.
         if need_var:
             self.vars_rest = np.zeros((n_groups, n_genes))
             for g, mg in enumerate(self.groups_masks_obs):
