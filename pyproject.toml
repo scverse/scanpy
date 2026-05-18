@@ -57,8 +57,8 @@ dependencies = [
     "h5py>=3.11",
     "joblib",
     "legacy-api-wrap>=1.5",                     # for positional API deprecations
-    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.9,!=3.11.0rc1",
+    # skip 3.11.0rc1–2 for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.9,!=3.11.0rc1,!=3.11.0rc2",
     "natsort",
     "networkx>=2.8.8",
     "numba>=0.60",
