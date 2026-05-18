@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numba import njit # noqa: TID251
+from numba import njit  # noqa: TID251
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
