@@ -25,10 +25,9 @@ def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
     pbmc = pbmc68k_reduced()[:200].copy()
 
     euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
-    with pytest.warns(UserWarning, match="In previous versions of scanpy"):
-        euclidean2 = sc.tl.tsne(
-            pbmc, metric="euclidean", n_jobs=2, key_added=key_added, copy=True
-        )
+    euclidean2 = sc.tl.tsne(
+        pbmc, metric="euclidean", n_jobs=2, key_added=key_added, copy=True
+    )
     cosine = sc.tl.tsne(pbmc, metric="cosine", copy=True)
 
     # Reproducibility
@@ -37,9 +36,9 @@ def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
     assert not np.array_equal(euclidean1.obsm["X_tsne"], cosine.obsm["X_tsne"])
 
     # Params are recorded
-    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == 1
+    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
     assert euclidean2.uns[key_uns]["params"]["n_jobs"] == 2
-    assert cosine.uns["tsne"]["params"]["n_jobs"] == 1
+    assert cosine.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
     assert euclidean1.uns["tsne"]["params"]["metric"] == "euclidean"
     assert euclidean2.uns[key_uns]["params"]["metric"] == "euclidean"
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"

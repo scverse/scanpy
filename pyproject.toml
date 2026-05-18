@@ -57,17 +57,18 @@ dependencies = [
     "h5py>=3.11",
     "joblib",
     # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.9,!=3.11.0rc1",
+    "matplotlib>=3.10,!=3.11.0rc1",
     "natsort",
-    "networkx>=2.8.8",
-    "numba>=0.60",
-    "numpy>=2",
+    "networkx>=3.4",
+    "numba>=0.61",
+    "numpy>=2.1",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.13",
+    "scipy>=1.14",
+    "scverse-misc[settings]>=0.0.5",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -94,7 +95,7 @@ magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
 scanorama = [ "scanorama" ]
-scrublet = [ "scikit-image>=0.23.1" ]
+scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.5.1" ]
@@ -117,7 +118,7 @@ test = [
     { include-group = "test-min" },
 ]
 doc = [
-    "ipython>=7.20",                        # for nbsphinx code highlighting
+    "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
@@ -211,6 +212,7 @@ lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
+lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
 lint.isort.required-imports = [ "from __future__ import annotations" ]
@@ -233,6 +235,7 @@ lint.pylint.max-positional-args = 5
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"
 "warnings.warn".msg = "Use `scanpy._compat.warn` instead"
+"warnings.deprecated".msg = "Use `scverse_misc.deprecated` instead"
 
 [tool.pyproject-fmt]
 indent = 4
