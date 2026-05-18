@@ -545,9 +545,8 @@ def normalize_per_cell(
     >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
     >>> print(adata.X.sum(axis=1))
     [ 1.  3. 11.]
-    >>> sc.pp.normalize_per_cell(adata)
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_per_cell(adata)  # doctest: +ELLIPSIS
+    FutureWarning: The function normalize_per_cell is deprecated ...
     >>> print(adata.obs)
        n_counts
     0       1.0
@@ -559,9 +558,8 @@ def normalize_per_cell(
     ...     adata,
     ...     counts_per_cell_after=1,
     ...     key_n_counts="n_counts2",
-    ... )
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(
+    ... )  # doctest: +ELLIPSIS
+    FutureWarning: The function normalize_per_cell is deprecated ...
     >>> print(adata.obs)
        n_counts  n_counts2
     0       1.0        3.0
@@ -572,7 +570,7 @@ def normalize_per_cell(
 
     """
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", r".*sc\.pp\.normalize_total", FutureWarning)
+        warnings.filterwarnings("ignore", r".*sc.*\.pp\.normalize_total", FutureWarning)
 
         if isinstance(data, AnnData):
             start = logg.info("normalizing by total count per cell")

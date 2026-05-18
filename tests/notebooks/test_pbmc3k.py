@@ -76,7 +76,7 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+    with pytest.warns(FutureWarning, match=r"sc.*\.pp\.normalize_total"):
         sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
     with pytest.warns(FutureWarning, match=r"pp\.highly_variable_genes"):
