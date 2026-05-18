@@ -76,10 +76,10 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     adata.raw = sc.pp.log1p(adata, copy=True)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
+    with pytest.warns(FutureWarning, match=r"sc.*\.pp\.normalize_total"):
         sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):
+    with pytest.warns(FutureWarning, match=r"pp\.highly_variable_genes"):
         filter_result = sc.pp.filter_genes_dispersion(
             adata.X,
             min_mean=0.0125,
@@ -88,7 +88,7 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
         )
 
     with subtests.test("filter_genes_dispersion"):
-        with pytest.warns(FutureWarning, match=r"sc\.pl\.highly_variable_genes"):
+        with pytest.warns(FutureWarning, match=r"pl\.highly_variable_genes"):
             sc.pl.filter_genes_dispersion(filter_result, show=False)
         save_and_compare_images("filter_genes_dispersion")
 

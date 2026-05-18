@@ -8,12 +8,13 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, OldFormatWarning
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
-from .._compat import deprecated, old_positionals, pkg_version
+from .._compat import old_positionals, pkg_version
 from .._settings import settings
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
-from ..readwrite import read, read_h5ad, read_visium
+from ..readwrite import read, read_h5ad
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -532,7 +533,7 @@ def _download_visium_dataset(
     return sample_dir
 
 
-@deprecated("Use `squidpy.datasets.visium` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.datasets.visium` instead."))
 @_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
@@ -542,9 +543,6 @@ def visium_sge(
     include_hires_tiff: bool = False,
 ) -> AnnData:
     """Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.datasets.visium` instead.
 
     The database_ can be browsed online to find the ``sample_id`` you want.
 
@@ -566,7 +564,7 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
-    FutureWarning: Use `squidpy.datasets.visium` instead.
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
         ...
@@ -578,6 +576,8 @@ def visium_sge(
         layers: None
 
     """  # noqa: D401
+    from ..readwrite import read_visium
+
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
     sample_dir = _download_visium_dataset(
         sample_id, spaceranger_version, download_image=include_hires_tiff

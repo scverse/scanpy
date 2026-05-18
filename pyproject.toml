@@ -69,6 +69,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.13",
+    "scverse-misc>=0.0.6",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -230,6 +231,7 @@ lint.pylint.max-positional-args = 5
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"
 "warnings.warn".msg = "Use `scanpy._compat.warn` instead"
+"warnings.deprecated".msg = "Use `scverse_misc.deprecated` instead"
 
 [tool.pyproject-fmt]
 indent = 4

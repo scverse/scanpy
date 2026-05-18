@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from functools import cache, partial
 from importlib.util import find_spec
@@ -21,7 +20,6 @@ __all__ = [
     "CSRBase",
     "DaskArray",
     "SpBase",
-    "deprecated",
     "fullname",
     "old_positionals",
     "pkg_metadata",
@@ -87,18 +85,6 @@ old_positionals = partial(
     category=FutureWarning,
     skip_file_prefixes=_FILE_PREFIXES,
 )
-
-
-# we’re not using _FILE_PREFIXES here,
-# since a wholesale deprecated function shouldn’t be used internally anyway
-if TYPE_CHECKING:
-    from warnings import deprecated
-else:
-    if sys.version_info >= (3, 13):
-        from warnings import deprecated as _deprecated
-    else:
-        from typing_extensions import deprecated as _deprecated
-    deprecated = partial(_deprecated, category=FutureWarning)
 
 
 def warn(

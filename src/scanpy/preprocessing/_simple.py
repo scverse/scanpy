@@ -17,10 +17,11 @@ from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated
 from sklearn.utils import check_array, sparsefuncs
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, old_positionals
+from .._compat import CSBase, CSRBase, DaskArray, old_positionals
 from .._settings import settings as sett
 from .._utils import (
     _resolve_axis,
@@ -468,7 +469,21 @@ def sqrt(
     return x.sqrt() if isinstance(x, CSBase) else np.sqrt(x)
 
 
-@deprecated("Use `sc.pp.normalize_total` instead.")
+@deprecated(
+    Deprecation(
+        "1.3.7",
+        """\
+Use :func:`~scanpy.pp.normalize_total` instead.
+The new function is equivalent to the present
+function, except that
+
+* the new function doesn't filter cells based on `min_counts`,
+    use :func:`~scanpy.pp.filter_cells` if filtering is needed.
+* some arguments were renamed
+* `copy` is replaced by `inplace`\
+""",
+    )
+)
 @old_positionals(
     "counts_per_cell_after",
     "counts_per_cell",
@@ -490,17 +505,6 @@ def normalize_per_cell(
     min_counts: int = 1,
 ) -> AnnData | np.ndarray | CSBase | None:
     """Normalize total counts per cell.
-
-    .. deprecated:: 1.3.7
-
-       Use :func:`~scanpy.pp.normalize_total` instead.
-       The new function is equivalent to the present
-       function, except that
-
-       * the new function doesn't filter cells based on `min_counts`,
-         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-       * some arguments were renamed
-       * `copy` is replaced by `inplace`
 
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
@@ -541,9 +545,8 @@ def normalize_per_cell(
     >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
     >>> print(adata.X.sum(axis=1))
     [ 1.  3. 11.]
-    >>> sc.pp.normalize_per_cell(adata)
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_per_cell(adata)  # doctest: +ELLIPSIS
+    FutureWarning: The function normalize_per_cell is deprecated ...
     >>> print(adata.obs)
        n_counts
     0       1.0
@@ -555,9 +558,8 @@ def normalize_per_cell(
     ...     adata,
     ...     counts_per_cell_after=1,
     ...     key_n_counts="n_counts2",
-    ... )
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(
+    ... )  # doctest: +ELLIPSIS
+    FutureWarning: The function normalize_per_cell is deprecated ...
     >>> print(adata.obs)
        n_counts  n_counts2
     0       1.0        3.0
@@ -568,7 +570,7 @@ def normalize_per_cell(
 
     """
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", r".*sc\.pp\.normalize_total", FutureWarning)
+        warnings.filterwarnings("ignore", r".*sc.*\.pp\.normalize_total", FutureWarning)
 
         if isinstance(data, AnnData):
             start = logg.info("normalizing by total count per cell")

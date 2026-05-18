@@ -403,7 +403,7 @@ def test_compare_to_upstream(
         sc.pp.log1p(pbmc)
         sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
     elif func == "fgd":
-        with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):  # noqa: PT031
+        with pytest.warns(FutureWarning, match=r"pp\.highly_variable_genes"):  # noqa: PT031
             # https://github.com/pandas-dev/pandas/issues/61928
             warnings.filterwarnings(
                 "ignore", r"invalid value encountered in cast", RuntimeWarning

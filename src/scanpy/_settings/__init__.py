@@ -7,8 +7,10 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, Literal, get_args
 
+from scverse_misc import Deprecation, deprecated
+
 from .. import logging
-from .._compat import deprecated, old_positionals
+from .._compat import old_positionals
 from .._singleton import SingletonMeta, documenting
 from ..logging import _RootLogger, _set_log_file, _set_log_level
 from .verbosity import Verbosity
@@ -330,7 +332,7 @@ class SettingsMeta(SingletonMeta, type):
     # Functions
     # --------------------------------------------------------------------------------
 
-    @deprecated("Use `scanpy.set_figure_params` instead")
+    @deprecated(Deprecation("1.11.3", "Use :func:`scanpy.set_figure_params` instead"))
     def set_figure_params(cls, *args, **kwargs) -> None:
         cls._set_figure_params(*args, **kwargs)
 
