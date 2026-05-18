@@ -56,18 +56,18 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.9,!=3.11.0rc1",
+    # skip 3.11.0rc1–2 for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.10,!=3.11.0rc1,!=3.11.0rc2",
     "natsort",
-    "networkx>=2.8.8",
-    "numba>=0.60",
-    "numpy>=2",
+    "networkx>=3.4",
+    "numba>=0.61",
+    "numpy>=2.1",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.13",
+    "scipy>=1.14",
     "scverse-misc[settings]>=0.0.5",
     "seaborn>=0.13.2",
     "session-info2",
@@ -95,7 +95,7 @@ magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
 scanorama = [ "scanorama" ]
-scrublet = [ "scikit-image>=0.23.1" ]
+scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
@@ -116,7 +116,7 @@ test = [
     { include-group = "test-min" },
 ]
 doc = [
-    "ipython>=7.20",                        # for nbsphinx code highlighting
+    "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
