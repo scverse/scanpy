@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from fast_array_utils.numba import njit
+from numba import njit # noqa: TID251
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from scanpy._compat import CSRBase
 
 
-@njit
+@njit(nogil=True)
 def _csr_gram_upper_triangular(
     mat: CSRBase,
     out: NDArray,
@@ -31,7 +31,7 @@ def _csr_gram_upper_triangular(
             out[i, j] = out[j, i]
 
 
-@njit
+@njit(nogil=True)
 def _csr_gram_full(
     mat: CSRBase,
     out: NDArray,
