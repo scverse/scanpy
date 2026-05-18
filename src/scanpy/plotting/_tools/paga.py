@@ -113,6 +113,18 @@ def paga_compare(  # noqa: PLR0912, PLR0913
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
 
+    Examples
+    --------
+    Compute a PAGA graph on the bundled PBMC dataset and show it next to the UMAP embedding.
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.paga(adata, groups="bulk_labels")
+        sc.pl.paga_compare(adata, basis="umap")
+
     """
     axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
