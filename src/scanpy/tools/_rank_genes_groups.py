@@ -337,9 +337,7 @@ class _RankGenes:
         part_n = np.bincount(codes, minlength=k + 1)  # partition k == remainder
         n_sel = part_n[:k]
 
-        mean, var, nnz = self._aggregate_group_stats(
-            X, codes, k + 1, need_var=need_var
-        )
+        mean, var, nnz = self._aggregate_group_stats(X, codes, k + 1, need_var=need_var)
 
         # Selected-group arm of the test (the remainder partition is excluded).
         self.means = mean[:k]
@@ -382,11 +380,7 @@ class _RankGenes:
             n = n_a + n_b
             delta = mean_b - mean_a
             mean_c = mean_a + delta * (n_b / n)
-            m2_c = (
-                m2_a + m2_b + delta * delta * (n_a * n_b / n)
-                if need_var
-                else None
-            )
+            m2_c = m2_a + m2_b + delta * delta * (n_a * n_b / n) if need_var else None
             nnz_c = nnz_a + nnz_b if comp_pts else None
             return (n, mean_c, m2_c, nnz_c)
 
