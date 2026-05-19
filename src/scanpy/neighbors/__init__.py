@@ -571,7 +571,7 @@ class Neighbors:
 
     def to_igraph(self) -> Graph:
         """Generate igraph from connectiviies."""
-        return _utils.get_igraph_from_adjacency(self.connectivities)
+        return _utils.get_igraph_from_adjacency(self.connectivities, directed=False)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     def compute_neighbors(

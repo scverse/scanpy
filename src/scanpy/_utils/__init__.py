@@ -74,6 +74,7 @@ __all__ = [
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
     "ensure_igraph",
+    "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
@@ -287,7 +288,7 @@ def check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
 
