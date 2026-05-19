@@ -13,7 +13,6 @@ import scipy
 from packaging.version import Version
 from scipy import sparse
 
-from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
@@ -578,7 +577,9 @@ class Neighbors:
 
     def to_igraph(self) -> Graph:
         """Generate igraph from connectiviies."""
-        return _utils.get_igraph_from_adjacency(self.connectivities)
+        import igraph as ig
+
+        return ig.Graph.Weighted_Adjacency(self.connectivities, mode=ig.ADJ_UNDIRECTED)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     @_accepts_legacy_random_state(0)

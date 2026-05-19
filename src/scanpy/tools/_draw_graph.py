@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 
-from .. import _utils
 from .. import logging as logg
 from .._docs import doc_rng
 from .._utils import _choose_graph, _doc_params, get_literal_vals
@@ -150,7 +149,9 @@ def draw_graph(  # noqa: PLR0913
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency)
+        import igraph as ig
+
+        g: ig.Graph = ig.Graph.Weighted_Adjacency(adjacency, mode=ig.ADJ_UNDIRECTED)
         with _igraph_rng_compat(rng):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)

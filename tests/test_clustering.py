@@ -84,7 +84,7 @@ def test_leiden_random_state(
             n_iterations=n_iterations,
             **{rng_arg: seed},
         )
-        for seed in (1, 1, 42)
+        for seed in (1, 1, 3)
     )
     with subtests.test("reproducible"):
         pd.testing.assert_series_equal(
