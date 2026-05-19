@@ -322,20 +322,6 @@ class FlatTree(NamedTuple):  # noqa: D101
     indices: None
 
 
-def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
-    if "X_diffmap0" in adata.obs:
-        return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
-    else:
-        return adata.obsm["X_diffmap"]
-
-
-def _backwards_compat_get_full_eval(adata: AnnData):
-    if "X_diffmap0" in adata.obs:
-        return np.r_[1, adata.uns["diffmap_evals"]]
-    else:
-        return adata.uns["diffmap_evals"]
-
-
 def _make_forest_dict(forest):
     d = {}
     props = ("hyperplanes", "offsets", "children", "indices")
@@ -484,9 +470,9 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm:
-            self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
+        if dm := (adata.obsm.get("diffmap") or adata.obsm.get("X_diffmap")):
+            self._eigen_values = adata.uns["diffmap_evals"]
+            self._eigen_basis = dm
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (

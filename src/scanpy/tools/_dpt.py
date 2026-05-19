@@ -22,21 +22,25 @@ def _diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None,
+    key_added: str | None,
     rng: np.random.Generator,
 ) -> None:
+    obsm_key, uns_key = (
+        ("X_diffmap", "diffmap_evals") if key_added is None else ((key_added,) * 2)
+    )
     start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, rng=rng)
-    adata.obsm["X_diffmap"] = dpt.eigen_basis
-    adata.uns["diffmap_evals"] = dpt.eigen_values
+    adata.obsm[obsm_key] = dpt.eigen_basis
+    adata.uns[uns_key] = dpt.eigen_values
     logg.info(
         "    finished",
         time=start,
         deep=(
             "added\n"
-            "    'X_diffmap', diffmap coordinates (adata.obsm)\n"
-            "    'diffmap_evals', eigenvalues of transition matrix (adata.uns)"
+            f"    {obsm_key!r}, diffmap coordinates (adata.obsm)\n"
+            f"    {uns_key!r}, eigenvalues of transition matrix (adata.uns)"
         ),
     )
 
