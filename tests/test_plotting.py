@@ -618,6 +618,18 @@ def test_violin(
         )
         save_and_compare_images("violin_multi_panel_with_layer")
 
+    with subtests.test("ncols"):
+        sc.pl.violin(
+            pbmc,
+            ["n_genes", "percent_mito", "n_counts"],
+            multi_panel=True,
+            ncols=2,
+            show=False,
+        )
+        # Insurance against tol=40 hiding an off-by-one in panel count.
+        assert len(plt.gcf().axes) == 3
+        save_and_compare_images("violin_ncols_wrap")
+
 
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmp_path):
