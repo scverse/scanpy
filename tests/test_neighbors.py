@@ -294,3 +294,25 @@ def test_neighbors_distance_equivalence() -> None:
     assert p.pop("metric") == "euclidean"
     assert p_d.pop("metric") is None
     assert p == p_d
+
+
+def test_neighbors_connectivities_support_umap() -> None:
+    adata = pbmc68k_reduced()
+    adata_c = adata.copy()
+    for key in list(adata_c.obsp):
+        del adata_c.obsp[key]
+    adata_c.uns.pop("neighbors", None)
+
+    sc.pp.neighbors(adata)
+    sc.pp.neighbors(adata_c, connectivities=adata.obsp["connectivities"])
+
+    np.testing.assert_allclose(
+        adata.obsp["connectivities"].toarray(),
+        adata_c.obsp["connectivities"].toarray(),
+    )
+    assert "distances" not in adata_c.obsp
+
+    sc.tl.umap(adata, random_state=0)
+    sc.tl.umap(adata_c, random_state=0)
+
+    np.testing.assert_allclose(adata.obsm["X_umap"], adata_c.obsm["X_umap"])
