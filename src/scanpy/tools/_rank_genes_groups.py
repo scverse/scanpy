@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
-from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
@@ -253,34 +252,36 @@ class _RankGenes:
         """Populate per-group stats, and (in vs_rest mode) rest-group stats.
 
         ``need_var`` controls whether variance (per-group and per-rest) is
-        computed. Only the t-test family reads variance; Wilcoxon paths skip it.
+        computed; only the t-test family reads it. In vs_rest mode every cell
+        is partitioned into its selected group or a single "remainder"
+        partition (cells in no selected group), and each group's "rest" is the
+        forward Chan-combine of all other partitions — a sum of non-negative
+        terms, hence free of catastrophic cancellation for any group sizes.
         """
         X = (
             _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
             if exponentiate_values
             else self.X
         )
-        self._aggregate_group_stats(X, need_var=need_var)
         if self.ireference is None:
-            self._derive_rest_stats(X, need_var=need_var)
+            self._stats_vs_rest(X, need_var=need_var)
+        else:
+            self._stats_vs_reference(X, need_var=need_var)
 
-    def _aggregate_group_stats(self, X, *, need_var: bool) -> None:
-        """Populate ``self.{means, vars, pts}`` via one batched
-        :func:`scanpy.get.aggregate` call.
+    def _aggregate_group_stats(
+        self, X_used, codes: NDArray[np.int64], n_parts: int, *, need_var: bool
+    ):
+        """One batched :func:`scanpy.get.aggregate` over ``X_used`` grouped by
+        ``codes`` (values ``0 .. n_parts-1``).
 
-        ``var`` is requested only when ``need_var`` is True; otherwise
-        ``self.vars`` is left as ``None``.
+        Returns ``(mean, var, nnz)`` of shape ``(n_parts, n_genes)``,
+        zero-filled for partitions with no cells. ``var`` is ``None`` unless
+        ``need_var``; ``nnz`` is ``None`` unless ``self.comp_pts``.
         """
-        n_genes = X.shape[1]
-        n_groups = self.groups_masks_obs.shape[0]
-
-        self.means = np.zeros((n_groups, n_genes))
-        self.vars = np.zeros((n_groups, n_genes)) if need_var else None
-        self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
-
-        mask = self.grouping_mask.to_numpy()
-        X_used = X if mask.all() else X[mask]
-        codes = pd.Categorical(self.grouping, categories=self.groups_order).codes
+        n_genes = X_used.shape[1]
+        mean = np.zeros((n_parts, n_genes))
+        var = np.zeros((n_parts, n_genes)) if need_var else None
+        nnz = np.zeros((n_parts, n_genes)) if self.comp_pts else None
 
         funcs = ["mean"]
         if need_var:
@@ -290,75 +291,135 @@ class _RankGenes:
         agg_adata = AnnData(
             X=X_used,
             obs=pd.DataFrame(
-                {"_g": pd.Categorical(codes, categories=range(n_groups))},
+                {"_g": pd.Categorical(codes, categories=range(n_parts))},
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
         out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
-
-        # assign computed means/vars/pts back to self objs.
-        out_idx = out.obs_names.astype(int).to_numpy()
-        self.means[out_idx] = np.asarray(out.layers["mean"])
+        idx = out.obs_names.astype(int).to_numpy()
+        mean[idx] = np.asarray(out.layers["mean"])
         if need_var:
-            self.vars[out_idx] = np.asarray(out.layers["var"])
+            var[idx] = np.asarray(out.layers["var"])
         if self.comp_pts:
-            nnz_per_group = np.asarray(out.layers["count_nonzero"])
-            n_per_group = self.groups_masks_obs[out_idx].sum(axis=1)
-            self.pts[out_idx] = nnz_per_group / n_per_group[:, None]
+            nnz[idx] = np.asarray(out.layers["count_nonzero"])
+        return mean, var, nnz
 
-    def _derive_rest_stats(self, X, *, need_var: bool) -> None:
-        """Populate ``self.means_rest`` / ``self.vars_rest`` /
-        ``self.pts_rest``.
-
-        Mean and pts are derived from per-group totals via stable subtraction
-        (no extra ``X`` pass when every cell falls in a selected group). Rest
-        variance, when requested, is computed directly per group via
-        :func:`mean_var` on ``X[~mask_g]`` — this avoids the cancellation that
-        a subtraction-based variance derivation would introduce.
+    def _stats_vs_reference(self, X, *, need_var: bool) -> None:
+        """vs-reference: aggregate the selected-group cells only (the
+        reference is itself one of the selected groups). No rest derivation.
         """
-        n_total = X.shape[0]
-        n_genes = X.shape[1]
-        n_groups = self.groups_masks_obs.shape[0]
-        n = self.groups_masks_obs.sum(axis=1).astype(np.int64)
-        n_arr = n[:, None]
-        n_r = (n_total - n)[:, None]
-        mask_all = self.grouping_mask.to_numpy().all()
+        mask = self.grouping_mask.to_numpy()
+        X_used = X if mask.all() else X[mask]
+        codes = pd.Categorical(self.grouping, categories=self.groups_order).codes
+        k = self.groups_masks_obs.shape[0]
 
-        # Compute rest means without another pass
-        # TODO: can any cells not be part of a group? (will mask_all ever be False)
-        # If not, remove fallback
-        sum_g = self.means * n_arr
-        sum_total = sum_g.sum(0) if mask_all else np.asarray(X.sum(axis=0)).ravel()
-        self.means_rest = (sum_total - sum_g) / n_r
-
-        # TODO: if `aggregate` exposed `sum_of_squares` (an additive
-        # primitive it already computes internally for `var`), rest variance
-        # could be derived from the (n_groups, n_genes) aggregate output via
-        # Chan's parallel/pairwise formula, replacing this n_groups-pass loop:
-        #     M2_rest = M2_total - M2_g - delta**2 * n_g * n_r / n_total
-        #     var_rest = M2_rest / (n_r - 1)
-        # Faster, and Dask-streamable.
-        if need_var:
-            self.vars_rest = np.zeros((n_groups, n_genes))
-            for g, mg in enumerate(self.groups_masks_obs):
-                _, self.vars_rest[g] = mean_var(X[~mg], axis=0, correction=1)
-        else:
-            self.vars_rest = None
-
-        # Rest nnz — stable integer subtraction.
+        self.means, self.vars, nnz = self._aggregate_group_stats(
+            X_used, codes, k, need_var=need_var
+        )
         if self.comp_pts:
-            nnz_g = self.pts * n_arr
-            if mask_all:
-                nnz_total = nnz_g.sum(0)
-            else:
-                nnz_total = (
-                    X.getnnz(axis=0)
-                    if isinstance(X, CSBase)
-                    else np.count_nonzero(X, axis=0)
-                )
-            self.pts_rest = (nnz_total - nnz_g) / n_r
+            n_per_group = self.groups_masks_obs.sum(axis=1)
+            self.pts = nnz / n_per_group[:, None]
         else:
-            self.pts_rest = None
+            self.pts = None
+
+    def _stats_vs_rest(self, X, *, need_var: bool) -> None:
+        """vs-rest: partition *all* cells into the ``k`` selected-group
+        partitions plus one "remainder" partition (cells in no selected group
+        — non-selected groups and unassigned/NaN). Each group's "rest" is the
+        forward Chan-combine of every other partition.
+        """
+        k = self.groups_masks_obs.shape[0]
+
+        # Codes: each cell's selected-group index, or `k` (the remainder
+        # partition) for cells in no selected group (non-selected / NaN).
+        sel = pd.Categorical(self.group_col, categories=self.groups_order).codes
+        codes = np.where(sel >= 0, sel, k).astype(np.int64)
+        part_n = np.bincount(codes, minlength=k + 1)  # partition k == remainder
+        n_sel = part_n[:k]
+
+        mean, var, nnz = self._aggregate_group_stats(
+            X, codes, k + 1, need_var=need_var
+        )
+
+        # Selected-group arm of the test (the remainder partition is excluded).
+        self.means = mean[:k]
+        self.vars = var[:k] if need_var else None
+        self.pts = nnz[:k] / n_sel[:, None] if self.comp_pts else None
+
+        # M2 = var * (n - 1); forced to 0 for partitions with <= 1 cell so a
+        # singleton remainder (aggregate var undefined there) is harmless.
+        if need_var:
+            with np.errstate(invalid="ignore"):
+                M2 = var * (part_n[:, None] - 1)
+            M2[part_n <= 1] = 0.0
+        else:
+            M2 = None
+
+        self._derive_rest_stats(part_n, mean, M2, nnz, k, need_var=need_var)
+
+    def _derive_rest_stats(
+        self, part_n, mean, M2, nnz, k: int, *, need_var: bool
+    ) -> None:
+        """Set ``means_rest``/``vars_rest``/``pts_rest``: for each selected
+        group ``g``, the forward Chan-combine of every partition except ``g``.
+
+        Chan's parallel combine adds only non-negative terms
+        (``m2 = m2_a + m2_b + delta**2 * n_a * n_b / n``); a prefix/suffix scan
+        yields every leave-one-out with no subtraction, so the result has no
+        catastrophic cancellation for any group sizes/means/variances.
+        See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+        """
+        comp_pts = self.comp_pts
+        n_parts = k + 1
+
+        def comb(a, b):
+            n_a, mean_a, m2_a, nnz_a = a
+            n_b, mean_b, m2_b, nnz_b = b
+            if n_a == 0:
+                return b
+            if n_b == 0:
+                return a
+            n = n_a + n_b
+            delta = mean_b - mean_a
+            mean_c = mean_a + delta * (n_b / n)
+            m2_c = (
+                m2_a + m2_b + delta * delta * (n_a * n_b / n)
+                if need_var
+                else None
+            )
+            nnz_c = nnz_a + nnz_b if comp_pts else None
+            return (n, mean_c, m2_c, nnz_c)
+
+        parts = [
+            (
+                int(part_n[i]),
+                mean[i],
+                M2[i] if need_var else None,
+                nnz[i] if comp_pts else None,
+            )
+            for i in range(n_parts)
+        ]
+        prefix = [parts[0]] * n_parts
+        suffix = [parts[-1]] * n_parts
+        for i in range(1, n_parts):
+            prefix[i] = comb(prefix[i - 1], parts[i])
+        for i in range(n_parts - 2, -1, -1):
+            suffix[i] = comb(parts[i], suffix[i + 1])
+
+        n_genes = mean.shape[1]
+        empty = (0, None, None, None)
+        self.means_rest = np.zeros((k, n_genes))
+        self.vars_rest = np.zeros((k, n_genes)) if need_var else None
+        self.pts_rest = np.zeros((k, n_genes)) if comp_pts else None
+        for g in range(k):
+            left = prefix[g - 1] if g >= 1 else empty
+            right = suffix[g + 1] if g + 1 < n_parts else empty
+            n_r, mean_r, m2_r, nnz_r = comb(left, right)
+            self.means_rest[g] = mean_r
+            if need_var:
+                self.vars_rest[g] = np.maximum(m2_r / max(n_r - 1, 1), 0.0)
+            if comp_pts:
+                self.pts_rest[g] = nnz_r / n_r
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
