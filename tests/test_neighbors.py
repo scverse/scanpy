@@ -316,3 +316,63 @@ def test_neighbors_connectivities_support_umap() -> None:
     sc.tl.umap(adata_c, random_state=0)
 
     np.testing.assert_allclose(adata.obsm["X_umap"], adata_c.obsm["X_umap"])
+
+
+def test_neighbors_dense_precomputed_inputs_are_prepared() -> None:
+    adata = AnnData(np.array(X))
+    distances = np.array(distances_euclidean_all)
+    connectivities = np.array(connectivities_umap)
+    np.fill_diagonal(distances, 1)
+    np.fill_diagonal(connectivities, 1)
+
+    sc.pp.neighbors(adata, distances=distances, connectivities=connectivities)
+
+    np.testing.assert_allclose(np.diag(adata.obsp["distances"]), 0)
+    assert isinstance(adata.obsp["connectivities"], CSBase)
+    np.testing.assert_allclose(adata.obsp["connectivities"].diagonal(), 0)
+
+
+@pytest.mark.parametrize(
+    ("argument", "name"),
+    [
+        pytest.param("distances", "distances", id="distances"),
+        pytest.param("connectivities", "connectivities", id="connectivities"),
+    ],
+)
+def test_neighbors_precomputed_shape_validation(argument: str, name: str) -> None:
+    adata = AnnData(np.array(X))
+
+    with pytest.raises(ValueError, match=rf"`{name}` must have shape"):
+        sc.pp.neighbors(
+            adata, **{argument: np.ones((adata.n_obs - 1, adata.n_obs - 1))}
+        )
+
+
+def test_neighbors_precomputed_rejects_callable_metric() -> None:
+    adata = AnnData(np.array(X))
+
+    def metric(a, b):
+        return np.linalg.norm(a - b)
+
+    with pytest.raises(TypeError, match="`metric` must be a string"):
+        sc.pp.neighbors(
+            adata, connectivities=np.array(connectivities_umap), metric=metric
+        )
+
+
+def test_neighbors_precomputed_warns_for_ignored_parameters() -> None:
+    adata = AnnData(np.array(X))
+
+    with pytest.warns(
+        UserWarning,
+        match=r"Parameter\(s\) ignored if `distances` or `connectivities` is given",
+    ):
+        sc.pp.neighbors(
+            adata,
+            connectivities=np.array(connectivities_umap),
+            n_pcs=1,
+            use_rep="X",
+            knn=False,
+            metric_kwds={"p": 1},
+            rng=1,
+        )
