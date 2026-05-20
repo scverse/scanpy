@@ -214,7 +214,7 @@ class PAGA:
 
         ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
-        g = _utils.get_igraph_from_adjacency(ones)
+        g = _utils.get_igraph_from_adjacency(ones, directed=False)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values
         )

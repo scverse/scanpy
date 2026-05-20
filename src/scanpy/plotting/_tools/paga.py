@@ -259,7 +259,7 @@ def _compute_pos(  # noqa: PLR0912
     else:
         # igraph layouts
         random.seed(random_state.bytes(8))
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid, directed=False)
         if "rt" in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
             pos_list = g_tree.layout(

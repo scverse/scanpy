@@ -151,7 +151,7 @@ def draw_graph(  # noqa: PLR0913
         # igraph doesn't use numpy seed
         random.seed(random_state)
 
-        g = _utils.get_igraph_from_adjacency(adjacency)
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if layout in {"fr", "drl", "kk", "grid_fr"}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
         elif "rt" in layout:

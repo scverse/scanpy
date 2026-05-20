@@ -334,7 +334,7 @@ def test_modularity_adata(
             assert 0 <= s <= 1
     for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
         with subtests.test("equality", l=n0, r=n1):
-            assert pytest.approx(s0, rel=1e-6) == s1
+            assert s0 == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
 
