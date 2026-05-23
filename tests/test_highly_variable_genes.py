@@ -364,6 +364,102 @@ def test_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
+def test_pearson_residuals_batch_clip_scoped_per_batch(monkeypatch) -> None:
+    """Each batch must receive its own clip threshold.
+
+    Per Lause-Berens-Kobak 2021 the clip is ``sqrt(n_cells_in_batch)``. Before
+    the fix, the function-scoped ``clip`` parameter was reassigned on the first
+    batch iteration and reused for every subsequent batch — so a small batch
+    silently inherited a large batch's clip value. This test instruments the
+    residual kernels and verifies that each batch receives its own.
+    """
+    from scanpy.experimental.pp import _highly_variable_genes as hvg_module
+
+    rng = np.random.default_rng(0)
+    n_big, n_small, n_genes = 5000, 200, 200
+    counts = (rng.random((n_big + n_small, n_genes)) < 0.05).astype(np.int32)
+    counts *= rng.integers(1, 31, size=counts.shape, dtype=np.int32)
+    adata = AnnData(X=sps.csr_matrix(counts.astype(np.float32)))  # noqa: TID251
+    adata.obs["batch"] = pd.Categorical(["big"] * n_big + ["small"] * n_small)
+
+    captured_clips: list[float] = []
+    original_sparse = hvg_module._calculate_res_sparse
+
+    def spy_sparse(*args, **kwargs):
+        captured_clips.append(float(kwargs.get("clip", -1)))
+        return original_sparse(*args, **kwargs)
+
+    monkeypatch.setattr(hvg_module, "_calculate_res_sparse", spy_sparse)
+
+    sc.experimental.pp.highly_variable_genes(
+        adata,
+        flavor="pearson_residuals",
+        n_top_genes=100,
+        batch_key="batch",
+        check_values=False,
+    )
+
+    assert len(captured_clips) >= 2, (
+        f"expected >= 2 per-batch kernel calls, got {len(captured_clips)}"
+    )
+
+    # Per-batch correct clips: sqrt(5000) ~ 70.71 and sqrt(200) ~ 14.14.
+    distinct = {round(c, 1) for c in captured_clips}
+    expected_big = round(float(np.sqrt(n_big)), 1)
+    expected_small = round(float(np.sqrt(n_small)), 1)
+    assert distinct == {expected_big, expected_small}, (
+        f"expected distinct clip values {{{expected_small}, {expected_big}}}; "
+        f"got {sorted(distinct)} from per-batch calls {captured_clips}. "
+        "Each batch's clip must be sqrt(n_cells_in_batch), not the first "
+        "batch's value carried over."
+    )
+
+
+def test_pearson_residuals_batch_order_invariant() -> None:
+    """HVG ranking must not depend on alphabetical batch-label order.
+
+    Before the fix, the first batch's ``sqrt(n)`` clip leaked into all other
+    batches, so renaming "A"<->"B" silently changed which clip was applied to
+    which cells — a reproducibility hazard.
+    """
+    rng = np.random.default_rng(0)
+    n_big, n_small, n_genes = 5000, 200, 200
+    counts = (rng.random((n_big + n_small, n_genes)) < 0.05).astype(np.int32)
+    counts *= rng.integers(1, 31, size=counts.shape, dtype=np.int32)
+    x = sps.csr_matrix(counts.astype(np.float32))  # noqa: TID251
+
+    a1 = AnnData(X=x.copy())
+    a1.obs["batch"] = pd.Categorical(["A"] * n_big + ["B"] * n_small)
+    sc.experimental.pp.highly_variable_genes(
+        a1,
+        flavor="pearson_residuals",
+        n_top_genes=100,
+        batch_key="batch",
+        check_values=False,
+    )
+
+    a2 = AnnData(X=x.copy())
+    a2.obs["batch"] = pd.Categorical(["B"] * n_big + ["A"] * n_small)
+    sc.experimental.pp.highly_variable_genes(
+        a2,
+        flavor="pearson_residuals",
+        n_top_genes=100,
+        batch_key="batch",
+        check_values=False,
+    )
+
+    np.testing.assert_allclose(
+        a1.var["residual_variances"].to_numpy(),
+        a2.var["residual_variances"].to_numpy(),
+        atol=1e-6,
+        err_msg=(
+            "Swapping batch labels A<->B changed residual_variances on "
+            "identical data. The first batch's clip value is leaking into "
+            "later batches via the function-scoped `clip` variable."
+        ),
+    )
+
+
 @pytest.mark.parametrize(
     ("flavor", "params", "ref_path"),
     [
