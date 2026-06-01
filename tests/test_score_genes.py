@@ -153,6 +153,20 @@ def test_sparse_nanmean_on_dense_matrix():
         _sparse_nanmean(data, 0)
 
 
+@pytest.mark.parametrize("axis", [0, 1])
+def test_sparse_nanmean_csc(axis: Literal[0, 1]) -> None:
+    """_sparse_nanmean is equivalent to np.nanmean for CSC input too."""
+    from scanpy.tools._score_genes import _sparse_nanmean
+
+    arr = conv.to_dense(
+        _create_sparse_nan_matrix(60, 50, percent_zero=0.3, percent_nan=0.3)
+    )
+    mat = sparse.csc_matrix(arr)  # noqa: TID251
+    np.testing.assert_allclose(
+        np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
+    )
+
+
 def test_score_genes_sparse_vs_dense():
     """score_genes() should give the same result for dense and sparse matrices."""
     adata_sparse = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
