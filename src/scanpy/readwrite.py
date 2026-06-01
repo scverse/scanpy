@@ -1084,6 +1084,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     from ssl import create_default_context
+    from tempfile import NamedTemporaryFile
     from urllib.request import Request, urlopen
 
     from certifi import contents
@@ -1092,6 +1093,11 @@ def _download(url: str, path: Path):
     blocksize = 1024 * 8
     blocknum = 0
 
+    # Download to a temporary file in the same directory and atomically move it
+    # into place once it is complete. This way concurrent readers (e.g. parallel
+    # pytest workers sharing a dataset cache) never observe ``path`` in a
+    # partially-written state. See #4097.
+    tmp_path: Path | None = None
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
@@ -1105,8 +1111,14 @@ def _download(url: str, path: Path):
                     unit_divisor=1024,
                     total=total if total is None else int(total),
                 ) as t,
-                path.open("wb") as f,
+                NamedTemporaryFile(
+                    dir=path.parent,
+                    prefix=f"{path.name}.",
+                    suffix=".part",
+                    delete=False,
+                ) as f,
             ):
+                tmp_path = Path(f.name)
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)
@@ -1114,10 +1126,15 @@ def _download(url: str, path: Path):
                     t.update(len(block))
                     block = resp.read(blocksize)
 
+        tmp_path.replace(path)
+        tmp_path = None
+
     except (KeyboardInterrupt, Exception):
-        # Make sure file doesn’t exist half-downloaded
-        if path.is_file():
-            path.unlink()
+        # Make sure no half-downloaded temporary file is left behind. ``path``
+        # itself is only ever created by the atomic rename above, so it is left
+        # untouched (it may belong to another process that finished first).
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
         raise
 
 

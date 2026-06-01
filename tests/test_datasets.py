@@ -168,6 +168,56 @@ def test_download_failure() -> None:
     excinfo.value.close()
 
 
+def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A download must be atomic (#4097).
+
+    The destination path must not appear until the download has completed, so
+    that concurrent readers (e.g. parallel pytest workers sharing a cache) never
+    observe a partially-written file.
+    """
+    import io
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    content = b"0123456789" * 5_000
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest_present_during_download: list[bool] = []
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self._buf = io.BytesIO(content)
+
+        def info(self) -> dict[str, str]:
+            return {"content-length": str(len(content))}
+
+        def read(self, size: int) -> bytes:
+            chunk = self._buf.read(size)
+            if chunk:
+                dest_present_during_download.append(dest.exists())
+            return chunk
+
+        def __enter__(self) -> FakeResponse:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FakeResponse())
+
+    _download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == content
+    # sanity check that the download was actually streamed in several chunks
+    assert len(dest_present_during_download) > 1
+    assert not any(dest_present_during_download), (
+        "destination appeared before the download finished"
+    )
+    # the temporary file must have been renamed, leaving only the final file
+    assert list(dest.parent.iterdir()) == [dest]
+
+
 # These are tested via doctest
 DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
 # These have parameters that affect shape and so on
