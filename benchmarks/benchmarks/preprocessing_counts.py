@@ -165,7 +165,7 @@ class Agg:  # noqa: D101
 
     def setup(self, agg_name: AggType, use_dask: bool) -> None:  # noqa: FBT001
         if use_dask:
-            z = zarr.open("lung93k_shuffled.zarr")
+            z = zarr.open("lung93k.zarr")
             self.adata = ad.AnnData(
                 obs=ad.io.read_elem(z["obs"]),
                 var=ad.io.read_elem(z["var"]),
@@ -174,10 +174,6 @@ class Agg:  # noqa: D101
                 },
                 X=ad.experimental.read_elem_lazy(z["X"]),
             )
-            # Times out on the benchmark machine with full dataset
-            self.adata = self.adata[
-                self.adata.obs["PatientNumber"].isin(["1", "2", "3"])
-            ].copy()
         else:
             self.adata = ad.read_zarr("lung93k.zarr")
         self.agg_name: AggType = agg_name
