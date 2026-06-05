@@ -194,7 +194,9 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             aggregated_mean_var.layers["var"] = var_global
     else:
         aggregated_mean_var = ad.AnnData(
-            obs=pd.DataFrame(index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}),
+            obs=pd.DataFrame(
+                index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}
+            ),
             layers={
                 "mean": df["means"].to_numpy().reshape((1, -1)),
                 "var": df["variances"].to_numpy().reshape((1, -1)),
