@@ -33,7 +33,7 @@ from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
+from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -70,6 +70,7 @@ __all__ = [
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
     "ensure_igraph",
+    "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
@@ -273,9 +274,19 @@ def check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
+    import scipy.sparse as sps
+
+    import scanpy as sc
+
+    if sc.settings.preset is sc.Preset.ScanpyV2Preview:
+        # TODO: replace all call sites with this line
+        return ig.Graph.Weighted_Adjacency(
+            sps.coo_matrix(adjacency) if isinstance(adjacency, SpBase) else adjacency,
+            mode=ig.ADJ_DIRECTED if directed else ig.ADJ_UNDIRECTED,
+        )
 
     sources, targets = adjacency.nonzero()
     weights = dematrix(adjacency[sources, targets]).ravel() if len(sources) else []

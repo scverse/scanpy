@@ -58,6 +58,7 @@ def original_settings(
         })
 
     setup()
+    sc.settings.preset = sc.Preset.ScanpyV1
     if pkg_version("anndata") >= Version("0.12"):
         ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
     sc.settings.logfile = sys.stderr
