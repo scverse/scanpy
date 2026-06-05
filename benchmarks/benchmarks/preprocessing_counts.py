@@ -19,7 +19,6 @@ from scanpy.get._aggregated import AggType
 from ._utils import get_count_dataset, get_dataset
 
 if TYPE_CHECKING:
-    from collections.abc import KeysView
     from typing import Any
 
     from ._utils import Dataset, KeyCount
@@ -153,8 +152,8 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[KeysView[AggType], list[bool]] = (
-        get_literal_vals(AggType),
+    params: tuple[list[str], list[bool]] = (
+        list(get_literal_vals(AggType)),
         [True, False],
     )
     param_names = ("agg_name", "use_dask")
