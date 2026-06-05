@@ -165,6 +165,9 @@ class Agg:  # noqa: D101
 
     def setup(self, agg_name: AggType, use_dask: bool) -> None:  # noqa: FBT001
         if use_dask:
+            if agg_name == "median":
+                # Skip this one: https://asv.readthedocs.io/en/stable/writing_benchmarks.html#setup-and-teardown-functions
+                raise NotImplementedError()
             z = zarr.open("lung93k.zarr")
             self.adata = ad.AnnData(
                 obs=ad.io.read_elem(z["obs"]),
