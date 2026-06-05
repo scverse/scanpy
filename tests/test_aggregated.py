@@ -462,7 +462,7 @@ def test_aggregate_obsm_labels() -> None:
     from itertools import chain, repeat
 
     label_counts = [("a", 5), ("b", 3), ("c", 4)]
-    blocks = [np.ones((n, 1)) for _, n in label_counts]
+    blocks = [sparse.csr_array(np.ones((n, 1))) for _, n in label_counts]  # noqa: TID251
     obs_names = pd.Index([
         f"cell_{i:02d}" for i in range(sum(b.shape[0] for b in blocks))
     ])
