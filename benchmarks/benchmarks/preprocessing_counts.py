@@ -153,9 +153,9 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[KeysView[AggType], tuple[bool]] = (
+    params: tuple[KeysView[AggType], list[bool]] = (
         get_literal_vals(AggType),
-        (True, False),
+        [True, False],
     )
     param_names = ("agg_name", "use_dask")
 
