@@ -85,6 +85,9 @@ class HVGSuite:  # noqa: D101
         use_dask: bool,  # noqa: FBT001
     ) -> None:
         if use_dask:
+            if flavor != "seurat_v3":
+                # This benchmark only really makes sense for seurat v3 as that has been optimized.
+                raise NotImplementedError()
             z = zarr.open("lung93k_shuffled.zarr")
             self.adata = ad.AnnData(
                 obs=ad.io.read_elem(z["obs"]),
