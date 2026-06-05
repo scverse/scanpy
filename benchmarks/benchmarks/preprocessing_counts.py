@@ -10,6 +10,7 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
+import zarr
 
 import scanpy as sc
 from scanpy._utils import get_literal_vals
@@ -18,6 +19,7 @@ from scanpy.get._aggregated import AggType
 from ._utils import get_count_dataset, get_dataset
 
 if TYPE_CHECKING:
+    from collections.abc import KeysView
     from typing import Any
 
     from ._utils import Dataset, KeyCount
@@ -151,17 +153,35 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[AggType] = tuple(get_literal_vals(AggType))
-    param_names = ("agg_name",)
+    params: tuple[KeysView[AggType], tuple[bool]] = (
+        get_literal_vals(AggType),
+        (True, False),
+    )
+    param_names = ("agg_name", "use_dask")
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
-        adata.write_h5ad("lung93k.h5ad")
+        adata.write_zarr("lung93k.zarr")
 
-    def setup(self, agg_name: AggType) -> None:
-        self.adata = ad.read_h5ad("lung93k.h5ad")
-        self.agg_name = agg_name
+    def setup(self, agg_name: AggType, use_dask: bool) -> None:  # noqa: FBT001
+        if use_dask:
+            z = zarr.open("lung93k_shuffled.zarr")
+            self.adata = ad.AnnData(
+                obs=ad.io.read_elem(z["obs"]),
+                var=ad.io.read_elem(z["var"]),
+                layers={
+                    "counts": ad.experimental.read_elem_lazy(z["layers"]["counts"])
+                },
+                X=ad.experimental.read_elem_lazy(z["X"]),
+            )
+            # Times out on the benchmark machine with full dataset
+            self.adata = self.adata[
+                self.adata.obs["PatientNumber"].isin(["1", "2", "3"])
+            ].copy()
+        else:
+            self.adata = ad.read_zarr("lung93k.zarr")
+        self.agg_name: AggType = agg_name
 
     def time_agg(self, *_) -> None:
         sc.get.aggregate(
