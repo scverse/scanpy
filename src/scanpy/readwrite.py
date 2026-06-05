@@ -604,7 +604,11 @@ def _read_mtx(
     from scipy.io import mmread
     from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
 
-    x = mmread(filename)
+    # TODO: Replace with xxx_array when we make the switch
+    x = mmread(
+        filename,
+        **({"spmatrix": True} if pkg_version("scipy") >= Version("1.18.0rc1") else {}),
+    )
     if x.dtype != np.dtype(dtype):
         x = x.astype(dtype)
     if sparse_format == "csr":
