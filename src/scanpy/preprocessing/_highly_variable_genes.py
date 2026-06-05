@@ -178,16 +178,29 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             index=adata.obs_names, data={"__hvg_v3_batch_info__": batch_info}
         ),
     )
-    aggregated_mean_var = aggregate(
-        adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
-    )
-    mean_global, var_global = (aggregated_mean_var.layers[l] for l in ["mean", "var"])
-    if isinstance(mean_global, DaskArray):
-        import dask.array as da
+    if batch_key is not None:
+        aggregated_mean_var = aggregate(
+            adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
+        )
+        mean_global, var_global = (
+            aggregated_mean_var.layers[l] for l in ["mean", "var"]
+        )
+        if isinstance(mean_global, DaskArray):
+            import dask.array as da
 
-        mean_global, var_global = da.compute(mean_global, var_global)
-        aggregated_mean_var.layers["mean"] = mean_global
-        aggregated_mean_var.layers["var"] = var_global
+            mean_global, var_global = da.compute(mean_global, var_global)
+            aggregated_mean_var.layers["mean"] = mean_global
+            aggregated_mean_var.layers["var"] = var_global
+    else:
+        aggregated_mean_var = AnnData(
+            obs=pd.DataFrame(
+                index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}
+            ),
+            layers={
+                "mean": df["means"].to_numpy().reshape((1, -1)),
+                "var": df["variances"].to_numpy().reshape((1, -1)),
+            },
+        )
     batch_info = batch_info.to_numpy()
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
