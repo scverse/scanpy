@@ -243,7 +243,7 @@ def _compute_pos(  # noqa: PLR0912
             ctx = nullcontext()
         else:
             ctx = _set_igraph_rng(rng)
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid, directed=False)
         with ctx:
             if "rt" in layout:
                 g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)

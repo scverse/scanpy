@@ -122,8 +122,8 @@ nb_execution_mode = "off"
 nb_merge_streams = True
 
 
-ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
-ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
+ogp_site_url = "https://scanpy.scverse.org/en/stable/"
+ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
 always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
@@ -134,17 +134,14 @@ pygments_dark_style = "native"
 katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
-    anndata=("https://anndata.readthedocs.io/en/stable/", None),
+    anndata=("https://anndata.scverse.org/en/stable/", None),
     bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
     cuml=("https://docs.rapids.ai/api/cuml/stable/", None),
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
     decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
-    fast_array_utils=(
-        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
-        None,
-    ),
+    fast_array_utils=("https://fast-array-utils.scverse.org/en/stable/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),

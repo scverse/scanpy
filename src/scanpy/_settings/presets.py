@@ -163,11 +163,19 @@ class Preset(enum.StrEnum):
         # lower-kebap-case
         return "-".join(part.lower() for part in re.split(r"(?=[A-Z])", name) if part)
 
+    # TODO: make the docstrings appear in the docs: https://github.com/sphinx-doc/sphinx/issues/857
+
     ScanpyV1 = enum.auto()
-    """: Scanpy 1.*’s default settings."""
+    """Scanpy 1.*’s default settings."""
 
     ScanpyV2Preview = enum.auto()
-    """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+    """Scanpy 2.*’s feature default settings. (Preview: subject to change!)
+
+    Apart from changing the functions referenced below, this preset will also:
+
+    - change all functions using `igraph` to no longer create duplicate edges,
+      slightly changing community detection and modularity scores.
+    """
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
