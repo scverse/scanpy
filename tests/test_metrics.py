@@ -5,13 +5,13 @@ from functools import partial
 from itertools import combinations
 from string import ascii_letters
 from typing import TYPE_CHECKING
-from packaging.version import Version
 
 import numpy as np
 import pandas as pd
 import pytest
 import threadpoolctl
 from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
@@ -71,7 +71,11 @@ def test_consistency(metric) -> None:
         pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
     )
     # https://github.com/numba/numba/issues/10640 for why the tolerance is 1e-6 and not 1e-9
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-6 if pkg_version("numba") == Version("0.66.0rc1") else 1e-9)
+    np.testing.assert_allclose(
+        all_genes[0],
+        first_gene,
+        rtol=1e-6 if pkg_version("numba") == Version("0.66.0rc1") else 1e-9,
+    )
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
