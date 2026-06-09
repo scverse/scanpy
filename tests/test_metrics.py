@@ -11,9 +11,11 @@ import pandas as pd
 import pytest
 import threadpoolctl
 from anndata import AnnData
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from scanpy.metrics import modularity
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
@@ -68,8 +70,12 @@ def test_consistency(metric) -> None:
     first_gene = metric(
         pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
     )
-
-    np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-6)
+    # https://github.com/numba/numba/issues/10640 for why the tolerance is 1e-6 and not 1e-9
+    np.testing.assert_allclose(
+        all_genes[0],
+        first_gene,
+        rtol=1e-6 if pkg_version("numba") == Version("0.66.0rc1") else 1e-9,
+    )
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
