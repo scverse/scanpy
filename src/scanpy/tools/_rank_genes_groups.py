@@ -23,6 +23,7 @@ from .._utils import (
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask, _get_obs_rep, aggregate
+from ..get._aggregated import _chan_combine
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -165,6 +166,66 @@ def _apply_expm1_preserving_sparsity(X, expm1_func):
         Xp.data = expm1_func(Xp.data)
         return Xp
     return expm1_func(X)
+
+
+@njit
+def _derive_rest_njit(
+    part_n: NDArray[np.float64],
+    mean: NDArray[np.float64],
+    m2: NDArray[np.float64],
+    k: int,
+    do_var: bool,  # noqa: FBT001
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Leave-one-out Chan combine for every selected group, parallel over genes.
+
+    For each gene, a forward (prefix) and backward (suffix) running combine over the
+    ``k + 1`` partitions is built; group ``g``'s "rest" is ``prefix[g-1]`` combined
+    with ``suffix[g+1]`` — every partition except ``g``, with no subtraction. ``m2``
+    is ignored (and ``vars_rest`` left zero) when ``do_var`` is False.
+    """
+    n_parts, n_genes = mean.shape
+    means_rest = np.zeros((k, n_genes))
+    vars_rest = np.zeros((k, n_genes))
+    for j in numba.prange(n_genes):
+        pre_n = np.empty(n_parts)
+        pre_m = np.empty(n_parts)
+        pre_v = np.empty(n_parts)
+        pre_n[0] = part_n[0]
+        pre_m[0] = mean[0, j]
+        pre_v[0] = m2[0, j] if do_var else 0.0
+        for i in range(1, n_parts):
+            b2 = m2[i, j] if do_var else 0.0
+            pre_n[i], pre_m[i], pre_v[i] = _chan_combine(
+                pre_n[i - 1], pre_m[i - 1], pre_v[i - 1], part_n[i], mean[i, j], b2
+            )
+        suf_n = np.empty(n_parts)
+        suf_m = np.empty(n_parts)
+        suf_v = np.empty(n_parts)
+        last = n_parts - 1
+        suf_n[last] = part_n[last]
+        suf_m[last] = mean[last, j]
+        suf_v[last] = m2[last, j] if do_var else 0.0
+        for i in range(n_parts - 2, -1, -1):
+            b2 = m2[i, j] if do_var else 0.0
+            suf_n[i], suf_m[i], suf_v[i] = _chan_combine(
+                part_n[i], mean[i, j], b2, suf_n[i + 1], suf_m[i + 1], suf_v[i + 1]
+            )
+        for g in range(k):
+            if g >= 1:
+                ln, lm, lv = pre_n[g - 1], pre_m[g - 1], pre_v[g - 1]
+            else:
+                ln, lm, lv = 0.0, 0.0, 0.0
+            if g + 1 < n_parts:
+                rn, rm, rv = suf_n[g + 1], suf_m[g + 1], suf_v[g + 1]
+            else:
+                rn, rm, rv = 0.0, 0.0, 0.0
+            n_r, mean_r, m2_r = _chan_combine(ln, lm, lv, rn, rm, rv)
+            means_rest[g, j] = mean_r
+            if do_var:
+                denom = n_r - 1.0 if n_r >= 2.0 else 1.0
+                v = m2_r / denom
+                vars_rest[g, j] = v if v > 0.0 else 0.0
+    return means_rest, vars_rest
 
 
 class _RankGenes:
@@ -358,62 +419,29 @@ class _RankGenes:
     def _derive_rest_stats(
         self, part_n, mean, M2, nnz, k: int, *, need_var: bool
     ) -> None:
-        """Set ``means_rest``/``vars_rest``/``pts_rest``: for each selected
-        group ``g``, the forward Chan-combine of every partition except ``g``.
+        """Set ``means_rest``/``vars_rest``/``pts_rest``: for each selected group
+        ``g``, the Chan-combine of every partition except ``g`` (its "rest").
 
-        Chan's parallel combine adds only non-negative terms
-        (``m2 = m2_a + m2_b + delta**2 * n_a * n_b / n``); a prefix/suffix scan
-        yields every leave-one-out with no subtraction, so the result has no
-        catastrophic cancellation for any group sizes/means/variances.
-        See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
+        Mean and variance use a leave-one-out prefix/suffix scan of
+        :func:`~scanpy.get._aggregated._chan_combine` over the ``k + 1`` partitions
+        (:func:`_derive_rest_njit`); it adds only non-negative terms, so there is no
+        catastrophic cancellation for any group sizes. Counts combine by plain
+        summation, so ``pts_rest`` is the exact total-minus-group difference.
         """
-        comp_pts = self.comp_pts
-        n_parts = k + 1
-
-        def comb(a, b):
-            n_a, mean_a, m2_a, nnz_a = a
-            n_b, mean_b, m2_b, nnz_b = b
-            if n_a == 0:
-                return b
-            if n_b == 0:
-                return a
-            n = n_a + n_b
-            delta = mean_b - mean_a
-            mean_c = mean_a + delta * (n_b / n)
-            m2_c = m2_a + m2_b + delta * delta * (n_a * n_b / n) if need_var else None
-            nnz_c = nnz_a + nnz_b if comp_pts else None
-            return (n, mean_c, m2_c, nnz_c)
-
-        parts = [
-            (
-                int(part_n[i]),
-                mean[i],
-                M2[i] if need_var else None,
-                nnz[i] if comp_pts else None,
-            )
-            for i in range(n_parts)
-        ]
-        prefix = [parts[0]] * n_parts
-        suffix = [parts[-1]] * n_parts
-        for i in range(1, n_parts):
-            prefix[i] = comb(prefix[i - 1], parts[i])
-        for i in range(n_parts - 2, -1, -1):
-            suffix[i] = comb(parts[i], suffix[i + 1])
-
-        n_genes = mean.shape[1]
-        empty = (0, None, None, None)
-        self.means_rest = np.zeros((k, n_genes))
-        self.vars_rest = np.zeros((k, n_genes)) if need_var else None
-        self.pts_rest = np.zeros((k, n_genes)) if comp_pts else None
-        for g in range(k):
-            left = prefix[g - 1] if g >= 1 else empty
-            right = suffix[g + 1] if g + 1 < n_parts else empty
-            n_r, mean_r, m2_r, nnz_r = comb(left, right)
-            self.means_rest[g] = mean_r
-            if need_var:
-                self.vars_rest[g] = np.maximum(m2_r / max(n_r - 1, 1), 0.0)
-            if comp_pts:
-                self.pts_rest[g] = nnz_r / n_r
+        means_rest, vars_rest = _derive_rest_njit(
+            np.ascontiguousarray(part_n, dtype=np.float64),
+            mean,
+            M2 if need_var else mean,  # placeholder; unused when need_var is False
+            k,
+            need_var,
+        )
+        self.means_rest = means_rest
+        self.vars_rest = vars_rest if need_var else None
+        if self.comp_pts:
+            n_rest = self.X.shape[0] - part_n[:k]
+            self.pts_rest = (nnz.sum(axis=0) - nnz[:k]) / n_rest[:, None]
+        else:
+            self.pts_rest = None
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
