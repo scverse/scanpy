@@ -21,6 +21,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Self
 
     from anndata import AnnData
 
@@ -198,7 +199,7 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
                 dest_present_during_download.append(dest.exists())
             return chunk
 
-        def __enter__(self) -> FakeResponse:
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *exc: object) -> bool:
