@@ -83,7 +83,8 @@
         // "psutil": [""]
         "pooch": [""],
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
-        // "scikit-misc": [""],
+        "scikit-misc": [""],
+        "dask": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included

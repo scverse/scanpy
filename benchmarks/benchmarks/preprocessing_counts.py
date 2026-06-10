@@ -10,6 +10,7 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
+import zarr
 
 import scanpy as sc
 from scanpy._utils import get_literal_vals
@@ -151,17 +152,34 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[AggType] = tuple(get_literal_vals(AggType))
-    param_names = ("agg_name",)
+    params: tuple[list[str], list[bool]] = (
+        list(get_literal_vals(AggType)),
+        [True, False],
+    )
+    param_names = ("agg_name", "use_dask")
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
-        adata.write_h5ad("lung93k.h5ad")
+        adata.write_zarr("lung93k.zarr")
 
-    def setup(self, agg_name: AggType) -> None:
-        self.adata = ad.read_h5ad("lung93k.h5ad")
-        self.agg_name = agg_name
+    def setup(self, agg_name: AggType, use_dask: bool) -> None:  # noqa: FBT001
+        if use_dask:
+            if agg_name == "median":
+                # Skip this one: https://asv.readthedocs.io/en/stable/writing_benchmarks.html#setup-and-teardown-functions
+                raise NotImplementedError()
+            z = zarr.open("lung93k.zarr")
+            self.adata = ad.AnnData(
+                obs=ad.io.read_elem(z["obs"]),
+                var=ad.io.read_elem(z["var"]),
+                layers={
+                    "counts": ad.experimental.read_elem_lazy(z["layers"]["counts"])
+                },
+                X=ad.experimental.read_elem_lazy(z["X"]),
+            )
+        else:
+            self.adata = ad.read_zarr("lung93k.zarr")
+        self.agg_name: AggType = agg_name
 
     def time_agg(self, *_) -> None:
         sc.get.aggregate(
