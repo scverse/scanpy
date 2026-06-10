@@ -472,22 +472,37 @@ def _block_moments(
     return out
 
 
-@njit
+@numba.njit(inline="always")
 def _chan_combine(
+    n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
+) -> tuple[float, float, float]:
+    """Merge two ``(count, mean, M2)`` groups with Chan's parallel algorithm.
+
+    Adds only non-negative terms (``m2 = m2_a + m2_b + delta**2 * n_a * n_b / n``),
+    so it is free of catastrophic cancellation for any group sizes. This is the one
+    Chan combine; both the block reduction here and `rank_genes_groups` call it.
+    """
+    if n_a == 0.0:
+        return n_b, mean_b, m2_b
+    if n_b == 0.0:
+        return n_a, mean_a, m2_a
+    n = n_a + n_b
+    delta = mean_b - mean_a
+    return n, mean_a + delta * n_b / n, m2_a + m2_b + delta * delta * n_a * n_b / n
+
+
+@njit
+def _chan_combine_blocks(
     a: NDArray[np.float64], b: NDArray[np.float64]
 ) -> NDArray[np.float64]:
-    """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
+    """Pairwise-combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks."""
     out = np.empty_like(a)
     for i in numba.prange(a.shape[1]):
         for j in range(a.shape[2]):
-            n_a, mean_a, m2_a = a[0, i, j], a[1, i, j], a[2, i, j]
-            n_b, mean_b, m2_b = b[0, i, j], b[1, i, j], b[2, i, j]
-            n = n_a + n_b
-            safe_n = n if n > 0.0 else 1.0
-            delta = mean_b - mean_a
-            out[0, i, j] = n
-            out[1, i, j] = mean_a + delta * n_b / safe_n
-            out[2, i, j] = m2_a + m2_b + delta * delta * n_a * n_b / safe_n
+            out[0, i, j], out[1, i, j], out[2, i, j] = _chan_combine(
+                a[0, i, j], a[1, i, j], a[2, i, j],
+                b[0, i, j], b[1, i, j], b[2, i, j],
+            )
     return out
 
 
@@ -499,13 +514,13 @@ def _chan_reduce_axis_0(
     """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
     # Runs in dask workers at compute time; `set_num_threads` is thread-local, so the
     # cap must be set here, not at graph-build time. In a worker pool dask already
-    # parallelizes across reduction tasks, so run `_chan_combine` serially to avoid
-    # workers x numba-threads oversubscription; on the main thread leave it unrestricted.
+    # parallelizes across reduction tasks, so run `_chan_combine_blocks` serially to
+    # avoid workers x numba-threads oversubscription; on the main thread leave it free.
     in_thread_pool = threading.current_thread().name.startswith("ThreadPoolExecutor")
     with _numba_thread_limit(1 if in_thread_pool else None):
         result = stats[0]
         for i in range(1, stats.shape[0]):
-            result = _chan_combine(result, stats[i])
+            result = _chan_combine_blocks(result, stats[i])
     return result[None] if keepdims else result
 
 
