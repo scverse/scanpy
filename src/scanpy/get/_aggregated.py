@@ -476,12 +476,7 @@ def _block_moments(
 def _chan_combine(
     n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
 ) -> tuple[float, float, float]:
-    """Merge two ``(count, mean, M2)`` groups with Chan's parallel algorithm.
-
-    Adds only non-negative terms (``m2 = m2_a + m2_b + delta**2 * n_a * n_b / n``),
-    so it is free of catastrophic cancellation for any group sizes. This is the one
-    Chan combine; both the block reduction here and `rank_genes_groups` call it.
-    """
+    """Combine two ``(count, mean, M2)`` groups pairwise."""
     if n_a == 0.0:
         return n_b, mean_b, m2_b
     if n_b == 0.0:
@@ -495,7 +490,7 @@ def _chan_combine(
 def _chan_combine_blocks(
     a: NDArray[np.float64], b: NDArray[np.float64]
 ) -> NDArray[np.float64]:
-    """Pairwise-combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks."""
+    """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
     out = np.empty_like(a)
     for i in numba.prange(a.shape[1]):
         for j in range(a.shape[2]):
@@ -512,10 +507,6 @@ def _chan_reduce_axis_0(
     keepdims: bool,  # noqa: FBT001
 ) -> NDArray[np.float64]:
     """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
-    # Runs in dask workers at compute time; `set_num_threads` is thread-local, so the
-    # cap must be set here, not at graph-build time. In a worker pool dask already
-    # parallelizes across reduction tasks, so run `_chan_combine_blocks` serially to
-    # avoid workers x numba-threads oversubscription; on the main thread leave it free.
     in_thread_pool = threading.current_thread().name.startswith("ThreadPoolExecutor")
     with _numba_thread_limit(1 if in_thread_pool else None):
         result = stats[0]
