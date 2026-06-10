@@ -242,7 +242,8 @@ def test_download_failure_keeps_existing_file(
             return {"content-length": "100"}
 
         def read(self, size: int) -> bytes:
-            raise OSError("connection reset")
+            msg = "connection reset"
+            raise OSError(msg)
 
         def __enter__(self) -> Self:
             return self
