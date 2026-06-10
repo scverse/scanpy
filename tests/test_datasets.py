@@ -219,6 +219,48 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert list(dest.parent.iterdir()) == [dest]
 
 
+def test_download_failure_keeps_existing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed download must not delete an already-present destination (#4097).
+
+    The old code unconditionally removed ``path`` on error, which under the
+    parallel-cache race could wipe a file another process had finished
+    downloading. The atomic version only cleans up its own temporary file.
+    """
+    import io
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    # A sibling process already finished this download.
+    dest.write_bytes(b"complete")
+
+    class FailingResponse:
+        def info(self) -> dict[str, str]:
+            return {"content-length": "100"}
+
+        def read(self, size: int) -> bytes:
+            raise OSError("connection reset")
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FailingResponse())
+
+    with pytest.raises(OSError, match="connection reset"):
+        _download("http://example.invalid/data.bin", dest)
+
+    # The pre-existing file is untouched and no temporary file is left behind.
+    assert dest.read_bytes() == b"complete"
+    assert list(dest.parent.iterdir()) == [dest]
+
+
 # These are tested via doctest
 DS_INCLUDED = frozenset({"krumsiek11", "toggleswitch", "pbmc68k_reduced"})
 # These have parameters that affect shape and so on
