@@ -228,7 +228,6 @@ def test_download_failure_keeps_existing_file(
     parallel-cache race could wipe a file another process had finished
     downloading. The atomic version only cleans up its own temporary file.
     """
-    import io
     import urllib.request
 
     from scanpy.readwrite import _download
