@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import threading
 from functools import partial, singledispatch
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
+import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
-from .._utils import _resolve_axis, get_literal_vals
+from .._utils import _numba_thread_limit, _resolve_axis, get_literal_vals
 from ._kernels import agg_sum_csc, agg_sum_csr, mean_var_csc, mean_var_csr
 from .get import _check_mask
 
@@ -469,18 +472,23 @@ def _block_moments(
     return out
 
 
+@njit
 def _chan_combine(
     a: NDArray[np.float64], b: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
-    n_a, mean_a, m2_a = a[0], a[1], a[2]
-    n_b, mean_b, m2_b = b[0], b[1], b[2]
-    n = n_a + n_b
-    safe_n = np.where(n > 0, n, 1)
-    delta = mean_b - mean_a
-    new_mean = mean_a + delta * n_b / safe_n
-    new_m2 = m2_a + m2_b + delta * delta * n_a * n_b / safe_n
-    return np.stack([n, new_mean, new_m2])
+    out = np.empty_like(a)
+    for i in numba.prange(a.shape[1]):
+        for j in range(a.shape[2]):
+            n_a, mean_a, m2_a = a[0, i, j], a[1, i, j], a[2, i, j]
+            n_b, mean_b, m2_b = b[0, i, j], b[1, i, j], b[2, i, j]
+            n = n_a + n_b
+            safe_n = n if n > 0.0 else 1.0
+            delta = mean_b - mean_a
+            out[0, i, j] = n
+            out[1, i, j] = mean_a + delta * n_b / safe_n
+            out[2, i, j] = m2_a + m2_b + delta * delta * n_a * n_b / safe_n
+    return out
 
 
 def _chan_reduce_axis_0(
@@ -489,9 +497,15 @@ def _chan_reduce_axis_0(
     keepdims: bool,  # noqa: FBT001
 ) -> NDArray[np.float64]:
     """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
-    result = stats[0]
-    for i in range(1, stats.shape[0]):
-        result = _chan_combine(result, stats[i])
+    # Runs in dask workers at compute time; `set_num_threads` is thread-local, so the
+    # cap must be set here, not at graph-build time. In a worker pool dask already
+    # parallelizes across reduction tasks, so run `_chan_combine` serially to avoid
+    # workers x numba-threads oversubscription; on the main thread leave it unrestricted.
+    in_thread_pool = threading.current_thread().name.startswith("ThreadPoolExecutor")
+    with _numba_thread_limit(1 if in_thread_pool else None):
+        result = stats[0]
+        for i in range(1, stats.shape[0]):
+            result = _chan_combine(result, stats[i])
     return result[None] if keepdims else result
 
 
