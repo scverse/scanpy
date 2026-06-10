@@ -433,9 +433,7 @@ class _RankGenes:
             if need_var
             else None
         )
-        self.pts_rest = (
-            (nnz.sum(axis=0) - nnz[:k]) / n_rest if self.comp_pts else None
-        )
+        self.pts_rest = (nnz.sum(axis=0) - nnz[:k]) / n_rest if self.comp_pts else None
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
