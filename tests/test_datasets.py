@@ -170,12 +170,7 @@ def test_download_failure() -> None:
 
 
 def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A download must be atomic (#4097).
-
-    The destination path must not appear until the download has completed, so
-    that concurrent readers (e.g. parallel pytest workers sharing a cache) never
-    observe a partially-written file.
-    """
+    """The destination must not appear until the download finished (#4097)."""
     import io
     import urllib.request
 
@@ -210,31 +205,21 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     _download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == content
-    # sanity check that the download was actually streamed in several chunks
     assert len(dest_present_during_download) > 1
-    assert not any(dest_present_during_download), (
-        "destination appeared before the download finished"
-    )
-    # the temporary file must have been renamed, leaving only the final file
+    assert not any(dest_present_during_download)
     assert list(dest.parent.iterdir()) == [dest]
 
 
 def test_download_failure_keeps_existing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A failed download must not delete an already-present destination (#4097).
-
-    The old code unconditionally removed ``path`` on error, which under the
-    parallel-cache race could wipe a file another process had finished
-    downloading. The atomic version only cleans up its own temporary file.
-    """
+    """A failed download must not delete an already-present destination (#4097)."""
     import urllib.request
 
     from scanpy.readwrite import _download
 
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
-    # A sibling process already finished this download.
     dest.write_bytes(b"complete")
 
     class FailingResponse:
@@ -256,7 +241,6 @@ def test_download_failure_keeps_existing_file(
     with pytest.raises(OSError, match="connection reset"):
         _download("http://example.invalid/data.bin", dest)
 
-    # The pre-existing file is untouched and no temporary file is left behind.
     assert dest.read_bytes() == b"complete"
     assert list(dest.parent.iterdir()) == [dest]
 

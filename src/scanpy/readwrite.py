@@ -1093,10 +1093,7 @@ def _download(url: str, path: Path):
     blocksize = 1024 * 8
     blocknum = 0
 
-    # Download to a temporary file in the same directory and atomically move it
-    # into place once it is complete. This way concurrent readers (e.g. parallel
-    # pytest workers sharing a dataset cache) never observe ``path`` in a
-    # partially-written state. See #4097.
+    # Write to a temp file and rename so readers never see a partial file (#4097).
     tmp_path: Path | None = None
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
@@ -1130,9 +1127,7 @@ def _download(url: str, path: Path):
         tmp_path = None
 
     except (KeyboardInterrupt, Exception):
-        # Make sure no half-downloaded temporary file is left behind. ``path``
-        # itself is only ever created by the atomic rename above, so it is left
-        # untouched (it may belong to another process that finished first).
+        # Only remove our own temp file; leave path, which may be another process's.
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)
         raise
