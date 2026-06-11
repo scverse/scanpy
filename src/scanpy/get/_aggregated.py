@@ -3,9 +3,11 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
+import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
@@ -469,18 +471,37 @@ def _block_moments(
     return out
 
 
-def _chan_combine(
+@numba.njit(inline="always")  # noqa: TID251
+def _chan_combine(  # noqa: PLR0917
+    n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
+) -> tuple[float, float, float]:
+    """Combine two ``(count, mean, M2)`` groups pairwise."""
+    if n_a == 0.0:
+        return n_b, mean_b, m2_b
+    if n_b == 0.0:
+        return n_a, mean_a, m2_a
+    n = n_a + n_b
+    delta = mean_b - mean_a
+    return n, mean_a + delta * n_b / n, m2_a + m2_b + delta * delta * n_a * n_b / n
+
+
+@njit
+def _chan_combine_blocks(
     a: NDArray[np.float64], b: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
-    n_a, mean_a, m2_a = a[0], a[1], a[2]
-    n_b, mean_b, m2_b = b[0], b[1], b[2]
-    n = n_a + n_b
-    safe_n = np.where(n > 0, n, 1)
-    delta = mean_b - mean_a
-    new_mean = mean_a + delta * n_b / safe_n
-    new_m2 = m2_a + m2_b + delta * delta * n_a * n_b / safe_n
-    return np.stack([n, new_mean, new_m2])
+    out = np.empty_like(a)
+    for i in numba.prange(a.shape[1]):
+        for j in range(a.shape[2]):
+            out[0, i, j], out[1, i, j], out[2, i, j] = _chan_combine(
+                a[0, i, j],
+                a[1, i, j],
+                a[2, i, j],
+                b[0, i, j],
+                b[1, i, j],
+                b[2, i, j],
+            )
+    return out
 
 
 def _chan_reduce_axis_0(
@@ -491,7 +512,7 @@ def _chan_reduce_axis_0(
     """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
     result = stats[0]
     for i in range(1, stats.shape[0]):
-        result = _chan_combine(result, stats[i])
+        result = _chan_combine_blocks(result, stats[i])
     return result[None] if keepdims else result
 
 
