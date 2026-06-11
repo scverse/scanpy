@@ -138,7 +138,7 @@ def _morans_i_vec_w(g: CSRBase, x: np.ndarray, w: np.float64) -> np.float64:
     n = len(x)
     inum = 0.0
 
-    for i in numba.prange(n):
+    for i in range(n):
         s = slice(g.indptr[i], g.indptr[i + 1])
         i_indices = g.indices[s]
         i_data = g.data[s]
