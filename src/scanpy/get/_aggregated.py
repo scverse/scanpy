@@ -13,7 +13,13 @@ from sklearn.utils.sparsefuncs import csc_median_axis_0
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
-from ._kernels import agg_sum_csc, agg_sum_csr, mean_var_csc, mean_var_csr
+from ._kernels import (
+    agg_sum_csc,
+    agg_sum_csr,
+    mean_var_csc,
+    mean_var_csr,
+    mean_var_dense,
+)
 from .get import _check_mask
 
 if TYPE_CHECKING:
@@ -117,11 +123,8 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
 
-        The formula `Var(X) = E(X^2) - E(X)^2` suffers loss of precision when the variance is a
-        very small fraction of the squared mean. In particular, when X is constant, the formula may
-        nonetheless be non-zero. By default, our implementation resets the variance to exactly zero
-        when the computed variance, relative to the squared mean, nears limit of precision of the
-        floating-point significand.
+        Mean and variance are computed with Welford's online algorithm, which is
+        numerically stable for constant or near-constant inputs.
 
         Params
         ------
@@ -137,21 +140,11 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
 
         group_counts = np.bincount(self.groupby.codes)
         if isinstance(self.data, np.ndarray):
-            mean_ = self.mean()
-            # sparse matrices do not support ** for elementwise power.
-            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
-            sq_mean = mean_**2
-            var_ = mean_sq - sq_mean
+            mean_, var_ = mean_var_dense(self.indicator_matrix.tocsr(), self.data)
         else:
             mean_, var_ = (
                 mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
             )(self.indicator_matrix, self.data)
-            sq_mean = mean_**2
-        # TODO: Why these values exactly? Because they are high relative to the datatype?
-        # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
-        precision = 2 << (42 if self.data.dtype == np.float64 else 20)
-        # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
-        var_[precision * var_ < sq_mean] = 0
         if dof != 0:
             var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
         return mean_, var_
