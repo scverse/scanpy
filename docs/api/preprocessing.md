@@ -29,6 +29,7 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.log1p
    pp.pca
    pp.normalize_total
+   pp.normalize_clr
    pp.regress_out
    pp.scale
    pp.sample

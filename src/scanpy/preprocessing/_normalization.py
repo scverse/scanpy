@@ -304,3 +304,206 @@ def normalize_total(  # noqa: PLR0912
     elif not inplace:
         return dat
     return None
+
+
+# -----------------------------------------------------------------------------
+# Shifted Centered Log-Ratio (PFlogPF) Core Implementation
+#
+# The mathematical logic and sparse matrix optimization ("offset trick")
+# implemented below are adapted from the Pachter Lab reference repository:
+# https://github.com/pachterlab/bhgp_2022
+#
+# Reference Publication:
+# Booeshaghi et al. (2022, 2026) "Depth normalization for single-cell genomics
+# count data" bioRxiv. doi: 10.1101/2022.05.06.490859
+#
+# Copyright (c) 2022, Pachter Lab. All rights reserved.
+# Licensed under the BSD 2-Clause License.
+# -----------------------------------------------------------------------------
+
+
+def _normalize_clr_helper(
+    x: np.ndarray | CSBase,
+    *,
+    c: float,
+    target_sum: float | None,
+    alpha: float | None,
+    scale: float | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute the shifted CLR (PFlog1pPF) transform backend logic.
+
+    This function acts as the internal processing engine for `normalize_clr`,
+    adapted from the reference implementations provided by the Pachter Lab
+    (Booeshaghi et al. 2022). It applies initial depth-scaling followed by
+    an optimized sparse log-shift operation before mapping coordinates onto
+    the zero-sum Aitchison hyperplane.
+
+    Returns the dense, per-cell-centered matrix and the raw per-cell depths
+    (the latter is used by the caller to warn about empty cells).
+
+    See `normalize_clr` for the meaning of the parameters.
+    """
+    cell_depths = np.asarray(stats.sum(x, axis=1)).ravel()
+
+    # Determine the target scale factor (sf, corresponding to K or s_f in the paper)
+    # for the initial proportional-fitting step.
+    if alpha is not None:
+        if scale is None:
+            scale = cell_depths.mean()
+        # Delta-method calibration: Sets the target scale factor (sf) to 4 * alpha * scale.
+        # This implicitly sets the count-scale pseudocount to the optimal
+        # variance-stabilizing value: y0 = 1 / (4 * alpha).
+        sf = 4.0 * alpha * scale
+    elif target_sum is not None:
+        sf = target_sum
+    else:
+        sf = cell_depths.mean()
+
+    # Proportional fitting: rescale each cell so its counts sum to the target scale factor `sf`.
+    # Dividing by `cell_depths / sf` (with allow_divide_by_zero=False) leaves
+    # empty cells as all-zero rows instead of producing invalid infinities.
+    u = axis_mul_or_truediv(
+        x, cell_depths / sf, op=truediv, axis=0, allow_divide_by_zero=False
+    )
+
+    n_genes = x.shape[1]
+    log_c = np.log(c)
+
+    if isinstance(u, CSBase):
+        # Sparse "offset trick": To avoid densifying the sparse matrix prematurely,
+        # we store log(u_nz + c) - log(c) at the nonzero entries only.
+        # Structural zeros keep their value of 0. The true value log(u + c)
+        # at any position can be recovered via: (stored value + log(c)).
+        # This defers matrix densification until the final centering step.
+        if c == 1.0:
+            # log(u + 1) - log(1) = log1p(u); log1p is more accurate near 0.
+            u.data = np.log1p(u.data)
+        else:
+            u.data = np.log(u.data + c) - log_c
+        # Per-cell mean over all genes, including the zeros: each of the
+        # (n_genes - nnz) zero positions contributes log(c), so the true row sum
+        # is (stored row sum) + n_genes * log(c).
+        # The true mean is therefore: row_sum / n_genes + log(c).
+        row_sum = np.asarray(u.sum(axis=1)).ravel()
+        per_cell_mean = row_sum / n_genes + log_c
+        # Materialize dense and add log(c) back so every position holds log(u + c).
+        dense_log = u.toarray() + log_c
+    else:
+        u = np.asarray(u)
+        dense_log = np.log1p(u) if c == 1.0 else np.log(u + c)
+        per_cell_mean = dense_log.mean(axis=1)
+
+    # Additive centering (the CLR step): map each cell onto the zero-sum
+    # (Aitchison) hyperplane. This is what fills the zeros and densifies the matrix.
+    return dense_log - per_cell_mean[:, None], cell_depths
+
+
+def normalize_clr(
+    adata: AnnData,
+    *,
+    c: float = 1.0,
+    target_sum: float | None = None,
+    alpha: float | None = None,
+    scale: float | None = None,
+    layer: str | None = None,
+    inplace: bool = True,
+    copy: bool = False,
+) -> AnnData | dict[str, np.ndarray] | None:
+    r"""Normalize counts with the shifted centered log-ratio (PFlog1pPF) transform.
+
+    Computes the shifted centered log-ratio (CLR) transform
+
+    .. math::
+        T(x)_i = \log(u_i + c) - \frac{1}{D} \sum_{j=1}^D \log(u_j + c),
+
+    where :math:`u_i = s_f \, x_i / \sum_j x_j` are the depth-normalized counts
+    (proportional fitting to a target scale factor :math:`s_f`) and :math:`D` is the
+    number of genes. Equivalently this is proportional fitting, then
+    :func:`~numpy.log1p`, then per-cell mean-centering in log space (the
+    centered-log-ratio step). It is the unique count transform that is
+    simultaneously variance-stabilizing, depth-invariant, and rank-preserving
+    :cite:p:`Booeshaghi2022`.
+
+    Because the per-cell centering fills the zero entries, the output is always
+    dense, and each cell sums to exactly zero.
+
+    Parameters
+    ----------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    c
+        Pseudocount shift added inside the logarithm. The default ``1.0`` uses
+        :func:`~numpy.log1p` and keeps the sparse computation exact.
+    target_sum
+        Target scale factor :math:`s_f` for the first proportional-fitting step. If
+        `None` (and `alpha` is not given), the empirical mean cell depth is used.
+    alpha
+        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``). If
+        given, it overrides `target_sum` and sets :math:`s_f = 4 α \cdot` `scale`
+        by the delta method, calibrating the count-scale pseudocount to the
+        variance-stabilizing value ``y0 = 1/(4·α)``.
+    scale
+        Mean total counts per cell used in the delta-method rule. Only used when
+        `alpha` is given; defaults to the mean cell depth of the data.
+    layer
+        Layer to normalize instead of `X`.
+    inplace
+        Whether to update `adata` or return a dictionary with the normalized
+        matrix.
+    copy
+        Whether to modify a copied input object. Not compatible with
+        `inplace=False`.
+
+    Returns
+    -------
+    Returns a dictionary with the normalized copy of `adata.X` (key `"X"`) or
+    updates `adata` with the normalized matrix, depending on `inplace`.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from anndata import AnnData
+    >>> import scanpy as sc
+    >>> adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]], dtype="float32"))
+    >>> sc.pp.normalize_clr(adata)
+    >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-6)
+    True
+    """
+    if copy:
+        if not inplace:
+            msg = "`copy=True` cannot be used with `inplace=False`."
+            raise ValueError(msg)
+        adata = adata.copy()
+
+    view_to_actual(adata)
+
+    x = _get_obs_rep(adata, layer=layer)
+    if isinstance(x, CSCBase):
+        x = x.tocsr()
+    if issubclass(x.dtype.type, int | np.integer):
+        x = x.astype(np.float32)
+
+    start = logg.info("normalizing counts per cell via shifted CLR")
+
+    x, cell_depths = _normalize_clr_helper(
+        x, c=c, target_sum=target_sum, alpha=alpha, scale=scale
+    )
+
+    if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
+        warn("Some cells have zero counts", UserWarning)
+
+    dat = dict(X=x)
+    if inplace:
+        _set_obs_rep(adata, dat["X"], layer=layer)
+
+    logg.info(
+        "    finished ({time_passed})",
+        time=start,
+    )
+
+    if copy:
+        return adata
+    elif not inplace:
+        return dat
+    return None

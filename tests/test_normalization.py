@@ -11,6 +11,7 @@ from fast_array_utils import conv, stats
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
@@ -19,7 +20,11 @@ from testing.scanpy._helpers import (
 )
 
 # TODO: Add support for sparse-in-dask
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_DENSE,
+    ARRAY_TYPES_MEM,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -329,3 +334,160 @@ def test_compute_nnz_median(array_type, dtype):
     data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
     data = array_type(data)
     np.testing.assert_allclose(_compute_nnz_median(data), 5)
+
+
+# ------------------------------------------------------------------------------
+# normalize_clr (shifted CLR / PFlog1pPF)
+# ------------------------------------------------------------------------------
+
+# A small count matrix with no empty cells, used for the value/equivalence tests.
+X_clr = np.array(
+    [[5, 0, 3, 2], [1, 1, 0, 4], [0, 7, 2, 1], [3, 3, 3, 3]], dtype="float32"
+)
+
+
+def _clr_reference(x, *, c=1.0, target_sum=None, alpha=None, scale=None) -> np.ndarray:
+    """Self-contained dense shifted-CLR, independent of the implementation.
+
+    PF to a target depth, log(. + c), then subtract the per-cell mean. Empty
+    cells (zero depth) are left as all-zero rows, matching `normalize_clr`.
+    """
+    x = np.asarray(to_ndarray(x), dtype=np.float64)
+    depths = x.sum(axis=1)
+    if alpha is not None:
+        if scale is None:
+            scale = depths.mean()
+        sf = 4.0 * alpha * scale
+    elif target_sum is not None:
+        sf = target_sum
+    else:
+        sf = depths.mean()
+    safe_depths = np.where(depths == 0, 1.0, depths)
+    u = x * (sf / safe_depths)[:, None]
+    log_u = np.log(u + c)
+    return log_u - log_u.mean(axis=1, keepdims=True)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_normalize_clr_values(array_type, dtype):
+    """Values match the reference and every cell sums to zero, for all layouts.
+
+    Asserting that numpy / csr / csc / sparse-array inputs all equal the same
+    dense reference also proves the sparse "offset trick" matches the dense path.
+    """
+    adata = AnnData(array_type(X_clr).astype(dtype))
+    sc.pp.normalize_clr(adata)
+    result = to_ndarray(adata.X)
+
+    np.testing.assert_allclose(result, _clr_reference(X_clr), rtol=1e-5, atol=1e-5)
+    # zero-sum (Aitchison) hyperplane
+    np.testing.assert_allclose(result.sum(axis=1), 0.0, atol=1e-5)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize(
+    "kwargs",
+    [{}, {"target_sum": 1e4}, {"c": 2.0}, {"alpha": 0.5}],
+    ids=["default", "target_sum", "shift_c", "alpha"],
+)
+def test_normalize_clr_params(array_type, kwargs):
+    adata = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(adata, **kwargs)
+    np.testing.assert_allclose(
+        to_ndarray(adata.X), _clr_reference(X_clr, **kwargs), rtol=1e-5, atol=1e-5
+    )
+
+
+def test_normalize_clr_alpha_overrides_target_sum():
+    """`alpha` sets sf = 4*alpha*scale and overrides any given `target_sum`."""
+    alpha = 0.5
+    scale = X_clr.sum(axis=1).mean()
+
+    via_alpha = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(via_alpha, alpha=alpha)
+
+    via_target = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(via_target, target_sum=4.0 * alpha * scale)
+    np.testing.assert_allclose(
+        to_ndarray(via_alpha.X), to_ndarray(via_target.X), rtol=1e-5, atol=1e-5
+    )
+
+    # passing both -> alpha wins, target_sum ignored
+    both = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(both, alpha=alpha, target_sum=999.0)
+    np.testing.assert_allclose(
+        to_ndarray(both.X), to_ndarray(via_alpha.X), rtol=1e-5, atol=1e-5
+    )
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_normalize_clr_zero_cell(array_type):
+    """An empty cell stays all-zero, stays finite, and triggers a warning."""
+    x = X_clr.copy()
+    x[1] = 0  # make the second cell empty
+    adata = AnnData(array_type(x))
+    with pytest.warns(UserWarning, match="Some cells have zero counts"):
+        sc.pp.normalize_clr(adata)
+    result = to_ndarray(adata.X)
+    assert np.isfinite(result).all()
+    np.testing.assert_allclose(result[1], 0.0, atol=1e-6)
+
+
+def test_normalize_clr_inplace_false():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    x_before = to_ndarray(adata.X).copy()
+    out = sc.pp.normalize_clr(adata, inplace=False)
+
+    assert isinstance(out, dict)
+    np.testing.assert_allclose(out["X"], _clr_reference(X_clr), rtol=1e-5, atol=1e-5)
+    # input is left untouched
+    assert isinstance(adata.X, CSBase)
+    np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
+
+
+def test_normalize_clr_copy():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    returned = sc.pp.normalize_clr(adata, copy=True)
+
+    assert isinstance(returned, AnnData)
+    assert returned is not adata
+    np.testing.assert_allclose(
+        to_ndarray(returned.X), _clr_reference(X_clr), rtol=1e-5, atol=1e-5
+    )
+    # original is left untouched
+    assert isinstance(adata.X, CSBase)
+
+
+def test_normalize_clr_copy_inplace_error():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    with pytest.raises(
+        ValueError, match="`copy=True` cannot be used with `inplace=False`"
+    ):
+        sc.pp.normalize_clr(adata, copy=True, inplace=False)
+
+
+def test_normalize_clr_layer():
+    """`layer` targets that layer and leaves `X` untouched."""
+    adata = AnnData(
+        sparse.csr_matrix(X_clr),  # noqa: TID251
+        layers={"counts": sparse.csr_matrix(X_clr)},  # noqa: TID251
+    )
+    x_before = to_ndarray(adata.X).copy()
+    sc.pp.normalize_clr(adata, layer="counts")
+
+    np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
+    np.testing.assert_allclose(
+        to_ndarray(adata.layers["counts"]),
+        _clr_reference(X_clr),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+
+def test_normalize_clr_view():
+    adata = AnnData(X_clr.copy())
+    v = adata[:, :]
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.normalize_clr(v)
+    assert not v.is_view

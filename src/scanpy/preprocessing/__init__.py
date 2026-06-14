@@ -7,7 +7,7 @@ from ._combat import combat
 from ._deprecated.sampling import subsample
 from ._harmony import harmony_integrate
 from ._highly_variable_genes import highly_variable_genes
-from ._normalization import normalize_total
+from ._normalization import normalize_clr, normalize_total
 from ._pca import pca
 from ._qc import calculate_qc_metrics
 from ._recipes import recipe_seurat, recipe_weinreb17, recipe_zheng17
@@ -33,6 +33,7 @@ __all__ = [
     "highly_variable_genes",
     "log1p",
     "neighbors",
+    "normalize_clr",
     "normalize_total",
     "pca",
     "recipe_seurat",
