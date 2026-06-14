@@ -420,9 +420,8 @@ def normalize_clr(
     (proportional fitting to a target scale factor :math:`s_f`) and :math:`D` is the
     number of genes. Equivalently this is proportional fitting, then
     :func:`~numpy.log1p`, then per-cell mean-centering in log space (the
-    centered-log-ratio step). It is the unique count transform that is
-    simultaneously variance-stabilizing, depth-invariant, and rank-preserving
-    :cite:p:`Booeshaghi2022`.
+    centered-log-ratio step). This count transform is simultaneously
+    variance-stabilizing, depth-invariant, and rank-preserving :cite:p:`Booeshaghi2022`.
 
     Because the per-cell centering fills the zero entries, the output is always
     dense, and each cell sums to exactly zero.
