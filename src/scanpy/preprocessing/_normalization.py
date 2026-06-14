@@ -419,7 +419,7 @@ def normalize_clr(
     where :math:`u_i = s_f \, x_i / \sum_j x_j` are the depth-normalized counts
     (proportional fitting to a target scale factor :math:`s_f`) and :math:`D` is the
     number of genes. Equivalently this is proportional fitting, then
-    :func:`~numpy.log1p`, then per-cell mean-centering in log space (the
+    :obj:`~numpy.log1p`, then per-cell mean-centering in log space (the
     centered-log-ratio step). This count transform is simultaneously
     variance-stabilizing, depth-invariant, and rank-preserving :cite:p:`Booeshaghi2022`.
 
@@ -433,7 +433,7 @@ def normalize_clr(
         Rows correspond to cells and columns to genes.
     c
         Pseudocount shift added inside the logarithm. The default ``1.0`` uses
-        :func:`~numpy.log1p` and keeps the sparse computation exact.
+        :obj:`~numpy.log1p` and keeps the sparse computation exact.
     target_sum
         Target scale factor :math:`s_f` for the first proportional-fitting step. If
         `None` (and `alpha` is not given), the empirical mean cell depth is used.

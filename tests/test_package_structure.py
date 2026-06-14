@@ -96,7 +96,9 @@ copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
 # other partial exceptions
 copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
     "sc.experimental.pp.normalize_pearson_residuals"
-]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
+]["return_ann"] = copy_sigs["sc.pp.normalize_clr"]["return_ann"] = (
+    "AnnData | dict[str, np.ndarray] | None"
+)
 copy_sigs["sc.external.pp.magic"]["copy_default"] = None
 
 
