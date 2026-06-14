@@ -345,25 +345,26 @@ def _normalize_clr_helper(
     """
     cell_depths = np.asarray(stats.sum(x, axis=1)).ravel()
 
-    # Determine the target scale factor (sf, corresponding to K or s_f in the paper)
-    # for the initial proportional-fitting step.
+    # Resolve `target_sum`: the depth that the first proportional-fitting step
+    # scales every cell to. This is the paper's PF target constant K (Booeshaghi
+    # et al. 2022); the three branches below are the three ways to choose it.
     if alpha is not None:
         if scale is None:
             scale = cell_depths.mean()
-        # Delta-method calibration: Sets the target scale factor (sf) to 4 * alpha * scale.
-        # This implicitly sets the count-scale pseudocount to the optimal
-        # variance-stabilizing value: y0 = 1 / (4 * alpha).
-        sf = 4.0 * alpha * scale
-    elif target_sum is not None:
-        sf = target_sum
-    else:
-        sf = cell_depths.mean()
+        # Delta-method calibration: K = 4 * alpha * s, where s (`scale`) is the
+        # mean cell depth. This implicitly sets the count-scale pseudocount to the
+        # optimal variance-stabilizing value y0 = 1 / (4 * alpha), and overrides
+        # any value passed as `target_sum`.
+        target_sum = 4.0 * alpha * scale
+    elif target_sum is None:
+        target_sum = cell_depths.mean()
+    # else: use the `target_sum` passed by the caller.
 
-    # Proportional fitting: rescale each cell so its counts sum to the target scale factor `sf`.
-    # Dividing by `cell_depths / sf` (with allow_divide_by_zero=False) leaves
-    # empty cells as all-zero rows instead of producing invalid infinities.
+    # Proportional fitting: rescale each cell so its counts sum to `target_sum` (K).
+    # Dividing by `cell_depths / target_sum` (with allow_divide_by_zero=False)
+    # leaves empty cells as all-zero rows instead of producing invalid infinities.
     u = axis_mul_or_truediv(
-        x, cell_depths / sf, op=truediv, axis=0, allow_divide_by_zero=False
+        x, cell_depths / target_sum, op=truediv, axis=0, allow_divide_by_zero=False
     )
 
     n_genes = x.shape[1]
@@ -416,8 +417,8 @@ def normalize_clr(
     .. math::
         T(x)_i = \log(u_i + c) - \frac{1}{D} \sum_{j=1}^D \log(u_j + c),
 
-    where :math:`u_i = s_f \, x_i / \sum_j x_j` are the depth-normalized counts
-    (proportional fitting to a target scale factor :math:`s_f`) and :math:`D` is the
+    where :math:`u_i = K \, x_i / \sum_j x_j` are the depth-normalized counts
+    (proportional fitting to a target depth :math:`K`) and :math:`D` is the
     number of genes. Equivalently this is proportional fitting, then
     :obj:`~numpy.log1p`, then per-cell mean-centering in log space (the
     centered-log-ratio step). This count transform is simultaneously
@@ -435,16 +436,20 @@ def normalize_clr(
         Pseudocount shift added inside the logarithm. The default ``1.0`` uses
         :obj:`~numpy.log1p` and keeps the sparse computation exact.
     target_sum
-        Target scale factor :math:`s_f` for the first proportional-fitting step. If
-        `None` (and `alpha` is not given), the empirical mean cell depth is used.
+        Target depth :math:`K` for the first proportional-fitting step. If `None`
+        (and `alpha` is not given), the empirical mean cell depth is used. Unlike
+        :func:`~scanpy.pp.normalize_total`, this is only an *intermediate* target:
+        cells sum to `target_sum` after proportional fitting, but the subsequent
+        log and centering steps make each cell sum to exactly zero in the output.
     alpha
         Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``). If
-        given, it overrides `target_sum` and sets :math:`s_f = 4 α \cdot` `scale`
-        by the delta method, calibrating the count-scale pseudocount to the
-        variance-stabilizing value ``y0 = 1/(4·α)``.
+        given, it overrides `target_sum` and sets :math:`K = 4 \cdot α \cdot s`
+        by the delta method, where :math:`s` is `scale`. This calibrates the
+        count-scale pseudocount to the variance-stabilizing value ``y0 = 1/(4·α)``.
     scale
-        Mean total counts per cell used in the delta-method rule. Only used when
-        `alpha` is given; defaults to the mean cell depth of the data.
+        Mean total counts per cell (:math:`s` in :cite:p:`Booeshaghi2022`), used
+        in the delta-method rule :math:`K = 4 α s`. Only used when `alpha` is
+        given; defaults to the mean cell depth of the data.
     layer
         Layer to normalize instead of `X`.
     inplace

@@ -354,16 +354,15 @@ def _clr_reference(x, *, c=1.0, target_sum=None, alpha=None, scale=None) -> np.n
     """
     x = np.asarray(to_ndarray(x), dtype=np.float64)
     depths = x.sum(axis=1)
+    # Resolve the PF target depth K (paper's notation; exposed as `target_sum`).
     if alpha is not None:
         if scale is None:
             scale = depths.mean()
-        sf = 4.0 * alpha * scale
-    elif target_sum is not None:
-        sf = target_sum
-    else:
-        sf = depths.mean()
+        target_sum = 4.0 * alpha * scale
+    elif target_sum is None:
+        target_sum = depths.mean()
     safe_depths = np.where(depths == 0, 1.0, depths)
-    u = x * (sf / safe_depths)[:, None]
+    u = x * (target_sum / safe_depths)[:, None]
     log_u = np.log(u + c)
     return log_u - log_u.mean(axis=1, keepdims=True)
 
@@ -400,7 +399,7 @@ def test_normalize_clr_params(array_type, kwargs):
 
 
 def test_normalize_clr_alpha_overrides_target_sum():
-    """`alpha` sets sf = 4*alpha*scale and overrides any given `target_sum`."""
+    """`alpha` sets target_sum = 4*alpha*scale and overrides any given `target_sum`."""
     alpha = 0.5
     scale = X_clr.sum(axis=1).mean()
 
