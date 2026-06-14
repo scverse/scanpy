@@ -447,9 +447,9 @@ def normalize_clr(
         by the delta method, where :math:`s` is `scale`. This calibrates the
         count-scale pseudocount to the variance-stabilizing value ``y0 = 1/(4·α)``.
     scale
-        Mean total counts per cell (:math:`s` in :cite:p:`Booeshaghi2022`), used
-        in the delta-method rule :math:`K = 4 α s`. Only used when `alpha` is
-        given; defaults to the mean cell depth of the data.
+        Mean total counts per cell, used as :math:`s` in the delta-method
+        rule :math:`K = 4 α s`. Only used when `alpha` is given; defaults
+        to the mean cell depth of the data.
     layer
         Layer to normalize instead of `X`.
     inplace
