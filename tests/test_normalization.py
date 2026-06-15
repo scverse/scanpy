@@ -376,7 +376,7 @@ def _clr_reference(x, *, target_sum=None, alpha=None) -> np.ndarray:
     return log_u - log_u.mean(axis=1, keepdims=True)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_clr_values(array_type, dtype):
     """Values match the reference and every cell sums to zero, for all layouts.
@@ -393,7 +393,7 @@ def test_normalize_clr_values(array_type, dtype):
     np.testing.assert_allclose(result.sum(axis=1), 0.0, atol=1e-5)
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     "kwargs",
     [{}, {"target_sum": 1e4}, {"alpha": 0.5}, {"alpha": "auto"}],
@@ -429,7 +429,7 @@ def test_normalize_clr_alpha_overrides_target_sum():
     )
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_normalize_clr_alpha_auto(array_type):
     """`alpha="auto"` estimates the overdispersion and matches an explicit alpha."""
     estimated = _estimate_alpha_reference(X_clr)

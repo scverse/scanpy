@@ -7,6 +7,7 @@ import numba
 import numpy as np
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
@@ -324,48 +325,72 @@ def normalize_total(  # noqa: PLR0912
 # -----------------------------------------------------------------------------
 
 
-def _estimate_overdispersion(x: np.ndarray | CSBase) -> float:
+def _estimate_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
     r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
 
     Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
-    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and variance
-    over cells. The model is linear in :math:`α`, so the ordinary least-squares
-    solution is closed form
+    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and (population)
+    variance over cells. The model is linear in :math:`α`, so the ordinary
+    least-squares solution is closed form
 
     .. math::
         α = \frac{\sum_g (\mathrm{Var}_g - μ_g) \, μ_g^2}{\sum_g μ_g^4},
 
     which is exactly the minimizer a non-linear `curve_fit` would converge to,
-    but without the dependency.
+    but without the dependency. :func:`~fast_array_utils.stats.mean_var` is
+    dispatched for dense, sparse and dask input alike, so the only dask-specific
+    step is computing the two final scalar sums.
     """
-    n_cells = x.shape[0]
-    col_sum = np.asarray(stats.sum(x, axis=0)).ravel()
-    if isinstance(x, CSBase):
-        x_sq = x.copy()
-        x_sq.data **= 2
-    else:
-        x_sq = np.square(x)
-    col_sum_sq = np.asarray(stats.sum(x_sq, axis=0)).ravel()
-
-    mu = col_sum / n_cells
-    var = col_sum_sq / n_cells - mu**2
+    mu, var = mean_var(x, axis=0, correction=0)
     mu2 = mu**2
-    denominator = float(np.sum(mu2 * mu2))
+    numerator = np.sum((var - mu) * mu2)
+    denominator = np.sum(mu2 * mu2)
+    if isinstance(x, DaskArray):
+        import dask
+
+        numerator, denominator = dask.compute(numerator, denominator)
     if denominator == 0.0:
         msg = (
             "Cannot estimate overdispersion: every gene has zero mean. "
             "Pass `alpha` or `target_sum` explicitly."
         )
         raise ValueError(msg)
-    return float(np.sum((var - mu) * mu2) / denominator)
+    return float(numerator / denominator)
+
+
+def _clr_log_center(u: np.ndarray | CSBase) -> np.ndarray:
+    """Apply log1p then per-cell mean-centering to PF-scaled counts; return dense.
+
+    Operates on a full-width block of cells: every gene must be present so the
+    per-cell mean spans the whole row. Used directly for in-memory input, and
+    per row-chunk under :meth:`~dask.array.Array.map_blocks` (after the genes
+    have been rechunked into a single chunk).
+    """
+    n_genes = u.shape[1]
+    if isinstance(u, CSBase):
+        # Sparse "offset trick": store log1p only at the nonzero entries. The
+        # structural zeros already hold log1p(0) = 0, so the per-cell mean is just
+        # the stored row sum / n_genes, and no densification is needed until the
+        # final centering step.
+        u.data = np.log1p(u.data)
+        per_cell_mean = np.asarray(u.sum(axis=1)).ravel() / n_genes
+        dense_log = u.toarray()
+    else:
+        u = np.asarray(u)
+        dense_log = np.log1p(u)
+        per_cell_mean = dense_log.mean(axis=1)
+
+    # Additive centering (the CLR step): map each cell onto the zero-sum
+    # (Aitchison) hyperplane. This is what fills the zeros and densifies the matrix.
+    return dense_log - per_cell_mean[:, None]
 
 
 def _normalize_clr_helper(
-    x: np.ndarray | CSBase,
+    x: np.ndarray | CSBase | DaskArray,
     *,
     target_sum: float | None,
     alpha: float | Literal["auto"] | None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray | DaskArray, np.ndarray | DaskArray]:
     """Compute the shifted CLR (PFlog1pPF) transform backend logic.
 
     This function acts as the internal processing engine for `normalize_clr`,
@@ -379,7 +404,10 @@ def _normalize_clr_helper(
 
     See `normalize_clr` for the meaning of the parameters.
     """
-    cell_depths = np.asarray(stats.sum(x, axis=1)).ravel()
+    # Keep the depths lazy for dask; `.ravel()` would otherwise materialize them.
+    cell_depths = stats.sum(x, axis=1)
+    if not isinstance(x, DaskArray):
+        cell_depths = np.asarray(cell_depths).ravel()
 
     # Resolve `target_sum` (the paper's PF target constant K, Booeshaghi et al.
     # 2022): the depth the first proportional-fitting step scales every cell to.
@@ -397,9 +425,10 @@ def _normalize_clr_helper(
         # Delta-method calibration: K = 4 * alpha * s, where s is the mean cell
         # depth. This sets the count-scale pseudocount to the variance-stabilizing
         # value y0 = 1 / (4 * alpha), and overrides any value passed as `target_sum`.
-        target_sum = 4.0 * alpha * cell_depths.mean()
+        target_sum = 4.0 * alpha * float(cell_depths.mean())
     elif target_sum is None:
-        target_sum = cell_depths.mean()
+        # `float(...)` triggers a single blocking `.compute()` for dask input.
+        target_sum = float(cell_depths.mean())
     # else: use the `target_sum` passed by the caller.
 
     # Proportional fitting: rescale each cell so its counts sum to `target_sum` (K).
@@ -409,24 +438,18 @@ def _normalize_clr_helper(
         x, cell_depths / target_sum, op=truediv, axis=0, allow_divide_by_zero=False
     )
 
-    n_genes = x.shape[1]
-
-    if isinstance(u, CSBase):
-        # Sparse "offset trick": store log1p only at the nonzero entries. The
-        # structural zeros already hold log1p(0) = 0, so the per-cell mean is just
-        # the stored row sum / n_genes, and no densification is needed until the
-        # final centering step.
-        u.data = np.log1p(u.data)
-        per_cell_mean = np.asarray(u.sum(axis=1)).ravel() / n_genes
-        dense_log = u.toarray()
+    if isinstance(x, DaskArray):
+        # Per-cell centering needs the whole row, so collapse the genes into a
+        # single chunk; the transform is then embarrassingly parallel over the
+        # row-chunks. The output is always dense, hence the dense numpy `meta`.
+        u = u.rechunk({1: -1})
+        dense_log = u.map_blocks(
+            _clr_log_center, dtype=np.float64, meta=np.array([], dtype=np.float64)
+        )
     else:
-        u = np.asarray(u)
-        dense_log = np.log1p(u)
-        per_cell_mean = dense_log.mean(axis=1)
+        dense_log = _clr_log_center(u)
 
-    # Additive centering (the CLR step): map each cell onto the zero-sum
-    # (Aitchison) hyperplane. This is what fills the zeros and densifies the matrix.
-    return dense_log - per_cell_mean[:, None], cell_depths
+    return dense_log, cell_depths
 
 
 def normalize_clr(
@@ -454,6 +477,15 @@ def normalize_clr(
 
     Because the per-cell centering fills the zero entries, the output is always
     dense, and each cell sums to exactly zero.
+
+    .. note::
+        When used with a :class:`~dask.array.Array` in `adata.X`, deriving the
+        proportional-fitting target :math:`K` from the data requires a global
+        reduction and therefore triggers a blocking `.compute()`: once for the
+        default mean-depth target, and once more for `alpha` (including
+        ``alpha="auto"``). Only the scalar reduction is materialized, not the
+        matrix. Passing `target_sum` explicitly avoids this and keeps the whole
+        operation lazy.
 
     Parameters
     ----------
