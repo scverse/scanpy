@@ -14,6 +14,8 @@ from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
 
@@ -322,13 +324,47 @@ def normalize_total(  # noqa: PLR0912
 # -----------------------------------------------------------------------------
 
 
+def _estimate_overdispersion(x: np.ndarray | CSBase) -> float:
+    r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
+
+    Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
+    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and variance
+    over cells. The model is linear in :math:`α`, so the ordinary least-squares
+    solution is closed form
+
+    .. math::
+        α = \frac{\sum_g (\mathrm{Var}_g - μ_g) \, μ_g^2}{\sum_g μ_g^4},
+
+    which is exactly the minimizer a non-linear `curve_fit` would converge to,
+    but without the dependency.
+    """
+    n_cells = x.shape[0]
+    col_sum = np.asarray(stats.sum(x, axis=0)).ravel()
+    if isinstance(x, CSBase):
+        x_sq = x.copy()
+        x_sq.data **= 2
+    else:
+        x_sq = np.square(x)
+    col_sum_sq = np.asarray(stats.sum(x_sq, axis=0)).ravel()
+
+    mu = col_sum / n_cells
+    var = col_sum_sq / n_cells - mu**2
+    mu2 = mu**2
+    denominator = float(np.sum(mu2 * mu2))
+    if denominator == 0.0:
+        msg = (
+            "Cannot estimate overdispersion: every gene has zero mean. "
+            "Pass `alpha` or `target_sum` explicitly."
+        )
+        raise ValueError(msg)
+    return float(np.sum((var - mu) * mu2) / denominator)
+
+
 def _normalize_clr_helper(
     x: np.ndarray | CSBase,
     *,
-    c: float,
     target_sum: float | None,
-    alpha: float | None,
-    scale: float | None,
+    alpha: float | Literal["auto"] | None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute the shifted CLR (PFlog1pPF) transform backend logic.
 
@@ -345,17 +381,23 @@ def _normalize_clr_helper(
     """
     cell_depths = np.asarray(stats.sum(x, axis=1)).ravel()
 
-    # Resolve `target_sum`: the depth that the first proportional-fitting step
-    # scales every cell to. This is the paper's PF target constant K (Booeshaghi
-    # et al. 2022); the three branches below are the three ways to choose it.
+    # Resolve `target_sum` (the paper's PF target constant K, Booeshaghi et al.
+    # 2022): the depth the first proportional-fitting step scales every cell to.
     if alpha is not None:
-        if scale is None:
-            scale = cell_depths.mean()
-        # Delta-method calibration: K = 4 * alpha * s, where s (`scale`) is the
-        # mean cell depth. This implicitly sets the count-scale pseudocount to the
-        # optimal variance-stabilizing value y0 = 1 / (4 * alpha), and overrides
-        # any value passed as `target_sum`.
-        target_sum = 4.0 * alpha * scale
+        if alpha == "auto":
+            # Estimate the overdispersion from the raw counts (closed-form OLS,
+            # as in the reference implementation).
+            alpha = _estimate_overdispersion(x)
+        if not alpha > 0:
+            msg = (
+                f"`alpha` must be positive to derive K = 4 * alpha * s, got {alpha}. "
+                "The data may be underdispersed; pass `target_sum` explicitly instead."
+            )
+            raise ValueError(msg)
+        # Delta-method calibration: K = 4 * alpha * s, where s is the mean cell
+        # depth. This sets the count-scale pseudocount to the variance-stabilizing
+        # value y0 = 1 / (4 * alpha), and overrides any value passed as `target_sum`.
+        target_sum = 4.0 * alpha * cell_depths.mean()
     elif target_sum is None:
         target_sum = cell_depths.mean()
     # else: use the `target_sum` passed by the caller.
@@ -368,30 +410,18 @@ def _normalize_clr_helper(
     )
 
     n_genes = x.shape[1]
-    log_c = np.log(c)
 
     if isinstance(u, CSBase):
-        # Sparse "offset trick": To avoid densifying the sparse matrix prematurely,
-        # we store log(u_nz + c) - log(c) at the nonzero entries only.
-        # Structural zeros keep their value of 0. The true value log(u + c)
-        # at any position can be recovered via: (stored value + log(c)).
-        # This defers matrix densification until the final centering step.
-        if c == 1.0:
-            # log(u + 1) - log(1) = log1p(u); log1p is more accurate near 0.
-            u.data = np.log1p(u.data)
-        else:
-            u.data = np.log(u.data + c) - log_c
-        # Per-cell mean over all genes, including the zeros: each of the
-        # (n_genes - nnz) zero positions contributes log(c), so the true row sum
-        # is (stored row sum) + n_genes * log(c).
-        # The true mean is therefore: row_sum / n_genes + log(c).
-        row_sum = np.asarray(u.sum(axis=1)).ravel()
-        per_cell_mean = row_sum / n_genes + log_c
-        # Materialize dense and add log(c) back so every position holds log(u + c).
-        dense_log = u.toarray() + log_c
+        # Sparse "offset trick": store log1p only at the nonzero entries. The
+        # structural zeros already hold log1p(0) = 0, so the per-cell mean is just
+        # the stored row sum / n_genes, and no densification is needed until the
+        # final centering step.
+        u.data = np.log1p(u.data)
+        per_cell_mean = np.asarray(u.sum(axis=1)).ravel() / n_genes
+        dense_log = u.toarray()
     else:
         u = np.asarray(u)
-        dense_log = np.log1p(u) if c == 1.0 else np.log(u + c)
+        dense_log = np.log1p(u)
         per_cell_mean = dense_log.mean(axis=1)
 
     # Additive centering (the CLR step): map each cell onto the zero-sum
@@ -402,10 +432,8 @@ def _normalize_clr_helper(
 def normalize_clr(
     adata: AnnData,
     *,
-    c: float = 1.0,
     target_sum: float | None = None,
-    alpha: float | None = None,
-    scale: float | None = None,
+    alpha: float | Literal["auto"] | None = None,
     layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
@@ -415,7 +443,7 @@ def normalize_clr(
     Computes the shifted centered log-ratio (CLR) transform
 
     .. math::
-        T(x)_i = \log(u_i + c) - \frac{1}{D} \sum_{j=1}^D \log(u_j + c),
+        T(x)_i = \log(u_i + 1) - \frac{1}{D} \sum_{j=1}^D \log(u_j + 1),
 
     where :math:`u_i = K \, x_i / \sum_j x_j` are the depth-normalized counts
     (proportional fitting to a target depth :math:`K`) and :math:`D` is the
@@ -432,9 +460,6 @@ def normalize_clr(
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
-    c
-        Pseudocount shift added inside the logarithm. The default ``1.0`` uses
-        :obj:`~numpy.log1p` and keeps the sparse computation exact.
     target_sum
         Target depth :math:`K` for the first proportional-fitting step. If `None`
         (and `alpha` is not given), the empirical mean cell depth is used. Unlike
@@ -442,14 +467,14 @@ def normalize_clr(
         cells sum to `target_sum` after proportional fitting, but the subsequent
         log and centering steps make each cell sum to exactly zero in the output.
     alpha
-        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``). If
-        given, it overrides `target_sum` and sets :math:`K = 4 \cdot α \cdot s`
-        by the delta method, where :math:`s` is `scale`. This calibrates the
-        count-scale pseudocount to the variance-stabilizing value ``y0 = 1/(4·α)``.
-    scale
-        Mean total counts per cell, used as :math:`s` in the delta-method
-        rule :math:`K = 4 α s`. Only used when `alpha` is given; defaults
-        to the mean cell depth of the data.
+        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``). When
+        given, it overrides `target_sum` and sets :math:`K = 4 \cdot α \cdot s` by
+        the delta method, where :math:`s` is the mean cell depth, calibrating the
+        count-scale pseudocount to the variance-stabilizing value ``y0 = 1/(4·α)``
+        :cite:p:`Booeshaghi2022`. Pass ``"auto"`` to estimate :math:`α` from the
+        data (closed-form least squares of ``var = μ + α·μ²`` across genes). A
+        :class:`ValueError` is raised if the estimated or supplied :math:`α` is
+        not positive (e.g. underdispersed data); pass `target_sum` instead.
     layer
         Layer to normalize instead of `X`.
     inplace
@@ -486,13 +511,11 @@ def normalize_clr(
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if issubclass(x.dtype.type, int | np.integer):
-        x = x.astype(np.float32)
+        x = x.astype(np.float64)
 
     start = logg.info("normalizing counts per cell via shifted CLR")
 
-    x, cell_depths = _normalize_clr_helper(
-        x, c=c, target_sum=target_sum, alpha=alpha, scale=scale
-    )
+    x, cell_depths = _normalize_clr_helper(x, target_sum=target_sum, alpha=alpha)
 
     if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
         warn("Some cells have zero counts", UserWarning)

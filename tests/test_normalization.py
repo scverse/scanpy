@@ -346,24 +346,33 @@ X_clr = np.array(
 )
 
 
-def _clr_reference(x, *, c=1.0, target_sum=None, alpha=None, scale=None) -> np.ndarray:
+def _estimate_alpha_reference(x) -> float:
+    """Closed-form OLS overdispersion, independent of the implementation."""
+    x = np.asarray(to_ndarray(x), dtype=np.float64)
+    mu = x.mean(axis=0)
+    var = (x**2).mean(axis=0) - mu**2
+    mu2 = mu**2
+    return float(np.sum((var - mu) * mu2) / np.sum(mu2 * mu2))
+
+
+def _clr_reference(x, *, target_sum=None, alpha=None) -> np.ndarray:
     """Self-contained dense shifted-CLR, independent of the implementation.
 
-    PF to a target depth, log(. + c), then subtract the per-cell mean. Empty
-    cells (zero depth) are left as all-zero rows, matching `normalize_clr`.
+    PF to a target depth, log1p, then subtract the per-cell mean. Empty cells
+    (zero depth) are left as all-zero rows, matching `normalize_clr`.
     """
     x = np.asarray(to_ndarray(x), dtype=np.float64)
     depths = x.sum(axis=1)
     # Resolve the PF target depth K (paper's notation; exposed as `target_sum`).
     if alpha is not None:
-        if scale is None:
-            scale = depths.mean()
-        target_sum = 4.0 * alpha * scale
+        if alpha == "auto":
+            alpha = _estimate_alpha_reference(x)
+        target_sum = 4.0 * alpha * depths.mean()
     elif target_sum is None:
         target_sum = depths.mean()
     safe_depths = np.where(depths == 0, 1.0, depths)
     u = x * (target_sum / safe_depths)[:, None]
-    log_u = np.log(u + c)
+    log_u = np.log1p(u)
     return log_u - log_u.mean(axis=1, keepdims=True)
 
 
@@ -387,8 +396,8 @@ def test_normalize_clr_values(array_type, dtype):
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 @pytest.mark.parametrize(
     "kwargs",
-    [{}, {"target_sum": 1e4}, {"c": 2.0}, {"alpha": 0.5}],
-    ids=["default", "target_sum", "shift_c", "alpha"],
+    [{}, {"target_sum": 1e4}, {"alpha": 0.5}, {"alpha": "auto"}],
+    ids=["default", "target_sum", "alpha", "alpha_auto"],
 )
 def test_normalize_clr_params(array_type, kwargs):
     adata = AnnData(array_type(X_clr).astype("float32"))
@@ -418,6 +427,30 @@ def test_normalize_clr_alpha_overrides_target_sum():
     np.testing.assert_allclose(
         to_ndarray(both.X), to_ndarray(via_alpha.X), rtol=1e-5, atol=1e-5
     )
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_normalize_clr_alpha_auto(array_type):
+    """`alpha="auto"` estimates the overdispersion and matches an explicit alpha."""
+    estimated = _estimate_alpha_reference(X_clr)
+    assert estimated > 0
+
+    auto = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(auto, alpha="auto")
+
+    explicit = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(explicit, alpha=estimated)
+    np.testing.assert_allclose(
+        to_ndarray(auto.X), to_ndarray(explicit.X), rtol=1e-5, atol=1e-5
+    )
+
+
+@pytest.mark.parametrize("alpha", [0.0, -0.5], ids=["zero", "negative"])
+def test_normalize_clr_nonpositive_alpha_raises(alpha):
+    """A non-positive `alpha` cannot derive K = 4*alpha*s and raises."""
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    with pytest.raises(ValueError, match=r"alpha.*positive"):
+        sc.pp.normalize_clr(adata, alpha=alpha)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
