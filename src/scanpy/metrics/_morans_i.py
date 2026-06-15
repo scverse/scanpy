@@ -133,7 +133,8 @@ class _MoransI(_SparseMetric):
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _morans_i_vec_w(g: CSRBase, x: np.ndarray, w: np.float64) -> np.float64:
-    z = x - x.mean()
+    # https://github.com/numba/numba/issues/10640#issuecomment-4682957245
+    z = (x - x.mean()).astype(np.float64)
     z2ss = (z * z).sum()
     n = len(x)
     inum = 0.0
