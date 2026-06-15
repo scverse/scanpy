@@ -453,6 +453,13 @@ def test_normalize_clr_nonpositive_alpha_raises(alpha):
         sc.pp.normalize_clr(adata, alpha=alpha)
 
 
+def test_normalize_clr_alpha_auto_zero_mean_raises():
+    """`alpha="auto"` cannot estimate overdispersion when every gene mean is zero."""
+    adata = AnnData(np.zeros((3, 4), dtype="float32"))
+    with pytest.raises(ValueError, match="Cannot estimate overdispersion"):
+        sc.pp.normalize_clr(adata, alpha="auto")
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_normalize_clr_zero_cell(array_type):
     """An empty cell stays all-zero, stays finite, and triggers a warning."""
