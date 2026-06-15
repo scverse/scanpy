@@ -185,6 +185,33 @@ def leiden(  # noqa: PLR0913
             "MutableVertexPartition",
             leidenalg.find_partition(g, partition_type, seed=seed, **clustering_args),
         )
+    elif flavor == "networkit":
+        from types import SimpleNamespace
+
+        import networkit
+
+        seed = int(rng.integers(np.iinfo(np.int64).max))
+        networkit.setSeed(seed, useThreadId=True)
+        # only undirected for Parallel Leiden
+        g = _utils.get_networkit_from_adjacency(adjacency, weighted=use_weights)
+        iterations = n_iterations if n_iterations > 0 else 3
+        gamma = 1.0 if resolution is None else resolution
+        # randomization was removed as an option, so it is randomize = True
+        algorithm = networkit.community.ParallelLeiden(
+            g, iterations=iterations, gamma=gamma
+        )
+        # applying algorithm to the graph
+        algorithm.run()
+        nk_part = algorithm.getPartition()
+        # NetworKit's Partition exposes getVector() for the labels and a
+        # separate Modularity measure, rather than .membership / .modularity.
+
+        part = SimpleNamespace(
+            # get the actual vector representing the partition data structure
+            membership=np.asarray(nk_part.getVector()),
+            modularity=networkit.community.Modularity().getQuality(nk_part, g),
+        )
+
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         if use_weights:
@@ -242,6 +269,13 @@ def _validate_flavor(
                 raise ValueError(msg)
             if partition_type is not None:
                 msg = "Do not pass in partition_type argument when using igraph."
+                raise ValueError(msg)
+        case "networkit":
+            if directed:
+                msg = "Cannot use NetworKit's leiden implementation with a directed graph."
+                raise ValueError(msg)
+            if partition_type is not None:
+                msg = "Do not pass in partition_type argument when using networkit."
                 raise ValueError(msg)
         case "leidenalg":
             msg = (
