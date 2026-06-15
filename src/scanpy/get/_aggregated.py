@@ -147,7 +147,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
                 mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
             )(self.indicator_matrix, self.data)
         if dof != 0:
-            var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
+            var_ *= (group_counts / np.maximum(group_counts - dof, 1))[:, np.newaxis]
         return mean_, var_
 
     def median(self) -> Array:
@@ -453,14 +453,11 @@ def _block_moments(
         return out
 
     agg = Aggregate(groupby=by, data=data, mask=mask)
-    sum_ = agg.sum()
-    sum_sq = agg._sum(_power(data, 2))
-    safe_counts = np.where(nonempty, counts, 1)[:, None]
-    mean_ = sum_ / safe_counts
-    # M2 = sum((x - mean)**2) = sum_sq - count * mean**2; clip cancellation noise to 0.
-    m2 = np.maximum(sum_sq - sum_ * mean_, 0)
-    out[1, nonempty] = mean_[nonempty]
-    out[2, nonempty] = m2[nonempty]
+    mean_, var_ = agg.mean_var()
+    # M2 is the variance times the counts directly minus correction.
+    m2 = var_ * (counts - 1)[:, np.newaxis]
+    out[1, :] = mean_
+    out[2, :] = m2
     return out
 
 
