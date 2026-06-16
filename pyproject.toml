@@ -56,8 +56,8 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    # skip 3.11.0rc1–2 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.10,!=3.11.0rc1,!=3.11.0rc2",
+    # skip 3.11.0 series for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.10,!=3.11.0rc1,!=3.11.0rc2,!=3.11",
     "natsort",
     "networkx>=3.4",
     "numba>=0.61",
@@ -148,9 +148,9 @@ test-min = [
 ]
 
 [tool.hatch]
-build.targets.wheel.packages = [ "src/testing", "src/scanpy" ]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
 src = [ "src" ]
@@ -244,21 +244,12 @@ expand_tables = [
 ]
 
 [tool.pytest]
-strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
     "--pyargs",
-]
-testpaths = [ "./tests", "./ci", "scanpy" ]
-norecursedirs = [ "tests/_images" ]
-junit_family = "xunit1"
-markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
-    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
 filterwarnings = [
     "error",
@@ -289,6 +280,15 @@ filterwarnings = [
     # joblib fallback to serial mode in restricted multiprocessing environments
     "ignore:.*joblib will operate in serial mode:UserWarning",
 ]
+junit_family = "xunit1"
+markers = [
+    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
+    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
+]
+norecursedirs = [ "tests/_images" ]
+strict = true
+testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
 run.concurrency = [ "multiprocessing" ]
@@ -309,19 +309,19 @@ xml.output = "test-data/coverage.xml"
 [tool.towncrier]
 name = "scanpy"
 package = "scanpy"
+package_dir = "src"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
-single_file = false
-package_dir = "src"
-issue_format = "{{pr}}`{issue}`"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+issue_format = "{{pr}}`{issue}`"
+single_file = false
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
+fragment.chore.name = "Miscellaneous changes"
+fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
 # https://github.com/commitizen/conventional-commit-types/blob/master/index.json
 # style, refactor, test, build, ci: should not go into changelog
 fragment.feat.name = "Features"
 fragment.fix.name = "Bug fixes"
-fragment.docs.name = "Documentation"
 fragment.perf.name = "Performance"
-fragment.chore.name = "Miscellaneous changes"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
