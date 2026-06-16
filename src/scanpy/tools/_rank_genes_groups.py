@@ -479,9 +479,6 @@ class _RankGenes:
                         var=pd.DataFrame(index=self.var_names),
                         obs=pd.DataFrame(
                             index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                            # This self.group_col means illico will run tests against *all* data
-                            # instead of what's in self.groups_order as controlled by the `groups` arg.
-                            # TODO: Only run the subset once illico supports a `groups` argument
                             data={"group": self.group_col},
                         ),
                     ),
@@ -495,6 +492,7 @@ class _RankGenes:
                     use_continuity=False,
                     alternative="two-sided",
                     use_rust=False,
+                    groups=self.groups_order,
                 )
                 generate_test_results = _illico_results_to_iter(
                     illico_df,
