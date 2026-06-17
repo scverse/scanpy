@@ -472,7 +472,11 @@ def _chan_combine(  # noqa: PLR0917
         return n_a, mean_a, m2_a
     n = n_a + n_b
     delta = mean_b - mean_a
-    return n, mean_a + delta * n_b / n, m2_a + m2_b + delta * delta * n_a * n_b / n
+    return (
+        n,
+        (n_a * mean_a + n_b * mean_b) / n,
+        m2_a + m2_b + delta * delta * n_a * n_b / n,
+    )
 
 
 @njit
