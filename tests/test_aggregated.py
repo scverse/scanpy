@@ -553,7 +553,7 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
     # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
     # the variance ~1e-3, far below the rounding noise. Welford's online
-    # algorithm.
+    # algorithm avoids the subtraction entirely.
     rng = np.random.default_rng(0)
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3
