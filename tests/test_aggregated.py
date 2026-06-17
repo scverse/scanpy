@@ -555,6 +555,7 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     # the variance ~1e-3, far below the rounding noise. Welford's online
     # algorithm and Chan's parallel combine (per chunk in dask, and for the
     # zero-block merge in sparse paths) avoid the subtraction entirely.
+
     rng = np.random.default_rng(0)
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3

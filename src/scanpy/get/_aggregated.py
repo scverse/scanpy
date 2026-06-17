@@ -125,7 +125,8 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
 
         Mean and variance are computed with Welford's online algorithm, which is
-        numerically stable for constant or near-constant inputs.
+        numerically stable for constant or near-constant inputs
+        compared to subtracting E[X^2] - E[X]^2 since both values will be so close.
 
         Params
         ------
