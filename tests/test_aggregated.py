@@ -16,6 +16,7 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -544,3 +545,42 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_var_no_catastrophic_cancellation(array_type) -> None:
+    # Values of the form `offset + tiny_noise` make the textbook two-pass
+    # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
+    # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
+    # the variance ~1e-3, far below the rounding noise. Welford's online
+    # algorithm and Chan's parallel combine (per chunk in dask, and for the
+    # zero-block merge in sparse paths) avoid the subtraction entirely.
+    rng = np.random.default_rng(0)
+    n_per_group, n_features = 1000, 4
+    offset, std = 1e8, 1e-3
+    groups = ["a", "b"]
+    x = np.vstack([
+        offset + std * rng.standard_normal((n_per_group, n_features)) for _ in groups
+    ]).astype(np.float64)
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(np.repeat(groups, n_per_group))},
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    adata = ad.AnnData(X=array_type(x), obs=obs)
+
+    expected = np.vstack([
+        np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
+        for i in range(len(groups))
+    ])
+    # Sanity: textbook formula on this data is catastrophically wrong
+    # (off by >1e5x the true variance — proving the scenario actually triggers
+    # cancellation rather than being a vacuous test).
+    naive = (x**2).mean(axis=0) - x.mean(axis=0) ** 2
+    assert (
+        np.abs(naive - np.var(x, axis=0, ddof=0)) / np.var(x, axis=0, ddof=0) > 1e5
+    ).all()
+
+    result = sc.get.aggregate(adata, by="group", func="var", dof=0).layers["var"]
+    if isinstance(result, DaskArray):
+        result = result.compute()
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
