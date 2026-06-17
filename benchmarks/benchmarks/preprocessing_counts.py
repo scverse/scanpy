@@ -152,7 +152,7 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[list[str], list[bool]] = (
+    params: tuple[list[AggType], list[bool]] = (
         list(get_literal_vals(AggType)),
         [True, False],
     )
