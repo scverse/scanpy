@@ -38,7 +38,7 @@ def _manage_log_handlers() -> Generator[None, None, None]:
     yield
 
     loggers = [
-        sc.settings._root_logger,
+        sc.settings.root_logger,
         logging.getLogger(),
         *logging.Logger.manager.loggerDict.values(),
     ]
@@ -55,9 +55,9 @@ def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, N
     """Allow use of scanpy’s logger with caplog."""
     import scanpy as sc
 
-    sc.settings._root_logger.addHandler(caplog.handler)
+    sc.settings.root_logger.addHandler(caplog.handler)
     yield
-    sc.settings._root_logger.removeHandler(caplog.handler)
+    sc.settings.root_logger.removeHandler(caplog.handler)
 
 
 @pytest.fixture

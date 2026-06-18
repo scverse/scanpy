@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Annotated, Literal, Protocol, runtime_checkabl
 import scverse_misc
 from pydantic import (
     AfterValidator,
+    Field,
     PrivateAttr,
     computed_field,
     field_validator,
@@ -78,11 +79,9 @@ class Settings(
     verbosity: Verbosity = Verbosity.warning
     """Verbosity level (default :attr:`Verbosity.warning`)."""
 
-    _root_logger: Annotated[
-        _RootLogger, PrivateAttr(default=_RootLogger(Verbosity.warning.level))
-    ]
+    root_logger: _RootLogger = Field(default_factory=lambda: _RootLogger(Verbosity.warning.level), exclude=True)
 
-    logfile: Writer[str] = _default_logfile()
+    logfile: Writer[str] = Field(default_factory=_default_logfile)
     """The open file to write logs to.
 
     Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
