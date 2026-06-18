@@ -79,7 +79,9 @@ class Settings(
     verbosity: Verbosity = Verbosity.warning
     """Verbosity level (default :attr:`Verbosity.warning`)."""
 
-    root_logger: _RootLogger = Field(default_factory=lambda: _RootLogger(Verbosity.warning.level), exclude=True)
+    root_logger: _RootLogger = Field(
+        default_factory=lambda: _RootLogger(Verbosity.warning.level), exclude=True
+    )
 
     logfile: Writer[str] = Field(default_factory=_default_logfile)
     """The open file to write logs to.
