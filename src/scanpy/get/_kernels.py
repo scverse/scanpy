@@ -111,12 +111,13 @@ def mean_var_csr(
             for j in range(start_obs, end_obs):
                 col = data.indices[j]
                 value = np.float64(data.data[j])
-                n_nonzero[col] += 1
-                n = n_nonzero[col]
-                delta = value - mean[cat_num, col]
-                mean[cat_num, col] += delta / n
-                delta2 = value - mean[cat_num, col]
-                var[cat_num, col] += delta * delta2
+                n = n_nonzero[col] + 1
+                n_nonzero[col] = n
+                m = mean[cat_num, col]
+                delta = value - m
+                m += delta / n
+                mean[cat_num, col] = m
+                var[cat_num, col] += delta * (value - m)
 
         for col in range(n_features):
             n_nz = n_nonzero[col]
@@ -160,12 +161,13 @@ def mean_var_csc(
             if cat == -1:
                 continue
             value = np.float64(data.data[j])
-            n_nonzero[cat] += 1
-            n = n_nonzero[cat]
-            delta = value - mean[cat, col]
-            mean[cat, col] += delta / n
-            delta2 = value - mean[cat, col]
-            var[cat, col] += delta * delta2
+            n = n_nonzero[cat] + 1
+            n_nonzero[cat] = n
+            m = mean[cat, col]
+            delta = value - m
+            m += delta / n
+            mean[cat, col] = m
+            var[cat, col] += delta * (value - m)
 
         for cat in range(n_cats):
             n_obs = n_obs_per_cat[cat]
