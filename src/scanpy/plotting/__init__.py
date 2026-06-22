@@ -127,6 +127,6 @@ def timeseries_subplot(*args, **kwargs):
     return timeseries_subplot(*args, **kwargs)
 
 
-@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.pl.pca` instead."))
+@deprecated(Deprecation("1.12.2", "Use :func:`scanpy.pl.pca` instead."))
 def pca_scatter(*args, **params):
     return pca(*args, **params)
