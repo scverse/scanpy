@@ -51,6 +51,8 @@ def _illico_results_to_iter(
     illico_df: pd.DataFrame,
     groups_order: NDArray,
     ireference: int | None,
+    *,
+    copy_pvalues: bool,
 ):
     """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
 
@@ -67,7 +69,7 @@ def _illico_results_to_iter(
         (
             group_index,
             z_series.loc[group_name].to_numpy(),
-            p_series.loc[group_name].to_numpy(),
+            p_series.loc[group_name].to_numpy(copy=copy_pvalues),
         )
         for group_index, group_name in enumerate(groups_order)
         if group_name != ref_label and group_name in illico_groups
@@ -498,6 +500,8 @@ class _RankGenes:
                     illico_df,
                     self.groups_order,
                     self.ireference,
+                    # p-values are altered by this correction method
+                    copy_pvalues=corr_method == "benjamini-hochberg",
                 )
             else:
                 generate_test_results = self.wilcoxon(tie_correct=tie_correct)
