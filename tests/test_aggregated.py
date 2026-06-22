@@ -555,13 +555,14 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     # algorithm and Chan's parallel combine (per chunk in dask, and for the
     # zero-block merge in sparse paths) avoid the subtraction entirely.
 
-    rng = np.random.default_rng(0)
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3
     groups = ["a", "b"]
     x = np.vstack([
-        offset + std * rng.standard_normal((n_per_group, n_features)) for _ in groups
-    ]).astype(np.float64)
+        offset
+        + std * np.random.default_rng().standard_normal((n_per_group, n_features))
+        for _ in groups
+    ])
     obs = pd.DataFrame(
         {"group": pd.Categorical(np.repeat(groups, n_per_group))},
         index=[f"cell_{i}" for i in range(x.shape[0])],
