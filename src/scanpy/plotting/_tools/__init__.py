@@ -101,26 +101,6 @@ def pca_overview(adata: AnnData, **params):
     pca_variance_ratio(adata, show=show)
 
 
-# backwards compat
-@_doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
-def pca_scatter(adata: AnnData, **params):
-    """Scatter plot in PCA coordinates.
-
-    This is a backwards-compatible alias for :func:`~scanpy.pl.pca`.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    {scatter_bulk}
-    {show_save_ax}
-
-    Returns
-    -------
-    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-    return pca(adata, **params)
-
-
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,
