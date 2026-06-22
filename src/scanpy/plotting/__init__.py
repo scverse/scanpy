@@ -29,7 +29,6 @@ from ._tools import (
     embedding_density,
     pca_loadings,
     pca_overview,
-    pca_scatter,
     pca_variance_ratio,
     rank_genes_groups,
     rank_genes_groups_dotplot,
@@ -84,7 +83,6 @@ __all__ = [
     "pca",
     "pca_loadings",
     "pca_overview",
-    "pca_scatter",
     "pca_variance_ratio",
     "rank_genes_groups",
     "rank_genes_groups_dotplot",
@@ -127,3 +125,8 @@ def timeseries_subplot(*args, **kwargs):
     from ._utils import timeseries_subplot
 
     return timeseries_subplot(*args, **kwargs)
+
+
+@deprecated(Deprecation("1.12.2", "Use :func:`scanpy.pl.pca` instead."))
+def pca_scatter(*args, **params):
+    return pca(*args, **params)
