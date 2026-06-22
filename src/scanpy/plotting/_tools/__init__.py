@@ -102,7 +102,34 @@ def pca_overview(adata: AnnData, **params):
 
 
 # backwards compat
-pca_scatter = pca
+@_doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+def pca_scatter(adata: AnnData, **params):
+    """Scatter plot in PCA coordinates.
+
+    This is a backwards-compatible alias for :func:`~scanpy.pl.pca`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+
+        adata = sc.datasets.pbmc3k_processed()
+        sc.pl.pca_scatter(adata, color="louvain")
+    """
+    return pca(adata, **params)
 
 
 def pca_loadings(
