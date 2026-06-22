@@ -176,7 +176,9 @@ class Agg:  # noqa: D101
                 obs=ad.io.read_elem(z["obs"]),
                 var=ad.io.read_elem(z["var"]),
                 layers={
-                    "counts": ad.experimental.read_elem_lazy(z["layers"][counts_src_key])
+                    "counts": ad.experimental.read_elem_lazy(
+                        z["layers"][counts_src_key]
+                    )
                 },
                 X=ad.experimental.read_elem_lazy(z["X"]),
             )
