@@ -118,17 +118,6 @@ def pca_scatter(adata: AnnData, **params):
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
-
-    Examples
-    --------
-    .. plot::
-        :context: close-figs
-
-        import scanpy as sc
-
-        adata = sc.datasets.pbmc3k_processed()
-        sc.pl.pca_scatter(adata, color="louvain")
-    """
     return pca(adata, **params)
 
 
