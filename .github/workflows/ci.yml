@@ -21,9 +21,9 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with: { enable-cache: false }
       - id: get-envs
         run: |
@@ -47,10 +47,10 @@ jobs:
     permissions:
       id-token: write  # for codecov OIDC
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: ${{ matrix.env.python }}
 
@@ -110,12 +110,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
       - run: uvx --from build pyproject-build --sdist --wheel .
