@@ -118,7 +118,11 @@ def test_diffmap(
         pytest.param(None, "X_diffmap", "diffmap_evals", id="None"),
         pytest.param("custom_key", "custom_key", "custom_key", id="custom_key"),
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", id="v1"),
-        pytest.param(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", id="v2"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap"),
+            marks=[needs.igraph, needs.skmisc],
+            id="v2",
+        ),
     ],
 )
 def test_diffmap_key_added(
@@ -140,7 +144,11 @@ def test_diffmap_key_added(
         pytest.param(None, "X_draw_graph_fr", "draw_graph", id="None"),
         pytest.param("custom_{layout}", "custom_fr", "custom_fr", id="custom_template"),
         pytest.param(sc.Preset.ScanpyV1, "X_draw_graph_fr", "draw_graph", id="v1"),
-        pytest.param(sc.Preset.ScanpyV2Preview, "graph_fr", "graph_fr", id="v2"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "graph_fr", "graph_fr"),
+            marks=needs.skmisc,
+            id="v2",
+        ),
     ],
 )
 def test_draw_graph_key_added(
