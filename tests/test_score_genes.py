@@ -15,7 +15,6 @@ from fast_array_utils import conv
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase
 from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
 
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
-    from scanpy._compat import CSRBase
+    from scanpy._compat import CSBase, CSRBase
 
 
 HERE = Path(__file__).parent
@@ -105,6 +104,7 @@ def test_add_score():
     assert adata.obs["Test"].dtype == "float64"
 
 
+@pytest.mark.parametrize("fmt", ["csr", "csc"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "mk_arr",
@@ -130,14 +130,14 @@ def test_add_score():
     ],
 )
 def test_sparse_nanmean(
-    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1]
+    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1], fmt: str
 ) -> None:
-    """Check that _sparse_nanmean() is equivalent to np.nanmean()."""
+    """Check that _sparse_nanmean() is equivalent to np.nanmean() for CSR and CSC."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
-    arr_or_mat = mk_arr()
-    arr = conv.to_dense(arr_or_mat)
-    mat = sparse.csr_matrix(arr) if not isinstance(arr, CSBase) else arr  # noqa: TID251
+    arr = conv.to_dense(mk_arr())
+    make = sparse.csr_matrix if fmt == "csr" else sparse.csc_matrix  # noqa: TID251
+    mat = make(arr)
     np.testing.assert_allclose(
         np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
     )
