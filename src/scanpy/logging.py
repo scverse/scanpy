@@ -80,7 +80,7 @@ class _RootLogger(logging.RootLogger):
 def _set_log_file(settings: Settings) -> None:
     file = settings.logfile
     name = settings.logpath
-    root = settings._root_logger
+    root = settings.root_logger
     for handler in list(root.handlers):
         root.removeHandler(handler)
         handler.close()
@@ -91,7 +91,7 @@ def _set_log_file(settings: Settings) -> None:
 
 
 def _set_log_level(settings: Settings) -> None:
-    root = settings._root_logger
+    root = settings.root_logger
     root.setLevel(settings.verbosity.level)
     for h in list(root.handlers):
         h.setLevel(settings.verbosity.level)
@@ -223,25 +223,25 @@ def error(
 def warning(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
 
-    return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
+    return settings.root_logger.warning(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def info(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
 
-    return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
+    return settings.root_logger.info(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def hint(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
 
-    return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
+    return settings.root_logger.hint(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def debug(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
 
-    return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)
+    return settings.root_logger.debug(msg, time=time, deep=deep, extra=extra)

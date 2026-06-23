@@ -34,23 +34,30 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
+    if axis not in (0, 1):
+        msg = "axis must be 0 or 1"
+        raise ValueError(msg)
 
-    # count the number of nan elements per row/column (dep. on axis)
-    z = x.copy()
-    z.data = np.isnan(z.data)
-    z.eliminate_zeros()
-    n_elements = z.shape[axis] - z.sum(axis)
+    # Work in the compressed format aligned with the reduction axis and aggregate
+    # directly from index pointers to avoid matrix copies and eliminate_zeros().
+    mat = x.tocsc(copy=False) if axis == 0 else x.tocsr(copy=False)
+    segment_lengths = np.diff(mat.indptr)
+    out_size = mat.shape[1] if axis == 0 else mat.shape[0]
+    full_length = mat.shape[0] if axis == 0 else mat.shape[1]
 
-    # set the nans to 0, so that a normal .sum() works
-    y = x.copy()
-    y.data[np.isnan(y.data)] = 0
-    y.eliminate_zeros()
+    segment_ids = np.repeat(np.arange(out_size), segment_lengths)
+    isnan = np.isnan(mat.data)
 
-    # the average
-    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
-    m = s / n_elements
+    sums = np.bincount(
+        segment_ids[~isnan],
+        weights=mat.data[~isnan],
+        minlength=out_size,
+    ).astype(np.float64, copy=False)
+    nan_counts = np.bincount(segment_ids[isnan], minlength=out_size)
+    counts = full_length - nan_counts
 
-    return m
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return sums / counts
 
 
 @_doc_params(rng=doc_rng)

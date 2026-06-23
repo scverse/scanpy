@@ -106,6 +106,7 @@ def test_add_score():
 
 
 @pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("matrix_format", ["csr", "csc"])
 @pytest.mark.parametrize(
     "mk_arr",
     [
@@ -130,7 +131,9 @@ def test_add_score():
     ],
 )
 def test_sparse_nanmean(
-    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1]
+    mk_arr: Callable[[], CSBase | np.ndarray],
+    axis: Literal[0, 1],
+    matrix_format: Literal["csr", "csc"],
 ) -> None:
     """Check that _sparse_nanmean() is equivalent to np.nanmean()."""
     from scanpy.tools._score_genes import _sparse_nanmean
@@ -138,6 +141,7 @@ def test_sparse_nanmean(
     arr_or_mat = mk_arr()
     arr = conv.to_dense(arr_or_mat)
     mat = sparse.csr_matrix(arr) if not isinstance(arr, CSBase) else arr  # noqa: TID251
+    mat = mat.asformat(matrix_format)
     np.testing.assert_allclose(
         np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
     )
