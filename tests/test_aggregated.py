@@ -572,7 +572,7 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
         np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
         for i in range(len(groups))
     ])
-    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the epected
+    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the expected
     # or the sum-sq and sq-sum in naive are literally identical due to precision errors at the upper bound of the range.
     naive = np.vstack([
         (xg**2).mean(axis=0) - xg.mean(axis=0) ** 2
