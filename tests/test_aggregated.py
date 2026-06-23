@@ -16,6 +16,7 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -544,3 +545,49 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_var_no_catastrophic_cancellation(array_type) -> None:
+    # Values of the form `offset + tiny_noise` make the textbook two-pass
+    # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
+    # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
+    # the variance ~1e-3, far below the rounding noise. Welford's online
+    # algorithm avoids the subtraction entirely.
+    n_per_group, n_features = 1000, 4
+    offset, std = 1e8, 1e-3
+    groups = ["a", "b"]
+    x = np.vstack([
+        offset
+        + std * np.random.default_rng().standard_normal((n_per_group, n_features))
+        for _ in groups
+    ])
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(np.repeat(groups, n_per_group))},
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    adata = ad.AnnData(X=array_type(x), obs=obs)
+
+    expected = np.vstack([
+        np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
+        for i in range(len(groups))
+    ])
+    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the expected
+    # or the sum-sq and sq-sum in naive are literally identical due to precision errors at the upper bound of the range.
+    naive = np.vstack([
+        (xg**2).mean(axis=0) - xg.mean(axis=0) ** 2
+        for xg in (
+            x[i * n_per_group : (i + 1) * n_per_group] for i in range(len(groups))
+        )
+    ])
+    diff_magnitude = np.abs(naive - expected) / expected
+    all_large = (diff_magnitude > 1e5).all()
+    if not all_large:
+        does_naive_fully_cancel = naive == 0
+        assert does_naive_fully_cancel.any()
+        assert (diff_magnitude[does_naive_fully_cancel] == 1).all()
+
+    result = sc.get.aggregate(adata, by="group", func="var", dof=0).layers["var"]
+    if isinstance(result, DaskArray):
+        result = result.compute()
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
