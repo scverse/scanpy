@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numba
 import numpy as np
 import pandas as pd
+from fast_array_utils.numba import njit
 
 from .. import logging as logg
 from .._compat import CSBase, old_positionals
@@ -25,28 +27,65 @@ type _StrIdx = pd.Index[str]
 type _GetSubset = Callable[[_StrIdx], np.ndarray | CSBase]
 
 
+@njit
+def _sparse_nanmean_within_slot(
+    data: NDArray, indptr: NDArray, n_out: int, divisor: int
+) -> NDArray[np.float64]:
+    """Reduce within each compressed slot (e.g. per row for CSR), ignoring NaNs."""
+    out = np.empty(n_out, dtype=np.float64)
+    for i in numba.prange(n_out):
+        total = np.float64(0)
+        n_nan = 0
+        for k in range(indptr[i], indptr[i + 1]):
+            v = data[k]
+            if np.isnan(v):
+                n_nan += 1
+            else:
+                total += v
+        out[i] = total / (divisor - n_nan)
+    return out
+
+
+@njit
+def _sparse_nanmean_across_slots(
+    data: NDArray, indices: NDArray, n_out: int, divisor: int
+) -> NDArray[np.float64]:
+    """Reduce across compressed slots (e.g. per column for CSR), ignoring NaNs."""
+    total = np.zeros(n_out, dtype=np.float64)
+    n_nan = np.zeros(n_out, dtype=np.int64)
+    for k in range(data.shape[0]):
+        v = data[k]
+        j = indices[k]
+        if np.isnan(v):
+            n_nan[j] += 1
+        else:
+            total[j] += v
+    out = np.empty(n_out, dtype=np.float64)
+    for j in numba.prange(n_out):
+        out[j] = total[j] / (divisor - n_nan[j])
+    return out
+
+
 def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
-    """np.nanmean equivalent for sparse matrices."""
+    """np.nanmean equivalent for sparse matrices.
+
+    Computed in a single pass over the stored values, avoiding the two matrix
+    copies and the sparse set-index/``eliminate_zeros`` the previous
+    implementation needed. Implicit (structural) zeros count as observed
+    values; only stored ``NaN`` entries are excluded, matching ``np.nanmean``
+    on the densified array.
+    """
     if not isinstance(x, CSBase):
         msg = "X must be a compressed sparse matrix"
         raise TypeError(msg)
 
-    # count the number of nan elements per row/column (dep. on axis)
-    z = x.copy()
-    z.data = np.isnan(z.data)
-    z.eliminate_zeros()
-    n_elements = z.shape[axis] - z.sum(axis)
-
-    # set the nans to 0, so that a normal .sum() works
-    y = x.copy()
-    y.data[np.isnan(y.data)] = 0
-    y.eliminate_zeros()
-
-    # the average
-    s = y.sum(axis, dtype="float64")  # float64 for score_genes function compatibility)
-    m = s / n_elements
-
-    return m
+    n_out = x.shape[1 - axis]  # one result per row (axis=1) or per column (axis=0)
+    divisor = x.shape[axis]  # observable positions along the reduced axis
+    # the compressed (major) axis stores rows for CSR and columns for CSC
+    reduce_within_slot = (x.format == "csr") == (axis == 1)
+    if reduce_within_slot:
+        return _sparse_nanmean_within_slot(x.data, x.indptr, n_out, divisor)
+    return _sparse_nanmean_across_slots(x.data, x.indices, n_out, divisor)
 
 
 @old_positionals(
