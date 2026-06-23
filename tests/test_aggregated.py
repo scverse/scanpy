@@ -573,13 +573,20 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
         np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
         for i in range(len(groups))
     ])
-    # Sanity: textbook formula on this data is catastrophically wrong
-    # (off by >1e5x the true variance — proving the scenario actually triggers
-    # cancellation rather than being a vacuous test).
-    naive = (x**2).mean(axis=0) - x.mean(axis=0) ** 2
-    assert (
-        np.abs(naive - np.var(x, axis=0, ddof=0)) / np.var(x, axis=0, ddof=0) > 1e5
-    ).all()
+    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the epected
+    # or the sum-sq and sq-sum in naive are literally identical due to precision errors at the upper bound of the range.
+    naive = np.vstack([
+        (xg**2).mean(axis=0) - xg.mean(axis=0) ** 2
+        for xg in (
+            x[i * n_per_group : (i + 1) * n_per_group] for i in range(len(groups))
+        )
+    ])
+    diff_magnitude = np.abs(naive - expected) / expected
+    all_large = (diff_magnitude > 1e5).all()
+    if not all_large:
+        does_naive_fully_cancel = naive == 0
+        assert does_naive_fully_cancel.any()
+        assert (diff_magnitude[does_naive_fully_cancel] == 1).all()
 
     result = sc.get.aggregate(adata, by="group", func="var", dof=0).layers["var"]
     if isinstance(result, DaskArray):
