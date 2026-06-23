@@ -34,7 +34,6 @@ from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
-from .._settings import Preset
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -578,6 +577,8 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
 def _existing_preset_keys[T: tuple[str, ...]](
     adata: AnnData, keys: Callable[..., T]
 ) -> T | None:
+    from .._settings import Preset
+
     for preset in (Preset.ScanpyV1, Preset.ScanpyV2Preview):
         obsm_key, *rest = keys(preset)
         if obsm_key in adata.obsm:
