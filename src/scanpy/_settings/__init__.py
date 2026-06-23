@@ -64,9 +64,7 @@ def _is_run_from_ipython() -> bool:
     return getattr(builtins, "__IPYTHON__", False)
 
 
-class Settings(
-    scverse_misc.Settings, exported_object_name="settings", docstring_style="scverse"
-):
+class Settings(scverse_misc.Settings):
     def model_post_init(self, context: object) -> None:
         _set_log_level(self)
         _set_log_file(self)

@@ -79,6 +79,7 @@ extensions = [
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
+    "scverse_misc.sphinx_ext",
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_issues",
