@@ -114,16 +114,21 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[AggType] = tuple(get_literal_vals(AggType))
-    param_names = ("agg_name",)
+    params: tuple[list[AggType], list[bool]] = (
+        list(get_literal_vals(AggType)),
+        [True, False],
+    )
+    param_names = ("agg_name", "use_csc")
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
         adata.write_h5ad("lung93k.h5ad")
 
-    def setup(self, agg_name: AggType) -> None:
+    def setup(self, agg_name: AggType, use_csc: bool) -> None:  # noqa: FBT001
         self.adata = ad.read_h5ad("lung93k.h5ad")
+        if use_csc:
+            self.adata.layers["counts"] = self.adata.layers["counts"].tocsc()
         self.agg_name = agg_name
 
     def time_agg(self, *_) -> None:
