@@ -16,7 +16,6 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
