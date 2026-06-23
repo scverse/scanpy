@@ -21,6 +21,7 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Self
 
     from anndata import AnnData
 
@@ -165,6 +166,82 @@ def test_download_failure() -> None:
     with pytest.raises(HTTPError) as excinfo:
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
     excinfo.value.close()
+
+
+def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The destination must not appear until the download finished (#4097)."""
+    import io
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    content = b"0123456789" * 5_000
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest_present_during_download: list[bool] = []
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self._buf = io.BytesIO(content)
+
+        def info(self) -> dict[str, str]:
+            return {"content-length": str(len(content))}
+
+        def read(self, size: int) -> bytes:
+            chunk = self._buf.read(size)
+            if chunk:
+                dest_present_during_download.append(dest.exists())
+            return chunk
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FakeResponse())
+
+    _download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == content
+    assert len(dest_present_during_download) > 1
+    assert not any(dest_present_during_download)
+    assert list(dest.parent.iterdir()) == [dest]
+
+
+def test_download_failure_keeps_existing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed download must not delete an already-present destination (#4097)."""
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest.write_bytes(b"complete")
+
+    class FailingResponse:
+        def info(self) -> dict[str, str]:
+            return {"content-length": "100"}
+
+        def read(self, size: int) -> bytes:
+            msg = "connection reset"
+            raise OSError(msg)
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FailingResponse())
+
+    with pytest.raises(OSError, match="connection reset"):
+        _download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == b"complete"
+    assert list(dest.parent.iterdir()) == [dest]
 
 
 # These are tested via doctest
