@@ -184,8 +184,9 @@ class Agg:  # noqa: D101
             )
         else:
             self.adata = ad.read_zarr("lung93k.zarr")
-            self.adata.layers["counts"] = self.adata.layers[counts_src_key]
-            del self.adata.layers[counts_src_key]
+            if counts_src_key != "counts":
+                self.adata.layers["counts"] = self.adata.layers[counts_src_key]
+                del self.adata.layers[counts_src_key]
         self.agg_name: AggType = agg_name
 
     def time_agg(self, *_) -> None:
