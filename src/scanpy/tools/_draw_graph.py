@@ -156,7 +156,7 @@ def draw_graph(  # noqa: PLR0913
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
     else:
-        g = _utils.get_igraph_from_adjacency(adjacency)
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
         with _igraph_rng_compat(rng):
             if layout in {"fr", "drl", "kk", "grid_fr"}:
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)

@@ -10,7 +10,7 @@ from anndata import AnnData
 from natsort import natsorted
 from pandas.api.types import CategoricalDtype
 
-from .._utils import NeighborsView
+from .._utils import NeighborsView, get_igraph_from_adjacency
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -203,15 +203,14 @@ def modularity_array(
     connectivities: AnyArrayLike | SpBase, /, *, labels: AnyArrayLike, is_directed: bool
 ) -> float:
     try:
-        import igraph as ig
+        import igraph  # noqa: F401
     except ImportError as e:  # pragma: no cover
         e.add_note(
             "`igraph` is required for computing modularity. "
             "Please install `igraph` and try again."
         )
         raise
-    igraph_mode: str = ig.ADJ_DIRECTED if is_directed else ig.ADJ_UNDIRECTED
-    graph: ig.Graph = ig.Graph.Weighted_Adjacency(connectivities, mode=igraph_mode)
+    graph = get_igraph_from_adjacency(connectivities, directed=is_directed)
     return graph.modularity(_codes(labels), "weight")
 
 

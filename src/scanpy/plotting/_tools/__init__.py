@@ -101,10 +101,6 @@ def pca_overview(adata: AnnData, **params):
     pca_variance_ratio(adata, show=show)
 
 
-# backwards compat
-pca_scatter = pca
-
-
 def pca_loadings(
     adata: AnnData,
     components: str | Sequence[int] | None = None,

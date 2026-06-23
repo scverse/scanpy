@@ -68,7 +68,6 @@ def test_consistency(metric) -> None:
     first_gene = metric(
         pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
     )
-
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
@@ -310,10 +309,13 @@ def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) ->
 
 
 @needs.igraph
+@pytest.mark.parametrize("preset", [sc.Preset.ScanpyV1, sc.Preset.ScanpyV2Preview])
 def test_modularity_adata(
-    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
+    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests, preset: sc.Preset
 ) -> None:
     """Test domain and API of modularity score."""
+    # get_igraph_from_adjacency works very slightly differently in scanpy 2
+    sc.settings.preset = preset
     adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
@@ -334,7 +336,7 @@ def test_modularity_adata(
             assert 0 <= s <= 1
     for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
         with subtests.test("equality", l=n0, r=n1):
-            assert pytest.approx(s0, rel=1e-6) == s1
+            assert s0 == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
 

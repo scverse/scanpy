@@ -55,12 +55,13 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
         logg.info("    using data matrix X directly")
         return adata.X
 
-    if key := next((b for b in ["X_pca", "pca"] if b in adata.obsm), None):
-        if n_pcs is not None and n_pcs > adata.obsm[key].shape[1]:
-            msg = f"adata.obsm[{key!r}] does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    pca_key = next((k for k in ("pca", "X_pca") if k in adata.obsm), None)
+    if pca_key is not None:
+        if n_pcs is not None and n_pcs > adata.obsm[pca_key].shape[1]:
+            msg = f"`adata.obsm[{pca_key!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm[key][:, :n_pcs]
-        logg.info(f"    using {key!r} with n_pcs = {x.shape[1]}")
+        x = adata.obsm[pca_key][:, :n_pcs]
+        logg.info(f"    using {pca_key!r} with n_pcs = {x.shape[1]}")
         return x
 
     from ..preprocessing import pca
