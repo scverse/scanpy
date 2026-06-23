@@ -470,7 +470,9 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if dm := (adata.obsm.get("diffmap") or adata.obsm.get("X_diffmap")):
+        if (
+            dm := (adata.obsm.get("diffmap") or adata.obsm.get("X_diffmap"))
+        ) is not None:
             self._eigen_values = adata.uns["diffmap_evals"]
             self._eigen_basis = dm
             if n_dcs is not None:

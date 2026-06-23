@@ -151,7 +151,9 @@ def dpt(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
         )
-        _diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
+        from ._diffmap import diffmap
+
+        diffmap(adata, neighbors_key=neighbors_key, rng=_LegacyRng(0))
     # start with the actual computation
     dpt = DPT(
         adata,
