@@ -17,9 +17,11 @@ from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
+from scanpy.preprocessing._pca import _pca_keys
+
 from ... import logging as logg
 from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata
+from ..._utils import _doc_params, _existing_preset_keys, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from .. import _utils
@@ -925,7 +927,7 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
-    if "pca" not in adata.obsm and "X_pca" not in adata.obsm:
+    if not _existing_preset_keys(adata, _pca_keys):
         msg = (
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."

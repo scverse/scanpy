@@ -7,8 +7,11 @@ import pandas as pd
 import scipy as sp
 from natsort import natsorted
 
+from scanpy._utils.random import _LegacyRng
+from scanpy.tools._utils import _existing_preset_keys
+
 from .. import logging as logg
-from .._utils.random import _LegacyRng
+from .._settings import Default, Preset, settings
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -17,17 +20,25 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+def _diffmap_keys(key_added: str | None | Default | Preset) -> tuple[str, str]:
+    if isinstance(key_added, Default):
+        key_added = settings.preset
+    if isinstance(key_added, Preset):
+        key_added = key_added.diffmap.key_added
+    return (
+        ("X_diffmap", "diffmap_evals") if key_added is None else (key_added, key_added)
+    )
+
+
 def _diffmap(
     adata: AnnData,
     n_comps: int = 15,
     *,
     neighbors_key: str | None,
-    key_added: str | None,
+    key_added: str | None | Default,
     rng: np.random.Generator,
 ) -> None:
-    obsm_key, uns_key = (
-        ("X_diffmap", "diffmap_evals") if key_added is None else ((key_added,) * 2)
-    )
+    obsm_key, uns_key = _diffmap_keys(key_added)
     start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
@@ -53,6 +64,7 @@ def dpt(
     min_group_size: float = 0.01,
     allow_kendall_tau_shift: bool = True,
     neighbors_key: str | None = None,
+    diffmap_key: str | None = None,
     copy: bool = False,
 ) -> AnnData | None:
     """Infer progression of cells through geodesic distance along the graph :cite:p:`Haghverdi2016,Wolf2019`.
@@ -110,6 +122,9 @@ def dpt(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
+    diffmap_key
+        If specified, dpt looks in .obsm[diffmap_key] for diffmap coordinates,
+        otherwise int the default place.
     copy
         Copy instance before computation and return a copy.
         Otherwise, perform computation inplace and return `None`.
@@ -146,7 +161,7 @@ def dpt(
             "    adata.uns['iroot'] = root_cell_index\n"
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
-    if "X_diffmap" not in adata.obsm:
+    if not diffmap_key and not _existing_preset_keys(adata, _diffmap_keys):
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."
@@ -162,6 +177,7 @@ def dpt(
         n_branchings=n_branchings,
         allow_kendall_tau_shift=allow_kendall_tau_shift,
         neighbors_key=neighbors_key,
+        diffmap_key=diffmap_key,
     )
     start = logg.info(f"computing Diffusion Pseudotime using {n_dcs=}")
     if n_branchings > 1:
@@ -222,8 +238,11 @@ class DPT(Neighbors):
         n_branchings: int = 0,
         allow_kendall_tau_shift: bool = False,
         neighbors_key: str | None = None,
+        diffmap_key: str | None = None,
     ):
-        super().__init__(adata, n_dcs=n_dcs, neighbors_key=neighbors_key)
+        super().__init__(
+            adata, n_dcs=n_dcs, neighbors_key=neighbors_key, diffmap_key=diffmap_key
+        )
         self.flavor = "haghverdi16"
         self.n_branchings = n_branchings
         self.min_group_size = (

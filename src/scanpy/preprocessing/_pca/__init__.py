@@ -8,7 +8,7 @@ from anndata import AnnData
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, warn
 from ..._docs import doc_rng
-from ..._settings import Default, settings
+from ..._settings import Default, Preset, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
@@ -45,6 +45,20 @@ type SvdSolvSkearn = (
 
 type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
+
+
+def _pca_keys(
+    key_added: str | None | Default | Preset = Default(),
+) -> tuple[str, str, str]:
+    if isinstance(key_added, Default):
+        key_added = settings.preset
+    if isinstance(key_added, Preset):
+        key_added = key_added.pca.key_added
+    return (
+        ("X_pca", "PCs", "pca")
+        if key_added is None
+        else (key_added, key_added, key_added)
+    )
 
 
 @_doc_params(mask_var=doc_mask_var, rng=doc_rng)
@@ -203,8 +217,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
-    if isinstance(key_added, Default):
-        key_added = settings.preset.pca.key_added
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {"auto", "randomized"} and not chunked:
@@ -337,9 +349,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         x_pca = x_pca.astype(dtype)
 
     if return_anndata:
-        key_obsm, key_varm, key_uns = (
-            ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
-        )
+        key_obsm, key_varm, key_uns = _pca_keys(key_added)
         adata.obsm[key_obsm] = x_pca
 
         if obsm:

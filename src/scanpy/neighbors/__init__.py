@@ -18,7 +18,7 @@ from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
 from .._settings import settings
-from .._utils import NeighborsView, _doc_params, get_literal_vals
+from .._utils import NeighborsView, _doc_params, _existing_preset_keys, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
     _legacy_random_state,
@@ -418,6 +418,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
+        diffmap_key: str | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -470,11 +471,16 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if (
-            dm := (adata.obsm.get("diffmap") or adata.obsm.get("X_diffmap"))
-        ) is not None:
-            self._eigen_values = adata.uns["diffmap_evals"]
-            self._eigen_basis = dm
+
+        from ..tools._dpt import _diffmap_keys
+
+        if keys := (
+            (diffmap_key, diffmap_key)
+            if diffmap_key
+            else _existing_preset_keys(adata, _diffmap_keys)
+        ):
+            self._eigen_values = adata.uns[keys[1]]
+            self._eigen_basis = adata.obsm[keys[0]]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (

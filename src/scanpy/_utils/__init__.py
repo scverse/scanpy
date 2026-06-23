@@ -34,6 +34,7 @@ from packaging.version import Version
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
+from .._settings import Preset
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
+    "_existing_preset_keys",
     "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
@@ -571,6 +573,16 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
         return dict.fromkeys(get_args(typ)).keys()
     msg = f"{typ!r} ({type(typ).__name__}) is not a valid Literal"
     raise TypeError(msg)
+
+
+def _existing_preset_keys[T: tuple[str, ...]](
+    adata: AnnData, keys: Callable[..., T]
+) -> T | None:
+    for preset in (Preset.ScanpyV1, Preset.ScanpyV2Preview):
+        obsm_key, *rest = keys(preset)
+        if obsm_key in adata.obsm:
+            return (obsm_key, *rest)
+    return None
 
 
 # --------------------------------------------------------------------------------

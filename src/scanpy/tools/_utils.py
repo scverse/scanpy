@@ -7,7 +7,7 @@ import numpy as np
 from .. import logging as logg
 from .._compat import warn
 from .._settings import settings
-from .._utils import _choose_graph
+from .._utils import _choose_graph, _existing_preset_keys
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -51,12 +51,14 @@ def _choose_representation(
 
 
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+    from ..preprocessing._pca import _pca_keys, pca
+
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
         return adata.X
 
-    pca_key = next((k for k in ("pca", "X_pca") if k in adata.obsm), None)
-    if pca_key is not None:
+    if keys := _existing_preset_keys(adata, _pca_keys):
+        pca_key, *_ = keys
         if n_pcs is not None and n_pcs > adata.obsm[pca_key].shape[1]:
             msg = f"`adata.obsm[{pca_key!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
@@ -64,17 +66,15 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
         logg.info(f"    using {pca_key!r} with n_pcs = {x.shape[1]}")
         return x
 
-    from ..preprocessing import pca
-
     msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
-        "if you really want this, set `use_rep='X'`.\n         "
+        "if you really want this, set `use_rep=’X’`.\n         "
         "Falling back to preprocessing with `sc.pp.pca` and default params."
     )
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm[settings.preset.pca.key_added or "X_pca"]
+    return adata.obsm[_pca_keys(adata)[0]]
 
 
 def get_init_pos_from_paga(

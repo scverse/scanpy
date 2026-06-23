@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .._docs import doc_rng
-from .._settings import Default, settings
+from .._settings import Default
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
 from ._dpt import _diffmap
@@ -86,8 +86,6 @@ def diffmap(
     rng = np.random.default_rng(rng)
     if neighbors_key is None:
         neighbors_key = "neighbors"
-    if isinstance(key_added, Default):
-        key_added = settings.preset.diffmap.key_added
 
     if neighbors_key not in adata.uns:
         msg = "You need to run `pp.neighbors` first to compute a neighborhood graph."
