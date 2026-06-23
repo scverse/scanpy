@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import numpy as np
 
 from scanpy._compat import warn
-from scanpy._settings import Default
+from scanpy._settings import Default, settings
 
 from .. import _utils
 from .. import logging as logg
@@ -45,7 +45,7 @@ def draw_graph(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
     adjacency: CSBase | None = None,
-    key_added: str | Default = Default(preset=("draw_graph", "key_added")),
+    key_added: str | None | Default = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
@@ -181,7 +181,7 @@ def draw_graph(  # noqa: PLR0913
 
 
 def _get_keys_added(
-    key_added: str | Default, layout: str, key_added_ext: str | None
+    key_added: str | None | Default, layout: str, key_added_ext: str | None
 ) -> tuple[str, str]:
     if key_added_ext is not None:
         msg = "Passing `key_added_ext` is deprecated, use `key_added`’s template functionality instead."
@@ -190,6 +190,8 @@ def _get_keys_added(
     else:
         suffix = layout
     if isinstance(key_added, Default):
+        key_added = settings.preset.draw_graph.key_added
+    if key_added is None:
         return f"X_draw_graph_{suffix}", "draw_graph"
     key_added = key_added.format(layout=suffix)
     return key_added, key_added
