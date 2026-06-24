@@ -68,7 +68,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.14",
-    "scverse-misc[settings]>=0.0.5",
+    "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -125,6 +125,7 @@ doc = [
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting]",
     "scanpydoc>=0.16.1",
+    "scverse-misc[sphinx]",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-book-theme>=1.1",
