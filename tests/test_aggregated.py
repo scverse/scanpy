@@ -68,6 +68,74 @@ def test_mask(axis: Literal[0, 1]) -> None:
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("func", ["sum", "count_nonzero", "mean", "var", "median"])
+def test_aggregate_mask_matches_subset(
+    array_type, func: AggType, request: pytest.FixtureRequest
+) -> None:
+    rng = np.random.default_rng(0)
+    n_per, n_features = 4, 2
+    groups = np.repeat(["a", "b", "c"], n_per)
+    x = rng.standard_normal((len(groups), n_features))
+    keep = np.ones(len(groups), dtype=bool)
+    for start in range(0, len(groups), n_per):
+        keep[start] = False
+        x[start] = 1e6
+    index = [f"cell{i}" for i in range(len(groups))]
+    adata = ad.AnnData(
+        X=x, obs=pd.DataFrame({"grp": pd.Categorical(groups)}, index=index)
+    )
+
+    expected = sc.get.aggregate(adata[keep].copy(), "grp", func)
+
+    adata.X = array_type(adata.X)
+    xfail_dask_median(adata, func, request)
+    result = sc.get.aggregate(adata, "grp", func, mask=keep)
+
+    assert list(result.obs_names) == list(expected.obs_names)
+    assert (
+        result.obs["n_obs_aggregated"].tolist()
+        == expected.obs["n_obs_aggregated"].tolist()
+    )
+    actual = result.layers[func]
+    if isinstance(actual, DaskArray):
+        actual = actual.compute()
+    np.testing.assert_allclose(
+        np.asarray(actual), np.asarray(expected.layers[func]), rtol=1e-6, atol=1e-8
+    )
+
+
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("func", ["mean", "var", "median"])
+def test_aggregate_nan_group_matches_dropna(
+    array_type, func: AggType, request: pytest.FixtureRequest
+) -> None:
+    rng = np.random.default_rng(0)
+    n_per, n_features = 4, 2
+    labels = np.repeat(["a", "b", "c"], n_per).astype(object)
+    labels[1] = None
+    x = rng.standard_normal((len(labels), n_features))
+    index = [f"cell{i}" for i in range(len(labels))]
+    adata = ad.AnnData(
+        X=x, obs=pd.DataFrame({"grp": pd.Categorical(labels)}, index=index)
+    )
+    notna = ~pd.isna(labels)
+
+    expected = sc.get.aggregate(adata[notna].copy(), "grp", func)
+
+    adata.X = array_type(adata.X)
+    xfail_dask_median(adata, func, request)
+    result = sc.get.aggregate(adata, "grp", func)
+
+    assert list(result.obs_names) == list(expected.obs_names)
+    actual = result.layers[func]
+    if isinstance(actual, DaskArray):
+        actual = actual.compute()
+    np.testing.assert_allclose(
+        np.asarray(actual), np.asarray(expected.layers[func]), rtol=1e-6, atol=1e-8
+    )
+
+
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 def test_aggregate_vs_pandas(
     metric: AggType, array_type, request: pytest.FixtureRequest
 ) -> None:
