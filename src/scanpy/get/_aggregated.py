@@ -3,16 +3,24 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
+import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from scanpy._compat import CSBase, CSRBase, DaskArray
 
 from .._utils import _resolve_axis, get_literal_vals
-from ._kernels import agg_sum_csc, agg_sum_csr, mean_var_csc, mean_var_csr
+from ._kernels import (
+    agg_sum_csc,
+    agg_sum_csr,
+    mean_var_csc,
+    mean_var_csr,
+    mean_var_dense,
+)
 from .get import _check_mask
 
 if TYPE_CHECKING:
@@ -116,11 +124,9 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
 
-        The formula `Var(X) = E(X^2) - E(X)^2` suffers loss of precision when the variance is a
-        very small fraction of the squared mean. In particular, when X is constant, the formula may
-        nonetheless be non-zero. By default, our implementation resets the variance to exactly zero
-        when the computed variance, relative to the squared mean, nears limit of precision of the
-        floating-point significand.
+        Mean and variance are computed with Welford's online algorithm, which is
+        numerically stable for constant or near-constant inputs
+        compared to subtracting E[X^2] - E[X]^2 since both values will be so close.
 
         Params
         ------
@@ -136,23 +142,13 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
 
         group_counts = np.bincount(self.groupby.codes)
         if isinstance(self.data, np.ndarray):
-            mean_ = self.mean()
-            # sparse matrices do not support ** for elementwise power.
-            mean_sq = self._sum(_power(self.data, 2)) / group_counts[:, None]
-            sq_mean = mean_**2
-            var_ = mean_sq - sq_mean
+            mean_, var_ = mean_var_dense(self.indicator_matrix.tocsr(), self.data)
         else:
             mean_, var_ = (
                 mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
             )(self.indicator_matrix, self.data)
-            sq_mean = mean_**2
-        # TODO: Why these values exactly? Because they are high relative to the datatype?
-        # (unchanged from original code: https://github.com/scverse/anndata/pull/564)
-        precision = 2 << (42 if self.data.dtype == np.float64 else 20)
-        # detects loss of precision in mean_sq - sq_mean, which suggests variance is 0
-        var_[precision * var_ < sq_mean] = 0
         if dof != 0:
-            var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
+            var_ *= (group_counts / np.maximum(group_counts - dof, 1))[:, np.newaxis]
         return mean_, var_
 
     def median(self) -> Array:
@@ -458,29 +454,49 @@ def _block_moments(
         return out
 
     agg = Aggregate(groupby=by, data=data, mask=mask)
-    sum_ = agg.sum()
-    sum_sq = agg._sum(_power(data, 2))
-    safe_counts = np.where(nonempty, counts, 1)[:, None]
-    mean_ = sum_ / safe_counts
-    # M2 = sum((x - mean)**2) = sum_sq - count * mean**2; clip cancellation noise to 0.
-    m2 = np.maximum(sum_sq - sum_ * mean_, 0)
-    out[1, nonempty] = mean_[nonempty]
-    out[2, nonempty] = m2[nonempty]
+    mean_, var_ = agg.mean_var()
+    # M2 is the variance times the counts directly minus correction.
+    m2 = var_ * (counts - 1)[:, np.newaxis]
+    out[1, :] = mean_
+    out[2, :] = m2
     return out
 
 
-def _chan_combine(
+@numba.njit(inline="always")  # noqa: TID251
+def _chan_combine(  # noqa: PLR0917
+    n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
+) -> tuple[float, float, float]:
+    """Combine two ``(count, mean, M2)`` groups pairwise."""
+    if n_a == 0.0:
+        return n_b, mean_b, m2_b
+    if n_b == 0.0:
+        return n_a, mean_a, m2_a
+    n = n_a + n_b
+    delta = mean_b - mean_a
+    return (
+        n,
+        (n_a * mean_a + n_b * mean_b) / n,
+        m2_a + m2_b + delta * delta * n_a * n_b / n,
+    )
+
+
+@njit
+def _chan_combine_blocks(
     a: NDArray[np.float64], b: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
-    n_a, mean_a, m2_a = a[0], a[1], a[2]
-    n_b, mean_b, m2_b = b[0], b[1], b[2]
-    n = n_a + n_b
-    safe_n = np.where(n > 0, n, 1)
-    delta = mean_b - mean_a
-    new_mean = mean_a + delta * n_b / safe_n
-    new_m2 = m2_a + m2_b + delta * delta * n_a * n_b / safe_n
-    return np.stack([n, new_mean, new_m2])
+    out = np.empty_like(a)
+    for i in numba.prange(a.shape[1]):
+        for j in range(a.shape[2]):
+            out[0, i, j], out[1, i, j], out[2, i, j] = _chan_combine(
+                a[0, i, j],
+                a[1, i, j],
+                a[2, i, j],
+                b[0, i, j],
+                b[1, i, j],
+                b[2, i, j],
+            )
+    return out
 
 
 def _chan_reduce_axis_0(
@@ -491,7 +507,7 @@ def _chan_reduce_axis_0(
     """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
     result = stats[0]
     for i in range(1, stats.shape[0]):
-        result = _chan_combine(result, stats[i])
+        result = _chan_combine_blocks(result, stats[i])
     return result[None] if keepdims else result
 
 
