@@ -70,6 +70,9 @@ def test_mask(axis: Literal[0, 1]) -> None:
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 @pytest.mark.parametrize("use_mask", [True, False], ids=["masked", "unmasked"])
 @pytest.mark.parametrize("with_na", [True, False], ids=["na", "no_na"])
+@pytest.mark.parametrize(
+    "remove_unused_categories", [True, False], ids=["removed_unused", "all_categories"]
+)
 def test_aggregate_vs_pandas(
     metric: AggType,
     array_type,
@@ -77,11 +80,13 @@ def test_aggregate_vs_pandas(
     *,
     use_mask: bool,
     with_na: bool,
+    remove_unused_categories: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
-    adata = adata[
-        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
-    ].copy()
+    with ad.settings.override(remove_unused_categories=remove_unused_categories):
+        adata = adata[
+            adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
+        ].copy()
     adata.X = array_type(adata.X)
     if with_na:
         nas = list(range(0, adata.shape[0], 5))
