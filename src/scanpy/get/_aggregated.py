@@ -65,8 +65,6 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         mask: NDArray[np.bool] | None = None,
     ) -> None:
         self.groupby = groupby
-        if (missing := groupby.isna()).any():
-            mask = mask & ~missing if mask is not None else ~missing
         self.mask = mask
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         if isinstance(data, CSBase):
