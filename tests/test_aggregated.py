@@ -6,10 +6,11 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import DaskArray, pkg_version
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -67,19 +68,53 @@ def test_mask(axis: Literal[0, 1]) -> None:
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("use_mask", [True, False], ids=["masked", "unmasked"])
+@pytest.mark.parametrize("with_na", [True, False], ids=["na", "no_na"])
+@pytest.mark.parametrize(
+    "remove_unused_categories", [True, False], ids=["removed_unused", "all_categories"]
+)
 def test_aggregate_vs_pandas(
-    metric: AggType, array_type, request: pytest.FixtureRequest
+    metric: AggType,
+    array_type,
+    request: pytest.FixtureRequest,
+    *,
+    use_mask: bool,
+    with_na: bool,
+    remove_unused_categories: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
-    adata = adata[
-        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
-    ].copy()
+    anndata_has_settings = pkg_version("anndata") >= Version("0.11")
+    cat_col = adata.obs["louvain"]
+    categories = cat_col.cat.categories
+    if anndata_has_settings:
+        with ad.settings.override(remove_unused_categories=remove_unused_categories):
+            adata = adata[cat_col.isin(categories[:5]), :1_000].copy()
+    else:
+        del adata.obs["louvain"]
+        mask = cat_col.isin(categories[:5])
+        adata = adata[mask, :1_000].copy()
+        adata.obs["louvain"] = cat_col[mask]
+        if remove_unused_categories:
+            adata.obs["louvain"] = adata.obs["louvain"].cat.remove_unused_categories()
     adata.X = array_type(adata.X)
+    if with_na:
+        nas = list(range(0, adata.shape[0], 5))
+        adata.obs.iloc[nas, adata.obs.columns.get_loc("louvain")] = pd.NA
+    kwargs = {}
+    if use_mask:
+        mask = np.ones(adata.shape[0], dtype=bool)
+        for excluded in range(0, adata.shape[0], 4):
+            mask[excluded] = False
+        kwargs["mask"] = mask
     xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
-    result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
+    result = sc.get.aggregate(
+        adata, ["louvain", "percent_mito_binned"], metric, **kwargs
+    )
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.compute()
+    if use_mask:
+        adata = adata[mask]
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -105,7 +140,10 @@ def test_aggregate_vs_pandas(
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
-
+    expected_counts = adata.obs.groupby(
+        ["louvain", "percent_mito_binned"], observed=True
+    ).size()
+    assert result.obs["n_obs_aggregated"].tolist() == expected_counts.tolist()
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
