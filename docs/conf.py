@@ -73,9 +73,9 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_exec_jupyter",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
-    "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
@@ -105,6 +105,11 @@ napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
+# import all slow optional imports before running code
+exec_jupyter_code = """
+import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx
+"""
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
@@ -119,9 +124,11 @@ myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
 nb_output_stderr = "remove"
-nb_execution_mode = "off"
+nb_execution_mode = "cache"
+nb_execution_excludepatterns = [
+    f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
+]
 nb_merge_streams = True
-
 
 ogp_site_url = "https://scanpy.scverse.org/en/stable/"
 ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
