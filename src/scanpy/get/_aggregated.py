@@ -158,10 +158,9 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of median.
 
         """
-        keep = _kept_observations(self.groupby, self.mask)
         medians = []
         for group in range(len(self.groupby.categories)):
-            group_data = self.data[keep & (self.groupby.codes == group)]
+            group_data = self.data[self.mask & (self.groupby.codes == group)]
             if isinstance(group_data, CSBase):
                 if group_data.format != "csc":
                     group_data = group_data.tocsc()
