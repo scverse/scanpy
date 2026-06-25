@@ -71,12 +71,15 @@ def pkg_metadata(package: str) -> PackageMetadata:
 def is_array_api(x: object) -> bool:
     # returns true if x is array api compatible
     # exclusing the ones that are already handled by the script
+    import numpy as np
     from array_api_compat import is_array_api_obj
 
     # excluding packages that are handled by both array-api-compat and script
-    if isinstance(x, DaskArray):
+    if isinstance(x, np.ndarray):
         return False
     if isinstance(x, DaskArray):
+        return False
+    if isinstance(x, SpBase):
         return False
     return is_array_api_obj(x)
 
