@@ -68,87 +68,39 @@ def test_mask(axis: Literal[0, 1]) -> None:
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
-@pytest.mark.parametrize("func", ["sum", "count_nonzero", "mean", "var", "median"])
-def test_aggregate_mask_matches_subset(
-    array_type, func: AggType, request: pytest.FixtureRequest
-) -> None:
-    rng = np.random.default_rng(0)
-    n_per, n_features = 4, 2
-    groups = np.repeat(["a", "b", "c"], n_per)
-    x = rng.standard_normal((len(groups), n_features))
-    keep = np.ones(len(groups), dtype=bool)
-    for start in range(0, len(groups), n_per):
-        keep[start] = False
-        x[start] = 1e6
-    index = [f"cell{i}" for i in range(len(groups))]
-    adata = ad.AnnData(
-        X=x, obs=pd.DataFrame({"grp": pd.Categorical(groups)}, index=index)
-    )
-
-    expected = sc.get.aggregate(adata[keep].copy(), "grp", func)
-
-    adata.X = array_type(adata.X)
-    xfail_dask_median(adata, func, request)
-    result = sc.get.aggregate(adata, "grp", func, mask=keep)
-
-    assert list(result.obs_names) == list(expected.obs_names)
-    assert (
-        result.obs["n_obs_aggregated"].tolist()
-        == expected.obs["n_obs_aggregated"].tolist()
-    )
-    actual = result.layers[func]
-    if isinstance(actual, DaskArray):
-        actual = actual.compute()
-    np.testing.assert_allclose(
-        np.asarray(actual), np.asarray(expected.layers[func]), rtol=1e-6, atol=1e-8
-    )
-
-
-@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
-@pytest.mark.parametrize("func", ["mean", "var", "median"])
-def test_aggregate_nan_group_matches_dropna(
-    array_type, func: AggType, request: pytest.FixtureRequest
-) -> None:
-    rng = np.random.default_rng(0)
-    n_per, n_features = 4, 2
-    labels = np.repeat(["a", "b", "c"], n_per).astype(object)
-    labels[1] = None
-    x = rng.standard_normal((len(labels), n_features))
-    index = [f"cell{i}" for i in range(len(labels))]
-    adata = ad.AnnData(
-        X=x, obs=pd.DataFrame({"grp": pd.Categorical(labels)}, index=index)
-    )
-    notna = ~pd.isna(labels)
-
-    expected = sc.get.aggregate(adata[notna].copy(), "grp", func)
-
-    adata.X = array_type(adata.X)
-    xfail_dask_median(adata, func, request)
-    result = sc.get.aggregate(adata, "grp", func)
-
-    assert list(result.obs_names) == list(expected.obs_names)
-    actual = result.layers[func]
-    if isinstance(actual, DaskArray):
-        actual = actual.compute()
-    np.testing.assert_allclose(
-        np.asarray(actual), np.asarray(expected.layers[func]), rtol=1e-6, atol=1e-8
-    )
-
-
-@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("use_mask", [True, False], ids=["masked", "unmasked"])
+@pytest.mark.parametrize("with_na", [True, False], ids=["na", "no_na"])
 def test_aggregate_vs_pandas(
-    metric: AggType, array_type, request: pytest.FixtureRequest
+    metric: AggType,
+    array_type,
+    request: pytest.FixtureRequest,
+    *,
+    use_mask: bool,
+    with_na: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
     adata = adata[
         adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
     ].copy()
     adata.X = array_type(adata.X)
+    if with_na:
+        nas = list(range(0, adata.shape[0], 5))
+        adata.obs.iloc[nas, adata.obs.columns.get_loc("louvain")] = pd.NA
+    kwargs = {}
+    if use_mask:
+        mask = np.ones(adata.shape[0], dtype=bool)
+        for excluded in range(0, adata.shape[0], 4):
+            mask[excluded] = False
+        kwargs["mask"] = mask
     xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
-    result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
+    result = sc.get.aggregate(
+        adata, ["louvain", "percent_mito_binned"], metric, **kwargs
+    )
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.compute()
+    if use_mask:
+        adata = adata[mask]
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -174,7 +126,10 @@ def test_aggregate_vs_pandas(
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
-
+    expected_counts = adata.obs.groupby(
+        ["louvain", "percent_mito_binned"], observed=True
+    ).size()
+    assert result.obs["n_obs_aggregated"].tolist() == expected_counts.tolist()
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
