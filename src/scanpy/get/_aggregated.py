@@ -3,10 +3,11 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
+import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from fast_array_utils.stats._power import power as fau_power  # TODO: upstream
+from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
@@ -147,7 +148,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
                 mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
             )(self.indicator_matrix, self.data)
         if dof != 0:
-            var_ *= (group_counts / (group_counts - dof))[:, np.newaxis]
+            var_ *= (group_counts / np.maximum(group_counts - dof, 1))[:, np.newaxis]
         return mean_, var_
 
     def median(self) -> Array:
@@ -367,16 +368,145 @@ def aggregate_dask_mean_var(
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
 ) -> MeanVarDict:
-    mean = aggregate_dask(data, by, "mean", mask=mask, dof=dof)["mean"]
-    sq_mean = aggregate_dask(fau_power(data, 2), by, "mean", mask=mask, dof=dof)["mean"]
-    # TODO: If we don't compute here, the results are not deterministic under the process cluster for sparse.
-    if isinstance(data._meta, CSRBase):
-        sq_mean = sq_mean.compute()
-    var = sq_mean - fau_power(mean, 2)
-    if dof != 0:
-        group_counts = _group_counts(by, mask)
-        var *= (group_counts / (group_counts - dof))[:, np.newaxis]
-    return MeanVarDict(mean=mean, var=var)
+    """Compute group-wise mean and variance for a dask array.
+
+    Per chunk we compute ``(count, mean, M2)`` (where ``M2 = sum((x - mean)**2)``),
+    then combine across chunks with the pairwise parallel algorithm from
+    Chan et al. (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm)
+    so the across-chunk reduction avoids the catastrophic cancellation of
+    ``E[X**2] - E[X]**2``.
+    """
+    import dask.array as da
+
+    n_categories = len(by.categories)
+    n_features = data.shape[1]
+    chunked_axis = 0 if isinstance(data._meta, CSRBase | np.ndarray) else 1
+
+    if chunked_axis == 1:
+        # Each block already sees every observation, so mean/var per chunk is final.
+        def per_block_col(chunk: Array) -> NDArray[np.float64]:
+            mean_, var_ = Aggregate(groupby=by, data=chunk, mask=mask).mean_var(dof=dof)
+            return np.concatenate([mean_, var_], axis=0)
+
+        combined = data.map_blocks(
+            per_block_col,
+            chunks=((2 * n_categories,), data.chunks[1]),
+            meta=np.array([], dtype=np.float64),
+        )
+        return MeanVarDict(mean=combined[:n_categories], var=combined[n_categories:])
+
+    n_blocks = data.numblocks[0]
+
+    def per_block_row(
+        chunk: Array, block_info: dict | None = None
+    ) -> NDArray[np.float64]:
+        row_subset = slice(*block_info[0]["array-location"][0])
+        by_sub = by[row_subset]
+        mask_sub = mask[row_subset] if mask is not None else None
+        return _block_moments(chunk, by_sub, mask=mask_sub, n_categories=n_categories)[
+            None
+        ]
+
+    per_block_stats = data.map_blocks(
+        per_block_row,
+        chunks=((1,) * n_blocks, (3,), (n_categories,), (n_features,)),
+        new_axis=(1, 2),
+        meta=np.array([], dtype=np.float64),
+    )
+
+    combined = da.reduction(
+        per_block_stats,
+        chunk=lambda x, axis=None, keepdims=False: x,
+        aggregate=_chan_reduce_axis_0,
+        axis=0,
+        keepdims=False,
+        concatenate=True,
+        dtype=np.float64,
+        meta=np.array([], dtype=np.float64),
+    )
+    counts = combined[0]
+    mean_ = combined[1]
+    m2 = combined[2]
+    denom = counts - dof if dof > 0 else counts
+    return MeanVarDict(mean=mean_, var=m2 / denom)
+
+
+def _block_moments(
+    data: np.ndarray | CSBase,
+    by: pd.Categorical,
+    *,
+    mask: NDArray[np.bool] | None,
+    n_categories: int,
+) -> NDArray[np.float64]:
+    """Per-chunk ``(count, mean, M2)`` array of shape ``(3, n_categories, n_features)``.
+
+    Groups with no observations in the chunk get zeros for mean and M2 so
+    they combine cleanly under ``_chan_combine``.
+    """
+    counts = _group_counts(by, mask)
+
+    out = np.zeros((3, n_categories, data.shape[1]), dtype=np.float64)
+    out[0] = counts[:, None]
+    nonempty = counts > 0
+    if not nonempty.any():
+        return out
+
+    agg = Aggregate(groupby=by, data=data, mask=mask)
+    mean_, var_ = agg.mean_var()
+    # M2 is the variance times the counts directly minus correction.
+    m2 = var_ * (counts - 1)[:, np.newaxis]
+    out[1, :] = mean_
+    out[2, :] = m2
+    return out
+
+
+@numba.njit(inline="always")  # noqa: TID251
+def _chan_combine(  # noqa: PLR0917
+    n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
+) -> tuple[float, float, float]:
+    """Combine two ``(count, mean, M2)`` groups pairwise."""
+    if n_a == 0.0:
+        return n_b, mean_b, m2_b
+    if n_b == 0.0:
+        return n_a, mean_a, m2_a
+    n = n_a + n_b
+    delta = mean_b - mean_a
+    return (
+        n,
+        (n_a * mean_a + n_b * mean_b) / n,
+        m2_a + m2_b + delta * delta * n_a * n_b / n,
+    )
+
+
+@njit
+def _chan_combine_blocks(
+    a: NDArray[np.float64], b: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    """Combine two ``(3, K, F)`` ``(count, mean, M2)`` stat blocks pairwise."""
+    out = np.empty_like(a)
+    for i in numba.prange(a.shape[1]):
+        for j in range(a.shape[2]):
+            out[0, i, j], out[1, i, j], out[2, i, j] = _chan_combine(
+                a[0, i, j],
+                a[1, i, j],
+                a[2, i, j],
+                b[0, i, j],
+                b[1, i, j],
+                b[2, i, j],
+            )
+    return out
+
+
+def _chan_reduce_axis_0(
+    stats: NDArray[np.float64],
+    axis: int | None,
+    keepdims: bool,  # noqa: FBT001
+) -> NDArray[np.float64]:
+    """Aggregate per-block stats along axis 0 with the parallel variance algorithm."""
+    result = stats[0]
+    for i in range(1, stats.shape[0]):
+        result = _chan_combine_blocks(result, stats[i])
+    return result[None] if keepdims else result
 
 
 @_aggregate.register(DaskArray)
