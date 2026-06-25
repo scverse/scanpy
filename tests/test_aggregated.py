@@ -16,7 +16,6 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -547,13 +546,15 @@ def test_nan() -> None:
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
 
 
-@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
 def test_var_no_catastrophic_cancellation(array_type) -> None:
     # Values of the form `offset + tiny_noise` make the textbook two-pass
     # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
     # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
     # the variance ~1e-3, far below the rounding noise. Welford's online
-    # algorithm avoids the subtraction entirely.
+    # algorithm and Chan's parallel combine (per chunk in dask, and for the
+    # zero-block merge in sparse paths) avoid the subtraction entirely.
+
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3
     groups = ["a", "b"]
