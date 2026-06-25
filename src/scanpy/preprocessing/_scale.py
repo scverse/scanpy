@@ -32,6 +32,15 @@ type _Array = CSBase | np.ndarray | DaskArray
 def clip[A: _Array](
     x: ArrayLike | A, *, max_value: float, zero_center: bool = True
 ) -> A:
+    # clip_array cannot trace JAX arrays = example
+    from .._compat import get_namespace, is_array_api
+
+    if is_array_api(x):
+        xp = get_namespace(x)
+        if zero_center:
+            return xp.clip(x, -max_value, max_value)  ### double check
+        return xp.clip(x, None, max_value)
+
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -169,8 +178,15 @@ def scale_array[A: _Array](
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
+    from .._compat import get_namespace, is_array_api
 
-    if np.issubdtype(x.dtype, np.integer):
+    if is_array_api(x):
+        xp = get_namespace(x)
+        if xp.isdtype(x.dtype, "integral"):  ### double check if integral is needed
+            logg.info("...")
+            x = xp.astype(x, xp.float64)
+
+    elif np.issubdtype(x.dtype, np.integer):
         logg.info(
             "... as scaling leads to float results, integer "
             "input is cast to float, returning copy."
@@ -192,18 +208,28 @@ def scale_array[A: _Array](
             max_value=max_value,
             return_mean_std=return_mean_std,
         )
+    from .._compat import get_namespace, is_array_api
 
     mean, var = mean_var(x, axis=0, correction=1)
-    std = np.sqrt(var)
-    std[std == 0] = 1
-    if zero_center:
-        if isinstance(x, CSBase) or (
-            isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
-        ):
-            msg = "zero-centering a sparse array/matrix densifies it."
-            warn(msg, UserWarning)
-        x -= mean
-        x = dematrix(x)
+
+    if is_array_api(x):
+        xp = get_namespace(x)
+        std = xp.sqrt(var)
+        std = xp.where(std == 0, xp.ones_like(std), std)
+
+        if zero_center:
+            x = x - mean  ### double check this formula
+    else:
+        std = np.sqrt(var)
+        std[std == 0] = 1
+        if zero_center:
+            if isinstance(x, CSBase) or (
+                isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
+            ):
+                msg = "zero-centering a sparse array/matrix densifies it."
+                warn(msg, UserWarning)
+            x -= mean
+            x = dematrix(x)
 
     x = axis_mul_or_truediv(
         x,

@@ -19,8 +19,15 @@ if TYPE_CHECKING:
 
 def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
     """Given a 1D array of counts, compute the median of the non-zero counts."""
+    from .._compat import is_array_api
+
     if isinstance(counts, DaskArray):
         counts = counts.compute()
+
+    if is_array_api(counts):
+        # there is no xp.median? ### double check
+        counts = np.asarray(counts)
+
     counts_greater_than_zero = counts[counts > 0]
     median = np.median(counts_greater_than_zero)
     return median

@@ -641,7 +641,12 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
+        from .._compat import is_array_api
+
         x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        if is_array_api(x):
+            # sklearn transformers require numpy, so need to convert at boundary
+            x = np.asarray(x)
         self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors

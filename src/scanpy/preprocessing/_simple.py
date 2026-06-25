@@ -349,9 +349,17 @@ def log1p(
     Returns or updates `data`, depending on `copy`.
 
     """
+    from .._compat import get_namespace, is_array_api
+
     check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
+    if is_array_api(data):
+        xp = get_namespace(data)
+        result = xp.log1p(data)
+        if base is not None:
+            result = result / float(np.log(base))
+        return result
     return log1p_array(data, copy=copy, base=base)
 
 

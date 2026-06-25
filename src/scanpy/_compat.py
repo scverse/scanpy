@@ -22,6 +22,8 @@ __all__ = [
     "DaskArray",
     "SpBase",
     "fullname",
+    "get_namespace",
+    "is_array_api",
     "pkg_metadata",
     "pkg_version",
     "set_module",
@@ -64,6 +66,26 @@ def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
     return metadata(package)
+
+
+def is_array_api(x: object) -> bool:
+    # returns true if x is array api compatible
+    # exclusing the ones that are already handled by the script
+    from array_api_compat import is_array_api_obj
+
+    # excluding packages that are handled by both array-api-compat and script
+    if isinstance(x, DaskArray):
+        return False
+    if isinstance(x, DaskArray):
+        return False
+    return is_array_api_obj(x)
+
+
+def get_namespace(x):
+    # get array-api namespace for x
+    from array_api_compat import get_namespace
+
+    return get_namespace(x)
 
 
 @cache
