@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import sys
 from datetime import datetime
@@ -17,15 +16,11 @@ from docutils import nodes
 from packaging.version import Version
 from sphinxcontrib.katex import NODEJS_BINARY
 
-# Don’t use tkinter agg when importing scanpy → … → matplotlib
-matplotlib.use("agg")
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
-
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
 
 # -- General configuration ------------------------------------------------
@@ -107,8 +102,9 @@ todo_include_todos = False
 api_dir = HERE / "api"  # function_images
 # import all slow optional imports before running code
 exec_jupyter_code = """
-import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
-del scanpy, umap, seaborn, sklearn, pynndescent, networkx
+import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx, matplotlib
+matplotlib.use("agg")
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
 """
 myst_enable_extensions = [
     "amsmath",
