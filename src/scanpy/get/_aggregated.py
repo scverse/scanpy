@@ -66,8 +66,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         mask: NDArray[np.bool] | None = None,
     ) -> None:
         self.groupby = groupby
-        if (missing := groupby.isna()).any():
-            mask = mask & ~missing if mask is not None else ~missing
+        self.mask = mask
         self.indicator_matrix = sparse_indicator(groupby, mask=mask)
         if isinstance(data, CSBase):
             # TODO: Look into if this can be CSR and fast for dense
@@ -76,6 +75,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
 
     groupby: pd.Categorical
     indicator_matrix: CSRBase | sparse.coo_array
+    mask: NDArray[np.bool] | None
     data: ArrayT
 
     def count_nonzero(self) -> NDArray[np.integer]:
@@ -119,7 +119,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of mean.
 
         """
-        return self.sum() / np.bincount(self.groupby.codes)[:, None]
+        return self.sum() / _group_counts(self.groupby, self.mask)[:, None]
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
@@ -140,7 +140,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         """
         assert dof >= 0
 
-        group_counts = np.bincount(self.groupby.codes)
+        group_counts = _group_counts(self.groupby, self.mask)
         if isinstance(self.data, np.ndarray):
             mean_, var_ = mean_var_dense(self.indicator_matrix.tocsr(), self.data)
         else:
@@ -160,8 +160,10 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
 
         """
         medians = []
-        for group in np.unique(self.groupby.codes):
+        for group in range(len(self.groupby.categories)):
             group_mask = self.groupby.codes == group
+            if self.mask is not None:
+                group_mask = group_mask & self.mask
             group_data = self.data[group_mask]
             if isinstance(group_data, CSBase):
                 if group_data.format != "csc":
@@ -308,10 +310,10 @@ def aggregate(  # noqa: PLR0912
     dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
 
-    # Add number of obs aggregated into each group
-    new_label_df["n_obs_aggregated"] = (
-        pd.Series(categorical).value_counts().reindex(new_label_df.index)
-    )
+    # Add number of obs aggregated into each group (respecting the mask)
+    new_label_df["n_obs_aggregated"] = pd.Series(
+        _group_counts(categorical, mask), index=categorical.categories
+    ).reindex(new_label_df.index)
     # Actual computation
     layers = _aggregate(
         data,
@@ -441,11 +443,7 @@ def _block_moments(
     Groups with no observations in the chunk get zeros for mean and M2 so
     they combine cleanly under ``_chan_combine``.
     """
-    codes = by.codes
-    valid = codes >= 0
-    if mask is not None:
-        valid = valid & mask
-    counts = np.bincount(codes[valid], minlength=n_categories).astype(np.float64)
+    counts = _group_counts(by, mask)
 
     out = np.zeros((3, n_categories, data.shape[1]), dtype=np.float64)
     out[0] = counts[:, None]
@@ -588,7 +586,7 @@ def aggregate_dask(
     # division must come after, not before, the summation for numerical precision
     # i.e., we can't just call map blocks over the mean function.
     elif has_mean:
-        group_counts = np.bincount(by.codes)
+        group_counts = _group_counts(by, mask)
         aggregated["mean"] = (
             aggregate_dask(data, by, "sum", mask=mask, dof=dof)["sum"]
             / group_counts[:, None]
@@ -689,19 +687,30 @@ def _combine_categories(
     return result_categorical, new_label_df
 
 
+def _group_counts(
+    categorical: pd.Categorical, mask: NDArray[np.bool] | None
+) -> NDArray[np.int64]:
+    """Count observations per category, ignoring unassigned (NaN) and masked-out ones."""
+    keep = _kept_observations(categorical, mask)
+    return np.bincount(categorical.codes[keep], minlength=len(categorical.categories))
+
+
+def _kept_observations(
+    categorical: pd.Categorical, mask: NDArray[np.bool] | None
+) -> NDArray[np.bool]:
+    """Boolean selector of observations that are assigned to a category and unmasked."""
+    keep = categorical.codes >= 0
+    return keep if mask is None else keep & mask
+
+
 def sparse_indicator(
     categorical: pd.Categorical,
     *,
     mask: NDArray[np.bool] | None = None,
 ) -> sparse.coo_array:
-    # TODO: why is this float64.  This is a scanpy 2.0 problem maybe?
-    mask = (
-        np.broadcast_to(1.0, len(categorical)) if mask is None else mask.astype("uint8")
-    )
-    # can’t have -1s in the codes, but (as long as it’s valid), the value is ignored, so set to 0 where masked
-    codes = np.where(mask, categorical.codes, 0)
-    a = sparse.coo_array(
-        (mask, (codes, np.arange(len(categorical)))),
+    keep = _kept_observations(categorical, mask)
+    obs = np.flatnonzero(keep)
+    return sparse.coo_array(
+        (np.ones(obs.shape[0]), (categorical.codes[keep], obs)),
         shape=(len(categorical.categories), len(categorical)),
     )
-    return a
