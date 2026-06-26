@@ -18,6 +18,7 @@ from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
 from scanpy.preprocessing._pca import _pca_keys
+from scanpy.tools._draw_graph import _draw_graph_keys
 
 from ... import logging as logg
 from ..._settings import Default, settings
@@ -854,12 +855,10 @@ def draw_graph(
     """
     if layout is None:
         layout = str(adata.uns["draw_graph"]["params"]["layout"])
-    basis = f"draw_graph_{layout}"
-    if f"X_{basis}" not in adata.obsm:
-        msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
-        raise ValueError(msg)
-
-    return embedding(adata, basis, **kwargs)
+    if keys := _existing_preset_keys(adata, _draw_graph_keys, layout):
+        return embedding(adata, keys[0], **kwargs)
+    msg = f"Did not find `adata.obsm['draw_graph_{layout}']`. Did you compute layout {layout}?"
+    raise ValueError(msg)
 
 
 @_wraps_plot_scatter

@@ -5,12 +5,11 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 
-from scanpy._compat import warn
-from scanpy._settings import Default, settings
-
 from .. import _utils
 from .. import logging as logg
+from .._compat import warn
 from .._docs import doc_rng
+from .._settings import Default, Preset, settings
 from .._utils import _choose_graph, _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
@@ -126,7 +125,8 @@ def draw_graph(  # noqa: PLR0913
 
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
-    key_obsm, key_uns = _get_keys_added(key_added, layout, key_added_ext)
+    layout = coerce_fa2_layout(layout)
+    key_obsm, key_uns = _draw_graph_keys(key_added, layout, key_added_ext)
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -151,7 +151,6 @@ def draw_graph(  # noqa: PLR0913
     else:
         _if_legacy_apply_global(rng)
         init_coords = rng.random((adjacency.shape[0], 2))
-    layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
@@ -180,8 +179,10 @@ def draw_graph(  # noqa: PLR0913
     return adata if copy else None
 
 
-def _get_keys_added(
-    key_added: str | None | Default, layout: str, key_added_ext: str | None
+def _draw_graph_keys(
+    key_added: str | None | Default | Preset,
+    layout: str,
+    key_added_ext: str | None = None,
 ) -> tuple[str, str]:
     if key_added_ext is not None:
         msg = "Passing `key_added_ext` is deprecated, use `key_added`’s template functionality instead."
@@ -190,7 +191,9 @@ def _get_keys_added(
     else:
         suffix = layout
     if isinstance(key_added, Default):
-        key_added = settings.preset.draw_graph.key_added
+        key_added = settings.preset
+    if isinstance(key_added, Preset):
+        key_added = key_added.draw_graph.key_added
     if key_added is None:
         return f"X_draw_graph_{suffix}", "draw_graph"
     key_added = key_added.format(layout=suffix)
