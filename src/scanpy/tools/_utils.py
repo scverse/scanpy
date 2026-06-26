@@ -74,7 +74,7 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm[_pca_keys(adata)[0]]
+    return adata.obsm[_pca_keys()[0]]
 
 
 def get_init_pos_from_paga(
