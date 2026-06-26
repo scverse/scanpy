@@ -17,6 +17,7 @@ from ...experimental._docs import (
     doc_pca_chunk,
 )
 from ...preprocessing import pca
+from ...preprocessing._pca import _pca_keys
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -116,9 +117,7 @@ def recipe_pearson_residuals(  # noqa: PLR0913
 
     """
     key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
-    key_obsm, key_varm, key_uns = (
-        ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
-    )
+    key_obsm, key_varm, key_uns = _pca_keys(key_added)
     hvg_args = dict(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,

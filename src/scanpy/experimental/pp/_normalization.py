@@ -23,7 +23,7 @@ from ...experimental._docs import (
 )
 from ...get import _check_mask, _get_obs_rep, _set_obs_rep
 from ...preprocessing._docs import doc_mask_var
-from ...preprocessing._pca import pca
+from ...preprocessing._pca import _pca_keys, pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -222,9 +222,7 @@ def normalize_pearson_residuals_pca(
 
     """
     key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
-    key_obsm, key_varm, key_uns = (
-        ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
-    )
+    key_obsm, key_varm, key_uns = _pca_keys(key_added)
     if isinstance(mask_var, Default):
         mask_var = "highly_variable" if "highly_variable" in adata.var else None
     mask_var = _check_mask(adata, mask_var, "var")
