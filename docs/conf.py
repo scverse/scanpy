@@ -100,10 +100,12 @@ napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
-# import all slow optional imports before running code
 exec_jupyter_code = """
-import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx, matplotlib
-matplotlib.use("agg")
+# setup notebook backend
+import matplotlib
+matplotlib.use("module://matplotlib_inline.backend_inline")
+# import all slow optional imports before running code
+import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
 del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
 """
 myst_enable_extensions = [
