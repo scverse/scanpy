@@ -131,7 +131,7 @@ docs = [
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
-    "sphinx-exec-jupyter>=0.1.2",
+    "sphinx-exec-jupyter>=0.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
