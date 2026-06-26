@@ -19,7 +19,12 @@ from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._settings import Default, settings
-from ..._utils import _doc_params, _existing_preset_keys, sanitize_anndata
+from ..._utils import (
+    _doc_params,
+    _existing_preset_keys,
+    _get_basis_key,
+    sanitize_anndata,
+)
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from ...preprocessing._pca import _pca_keys
@@ -32,13 +37,7 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import (
-    _get_basis,
-    _obs_vector_compat,
-    check_colornorm,
-    check_projection,
-    circles,
-)
+from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -1210,7 +1209,7 @@ def _add_categorical_legend(  # noqa: PLR0913
 
 def _get_basis_arr(adata: AnnData, basis: str) -> np.ndarray:
     """Get array for basis from anndata. Just tries to add 'X_'."""
-    if basis_key := _get_basis(adata, basis):
+    if basis_key := _get_basis_key(adata, basis):
         return adata.obsm[basis_key]
     msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
     raise KeyError(msg)

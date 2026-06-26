@@ -18,7 +18,7 @@ from matplotlib.patches import Circle
 from .. import logging as logg
 from .._compat import warn
 from .._settings import Default, settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, _get_basis_key
 from . import palettes
 
 if TYPE_CHECKING:
@@ -567,7 +567,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
         raise ValueError(msg)
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors["connectivities"])
-    basis_key = _get_basis(adata, basis)
+    basis_key = _get_basis_key(adata, basis)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -602,7 +602,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             "Prefer using `scv.pl.velocity_embedding` to `arrows=True`."
         )
 
-    basis_key = _get_basis(adata, basis)
+    basis_key = _get_basis_key(adata, basis)
     x = adata.obsm[basis_key]
     v = adata.obsm[f"{v_prefix}_{basis}"]
     for ax in axs:
@@ -1025,14 +1025,6 @@ def fix_kwds(kwds_dict, **kwargs):
     kwargs.update(kwds_dict)
 
     return kwargs
-
-
-def _get_basis(adata: AnnData, basis: str) -> str | None:
-    if basis in adata.obsm:
-        return basis
-    if f"X_{basis}" in adata.obsm:
-        return f"X_{basis}"
-    return None
 
 
 def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):

@@ -20,6 +20,7 @@ from .._utils import (
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
+from ..preprocessing._pca import _pca_keys
 from ..tools._umap import _umap_keys
 
 if TYPE_CHECKING:
@@ -556,10 +557,10 @@ class Ingest:
                 self._obsm["rep"],
             ))
 
-        if "X_umap" in self._obsm:
-            adata.uns["umap"] = self._adata_ref.uns["umap"]
-        if "X_pca" in self._obsm:
-            adata.uns["pca"] = self._adata_ref.uns["pca"]
-            adata.varm["PCs"] = self._adata_ref.varm["PCs"]
+        if keys := _existing_preset_keys(self._adata_ref, _umap_keys):
+            adata.uns[keys[1]] = self._adata_ref.uns[keys[1]]
+        if keys := _existing_preset_keys(self._adata_ref, _pca_keys):
+            adata.varm[keys[1]] = self._adata_ref.varm[keys[1]]
+            adata.uns[keys[2]] = self._adata_ref.uns[keys[2]]
 
         return adata

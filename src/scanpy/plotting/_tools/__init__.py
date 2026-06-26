@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 
 from ... import logging as logg
 from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
+from ..._utils import _doc_params, _get_basis_key, sanitize_anndata, with_cat_dtype
 from ..._utils.random import _LegacyRng
 from ...get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
@@ -29,7 +29,6 @@ from .._docs import (
 )
 from .._utils import (
     _deprecated_scale,
-    _get_basis,
     savefig_or_show,
     timeseries,
     timeseries_as_heatmap,
@@ -1496,9 +1495,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is not None:
         key += f"_{groupby}"
 
-    if _get_basis(adata, basis) is None:
+    if _get_basis_key(adata, basis) is None:
         msg = (
-            f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
+            f"Cannot find the embedded representation `adata.obsm[{basis!r} | 'X_{basis}']`. "
             "Compute the embedding first."
         )
         raise ValueError(msg)
