@@ -1027,14 +1027,12 @@ def fix_kwds(kwds_dict, **kwargs):
     return kwargs
 
 
-def _get_basis(adata: AnnData, basis: str):
+def _get_basis(adata: AnnData, basis: str) -> str | None:
     if basis in adata.obsm:
-        basis_key = basis
-
-    elif f"X_{basis}" in adata.obsm:
-        basis_key = f"X_{basis}"
-
-    return basis_key
+        return basis
+    if f"X_{basis}" in adata.obsm:
+        return f"X_{basis}"
+    return None
 
 
 def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):

@@ -14,11 +14,13 @@ from .._settings import Default, settings
 from .._utils import (
     NeighborsView,
     _doc_params,
+    _existing_preset_keys,
     raise_not_implemented_error_if_backed_type,
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
+from ..tools._umap import _umap_keys
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -248,10 +250,10 @@ class Ingest:
         random_state = params.get("random_state", 0)
         return _LegacyRng(random_state)
 
-    def _init_umap(self, adata: AnnData) -> None:
+    def _init_umap(self, adata: AnnData, obsm_key: str, uns_key: str) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns["umap"]["params"])
+        rng = self._get_rng(adata.uns[uns_key]["params"])
         self._umap = UMAP(
             metric=self._metric,
             random_state=_legacy_random_state(rng),
@@ -265,7 +267,7 @@ class Ingest:
 
         self._umap._validate_parameters()
 
-        self._umap.embedding_ = adata.obsm["X_umap"]
+        self._umap.embedding_ = adata.obsm[obsm_key]
         self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
@@ -275,8 +277,8 @@ class Ingest:
 
         self._umap._knn_search_index = self._nnd_idx
 
-        self._umap._a = adata.uns["umap"]["params"]["a"]
-        self._umap._b = adata.uns["umap"]["params"]["b"]
+        self._umap._a = adata.uns[uns_key]["params"]["a"]
+        self._umap._b = adata.uns[uns_key]["params"]["b"]
 
         self._umap._input_hash = None
 
@@ -388,8 +390,8 @@ class Ingest:
             )
             raise ValueError(msg)
 
-        if "X_umap" in adata.obsm:
-            self._init_umap(adata)
+        if keys := _existing_preset_keys(adata, _umap_keys):
+            self._init_umap(adata, *keys)
 
         self._obsm = None
         self._obs = None

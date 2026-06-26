@@ -7,7 +7,7 @@ from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._docs import doc_rng
-from .._settings import settings
+from .._settings import Default, Preset, settings
 from .._utils import NeighborsView, _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
@@ -27,6 +27,16 @@ if TYPE_CHECKING:
 type _InitPos = Literal["paga", "spectral", "random"]
 
 
+def _umap_keys(
+    key_added: str | None | Default | Preset = Default(),
+) -> tuple[str, str]:
+    if isinstance(key_added, Default):
+        key_added = settings.preset
+    if isinstance(key_added, Preset):
+        key_added = key_added.umap.key_added
+    return ("X_umap", "umap") if key_added is None else (key_added, key_added)
+
+
 @_accepts_legacy_random_state(0)
 @_doc_params(rng=doc_rng)
 def umap(  # noqa: PLR0913
@@ -44,7 +54,7 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    key_added: str | None = None,
+    key_added: str | None | Default = Default(preset=("umap", "key_added")),
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
@@ -144,7 +154,7 @@ def umap(  # noqa: PLR0913
     rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
-    key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
+    key_obsm, key_uns = _umap_keys(key_added)
 
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"

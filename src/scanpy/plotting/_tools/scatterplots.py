@@ -17,14 +17,13 @@ from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
-from scanpy.preprocessing._pca import _pca_keys
-from scanpy.tools._draw_graph import _draw_graph_keys
-
 from ... import logging as logg
 from ..._settings import Default, settings
 from ..._utils import _doc_params, _existing_preset_keys, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
+from ...preprocessing._pca import _pca_keys
+from ...tools._draw_graph import _draw_graph_keys
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -33,7 +32,13 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
+from .._utils import (
+    _get_basis,
+    _obs_vector_compat,
+    check_colornorm,
+    check_projection,
+    circles,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -150,7 +155,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     check_projection(projection)
     sanitize_anndata(adata)
 
-    basis_values = _get_basis(adata, basis)
+    basis_values = _get_basis_arr(adata, basis)
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
@@ -1203,15 +1208,12 @@ def _add_categorical_legend(  # noqa: PLR0913
             ax.legend(loc=legend_loc, fontsize=legend_fontsize)
 
 
-def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
+def _get_basis_arr(adata: AnnData, basis: str) -> np.ndarray:
     """Get array for basis from anndata. Just tries to add 'X_'."""
-    if basis in adata.obsm:
-        return adata.obsm[basis]
-    elif f"X_{basis}" in adata.obsm:
-        return adata.obsm[f"X_{basis}"]
-    else:
-        msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
-        raise KeyError(msg)
+    if basis_key := _get_basis(adata, basis):
+        return adata.obsm[basis_key]
+    msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
+    raise KeyError(msg)
 
 
 def _get_color_source_vector(

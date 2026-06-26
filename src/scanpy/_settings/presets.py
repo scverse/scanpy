@@ -81,7 +81,7 @@ class BasicEmbeddingPreset(NamedTuple):
 
 
 # replace once they diverge
-PcaPreset = DiffmapPreset = DrawGraphPreset = BasicEmbeddingPreset
+PcaPreset = UmapPreset = DiffmapPreset = DrawGraphPreset = BasicEmbeddingPreset
 
 
 class RankGenesGroupsPreset(NamedTuple):
@@ -195,6 +195,14 @@ class Preset(enum.StrEnum):
         return {
             Preset.ScanpyV1: PcaPreset(key_added=None),
             Preset.ScanpyV2Preview: PcaPreset(key_added="pca"),
+        }
+
+    @preset_property
+    def umap() -> Mapping[Preset, UmapPreset]:
+        """Settings for :func:`~scanpy.tl.umap`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="umap"),
         }
 
     @preset_property

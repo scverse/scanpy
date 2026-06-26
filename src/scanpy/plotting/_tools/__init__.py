@@ -29,6 +29,7 @@ from .._docs import (
 )
 from .._utils import (
     _deprecated_scale,
+    _get_basis,
     savefig_or_show,
     timeseries,
     timeseries_as_heatmap,
@@ -1495,7 +1496,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is not None:
         key += f"_{groupby}"
 
-    if f"X_{basis}" not in adata.obsm:
+    if _get_basis(adata, basis) is None:
         msg = (
             f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
             "Compute the embedding first."
