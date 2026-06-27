@@ -148,7 +148,8 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
                 mean_var_csr if isinstance(self.data, CSRBase) else mean_var_csc
             )(self.indicator_matrix, self.data)
         if dof != 0:
-            var_ *= (group_counts / np.maximum(group_counts - dof, 1))[:, np.newaxis]
+            denom = np.where(group_counts > dof, group_counts - dof, np.nan)
+            var_ *= (group_counts / denom)[:, np.newaxis]
         return mean_, var_
 
     def median(self) -> Array:
@@ -427,7 +428,7 @@ def aggregate_dask_mean_var(
     counts = combined[0]
     mean_ = combined[1]
     m2 = combined[2]
-    denom = counts - dof if dof > 0 else counts
+    denom = da.where(counts > dof, counts - dof, np.nan) if dof > 0 else counts
     return MeanVarDict(mean=mean_, var=m2 / denom)
 
 
@@ -452,9 +453,9 @@ def _block_moments(
         return out
 
     agg = Aggregate(groupby=by, data=data, mask=mask)
-    mean_, var_ = agg.mean_var()
-    # M2 is the variance times the counts directly minus correction.
-    m2 = var_ * (counts - 1)[:, np.newaxis]
+    mean_, var_ = agg.mean_var(dof=0)
+    # M2 (sum of squared deviations) is the population variance times the count.
+    m2 = var_ * counts[:, np.newaxis]
     out[1, :] = mean_
     out[2, :] = m2
     return out

@@ -630,3 +630,32 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     if isinstance(result, DaskArray):
         result = result.compute()
     np.testing.assert_allclose(result, expected, rtol=1e-4)
+
+
+def test_aggregate_var_singleton_group() -> None:
+    # Guards that a one-observation group's variance is nan (not 0), and that a
+    # group split into single-observation chunks keeps its correct variance
+    # rather than being corrupted to nan by the dask per-chunk combine.
+    import dask.array as da
+
+    x = np.array([[1.0], [2.0], [3.0]])
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(["a", "b", "a"])},
+        index=[f"cell_{i}" for i in range(3)],
+    )
+
+    in_memory = sc.get.aggregate(ad.AnnData(X=x, obs=obs), "group", "var").layers["var"]
+    dask_x = da.from_array(x, chunks=(1, -1))  # tests chunks that contain one item
+    dask = (
+        sc.get
+        .aggregate(ad.AnnData(X=dask_x, obs=obs), "group", "var")
+        .layers["var"]
+        .compute()
+    )
+
+    np.testing.assert_allclose(in_memory, dask)  # equal_nan=True by default
+    var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
+    assert (
+        var["a"] == 2.0
+    )  # two observations in two separate chunks -> finite, not corrupted
+    assert np.isnan(var["b"])  # one observation -> undefined sample variance
