@@ -632,6 +632,7 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
+@needs.dask
 def test_aggregate_var_singleton_group() -> None:
     # Guards that a one-observation group's variance is nan (not 0), and that a
     # group split into single-observation chunks keeps its correct variance
