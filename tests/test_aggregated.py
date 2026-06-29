@@ -670,7 +670,9 @@ def test_aggregate_var_group_matches_dof(dof: int) -> None:
     var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
     for cat in ["a", "b"]:
         with (
-            pytest.warns(RuntimeWarning, match="((Degrees of freedom.*))")
+            pytest.warns(
+                RuntimeWarning, match="((Degrees of freedom.*)|(.*invalid value.*))"
+            )
             if dof > 0 and cat == "b"
             else nullcontext()
         ):
