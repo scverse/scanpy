@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from .._compat import CSBase
-from .._settings import settings
-from .._utils import _doc_params
-from ..preprocessing._normalization import normalize_total
+from ..._compat import CSBase
+from ..._settings import settings
+from ..._utils import _doc_params
+from ...preprocessing._normalization import normalize_total
 from ._docs import doc_show_save_ax
 from ._utils import savefig_or_show
 

@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 from matplotlib import colormaps, rcParams
 
-from .. import logging as logg
-from .._settings import Default, settings
-from .._utils import _doc_params
+from ... import logging as logg
+from ..._settings import Default, settings
+from ..._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import (
     doc_common_plot_args,

@@ -17,12 +17,12 @@ from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
-from ... import logging as logg
-from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata
-from ..._utils._doctests import doctest_internet
-from ...get import _check_mask
-from .. import _utils
+from .... import logging as logg
+from ...._settings import Default, settings
+from ...._utils import _doc_params, sanitize_anndata
+from ...._utils._doctests import doctest_internet
+from ....get import _check_mask
+from .. import _utils, mpl_settings
 from .._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from numpy.typing import NDArray
 
-    from ...tools._draw_graph import _Layout
+    from ....tools._draw_graph import _Layout
     from .._utils import ColorLike, VBound, _FontSize, _FontWeight, _LegendLoc
 
 
@@ -321,7 +321,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
         if grid:
             ax = plt.subplot(grid[count], **args_3d)
             axs.append(ax)
-        if not (settings._frameon if frameon is None else frameon):
+        if not (mpl_settings.FRAMEON if frameon is None else frameon):
             ax.axis("off")
         if title is None:
             if value_to_plot is not None:
@@ -357,7 +357,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                 coords[:, 1],
                 coords[:, 2],
                 c=color_vector,
-                rasterized=settings._vector_friendly,
+                rasterized=mpl_settings.VECTOR_FRIENDLY,
                 marker=marker[count],
                 **kwargs_scatter,
             )
@@ -407,7 +407,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                         coords[:, 1],
                         s=s,
                         c=c,
-                        rasterized=settings._vector_friendly,
+                        rasterized=mpl_settings.VECTOR_FRIENDLY,
                         marker=marker[count],
                         **kwargs_outline,
                     )
@@ -419,7 +419,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                 coords[:, 0],
                 coords[:, 1],
                 c=color_vector,
-                rasterized=settings._vector_friendly,
+                rasterized=mpl_settings.VECTOR_FRIENDLY,
                 marker=marker[count],
                 edgecolor=edgecolor,
                 **kwargs_scatter,

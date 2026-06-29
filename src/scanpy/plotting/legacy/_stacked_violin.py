@@ -6,10 +6,10 @@ import numpy as np
 from matplotlib import colormaps
 from matplotlib.colors import is_color_like
 
-from .. import logging as logg
-from .._compat import warn
-from .._settings import Default, settings
-from .._utils import _doc_params
+from ... import logging as logg
+from ..._compat import warn
+from ..._settings import Default, settings
+from ..._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (

@@ -6,7 +6,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._settings import settings
+from ..._settings import settings
 from ._utils import savefig_or_show
 
 # --------------------------------------------------------------------------------

@@ -17,18 +17,18 @@ from pandas.api.types import CategoricalDtype
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
-from ... import _utils as _sc_utils
-from ... import logging as logg
-from ..._compat import CSBase
-from ..._docs import doc_rng
-from ..._settings import settings
-from ..._utils import _doc_params
-from ..._utils.random import (
+from .... import _utils as _sc_utils
+from .... import logging as logg
+from ...._compat import CSBase
+from ...._docs import doc_rng
+from ...._settings import settings
+from ...._utils import _doc_params
+from ...._utils.random import (
     _accepts_legacy_random_state,
     _LegacyRng,
     _set_igraph_rng,
 )
-from .. import _utils
+from .. import _utils, mpl_settings
 from .._utils import matrix
 
 if TYPE_CHECKING:
@@ -39,8 +39,8 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from numpy.typing import NDArray
 
-    from ..._utils.random import RNGLike, SeedLike
-    from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
+    from ...._utils.random import RNGLike, SeedLike
+    from ....tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
 type _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
@@ -568,7 +568,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         colors = [colors]
 
     if frameon is None:
-        frameon = settings._frameon
+        frameon = mpl_settings.FRAMEON
     # labels is a list that contains no lists
     if is_flat(labels):
         labels = [labels for _ in range(len(colors))]
