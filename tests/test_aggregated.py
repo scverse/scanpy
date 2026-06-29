@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -630,3 +631,55 @@ def test_var_no_catastrophic_cancellation(array_type) -> None:
     if isinstance(result, DaskArray):
         result = result.compute()
     np.testing.assert_allclose(result, expected, rtol=1e-4)
+
+
+@needs.dask
+@pytest.mark.parametrize("dof", [0, 1, 4])
+def test_aggregate_var_group_matches_dof(dof: int) -> None:
+    # Guards that a one-observation (or n_obs==dof) group's variance is nan (not 0), and that a
+    # group split into single-observation chunks keeps its correct variance
+    # rather than being corrupted to nan by the dask per-chunk combine.
+    import dask.array as da
+
+    run_size = max(1, dof)
+    x = np.array(([1.0] * run_size) + ([2.0] * run_size) + ([3.0] * run_size)).reshape(
+        3 * run_size, 1
+    )
+    obs = pd.DataFrame(
+        {
+            "group": pd.Categorical(
+                (["a"] * run_size) + (["b"] * run_size) + (["a"] * run_size)
+            )
+        },
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    with (
+        pytest.warns(RuntimeWarning, match=r".*groups \['b'\] will be nan.*")
+        if dof > 0
+        else nullcontext()
+    ):
+        in_memory = sc.get.aggregate(
+            ad.AnnData(X=x, obs=obs), "group", "var", dof=dof
+        ).layers["var"]
+    # tests chunks that contain run_size item i.e., chunk matches dof
+    dask_x = da.from_array(x, chunks=(run_size, -1))
+    dask = (
+        sc.get
+        .aggregate(ad.AnnData(X=dask_x, obs=obs), "group", "var", dof=dof)
+        .layers["var"]
+        .compute()
+    )
+    # equal_nan=True by default
+    np.testing.assert_allclose(in_memory, dask)
+    var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
+    for cat in ["a", "b"]:
+        with (
+            pytest.warns(
+                RuntimeWarning, match=r"((Degrees of freedom.*)|(.*invalid value.*))"
+            )
+            if dof > 0 and cat == "b"
+            else nullcontext()
+        ):
+            np.testing.assert_equal(
+                var[cat], np.var(x[(obs["group"] == cat).to_numpy()], ddof=dof)
+            )
