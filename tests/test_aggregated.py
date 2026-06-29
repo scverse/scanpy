@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -664,13 +665,15 @@ def test_aggregate_var_group_matches_dof(dof: int) -> None:
         .layers["var"]
         .compute()
     )
-
-    np.testing.assert_allclose(in_memory, dask)  # equal_nan=True by default
+    # equal_nan=True by default
+    np.testing.assert_allclose(in_memory, dask)
     var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
-    # two observations in two separate chunks -> finite, not corrupted
-    assert var["a"] == (2.0 if dof > 0 else 1.0)
-    # one observation and dof > 0 -> undefined sample variance, otherwise 0
-    if dof > 0:
-        assert np.isnan(var["b"])
-    else:
-        assert var["b"] == 0
+    for cat in ["a", "b"]:
+        with (
+            pytest.warns(RuntimeWarning, match="((Degrees of freedom.*))")
+            if dof > 0 and cat == "b"
+            else nullcontext()
+        ):
+            np.testing.assert_equal(
+                var[cat], np.var(x[(obs["group"] == cat).to_numpy()], ddof=dof)
+            )
