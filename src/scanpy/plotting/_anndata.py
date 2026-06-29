@@ -161,8 +161,7 @@ def scatter(  # noqa: PLR0913
     --------
     Plot two `.obs` annotations against each other and colour by a third.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -170,15 +169,13 @@ def scatter(  # noqa: PLR0913
 
     Plot expression of two genes against each other.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.scatter(adata, x="CD79A", y="CD3D", color="bulk_labels")
 
     Use a precomputed embedding via the `basis` argument.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.scatter(adata, basis="umap", color="bulk_labels")
 
@@ -618,8 +615,7 @@ def ranking(  # noqa: PLR0912, PLR0913
     PCA in :func:`~scanpy.datasets.pbmc68k_reduced` was computed on highly-variable
     genes only, so we subset to those genes before ranking.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -628,8 +624,7 @@ def ranking(  # noqa: PLR0912, PLR0913
 
     Include the lowest-loading genes alongside the highest.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2], include_lowest=True)
 
@@ -801,8 +796,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -810,15 +804,13 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot by category. Rotate x-axis labels so that they do not overlap.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
 
     Set order of categories to be plotted or select specific categories to be plotted.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         groupby_order = ['CD34+', 'CD19+ B']
         sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
@@ -826,16 +818,14 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot multiple keys.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
             rotation=90)
 
     For large datasets consider omitting the overlaid scatter plot.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys='S_score', stripplot=False)
 
@@ -1022,15 +1012,13 @@ def clustermap(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.krumsiek11()
         sc.pl.clustermap(adata)
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.clustermap(adata, obs_keys='cell_type')
 
@@ -1126,8 +1114,7 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1495,8 +1482,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     Using var_names as list:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1505,8 +1491,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     Using var_names as dict:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -1754,8 +1739,7 @@ def dendrogram(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1829,8 +1813,7 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     Plot correlation matrix between cell type groups.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
