@@ -53,7 +53,7 @@ def _illico_results_to_iter(
     ireference: int | None,
     *,
     copy_pvalues: bool,
-):
+) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]]]:
     """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
 
     illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
@@ -454,6 +454,40 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
+    def illico(
+        self, *, tie_correct: bool, corr_method: _CorrMethod
+    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+        from illico import asymptotic_wilcoxon
+
+        illico_df = asymptotic_wilcoxon(
+            AnnData(
+                X=self.X,
+                var=pd.DataFrame(index=self.var_names),
+                obs=pd.DataFrame(
+                    index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                    data={"group": self.group_col},
+                ),
+            ),
+            reference=self.groups_order[self.ireference]
+            if self.ireference is not None
+            else None,
+            group_keys="group",
+            return_as_scanpy=False,
+            is_log1p=True,
+            tie_correct=tie_correct,
+            use_continuity=False,
+            alternative="two-sided",
+            use_rust=False,
+            groups=self.groups_order,
+        )
+        return _illico_results_to_iter(
+            illico_df,
+            self.groups_order,
+            self.ireference,
+            # p-values are altered by this correction method
+            copy_pvalues=corr_method == "benjamini-hochberg",
+        )
+
     def compute_statistics(  # noqa: PLR0912
         self,
         method: DETest,
@@ -472,39 +506,11 @@ class _RankGenes:
                 # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
                 self._basic_stats(exponentiate_values=True)
         elif "wilcoxon" in method:
-            if "illico" in method:
-                from illico import asymptotic_wilcoxon
-
-                illico_df = asymptotic_wilcoxon(
-                    AnnData(
-                        X=self.X,
-                        var=pd.DataFrame(index=self.var_names),
-                        obs=pd.DataFrame(
-                            index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                            data={"group": self.group_col},
-                        ),
-                    ),
-                    reference=self.groups_order[self.ireference]
-                    if self.ireference is not None
-                    else None,
-                    group_keys="group",
-                    return_as_scanpy=False,
-                    is_log1p=True,
-                    tie_correct=tie_correct,
-                    use_continuity=False,
-                    alternative="two-sided",
-                    use_rust=False,
-                    groups=self.groups_order,
-                )
-                generate_test_results = _illico_results_to_iter(
-                    illico_df,
-                    self.groups_order,
-                    self.ireference,
-                    # p-values are altered by this correction method
-                    copy_pvalues=corr_method == "benjamini-hochberg",
-                )
-            else:
-                generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+            generate_test_results = (
+                self.illico(tie_correct=tie_correct, corr_method=corr_method)
+                if "illico" in method
+                else self.wilcoxon(tie_correct=tie_correct)
+            )
             # If we're not exponentiating after the mean aggregation, then do it now.
             self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
