@@ -392,7 +392,7 @@ def test_illico_iter(groups_order, ireference, expected_indices):
 
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
-@pytest.mark.parametrize("test", ["ovo", "ovr"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])  # pairwise or vs. rest
 @pytest.mark.parametrize(
     "mean_in_log_space", [True, False], ids=["log_space_mean", "linear_space_mean"]
 )
