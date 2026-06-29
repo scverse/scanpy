@@ -101,8 +101,7 @@ def paga_compare(  # noqa: PLR0912, PLR0913
     --------
     Compute a PAGA graph on the bundled PBMC dataset and show it next to the UMAP embedding.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -516,8 +515,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -526,8 +524,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
 
     You can increase node and edge sizes by specifying additional arguments.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 
