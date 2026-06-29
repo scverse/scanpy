@@ -11,7 +11,7 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase, CSRBase, DaskArray
+from scanpy._compat import CSBase, CSRBase, DaskArray, warn
 
 from .._utils import _resolve_axis, get_literal_vals
 from ._kernels import (
@@ -149,6 +149,10 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
             )(self.indicator_matrix, self.data)
         if dof != 0:
             denom = np.where(group_counts > dof, group_counts - dof, np.nan)
+            which_nan = np.isnan(denom)
+            if which_nan.any():
+                msg = f"Group counts matches dof, resulting var for groups {self.groupby.categories[which_nan].to_list()} will be nan"
+                warn(msg, RuntimeWarning)
             var_ *= (group_counts / denom)[:, np.newaxis]
         return mean_, var_
 

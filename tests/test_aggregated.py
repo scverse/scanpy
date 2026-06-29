@@ -653,10 +653,14 @@ def test_aggregate_var_group_matches_dof(dof: int) -> None:
         },
         index=[f"cell_{i}" for i in range(x.shape[0])],
     )
-
-    in_memory = sc.get.aggregate(
-        ad.AnnData(X=x, obs=obs), "group", "var", dof=dof
-    ).layers["var"]
+    with (
+        pytest.warns(RuntimeWarning, match=r".*groups \['b'\] will be nan.*")
+        if dof > 0
+        else nullcontext()
+    ):
+        in_memory = sc.get.aggregate(
+            ad.AnnData(X=x, obs=obs), "group", "var", dof=dof
+        ).layers["var"]
     # tests chunks that contain run_size item i.e., chunk matches dof
     dask_x = da.from_array(x, chunks=(run_size, -1))
     dask = (
@@ -671,7 +675,7 @@ def test_aggregate_var_group_matches_dof(dof: int) -> None:
     for cat in ["a", "b"]:
         with (
             pytest.warns(
-                RuntimeWarning, match="((Degrees of freedom.*)|(.*invalid value.*))"
+                RuntimeWarning, match=r"((Degrees of freedom.*)|(.*invalid value.*))"
             )
             if dof > 0 and cat == "b"
             else nullcontext()
