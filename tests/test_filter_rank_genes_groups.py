@@ -62,8 +62,15 @@ EXPECTED = {
         pytest.param("rest", True, True, id="rest-pts-abs"),
     ],
 )
-def test_filter_rank_genes_groups(reference, pts, abs):
+@pytest.mark.parametrize("layer", [None, "layer"], ids=["raw", "layer"])
+def test_filter_rank_genes_groups(
+    *, reference: str, pts: bool, abs: bool, layer: str | None
+) -> None:
     adata = pbmc68k_reduced()
+    if layer is not None:
+        adata.layers[layer] = adata.raw.X
+        del adata.X
+        del adata.raw
 
     rank_genes_groups(
         adata,
@@ -71,12 +78,14 @@ def test_filter_rank_genes_groups(reference, pts, abs):
         reference=reference,
         pts=pts,
         method="wilcoxon",
+        layer=layer,
         rankby_abs=abs,
         n_genes=5,
     )
     if abs:
         filter_rank_genes_groups(
             adata,
+            layer=layer,
             compare_abs=True,
             min_in_group_fraction=-1,
             max_out_group_fraction=1,
@@ -85,6 +94,7 @@ def test_filter_rank_genes_groups(reference, pts, abs):
     else:
         filter_rank_genes_groups(
             adata,
+            layer=layer,
             min_in_group_fraction=0.25,
             min_fold_change=1,
             max_out_group_fraction=0.5,

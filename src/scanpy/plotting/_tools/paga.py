@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Collection, Mapping, Sequence
+from contextlib import nullcontext
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, TypedDict
@@ -13,14 +14,20 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
-from sklearn.utils import check_random_state
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
 from ... import _utils as _sc_utils
 from ... import logging as logg
-from ..._compat import CSBase, old_positionals
+from ..._compat import CSBase
+from ..._docs import doc_rng
 from ..._settings import settings
+from ..._utils import _doc_params
+from ..._utils.random import (
+    _accepts_legacy_random_state,
+    _LegacyRng,
+    _set_igraph_rng,
+)
 from .. import _utils
 from .._utils import matrix
 
@@ -30,38 +37,15 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
+    from numpy.typing import NDArray
 
-    from ..._compat import SpBase
-    from ..._utils.random import _LegacyRandom
+    from ..._utils.random import RNGLike, SeedLike
     from ...tools._draw_graph import _Layout as _LayoutWithoutEqTree
     from .._utils import _FontSize, _FontWeight, _LegendLoc
 
 type _Layout = _LayoutWithoutEqTree | Literal["eq_tree"]
 
 
-@old_positionals(
-    "edges",
-    "color",
-    "alpha",
-    "groups",
-    "components",
-    "projection",
-    "legend_loc",
-    "legend_fontsize",
-    "legend_fontweight",
-    "legend_fontoutline",
-    "color_map",
-    "palette",
-    "frameon",
-    "size",
-    "title",
-    "right_margin",
-    "left_margin",
-    "show",
-    "save",
-    "title_graph",
-    "groups_graph",
-)
 def paga_compare(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     basis=None,
@@ -112,6 +96,17 @@ def paga_compare(  # noqa: PLR0912, PLR0913
     Returns
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
+
+    Examples
+    --------
+    Compute a PAGA graph on the bundled PBMC dataset and show it next to the UMAP embedding.
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.paga(adata, groups="bulk_labels")
+        sc.pl.paga_compare(adata, basis="umap")
 
     """
     axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
@@ -208,29 +203,26 @@ def paga_compare(  # noqa: PLR0912, PLR0913
 
 
 def _compute_pos(  # noqa: PLR0912
-    adjacency_solid: SpBase | np.ndarray,
+    adjacency_solid: CSBase | np.ndarray,
     *,
-    layout: _Layout | None = None,
-    random_state: _LegacyRandom = 0,
-    init_pos: np.ndarray | None = None,
-    adj_tree=None,
-    root: int = 0,
+    layout: _Layout | None,
+    rng: np.random.Generator,
+    init_pos: np.ndarray | None,
+    adj_tree,
+    root: int,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
-):
+) -> NDArray[np.float64]:
     import random
 
     import networkx as nx
-
-    random_state = check_random_state(random_state)
 
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = "fr"
     layout = coerce_fa2_layout(layout)
     if layout == "fa":
-        # np.random.seed(random_state)
         if init_pos is None:
-            init_coords = random_state.random_sample((adjacency_solid.shape[0], 2))
+            init_coords = rng.random((adjacency_solid.shape[0], 2))
         else:
             init_coords = init_pos.copy()
         pos_list = fa2_positions(adjacency_solid, init_coords, **layout_kwds)
@@ -244,41 +236,41 @@ def _compute_pos(  # noqa: PLR0912
                 "Try another `layout`, e.g., {'fr'}."
             )
             raise ValueError(msg)
-    else:
-        # igraph layouts
-        random.seed(random_state.bytes(8))
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
-        if "rt" in layout:
-            g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
-            pos_list = g_tree.layout(
-                layout, root=root if isinstance(root, list) else [root]
-            ).coords
-        elif layout == "circle":
-            pos_list = g.layout(layout).coords
+    else:  # igraph layouts
+        if isinstance(rng, _LegacyRng):  # backwards compat
+            random.seed(rng.bytes(8))
+            ctx = nullcontext()
         else:
-            # I don't know why this is necessary
-            # np.random.seed(random_state)
-            if init_pos is None:
-                init_coords = random_state.random_sample((
-                    adjacency_solid.shape[0],
-                    2,
-                )).tolist()
-            else:
-                init_pos = init_pos.copy()
-                # this is a super-weird hack that is necessary as igraph’s
-                # layout function seems to do some strange stuff here
-                init_pos[:, 1] *= -1
-                init_coords = init_pos.tolist()
-            try:
-                pos_list = g.layout(
-                    layout, seed=init_coords, weights="weight", **layout_kwds
+            ctx = _set_igraph_rng(rng)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid, directed=False)
+        with ctx:
+            if "rt" in layout:
+                g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
+                pos_list = g_tree.layout(
+                    layout, root=root if isinstance(root, list) else [root]
                 ).coords
-            except AttributeError:  # hack for empty graphs...
-                pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
+            elif layout == "circle":
+                pos_list = g.layout(layout).coords
+            else:
+                # I don't know why this is necessary
+                if init_pos is None:
+                    init_coords = rng.random((adjacency_solid.shape[0], 2)).tolist()
+                else:
+                    init_pos = init_pos.copy()
+                    # this is a super-weird hack that is necessary as igraph’s
+                    # layout function seems to do some strange stuff here
+                    init_pos[:, 1] *= -1
+                    init_coords = init_pos.tolist()
+                try:
+                    pos_list = g.layout(
+                        layout, seed=init_coords, weights="weight", **layout_kwds
+                    ).coords
+                except AttributeError:  # hack for empty graphs...
+                    pos_list = g.layout(layout, seed=init_coords, **layout_kwds).coords
         pos = {n: (x, -y) for n, (x, y) in enumerate(pos_list)}
     if len(pos) == 1:
         pos[0] = (0.5, 0.5)
-    pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
+    pos_array = np.array([pos[n] for n in nx_g_solid])
     return pos_array
 
 
@@ -354,25 +346,8 @@ def hierarchy_pos(
     return make_pos({})
 
 
-@old_positionals(
-    "threshold",
-    "color",
-    "layout",
-    "layout_kwds",
-    "init_pos",
-    "root",
-    "labels",
-    "single_component",
-    "solid_edges",
-    "dashed_edges",
-    "transitions",
-    "fontsize",
-    "fontweight",
-    "fontoutline",
-    "text_kwds",
-    "node_size_scale",
-    # 17 positionals are enough for backwards compat
-)
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def paga(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
@@ -399,7 +374,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     arrowsize: int = 30,
     title: str | None = None,
     left_margin: float = 0.01,
-    random_state: int | None = 0,
+    rng: SeedLike | RNGLike | None = None,
     pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
     cmap: str | Colormap | None = None,
@@ -438,10 +413,10 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     color
         Gene name or `obs` annotation defining the node colors.
         Also plots the degree of the abstracted graph when
-        passing {`'degree_dashed'`, `'degree_solid'`}.
+        passing {{`'degree_dashed'`, `'degree_solid'`}}.
 
         Can be also used to visualize pie chart at each node in the following form:
-        `{<group name or index>: {<color>: <fraction>, ...}, ...}`. If the fractions
+        `{{<group name or index>: {{<color>: <fraction>, ...}}, ...}}`. If the fractions
         do not sum to 1, a new category called `'rest'` colored grey will be created.
     labels
         The node labels. If `None`, this defaults to the group labels stored in
@@ -464,10 +439,9 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     init_pos
         Two-column array storing the x and y coordinates for initializing the
         layout.
-    random_state
-        For layouts with random initialization like `'fr'`, change this to use
-        different intial states for the optimization. If `None`, the initial
-        state is not reproducible.
+    {rng}
+
+        Applies to layouts with random initialization like `'fr'`.
     root
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied
@@ -529,7 +503,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
-        Infer the filetype if ending on \{`'.pdf'`, `'.png'`, `'.svg'`\}.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     ax
         A matplotlib axes object.
 
@@ -541,8 +515,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -551,8 +524,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
 
     You can increase node and edge sizes by specifying additional arguments.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 
@@ -571,6 +543,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     pl.paga_path
 
     """
+    rng = np.random.default_rng(rng)
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning("`groups` is deprecated in `pl.paga`: use `labels` instead")
@@ -649,7 +622,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         pos = _compute_pos(
             adjacency_solid,
             layout=layout,
-            random_state=random_state,
+            rng=rng,
             init_pos=init_pos,
             layout_kwds=layout_kwds,
             adj_tree=adj_tree,
@@ -818,7 +791,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         from io import StringIO
 
         df = pd.read_csv(StringIO(s), header=-1)
-        pos_array = df[[4, 5]].values
+        pos_array = df[[4, 5]].to_numpy()
 
     # convert to dictionary
     pos = {n: [p[0], p[1]] for n, p in enumerate(pos_array)}
@@ -845,7 +818,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).values
+            subset = (cat == adata.obs[groups_key]).to_numpy()
             if adata.raw is not None and use_raw:
                 adata_gene = adata.raw[:, colors]
             else:
@@ -862,7 +835,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
         x_color = []
         cats = adata.obs[groups_key].cat.categories
         for cat in cats:
-            subset = (cat == adata.obs[groups_key]).values
+            subset = (cat == adata.obs[groups_key]).to_numpy()
             x_color.append(adata.obs.loc[subset, colors].mean())
         colors = x_color
 
@@ -1089,31 +1062,6 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     return sct
 
 
-@old_positionals(
-    "use_raw",
-    "annotations",
-    "color_map",
-    "color_maps_annotations",
-    "palette_groups",
-    "n_avg",
-    "groups_key",
-    "xlim",
-    "title",
-    "left_margin",
-    "ytick_fontsize",
-    "title_fontsize",
-    "show_node_names",
-    "show_yticks",
-    "show_colorbar",
-    "legend_fontsize",
-    "legend_fontweight",
-    "normalize_to_zero_one",
-    "as_heatmap",
-    "return_data",
-    "show",
-    "save",
-    "ax",
-)
 def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     nodes: Sequence[str | int],
@@ -1260,9 +1208,8 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes_ints):
-            idcs = np.arange(adata.n_obs)[
-                adata.obs[groups_key].values == nodes_strs[igroup]
-            ]
+            mask = (adata.obs[groups_key] == nodes_strs[igroup]).to_numpy()
+            idcs = np.flatnonzero(mask)
             if len(idcs) == 0:
                 msg = (
                     "Did not find data points that match "
@@ -1271,15 +1218,11 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                     "actually contains what you expect."
                 )
                 raise ValueError(msg)
-            idcs_group = np.argsort(
-                adata.obs["dpt_pseudotime"].values[
-                    adata.obs[groups_key].values == nodes_strs[igroup]
-                ]
-            )
+            idcs_group = np.argsort(adata.obs["dpt_pseudotime"].iloc[mask].to_numpy())
             idcs = idcs[idcs_group]
-            values = (adata.obs[key].values if key in adata.obs else adata_x[:, key].X)[
-                idcs
-            ]
+            values = (
+                adata.obs[key].to_numpy() if key in adata.obs else adata_x[:, key].X
+            )[idcs]
             x += (values.toarray() if isinstance(values, CSBase) else values).tolist()
             if ikey == 0:
                 groups += [group] * len(idcs)
@@ -1288,7 +1231,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
                     series = adata.obs[anno]
                     if isinstance(series.dtype, CategoricalDtype):
                         series = series.cat.codes
-                    anno_dict[anno] += list(series.values[idcs])
+                    anno_dict[anno] += series.iloc[idcs].to_list()
         if n_avg > 1:
             x = moving_average(x)
             if ikey == 0:
@@ -1358,8 +1301,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
             cmap=matplotlib.colors.ListedColormap(
                 # the following line doesn't work because of normalization
                 # adata.uns['paga_groups_colors'])
-                palette_groups[np.min(groups).astype(int) :],
-                N=int(np.max(groups) + 1 - np.min(groups)),
+                palette_groups[int(np.min(groups)) : int(np.max(groups)) + 1]
             ),
         )
         if show_yticks:

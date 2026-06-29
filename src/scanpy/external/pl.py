@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scverse_misc import Deprecation, deprecated
 
-from .._compat import deprecated, old_positionals
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
-from ..plotting import _scrublet, _utils, embedding
+from ..plotting import _utils, embedding
 from ..plotting._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
@@ -162,7 +162,6 @@ def harmony_timeseries(
     return axes
 
 
-@old_positionals("c", "cmap", "linewidth", "edgecolor", "axes", "colorbar", "s")
 def sam(
     adata: AnnData,
     projection: str | np.ndarray = "X_umap",
@@ -257,17 +256,6 @@ def sam(
     return axes
 
 
-@old_positionals(
-    "no_bins",
-    "smoothing_factor",
-    "min_delta",
-    "show_variance",
-    "figsize",
-    "return_fig",
-    "show",
-    "save",
-    "ax",
-)
 @_doc_params(show_save_ax=doc_show_save_ax)
 def wishbone_marker_trajectory(  # noqa: PLR0913
     adata: AnnData,
@@ -357,6 +345,8 @@ def wishbone_marker_trajectory(  # noqa: PLR0913
     return ax
 
 
-scrublet_score_distribution = deprecated("Import from sc.pl instead")(
-    _scrublet.scrublet_score_distribution
-)
+@deprecated(Deprecation("1.10.0", "Import from sc.pl instead."))
+def scrublet_score_distribution(*args, **kwargs):  # pragma: no cover
+    from ..plotting._scrublet import scrublet_score_distribution
+
+    return scrublet_score_distribution(*args, **kwargs)

@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, cast
 
 import numba
 import numpy as np
+from fast_array_utils.numba import njit
 
-from .._compat import CSRBase, njit
+from .._compat import CSRBase
 from .._utils import _doc_params
 from ..get import _get_obs_rep
 from ..neighbors._doc import doc_neighbors_key
@@ -132,12 +133,13 @@ class _MoransI(_SparseMetric):
 
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _morans_i_vec_w(g: CSRBase, x: np.ndarray, w: np.float64) -> np.float64:
-    z = x - x.mean()
+    # https://github.com/numba/numba/issues/10640#issuecomment-4682957245
+    z = (x - x.mean()).astype(np.float64)
     z2ss = (z * z).sum()
     n = len(x)
     inum = 0.0
 
-    for i in numba.prange(n):
+    for i in range(n):
         s = slice(g.indptr[i], g.indptr[i + 1])
         i_indices = g.indices[s]
         i_data = g.data[s]

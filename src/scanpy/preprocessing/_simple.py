@@ -6,6 +6,8 @@ Compositions of these functions are found in sc.preprocess.recipes.
 from __future__ import annotations
 
 import warnings
+from contextlib import AbstractContextManager
+from dataclasses import dataclass, field
 from functools import singledispatch
 from itertools import repeat
 from typing import TYPE_CHECKING, overload
@@ -15,38 +17,39 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
+from fast_array_utils.numba import njit
+from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
-from sklearn.utils import check_array, sparsefuncs
+from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, deprecated, njit, old_positionals
-from .._settings import settings as sett
+from .._compat import CSBase, CSRBase, DaskArray
+from .._docs import doc_rng
+from .._settings import settings
 from .._utils import (
+    _doc_params,
     _resolve_axis,
     check_array_function_arguments,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
-    renamed_arg,
     sanitize_anndata,
     view_to_actual,
 )
+from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sequence
+    from collections.abc import Collection, Sequence
     from numbers import Number
-    from typing import Literal
+    from typing import Literal, Self
 
     import pandas as pd
     from numpy.typing import NDArray
 
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
-@old_positionals(
-    "min_counts", "min_genes", "max_counts", "max_genes", "inplace", "copy"
-)
 def filter_cells(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -137,7 +140,7 @@ def filter_cells(
     )
     if n_given_options != 1:
         msg = (
-            "Only provide one of the optional parameters `min_counts`, "
+            "Provide exactly one of the optional parameters `min_counts`, "
             "`min_genes`, `max_counts`, `max_genes` per call."
         )
         raise ValueError(msg)
@@ -193,9 +196,6 @@ def filter_cells(
     return cell_subset, number_per_cell
 
 
-@old_positionals(
-    "min_counts", "min_cells", "max_counts", "max_cells", "inplace", "copy"
-)
 def filter_genes(
     data: AnnData | CSBase | np.ndarray | DaskArray,
     *,
@@ -253,7 +253,7 @@ def filter_genes(
     )
     if n_given_options != 1:
         msg = (
-            "Only provide one of the optional parameters `min_counts`, "
+            "Provide exactly one of the optional parameters `min_counts`, "
             "`min_cells`, `max_counts`, `max_cells` per call."
         )
         raise ValueError(msg)
@@ -306,7 +306,6 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
-@renamed_arg("X", "data", pos_0=True)
 @singledispatch
 def log1p(
     data: AnnData | np.ndarray | CSBase,
@@ -424,7 +423,6 @@ def log1p_anndata(
         return adata
 
 
-@old_positionals("copy", "chunked", "chunk_size")
 def sqrt(
     data: AnnData | CSBase | np.ndarray,
     *,
@@ -465,169 +463,6 @@ def sqrt(
         return adata if copy else None
     x = data  # proceed with data matrix
     return x.sqrt() if isinstance(x, CSBase) else np.sqrt(x)
-
-
-@deprecated("Use `sc.pp.normalize_total` instead.")
-@old_positionals(
-    "counts_per_cell_after",
-    "counts_per_cell",
-    "key_n_counts",
-    "copy",
-    "layers",
-    "use_rep",
-    "min_counts",
-)
-def normalize_per_cell(
-    data: AnnData | np.ndarray | CSBase,
-    *,
-    counts_per_cell_after: float | None = None,
-    counts_per_cell: np.ndarray | None = None,
-    key_n_counts: str = "n_counts",
-    copy: bool = False,
-    layers: Literal["all"] | Iterable[str] = (),
-    use_rep: Literal["after", "X"] | None = None,
-    min_counts: int = 1,
-) -> AnnData | np.ndarray | CSBase | None:
-    """Normalize total counts per cell.
-
-    .. deprecated:: 1.3.7
-
-       Use :func:`~scanpy.pp.normalize_total` instead.
-       The new function is equivalent to the present
-       function, except that
-
-       * the new function doesn't filter cells based on `min_counts`,
-         use :func:`~scanpy.pp.filter_cells` if filtering is needed.
-       * some arguments were renamed
-       * `copy` is replaced by `inplace`
-
-    Normalize each cell by total counts over all genes, so that every cell has
-    the same total count after normalization.
-
-    Similar functions are used, for example, by Seurat :cite:p:`Satija2015`, Cell Ranger
-    :cite:p:`Zheng2017` or SPRING :cite:p:`Weinreb2017`.
-
-    Parameters
-    ----------
-    data
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    counts_per_cell_after
-        If `None`, after normalization, each cell has a total count equal
-        to the median of the *counts_per_cell* before normalization.
-    counts_per_cell
-        Precomputed counts per cell.
-    key_n_counts
-        Name of the field in `adata.obs` where the total counts per cell are
-        stored.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
-    min_counts
-        Cells with counts less than `min_counts` are filtered out during
-        normalization.
-
-    Returns
-    -------
-    Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
-
-    `adata.X` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
-        Normalized count data matrix.
-
-    Examples
-    --------
-    >>> import scanpy as sc
-    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32))
-    >>> print(adata.X.sum(axis=1))
-    [ 1.  3. 11.]
-    >>> sc.pp.normalize_per_cell(adata)
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(adata)
-    >>> print(adata.obs)
-       n_counts
-    0       1.0
-    1       3.0
-    2      11.0
-    >>> print(adata.X.sum(axis=1))
-    [3. 3. 3.]
-    >>> sc.pp.normalize_per_cell(
-    ...     adata,
-    ...     counts_per_cell_after=1,
-    ...     key_n_counts="n_counts2",
-    ... )
-    FutureWarning: Use `sc.pp.normalize_total` instead.
-        sc.pp.normalize_per_cell(
-    >>> print(adata.obs)
-       n_counts  n_counts2
-    0       1.0        3.0
-    1       3.0        3.0
-    2      11.0        3.0
-    >>> print(adata.X.sum(axis=1))
-    [1. 1. 1.]
-
-    """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", r".*sc\.pp\.normalize_total", FutureWarning)
-
-        if isinstance(data, AnnData):
-            start = logg.info("normalizing by total count per cell")
-            adata = data.copy() if copy else data
-            if counts_per_cell is None:
-                cell_subset, counts_per_cell = materialize_as_ndarray(
-                    filter_cells(adata.X, min_counts=min_counts)
-                )
-                adata.obs[key_n_counts] = counts_per_cell
-                adata._inplace_subset_obs(cell_subset)
-                counts_per_cell = counts_per_cell[cell_subset]
-            normalize_per_cell(
-                adata.X,
-                counts_per_cell_after=counts_per_cell_after,
-                counts_per_cell=counts_per_cell,
-            )
-
-            layers = adata.layers.keys() if layers == "all" else layers
-            if use_rep == "after":
-                after = counts_per_cell_after
-            elif use_rep == "X":
-                after = np.median(counts_per_cell[cell_subset])
-            elif use_rep is None:
-                after = None
-            else:
-                msg = 'use_rep should be "after", "X" or None'
-                raise ValueError(msg)
-            for layer in layers:
-                _subset, counts = filter_cells(
-                    adata.layers[layer], min_counts=min_counts
-                )
-                temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
-                adata.layers[layer] = temp
-
-            logg.info(
-                "    finished ({time_passed}): normalized adata.X and added\n"
-                f"    {key_n_counts!r}, counts per cell before normalization (adata.obs)",
-                time=start,
-            )
-            return adata if copy else None
-        # proceed with data matrix
-        x = data.copy() if copy else data
-        if counts_per_cell is None:
-            if not copy:
-                msg = "Can only be run with copy=True"
-                raise ValueError(msg)
-            cell_subset, counts_per_cell = filter_cells(x, min_counts=min_counts)
-            x = x[cell_subset]
-            counts_per_cell = counts_per_cell[cell_subset]
-        if counts_per_cell_after is None:
-            counts_per_cell_after = np.median(counts_per_cell)
-
-        warnings.simplefilter("ignore")  # division by zero I guess
-        counts_per_cell += counts_per_cell == 0
-        counts_per_cell /= counts_per_cell_after
-        if not isinstance(x, CSBase):
-            x /= counts_per_cell[:, np.newaxis]
-        else:
-            sparsefuncs.inplace_row_scale(x, 1 / counts_per_cell)
-    return x if copy else None
 
 
 @njit
@@ -672,7 +507,6 @@ def numpy_regress_out(
     return data
 
 
-@old_positionals("layer", "n_jobs", "copy")
 def regress_out(
     adata: AnnData,
     keys: str | Sequence[str],
@@ -729,7 +563,7 @@ def regress_out(
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
 
-    n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
     # regress on a single categorical variable
     variable_is_categorical = False
@@ -853,11 +687,11 @@ def sample(
     fraction: float | None = None,
     *,
     n: int | None = None,
-    rng: RNGLike | SeedLike | None = 0,
+    rng: RNGLike | SeedLike | None = None,
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -869,7 +703,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample[A: np.ndarray | CSBase | DaskArray](
@@ -881,8 +715,11 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
+
+
+@_doc_params(rng=doc_rng)
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
@@ -892,7 +729,7 @@ def sample(  # noqa: PLR0912
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool_] | NDArray[np.floating] | None = None,
+    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
 ) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
     r"""Sample observations or variables with or without replacement.
 
@@ -910,8 +747,7 @@ def sample(  # noqa: PLR0912
         See `axis` and `replace`.
     n
         Sample to this number of observations or variables. See `axis`.
-    rng
-        Random seed to change subsampling.
+    {rng}
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
@@ -990,13 +826,14 @@ def sample(  # noqa: PLR0912
     return subset, indices
 
 
-@renamed_arg("target_counts", "counts_per_cell")
+@_accepts_legacy_random_state(0)
+@_doc_params(rng=doc_rng)
 def downsample_counts(
     adata: AnnData,
     counts_per_cell: int | Collection[int] | None = None,
     total_counts: int | None = None,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     replace: bool = False,
     copy: bool = False,
 ) -> AnnData | None:
@@ -1020,8 +857,7 @@ def downsample_counts(
     total_counts
         Target total counts. If the count matrix has more than `total_counts`
         it will be downsampled to have this number.
-    random_state
-        Random seed for subsampling.
+    {rng}
     replace
         Whether to sample the counts with replacement.
     copy
@@ -1037,143 +873,136 @@ def downsample_counts(
     """
     raise_not_implemented_error_if_backed_type(adata.X, "downsample_counts")
     # This logic is all dispatch
-    total_counts_call = total_counts is not None
-    counts_per_cell_call = counts_per_cell is not None
-    if total_counts_call is counts_per_cell_call:
+    rng = np.random.default_rng(rng)
+    if (total_counts is not None) is (counts_per_cell is not None):
         msg = "Must specify exactly one of `total_counts` or `counts_per_cell`."
         raise ValueError(msg)
     if copy:
         adata = adata.copy()
-    if total_counts_call:
+    if total_counts is not None:
         adata.X = _downsample_total_counts(
-            adata.X, total_counts, random_state=random_state, replace=replace
+            adata.X, total_counts, rng=rng, replace=replace
         )
-    elif counts_per_cell_call:
+    elif counts_per_cell is not None:
         adata.X = _downsample_per_cell(
-            adata.X, counts_per_cell, random_state=random_state, replace=replace
+            adata.X, counts_per_cell, rng=rng, replace=replace
         )
-    if copy:
-        return adata
+    return adata if copy else None
 
 
-def _downsample_per_cell(
-    x: np.ndarray | CSBase,
+def _downsample_per_cell[T: (np.ndarray, CSBase)](
+    x: T,
     /,
-    counts_per_cell: int,
+    counts_per_cell: int | Collection[int],
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
-) -> CSBase:
+) -> T:
     n_obs = x.shape[0]
-    if isinstance(counts_per_cell, int):
-        counts_per_cell = np.full(n_obs, counts_per_cell)
-    else:
-        counts_per_cell = np.asarray(counts_per_cell)
-    # np.random.choice needs int arguments in numba code:
-    counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
-    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
+    counts_per_cell = (
+        np.full(n_obs, counts_per_cell)
+        if isinstance(counts_per_cell, int)
+        else np.asarray(counts_per_cell, np.int_)
+    )
+    if counts_per_cell.shape != (n_obs,):
         msg = (
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
             " by `np.asarray(counts_per_cell)`."
         )
         raise ValueError(msg)
-    if isinstance(x, CSBase):
-        original_type = type(x)
-        if not isinstance(x, CSRBase):
-            x = x.tocsr()
-        totals = stats.sum(x, axis=1)  # Faster for csr matrix
-        under_target = np.nonzero(totals > counts_per_cell)[0]
-        rows = np.split(x.data, x.indptr[1:-1])
-        for rowidx in under_target:
-            row = rows[rowidx]
-            _downsample_array(
-                row,
-                counts_per_cell[rowidx],
-                random_state=random_state,
-                replace=replace,
-                inplace=True,
-            )
-        x.eliminate_zeros()
-        if not issubclass(original_type, CSRBase):  # Put it back
-            x = original_type(x)
-    else:
+    with sparse_as_csr(x) as spc:
+        x = spc.x  # we only mutate x, so spc.x receives the changes
+        rows = np.split(x.data, x.indptr[1:-1]) if isinstance(x, CSRBase) else x
         totals = stats.sum(x, axis=1)
-        under_target = np.nonzero(totals > counts_per_cell)[0]
+        under_target = np.flatnonzero(totals > counts_per_cell)
+        # when parallelizing this, the results will change due to having to spawn `rngs` (e.g. per thread)
         for rowidx in under_target:
-            row = x[rowidx, :]
             _downsample_array(
-                row,
+                rows[rowidx],
                 counts_per_cell[rowidx],
-                random_state=random_state,
+                rng=rng,
                 replace=replace,
                 inplace=True,
             )
-    return x
+    return spc.x  # use x that was converted back
 
 
-def _downsample_total_counts(
-    x: np.ndarray | CSBase,
+def _downsample_total_counts[T: (np.ndarray, CSBase)](
+    x: T,
     /,
     total_counts: int,
     *,
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
     replace: bool,
-) -> CSBase:
+) -> T:
     total_counts = int(total_counts)
     total = x.sum()
     if total < total_counts:
         return x
-    if isinstance(x, CSBase):
-        original_type = type(x)
-        if not isinstance(x, CSRBase):
-            x = x.tocsr()
-        _downsample_array(
-            x.data,
-            total_counts,
-            random_state=random_state,
-            replace=replace,
-            inplace=True,
-        )
-        x.eliminate_zeros()
-        if not issubclass(original_type, CSRBase):
-            x = original_type(x)
-    else:
-        v = x.reshape(np.multiply(*x.shape))
-        _downsample_array(
-            v, total_counts, random_state=random_state, replace=replace, inplace=True
-        )
-    return x
+    with sparse_as_csr(x) as spc:
+        x = spc.x  # we only mutate x, so spc.x receives the changes
+        v = x.data if isinstance(x, CSBase) else x.reshape(-1)
+        _downsample_array(v, total_counts, rng=rng, replace=replace, inplace=True)
+    return spc.x  # use x that was converted back
 
 
-# TODO: can/should this be parallelized?
-@numba.njit(cache=True)  # noqa: TID251
 def _downsample_array(
     col: np.ndarray,
     target: int,
     *,
-    random_state: _LegacyRandom = 0,
+    rng: np.random.Generator,
     replace: bool = True,
     inplace: bool = False,
-):
+) -> np.ndarray:
     """Evenly reduce counts in cell to target amount.
 
     This is an internal function and has some restrictions:
 
     * total counts in cell must be less than target
     """
-    np.random.seed(random_state)
+    rng = _if_legacy_apply_global(rng)
     cumcounts = col.cumsum()
+    total = np.int_(cumcounts[-1])
+    sample = rng.choice(total, target, replace=replace)
+    sample.sort()
+    return _downsample_array_inner(col, cumcounts, sample, inplace=inplace)
+
+
+# TODO: can/should this be parallelized?
+@numba.njit(cache=True)  # noqa: TID251
+def _downsample_array_inner(
+    col: np.ndarray, cumcounts: np.ndarray, sample: np.ndarray, *, inplace: bool
+) -> np.ndarray:
     if inplace:
         col[:] = 0
     else:
         col = np.zeros_like(col)
-    total = np.int_(cumcounts[-1])
-    sample = np.random.choice(total, target, replace=replace)
-    sample.sort()
     geneptr = 0
     for count in sample:
         while count >= cumcounts[geneptr]:
             geneptr += 1
         col[geneptr] += 1
     return col
+
+
+@dataclass
+class sparse_as_csr[T: (np.ndarray | CSBase)](AbstractContextManager):  # noqa: N801
+    """Context manager that converts to CSR while active."""
+
+    x: T
+    _original_type: type[T] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._original_type = type(self.x)
+        if isinstance(self.x, CSBase) and not isinstance(self.x, CSRBase):
+            self.x = self.x.tocsr()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *args: object) -> bool | None:
+        if isinstance(self.x, CSBase):
+            self.x.eliminate_zeros()
+            if not issubclass(self._original_type, CSRBase):
+                self.x = self._original_type(self.x)

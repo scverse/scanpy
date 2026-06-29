@@ -9,8 +9,7 @@ from anndata import AnnData
 from packaging.version import Version
 
 from ... import logging as logg
-from ..._compat import old_positionals, pkg_version
-from ..._utils import renamed_arg
+from ..._compat import pkg_version
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -22,25 +21,6 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
-@renamed_arg("adata", "data", pos_0=True)
-@old_positionals(
-    "k",
-    "directed",
-    "prune",
-    "min_cluster_size",
-    "jaccard",
-    "primary_metric",
-    "n_jobs",
-    "q_tol",
-    "louvain_time_limit",
-    "nn_method",
-    "partition_type",
-    "resolution_parameter",
-    "n_iterations",
-    "use_weights",
-    "seed",
-    "copy",
-)
 @doctest_needs("phenograph")
 def phenograph(  # noqa: PLR0913
     data: AnnData | np.ndarray | SpBase,
@@ -170,7 +150,7 @@ def phenograph(  # noqa: PLR0913
     With annotated data as input:
 
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
 
     Then do PCA:
 
@@ -208,13 +188,13 @@ def phenograph(  # noqa: PLR0913
 
     Cluster and cluster centroids for input Numpy ndarray
 
-    >>> df = np.random.rand(1000, 40)
-    >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (
-    ...     map(str, dframe.index),
-    ...     map(str, dframe.columns),
+    >>> data = np.random.default_rng().random((1000, 40))
+    >>> df = pd.DataFrame(data)
+    >>> df.index, df.columns = (
+    ...     map(str, df.index),
+    ...     map(str, df.columns),
     ... )
-    >>> adata = AnnData(dframe)
+    >>> adata = AnnData(df)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)

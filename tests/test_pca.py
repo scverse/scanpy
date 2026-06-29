@@ -241,20 +241,17 @@ def test_pca_transform_randomized(array_type):
     adata = AnnData(array_type(A_list).astype("float32"))
     a_pca_abs = np.abs(A_pca)
 
-    warnings.filterwarnings("error")
     if isinstance(adata.X, DaskArray) and isinstance(adata.X._meta, CSBase):
-        patterns = (
-            r"Ignoring random_state=14 when using a sparse dask array",
-            r"Ignoring svd_solver='randomized' when using a sparse dask array",
-        )
-        ctx = _helpers.MultiContext(
-            *(pytest.warns(UserWarning, match=pattern) for pattern in patterns)
+        ctx = pytest.warns(
+            UserWarning,
+            match=r"Ignoring svd_solver='randomized' when using a sparse dask array",
         )
     elif isinstance(adata.X, CSBase):
         ctx = pytest.warns(UserWarning, match=r"Ignoring.*'randomized")
     else:
         ctx = nullcontext()
 
+    warnings.filterwarnings("error")
     with ctx:
         sc.pp.pca(
             adata,
@@ -286,11 +283,13 @@ def test_pca_shapes():
 
     See <https://github.com/scverse/scanpy/issues/1051>
     """
-    adata = AnnData(np.random.randn(30, 20))
+    rng = np.random.default_rng()
+
+    adata = AnnData(rng.standard_normal((30, 20)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
 
-    adata = AnnData(np.random.randn(20, 30))
+    adata = AnnData(rng.standard_normal((20, 30)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (20, 19)
 
@@ -333,27 +332,28 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
 
 
-def test_pca_reproducible(array_type):
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_pca_reproducible(
+    subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
+):
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
-    with (
-        pytest.warns(UserWarning, match=r"Ignoring random_state.*sparse dask array")
-        if isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)
-        else nullcontext()
-    ):
-        a = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        b = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=42)
-        c = sc.pp.pca(pbmc, copy=True, dtype=np.float64, random_state=0)
+    a, b, c = (
+        sc.pp.pca(pbmc, copy=True, dtype=np.float64, **{rng_arg: seed})
+        for seed in (42, 42, 0)
+    )
 
-    assert_equal(a, b)
+    with subtests.test("reproducible"):
+        assert_equal(a, b)
 
     # Test that changing random seed changes result
     # Does not show up reliably with 32 bit computation
     # sparse-in-dask doesn’t use a random seed, so it also doesn’t work there.
     if not (isinstance(pbmc.X, DaskArray) and isinstance(pbmc.X._meta, CSBase)):
         a, c = map(AnnData.to_memory, [a, c])
-        assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
+        with subtests.test("different embedding"):
+            assert not np.array_equal(a.obsm["X_pca"], c.obsm["X_pca"])
 
 
 def test_pca_chunked() -> None:
@@ -405,20 +405,14 @@ def test_pca_n_pcs():
 # We use all possible array types here since this error should be raised before
 # PCA can realize that it got a Dask array
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_ALL)
-def test_mask_highly_var_error(array_type):
-    """Check if use_highly_variable=True throws an error if the annotation is missing."""
+def test_mask_var_error(array_type):
+    """Check if mask_var="..." throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
-    with (
-        pytest.warns(
-            FutureWarning,
-            match=r"Argument `use_highly_variable` is deprecated, consider using the mask argument\.",
-        ),
-        pytest.raises(
-            ValueError,
-            match=r"Did not find `adata\.var\['highly_variable'\]`\.",
-        ),
+    with pytest.raises(
+        ValueError,
+        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
     ):
-        sc.pp.pca(adata, use_highly_variable=True)
+        sc.pp.pca(adata, mask_var="highly_variable")
 
 
 def test_mask_length_error():
@@ -446,8 +440,9 @@ def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None
 
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
-    adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask_var = _helpers.random_mask(adata_base.shape[1])
+    rng = np.random.default_rng()
+    adata_base = AnnData(array_type(rng.random((100, 10))).astype(float_dtype))
+    mask_var = _helpers.random_mask(adata_base.shape[1], rng=rng)
 
     adata = adata_base.copy()
     sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)

@@ -7,7 +7,7 @@ import pandas as pd
 from numpy import linalg as la
 
 from .. import logging as logg
-from .._compat import CSBase, old_positionals
+from .._compat import CSBase
 from .._utils import sanitize_anndata
 
 if TYPE_CHECKING:
@@ -43,10 +43,10 @@ def _design_matrix(
         return_type="dataframe",
     )
     model = model.drop([batch_key], axis=1)
-    numerical_covariates = model.select_dtypes("number").columns.values
+    numerical_covariates = model.select_dtypes("number").columns.array
 
     logg.info(f"Found {design.shape[1]} batches\n")
-    other_cols = [c for c in model.columns.values if c not in numerical_covariates]
+    other_cols = [c for c in model.columns.array if c not in numerical_covariates]
 
     if other_cols:
         col_repr = " + ".join(f"Q('{x}')" for x in other_cols)
@@ -108,32 +108,29 @@ def _standardize_data(
     # compute pooled variance estimator
     b_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
     grand_mean = np.dot((n_batches / n_array).T, b_hat[:n_batch, :])
-    var_pooled = (data - np.dot(design, b_hat).T) ** 2
-    var_pooled = np.dot(var_pooled, np.ones((int(n_array), 1)) / int(n_array))
+    var_pooled = (
+        (data - np.dot(design, b_hat).T).pow(2).to_numpy().mean(axis=1, keepdims=True)
+    )
 
     # Compute the means
     if np.sum(var_pooled == 0) > 0:
         print(f"Found {np.sum(var_pooled == 0)} genes with zero variance.")
-    stand_mean = np.dot(
-        grand_mean.T.reshape((len(grand_mean), 1)), np.ones((1, int(n_array)))
-    )
-    tmp = np.array(design.copy())
+    tmp = design.to_numpy(copy=True)
     tmp[:, :n_batch] = 0
-    stand_mean += np.dot(tmp, b_hat).T
+    stand_mean = grand_mean[:, np.newaxis] + np.dot(tmp, b_hat).T
 
     # need to be a bit careful with the zero variance genes
     # just set the zero variance genes to zero in the standardized data
     s_data = np.where(
         var_pooled == 0,
         0,
-        ((data - stand_mean) / np.dot(np.sqrt(var_pooled), np.ones((1, int(n_array))))),
+        (data - stand_mean) / np.sqrt(var_pooled),
     )
     s_data = pd.DataFrame(s_data, index=data.index, columns=data.columns)
 
     return s_data, design, var_pooled, stand_mean
 
 
-@old_positionals("covariates", "inplace")
 def combat(  # noqa: PLR0915
     adata: AnnData,
     key: str = "batch",
@@ -203,11 +200,22 @@ def combat(  # noqa: PLR0915
     sanitize_anndata(adata)
 
     # construct a pandas series of the batch annotation
-    model = adata.obs[[key, *(covariates if covariates else [])]]
-    batch_info = model.groupby(key, observed=True).indices.values()
+    model: pd.DataFrame = adata.obs[[key, *(covariates if covariates else [])]]
+    batch_info = model.groupby(key, observed=True).indices
     n_batch = len(batch_info)
-    n_batches = np.array([len(v) for v in batch_info])
-    n_array = float(sum(n_batches))
+    n_batches = np.array([len(v) for v in batch_info.values()])
+
+    # check for batches with fewer than 2 cells
+    small_batches = [
+        batch for batch, size in zip(batch_info, n_batches, strict=True) if size < 2
+    ]
+    if small_batches:
+        msg = (
+            f"Batches {small_batches!r} have fewer than 2 cells. "
+            "ComBat requires at least 2 cells per batch to estimate "
+            "within-batch variance. Filter these batches before running combat."
+        )
+        raise ValueError(msg)
 
     # standardize across genes using a pooled variance estimator
     logg.info("Standardizing Data across genes.\n")
@@ -219,9 +227,11 @@ def combat(  # noqa: PLR0915
     # first estimate of the additive batch effect
     gamma_hat = (
         la.inv(batch_design.T @ batch_design) @ batch_design.T @ s_data.T
-    ).values
+    ).to_numpy()
     # first estimate for the multiplicative batch effect
-    delta_hat = [s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info]
+    delta_hat = [
+        s_data.iloc[:, batch_idxs].var(axis=1) for batch_idxs in batch_info.values()
+    ]
 
     # empirically fix the prior hyperparameters
     gamma_bar = gamma_hat.mean(axis=1)
@@ -234,7 +244,7 @@ def combat(  # noqa: PLR0915
     # gamma star and delta star will be our empirical bayes (EB) estimators
     # for the additive and multiplicative batch effect per batch and cell
     gamma_star, delta_star = [], []
-    for i, batch_idxs in enumerate(batch_info):
+    for i, batch_idxs in enumerate(batch_info.values()):
         # temp stores our estimates for the batch effect parameters.
         # temp[0] is the additive batch effect
         # temp[1] is the multiplicative batch effect
@@ -258,27 +268,25 @@ def combat(  # noqa: PLR0915
 
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
-    for j, batch_idxs in enumerate(batch_info):
+    for j, batch_idxs in enumerate(batch_info.values()):
         # we basically subtract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
         dsq = np.sqrt(delta_star[j, :])
-        dsq = dsq.reshape((len(dsq), 1))
-        denom = np.dot(dsq, np.ones((1, n_batches[j])))
         numer = np.array(
             bayesdata.iloc[:, batch_idxs]
             - np.dot(batch_design.iloc[batch_idxs], gamma_star).T
         )
-        bayesdata.iloc[:, batch_idxs] = numer / denom
+        bayesdata.iloc[:, batch_idxs] = numer / dsq[:, np.newaxis]
 
-    vpsq = np.sqrt(var_pooled).reshape((len(var_pooled), 1))
-    bayesdata = bayesdata * np.dot(vpsq, np.ones((1, int(n_array)))) + stand_mean
+    bayesdata = bayesdata * np.sqrt(var_pooled) + stand_mean
 
     # put back into the adata object or return
+    x = bayesdata.to_numpy().transpose()
     if inplace:
-        adata.X = bayesdata.values.transpose()
-    else:
-        return bayesdata.values.transpose()
+        adata.X = x
+        return None
+    return x
 
 
 def _it_sol(
@@ -334,12 +342,7 @@ def _it_sol(
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
         g_new = (t2 * n * g_hat + d_old * g_bar) / (t2 * n + d_old)
-        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones((
-            1,
-            s_data.shape[1],
-        ))
-        sum2 = sum2**2
-        sum2 = sum2.sum(axis=1)
+        sum2 = ((s_data - g_new[:, np.newaxis]) ** 2).sum(axis=1)
         d_new = (0.5 * sum2 + b) / (n / 2.0 + a - 1.0)
 
         change = max(

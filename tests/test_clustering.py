@@ -66,47 +66,40 @@ def test_leiden_basic(
 
 @needs.leidenalg
 @needs.igraph
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_leiden_random_state(
-    adata_neighbors: AnnData, flavor: Literal["igraph", "leidenalg"]
+    subtests: pytest.Subtests,
+    adata_neighbors: AnnData,
+    flavor: Literal["igraph", "leidenalg"],
+    rng_arg: Literal["rng", "random_state"],
 ) -> None:
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
-    adata_1 = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=1,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
+    adata_1, adata_1_again, adata_2 = (
+        sc.tl.leiden(
+            adata_neighbors,
+            flavor=flavor,
+            copy=True,
+            directed=is_leiden_alg,
+            n_iterations=n_iterations,
+            **{rng_arg: seed},
+        )
+        for seed in (1, 1, 42)
     )
-    adata_1_again = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=1,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
-    )
-    adata_2 = sc.tl.leiden(
-        adata_neighbors,
-        flavor=flavor,
-        random_state=3,
-        copy=True,
-        directed=is_leiden_alg,
-        n_iterations=n_iterations,
-    )
-    # reproducible
-    pd.testing.assert_series_equal(adata_1.obs["leiden"], adata_1_again.obs["leiden"])
-    assert (
-        pytest.approx(adata_1.uns["leiden"]["modularity"])
-        == adata_1_again.uns["leiden"]["modularity"]
-    )
-    # different clustering
-    assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
-    assert (
-        pytest.approx(adata_2.uns["leiden"]["modularity"])
-        != adata_1_again.uns["leiden"]["modularity"]
-    )
+    with subtests.test("reproducible"):
+        pd.testing.assert_series_equal(
+            adata_1.obs["leiden"], adata_1_again.obs["leiden"]
+        )
+        assert (
+            pytest.approx(adata_1.uns["leiden"]["modularity"])
+            == adata_1_again.uns["leiden"]["modularity"]
+        )
+    with subtests.test("different clustering"):
+        assert not adata_2.obs["leiden"].equals(adata_1_again.obs["leiden"])
+        assert (
+            pytest.approx(adata_2.uns["leiden"]["modularity"])
+            != adata_1_again.uns["leiden"]["modularity"]
+        )
 
 
 @needs.igraph

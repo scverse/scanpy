@@ -103,10 +103,12 @@ def bmmc(n_obs: int = 400) -> AnnData:
 
 @cache
 def _lung93k() -> AnnData:
-    path = pooch.retrieve(
-        url="https://figshare.com/ndownloader/files/45788454",
-        known_hash="md5:4f28af5ff226052443e7e0b39f3f9212",
+    registry = pooch.create(
+        path=pooch.os_cache("pooch"),
+        base_url="doi:10.6084/m9.figshare.25664775.v1/",
     )
+    registry.load_registry_from_doi()
+    path = registry.fetch("adata.raw_compressed.h5ad")
     adata = sc.read_h5ad(path)
     assert isinstance(adata.X, CSRBase)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)

@@ -9,13 +9,7 @@ import pytest
 from anndata import OldFormatWarning, read_zarr
 
 from scanpy._compat import DaskArray
-from scanpy.preprocessing import (
-    filter_cells,
-    filter_genes,
-    log1p,
-    normalize_per_cell,
-    normalize_total,
-)
+from scanpy.preprocessing import filter_cells, filter_genes, log1p, normalize_total
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from testing.scanpy._pytest.marks import needs
 
@@ -61,21 +55,6 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
-    assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
-
-
-@pytest.mark.filterwarnings("ignore:.*sc.pp.normalize_total:FutureWarning")
-def test_normalize_per_cell(
-    request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
-):
-    if isinstance(adata_dist.X, DaskArray):
-        reason = "normalize_per_cell deprecated and broken for Dask"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-    normalize_per_cell(adata_dist)
-    assert isinstance(adata_dist.X, DaskArray)
-    result = materialize_as_ndarray(adata_dist.X)
-    normalize_per_cell(adata)
     assert result.shape == adata.shape
     npt.assert_allclose(result, adata.X)
 

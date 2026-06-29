@@ -21,9 +21,9 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with: { enable-cache: false }
       - id: get-envs
         run: |
@@ -47,10 +47,10 @@ jobs:
     permissions:
       id-token: write  # for codecov OIDC
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: ${{ matrix.env.python }}
 
@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload coverage data
         if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           flags: ${{ matrix.env.name }}
           files: test-data/coverage.xml
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           report_type: test_results
           flags: ${{ matrix.env.name }}
@@ -110,12 +110,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: { filter: 'blob:none', fetch-depth: 0 }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
       - run: uvx --from build pyproject-build --sdist --wheel .

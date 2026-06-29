@@ -16,9 +16,9 @@ from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
-from .._settings import settings
-from .._utils import NeighborsView, _empty
+from .._compat import warn
+from .._settings import Default, settings
+from .._utils import NeighborsView
 from . import palettes
 
 if TYPE_CHECKING:
@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.typing import MarkerType
     from numpy.typing import ArrayLike
+    from pandas.api.extensions import ExtensionArray
     from PIL.Image import Image
 
-    from .._utils import Empty
 
 __all__ = [
     "ColorLike",
@@ -44,6 +44,7 @@ __all__ = [
     "_create_white_to_color_gradient",
     "_deprecated_scale",
     "_dk",
+    "_obs_vector_compat",
     "add_colors_for_categorical_sample_annotation",
     "check_colornorm",
     "check_projection",
@@ -106,18 +107,6 @@ class _AxesSubplot(Axes, axes.SubplotBase):
 # -------------------------------------------------------------------------------
 
 
-@old_positionals(
-    "xlabel",
-    "ylabel",
-    "xticks",
-    "yticks",
-    "title",
-    "colorbar_shrink",
-    "color_map",
-    "show",
-    "save",
-    "ax",
-)
 def matrix(  # noqa: PLR0913
     matrix: ArrayLike | Image,
     *,
@@ -641,7 +630,7 @@ def scatter_group(
     marker: MarkerType = ".",
 ):
     """Scatter of group using representation of data Y."""
-    mask_obs = adata.obs[key].cat.categories[cat_code] == adata.obs[key].values
+    mask_obs = (adata.obs[key].cat.categories[cat_code] == adata.obs[key]).to_numpy()
     color = adata.uns[f"{key}_colors"][cat_code]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
@@ -1072,7 +1061,7 @@ def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):
 @overload
 def _deprecated_scale(
     density_norm: DensityNorm,
-    scale: DensityNorm | Empty,
+    scale: DensityNorm | Default,
     *,
     default: DensityNorm,
 ) -> DensityNorm: ...
@@ -1080,20 +1069,20 @@ def _deprecated_scale(
 
 @overload
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty: ...
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default: ...
 
 
 def _deprecated_scale(
-    density_norm: DensityNorm | Empty,
-    scale: DensityNorm | Empty,
+    density_norm: DensityNorm | Default,
+    scale: DensityNorm | Default,
     *,
-    default: DensityNorm | Empty = _empty,
-) -> DensityNorm | Empty:
-    if scale is _empty:
+    default: DensityNorm | Default = Default(),
+) -> DensityNorm | Default:
+    if isinstance(scale, Default):
         return density_norm
     if density_norm != default:
         msg = "can’t specify both `scale` and `density_norm`"
@@ -1130,12 +1119,12 @@ def _create_white_to_color_gradient(
     popt = np.get_printoptions()
     try:
         import colour
-    except ImportError:
-        msg = (
-            "Please install the `colour-science` package to use `group_colors`: "
-            "`pip install colour-science` or `pip install scanpy[plotting]`"
+    except ImportError as e:
+        e.add_note(
+            "`colour-science` is required for using `group_colors`. "
+            "Please install `scanpy[plotting]` (or `colour-science` directly) and try again."
         )
-        raise ImportError(msg) from None
+        raise
     finally:  # https://github.com/colour-science/colour/issues/1388
         np.set_printoptions(legacy=popt["legacy"])
 
@@ -1167,3 +1156,23 @@ def _create_white_to_color_gradient(
     return ListedColormap(
         clipped_rgb, name=color if isinstance(color, str) else hex_color
     )
+
+
+def _obs_vector_compat(
+    adata: AnnData, k: str, *, use_raw: bool, layer: str | None
+) -> np.ndarray | ExtensionArray:
+    try:
+        from anndata.acc import A
+    except ImportError:
+        return (
+            adata.raw.obs_vector(k)
+            if use_raw and k not in adata.obs.columns
+            else adata.obs_vector(k, layer=layer)
+        )
+
+    if k in adata.obs.columns:
+        return adata[A.obs[k]]
+    elif not use_raw:
+        return adata[A.layers[layer][:, k]]
+    else:
+        return adata.raw[A.X[:, k]]

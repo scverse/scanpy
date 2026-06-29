@@ -4,7 +4,6 @@ import inspect
 import re
 import textwrap
 from collections.abc import Sequence
-from copy import copy
 from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
@@ -16,11 +15,11 @@ from matplotlib import colormaps, colors, patheffects, rcParams
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.markers import MarkerStyle
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
-from ..._compat import deprecated
-from ..._settings import settings
-from ..._utils import _doc_params, _empty, sanitize_anndata
+from ..._settings import Default, settings
+from ..._utils import _doc_params, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from .. import _utils
@@ -31,7 +30,7 @@ from .._docs import (
     doc_scatter_spatial,
     doc_show_save_ax,
 )
-from .._utils import check_colornorm, check_projection, circles
+from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Mapping
@@ -45,7 +44,6 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from numpy.typing import NDArray
 
-    from ..._utils import Empty
     from ...tools._draw_graph import _Layout
     from .._utils import ColorLike, VBound, _FontSize, _FontWeight, _LegendLoc
 
@@ -61,7 +59,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     basis: str,
     *,
     color: str | Sequence[str] | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool] | str | None = None,
     gene_symbols: str | None = None,
     use_raw: bool | None = None,
     sort_order: bool = True,
@@ -122,6 +120,23 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
+    Examples
+    --------
+    Plot a precomputed UMAP embedding coloured by the `'bulk_labels'` cell-type annotation.
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.embedding(adata, basis="umap", color="bulk_labels")
+
+    Show several panels in a single call by passing a list of keys to `color`,
+    mixing categorical annotations and gene expression.
+
+    ..  exec-jupyter::
+
+        sc.pl.embedding(adata, basis="umap", color=["bulk_labels", "CD3D", "LYZ"])
+
     """
     #####################
     # Argument handling #
@@ -169,8 +184,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             raise ValueError(msg)
         else:
             cmap = color_map
-    cmap = copy(colormaps.get_cmap(cmap))
-    cmap.set_bad(na_color)
+    cmap = colormaps.get_cmap(cmap).with_extremes(bad=na_color)
     # Prevents warnings during legend creation
     na_color = colors.to_hex(na_color, keep_alpha=True)
 
@@ -266,6 +280,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     # ]
     for count, (value_to_plot, dims) in enumerate(zip(color, dimensions, strict=True)):
         kwargs_scatter = kwargs.copy()  # is potentially mutated for each plot
+        # TODO: It might be worth not returning `NumpyExtensionArray` objects out of the dataframes via accessors because we have a lot of np.ndarray checks.
+        # Setting np.array here prevents the  `NumpyExtensionArray` from propagating.
         color_source_vector = _get_color_source_vector(
             adata,
             value_to_plot,
@@ -275,6 +291,8 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             gene_symbols=gene_symbols,
             groups=groups,
         )
+        if isinstance(color_source_vector, pd.arrays.NumpyExtensionArray):
+            color_source_vector = color_source_vector.to_numpy()
         color_vector, color_type = _color_vector(
             adata,
             value_to_plot,
@@ -290,10 +308,10 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             order = np.argsort(-color_vector, kind="stable")[::-1]
         elif sort_order and color_type == "cat":
             # Null points go on bottom
-            order = np.argsort(~pd.isnull(color_source_vector), kind="stable")
-        # Set orders
-        if isinstance(size, np.ndarray):
-            size = np.array(size)[order]
+            order = np.argsort(~pd.isna(color_source_vector), kind="stable")
+        # Set orders — use a local to avoid cumulative reordering across
+        # subplots when multiple color keys are given.
+        _size = np.array(size)[order] if isinstance(size, np.ndarray) else size
         color_source_vector = color_source_vector[order]
         color_vector = color_vector[order]
         coords = basis_values[:, dims][order, :]
@@ -345,10 +363,10 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
             )
         else:
             scatter = (
-                partial(ax.scatter, s=size, plotnonfinite=True)
+                partial(ax.scatter, s=_size, plotnonfinite=True)
                 if scale_factor is None
                 else partial(
-                    circles, s=size, ax=ax, scale_factor=scale_factor
+                    circles, s=_size, ax=ax, scale_factor=scale_factor
                 )  # size in circles is radius
             )
 
@@ -363,7 +381,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
                 # with some transparency.
 
                 bg_width, gap_width = outline_width
-                point = np.sqrt(size)
+                point = np.sqrt(_size)
                 gap_size = (point + (point * gap_width) * 2) ** 2
                 bg_size = (np.sqrt(gap_size) + (point * bg_width) * 2) ** 2
                 # the default black and white colors can be changes using
@@ -669,8 +687,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -678,22 +695,19 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="HES4")
 
     Plot muliple umaps for different gene expressions.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
 
@@ -730,8 +744,7 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -769,8 +782,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -815,8 +827,7 @@ def draw_graph(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -873,8 +884,7 @@ def pca(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -882,15 +892,13 @@ def pca(
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="CST3")
 
@@ -943,7 +951,7 @@ def pca(
     return axs
 
 
-@deprecated("Use `squidpy.pl.spatial_scatter` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.pl.spatial_scatter` instead."))
 @doctest_internet
 @_wraps_plot_scatter
 @_doc_params(
@@ -957,8 +965,8 @@ def spatial(  # noqa: PLR0913
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
-    img_key: str | None | Empty = _empty,
-    library_id: str | None | Empty = _empty,
+    img_key: str | None | Default = Default("'hires' | 'lowres'"),
+    library_id: str | None | Default = Default("uns['spatial'][key] if only one key"),
     crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
@@ -972,9 +980,6 @@ def spatial(  # noqa: PLR0913
     **kwargs,
 ) -> Figure | Axes | list[Axes] | None:
     """Scatter plot in spatial coordinates.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.pl.spatial_scatter` instead.
 
     This function allows overlaying data on top of images.
     Use the parameter `img_key` to see the image in the background
@@ -1015,11 +1020,11 @@ def spatial(  # noqa: PLR0913
 
     >>> import scanpy as sc
     >>> adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
-    FutureWarning: Use `squidpy.datasets.visium` instead.
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
         adata = sc.datasets.visium_sge("Targeted_Visium_Human_Glioblastoma_Pan_Cancer")
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
-    FutureWarning: Use `squidpy.pl.spatial_scatter` instead.
+    FutureWarning: The function spatial is deprecated and will be removed in the future. Use :func:`squidpy.pl.spatial_scatter` instead.
         sc.pl.spatial(adata, color="log1p_n_genes_by_counts")
 
     See Also
@@ -1127,7 +1132,7 @@ def _add_categorical_legend(  # noqa: PLR0913
     scatter_array=None,
 ):
     """Add a legend to the passed Axes."""
-    if na_in_legend and pd.isnull(color_source_vector).any():
+    if na_in_legend and pd.isna(color_source_vector).any():
         if "NA" in color_source_vector:
             msg = "No fallback for null labels has been defined if NA already in categories."
             raise NotImplementedError(msg)
@@ -1200,7 +1205,7 @@ def _get_color_source_vector(
     adata: AnnData,
     value_to_plot: str,
     *,
-    mask_obs: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
     use_raw: bool = False,
     gene_symbols: str | None = None,
     layer: str | None = None,
@@ -1221,10 +1226,7 @@ def _get_color_source_vector(
         # We should probably just make an index for this, and share it over runs
         # TODO: Throw helpful error if this doesn't work
         value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0]
-    if use_raw and value_to_plot not in adata.obs.columns:
-        values = adata.raw.obs_vector(value_to_plot)
-    else:
-        values = adata.obs_vector(value_to_plot, layer=layer)
+    values = _obs_vector_compat(adata, value_to_plot, use_raw=use_raw, layer=layer)
     if mask_obs is not None:
         values = values.copy()
         values[~mask_obs] = np.nan
@@ -1348,14 +1350,14 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: str | None | Empty
+    uns: Mapping, library_id: str | None | Default
 ) -> tuple[str | None, Mapping | None]:
     """Given a mapping, try and extract a library id/ mapping with spatial data.
 
     Assumes this is `.uns` from how we parse visium data.
     """
     spatial_mapping = uns.get("spatial", {})
-    if library_id is _empty:
+    if isinstance(library_id, Default):
         if len(spatial_mapping) > 1:
             msg = (
                 "Found multiple possible libraries in `.uns['spatial']. Please specify."
@@ -1373,12 +1375,12 @@ def _check_spatial_data(
 def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
-    img_key: None | str | Empty,
+    img_key: None | str | Default,
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:
     """Resolve image for spatial plots."""
-    if img is None and spatial_data is not None and img_key is _empty:
+    if img is None and spatial_data is not None and isinstance(img_key, Default):
         img_key = next(
             (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
         )  # Throws StopIteration Error if keys not present

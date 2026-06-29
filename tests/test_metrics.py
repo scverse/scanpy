@@ -11,14 +11,11 @@ import pandas as pd
 import pytest
 import threadpoolctl
 from anndata import AnnData
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import pkg_version
 from scanpy.metrics import modularity
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.context import xfail
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
@@ -68,8 +65,9 @@ def test_consistency(metric) -> None:
     )
 
     all_genes = metric(pbmc, layer="raw")
-    first_gene = metric(pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw"))
-
+    first_gene = metric(
+        pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
+    )
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
@@ -311,10 +309,13 @@ def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) ->
 
 
 @needs.igraph
+@pytest.mark.parametrize("preset", [sc.Preset.ScanpyV1, sc.Preset.ScanpyV2Preview])
 def test_modularity_adata(
-    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
+    monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests, preset: sc.Preset
 ) -> None:
     """Test domain and API of modularity score."""
+    # get_igraph_from_adjacency works very slightly differently in scanpy 2
+    sc.settings.preset = preset
     adata = pbmc3k()
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
@@ -334,15 +335,8 @@ def test_modularity_adata(
         with subtests.test("bounds", score=name):
             assert 0 <= s <= 1
     for (n0, s0), (n1, s1) in combinations(scores.items(), 2):
-        approx = {n0, n1} != {"update", "calculate"}
-        with (
-            subtests.test("equality", l=n0, r=n1),
-            xfail(
-                approx and pkg_version("igraph") < Version("1"),
-                reason="igraph 0.x has different modularity behavior",
-            ),
-        ):
-            assert pytest.approx(s0, rel=1e-3 if approx else 1e-6) == s1
+        with subtests.test("equality", l=n0, r=n1):
+            assert s0 == s1
     with subtests.test("update"):
         assert adata.uns["leiden"]["modularity"] is scores["update"]
 

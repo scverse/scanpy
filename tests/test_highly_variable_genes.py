@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from contextlib import nullcontext
 from pathlib import Path
 from string import ascii_letters
@@ -10,6 +9,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse as sps
 from anndata import AnnData
 from fast_array_utils import stats
 from pandas.testing import assert_frame_equal, assert_index_equal
@@ -18,12 +18,12 @@ import scanpy as sc
 from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.marks import needs, skip_numba_0_63
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Literal
+    from typing import Any, Literal
 
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
@@ -165,7 +165,6 @@ def _check_pearson_hvg_columns(output_df: pd.DataFrame, n_top_genes: int):
     assert np.nanmax(output_df["highly_variable_rank"].to_numpy()) <= n_top_genes - 1
 
 
-@skip_numba_0_63
 def test_pearson_residuals_inputchecks(
     pbmc3k_parametrized_small: Callable[[], AnnData],
 ) -> None:
@@ -202,7 +201,6 @@ def test_pearson_residuals_inputchecks(
         )
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize(
     "clip", [None, np.inf, 30], ids=["noclip", "infclip", "30clip"]
@@ -296,7 +294,6 @@ def test_pearson_residuals_general(
     _check_pearson_hvg_columns(output_df, n_top_genes)
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("subset", [True, False], ids=["subset", "full"])
 @pytest.mark.parametrize("n_top_genes", [100, 200], ids=["100n", "200n"])
 def test_pearson_residuals_batch(
@@ -367,7 +364,6 @@ def test_pearson_residuals_batch(
         assert len(output_df) == n_genes
 
 
-@pytest.mark.parametrize("func", ["hvg", "fgd"])
 @pytest.mark.parametrize(
     ("flavor", "params", "ref_path"),
     [
@@ -383,15 +379,11 @@ def test_pearson_residuals_batch(
 def test_compare_to_upstream(
     *,
     request: pytest.FixtureRequest,
-    func: Literal["hvg", "fgd"],
     flavor: Literal["seurat", "cell_ranger"],
-    params: dict[str, float | int],
+    params: Any,
     ref_path: Path,
     array_type: Callable,
 ):
-    if func == "fgd" and flavor == "cell_ranger":
-        reason = "The deprecated filter_genes_dispersion behaves differently with cell_ranger"
-        request.applymarker(pytest.mark.xfail(reason=reason))
     hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
@@ -400,21 +392,8 @@ def test_compare_to_upstream(
     pbmc.var_names_make_unique()
     sc.pp.filter_cells(pbmc, min_counts=1)
     sc.pp.normalize_total(pbmc, target_sum=1e4)
-
-    if func == "hvg":
-        sc.pp.log1p(pbmc)
-        sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
-    elif func == "fgd":
-        with pytest.warns(FutureWarning, match=r"sc\.pp\.highly_variable_genes"):  # noqa: PT031
-            # https://github.com/pandas-dev/pandas/issues/61928
-            warnings.filterwarnings(
-                "ignore", r"invalid value encountered in cast", RuntimeWarning
-            )
-            sc.pp.filter_genes_dispersion(
-                pbmc, flavor=flavor, **params, log=True, subset=False
-            )
-    else:
-        pytest.fail(f"Unknown func {func}")
+    sc.pp.log1p(pbmc)
+    sc.pp.highly_variable_genes(pbmc, flavor=flavor, **params, inplace=True)
 
     np.testing.assert_array_equal(
         hvg_info["highly_variable"], pbmc.var["highly_variable"]
@@ -522,7 +501,16 @@ def test_seurat_v3_warning():
         sc.pp.highly_variable_genes(pbmc, flavor="seurat_v3")
 
 
-def test_batches():
+@needs.skmisc
+def test_seurat_v3_degenerate() -> None:
+    """Tests that the flavor handles all-zero genes."""
+    adata = AnnData(sps.random(10, 1000, density=0.001, format="csr", dtype="int"))
+    adata.X.data = np.abs(adata.X.data)
+
+    sc.pp.highly_variable_genes(adata, flavor="seurat_v3")
+
+
+def test_batches() -> None:
     adata = pbmc68k_reduced()
     adata.X[:100, :100] = np.zeros((100, 100))
 
@@ -549,20 +537,22 @@ def test_batches():
     assert hvg2 is not None
 
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[100],
-        0.5 * hvg1["dispersions_norm"].iat[0] + 0.5 * hvg2["dispersions_norm"].iat[100],
+        adata.var["dispersions_norm"].iloc[100],
+        0.5 * hvg1["dispersions_norm"].iloc[0]
+        + 0.5 * hvg2["dispersions_norm"].iloc[100],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[101],
-        0.5 * hvg1["dispersions_norm"].iat[1] + 0.5 * hvg2["dispersions_norm"].iat[101],
+        adata.var["dispersions_norm"].iloc[101],
+        0.5 * hvg1["dispersions_norm"].iloc[1]
+        + 0.5 * hvg2["dispersions_norm"].iloc[101],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[0],
-        0.5 * hvg2["dispersions_norm"].iat[0],
+        adata.var["dispersions_norm"].iloc[0],
+        0.5 * hvg2["dispersions_norm"].iloc[0],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
@@ -579,8 +569,9 @@ def test_batches():
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 def test_degenerate_batches():
+    rng = np.random.default_rng()
     adata = AnnData(
-        X=np.random.randn(10, 100),
+        X=rng.standard_normal((10, 100)),
         obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
     )
     sc.pp.highly_variable_genes(adata, batch_key="batch")
@@ -605,7 +596,8 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 
 def test_cellranger_n_top_genes_warning():
-    x = np.random.poisson(2, (100, 30))
+    rng = np.random.default_rng()
+    x = rng.poisson(2, (100, 30))
     adata = AnnData(x)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
@@ -657,7 +649,12 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
     ],
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
-def test_subset_inplace_consistency(flavor, array_type, batch_key):
+def test_subset_inplace_consistency(
+    subtests: pytest.Subtests,
+    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    array_type,
+    batch_key: Literal["batch"] | None,
+) -> None:
     """Tests `n_top_genes=n`.
 
     - if `inplace` and `subset` interact correctly
@@ -665,12 +662,12 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
+    rng = np.random.default_rng(0)
     adata = (
-        sc.datasets.blobs(n_observations=20, n_variables=80, random_state=0)
+        sc.datasets.blobs(n_observations=20, n_variables=80, rng=rng)
         if "seurat_v3" not in flavor
         else pbmc3k()[:1500, :1000].copy()
     )
-    rng = np.random.default_rng(0)
     adata.obs["batch"] = rng.choice(["a", "b"], adata.shape[0])
     adata.X = array_type(np.abs(adata.X).astype(int))
 
@@ -695,32 +692,35 @@ def test_subset_inplace_consistency(flavor, array_type, batch_key):
             inplace=inplace,
         )
 
-        assert (output_df is None) == inplace
-        assert len(adata_copy.var if inplace else output_df) == (
-            15 if subset else n_genes
-        )
-        assert sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
+        with subtests.test(subset=subset, inplace=inplace):
+            assert (output_df is None) == inplace
+            assert len(adata_copy.var if inplace else output_df) == (
+                15 if subset else n_genes
+            )
+            assert (
+                sum((adata_copy.var if inplace else output_df)["highly_variable"]) == 15
+            )
 
-        if not inplace:
-            assert isinstance(output_df, pd.DataFrame)
+            if not inplace:
+                assert isinstance(output_df, pd.DataFrame)
 
-        if inplace:
-            assert subset not in adatas
-            adatas[subset] = adata_copy
-        else:
-            assert subset not in dfs
-            dfs[subset] = output_df
+            if inplace:
+                assert subset not in adatas
+                adatas[subset] = adata_copy
+            else:
+                assert subset not in dfs
+                dfs[subset] = output_df
 
-    # check that the results are consistent for subset True/False: inplace True
-    adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
-    assert adata_subset.var_names.equals(adatas[True].var_names)
+    with subtests.test("consistency", inplace=True):
+        adata_subset = adatas[False][:, adatas[False].var["highly_variable"]]
+        assert adata_subset.var_names.equals(adatas[True].var_names)
 
-    # check that the results are consistent for subset True/False: inplace False
-    df_subset = dfs[False][dfs[False]["highly_variable"]]
-    assert df_subset.index.equals(dfs[True].index)
+    with subtests.test("consistency", inplace=False):
+        df_subset = dfs[False][dfs[False]["highly_variable"]]
+        assert df_subset.index.equals(dfs[True].index)
 
-    # check that the results are consistent for inplace True/False: subset True
-    assert adatas[True].var_names.equals(dfs[True].index)
+    with subtests.test("consistency", subset=True):
+        assert adatas[True].var_names.equals(dfs[True].index)
 
 
 @pytest.mark.parametrize(

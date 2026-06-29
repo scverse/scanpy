@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -18,7 +17,6 @@ from testing.scanpy._helpers import (
     check_rep_mutation,
     check_rep_results,
 )
-from testing.scanpy._pytest.marks import skip_numba_0_63
 
 # TODO: Add support for sparse-in-dask
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
@@ -210,7 +208,6 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     ), "Wrong shape of PCA output in `X_pca`"
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
 @pytest.mark.parametrize(
@@ -218,9 +215,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     [
         pytest.param(False, dict(), "n_genes", id="no_hvg"),
         pytest.param(True, dict(), "n_hvgs", id="hvg_default"),
-        pytest.param(
-            True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
-        ),
+        pytest.param(True, dict(mask_var=None), "n_genes", id="hvg_opt_out"),
         pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
     ],
 )
@@ -247,19 +242,14 @@ def test_normalize_pearson_residuals_pca(
             adata, flavor="pearson_residuals", n_top_genes=n_hvgs
         )
 
-    ctx = (
-        pytest.warns(FutureWarning, match=r"use_highly_variable.*deprecated")
-        if "use_highly_variable" in params
-        else nullcontext()
+    # inplace=False
+    adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata.copy(), inplace=False, n_comps=n_comps, **params
     )
-    with ctx:  # inplace=False
-        adata_pca = sc.experimental.pp.normalize_pearson_residuals_pca(
-            adata.copy(), inplace=False, n_comps=n_comps, **params
-        )
-    with ctx:  # inplace=True modifies the input adata object
-        sc.experimental.pp.normalize_pearson_residuals_pca(
-            adata, inplace=True, n_comps=n_comps, **params
-        )
+    # inplace=True modifies the input adata object
+    sc.experimental.pp.normalize_pearson_residuals_pca(
+        adata, inplace=True, n_comps=n_comps, **params
+    )
 
     for ad, n_var_ret in (
         (adata_pca, n_var_copy),
@@ -283,7 +273,6 @@ def test_normalize_pearson_residuals_pca(
     np.testing.assert_array_equal(adata.obsm["X_pca"], adata_pca.obsm["X_pca"])
 
 
-@skip_numba_0_63
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
 def test_normalize_pearson_residuals_recipe(

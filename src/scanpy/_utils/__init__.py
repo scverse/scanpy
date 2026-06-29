@@ -10,7 +10,6 @@ import importlib.util
 import inspect
 import re
 from contextlib import suppress
-from enum import Enum
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import indent
@@ -34,8 +33,8 @@ from anndata._core.sparse_dataset import BaseCompressedSparseDataset
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
-from .._settings import settings
+from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
+from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
@@ -56,11 +55,10 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AssoResult",
-    "Empty",
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
-    "_empty",
+    "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
     "axis_mul_or_truediv",
@@ -72,6 +70,7 @@ __all__ = [
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
     "ensure_igraph",
+    "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
@@ -86,16 +85,6 @@ __all__ = [
 
 
 LegacyUnionType: type = type(Union[int, str])  # noqa: UP007
-
-
-class Empty(Enum):
-    token = 0
-
-    def __repr__(self) -> str:
-        return "_empty"
-
-
-_empty = Empty.token
 
 
 def ensure_igraph() -> None:
@@ -285,9 +274,19 @@ def check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
+    import scipy.sparse as sps
+
+    import scanpy as sc
+
+    if sc.settings.preset is sc.Preset.ScanpyV2Preview:
+        # TODO: replace all call sites with this line
+        return ig.Graph.Weighted_Adjacency(
+            sps.coo_matrix(adjacency) if isinstance(adjacency, SpBase) else adjacency,
+            mode=ig.ADJ_DIRECTED if directed else ig.ADJ_UNDIRECTED,
+        )
 
     sources, targets = adjacency.nonzero()
     weights = dematrix(adjacency[sources, targets]).ravel() if len(sources) else []
@@ -353,6 +352,8 @@ def compute_association_matrix_of_groups(
         reference labels, entries are proportional to degree of association.
 
     """
+    from .._settings import settings
+
     if normalization not in {"prediction", "reference"}:
         msg = '`normalization` needs to be either "prediction" or "reference".'
         raise ValueError(msg)
@@ -369,11 +370,11 @@ def compute_association_matrix_of_groups(
         if "?" in pred_group:
             pred_group = str(ipred_group)  # noqa: PLW2901
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
-        mask_pred = adata.obs[prediction].values == pred_group
+        mask_pred = adata.obs[prediction].to_numpy() == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
         for ref_group in adata.obs[reference].cat.categories:
-            mask_ref = (adata.obs[reference].values == ref_group).astype(np.int8)
+            mask_ref = (adata.obs[reference].to_numpy() == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
@@ -801,53 +802,49 @@ def select_groups(
     adata: AnnData,
     groups_order_subset: Iterable[str] | Literal["all"] = "all",
     key: str = "groups",
-) -> tuple[list[str], NDArray[np.bool_]]:
+) -> tuple[list[str], NDArray[np.bool]]:
     """Get subset of groups in adata.obs[key]."""
     groups_order = adata.obs[key].cat.categories
     if f"{key}_masks" in adata.uns:
         groups_masks_obs = adata.uns[f"{key}_masks"]
     else:
         groups_masks_obs = np.zeros(
-            (len(adata.obs[key].cat.categories), adata.obs[key].values.size), dtype=bool
+            (len(adata.obs[key].cat.categories), adata.obs[key].size), dtype=bool
         )
         for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if name in adata.obs[key].values:
-                mask_obs = name == adata.obs[key].values
+            if name in adata.obs[key].array:
+                mask_obs = name == adata.obs[key].to_numpy()
             else:
-                mask_obs = str(iname) == adata.obs[key].values
+                mask_obs = str(iname) == adata.obs[key].to_numpy()
             groups_masks_obs[iname] = mask_obs
-    groups_ids = list(range(len(groups_order)))
-    if groups_order_subset != "all":
-        groups_ids = []
-        for name in groups_order_subset:
-            groups_ids.append(
-                np.where(adata.obs[key].cat.categories.values == name)[0][0]
-            )
-        if len(groups_ids) == 0:
-            # fallback to index retrieval
-            groups_ids = np.where(
-                np.isin(
-                    np.arange(len(adata.obs[key].cat.categories)).astype(str),
-                    np.array(groups_order_subset),
-                )
-            )[0]
-        if len(groups_ids) == 0:
-            logg.debug(
-                f"{np.array(groups_order_subset)} invalid! specify valid "
-                f"groups_order (or indices) from {adata.obs[key].cat.categories}",
-            )
-            from sys import exit
+    if groups_order_subset == "all":
+        return groups_order.to_numpy(), groups_masks_obs
 
-            exit(0)
-        groups_masks_obs = groups_masks_obs[groups_ids]
-        groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
-    else:
-        groups_order_subset = groups_order.values
+    groups_ids = [
+        np.flatnonzero(adata.obs[key].cat.categories.array == name)[0]
+        for name in groups_order_subset
+    ]
+    if len(groups_ids) == 0:
+        # fallback to index retrieval
+        groups_ids = np.flatnonzero(
+            np.isin(
+                np.arange(len(adata.obs[key].cat.categories)).astype(str),
+                np.array(groups_order_subset),
+            )
+        )
+    if len(groups_ids) == 0:
+        msg = (
+            f"{np.array(groups_order_subset)} invalid! specify valid "
+            f"groups_order (or indices) from {adata.obs[key].cat.categories}",
+        )
+        raise RuntimeError(msg)
+    groups_masks_obs = groups_masks_obs[groups_ids]
+    groups_order_subset = adata.obs[key].cat.categories[groups_ids].to_numpy()
     return groups_order_subset, groups_masks_obs
 
 
-def check_presence_download(filename: Path, backup_url):
+def check_presence_download(filename: Path, backup_url: str):
     """Check if file is present otherwise download."""
     if not filename.is_file():
         from ..readwrite import _download

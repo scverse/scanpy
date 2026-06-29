@@ -11,8 +11,9 @@ from .._utils import _choose_graph
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from numpy.typing import NDArray
 
-    from .._compat import CSRBase, SpBase
+    from .._compat import CSBase, CSRBase
 
 
 def _choose_representation(
@@ -54,12 +55,13 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
         logg.info("    using data matrix X directly")
         return adata.X
 
-    if "X_pca" in adata.obsm:
-        if n_pcs is not None and n_pcs > adata.obsm["X_pca"].shape[1]:
-            msg = "`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    pca_key = next((k for k in ("pca", "X_pca") if k in adata.obsm), None)
+    if pca_key is not None:
+        if n_pcs is not None and n_pcs > adata.obsm[pca_key].shape[1]:
+            msg = f"`{pca_key}` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm["X_pca"][:, :n_pcs]
-        logg.info(f"    using 'X_pca' with n_pcs = {x.shape[1]}")
+        x = adata.obsm[pca_key][:, :n_pcs]
+        logg.info(f"    using {pca_key!r} with n_pcs = {x.shape[1]}")
         return x
 
     from ..preprocessing import pca
@@ -72,17 +74,17 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm["X_pca"]
+    return adata.obsm[settings.preset.pca.key_added or "X_pca"]
 
 
 def get_init_pos_from_paga(
     adata: AnnData,
-    adjacency: SpBase | None = None,
-    random_state=0,
+    *,
+    rng: np.random.Generator,
+    adjacency: CSBase | None = None,
     neighbors_key: str | None = None,
     obsp: str | None = None,
-):
-    np.random.seed(random_state)
+) -> NDArray[np.float64]:
     if adjacency is None:
         adjacency = _choose_graph(adata, obsp, neighbors_key)
     if "pos" not in adata.uns.get("paga", {}):
@@ -93,13 +95,16 @@ def get_init_pos_from_paga(
     pos = adata.uns["paga"]["pos"]
     connectivities_coarse = adata.uns["paga"]["connectivities"]
     init_pos = np.ones((adjacency.shape[0], 2))
-    for i, group_pos in enumerate(pos):
+    # spawn sub-rngs so this can maybe be parallelized without changing random number generation
+    for i, (group_pos, sub_rng) in enumerate(
+        zip(pos, rng.spawn(len(pos)), strict=True)
+    ):
         subset = (groups == groups.cat.categories[i]).values
         neighbors = connectivities_coarse[i].nonzero()
         if len(neighbors[1]) > 0:
             connectivities = connectivities_coarse[i][neighbors]
             nearest_neighbor = neighbors[1][np.argmax(connectivities)]
-            noise = np.random.random((len(subset[subset]), 2))
+            noise = sub_rng.random((len(subset[subset]), 2))
             dist = group_pos - pos[nearest_neighbor]
             noise = noise * dist
             init_pos[subset] = group_pos - 0.5 * dist + noise

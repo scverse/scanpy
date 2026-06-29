@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import sys
 from datetime import datetime
 from functools import partial
 from importlib.metadata import version as get_version
+from itertools import product
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -16,15 +16,11 @@ from docutils import nodes
 from packaging.version import Version
 from sphinxcontrib.katex import NODEJS_BINARY
 
-# Don’t use tkinter agg when importing scanpy → … → matplotlib
-matplotlib.use("agg")
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
-
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
 
 # -- General configuration ------------------------------------------------
@@ -72,12 +68,13 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_exec_jupyter",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
-    "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
+    "scverse_misc.sphinx_ext",
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_issues",
@@ -103,6 +100,14 @@ napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
+exec_jupyter_code = """
+# setup notebook backend
+import matplotlib
+matplotlib.use("module://matplotlib_inline.backend_inline")
+# import all slow optional imports before running code
+import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+"""
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
@@ -117,12 +122,14 @@ myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
 nb_output_stderr = "remove"
-nb_execution_mode = "off"
+nb_execution_mode = "cache"
+nb_execution_excludepatterns = [
+    f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
+]
 nb_merge_streams = True
 
-
-ogp_site_url = "https://scanpy.readthedocs.io/en/stable/"
-ogp_image = "https://scanpy.readthedocs.io/en/stable/_static/Scanpy_Logo_BrightFG.svg"
+ogp_site_url = "https://scanpy.scverse.org/en/stable/"
+ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
 
 typehints_defaults = "braces"
 always_use_bars_union = True  # Don’t use `Union` even when building with Python ≤3.14
@@ -133,17 +140,14 @@ pygments_dark_style = "native"
 katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
-    anndata=("https://anndata.readthedocs.io/en/stable/", None),
+    anndata=("https://anndata.scverse.org/en/stable/", None),
     bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
     cuml=("https://docs.rapids.ai/api/cuml/stable/", None),
     cycler=("https://matplotlib.org/cycler/", None),
     dask=("https://docs.dask.org/en/stable/", None),
     dask_ml=("https://ml.dask.org/", None),
     decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
-    fast_array_utils=(
-        "https://icb-fast-array-utils.readthedocs-hosted.com/en/stable/",
-        None,
-    ),
+    fast_array_utils=("https://fast-array-utils.scverse.org/en/stable/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
@@ -175,6 +179,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.downsample_counts": (["np", "sp[csr]"], []),
     "pp.filter_cells": (["np", "sp", "da"], []),
     "pp.filter_genes": (["np", "sp", "da"], []),
+    "pp.harmony_integrate": (["np"], []),
     "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
     "pp.log1p": (["np", "sp", "da"], []),
     "pp.neighbors": (["np", "sp"], []),
@@ -195,6 +200,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
     "tl.paga": (["np", "sp"], []),
     "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.score_genes": (["np", "sp"], []),
     "tl.tsne": (["np", "sp"], []),
     "tl.umap": (["np", "sp"], []),
 }
@@ -262,8 +268,10 @@ qualname_overrides = {
     "pandas.core.series.Series": "pandas.Series",
     # https://github.com/pandas-dev/pandas/issues/63810
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
-    "numpy.bool_": "numpy.bool",  # Since numpy 2, numpy.bool is the canonical dtype
-    "numpy.typing.ArrayLike": ("py:data", "numpy.typing.ArrayLike"),
+    **{
+        f"numpy.{prefix}typing.{name}": ("py:data", f"numpy.typing.{name}")
+        for name, prefix in product(["ArrayLike", "DTypeLike"], ["", "_"])
+    },
 }
 
 nitpick_ignore = [
@@ -284,6 +292,7 @@ nitpick_ignore = [
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),
+    ("py:class", "scanpy._settings.presets.Default"),
 ]
 
 # Options for plot examples

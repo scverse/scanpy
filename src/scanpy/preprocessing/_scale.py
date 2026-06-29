@@ -7,16 +7,17 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
+from .._settings import Default, settings
 from .._utils import (
     axis_mul_or_truediv,
     check_array_function_arguments,
     dematrix,
     raise_not_implemented_error_if_backed_type,
-    renamed_arg,
     view_to_actual,
 )
 from ..get import _check_mask, _get_obs_rep, _set_obs_rep
@@ -67,18 +68,16 @@ def clip_array(
     return x
 
 
-@renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
 def scale[A: _Array](
     data: AnnData | A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool] | str | None = None,
 ) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
 
@@ -97,6 +96,7 @@ def scale[A: _Array](
     zero_center
         If `False`, omit zero-centering variables, which allows to handle sparse
         input efficiently.
+        The default will be removed in scanpy 2.0.
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
@@ -144,11 +144,11 @@ def scale[A: _Array](
 def scale_array[A: _Array](
     x: A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask_obs: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
 ) -> (
     A
     | tuple[
@@ -160,6 +160,11 @@ def scale_array[A: _Array](
     if copy:
         x = x.copy()
 
+    if isinstance(zero_center, Default):
+        if settings.preset.scale.zero_center is None:
+            msg = "scale() missing 1 required keyword argument: 'zero_center'"
+            raise TypeError(msg)
+        zero_center = settings.preset.scale.zero_center
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
@@ -175,7 +180,7 @@ def scale_array[A: _Array](
     mask_obs = (
         # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
         # This is faster than the maskless `axis_mul_or_truediv` path.
-        np.ones(x.shape[0], dtype=np.bool_)
+        np.ones(x.shape[0], dtype=np.bool)
         if isinstance(x, CSRBase) and mask_obs is None and not zero_center
         else _check_mask(x, mask_obs, "obs")
     )
@@ -219,7 +224,7 @@ def scale_array[A: _Array](
 
 def scale_array_masked[A: _Array](
     x: A,
-    mask_obs: NDArray[np.bool_],
+    mask_obs: NDArray[np.bool],
     *,
     zero_center: bool = True,
     max_value: float | None = None,
@@ -268,7 +273,7 @@ def scale_and_clip_csr(
     data: NDArray[np.floating],
     *,
     std: NDArray[np.floating],
-    mask_obs: NDArray[np.bool_],
+    mask_obs: NDArray[np.bool],
     max_value: float | None,
 ) -> None:
     for i in numba.prange(len(indptr) - 1):
@@ -284,12 +289,12 @@ def scale_and_clip_csr(
 def scale_anndata(
     adata: AnnData,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool] | str | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")

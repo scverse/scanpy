@@ -29,8 +29,9 @@ def mk_knn_matrix(
     style: Literal["basic", "rapids", "sklearn"],
     duplicates: bool = False,
 ) -> CSRBase:
+    rng = np.random.default_rng()
     n_col = n_neighbors + (1 if style == "sklearn" else 0)
-    dists = np.abs(np.random.randn(n_obs, n_col)) + 1e-8
+    dists = np.abs(rng.standard_normal((n_obs, n_col))) + 1e-8
     idxs = np.arange(n_obs * n_col).reshape((n_col, n_obs)).T
     if style == "rapids":
         idxs[:, 0] += 1  # does not include cell itself
@@ -80,7 +81,9 @@ def test_ind_dist_shortcut_manual(
         pytest.param(
             lambda n_obs, n_neighbors: KNeighborsTransformer(
                 n_neighbors=n_neighbors
-            ).fit_transform(np.random.randn(n_obs, n_obs // 4)),
+            ).fit_transform(
+                np.random.default_rng().standard_normal((n_obs, n_obs // 4))
+            ),
             id="sklearn_auto",
         )
     ],

@@ -7,12 +7,13 @@ import numba
 import numpy as np
 import pandas as pd
 from fast_array_utils import stats
+from fast_array_utils.numba import njit
 from scipy import sparse
 
 from scanpy.get import _get_obs_rep
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
-from .._compat import CSBase, CSRBase, DaskArray, njit, warn
+from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -110,7 +111,7 @@ def describe_obs(  # noqa: PLR0913
             )
     for qc_var in qc_vars:
         obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
-            x[:, adata.var[qc_var].values], axis=1
+            x[:, adata.var[qc_var].to_numpy()], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -251,8 +252,7 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         import seaborn as sns
@@ -267,8 +267,7 @@ def calculate_qc_metrics(
             kind="hex",
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sns.histplot(pbmc.obs["pct_counts_mito"])
 

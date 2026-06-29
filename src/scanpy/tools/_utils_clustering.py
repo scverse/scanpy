@@ -19,7 +19,7 @@ def rename_groups(
     *,
     key_added: str | None,
     restrict_categories: Iterable[str],
-    restrict_indices: NDArray[np.bool_],
+    restrict_indices: NDArray[np.bool],
     groups: NDArray,
 ) -> pd.Series[str]:
     key_added = f"{restrict_key}_R" if key_added is None else key_added
@@ -36,7 +36,7 @@ def restrict_adjacency(
     *,
     restrict_categories: Sequence[str],
     adjacency: CSBase,
-) -> tuple[CSBase, NDArray[np.bool_]]:
+) -> tuple[CSBase, NDArray[np.bool]]:
     if not isinstance(restrict_categories[0], str):
         msg = "You need to use strings to label categories, e.g. '1' instead of 1."
         raise ValueError(msg)
@@ -44,7 +44,7 @@ def restrict_adjacency(
         if c not in adata.obs[restrict_key].cat.categories:
             msg = f"{c!r} is not a valid category for {restrict_key!r}"
             raise ValueError(msg)
-    restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
+    restrict_indices = adata.obs[restrict_key].isin(restrict_categories).to_numpy()
     adjacency = adjacency[restrict_indices, :]
     adjacency = adjacency[:, restrict_indices]
     return adjacency, restrict_indices

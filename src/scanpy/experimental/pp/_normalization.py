@@ -8,7 +8,9 @@ from anndata import AnnData
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
-from ..._utils import _doc_params, _empty, check_nonnegative_integers, view_to_actual
+from ..._settings import Default
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -18,15 +20,15 @@ from ...experimental._docs import (
     doc_layer,
     doc_pca_chunk,
 )
-from ...get import _get_obs_rep, _set_obs_rep
-from ...preprocessing._docs import doc_mask_var_hvg
-from ...preprocessing._pca import _handle_mask_var, pca
+from ...get import _check_mask, _get_obs_rep, _set_obs_rep
+from ...preprocessing._docs import doc_mask_var
+from ...preprocessing._pca import pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from ..._utils import Empty
+    from ..._utils.random import RNGLike, SeedLike
 
 
 def _pearson_residuals(
@@ -156,20 +158,22 @@ def normalize_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     pca_chunk=doc_pca_chunk,
-    mask_var_hvg=doc_mask_var_hvg,
+    mask_var=doc_mask_var,
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
+@_accepts_legacy_random_state(0)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
     theta: float = 100,
     clip: float | None = None,
     n_comps: int | None = 50,
-    random_state: float = 0,
+    rng: SeedLike | RNGLike | None = None,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Empty = _empty,
-    use_highly_variable: bool | None = None,
+    mask_var: np.ndarray | str | None | Default = Default(
+        "adata.var.get('highly_variable')"
+    ),
     check_values: bool = True,
     inplace: bool = True,
 ) -> AnnData | None:
@@ -187,7 +191,7 @@ def normalize_pearson_residuals_pca(
     {adata}
     {dist_params}
     {pca_chunk}
-    {mask_var_hvg}
+    {mask_var}
     {check_values}
     {inplace}
 
@@ -208,7 +212,7 @@ def normalize_pearson_residuals_pca(
         residual normalization.
     `.varm['PCs']`
         The principal components containing the loadings. When `inplace=True` and
-        `use_highly_variable=True`, this will contain empty rows for the genes not
+        `mask_var is not None`, this will contain empty rows for the genes not
         selected.
     `.uns['pca']['variance_ratio']`
         Ratio of explained variance.
@@ -216,11 +220,9 @@ def normalize_pearson_residuals_pca(
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
-    # Unify new mask argument and deprecated use_highly_varible argument
-    _, mask_var = _handle_mask_var(
-        adata, mask_var, use_highly_variable=use_highly_variable
-    )
-    del use_highly_variable
+    if isinstance(mask_var, Default):
+        mask_var = "highly_variable" if "highly_variable" in adata.var else None
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if mask_var is not None:
         adata_sub = adata[:, mask_var].copy()
@@ -233,7 +235,7 @@ def normalize_pearson_residuals_pca(
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
     n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
 
     if inplace:

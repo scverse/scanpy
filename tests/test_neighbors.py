@@ -5,13 +5,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
-from packaging.version import Version
 from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
 from scanpy import Neighbors
-from scanpy._compat import CSBase, pkg_version
+from scanpy._compat import CSBase
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
@@ -19,12 +18,6 @@ if TYPE_CHECKING:
 
     from pytest_mock import MockerFixture
 
-# https://github.com/lmcinnes/umap/issues/1216
-XFAIL_IF_UMAP_BROKEN = pytest.mark.xfail(
-    pkg_version("umap-learn") < Version("0.6a0.dev0")
-    and pkg_version("numba") >= Version("0.62.0rc1"),
-    reason="umap<0.6 is broken with numba≥0.62.0rc1",
-)
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -207,7 +200,6 @@ def test_distances_all(neigh: Neighbors, transformer, knn):
             connectivities_umap,
             transitions_umap,
             transitions_sym_umap,
-            marks=XFAIL_IF_UMAP_BROKEN,
             id="umap",
         ),
         pytest.param(
@@ -257,7 +249,8 @@ def test_metrics_argument():
 
 
 def test_use_rep_argument():
-    adata = AnnData(np.random.randn(30, 300))
+    rng = np.random.default_rng()
+    adata = AnnData(rng.standard_normal((30, 300)))
     sc.pp.pca(adata)
     neigh_pca = Neighbors(adata)
     neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")

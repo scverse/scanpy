@@ -6,16 +6,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "basis", "adjusted_basis", "knn", "sigma", "approx", "alpha", "batch_size"
-)
 @doctest_needs("scanorama")
 def scanorama_integrate(
     adata: AnnData,
@@ -109,8 +105,8 @@ def scanorama_integrate(
     try:
         import scanorama
     except ImportError as e:
-        msg = "\nplease install Scanorama:\n\n\tpip install scanorama"
-        raise ImportError(msg) from e
+        e.add_note("Please install `scanorama` and try again.")
+        raise
 
     # Get batch indices in linear time.
     curr_batch = None

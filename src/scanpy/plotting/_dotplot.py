@@ -6,9 +6,9 @@ import numpy as np
 from matplotlib import colormaps
 
 from .. import logging as logg
-from .._compat import old_positionals, warn
-from .._settings import settings
-from .._utils import _doc_params, _empty
+from .._compat import warn
+from .._settings import Default, settings
+from .._utils import _doc_params
 from ._baseplot_class import BasePlot, doc_common_groupby_plot_args
 from ._docs import doc_common_plot_args, doc_show_save_ax, doc_vboundnorm
 from ._utils import (
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap, Normalize
 
-    from .._utils import Empty
     from ._baseplot_class import _VarNames
     from ._utils import ColorLike, _AxesSubplot
 
@@ -113,29 +112,6 @@ class DotPlot(BasePlot):
     DEFAULT_PLOT_X_PADDING = 0.8  # a unit is the distance between two x-axis ticks
     DEFAULT_PLOT_Y_PADDING = 1.0  # a unit is the distance between two y-axis ticks
 
-    @old_positionals(
-        "use_raw",
-        "log",
-        "num_categories",
-        "categories_order",
-        "title",
-        "figsize",
-        "gene_symbols",
-        "var_group_positions",
-        "var_group_labels",
-        "var_group_rotation",
-        "layer",
-        "expression_cutoff",
-        "mean_only_expressed",
-        "standard_scale",
-        "dot_color_df",
-        "dot_size_df",
-        "ax",
-        "vmin",
-        "vmax",
-        "vcenter",
-        "norm",
-    )
     def __init__(  # noqa: PLR0913
         self,
         adata: AnnData,
@@ -333,35 +309,21 @@ class DotPlot(BasePlot):
 
         return dot_color_df, dot_size_df
 
-    @old_positionals(
-        "cmap",
-        "color_on",
-        "dot_max",
-        "dot_min",
-        "smallest_dot",
-        "largest_dot",
-        "dot_edge_color",
-        "dot_edge_lw",
-        "size_exponent",
-        "grid",
-        "x_padding",
-        "y_padding",
-    )
     def style(  # noqa: PLR0913
         self,
         *,
-        cmap: Colormap | str | None | Empty = _empty,
-        color_on: Literal["dot", "square"] | Empty = _empty,
-        dot_max: float | None | Empty = _empty,
-        dot_min: float | None | Empty = _empty,
-        smallest_dot: float | Empty = _empty,
-        largest_dot: float | Empty = _empty,
-        dot_edge_color: ColorLike | None | Empty = _empty,
-        dot_edge_lw: float | None | Empty = _empty,
-        size_exponent: float | Empty = _empty,
-        grid: bool | Empty = _empty,
-        x_padding: float | Empty = _empty,
-        y_padding: float | Empty = _empty,
+        cmap: Colormap | str | None | Default = Default("no change"),
+        color_on: Literal["dot", "square"] | Default = Default("no change"),
+        dot_max: float | None | Default = Default("no change"),
+        dot_min: float | None | Default = Default("no change"),
+        smallest_dot: float | Default = Default("no change"),
+        largest_dot: float | Default = Default("no change"),
+        dot_edge_color: ColorLike | None | Default = Default("no change"),
+        dot_edge_lw: float | None | Default = Default("no change"),
+        size_exponent: float | Default = Default("no change"),
+        grid: bool | Default = Default("no change"),
+        x_padding: float | Default = Default("no change"),
+        y_padding: float | Default = Default("no change"),
     ) -> Self:
         r"""Modify plot visual parameters.
 
@@ -435,39 +397,31 @@ class DotPlot(BasePlot):
         """
         super().style(cmap=cmap)
 
-        if dot_max is not _empty:
+        if not isinstance(dot_max, Default):
             self.dot_max = dot_max
-        if dot_min is not _empty:
+        if not isinstance(dot_min, Default):
             self.dot_min = dot_min
-        if smallest_dot is not _empty:
+        if not isinstance(smallest_dot, Default):
             self.smallest_dot = smallest_dot
-        if largest_dot is not _empty:
+        if not isinstance(largest_dot, Default):
             self.largest_dot = largest_dot
-        if color_on is not _empty:
+        if not isinstance(color_on, Default):
             self.color_on = color_on
-        if size_exponent is not _empty:
+        if not isinstance(size_exponent, Default):
             self.size_exponent = size_exponent
-        if dot_edge_color is not _empty:
+        if not isinstance(dot_edge_color, Default):
             self.dot_edge_color = dot_edge_color
-        if dot_edge_lw is not _empty:
+        if not isinstance(dot_edge_lw, Default):
             self.dot_edge_lw = dot_edge_lw
-        if grid is not _empty:
+        if not isinstance(grid, Default):
             self.grid = grid
-        if x_padding is not _empty:
+        if not isinstance(x_padding, Default):
             self.plot_x_padding = x_padding
-        if y_padding is not _empty:
+        if not isinstance(y_padding, Default):
             self.plot_y_padding = y_padding
 
         return self
 
-    @old_positionals(
-        "show",
-        "show_size_legend",
-        "show_colorbar",
-        "size_title",
-        "colorbar_title",
-        "width",
-    )
     def legend(
         self,
         *,
@@ -654,8 +608,8 @@ class DotPlot(BasePlot):
         )
 
         # Create a dedicated normalizer for the legend
-        vmin = self.dot_color_df.values.min()
-        vmax = self.dot_color_df.values.max()
+        vmin = self.dot_color_df.to_numpy().min()
+        vmax = self.dot_color_df.to_numpy().max()
         legend_norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
         for i, group_name in enumerate(groups_to_plot):
@@ -845,8 +799,8 @@ class DotPlot(BasePlot):
         y, x = np.indices(dot_color.shape)
         y = y.flatten() + 0.5
         x = x.flatten() + 0.5
-        frac = dot_size.values.flatten()
-        mean_flat = dot_color.values.flatten()
+        frac = dot_size.to_numpy().flatten()
+        mean_flat = dot_color.to_numpy().flatten()
         cmap = colormaps.get_cmap(cmap)
         if dot_max is None:
             dot_max = np.ceil(max(frac) * 10) / 10
@@ -990,22 +944,6 @@ class DotPlot(BasePlot):
         return normalize, dot_min, dot_max
 
 
-@old_positionals(
-    "use_raw",
-    "log",
-    "num_categories",
-    "expression_cutoff",
-    "mean_only_expressed",
-    "cmap",
-    "dot_max",
-    "dot_min",
-    "standard_scale",
-    "smallest_dot",
-    "title",
-    "colorbar_title",
-    "size_title",
-    # No need to have backwards compat for > 16 positional parameters
-)
 @_doc_params(
     show_save_ax=doc_show_save_ax,
     common_plot_args=doc_common_plot_args,
@@ -1125,8 +1063,7 @@ def dotplot(  # noqa: PLR0913
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category `'bulk_labels'`.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1135,8 +1072,7 @@ def dotplot(  # noqa: PLR0913
 
     Grouping `var_names` as well and specifying group colors for `groupby`:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         from matplotlib import cm
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
@@ -1145,8 +1081,7 @@ def dotplot(  # noqa: PLR0913
 
     Get `DotPlot` object for fine tuning
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
         dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
@@ -1209,7 +1144,7 @@ def dotplot(  # noqa: PLR0913
         dot_max=dot_max,
         dot_min=dot_min,
         smallest_dot=smallest_dot,
-        dot_edge_lw=kwds.pop("linewidth", _empty),
+        dot_edge_lw=kwds.pop("linewidth", Default()),
     ).legend(
         colorbar_title=colorbar_title, size_title=size_title, width=2.0
     )  # Width 2.0 to avoid size legend circles to overlap

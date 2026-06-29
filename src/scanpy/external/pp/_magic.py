@@ -124,7 +124,7 @@ def magic(  # noqa: PLR0913
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.paul15()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
     >>> adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
     >>> adata_magic.shape
@@ -140,8 +140,8 @@ def magic(  # noqa: PLR0913
     try:
         from magic import MAGIC
     except ImportError as e:
-        msg = "Please install magic package via `pip install magic-impute`"
-        raise ImportError(msg) from e
+        e.add_note("Please install `magic-impute` and try again.")
+        raise
     else:
         if pkg_version("magic-impute") < Version(MIN_VERSION):
             msg = (

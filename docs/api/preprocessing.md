@@ -15,7 +15,7 @@ Any transformation of the data matrix that is not a *tool*. Other than *tools*, 
 ## Basic Preprocessing
 
 For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
-{func}`~scanpy.pl.filter_genes_dispersion` in {mod}`scanpy.pl`.
+{func}`~scanpy.pl.highly_variable_genes` in {mod}`scanpy.pl`.
 
 ```{eval-rst}
 .. autosummary::
@@ -47,9 +47,12 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    pp.recipe_seurat
 ```
 
-## Batch effect correction
+(pp-data-integration)=
 
-Also see {ref}`data-integration`. Note that a simple batch correction method is available via {func}`pp.regress_out`. Checkout {mod}`scanpy.external` for more.
+## Data integration
+
+Batch effect correction and other data integration.
+Note that a simple batch correction method is available via {func}`pp.regress_out`.
 
 ```{eval-rst}
 .. autosummary::
@@ -57,7 +60,10 @@ Also see {ref}`data-integration`. Note that a simple batch correction method is 
    :toctree: generated/
 
    pp.combat
+   pp.harmony_integrate
 ```
+
+Also see {ref}`data integration tools <data-integration>` and external {ref}`external data integration <external-data-integration>`.
 
 ## Doublet detection
 

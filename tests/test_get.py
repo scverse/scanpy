@@ -204,12 +204,15 @@ def test_column_content():
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
-    query = ["CST3", "NKG7", "GNLY", "louvain", "n_counts", "n_genes"]
+    cols = ["louvain", "n_counts", "n_genes"]
+    query = [*cols, "CST3", "NKG7", "GNLY"]
     df = sc.get.obs_df(adata, query)
     for col in query:
         assert col in df
         np.testing.assert_array_equal(query, df.columns)
-        np.testing.assert_array_equal(df[col].values, adata.obs_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values, adata.obs[col] if col in cols else adata[:, col].X.ravel()
+        )
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
@@ -217,7 +220,10 @@ def test_column_content():
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:
-        np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values,
+            adata[col, :].X.ravel() if col in cell_ids else adata.var[col],
+        )
 
 
 def test_var_df(adata: AnnData):
@@ -472,7 +478,8 @@ def test_shared_key_errors(shared_key_adata):
 ##############################
 
 
-def test_rank_genes_groups_df():
+@pytest.fixture(scope="module")
+def adata_rgg_module() -> AnnData:
     a = np.zeros((20, 3))
     a[:10, 0] = 5
     adata = AnnData(
@@ -484,32 +491,51 @@ def test_rank_genes_groups_df():
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
     sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
-    dedf = sc.get.rank_genes_groups_df(adata, "a")
+    return adata
+
+
+@pytest.fixture
+def adata_rgg(adata_rgg_module: AnnData) -> AnnData:
+    return adata_rgg_module.copy()
+
+
+def test_rank_genes_groups_df(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
     assert dedf["pvals"].value_counts()[1.0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1).shape[0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_min=0.1).shape[0] == 1
-    assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
-    del adata.uns["rank_genes_groups"]
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_max=0.1).shape[0] == 2
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_min=0.1).shape[0] == 1
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", pval_cutoff=0.9).shape[0] == 1
+
+
+def test_rank_genes_groups_df_error(adata_rgg: AnnData):
+    with pytest.raises(KeyError):
+        sc.get.rank_genes_groups_df(adata_rgg, "missing")
+
+
+def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
+    del adata_rgg.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata,
+        adata_rgg,
         groupby="celltype",
         method="wilcoxon",
         key_added="different_key",
         pts=True,
     )
-    with pytest.raises(KeyError):
-        sc.get.rank_genes_groups_df(adata, "a")
-    dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
+    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different_key")
+
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert "pct_nz_group" in dedf2.columns
     assert "pct_nz_reference" in dedf2.columns
 
-    # get all groups
-    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
-    assert "a" in dedf3["group"].unique()
-    assert "b" in dedf3["group"].unique()
-    adata.var_names.name = "pr1388"
-    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+
+@pytest.mark.parametrize("index_name", [None, "pr1388"])
+def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | None):
+    if index_name is not None:
+        adata_rgg.var_names.name = index_name
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, group=None)
+    assert "a" in dedf["group"].unique()
+    assert "b" in dedf["group"].unique()
 
 
 ######################

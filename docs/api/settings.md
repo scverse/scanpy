@@ -26,9 +26,21 @@ An object that allows configuring Scanpy.
    :toctree: ../generated/
 
    settings
+   settings.override
 ```
 
 Some selected settings are discussed in the following.
+
+Presets allow to set the behavior of many scanpy functions at once:
+
+```{eval-rst}
+.. autosummary::
+   :signatures: none
+   :toctree: ../generated/
+   :template: enum
+
+   Preset
+```
 
 Verbosity controls the amount of logging output:
 

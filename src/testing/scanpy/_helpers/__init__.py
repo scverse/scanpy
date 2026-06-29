@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import AbstractContextManager, contextmanager
-from dataclasses import dataclass
+from contextlib import contextmanager
 from importlib.metadata import version
 from importlib.util import find_spec
 from itertools import permutations
@@ -20,7 +19,7 @@ import scanpy as sc
 from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, MutableSequence
+    from collections.abc import Iterable
 
     from numpy.typing import NDArray
 
@@ -149,22 +148,6 @@ def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
     return as_sparse_dask_matrix(*args, **kwargs)
 
 
-@dataclass(init=False)
-class MultiContext(AbstractContextManager):
-    contexts: MutableSequence[AbstractContextManager]
-
-    def __init__(self, *contexts: AbstractContextManager):
-        self.contexts = list(contexts)
-
-    def __enter__(self):
-        for ctx in self.contexts:
-            ctx.__enter__()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        for ctx in reversed(self.contexts):
-            ctx.__exit__(exc_type, exc_value, traceback)
-
-
 @contextmanager
 def maybe_dask_process_context():
     """Switch to a single-threaded scheduler for tests that use numba.
@@ -186,7 +169,7 @@ def maybe_dask_process_context():
         dask.config.set(scheduler=prev_scheduler)
 
 
-def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool_]:
+def random_mask(n: int, *, rng: np.random.Generator | None = None) -> NDArray[np.bool]:
     """Generate a random mask.
 
     Makes sure that at least 2 mask entries are True and at least 2 are False.

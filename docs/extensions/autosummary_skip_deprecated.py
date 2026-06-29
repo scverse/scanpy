@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sphinx.util.typing import ExtensionMetadata
+
 if TYPE_CHECKING:
     from typing import Literal
 
@@ -27,6 +29,7 @@ def skip_deprecated(  # noqa: PLR0917
     return None
 
 
-def setup(app: Sphinx) -> None:
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     app.connect("autodoc-skip-member", skip_deprecated)
+    return ExtensionMetadata(parallel_read_safe=True)

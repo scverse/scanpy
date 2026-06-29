@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import scanpy as sc
+from scanpy._compat import CSRBase
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -61,7 +62,10 @@ def test_read_10x(
 
     # Drop genome column for comparing v3
     if "3.0.0" in str(h5_path):
-        h5.var.drop(columns="genome", inplace=True)
+        del h5.var["genome"]
+
+    # Verify CSR format (not CSC from transpose)
+    assert isinstance(mtx.X, CSRBase), f"Expected CSR matrix, got {type(mtx.X)}"
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)
@@ -174,7 +178,7 @@ def visium_pth(request, tmp_path) -> Path:
         pytest.fail("add branch for new visium version")
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 def test_read_visium_counts(visium_pth):
     """Test checking that read_visium reads the right genome."""
     spec_genome_v3 = sc.read_visium(visium_pth, genome="GRCh38")
