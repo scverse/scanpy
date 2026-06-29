@@ -252,8 +252,7 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         import seaborn as sns
@@ -268,8 +267,7 @@ def calculate_qc_metrics(
             kind="hex",
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sns.histplot(pbmc.obs["pct_counts_mito"])
 
