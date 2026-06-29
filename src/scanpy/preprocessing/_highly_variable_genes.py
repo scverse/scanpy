@@ -183,9 +183,8 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
         )
         aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
-            materialize_as_ndarray(
-                *(aggregated_mean_var.layers[l] for l in ["mean", "var"])
-            )
+            materialize_as_ndarray(aggregated_mean_var.layers[l])
+            for l in ["mean", "var"]
         )
     else:
         aggregated_mean_var = AnnData(
