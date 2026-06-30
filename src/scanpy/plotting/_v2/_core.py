@@ -26,11 +26,13 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "diffmap",
     "heatmap",
     "matrixplot",
     "scatter",
     "stacked_violin",
     "tracksplot",
+    "tsne",
     "umap",
     "violin",
 ]
@@ -72,13 +74,14 @@ def scatter(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
-        hv_sc.scatter(adata, A.X[:, ["PSAP", "C1QA"]], color=A.obs["bulk_labels"]).opts(
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.scatter(adata, A.X[:, ["PSAP", "C1QA"]], color=A.obs["bulk_labels"]).opts(
             cmap="tab10", show_legend=False
         )
 
@@ -110,24 +113,27 @@ def _scatter(
     return scatter(adata, kdims, vdims, color=color)
 
 
-umap = partial(_scatter, A.obsm["X_umap"][:, [0, 1]])
-umap.__doc__ = """\
-Shortcut for a UMAP scatter plot.
+def _embedding(key: str, name: str, /) -> partial:
+    p = partial(_scatter, A.obsm[key][:, [0, 1]])
+    p.__doc__ = f"""\
+Shortcut for a {name} scatter plot.
 
-See :func:`~hv_anndata.plotting.scanpy.scatter`.
+See :func:`scanpy.pl.scatter`.
 
 Examples
 --------
 
 ..  holoviews::
 
-    import hv_anndata.plotting.scanpy as hv_sc
-    from hv_anndata import data, register, A
+    import scanpy as sc
+    from hv_anndata import register, A
 
+    sc.settings.preset = sc.Preset.ScanpyV2Preview
     register()
 
-    adata = data.pbmc68k_processed()
-    hv_sc.umap(adata, color=A.obs["bulk_labels"]).opts(
+    adata = sc.datasets.pbmc68k_reduced()
+    sc.tl.{key}(adata)
+    sc.pl.{key}(adata, color=A.obs["bulk_labels"]).opts(
         cmap="tab10", show_legend=False
     )
 
@@ -135,6 +141,12 @@ Returns
 -------
 A scatter plot object
 """
+    return p
+
+
+umap = _embedding("umap", "UMAP")
+tsne = _embedding("tsne", "t-SNE")
+diffmap = _embedding("diffmap", "diffusion map")
 
 
 def heatmap(
@@ -183,14 +195,16 @@ def heatmap(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        import holoviews as hv
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
-        hv_sc.heatmap(
+        sc.pl.heatmap(
             adata[:, markers], A.X, [A.obs["n_counts"]], add_dendrogram="obs"
         ).opts(hv.opts.HeatMap(xticks=0, aspect=2))
 
@@ -243,14 +257,16 @@ def tracksplot(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        import holoviews as hv
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
-        hv_sc.tracksplot(
+        sc.pl.tracksplot(
             adata, A.X[:, markers], color=A.obs["bulk_labels"]
         ).opts(hv.opts.Curve(aspect=20))
 
@@ -354,25 +370,28 @@ def violin(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        import holoviews as hv
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
-        hv_sc.violin(adata, A.obs[["percent_mito", "n_counts", "n_genes"]]).opts(
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, A.obs[["percent_mito", "n_counts", "n_genes"]]).opts(
             hv.opts.Violin(ylim=(0, None))
         )
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
-        hv_sc.violin(adata, A.obs["S_score"], color=A.obs["bulk_labels"]).opts(
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.violin(adata, A.obs["S_score"], color=A.obs["bulk_labels"]).opts(
             width=500, xrotation=30
         )
 
@@ -417,14 +436,16 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        import holoviews as hv
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
-        hv_sc.stacked_violin(
+        sc.pl.stacked_violin(
             adata[:, markers], A.var.index, A.obs["bulk_labels"]
         ).opts(hv.opts.Violin(aspect="square"))
 
@@ -493,14 +514,15 @@ def matrixplot(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
-        hv_sc.matrixplot(
+        sc.pl.matrixplot(
             adata[:, markers], A.obs["bulk_labels"], data=A.layers["counts"],
             add_totals=True
         )

@@ -20,8 +20,6 @@ def highest_expr_genes(
 ) -> hv.BoxWhisker:
     """Get ``n_top`` genes by mean expression.
 
-    Uses :func:`hv_anndata.plotting.utils.highest_expr_genes` internally.
-
     Parameters
     ----------
     adata
@@ -42,13 +40,14 @@ def highest_expr_genes(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
-        hv_sc.highest_expr_genes(adata, layer="counts")
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.highest_expr_genes(adata, layer="counts")
 
     """
     hxg = _highest_expr_genes(adata, n_top, layer=layer, gene_symbols=gene_symbols)
@@ -77,15 +76,14 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
     ..  holoviews::
 
         import scanpy as sc
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
-        sc.pp.highly_variable_genes(adata)
-
-        hv_sc.highly_variable_genes(adata)
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pp.highly_variable_genes(adata, layer="counts")  # TODO: this should be the default
+        sc.pl.highly_variable_genes(adata)
 
     """
     d1, d2 = (
@@ -135,16 +133,15 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
     ..  holoviews::
 
         import scanpy as sc
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         adata_sim = sc.pp.scrublet_simulate_doublets(adata)
         sc.pp.scrublet(adata, adata_sim)
-
-        hv_sc.scrublet_score_distribution(adata)
+        sc.pl.scrublet_score_distribution(adata)
 
     """
     labels = dict(

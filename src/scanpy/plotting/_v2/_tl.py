@@ -56,16 +56,15 @@ def draw_graph(
         :backends: bokeh
 
         import scanpy as sc
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         sc.pp.neighbors(adata)
-
-        hv_sc.draw_graph(
-            adata, A.obsm["X_umap"], "distances", [A.obs["bulk_labels"]]
+        sc.pl.draw_graph(
+            adata, A.obsm["umap"], "distances", [A.obs["bulk_labels"]]
         ).opts(
             node_color=A.obs["bulk_labels"],
             node_cmap="tab10",
@@ -126,15 +125,17 @@ def ranking(
 
     ..  holoviews::
 
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        import scanpy as sc
+        import holoviews as hv
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         hv.Layout([
-            hv_sc.ranking(adata, A.varm["PCs"][0]).opts(aspect=1.2),
-            hv_sc.ranking(adata, A.varm["PCs"][0], include_lowest=False).opts(aspect=0.6),
+            sc.pl.ranking(adata, A.varm["PCs"][0]).opts(aspect=1.2),
+            sc.pl.ranking(adata, A.varm["PCs"][0], include_lowest=False).opts(aspect=0.6),
         ]).opts(shared_axes=False)
 
     """
@@ -186,7 +187,7 @@ def embedding_density(
     adata
         Annotated data matrix.
     basis
-        Embedding to plot (e.g. ``A.obsm["X_umap"]``).
+        Embedding to plot (e.g. ``A.obsm["umap"]``).
     groupby
         ``groupby`` as specified in :func:`scanpy.tl.embedding_density`.
     key
@@ -202,14 +203,14 @@ def embedding_density(
     ..  holoviews::
 
         import scanpy as sc
-        import hv_anndata.plotting.scanpy as hv_sc
-        from hv_anndata import data, register, A
+        from hv_anndata import register, A
 
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
         register()
 
-        adata = data.pbmc68k_processed()
+        adata = sc.datasets.pbmc68k_reduced()
         sc.tl.embedding_density(adata, basis="umap", groupby="phase")
-        hv_sc.embedding_density(adata, A.obsm["X_umap"], groupby="phase")
+        sc.pl.embedding_density(adata, A.obsm["umap"], groupby="phase")
 
     """
     basis_name = basis.k.removeprefix("X_")

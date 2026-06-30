@@ -1424,6 +1424,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.umap(adata)
         sc.tl.embedding_density(adata, basis='umap', groupby='phase')

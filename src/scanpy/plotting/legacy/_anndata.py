@@ -164,6 +164,7 @@ def scatter(  # noqa: PLR0913
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.scatter(adata, x="n_counts", y="n_genes", color="bulk_labels")
 
@@ -618,6 +619,7 @@ def ranking(  # noqa: PLR0912, PLR0913
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         adata_hv = adata[:, adata.var["highly_variable"]].copy()
         sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2])
@@ -799,6 +801,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, keys='S_score')
 
@@ -1117,6 +1120,7 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
@@ -1485,6 +1489,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)

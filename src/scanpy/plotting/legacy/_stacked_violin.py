@@ -711,6 +711,7 @@ def stacked_violin(  # noqa: PLR0913
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)

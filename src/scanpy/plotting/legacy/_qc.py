@@ -71,6 +71,7 @@ def highest_expr_genes(
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc3k()
         sc.pl.highest_expr_genes(adata)
 
