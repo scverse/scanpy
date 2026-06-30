@@ -2299,7 +2299,7 @@ def _get_dendrogram_key(
             raise AssertionError(msg)
 
     if dendrogram_key not in adata.uns:
-        from ..tools._dendrogram import dendrogram
+        from ...tools._dendrogram import dendrogram
 
         logg.warning(
             f"dendrogram data not found (using key={dendrogram_key}). "
