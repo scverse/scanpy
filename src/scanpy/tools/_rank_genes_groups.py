@@ -638,7 +638,7 @@ class _RankGenes:
             copy_pvalues=corr_method == "benjamini-hochberg",
         )
 
-    def compute_statistics(  # noqa: PLR0912
+    def compute_statistics(
         self,
         method: DETest,
         *,
