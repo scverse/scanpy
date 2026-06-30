@@ -708,8 +708,7 @@ def stacked_violin(  # noqa: PLR0913
     --------
     Visualization of violin plots of a few genes grouped by the category `bulk_labels`:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -719,16 +718,14 @@ def stacked_violin(  # noqa: PLR0913
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get StackedViolin object for fine tuning
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         vp = sc.pl.stacked_violin(adata, markers, 'bulk_labels', return_fig=True)
         vp.add_totals().style(ylim=(0,5)).show()

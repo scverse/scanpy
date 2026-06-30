@@ -45,8 +45,7 @@ def highly_variable_genes(  # noqa: PLR0912
     --------
     Compute and plot highly variable genes from raw PBMC data.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k()
@@ -57,8 +56,7 @@ def highly_variable_genes(  # noqa: PLR0912
 
     Plot on logarithmic axes.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.highly_variable_genes(adata, log=True)
 

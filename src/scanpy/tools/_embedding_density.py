@@ -88,8 +88,7 @@ def embedding_density(  # noqa: PLR0912
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -99,8 +98,7 @@ def embedding_density(  # noqa: PLR0912
             adata, basis='umap', key='umap_density_phase', group='G1'
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding_density(
             adata, basis='umap', key='umap_density_phase', group='S'

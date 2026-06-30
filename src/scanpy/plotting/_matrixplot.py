@@ -58,8 +58,10 @@ class MatrixPlot(BasePlot):
 
     See Also
     --------
-    :func:`~scanpy.pl.matrixplot`: Simpler way to call MatrixPlot but with less options.
-    :func:`~scanpy.pl.rank_genes_groups_matrixplot`: to plot marker genes identified
+    :func:`~scanpy.pl.matrixplot`
+        Simpler way to call MatrixPlot but with less options.
+    :func:`~scanpy.pl.rank_genes_groups_matrixplot`
+        to plot marker genes identified
         using the :func:`~scanpy.tl.rank_genes_groups` function.
 
     Examples
@@ -67,8 +69,7 @@ class MatrixPlot(BasePlot):
     Simple visualization of the average expression of a few genes grouped by
     the category 'bulk_labels'.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -78,8 +79,7 @@ class MatrixPlot(BasePlot):
     Same visualization but passing var_names as dict, which adds a grouping of
     the genes on top of the image:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels').show()
@@ -201,8 +201,7 @@ class MatrixPlot(BasePlot):
         Examples
         --------
 
-        .. plot::
-            :context: close-figs
+        ..  exec-jupyter::
 
             import scanpy as sc
 
@@ -212,8 +211,7 @@ class MatrixPlot(BasePlot):
         Change color map and turn off edges:
 
 
-        .. plot::
-            :context: close-figs
+        ..  exec-jupyter::
 
             (
                 sc.pl.MatrixPlot(adata, markers, groupby='bulk_labels')
@@ -358,8 +356,7 @@ def matrixplot(  # noqa: PLR0913
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -368,24 +365,21 @@ def matrixplot(  # noqa: PLR0913
 
     Using var_names as dict:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Get Matrix object for fine tuning:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         mp = sc.pl.matrixplot(adata, markers, 'bulk_labels', return_fig=True)
         mp.add_totals().style(edge_color='black').show()
 
     The axes used can be obtained using the get_axes() method
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         axes_dict = mp.get_axes()
 
