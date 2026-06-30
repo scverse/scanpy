@@ -58,7 +58,7 @@
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
-    "conda_channels": ["conda-forge", "defaults"],
+    "conda_channels": ["conda-forge"],
 
     // The matrix of dependencies to test.  Each key is the name of a
     // package (in PyPI) and the values are version numbers.  An empty
@@ -83,7 +83,8 @@
         // "psutil": [""]
         "pooch": [""],
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
-        // "scikit-misc": [""],
+        "scikit-misc": [""],
+        "dask": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
