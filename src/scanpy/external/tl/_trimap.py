@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING
 
 from ... import logging as logg
 from ..._compat import CSBase
+from ..._keys import _existing_preset_keys
 from ..._settings import settings
-from ..._utils import _existing_preset_keys
 from ..._utils._doctests import doctest_needs
-from ...preprocessing._pca import _pca_keys
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -102,9 +101,9 @@ def trimap(  # noqa: PLR0913
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity > 0
 
-    if keys := _existing_preset_keys(adata, _pca_keys):
-        n_dim_pca = adata.obsm[keys[0]].shape[1]
-        x = adata.obsm[keys[0]][:, : min(n_dim_pca, 100)]
+    if keys := _existing_preset_keys(adata, "pca"):
+        n_dim_pca = adata.obsm[keys.obsm].shape[1]
+        x = adata.obsm[keys.obsm][:, : min(n_dim_pca, 100)]
     else:
         x = adata.X
         if isinstance(x, CSBase):

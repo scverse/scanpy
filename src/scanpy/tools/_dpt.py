@@ -8,10 +8,9 @@ import scipy as sp
 from natsort import natsorted
 
 from scanpy._utils.random import _LegacyRng
-from scanpy.tools._utils import _existing_preset_keys
 
 from .. import logging as logg
-from .._settings import Default, Preset, settings
+from .._keys import _embedding_keys, _existing_preset_keys
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 if TYPE_CHECKING:
@@ -19,15 +18,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-
-def _diffmap_keys(key_added: str | None | Default | Preset) -> tuple[str, str]:
-    if isinstance(key_added, Default):
-        key_added = settings.preset
-    if isinstance(key_added, Preset):
-        key_added = key_added.diffmap.key_added
-    return (
-        ("X_diffmap", "diffmap_evals") if key_added is None else (key_added, key_added)
-    )
+    from .._settings import Default
 
 
 def _diffmap(
@@ -38,20 +29,20 @@ def _diffmap(
     key_added: str | None | Default,
     rng: np.random.Generator,
 ) -> None:
-    obsm_key, uns_key = _diffmap_keys(key_added)
+    keys = _embedding_keys("diffmap", key_added)
     start = logg.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
     dpt = DPT(adata, neighbors_key=neighbors_key)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps, rng=rng)
-    adata.obsm[obsm_key] = dpt.eigen_basis
-    adata.uns[uns_key] = dpt.eigen_values
+    adata.obsm[keys.obsm] = dpt.eigen_basis
+    adata.uns[keys.uns] = dpt.eigen_values
     logg.info(
         "    finished",
         time=start,
         deep=(
             "added\n"
-            f"    {obsm_key!r}, diffmap coordinates (adata.obsm)\n"
-            f"    {uns_key!r}, eigenvalues of transition matrix (adata.uns)"
+            f"    {keys.obsm!r}, diffmap coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}, eigenvalues of transition matrix (adata.uns)"
         ),
     )
 
@@ -161,7 +152,7 @@ def dpt(
             "    adata.uns['iroot'] = root_cell_index\n"
             "    adata.var['xroot'] = adata[root_cell_name, :].X"
         )
-    if not diffmap_key and not _existing_preset_keys(adata, _diffmap_keys):
+    if not diffmap_key and not _existing_preset_keys(adata, "diffmap"):
         logg.warning(
             "Trying to run `tl.dpt` without prior call of `tl.diffmap`. "
             "Falling back to `tl.diffmap` with default parameters."

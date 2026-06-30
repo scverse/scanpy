@@ -6,8 +6,9 @@ import numpy as np
 
 from .. import logging as logg
 from .._compat import warn
+from .._keys import _existing_preset_keys
 from .._settings import settings
-from .._utils import _choose_graph, _existing_preset_keys
+from .._utils import _choose_graph
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -51,19 +52,19 @@ def _choose_representation(
 
 
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
-    from ..preprocessing._pca import _pca_keys, pca
+    from .._keys import _embedding_keys
+    from ..preprocessing._pca import pca
 
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
         return adata.X
 
-    if keys := _existing_preset_keys(adata, _pca_keys):
-        pca_key, *_ = keys
-        if n_pcs is not None and n_pcs > adata.obsm[pca_key].shape[1]:
-            msg = f"`adata.obsm[{pca_key!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    if keys := _existing_preset_keys(adata, "pca"):
+        if n_pcs is not None and n_pcs > adata.obsm[keys.obsm].shape[1]:
+            msg = f"`adata.obsm[{keys.obsm!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm[pca_key][:, :n_pcs]
-        logg.info(f"    using {pca_key!r} with n_pcs = {x.shape[1]}")
+        x = adata.obsm[keys.obsm][:, :n_pcs]
+        logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
         return x
 
     msg = (
@@ -74,7 +75,7 @@ def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBa
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm[_pca_keys()[0]]
+    return adata.obsm[_embedding_keys("pca").obsm]
 
 
 def get_init_pos_from_paga(

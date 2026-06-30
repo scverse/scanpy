@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from .. import logging as logg
 from .._compat import warn
 from .._docs import doc_rng
-from .._settings import Default, Preset, settings
+from .._keys import _embedding_keys
+from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
@@ -15,14 +16,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._utils.random import RNGLike, SeedLike
-
-
-def _tsne_keys(key_added: str | None | Default | Preset) -> tuple[str, str]:
-    if isinstance(key_added, Default):
-        key_added = settings.preset
-    if isinstance(key_added, Preset):
-        key_added = key_added.tsne.key_added
-    return ("X_tsne", "tsne") if key_added is None else (key_added, key_added)
 
 
 @_accepts_legacy_random_state(0)
@@ -110,7 +103,7 @@ def tsne(  # noqa: PLR0913
 
     """
     start = logg.info("computing tSNE")
-    key_obsm, key_uns = _tsne_keys(key_added)
+    keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
     x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
@@ -166,16 +159,18 @@ def tsne(  # noqa: PLR0913
         use_rep=use_rep,
         n_components=n_components,
     )
-    adata.obsm[key_obsm] = x_tsne  # annotate samples with tSNE coordinates
-    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
+    adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates
+    adata.uns[keys.uns] = dict(
+        params={k: v for k, v in params.items() if v is not None}
+    )
 
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"added\n"
-            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
-            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+            f"    {keys.obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}, tSNE parameters (adata.uns)"
         ),
     )
 

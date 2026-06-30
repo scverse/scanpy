@@ -18,17 +18,11 @@ from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
+from ..._keys import _existing_preset_keys
 from ..._settings import Default, settings
-from ..._utils import (
-    _doc_params,
-    _existing_preset_keys,
-    _get_basis_key,
-    sanitize_anndata,
-)
+from ..._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
-from ...preprocessing._pca import _pca_keys
-from ...tools._draw_graph import _draw_graph_keys
 from .. import _utils
 from .._docs import (
     doc_adata_color_etc,
@@ -858,9 +852,9 @@ def draw_graph(
 
     """
     if layout is None:
-        layout = str(adata.uns["draw_graph"]["params"]["layout"])
-    if keys := _existing_preset_keys(adata, _draw_graph_keys, layout):
-        return embedding(adata, keys[0], **kwargs)
+        layout = adata.uns["draw_graph"]["params"]["layout"]
+    if keys := _existing_preset_keys(adata, "draw_graph", layout=layout):
+        return embedding(adata, keys.obsm, **kwargs)
     msg = f"Did not find `adata.obsm['draw_graph_{layout}']`. Did you compute layout {layout}?"
     raise ValueError(msg)
 
@@ -930,7 +924,7 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
-    if not _existing_preset_keys(adata, _pca_keys):
+    if not _existing_preset_keys(adata, "pca"):
         msg = (
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."

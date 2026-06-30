@@ -7,9 +7,9 @@ import numpy as np
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import warn
 from .._docs import doc_rng
-from .._settings import Default, Preset, settings
+from .._keys import _embedding_keys
+from .._settings import Default
 from .._utils import _choose_graph, _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
@@ -126,7 +126,9 @@ def draw_graph(  # noqa: PLR0913
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
     layout = coerce_fa2_layout(layout)
-    key_obsm, key_uns = _draw_graph_keys(key_added, layout, key_added_ext)
+    keys = _embedding_keys(
+        "draw_graph", key_added, layout=layout, key_added_ext=key_added_ext
+    )
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -166,38 +168,17 @@ def draw_graph(  # noqa: PLR0913
             else:
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
-    adata.uns[key_uns] = {}
-    adata.uns[key_uns]["params"] = dict(layout=layout, **meta_random_state)
-    adata.obsm[key_obsm] = positions
+    adata.uns[keys.uns] = {}
+    adata.uns[keys.uns]["params"] = dict(layout=layout, **meta_random_state)
+    adata.obsm[keys.obsm] = positions
     logg.info(
         "    finished",
         time=start,
         deep="added"
-        f"\n    {key_obsm!r}, draw_graph coordinates (adata.obsm)"
-        f"\n    {key_uns!r}, draw_graph parameters (adata.uns)",
+        f"\n    {keys.obsm!r}, draw_graph coordinates (adata.obsm)"
+        f"\n    {keys.uns!r}, draw_graph parameters (adata.uns)",
     )
     return adata if copy else None
-
-
-def _draw_graph_keys(
-    key_added: str | None | Default | Preset,
-    layout: str,
-    key_added_ext: str | None = None,
-) -> tuple[str, str]:
-    if key_added_ext is not None:
-        msg = "Passing `key_added_ext` is deprecated, use `key_added`’s template functionality instead."
-        warn(msg, category=FutureWarning)
-        suffix = key_added_ext
-    else:
-        suffix = layout
-    if isinstance(key_added, Default):
-        key_added = settings.preset
-    if isinstance(key_added, Preset):
-        key_added = key_added.draw_graph.key_added
-    if key_added is None:
-        return f"X_draw_graph_{suffix}", "draw_graph"
-    key_added = key_added.format(layout=suffix)
-    return key_added, key_added
 
 
 def fa2_positions(

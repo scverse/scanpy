@@ -39,7 +39,7 @@ from ._numba import _numba_thread_limit
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
     from pathlib import Path
-    from typing import Any, Concatenate
+    from typing import Any
 
     from anndata import AnnData
     from igraph import Graph
@@ -47,7 +47,6 @@ if TYPE_CHECKING:
     from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
-    from .._settings import Preset
     from ..neighbors import NeighborsParams, RPForestDict
 
     type _MemoryArray = NDArray | CSBase
@@ -59,7 +58,6 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
-    "_existing_preset_keys",
     "_get_basis",
     "_numba_thread_limit",
     "_resolve_axis",
@@ -581,21 +579,6 @@ def _get_basis_key(adata: AnnData, basis: str) -> str | None:
         return basis
     if f"X_{basis}" in adata.obsm:
         return f"X_{basis}"
-    return None
-
-
-def _existing_preset_keys[**P, T: tuple[str, ...]](
-    adata: AnnData,
-    keys: Callable[Concatenate[Preset, P], T],
-    *args: P.args,
-    **kw: P.kwargs,
-) -> T | None:
-    from .._settings import Preset
-
-    for preset in (Preset.ScanpyV1, Preset.ScanpyV2Preview):
-        obsm_key, *rest = keys(preset, *args, **kw)
-        if obsm_key in adata.obsm:
-            return (obsm_key, *rest)
     return None
 
 

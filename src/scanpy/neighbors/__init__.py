@@ -17,8 +17,9 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
+from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._settings import settings
-from .._utils import NeighborsView, _doc_params, _existing_preset_keys, get_literal_vals
+from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
     _legacy_random_state,
@@ -472,15 +473,13 @@ class Neighbors:
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
 
-        from ..tools._dpt import _diffmap_keys
-
         if keys := (
-            (diffmap_key, diffmap_key)
+            _EmbeddingKeys(diffmap_key, diffmap_key)
             if diffmap_key
-            else _existing_preset_keys(adata, _diffmap_keys)
+            else _existing_preset_keys(adata, "diffmap")
         ):
-            self._eigen_values = adata.uns[keys[1]]
-            self._eigen_basis = adata.obsm[keys[0]]
+            self._eigen_values = adata.uns[keys.uns]
+            self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (

@@ -10,18 +10,16 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .._compat import CSBase
 from .._docs import doc_rng
+from .._keys import _existing_preset_keys
 from .._settings import Default, settings
 from .._utils import (
     NeighborsView,
     _doc_params,
-    _existing_preset_keys,
     raise_not_implemented_error_if_backed_type,
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..neighbors import FlatTree
-from ..preprocessing._pca import _pca_keys
-from ..tools._umap import _umap_keys
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -30,6 +28,7 @@ if TYPE_CHECKING:
     from pynndescent import NNDescent
     from umap import UMAP
 
+    from .._keys import _EmbeddingKeys
     from ..neighbors import RPForestDict
 
 
@@ -251,10 +250,10 @@ class Ingest:
         random_state = params.get("random_state", 0)
         return _LegacyRng(random_state)
 
-    def _init_umap(self, adata: AnnData, obsm_key: str, uns_key: str) -> None:
+    def _init_umap(self, adata: AnnData, keys: _EmbeddingKeys) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns[uns_key]["params"])
+        rng = self._get_rng(adata.uns[keys.uns]["params"])
         self._umap = UMAP(
             metric=self._metric,
             random_state=_legacy_random_state(rng),
@@ -268,7 +267,7 @@ class Ingest:
 
         self._umap._validate_parameters()
 
-        self._umap.embedding_ = adata.obsm[obsm_key]
+        self._umap.embedding_ = adata.obsm[keys.obsm]
         self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
@@ -278,8 +277,8 @@ class Ingest:
 
         self._umap._knn_search_index = self._nnd_idx
 
-        self._umap._a = adata.uns[uns_key]["params"]["a"]
-        self._umap._b = adata.uns[uns_key]["params"]["b"]
+        self._umap._a = adata.uns[keys.uns]["params"]["a"]
+        self._umap._b = adata.uns[keys.uns]["params"]["b"]
 
         self._umap._input_hash = None
 
@@ -391,8 +390,8 @@ class Ingest:
             )
             raise ValueError(msg)
 
-        if keys := _existing_preset_keys(adata, _umap_keys):
-            self._init_umap(adata, *keys)
+        if keys := _existing_preset_keys(adata, "umap"):
+            self._init_umap(adata, keys)
 
         self._obsm = None
         self._obs = None
@@ -557,10 +556,10 @@ class Ingest:
                 self._obsm["rep"],
             ))
 
-        if keys := _existing_preset_keys(self._adata_ref, _umap_keys):
-            adata.uns[keys[1]] = self._adata_ref.uns[keys[1]]
-        if keys := _existing_preset_keys(self._adata_ref, _pca_keys):
-            adata.varm[keys[1]] = self._adata_ref.varm[keys[1]]
-            adata.uns[keys[2]] = self._adata_ref.uns[keys[2]]
+        if keys := _existing_preset_keys(self._adata_ref, "umap"):
+            adata.uns[keys.uns] = self._adata_ref.uns[keys.uns]
+        if keys := _existing_preset_keys(self._adata_ref, "pca"):
+            adata.varm[keys.varm] = self._adata_ref.varm[keys.varm]
+            adata.uns[keys.obsm] = self._adata_ref.uns[keys.obsm]
 
         return adata

@@ -9,6 +9,7 @@ from anndata import AnnData
 from ... import logging as logg
 from ... import settings
 from ..._compat import CSBase, warn
+from ..._keys import _embedding_keys
 from ..._settings import Default
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ..._utils.random import _accepts_legacy_random_state
@@ -23,7 +24,7 @@ from ...experimental._docs import (
 )
 from ...get import _check_mask, _get_obs_rep, _set_obs_rep
 from ...preprocessing._docs import doc_mask_var
-from ...preprocessing._pca import _pca_keys, pca
+from ...preprocessing._pca import pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -222,7 +223,7 @@ def normalize_pearson_residuals_pca(
 
     """
     key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
-    key_obsm, key_varm, key_uns = _pca_keys(key_added)
+    keys = _embedding_keys("pca", key_added)
     if isinstance(mask_var, Default):
         mask_var = "highly_variable" if "highly_variable" in adata.var else None
     mask_var = _check_mask(adata, mask_var, "var")
@@ -239,19 +240,19 @@ def normalize_pearson_residuals_pca(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
     pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
-    n_comps = adata_pca.obsm[key_obsm].shape[1]  # might be None
+    n_comps = adata_pca.obsm[keys.obsm].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
         if mask_var is not None:
-            adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm[key_varm][mask_var] = adata_pca.varm[key_varm]
+            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm[keys.varm][mask_var] = adata_pca.varm[keys.varm]
         else:
-            adata.varm[key_varm] = adata_pca.varm[key_varm]
-        adata.uns[key_uns] = adata_pca.uns[key_uns]
+            adata.varm[keys.varm] = adata_pca.varm[keys.varm]
+        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
         adata.uns["pearson_residuals_normalization"] = norm_dict
-        adata.obsm[key_obsm] = adata_pca.obsm[key_obsm]
+        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca
