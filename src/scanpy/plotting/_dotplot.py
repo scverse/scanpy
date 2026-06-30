@@ -1063,8 +1063,7 @@ def dotplot(  # noqa: PLR0913
     Create a dot plot using the given markers and the PBMC example dataset grouped by
     the category `'bulk_labels'`.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1073,8 +1072,7 @@ def dotplot(  # noqa: PLR0913
 
     Grouping `var_names` as well and specifying group colors for `groupby`:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         from matplotlib import cm
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
@@ -1083,8 +1081,7 @@ def dotplot(  # noqa: PLR0913
 
     Get `DotPlot` object for fine tuning
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         dp = sc.pl.dotplot(adata, markers, 'bulk_labels', return_fig=True)
         dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()

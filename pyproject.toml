@@ -68,7 +68,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.14",
-    "scverse-misc[settings]>=0.0.5",
+    "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -117,7 +117,7 @@ test = [
     "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-doc = [
+docs = [
     "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
@@ -127,11 +127,13 @@ doc = [
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting]",
     "scanpydoc>=0.16.1",
+    "scverse-misc[sphinx]",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
+    "sphinx-exec-jupyter>=0.2.1",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",

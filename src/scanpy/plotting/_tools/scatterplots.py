@@ -124,8 +124,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     Plot a precomputed UMAP embedding coloured by the `'bulk_labels'` cell-type annotation.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -134,8 +133,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     Show several panels in a single call by passing a list of keys to `color`,
     mixing categorical annotations and gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding(adata, basis="umap", color=["bulk_labels", "CD3D", "LYZ"])
 
@@ -689,8 +687,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -698,22 +695,19 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="HES4")
 
     Plot muliple umaps for different gene expressions.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
 
@@ -750,8 +744,7 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -789,8 +782,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -835,8 +827,7 @@ def draw_graph(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -893,8 +884,7 @@ def pca(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -902,15 +892,13 @@ def pca(
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="CST3")
 
