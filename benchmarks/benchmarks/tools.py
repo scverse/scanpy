@@ -19,6 +19,7 @@ class ToolsSuite:  # noqa: D101
         adata = pbmc68k_reduced()
         assert "X_pca" in adata.obsm
         adata.write_h5ad(path := Path("adata.h5ad"))
+        # we need to have a parameter, else asv doesn’t run `setup_cache` before `setup`
         return path
 
     def setup(self, path: Path) -> None:
