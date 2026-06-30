@@ -96,7 +96,11 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
     return hv.Layout([
         hv.Scatter(adata, [A.var["means"]], [A.var[d], A.var["highly_variable"]]).opts(
             color=A.var["highly_variable"],
-            cmap={True: "black", False: "gray"},
+            **(  # https://github.com/holoviz/holoviews/issues/6938
+                dict(cmap={True: "black", False: "gray"})
+                if hv.Store.current_backend != "plotly"
+                else {}
+            ),
             legend_labels={
                 True: "highly variable",
                 False: "not highly variable",

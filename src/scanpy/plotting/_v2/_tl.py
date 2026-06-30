@@ -169,7 +169,7 @@ def ranking(
 
     return hv.Labels(data, ["rank", "score"], ["text", "align"]).opts(
         angle=90, text_align="align", xticks=0
-    ) * hv.Points(data, ["rank", "score"], ["text", "dot"]).opts(alpha="dot")
+    ) * hv.Points(data[data["dot"] > 0], ["rank", "score"], ["text"])
 
 
 def embedding_density(

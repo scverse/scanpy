@@ -263,7 +263,7 @@ def tracksplot(
         vdim: hv.Curve(adata, [kdim], [vdim, *more_vdims]).opts(
             xticks=0,
             xlabel="",
-            ylabel=vdim,
+            ylabel=vdim.label,
             title="",
             show_legend=False,  # TODO: switch to below impl after fixing https://github.com/holoviz/holoviews/issues/5438
             aspect=2 * len(vdims),
