@@ -97,6 +97,17 @@ def paga_compare(  # noqa: PLR0912, PLR0913
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
 
+    Examples
+    --------
+    Compute a PAGA graph on the bundled PBMC dataset and show it next to the UMAP embedding.
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.tl.paga(adata, groups="bulk_labels")
+        sc.pl.paga_compare(adata, basis="umap")
+
     """
     axs, _, _, _ = _utils.setup_axes(panels=[0, 1], right_margin=right_margin)
     if color is None:
@@ -231,7 +242,7 @@ def _compute_pos(  # noqa: PLR0912
             ctx = nullcontext()
         else:
             ctx = _set_igraph_rng(rng)
-        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid, directed=False)
         with ctx:
             if "rt" in layout:
                 g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
@@ -504,8 +515,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -514,8 +524,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
 
     You can increase node and edge sizes by specifying additional arguments.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.paga(adata, node_size_scale=10, edge_width_scale=2)
 

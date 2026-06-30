@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .._compat import deprecated
+from scverse_misc import Deprecation, deprecated
+
 from . import palettes
 from ._anndata import (
     clustermap,
@@ -28,7 +29,6 @@ from ._tools import (
     embedding_density,
     pca_loadings,
     pca_overview,
-    pca_scatter,
     pca_variance_ratio,
     rank_genes_groups,
     rank_genes_groups_dotplot,
@@ -54,7 +54,7 @@ from ._tools.scatterplots import (
     tsne,
     umap,
 )
-from ._utils import matrix, timeseries, timeseries_as_heatmap, timeseries_subplot
+from ._utils import matrix
 
 __all__ = [
     "DotPlot",
@@ -83,7 +83,6 @@ __all__ = [
     "pca",
     "pca_loadings",
     "pca_overview",
-    "pca_scatter",
     "pca_variance_ratio",
     "rank_genes_groups",
     "rank_genes_groups_dotplot",
@@ -106,6 +105,28 @@ __all__ = [
     "violin",
 ]
 
-timeseries = deprecated("Use `dpt_timeseries`.")(timeseries)
-timeseries_as_heatmap = deprecated("Use `dpt_timeseries`.")(timeseries_as_heatmap)
-timeseries_subplot = deprecated("Use `dpt_timeseries`.")(timeseries_subplot)
+
+@deprecated(Deprecation("1.11.5", "Use :func:`scanpy.pl.dpt_timeseries` instead."))
+def timeseries(*args, **kwargs):
+    from ._utils import timeseries
+
+    return timeseries(*args, **kwargs)
+
+
+@deprecated(Deprecation("1.11.5", "Use :func:`scanpy.pl.dpt_timeseries` instead."))
+def timeseries_as_heatmap(*args, **kwargs):
+    from ._utils import timeseries_as_heatmap
+
+    return timeseries_as_heatmap(*args, **kwargs)
+
+
+@deprecated(Deprecation("1.11.5", "Use :func:`scanpy.pl.dpt_timeseries` instead."))
+def timeseries_subplot(*args, **kwargs):
+    from ._utils import timeseries_subplot
+
+    return timeseries_subplot(*args, **kwargs)
+
+
+@deprecated(Deprecation("1.12.2", "Use :func:`scanpy.pl.pca` instead."))
+def pca_scatter(*args, **params):
+    return pca(*args, **params)

@@ -51,7 +51,9 @@ def _illico_results_to_iter(
     illico_df: pd.DataFrame,
     groups_order: NDArray,
     ireference: int | None,
-):
+    *,
+    copy_pvalues: bool,
+) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]]]:
     """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
 
     illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
@@ -67,7 +69,7 @@ def _illico_results_to_iter(
         (
             group_index,
             z_series.loc[group_name].to_numpy(),
-            p_series.loc[group_name].to_numpy(),
+            p_series.loc[group_name].to_numpy(copy=copy_pvalues),
         )
         for group_index, group_name in enumerate(groups_order)
         if group_name != ref_label and group_name in illico_groups
@@ -598,11 +600,12 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def _run_illico(self, *, tie_correct: bool):
-        """Invoke `illico.asymptotic_wilcoxon` on `self.X` / `self.group_col`."""
+    def illico(
+        self, *, tie_correct: bool, corr_method: _CorrMethod
+    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from illico import asymptotic_wilcoxon
 
-        return asymptotic_wilcoxon(
+        illico_df = asymptotic_wilcoxon(
             AnnData(
                 X=self.X,
                 var=pd.DataFrame(index=self.var_names),
@@ -625,9 +628,17 @@ class _RankGenes:
             use_continuity=False,
             alternative="two-sided",
             use_rust=False,
+            groups=self.groups_order,
+        )
+        return _illico_results_to_iter(
+            illico_df,
+            self.groups_order,
+            self.ireference,
+            # p-values are altered by this correction method
+            copy_pvalues=corr_method == "benjamini-hochberg",
         )
 
-    def compute_statistics(
+    def compute_statistics(  # noqa: PLR0912
         self,
         method: DETest,
         *,
@@ -642,17 +653,13 @@ class _RankGenes:
             self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
-            if "illico" in method:
-                illico_df = self._run_illico(tie_correct=tie_correct)
-                generate_test_results = _illico_results_to_iter(
-                    illico_df,
-                    self.groups_order,
-                    self.ireference,
-                )
-            else:
-                generate_test_results = self.wilcoxon(tie_correct=tie_correct)
-            # Wilcoxon paths only need means (for fold-change); skip var.
-            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=False)
+            generate_test_results = (
+                self.illico(tie_correct=tie_correct, corr_method=corr_method)
+                if "illico" in method
+                else self.wilcoxon(tie_correct=tie_correct)
+            )
+            # If we're not exponentiating after the mean aggregation, then do it now.
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 

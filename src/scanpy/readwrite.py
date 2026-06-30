@@ -15,9 +15,10 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.image import imread
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from . import logging as logg
-from ._compat import deprecated, pkg_version, warn
+from ._compat import pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
 from ._utils.random import _LegacyRng
 
@@ -359,7 +360,7 @@ def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
     return adata
 
 
-@deprecated("Use `squidpy.read.visium` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.read.visium` instead."))
 def read_visium(
     path: PathLike[str] | str,
     genome: str | None = None,
@@ -370,9 +371,6 @@ def read_visium(
     source_image_path: PathLike[str] | str | None = None,
 ) -> AnnData:
     r"""Read 10x-Genomics-formatted visum dataset.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.read.visium` instead.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,
@@ -606,7 +604,11 @@ def _read_mtx(
     from scipy.io import mmread
     from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
 
-    x = mmread(filename)
+    # TODO: Replace with xxx_array when we make the switch
+    x = mmread(
+        filename,
+        **({"spmatrix": True} if pkg_version("scipy") >= Version("1.18.0rc1") else {}),
+    )
     if x.dtype != np.dtype(dtype):
         x = x.astype(dtype)
     if sparse_format == "csr":
@@ -1082,6 +1084,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     from ssl import create_default_context
+    from tempfile import NamedTemporaryFile
     from urllib.request import Request, urlopen
 
     from certifi import contents
@@ -1090,6 +1093,8 @@ def _download(url: str, path: Path):
     blocksize = 1024 * 8
     blocknum = 0
 
+    # Write to a temp file and rename so readers never see a partial file (#4097).
+    tmp_path: Path | None = None
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
@@ -1103,8 +1108,14 @@ def _download(url: str, path: Path):
                     unit_divisor=1024,
                     total=total if total is None else int(total),
                 ) as t,
-                path.open("wb") as f,
+                NamedTemporaryFile(
+                    dir=path.parent,
+                    prefix=f"{path.name}.",
+                    suffix=".part",
+                    delete=False,
+                ) as f,
             ):
+                tmp_path = Path(f.name)
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)
@@ -1112,10 +1123,13 @@ def _download(url: str, path: Path):
                     t.update(len(block))
                     block = resp.read(blocksize)
 
+        tmp_path.replace(path)
+        tmp_path = None
+
     except (KeyboardInterrupt, Exception):
-        # Make sure file doesn’t exist half-downloaded
-        if path.is_file():
-            path.unlink()
+        # Only remove our own temp file; leave path, which may be another process's.
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
         raise
 
 

@@ -109,6 +109,13 @@ For instructions on how to work with the code, see the {ref}`contribution guide 
 
 [on github]: https://github.com/scverse/scanpy
 
+## GPU acceleration
+
+If you have a GPU, consider [rapids-singlecell][], which mirrors the scanpy API with order-of-magnitude speedups.
+See its [documentation][rapids-singlecell] for installation and usage instructions.
+
+[rapids-singlecell]: https://rapids-singlecell.readthedocs.io
+
 ## Docker
 
 If you're using [Docker][], you can use e.g. the image [gcfntnu/scanpy][] from Docker Hub.

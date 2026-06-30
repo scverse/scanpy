@@ -26,6 +26,7 @@ An object that allows configuring Scanpy.
    :toctree: ../generated/
 
    settings
+   settings.override
 ```
 
 Some selected settings are discussed in the following.

@@ -56,18 +56,19 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.9,!=3.11.0rc1",
+    # skip 3.11.0 series for now: https://github.com/matplotlib/matplotlib/issues/31575
+    "matplotlib>=3.10,!=3.11.0rc1,!=3.11.0rc2,!=3.11",
     "natsort",
-    "networkx>=2.8.8",
-    "numba>=0.60",
-    "numpy>=2",
+    "networkx>=3.4",
+    "numba>=0.61",
+    "numpy>=2.1",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.13",
+    "scipy>=1.14",
+    "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -94,10 +95,10 @@ magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
 scanorama = [ "scanorama" ]
-scrublet = [ "scikit-image>=0.23.1" ]
+scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-illico = [ "illico>=0.5.1" ]
+illico = [ "illico>=0.6.0rc1" ]
 scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
@@ -116,8 +117,8 @@ test = [
     "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-doc = [
-    "ipython>=7.20",                        # for nbsphinx code highlighting
+docs = [
+    "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
@@ -126,11 +127,13 @@ doc = [
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting]",
     "scanpydoc>=0.16.1",
+    "scverse-misc[sphinx]",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
+    "sphinx-exec-jupyter>=0.2.1",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
@@ -149,9 +152,9 @@ test-min = [
 ]
 
 [tool.hatch]
-build.targets.wheel.packages = [ "src/testing", "src/scanpy" ]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
 src = [ "src" ]
@@ -211,6 +214,7 @@ lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
+lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
 lint.isort.required-imports = [ "from __future__ import annotations" ]
@@ -233,6 +237,7 @@ lint.pylint.max-positional-args = 5
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"
 "warnings.warn".msg = "Use `scanpy._compat.warn` instead"
+"warnings.deprecated".msg = "Use `scverse_misc.deprecated` instead"
 
 [tool.pyproject-fmt]
 indent = 4
@@ -243,21 +248,12 @@ expand_tables = [
 ]
 
 [tool.pytest]
-strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
     "--pyargs",
-]
-testpaths = [ "./tests", "./ci", "scanpy" ]
-norecursedirs = [ "tests/_images" ]
-junit_family = "xunit1"
-markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
-    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
 filterwarnings = [
     "error",
@@ -288,6 +284,15 @@ filterwarnings = [
     # joblib fallback to serial mode in restricted multiprocessing environments
     "ignore:.*joblib will operate in serial mode:UserWarning",
 ]
+junit_family = "xunit1"
+markers = [
+    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
+    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
+]
+norecursedirs = [ "tests/_images" ]
+strict = true
+testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
 run.concurrency = [ "multiprocessing" ]
@@ -308,19 +313,19 @@ xml.output = "test-data/coverage.xml"
 [tool.towncrier]
 name = "scanpy"
 package = "scanpy"
+package_dir = "src"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
-single_file = false
-package_dir = "src"
-issue_format = "{{pr}}`{issue}`"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+issue_format = "{{pr}}`{issue}`"
+single_file = false
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
+fragment.chore.name = "Miscellaneous changes"
+fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
 # https://github.com/commitizen/conventional-commit-types/blob/master/index.json
 # style, refactor, test, build, ci: should not go into changelog
 fragment.feat.name = "Features"
 fragment.fix.name = "Bug fixes"
-fragment.docs.name = "Documentation"
 fragment.perf.name = "Performance"
-fragment.chore.name = "Miscellaneous changes"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)

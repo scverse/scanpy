@@ -386,10 +386,23 @@ def test_mask_not_equal():
     ],
     ids=["vs_rest", "vs_reference"],
 )
-def test_illico_iter(groups_order, ireference, expected_indices):
+@pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+def test_illico_iter(
+    groups_order: list[str],
+    ireference: int | None,
+    expected_indices: list[int],
+    corr_method: Literal["benjamini-hochberg", "bonferroni"],
+):
     df = get_illico_results_df(n_groups=3, n_genes=4)
     feature_order = df.index.unique(level="feature")
-    out = list(_illico_results_to_iter(df, np.array(groups_order), ireference))
+    out = list(
+        _illico_results_to_iter(
+            df,
+            np.array(groups_order),
+            ireference,
+            copy_pvalues=corr_method == "benjamini-hochberg",
+        )
+    )
     assert sorted(t[0] for t in out) == sorted(expected_indices)
     for gi, z, p in out:
         sub = df.xs(groups_order[gi], level=0).reindex(feature_order)
@@ -398,7 +411,7 @@ def test_illico_iter(groups_order, ireference, expected_indices):
 
 
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
-@pytest.mark.parametrize("test", ["ovo", "ovr"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])  # pairwise or vs. rest
 @pytest.mark.parametrize(
     "mean_in_log_space", [True, False], ids=["log_space_mean", "linear_space_mean"]
 )

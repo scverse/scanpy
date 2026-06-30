@@ -12,10 +12,12 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
+from .._compat import set_module
 from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
+    from typing import Self
 
 
 __all__ = [
@@ -149,6 +151,7 @@ def preset_property[NT: NamedTuple](
     return prop
 
 
+@set_module("scanpy")
 class Preset(enum.StrEnum):
     """Presets for :attr:`scanpy.settings.preset`.
 
@@ -162,11 +165,19 @@ class Preset(enum.StrEnum):
         # lower-kebap-case
         return "-".join(part.lower() for part in re.split(r"(?=[A-Z])", name) if part)
 
+    # TODO: make the docstrings appear in the docs: https://github.com/sphinx-doc/sphinx/issues/857
+
     ScanpyV1 = enum.auto()
-    """: Scanpy 1.*’s default settings."""
+    """Scanpy 1.*’s default settings."""
 
     ScanpyV2Preview = enum.auto()
-    """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+    """Scanpy 2.*’s feature default settings. (Preview: subject to change!)
+
+    Apart from changing the functions referenced below, this preset will also:
+
+    - change all functions using `igraph` to no longer create duplicate edges,
+      slightly changing community detection and modularity scores.
+    """
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
@@ -242,14 +253,12 @@ class Preset(enum.StrEnum):
         finally:
             settings.preset = self
 
-    def check(self) -> None:
+    def check(self) -> Self:
         """Check if requirements for preset are met."""
         match self:
-            case self.ScanpyV1:
-                return
             case self.ScanpyV2Preview:
                 if not (missing := _missing_scanpy2_deps()):
-                    return
+                    return self
                 missing_str = ", ".join(f"‘{m.name}’" for m in missing)
                 msg = (
                     f"Setting preset to {Preset.ScanpyV2Preview!r} requires optional "
@@ -257,6 +266,8 @@ class Preset(enum.StrEnum):
                     "Install them with: pip install `scanpy[scanpy2]`"
                 )
                 raise ImportError(msg)
+            case _:
+                return self
 
 
 def _missing_scanpy2_deps() -> list[Requirement]:
