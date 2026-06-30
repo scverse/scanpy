@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from inspect import signature
 from itertools import product
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -25,12 +24,12 @@ if TYPE_CHECKING:
     from ._utils import Dataset, KeyCount
 
 
-def make_adata(dataset: Dataset, layer: KeyCount) -> ad.AnnData:
+def cache_adata(dataset: Dataset, layer: KeyCount) -> None:
     """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
     adata, batch_key = get_count_dataset(dataset, layer=layer)
     assert "lop1p" not in adata.uns
     adata.uns["batch_key"] = batch_key
-    return adata
+    adata.write_h5ad(f"{dataset}_{layer}.h5ad")
 
 
 class PreprocessingCountsSuite:  # noqa: D101
@@ -40,19 +39,12 @@ class PreprocessingCountsSuite:  # noqa: D101
     )
     param_names = ("dataset", "layer")
 
-    def setup_cache(self) -> dict[tuple[Dataset, KeyCount], ad.AnnData]:
-        return {
-            (dataset, layer): make_adata(dataset, layer)
-            for dataset, layer in product(*self.params)
-        }
+    def setup_cache(self) -> None:
+        for dataset, layer in product(*self.params):
+            cache_adata(dataset, layer)
 
-    def setup(
-        self,
-        cache: dict[tuple[Dataset, KeyCount], ad.AnnData],
-        dataset: Dataset,
-        layer: KeyCount,
-    ) -> None:
-        self.adata = cache[dataset, layer].copy()
+    def setup(self, dataset, layer) -> None:
+        self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
 
     def time_filter_cells(self, *_) -> None:
         sc.pp.filter_cells(self.adata, min_genes=100)
@@ -83,24 +75,23 @@ class PreprocessingCountsSuite:  # noqa: D101
 
 
 class PreprocessingCountsRngSuite:  # noqa: D101
-    params: tuple[list[Dataset], list[str]] = (
+    params: tuple[list[Dataset], list[str], list[str]] = (
         ["pbmc68k_reduced", "pbmc3k"],
         ["rng", "random_state"],
     )
     param_names = ("dataset", "layer")
 
-    def setup_cache(self) -> dict[Dataset, ad.AnnData]:
-        return {dataset: make_adata(dataset, "counts") for dataset in self.params[0]}
+    def setup_cache(self) -> None:
+        for dataset in self.params[0]:
+            cache_adata(dataset, "counts")
 
-    def setup(
-        self, cache: dict[Dataset, ad.AnnData], dataset: Dataset, rng_arg: str
-    ) -> None:
+    def setup(self, dataset, rng_arg) -> None:
         if (
             rng_arg == "rng"
             and "rng" not in signature(sc.pp.downsample_counts).parameters
         ):
             raise NotImplementedError
-        self.adata = cache[dataset].copy()
+        self.adata = ad.read_h5ad(f"{dataset}_counts.h5ad")
         self.rng_kw: Any = {rng_arg: 0}
         self.total = self.adata.X.sum() / 10
 
@@ -126,19 +117,12 @@ class FastSuite:
     )
     param_names = ("dataset", "layer")
 
-    def setup_cache(self) -> dict[tuple[Dataset, KeyCount], ad.AnnData]:
-        return {
-            (dataset, layer): make_adata(dataset, layer)
-            for dataset, layer in product(*self.params)
-        }
+    def setup_cache(self) -> None:
+        for dataset, layer in product(*self.params):
+            cache_adata(dataset, layer)
 
-    def setup(
-        self,
-        cache: dict[tuple[Dataset, KeyCount], ad.AnnData],
-        dataset: Dataset,
-        layer: KeyCount,
-    ) -> None:
-        self.adata = cache[dataset, layer].copy()
+    def setup(self, dataset, layer) -> None:
+        self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
 
     def time_calculate_qc_metrics(self, *_) -> None:
         sc.pp.calculate_qc_metrics(
@@ -175,27 +159,19 @@ class Agg:  # noqa: D101
     )
     param_names = ("agg_name", "use_csc", "use_dask")
 
-    def setup_cache(self) -> Path:
+    def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
         adata.layers["counts_csc"] = adata.layers["counts"].tocsc()
-        path = Path("lung93k.zarr").resolve()
-        adata.write_zarr(path)
-        return path
+        adata.write_zarr("lung93k.zarr")
 
-    def setup(
-        self,
-        path: Path,
-        agg_name: AggType,
-        use_csc: bool,  # noqa: FBT001
-        use_dask: bool,  # noqa: FBT001
-    ) -> None:
+    def setup(self, agg_name: AggType, use_csc: bool, use_dask: bool) -> None:  # noqa: FBT001
         counts_src_key = "counts_csc" if use_csc else "counts"
         if use_dask:
             if agg_name == "median":
                 # Skip this one: https://asv.readthedocs.io/en/stable/writing_benchmarks.html#setup-and-teardown-functions
                 raise NotImplementedError()
-            z = zarr.open(path)
+            z = zarr.open("lung93k.zarr")
             self.adata = ad.AnnData(
                 obs=ad.io.read_elem(z["obs"]),
                 var=ad.io.read_elem(z["var"]),
@@ -207,7 +183,7 @@ class Agg:  # noqa: D101
                 X=ad.experimental.read_elem_lazy(z["X"]),
             )
         else:
-            self.adata = ad.read_zarr(path)
+            self.adata = ad.read_zarr("lung93k.zarr")
             if counts_src_key != "counts":
                 self.adata.layers["counts"] = self.adata.layers[counts_src_key]
                 del self.adata.layers[counts_src_key]

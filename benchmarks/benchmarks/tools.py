@@ -5,24 +5,24 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+
+import anndata as ad
 
 import scanpy as sc
 
 from ._utils import pbmc3k, pbmc68k_reduced, to_off_axis
 
-if TYPE_CHECKING:
-    import anndata as ad
-
 
 class ToolsSuite:  # noqa: D101
-    def setup_cache(self) -> ad.AnnData:
+    def setup_cache(self) -> Path:
         adata = pbmc68k_reduced()
         assert "X_pca" in adata.obsm
-        return adata
+        adata.write_h5ad(path := Path("adata.h5ad"))
+        return path
 
-    def setup(self, adata: ad.AnnData) -> None:
-        self.adata = adata.copy()
+    def setup(self, path: Path) -> None:
+        self.adata = ad.read_h5ad(path)
 
     def time_umap(self, *_) -> None:
         sc.tl.umap(self.adata, rng=None)
@@ -66,14 +66,14 @@ class ScoreGenesSuite:
     params: tuple[str, ...] = ("pbmc3k", "pbmc3k-off-axis")
     param_names = ("layout",)
 
-    def setup_cache(self) -> dict[str, ad.AnnData]:
+    def setup_cache(self) -> None:
         adata = pbmc3k()
-        adata_orig = adata.copy()
+        adata.write_h5ad("pbmc3k.h5ad")
         adata.X = to_off_axis(adata.X)
-        return {"pbmc3k": adata_orig, "pbmc3k-off-axis": adata}
+        adata.write_h5ad("pbmc3k-off-axis.h5ad")
 
-    def setup(self, cache: dict[str, ad.AnnData], layout: str) -> None:
-        self.adata = cache[layout].copy()
+    def setup(self, layout: str) -> None:
+        self.adata = ad.read_h5ad(f"{layout}.h5ad")
         self.gene_list = self.adata.var_names[:100].tolist()
         # warm up the numba JIT (score_genes -> _sparse_nanmean) so compilation
         # is excluded from the timing

@@ -6,7 +6,6 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.ht
 from __future__ import annotations
 
 from itertools import product
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -37,20 +36,14 @@ class PreprocessingSuite:  # noqa: D101
     params = params
     param_names = param_names
 
-    def setup_cache(self) -> dict[tuple[Dataset, KeyX], ad.AnnData]:
+    def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
-        return {
-            (dataset, layer): get_dataset(dataset, layer=layer)[0]
-            for dataset, layer in product(*self.params)
-        }
+        for dataset, layer in product(*self.params):
+            adata, _ = get_dataset(dataset, layer=layer)
+            adata.write_h5ad(f"{dataset}_{layer}.h5ad")
 
-    def setup(
-        self,
-        cache: dict[tuple[Dataset, KeyX], ad.AnnData],
-        dataset: Dataset,
-        layer: KeyX,
-    ) -> None:
-        self.adata = cache[dataset, layer].copy()
+    def setup(self, dataset, layer) -> None:
+        self.adata = ad.read_h5ad(f"{dataset}_{layer}.h5ad")
 
     def time_pca(self, *_) -> None:
         sc.pp.pca(self.adata, svd_solver="arpack")
@@ -78,18 +71,16 @@ class HVGSuite:  # noqa: D101
     params = (["seurat_v3", "cell_ranger", "seurat"], [True, False])
     param_names = ("flavor", "use_dask")
 
-    def setup_cache(self) -> tuple[ad.AnnData, Path]:
+    def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
+        adata.write_zarr("lung93k.zarr")
         obs = np.arange(adata.shape[0])
         np.random.default_rng().shuffle(obs)
-        path = Path("lung93k_shuffled.zarr").resolve()
-        adata[obs].write_zarr(path)
-        return adata, path
+        adata[obs].write_zarr("lung93k_shuffled.zarr")
 
     def setup(
         self,
-        cache: tuple[ad.AnnData, Path],
         flavor: Literal["seurat_v3", "cell_ranger", "seurat"],
         use_dask: bool,  # noqa: FBT001
     ) -> None:
@@ -97,7 +88,7 @@ class HVGSuite:  # noqa: D101
             if flavor != "seurat_v3":
                 # This benchmark only really makes sense for seurat v3 as that has been optimized.
                 raise NotImplementedError()
-            z = zarr.open(cache[1])
+            z = zarr.open("lung93k_shuffled.zarr")
             self.adata = ad.AnnData(
                 obs=ad.io.read_elem(z["obs"]),
                 var=ad.io.read_elem(z["var"]),
@@ -111,7 +102,7 @@ class HVGSuite:  # noqa: D101
                 self.adata.obs["PatientNumber"].isin(["1", "2", "3"])
             ].copy()
         else:
-            self.adata = cache[0].copy()
+            self.adata = ad.read_zarr("lung93k.zarr")
         sc.pp.filter_genes(self.adata, min_cells=3)
         self.flavor = flavor
 
