@@ -5,50 +5,53 @@ API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
 
 from __future__ import annotations
 
-import anndata as ad
+from typing import TYPE_CHECKING
 
 import scanpy as sc
 
 from ._utils import pbmc3k, pbmc68k_reduced, to_off_axis
 
+if TYPE_CHECKING:
+    import anndata as ad
+
 
 class ToolsSuite:  # noqa: D101
-    def setup_cache(self) -> None:
+    def setup_cache(self) -> ad.AnnData:
         adata = pbmc68k_reduced()
         assert "X_pca" in adata.obsm
-        adata.write_h5ad("adata.h5ad")
+        return adata
 
-    def setup(self) -> None:
-        self.adata = ad.read_h5ad("adata.h5ad")
+    def setup(self, adata: ad.AnnData) -> None:
+        self.adata = adata.copy()
 
-    def time_umap(self) -> None:
+    def time_umap(self, *_) -> None:
         sc.tl.umap(self.adata, rng=None)
 
-    def peakmem_umap(self) -> None:
+    def peakmem_umap(self, *_) -> None:
         sc.tl.umap(self.adata, rng=None)
 
-    def time_diffmap(self) -> None:
+    def time_diffmap(self, *_) -> None:
         sc.tl.diffmap(self.adata)
 
-    def peakmem_diffmap(self) -> None:
+    def peakmem_diffmap(self, *_) -> None:
         sc.tl.diffmap(self.adata)
 
-    def time_leiden(self) -> None:
+    def time_leiden(self, *_) -> None:
         sc.tl.leiden(self.adata, flavor="igraph")
 
-    def peakmem_leiden(self) -> None:
+    def peakmem_leiden(self, *_) -> None:
         sc.tl.leiden(self.adata, flavor="igraph")
 
-    def time_rank_genes_groups(self) -> None:
+    def time_rank_genes_groups(self, *_) -> None:
         sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
 
-    def peakmem_rank_genes_groups(self) -> None:
+    def peakmem_rank_genes_groups(self, *_) -> None:
         sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
 
-    def time_combat(self) -> None:
+    def time_combat(self, *_) -> None:
         sc.pp.combat(self.adata, key="bulk_labels")
 
-    def peakmem_combat(self) -> None:
+    def peakmem_combat(self, *_) -> None:
         sc.pp.combat(self.adata, key="bulk_labels")
 
 
@@ -63,14 +66,14 @@ class ScoreGenesSuite:
     params: tuple[str, ...] = ("pbmc3k", "pbmc3k-off-axis")
     param_names = ("layout",)
 
-    def setup_cache(self) -> None:
+    def setup_cache(self) -> dict[str, ad.AnnData]:
         adata = pbmc3k()
-        adata.write_h5ad("pbmc3k.h5ad")
+        adata_orig = adata.copy()
         adata.X = to_off_axis(adata.X)
-        adata.write_h5ad("pbmc3k-off-axis.h5ad")
+        return {"pbmc3k": adata_orig, "pbmc3k-off-axis": adata}
 
-    def setup(self, layout: str) -> None:
-        self.adata = ad.read_h5ad(f"{layout}.h5ad")
+    def setup(self, cache: dict[str, ad.AnnData], layout: str) -> None:
+        self.adata = cache[layout].copy()
         self.gene_list = self.adata.var_names[:100].tolist()
         # warm up the numba JIT (score_genes -> _sparse_nanmean) so compilation
         # is excluded from the timing
