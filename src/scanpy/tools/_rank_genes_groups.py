@@ -358,7 +358,7 @@ class _RankGenes:
         """
         mask = self.grouping_mask.to_numpy()
         x_used = x if mask.all() else x[mask]
-        codes = pd.Categorical(self.grouping, categories=self.groups_order).codes
+        codes = pd.Index(self.groups_order).get_indexer(self.grouping)
         k = self.groups_masks_obs.shape[0]
 
         self.means, self.vars, nnz = self._aggregate_group_stats(
