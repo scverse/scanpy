@@ -115,8 +115,14 @@ def test_results(
 
     for g in range(expected["names"].shape[0]):
         with subtests.test(group=g):
+            # atol guards against ULP-level golden vs new-code bit-pattern
+            # differences at near-zero t-scores (e.g., genes with equal
+            # group/rest means produce 0.0 in one path vs ~1e-15 in another).
             np.testing.assert_allclose(
-                expected["scores"][g, :n], results["scores"][str(g)][:n], rtol=1e-5
+                expected["scores"][g, :n],
+                results["scores"][str(g)][:n],
+                rtol=1e-5,
+                atol=1e-10,
             )
             np.testing.assert_array_equal(
                 expected["names"][g, :n], results["names"][str(g)][:n]
