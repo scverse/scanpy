@@ -282,13 +282,13 @@ nitpick_ignore = [
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
-    ("py:class", "scanpy.plotting._baseplot_class.BasePlot"),
+    ("py:class", "scanpy.plotting.legacy._baseplot_class.BasePlot"),
     # Currently undocumented
     # https://github.com/mwaskom/seaborn/issues/1810
     ("py:class", "seaborn.matrix.ClusterGrid"),
     ("py:class", "samalg.SAM"),
     # Won’t be documented
-    ("py:class", "scanpy.plotting._utils._AxesSubplot"),
+    ("py:class", "scanpy.plotting.legacy._utils._AxesSubplot"),
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),

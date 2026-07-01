@@ -11,11 +11,11 @@ import pandas as pd
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
 
-from ... import logging as logg
-from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
-from ..._utils.random import _LegacyRng
-from ...get import obs_df, rank_genes_groups_df
+from .... import logging as logg
+from ...._settings import Default, settings
+from ...._utils import _doc_params, sanitize_anndata, with_cat_dtype
+from ...._utils.random import _LegacyRng
+from ....get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
 from .._docs import (
     doc_cm_palette,
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
-    from ..._utils.random import RNGLike, SeedLike
+    from ...._utils.random import RNGLike, SeedLike
     from .._baseplot_class import BasePlot
     from .._utils import DensityNorm
 
@@ -1424,6 +1424,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.umap(adata)
         sc.tl.embedding_density(adata, basis='umap', groupby='phase')

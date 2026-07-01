@@ -9,9 +9,9 @@ import numpy as np
 from matplotlib import colormaps, gridspec
 from matplotlib import pyplot as plt
 
-from .. import logging as logg
-from .._compat import warn
-from .._settings import Default
+from ... import logging as logg
+from ..._compat import warn
+from ..._settings import Default
 from ._anndata import (
     VarGroups,
     _plot_dendrogram,

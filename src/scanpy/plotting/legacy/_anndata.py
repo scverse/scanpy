@@ -15,17 +15,17 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype, is_numeric_dtype
 
-from .. import get
-from .. import logging as logg
-from .._compat import CSBase
-from .._settings import Default, settings
-from .._utils import (
+from ... import get
+from ... import logging as logg
+from ..._compat import CSBase
+from ..._settings import Default, settings
+from ..._utils import (
     _doc_params,
     check_use_raw,
     get_literal_vals,
     sanitize_anndata,
 )
-from . import _utils
+from . import _utils, mpl_settings
 from ._docs import (
     doc_common_plot_args,
     doc_scatter_basic,
@@ -164,6 +164,7 @@ def scatter(  # noqa: PLR0913
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.scatter(adata, x="n_counts", y="n_genes", color="bulk_labels")
 
@@ -562,7 +563,7 @@ def _scatter_obs(  # noqa: PLR0912, PLR0913, PLR0915
                 handle.set_sizes([300.0])
 
     # draw a frame around the scatter
-    frameon = settings._frameon if frameon is None else frameon
+    frameon = mpl_settings.FRAMEON if frameon is None else frameon
     if not frameon and x is None and y is None:
         for ax_ in axs:
             ax_.set_xlabel("")
@@ -618,6 +619,7 @@ def ranking(  # noqa: PLR0912, PLR0913
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         adata_hv = adata[:, adata.var["highly_variable"]].copy()
         sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2])
@@ -799,6 +801,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, keys='S_score')
 
@@ -1117,6 +1120,7 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.heatmap(adata, markers, groupby='bulk_labels', swap_axes=True)
@@ -1485,6 +1489,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc68k_reduced()
         markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
         sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -2299,7 +2304,7 @@ def _get_dendrogram_key(
             raise AssertionError(msg)
 
     if dendrogram_key not in adata.uns:
-        from ..tools._dendrogram import dendrogram
+        from ...tools._dendrogram import dendrogram
 
         logg.warning(
             f"dendrogram data not found (using key={dendrogram_key}). "

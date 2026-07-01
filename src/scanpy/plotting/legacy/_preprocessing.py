@@ -6,7 +6,7 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 
-from .._settings import settings
+from ..._settings import settings
 from ._utils import savefig_or_show
 
 # --------------------------------------------------------------------------------
@@ -48,6 +48,7 @@ def highly_variable_genes(  # noqa: PLR0912
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc3k()
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)

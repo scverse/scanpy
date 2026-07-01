@@ -8,8 +8,8 @@ import pytest
 from anndata import AnnData
 from matplotlib import colormaps
 
-from scanpy.plotting._anndata import _check_if_annotations
-from scanpy.plotting._utils import validate_palette
+from scanpy.plotting.legacy._anndata import _check_if_annotations
+from scanpy.plotting.legacy._utils import validate_palette
 
 if TYPE_CHECKING:
     from typing import Any, Literal

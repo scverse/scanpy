@@ -98,7 +98,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13rc3", "hv-anndata>=0.0.3a4", "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -116,14 +116,14 @@ test = [
     { include-group = "test-min" },
 ]
 docs = [
-    "ipython>=8.27",                        # for nbsphinx code highlighting
+    "ipython>=8.27",                                         # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",                           # type aliases
+    "numpy>=2.4",                                            # type aliases
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[dask-ml,leiden,paga,plotting]",
+    "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
     "scanpydoc>=0.16.1",
     "scverse-misc[sphinx]",
     "sphinx>=9.1",
@@ -131,11 +131,11 @@ docs = [
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
-    "sphinx-exec-jupyter>=0.2.1",
+    "sphinx-exec-jupyter[holoviews]>=0.2.1",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
-    "sphinxext-opengraph",                  # for nice cards when sharing on social
+    "sphinxext-opengraph",                                   # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
