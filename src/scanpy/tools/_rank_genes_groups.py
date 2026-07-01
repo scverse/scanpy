@@ -381,7 +381,7 @@ class _RankGenes:
 
         # Codes: each cell's selected-group index, or `k` (the remainder
         # partition) for cells in no selected group (non-selected / NaN).
-        sel = pd.Categorical(self.group_col, categories=self.groups_order).codes
+        sel = pd.Index(self.groups_order).get_indexer(self.group_col)
         codes = np.where(sel >= 0, sel, k).astype(np.int64)
         part_n = np.bincount(codes, minlength=k + 1)  # partition k == remainder
         n_sel = part_n[:k]
