@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .._docs import doc_rng
+from .._settings import Default
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
 from ._dpt import _diffmap
@@ -22,6 +23,7 @@ def diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None = None,
+    key_added: str | None | Default = Default(preset=("diffmap", "key_added")),
     rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -55,6 +57,8 @@ def diffmap(
         .obsp[.uns[neighbors_key]['connectivities_key']] and
         .obsp[.uns[neighbors_key]['distances_key']] for connectivities and distances,
         respectively.
+    key_added
+        Control where the embedding and eigenvalues are stored.
     {rng}
     copy
         Return a copy instead of writing to adata.
@@ -63,11 +67,11 @@ def diffmap(
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_diffmap']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm['X_diffmap' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
 
-    `adata.uns['diffmap_evals']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.uns['diffmap_evals' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
 
@@ -90,5 +94,11 @@ def diffmap(
         msg = "Provide any value greater than 2 for `n_comps`. "
         raise ValueError(msg)
     adata = adata.copy() if copy else adata
-    _diffmap(adata, n_comps=n_comps, neighbors_key=neighbors_key, rng=rng)
+    _diffmap(
+        adata,
+        n_comps=n_comps,
+        neighbors_key=neighbors_key,
+        key_added=key_added,
+        rng=rng,
+    )
     return adata if copy else None
