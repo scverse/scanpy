@@ -173,11 +173,18 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
         x_batch = _get_obs_rep(adata_subset, layer=layer)
 
-        # Prepare clipping
+        # Prepare clipping. Per Lause–Berens–Kobak 2021, the clip threshold is
+        # `sqrt(N)` where N is the number of cells used for the residual
+        # computation — so per-batch when `batch_key` is set. Use a loop-local
+        # variable so that the per-batch default is recomputed each iteration;
+        # reassigning the outer `clip` variable would freeze the first batch's
+        # value for every subsequent batch.
         if clip is None:
             n = x_batch.shape[0]
-            clip = np.sqrt(n)
-        if clip < 0:
+            clip_batch = np.sqrt(n)
+        else:
+            clip_batch = clip
+        if clip_batch < 0:
             msg = "Pearson residuals require `clip>=0` or `clip=None`."
             raise ValueError(msg)
 
@@ -197,7 +204,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             sums_genes=sums_genes,
             sums_cells=sums_cells,
             sum_total=np.float64(sum_total),
-            clip=np.float64(clip),
+            clip=np.float64(clip_batch),
             theta=np.float64(theta),
             n_genes=x_batch.shape[1],
             n_cells=x_batch.shape[0],
