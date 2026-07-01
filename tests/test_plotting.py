@@ -618,6 +618,52 @@ def test_violin(
         )
         save_and_compare_images("violin_multi_panel_with_layer")
 
+    with subtests.test("ncols"):
+        sc.pl.violin(
+            pbmc,
+            ["n_genes", "percent_mito", "n_counts"],
+            multi_panel=True,
+            ncols=2,
+            show=False,
+        )
+        # Insurance against tol=40 hiding an off-by-one in panel count.
+        assert len(plt.gcf().axes) == 3
+        save_and_compare_images("violin_ncols_wrap")
+
+    with subtests.test("ncols_groupby"):
+        # Covers the gridspec branch (Path B) used when groupby is set.
+        sc.pl.violin(
+            pbmc,
+            ["n_genes", "percent_mito", "n_counts"],
+            groupby="bulk_labels",
+            ncols=2,
+            show=False,
+            rotation=90,
+        )
+        assert len(plt.gcf().axes) == 3
+        # Same pandas-3 / seaborn rendering caveat as the multi_panel subtest.
+        with context.xfail(
+            pkg_version("pandas").major >= 3,
+            reason="seaborn violin plot is incompatible with pandas 3",
+            raises=AssertionError,
+        ):
+            save_and_compare_images("violin_ncols_with_groupby")
+
+    with subtests.test("ax_provided_single_key"):
+        # Covers the `ax is not None` branch with ncols left as default (None).
+        fig, ax = plt.subplots()
+        sc.pl.violin(pbmc, "n_genes", ax=ax, show=False)
+        plt.close(fig)
+
+    with subtests.test("ax_with_ncols_raises"):
+        # Covers the error branch: `ax` and `ncols` cannot be combined.
+        fig, ax = plt.subplots()
+        with pytest.raises(
+            ValueError, match=r"`ncols` cannot be combined with a pre-supplied `ax`"
+        ):
+            sc.pl.violin(pbmc, "n_genes", ax=ax, ncols=2, show=False)
+        plt.close(fig)
+
 
 # TODO: Generalize test to more plotting types
 def test_violin_without_raw(tmp_path):
