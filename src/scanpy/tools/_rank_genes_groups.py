@@ -152,47 +152,23 @@ def _ranks(
         yield ranks, left, right
 
 
-def _apply_expm1_preserving_sparsity(X, expm1_func):
-    """Apply ``expm1`` to X, lazily and chunk-wise for dask, keeping sparse
-    data sparse (``expm1(0) == 0``).
+def _apply_expm1_preserving_sparsity(x, expm1_func):
+    """Apply ``expm1`` to ``x`` while keeping sparse data sparse.
+
+    Applied lazily and chunk-wise for dask; ``expm1(0) == 0`` preserves sparsity.
     """
-    if isinstance(X, DaskArray):
-        return X.map_blocks(
+    if isinstance(x, DaskArray):
+        return x.map_blocks(
             _apply_expm1_preserving_sparsity,
             expm1_func,
-            dtype=X.dtype,
-            meta=X._meta,
+            dtype=x.dtype,
+            meta=x._meta,
         )
-    if isinstance(X, CSBase):
-        Xp = X.copy()
-        Xp.data = expm1_func(Xp.data)
-        return Xp
-    return expm1_func(X)
-
-
-@numba.njit
-def _scan(
-    part_n: NDArray[np.float64],
-    mean: NDArray[np.float64],
-    m2: NDArray[np.float64],
-    j: int,
-    step: int,
-) -> NDArray[np.float64]:
-    """Running Chan combine over the partitions for gene ``j``.
-
-    ``acc[i]`` is the combined ``(count, mean, M2)`` of partition ``i`` together with
-    every partition on the ``step`` side of it (``step=1`` forward / prefix,
-    ``step=-1`` backward / suffix).
-    """
-    n_parts = part_n.shape[0]
-    acc = np.empty((n_parts, 3))
-    n = m = v = 0.0
-    i = 0 if step == 1 else n_parts - 1
-    for _ in range(n_parts):
-        n, m, v = _chan_combine(n, m, v, part_n[i], mean[i, j], m2[i, j])
-        acc[i, 0], acc[i, 1], acc[i, 2] = n, m, v
-        i += step
-    return acc
+    if isinstance(x, CSBase):
+        xp = x.copy()
+        xp.data = expm1_func(xp.data)
+        return xp
+    return expm1_func(x)
 
 
 @njit
@@ -206,13 +182,23 @@ def _vars_rest(
 
     Group ``g``'s "rest" combines the forward scan up to ``g - 1`` with the backward
     scan from ``g + 1`` — every partition except ``g`` — so variances are never
-    subtracted (Chan's cancellation-free combine).
+    subtracted (Chan's cancellation-free combine). ``prefix[i]`` / ``suffix[i]`` hold
+    the running ``(count, mean, M2)`` combine of partitions ``0..i`` / ``i..end``.
     """
-    n_parts, n_genes = mean.shape
+    n_parts = part_n.shape[0]
+    n_genes = mean.shape[1]
     vars_rest = np.zeros((k, n_genes))
     for j in numba.prange(n_genes):
-        prefix = _scan(part_n, mean, m2, j, 1)
-        suffix = _scan(part_n, mean, m2, j, -1)
+        prefix = np.empty((n_parts, 3))
+        n = m = v = 0.0
+        for i in range(n_parts):
+            n, m, v = _chan_combine(n, m, v, part_n[i], mean[i, j], m2[i, j])
+            prefix[i, 0], prefix[i, 1], prefix[i, 2] = n, m, v
+        suffix = np.empty((n_parts, 3))
+        n = m = v = 0.0
+        for i in range(n_parts - 1, -1, -1):
+            n, m, v = _chan_combine(n, m, v, part_n[i], mean[i, j], m2[i, j])
+            suffix[i, 0], suffix[i, 1], suffix[i, 2] = n, m, v
         for g in range(k):
             right = suffix[g + 1]  # everything after g; g + 1 < n_parts always holds
             if g >= 1:
@@ -319,27 +305,27 @@ class _RankGenes:
         forward Chan-combine of all other partitions — a sum of non-negative
         terms, hence free of catastrophic cancellation for any group sizes.
         """
-        X = (
+        x = (
             _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
             if exponentiate_values
             else self.X
         )
         if self.ireference is None:
-            self._stats_vs_rest(X, need_var=need_var)
+            self._stats_vs_rest(x, need_var=need_var)
         else:
-            self._stats_vs_reference(X, need_var=need_var)
+            self._stats_vs_reference(x, need_var=need_var)
 
     def _aggregate_group_stats(
-        self, X_used, codes: NDArray[np.int64], n_parts: int, *, need_var: bool
+        self, x_used, codes: NDArray[np.int64], n_parts: int, *, need_var: bool
     ):
-        """One batched :func:`scanpy.get.aggregate` over ``X_used`` grouped by
-        ``codes`` (values ``0 .. n_parts-1``).
+        """Aggregate ``x_used`` in one batched :func:`scanpy.get.aggregate`.
 
-        Returns ``(mean, var, nnz)`` of shape ``(n_parts, n_genes)``,
-        zero-filled for partitions with no cells. ``var`` is ``None`` unless
-        ``need_var``; ``nnz`` is ``None`` unless ``self.comp_pts``.
+        Grouped by ``codes`` (values ``0 .. n_parts-1``). Returns ``(mean, var,
+        nnz)`` of shape ``(n_parts, n_genes)``, zero-filled for partitions with
+        no cells. ``var`` is ``None`` unless ``need_var``; ``nnz`` is ``None``
+        unless ``self.comp_pts``.
         """
-        n_genes = X_used.shape[1]
+        n_genes = x_used.shape[1]
         mean = np.zeros((n_parts, n_genes))
         var = np.zeros((n_parts, n_genes)) if need_var else None
         nnz = np.zeros((n_parts, n_genes)) if self.comp_pts else None
@@ -350,7 +336,7 @@ class _RankGenes:
         if self.comp_pts:
             funcs.append("count_nonzero")
         agg_adata = AnnData(
-            X=X_used,
+            X=x_used,
             obs=pd.DataFrame(
                 {"_g": pd.Categorical(codes, categories=range(n_parts))},
                 index=pd.RangeIndex(len(codes)).astype(str),
@@ -365,17 +351,18 @@ class _RankGenes:
             nnz[idx] = np.asarray(out.layers["count_nonzero"])
         return mean, var, nnz
 
-    def _stats_vs_reference(self, X, *, need_var: bool) -> None:
-        """vs-reference: aggregate the selected-group cells only (the
-        reference is itself one of the selected groups). No rest derivation.
+    def _stats_vs_reference(self, x, *, need_var: bool) -> None:
+        """Aggregate the selected-group cells only (vs-reference; no rest derivation).
+
+        The reference is itself one of the selected groups.
         """
         mask = self.grouping_mask.to_numpy()
-        X_used = X if mask.all() else X[mask]
+        x_used = x if mask.all() else x[mask]
         codes = pd.Categorical(self.grouping, categories=self.groups_order).codes
         k = self.groups_masks_obs.shape[0]
 
         self.means, self.vars, nnz = self._aggregate_group_stats(
-            X_used, codes, k, need_var=need_var
+            x_used, codes, k, need_var=need_var
         )
         if self.comp_pts:
             n_per_group = self.groups_masks_obs.sum(axis=1)
@@ -383,11 +370,12 @@ class _RankGenes:
         else:
             self.pts = None
 
-    def _stats_vs_rest(self, X, *, need_var: bool) -> None:
-        """vs-rest: partition *all* cells into the ``k`` selected-group
-        partitions plus one "remainder" partition (cells in no selected group
-        — non-selected groups and unassigned/NaN). Each group's "rest" is the
-        forward Chan-combine of every other partition.
+    def _stats_vs_rest(self, x, *, need_var: bool) -> None:
+        """Partition *all* cells into the ``k`` selected groups plus a remainder.
+
+        The remainder partition holds cells in no selected group (non-selected
+        groups and unassigned/NaN). Each group's "rest" is the forward
+        Chan-combine of every other partition.
         """
         k = self.groups_masks_obs.shape[0]
 
@@ -398,40 +386,41 @@ class _RankGenes:
         part_n = np.bincount(codes, minlength=k + 1)  # partition k == remainder
         n_sel = part_n[:k]
 
-        mean, var, nnz = self._aggregate_group_stats(X, codes, k + 1, need_var=need_var)
+        mean, var, nnz = self._aggregate_group_stats(x, codes, k + 1, need_var=need_var)
 
         # Selected-group arm of the test (the remainder partition is excluded).
         self.means = mean[:k]
         self.vars = var[:k] if need_var else None
         self.pts = nnz[:k] / n_sel[:, None] if self.comp_pts else None
 
-        # M2 = var * (n - 1); forced to 0 for partitions with <= 1 cell so a
+        # m2 = var * (n - 1); forced to 0 for partitions with <= 1 cell so a
         # singleton remainder (aggregate var undefined there) is harmless.
         if need_var:
             with np.errstate(invalid="ignore"):
-                M2 = var * (part_n[:, None] - 1)
-            M2[part_n <= 1] = 0.0
+                m2 = var * (part_n[:, None] - 1)
+            m2[part_n <= 1] = 0.0
         else:
-            M2 = None
+            m2 = None
 
-        self._derive_rest_stats(part_n, mean, M2, nnz, k, need_var=need_var)
+        self._derive_rest_stats(part_n, mean, m2, nnz, k, need_var=need_var)
 
     def _derive_rest_stats(
-        self, part_n, mean, M2, nnz, k: int, *, need_var: bool
+        self, part_n, mean, m2, nnz, k: int, *, need_var: bool
     ) -> None:
-        """Set ``means_rest``/``vars_rest``/``pts_rest`` for each selected group ``g``
-        (statistics over every cell *not* in ``g``).
+        """Set ``means_rest``/``vars_rest``/``pts_rest`` for each selected group ``g``.
 
-        ``means_rest`` and ``pts_rest`` are linear in the partitions, so they are the
-        exact total-minus-group difference. Variance would lose precision under such
-        subtraction, so ``vars_rest`` uses the cancellation-free Chan leave-one-out
-        scan (:func:`_vars_rest`) — only the variance-based tests request it.
+        Statistics are over every cell *not* in ``g``. ``means_rest`` and
+        ``pts_rest`` are linear in the partitions, so they are the exact
+        total-minus-group difference. Variance would lose precision under such
+        subtraction, so ``vars_rest`` uses the cancellation-free Chan
+        leave-one-out scan (:func:`_vars_rest`) — only the variance-based tests
+        request it.
         """
         n_rest = (self.X.shape[0] - part_n[:k])[:, None]
         total = (part_n[:, None] * mean).sum(axis=0)
         self.means_rest = (total - part_n[:k, None] * mean[:k]) / n_rest
         self.vars_rest = (
-            _vars_rest(np.ascontiguousarray(part_n, dtype=np.float64), mean, M2, k)
+            _vars_rest(np.ascontiguousarray(part_n, dtype=np.float64), mean, m2, k)
             if need_var
             else None
         )
@@ -682,8 +671,9 @@ def _build_stats_dataframe(
     rankby_abs: bool,
     mean_in_log_space: bool,
 ):
-    """Drain the per-group ``(group_index, scores, pvals)`` iterator into a
-    wide-form ``(group, statistic)`` MultiIndex DataFrame: top-N selection,
+    """Drain the per-group ``(group_index, scores, pvals)`` iterator into a DataFrame.
+
+    Builds a wide-form ``(group, statistic)`` MultiIndex frame: top-N selection,
     multiple-testing correction, and (when ``rg.means`` is set) log2
     fold-change. Read-only on ``rg``.
     """
