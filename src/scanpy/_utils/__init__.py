@@ -72,6 +72,7 @@ __all__ = [
     "ensure_igraph",
     "get_igraph_from_adjacency",
     "get_literal_vals",
+    "get_networkit_from_adjacency",
     "indent",
     "is_backed_type",
     "is_backed_type",
@@ -94,6 +95,17 @@ def ensure_igraph() -> None:
         "Please install the igraph package: "
         "`conda install -c conda-forge python-igraph` or "
         "`pip install igraph`."
+    )
+    raise ImportError(msg)
+
+
+def ensure_network() -> None:
+    if importlib.util.find_spec("netowrkit"):
+        return
+    msg = (
+        "Please install the networkit package: "
+        "`conda install conda-forge::networkit` or"
+        "`pip install networkit`"
     )
     raise ImportError(msg)
 
@@ -301,6 +313,25 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
             "Your adjacency matrix contained redundant nodes."
         )
     return g
+
+
+def get_networkit_from_adjacency(adjacency: CSBase, *, weighted: bool = True):
+    """Get a NetworKit graph from an adjacency matrix."""
+    import networkit as nk
+    import scipy.sparse as sps
+
+    shape = adjacency.shape
+    assert shape is not None
+    upper = sps.triu(adjacency, k=1).tocoo()
+    return nk.graph.GraphFromCoo(
+        (
+            upper.data.astype(np.float64),
+            (upper.row.astype(np.uint64), upper.col.astype(np.uint64)),
+        ),
+        n=adjacency.shape[0],
+        weighted=weighted,
+        directed=False,
+    )
 
 
 # --------------------------------------------------------------------------------
