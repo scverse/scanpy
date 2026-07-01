@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _TestResult = tuple[int, NDArray[np.floating], NDArray[np.floating] | None]
 
 _CONST_MAX_SIZE: int = 10_000_000
 
@@ -53,7 +54,7 @@ def _illico_results_to_iter(
     ireference: int | None,
     *,
     copy_pvalues: bool,
-) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]]]:
+) -> Generator[_TestResult]:
     """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
 
     illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
@@ -458,7 +459,7 @@ class _RankGenes:
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
-    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    ) -> Generator[_TestResult, None, None]:
         from scipy import stats
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
@@ -507,9 +508,7 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(
-        self, *, tie_correct: bool
-    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
         from scipy import stats
 
         n_genes = self.X.shape[1]
@@ -586,9 +585,7 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(
-        self, **kwds
-    ) -> Generator[tuple[int, NDArray[np.floating], None], None, None]:
+    def logreg(self, **kwds) -> Generator[_TestResult, None, None]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -621,7 +618,7 @@ class _RankGenes:
 
     def illico(
         self, *, tie_correct: bool, corr_method: _CorrMethod
-    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    ) -> Generator[_TestResult, None, None]:
         from illico import asymptotic_wilcoxon
 
         illico_df = asymptotic_wilcoxon(
@@ -693,14 +690,14 @@ class _RankGenes:
 
 
 def _build_stats_dataframe(
-    rg,
-    results,
+    rg: _RankGenes,
+    results: Iterable[_TestResult],
     *,
     corr_method: _CorrMethod,
     n_genes_user: int | None,
     rankby_abs: bool,
     mean_in_log_space: bool,
-):
+) -> pd.DataFrame | None:
     """Drain the per-group ``(group_index, scores, pvals)`` iterator into a DataFrame.
 
     Builds a wide-form ``(group, statistic)`` MultiIndex frame: top-N selection,
