@@ -790,6 +790,10 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
         sizes = [sizes[0] for _ in range(len(colors))]
     if len(markers) != len(colors) and len(markers) == 1:
         markers = [markers[0] for _ in range(len(colors))]
+    # When the caller provides an ax, panel_pos is computed for scanpy's own
+    # layout and does not reflect the user's figure, so the rectangle-based
+    # colorbar placement below would fall outside the user's ax (see #3963).
+    ax_was_user_supplied = ax is not None
     axs, panel_pos, draw_region_width, _figure_width = setup_axes(
         ax,
         panels=colors,
@@ -830,17 +834,30 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
                 rasterized=settings._vector_friendly,
             )
         if colorbars[icolor]:
-            width = 0.006 * draw_region_width / len(colors)
-            left = (
-                panel_pos[2][2 * icolor + 1]
-                + (1.2 if projection == "3d" else 0.2) * width
-            )
-            rectangle = [left, bottom, width, height]
-            fig = plt.gcf()
-            ax_cb = fig.add_axes(rectangle)
-            _ = plt.colorbar(
-                sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
-            )
+            if ax_was_user_supplied:
+                # Attach the colorbar to the caller's ax instead of using the
+                # internal panel_pos rectangle (which is in figure coords for
+                # scanpy's own layout). Mirrors sc.pl.embedding. See #3963.
+                _ = plt.colorbar(
+                    sct,
+                    ax=ax,
+                    format=ticker.FuncFormatter(ticks_formatter),
+                    pad=0.01,
+                    fraction=0.08,
+                    aspect=30,
+                )
+            else:
+                width = 0.006 * draw_region_width / len(colors)
+                left = (
+                    panel_pos[2][2 * icolor + 1]
+                    + (1.2 if projection == "3d" else 0.2) * width
+                )
+                rectangle = [left, bottom, width, height]
+                fig = plt.gcf()
+                ax_cb = fig.add_axes(rectangle)
+                _ = plt.colorbar(
+                    sct, format=ticker.FuncFormatter(ticks_formatter), cax=ax_cb
+                )
         # set the title
         if title is not None:
             ax.set_title(title[icolor])
