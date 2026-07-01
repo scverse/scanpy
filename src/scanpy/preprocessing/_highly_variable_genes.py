@@ -398,13 +398,21 @@ def _highly_variable_genes_single_batch(
     if n_removed:
         x = x[:, filt].copy()
 
+    from .._compat import get_namespace, is_array_api  ### double check
+
     if flavor == "seurat":
         x = x.copy()
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            x *= np.log(base)
+            if is_array_api(x):
+                x = x * float(np.log(base))
+            else:
+                x *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
         if isinstance(x, np.ndarray):
             np.expm1(x, out=x)
+        elif is_array_api(x):
+            xp = get_namespace(x)
+            x = xp.expm1(x)
         else:
             x = np.expm1(x)
 

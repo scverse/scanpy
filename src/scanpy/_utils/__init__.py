@@ -602,8 +602,22 @@ def axis_mul_or_truediv(
     allow_divide_by_zero: bool = True,
     out: ArrayLike | None = None,
 ) -> np.ndarray:
+    from .._compat import get_namespace, is_array_api
+
     _check_op(op)
     scaling_array = _broadcast_axis(scaling_array, axis)
+    # array api version
+    if is_array_api(x):  ### double check if numpy skips this
+        xp = get_namespace(x)
+        scaling_array = xp.asarray(scaling_array)
+        if op is mul:
+            return x * scaling_array
+        if not allow_divide_by_zero:
+            scaling_array = xp.where(
+                scaling_array == 0, xp.ones_like(scaling_array), scaling_array
+            )
+        return x / scaling_array
+    # numpy version
     if op is mul:
         return np.multiply(x, scaling_array, out=out)
     if not allow_divide_by_zero:
@@ -725,6 +739,12 @@ def _[T: (DaskArray, np.ndarray)](
 
 @singledispatch
 def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
+    from .._compat import get_namespace, is_array_api
+
+    if is_array_api(x):
+        xp = get_namespace(x)
+        return xp.count_nonzero(x, axis=axis)
+
     return np.count_nonzero(x, axis=axis)
 
 
@@ -758,6 +778,15 @@ def _(x: DaskArray, /, axis: Literal[0, 1]) -> DaskArray:
 @singledispatch
 def check_nonnegative_integers(x: _SupportedArray, /) -> bool | DaskArray:
     """Check values of X to ensure it is count data."""
+    from .._compat import get_namespace, is_array_api
+
+    if is_array_api(x):
+        xp = get_namespace(x)
+        if bool(xp.any(x < 0)):
+            return False
+        if xp.isdtype(x.dtype, "integral"):
+            return True
+        return not bool(xp.any((x % 1) != 0))  ### double check
     raise NotImplementedError
 
 

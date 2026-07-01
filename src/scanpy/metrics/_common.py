@@ -12,8 +12,6 @@ from .._compat import CSRBase, DaskArray, SpBase, fullname, warn
 from .._utils import NeighborsView
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-
     from anndata import AnnData
     from numpy.typing import NDArray
 
@@ -93,7 +91,12 @@ def _resolve_vals(val: pd.DataFrame | pd.Series) -> NDArray: ...
 
 
 @singledispatch
-def _resolve_vals(val: object) -> NoReturn:
+def _resolve_vals(val: object):  ### double check
+    from .._compat import is_array_api
+
+    if is_array_api(val):
+        # Moran's I / Geary's C use numba kernels, so need to convert at boundary
+        return np.asarray(val)
     msg = f"Unsupported type {type(val)}"
     raise TypeError(msg)
 
