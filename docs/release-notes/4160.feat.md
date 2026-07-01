@@ -1,0 +1,1 @@
+Add {func}`scanpy.pp.normalize_clr` for shifted centered log-ratio (PFlog1pPF) normalization, a variance-stabilizing, depth-invariant and rank-preserving count transform {cite:p}`Booeshaghi2022` {smaller}`R Baber`

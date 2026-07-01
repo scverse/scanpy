@@ -7,6 +7,7 @@ import numba
 import numpy as np
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
@@ -14,6 +15,8 @@ from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from anndata import AnnData
 
 
@@ -298,6 +301,265 @@ def normalize_total(  # noqa: PLR0912
         logg.debug(
             f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
         )
+
+    if copy:
+        return adata
+    elif not inplace:
+        return dat
+    return None
+
+
+# -----------------------------------------------------------------------------
+# Shifted Centered Log-Ratio (PFlogPF) Core Implementation
+#
+# The mathematical logic and sparse matrix optimization ("offset trick")
+# implemented below are adapted from the Pachter Lab reference repository:
+# https://github.com/pachterlab/bhgp_2022
+#
+# Reference Publication:
+# Booeshaghi et al. (2022, 2026) "Depth normalization for single-cell genomics
+# count data" bioRxiv. doi: 10.1101/2022.05.06.490859
+#
+# Copyright (c) 2022, Pachter Lab. All rights reserved.
+# Licensed under the BSD 2-Clause License.
+# -----------------------------------------------------------------------------
+
+
+def _estimate_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
+    r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
+
+    Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
+    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and (population)
+    variance over cells. The model is linear in :math:`α`, so the ordinary
+    least-squares solution is closed form
+
+    .. math::
+        α = \frac{\sum_g (\mathrm{Var}_g - μ_g) \, μ_g^2}{\sum_g μ_g^4},
+
+    which is exactly the minimizer a non-linear `curve_fit` would converge to,
+    but without the dependency. :func:`~fast_array_utils.stats.mean_var` is
+    dispatched for dense, sparse and dask input alike, so the only dask-specific
+    step is computing the two final scalar sums.
+    """
+    mu, var = mean_var(x, axis=0, correction=0)
+    mu2 = mu**2
+    numerator = np.sum((var - mu) * mu2)
+    denominator = np.sum(mu2 * mu2)
+    if isinstance(x, DaskArray):
+        import dask
+
+        numerator, denominator = dask.compute(numerator, denominator)
+    if denominator == 0.0:
+        msg = (
+            "Cannot estimate overdispersion: every gene has zero mean. "
+            "Pass `alpha` or `target_sum` explicitly."
+        )
+        raise ValueError(msg)
+    return float(numerator / denominator)
+
+
+def _clr_log_center(u: np.ndarray | CSBase) -> np.ndarray:
+    """Apply log1p then per-cell mean-centering to PF-scaled counts; return dense.
+
+    Operates on a full-width block of cells: every gene must be present so the
+    per-cell mean spans the whole row. Used directly for in-memory input, and
+    per row-chunk under :meth:`~dask.array.Array.map_blocks` (after the genes
+    have been rechunked into a single chunk).
+    """
+    n_genes = u.shape[1]
+    if isinstance(u, CSBase):
+        # Sparse "offset trick": store log1p only at the nonzero entries. The
+        # structural zeros already hold log1p(0) = 0, so the per-cell mean is just
+        # the stored row sum / n_genes, and no densification is needed until the
+        # final centering step.
+        u.data = np.log1p(u.data)
+        per_cell_mean = np.asarray(u.sum(axis=1)).ravel() / n_genes
+        dense_log = u.toarray()
+    else:
+        u = np.asarray(u)
+        dense_log = np.log1p(u)
+        per_cell_mean = dense_log.mean(axis=1)
+
+    # Additive centering (the CLR step): map each cell onto the zero-sum
+    # (Aitchison) hyperplane. This is what fills the zeros and densifies the matrix.
+    return dense_log - per_cell_mean[:, None]
+
+
+def _normalize_clr_helper(
+    x: np.ndarray | CSBase | DaskArray,
+    *,
+    target_sum: float | None,
+    alpha: float | Literal["auto"] | None,
+) -> tuple[np.ndarray | DaskArray, np.ndarray | DaskArray]:
+    """Compute the shifted CLR (PFlog1pPF) transform backend logic.
+
+    This function acts as the internal processing engine for `normalize_clr`,
+    adapted from the reference implementations provided by the Pachter Lab
+    (Booeshaghi et al. 2022). It applies initial depth-scaling followed by
+    an optimized sparse log-shift operation before mapping coordinates onto
+    the zero-sum Aitchison hyperplane.
+
+    Returns the dense, per-cell-centered matrix and the raw per-cell depths
+    (the latter is used by the caller to warn about empty cells).
+
+    See `normalize_clr` for the meaning of the parameters.
+    """
+    # Keep the depths lazy for dask; `.ravel()` would otherwise materialize them.
+    cell_depths = stats.sum(x, axis=1)
+    if not isinstance(x, DaskArray):
+        cell_depths = np.asarray(cell_depths).ravel()
+
+    # Resolve `target_sum` (the paper's PF target constant K, Booeshaghi et al.
+    # 2022): the depth the first proportional-fitting step scales every cell to.
+    if alpha is not None:
+        if alpha == "auto":
+            # Estimate the overdispersion from the raw counts (closed-form OLS,
+            # as in the reference implementation).
+            alpha = _estimate_overdispersion(x)
+        if not alpha > 0:
+            msg = (
+                f"`alpha` must be positive to derive K = 4 * alpha * s, got {alpha}. "
+                "The data may be underdispersed; pass `target_sum` explicitly instead."
+            )
+            raise ValueError(msg)
+        # Delta-method calibration: K = 4 * alpha * s, where s is the mean cell
+        # depth. This sets the count-scale pseudocount to the variance-stabilizing
+        # value y0 = 1 / (4 * alpha), and overrides any value passed as `target_sum`.
+        target_sum = 4.0 * alpha * float(cell_depths.mean())
+    elif target_sum is None:
+        # `float(...)` triggers a single blocking `.compute()` for dask input.
+        target_sum = float(cell_depths.mean())
+    # else: use the `target_sum` passed by the caller.
+
+    # Proportional fitting: rescale each cell so its counts sum to `target_sum` (K).
+    # Dividing by `cell_depths / target_sum` (with allow_divide_by_zero=False)
+    # leaves empty cells as all-zero rows instead of producing invalid infinities.
+    u = axis_mul_or_truediv(
+        x, cell_depths / target_sum, op=truediv, axis=0, allow_divide_by_zero=False
+    )
+
+    if isinstance(x, DaskArray):
+        # Per-cell centering needs the whole row, so collapse the genes into a
+        # single chunk; the transform is then embarrassingly parallel over the
+        # row-chunks. The output is always dense, hence the dense numpy `meta`.
+        u = u.rechunk({1: -1})
+        dense_log = u.map_blocks(
+            _clr_log_center, dtype=np.float64, meta=np.array([], dtype=np.float64)
+        )
+    else:
+        dense_log = _clr_log_center(u)
+
+    return dense_log, cell_depths
+
+
+def normalize_clr(
+    adata: AnnData,
+    *,
+    target_sum: float | None = None,
+    alpha: float | Literal["auto"] | None = None,
+    layer: str | None = None,
+    inplace: bool = True,
+    copy: bool = False,
+) -> AnnData | dict[str, np.ndarray] | None:
+    r"""Normalize counts with the shifted centered log-ratio (PFlog1pPF) transform.
+
+    Computes the shifted centered log-ratio (CLR) transform
+
+    .. math::
+        T(x)_i = \log(u_i + 1) - \frac{1}{D} \sum_{j=1}^D \log(u_j + 1),
+
+    where :math:`u_i = K \, x_i / \sum_j x_j` are the depth-normalized counts
+    (proportional fitting to a target depth :math:`K`) and :math:`D` is the
+    number of genes. Equivalently this is proportional fitting, then
+    :obj:`~numpy.log1p`, then per-cell mean-centering in log space (the
+    centered-log-ratio step). This count transform is simultaneously
+    variance-stabilizing, depth-invariant, and rank-preserving :cite:p:`Booeshaghi2022`.
+
+    Because the per-cell centering fills the zero entries, the output is always
+    dense, and each cell sums to exactly zero.
+
+    .. note::
+        When used with a :class:`~dask.array.Array` in `adata.X`, deriving the
+        proportional-fitting target :math:`K` from the data requires a global
+        reduction and therefore triggers a blocking `.compute()`: once for the
+        default mean-depth target, and once more for `alpha` (including
+        ``alpha="auto"``). Only the scalar reduction is materialized, not the
+        matrix. Passing `target_sum` explicitly avoids this and keeps the whole
+        operation lazy.
+
+    Parameters
+    ----------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    target_sum
+        Target depth :math:`K` for the first proportional-fitting step. If `None`
+        (and `alpha` is not given), the empirical mean cell depth is used. Unlike
+        :func:`~scanpy.pp.normalize_total`, this is only an *intermediate* target:
+        cells sum to `target_sum` after proportional fitting, but the subsequent
+        log and centering steps make each cell sum to exactly zero in the output.
+    alpha
+        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``). When
+        given, it overrides `target_sum` and sets :math:`K = 4 \cdot α \cdot s` by
+        the delta method, where :math:`s` is the mean cell depth, calibrating the
+        count-scale pseudocount to the variance-stabilizing value ``y0 = 1/(4·α)``
+        :cite:p:`Booeshaghi2022`. Pass ``"auto"`` to estimate :math:`α` from the
+        data (closed-form least squares of ``var = μ + α·μ²`` across genes). A
+        :class:`ValueError` is raised if the estimated or supplied :math:`α` is
+        not positive (e.g. underdispersed data); pass `target_sum` instead.
+    layer
+        Layer to normalize instead of `X`.
+    inplace
+        Whether to update `adata` or return a dictionary with the normalized
+        matrix.
+    copy
+        Whether to modify a copied input object. Not compatible with
+        `inplace=False`.
+
+    Returns
+    -------
+    Returns a dictionary with the normalized copy of `adata.X` (key `"X"`) or
+    updates `adata` with the normalized matrix, depending on `inplace`.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from anndata import AnnData
+    >>> import scanpy as sc
+    >>> adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]], dtype="float32"))
+    >>> sc.pp.normalize_clr(adata)
+    >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-6)
+    True
+    """
+    if copy:
+        if not inplace:
+            msg = "`copy=True` cannot be used with `inplace=False`."
+            raise ValueError(msg)
+        adata = adata.copy()
+
+    view_to_actual(adata)
+
+    x = _get_obs_rep(adata, layer=layer)
+    if isinstance(x, CSCBase):
+        x = x.tocsr()
+    if issubclass(x.dtype.type, int | np.integer):
+        x = x.astype(np.float64)
+
+    start = logg.info("normalizing counts per cell via shifted CLR")
+
+    x, cell_depths = _normalize_clr_helper(x, target_sum=target_sum, alpha=alpha)
+
+    if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
+        warn("Some cells have zero counts", UserWarning)
+
+    dat = dict(X=x)
+    if inplace:
+        _set_obs_rep(adata, dat["X"], layer=layer)
+
+    logg.info(
+        "    finished ({time_passed})",
+        time=start,
+    )
 
     if copy:
         return adata
