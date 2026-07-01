@@ -171,43 +171,71 @@ def _apply_expm1_preserving_sparsity(x, expm1_func):
     return expm1_func(x)
 
 
+@numba.njit  # noqa: TID251  (inner kernel called from _vars_rest's nopython loop)
+def _chan_accumulate(
+    group_counts: NDArray[np.float64],
+    mean: NDArray[np.float64],
+    m2: NDArray[np.float64],
+    j: int,
+    direction: int,
+) -> NDArray[np.float64]:
+    """Accumulate a running Chan combine of the groups for gene ``j``.
+
+    ``acc[i]`` holds the combined ``(count, mean, M2)`` of group ``i`` together with
+    every group toward ``direction``: ``+1`` gives groups ``0..i`` (forward),
+    ``-1`` gives groups ``i..end`` (backward).
+    """
+    n_groups = group_counts.shape[0]
+    acc = np.empty((n_groups, 3))
+    # accumulated (count, mean, M2) of the groups visited so far
+    acc_count = acc_mean = acc_m2 = 0.0
+    # visit groups forward (direction +1) or backward (-1)
+    group_order = range(n_groups) if direction == 1 else range(n_groups - 1, -1, -1)
+    for i in group_order:
+        acc_count, acc_mean, acc_m2 = _chan_combine(
+            acc_count, acc_mean, acc_m2, group_counts[i], mean[i, j], m2[i, j]
+        )
+        acc[i, 0], acc[i, 1], acc[i, 2] = acc_count, acc_mean, acc_m2
+    return acc
+
+
 @njit
 def _vars_rest(
-    part_n: NDArray[np.float64],
+    group_counts: NDArray[np.float64],
     mean: NDArray[np.float64],
     m2: NDArray[np.float64],
     k: int,
 ) -> NDArray[np.float64]:
     """Leave-one-out variance for each selected group, parallel over genes.
 
-    Group ``g``'s "rest" combines the forward scan up to ``g - 1`` with the backward
-    scan from ``g + 1`` — every partition except ``g`` — so variances are never
-    subtracted (Chan's cancellation-free combine). ``prefix[i]`` / ``suffix[i]`` hold
-    the running ``(count, mean, M2)`` combine of partitions ``0..i`` / ``i..end``.
+    Group ``g``'s "rest" is every other group combined — the groups up to ``g - 1``
+    pooled with the groups from ``g + 1`` — so variances are never subtracted
+    (Chan's cancellation-free combine).
     """
-    n_parts = part_n.shape[0]
     n_genes = mean.shape[1]
     vars_rest = np.zeros((k, n_genes))
     for j in numba.prange(n_genes):
-        prefix = np.empty((n_parts, 3))
-        n = m = v = 0.0
-        for i in range(n_parts):
-            n, m, v = _chan_combine(n, m, v, part_n[i], mean[i, j], m2[i, j])
-            prefix[i, 0], prefix[i, 1], prefix[i, 2] = n, m, v
-        suffix = np.empty((n_parts, 3))
-        n = m = v = 0.0
-        for i in range(n_parts - 1, -1, -1):
-            n, m, v = _chan_combine(n, m, v, part_n[i], mean[i, j], m2[i, j])
-            suffix[i, 0], suffix[i, 1], suffix[i, 2] = n, m, v
+        # combined (count, mean, M2) of groups 0..i (forward) and i..end (backward)
+        combined_stats_upto_group = _chan_accumulate(group_counts, mean, m2, j, 1)
+        combined_stats_from_group = _chan_accumulate(group_counts, mean, m2, j, -1)
+
+        # each group g's "rest" stats = the groups before g pooled with the groups after g
         for g in range(k):
-            right = suffix[g + 1]  # everything after g; g + 1 < n_parts always holds
+            stats_after_g = combined_stats_from_group[g + 1]
             if g >= 1:
-                left = prefix[g - 1]
+                stats_before_g = combined_stats_upto_group[g - 1]
+                # each stats row is (count, mean, M2)
                 n_r, _, m2_r = _chan_combine(
-                    left[0], left[1], left[2], right[0], right[1], right[2]
+                    n_a=stats_before_g[0],
+                    mean_a=stats_before_g[1],
+                    m2_a=stats_before_g[2],
+                    n_b=stats_after_g[0],
+                    mean_b=stats_after_g[1],
+                    m2_b=stats_after_g[2],
                 )
             else:
-                n_r, m2_r = right[0], right[2]
+                # g == 0 has no groups before it, so its rest is just the groups after
+                n_r, m2_r = stats_after_g[0], stats_after_g[2]
             denom = n_r - 1.0 if n_r >= 2.0 else 1.0
             v = m2_r / denom
             vars_rest[g, j] = v if v > 0.0 else 0.0
@@ -300,10 +328,10 @@ class _RankGenes:
 
         ``need_var`` controls whether variance (per-group and per-rest) is
         computed; only the t-test family reads it. In vs_rest mode every cell
-        is partitioned into its selected group or a single "remainder"
-        partition (cells in no selected group), and each group's "rest" is the
-        forward Chan-combine of all other partitions — a sum of non-negative
-        terms, hence free of catastrophic cancellation for any group sizes.
+        is assigned to its selected group or a single "remainder" group (cells
+        in no selected group), and each group's "rest" is the forward
+        Chan-combine of all other groups — a sum of non-negative terms, hence
+        free of catastrophic cancellation for any group sizes.
         """
         x = (
             _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
@@ -316,19 +344,19 @@ class _RankGenes:
             self._stats_vs_reference(x, need_var=need_var)
 
     def _aggregate_group_stats(
-        self, x_used, codes: NDArray[np.int64], n_parts: int, *, need_var: bool
+        self, x_used, codes: NDArray[np.int64], n_groups: int, *, need_var: bool
     ):
         """Aggregate ``x_used`` in one batched :func:`scanpy.get.aggregate`.
 
-        Grouped by ``codes`` (values ``0 .. n_parts-1``). Returns ``(mean, var,
-        nnz)`` of shape ``(n_parts, n_genes)``, zero-filled for partitions with
+        Grouped by ``codes`` (values ``0 .. n_groups-1``). Returns ``(mean, var,
+        nnz)`` of shape ``(n_groups, n_genes)``, zero-filled for groups with
         no cells. ``var`` is ``None`` unless ``need_var``; ``nnz`` is ``None``
         unless ``self.comp_pts``.
         """
         n_genes = x_used.shape[1]
-        mean = np.zeros((n_parts, n_genes))
-        var = np.zeros((n_parts, n_genes)) if need_var else None
-        nnz = np.zeros((n_parts, n_genes)) if self.comp_pts else None
+        mean = np.zeros((n_groups, n_genes))
+        var = np.zeros((n_groups, n_genes)) if need_var else None
+        nnz = np.zeros((n_groups, n_genes)) if self.comp_pts else None
 
         funcs = ["mean"]
         if need_var:
@@ -338,7 +366,7 @@ class _RankGenes:
         agg_adata = AnnData(
             X=x_used,
             obs=pd.DataFrame(
-                {"_g": pd.Categorical(codes, categories=range(n_parts))},
+                {"_g": pd.Categorical(codes, categories=range(n_groups))},
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
@@ -371,56 +399,58 @@ class _RankGenes:
             self.pts = None
 
     def _stats_vs_rest(self, x, *, need_var: bool) -> None:
-        """Partition *all* cells into the ``k`` selected groups plus a remainder.
+        """Assign every cell to one of the ``k`` selected groups or a remainder group.
 
-        The remainder partition holds cells in no selected group (non-selected
+        The remainder group holds cells in no selected group (non-selected
         groups and unassigned/NaN). Each group's "rest" is the forward
-        Chan-combine of every other partition.
+        Chan-combine of every other group.
         """
         k = self.groups_masks_obs.shape[0]
 
-        # Codes: each cell's selected-group index, or `k` (the remainder
-        # partition) for cells in no selected group (non-selected / NaN).
+        # each cell's selected-group index, or `k` (the remainder group) for
+        # cells in no selected group (non-selected / NaN)
         sel = pd.Index(self.groups_order).get_indexer(self.group_col)
         codes = np.where(sel >= 0, sel, k).astype(np.int64)
-        part_n = np.bincount(codes, minlength=k + 1)  # partition k == remainder
-        n_sel = part_n[:k]
+        group_counts = np.bincount(codes, minlength=k + 1)  # group k == remainder
+        n_sel = group_counts[:k]
 
         mean, var, nnz = self._aggregate_group_stats(x, codes, k + 1, need_var=need_var)
 
-        # Selected-group arm of the test (the remainder partition is excluded).
+        # selected-group arm of the test (the remainder group is excluded)
         self.means = mean[:k]
         self.vars = var[:k] if need_var else None
         self.pts = nnz[:k] / n_sel[:, None] if self.comp_pts else None
 
-        # m2 = var * (n - 1); forced to 0 for partitions with <= 1 cell so a
-        # singleton remainder (aggregate var undefined there) is harmless.
+        # m2 = var * (n - 1); forced to 0 for groups with <= 1 cell so a
+        # singleton remainder (aggregate var undefined there) is harmless
         if need_var:
             with np.errstate(invalid="ignore"):
-                m2 = var * (part_n[:, None] - 1)
-            m2[part_n <= 1] = 0.0
+                m2 = var * (group_counts[:, None] - 1)
+            m2[group_counts <= 1] = 0.0
         else:
             m2 = None
 
-        self._derive_rest_stats(part_n, mean, m2, nnz, k, need_var=need_var)
+        self._derive_rest_stats(group_counts, mean, m2, nnz, k, need_var=need_var)
 
     def _derive_rest_stats(
-        self, part_n, mean, m2, nnz, k: int, *, need_var: bool
+        self, group_counts, mean, m2, nnz, k: int, *, need_var: bool
     ) -> None:
         """Set ``means_rest``/``vars_rest``/``pts_rest`` for each selected group ``g``.
 
         Statistics are over every cell *not* in ``g``. ``means_rest`` and
-        ``pts_rest`` are linear in the partitions, so they are the exact
+        ``pts_rest`` are linear in the groups, so they are the exact
         total-minus-group difference. Variance would lose precision under such
         subtraction, so ``vars_rest`` uses the cancellation-free Chan
         leave-one-out scan (:func:`_vars_rest`) — only the variance-based tests
         request it.
         """
-        n_rest = (self.X.shape[0] - part_n[:k])[:, None]
-        total = (part_n[:, None] * mean).sum(axis=0)
-        self.means_rest = (total - part_n[:k, None] * mean[:k]) / n_rest
+        n_rest = (self.X.shape[0] - group_counts[:k])[:, None]
+        total = (group_counts[:, None] * mean).sum(axis=0)
+        self.means_rest = (total - group_counts[:k, None] * mean[:k]) / n_rest
         self.vars_rest = (
-            _vars_rest(np.ascontiguousarray(part_n, dtype=np.float64), mean, m2, k)
+            _vars_rest(
+                np.ascontiguousarray(group_counts, dtype=np.float64), mean, m2, k
+            )
             if need_var
             else None
         )
