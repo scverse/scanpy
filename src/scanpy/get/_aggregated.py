@@ -566,13 +566,13 @@ def aggregate_dask(
     )
     aggregated = {
         f: data.map_blocks(
-            partial(aggregate_chunk_sum_or_count_nonzero, func=func),
+            partial(aggregate_chunk_sum_or_count_nonzero, func=f),
             new_axis=(1,) if unchunked_axis == 1 else None,
             chunks=chunks,
             meta=np.array(
                 [],
                 dtype=np.float64
-                if func not in get_args(ConstantDtypeAgg)
+                if f not in get_args(ConstantDtypeAgg)
                 else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
             ),
         )
