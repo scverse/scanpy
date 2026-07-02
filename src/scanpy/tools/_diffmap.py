@@ -4,16 +4,20 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .. import logging
 from .._docs import doc_rng
-from .._settings import Default
+from .._keys import _embedding_keys
+from .._settings import Default, settings
 from .._utils import _doc_params
 from .._utils.random import _accepts_legacy_random_state
-from ._dpt import _diffmap
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._utils.random import RNGLike, SeedLike
+
+
+__all__ = ["diffmap"]
 
 
 @_doc_params(rng=doc_rng)
@@ -102,3 +106,37 @@ def diffmap(
         rng=rng,
     )
     return adata if copy else None
+
+
+def _diffmap(
+    adata: AnnData,
+    n_comps: int = 15,
+    *,
+    neighbors_key: str | None,
+    key_added: str | None | Default,
+    rng: np.random.Generator,
+) -> None:
+    from ._dpt import DPT
+
+    if isinstance(key_added, Default):
+        key_added = settings.preset.diffmap.key_added
+    keys = _embedding_keys("diffmap", key_added)
+    start = logging.info(f"computing Diffusion Maps using {n_comps=}(=n_dcs)")
+    dpt = DPT(adata, neighbors_key=neighbors_key)
+    dpt.compute_transitions()
+    dpt.compute_eigen(n_comps=n_comps, rng=rng)
+    adata.obsm[keys.obsm] = dpt.eigen_basis
+    adata.uns[keys.uns], acc = (
+        (dpt.eigen_values, "")
+        if key_added is None
+        else (dict(evals=dpt.eigen_values), "['evals']")
+    )
+    logging.info(
+        "    finished",
+        time=start,
+        deep=(
+            "added\n"
+            f"    {keys.obsm!r}, diffmap coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}{acc}, eigenvalues of transition matrix (adata.uns)"
+        ),
+    )
