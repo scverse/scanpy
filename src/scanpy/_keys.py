@@ -76,7 +76,7 @@ def _embedding_keys(
         case "diffmap", None:
             return _EmbeddingKeys("diffmap_evals", "X_diffmap")
         case "diffmap", str():
-            return _EmbeddingKeys(f"{key_added}_evals", key_added)
+            return _EmbeddingKeys(key_added, key_added)
         case "umap" | "tsne" as e, k:
             return _EmbeddingKeys(k or e, k or f"X_{e}")
         case _:

@@ -113,20 +113,24 @@ def test_diffmap(
 
 
 @pytest.mark.parametrize(
-    ("key_added", "key_obsm", "key_uns"),
+    ("key_added", "key_obsm", "key_uns", "is_dict"),
     [
-        pytest.param(None, "X_diffmap", "diffmap_evals", id="None"),
-        pytest.param("custom_key", "custom_key", "custom_key_evals", id="custom_key"),
-        pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", id="v1"),
+        pytest.param(None, "X_diffmap", "diffmap_evals", False, id="None"),
+        pytest.param("custom_key", "custom_key", "custom_key", True, id="custom_key"),
+        pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
         pytest.param(
-            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap_evals"),
+            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
             marks=[needs.igraph, needs.skmisc],
             id="v2",
         ),
     ],
 )
 def test_diffmap_key_added(
-    key_added: str | None | Default | sc.Preset, key_obsm: str, key_uns: str
+    *,
+    key_added: str | None | Default | sc.Preset,
+    key_obsm: str,
+    key_uns: str,
+    is_dict: bool,
 ) -> None:
     pbmc = pbmc68k_reduced()[:300, :100].copy()
     if isinstance(key_added, sc.Preset):
@@ -135,6 +139,7 @@ def test_diffmap_key_added(
     adata = sc.tl.diffmap(pbmc, key_added=key_added, copy=True)
     assert key_obsm in adata.obsm
     assert key_uns in adata.uns
+    assert isinstance(adata.uns[key_uns], dict if is_dict else np.ndarray)
 
 
 @needs.igraph
