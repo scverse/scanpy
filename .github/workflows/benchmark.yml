@@ -47,8 +47,7 @@ jobs:
 
       - name: Install dependencies
         # https://github.com/airspeed-velocity/asv/issues/1577
-        # https://github.com/airspeed-velocity/asv_runner/issues/52
-        run: pip install 'asv>=0.6.4' 'py-rattler<0.22' 'asv_runner<0.2.2'
+        run: pip install 'asv>=0.6.4' 'py-rattler<0.22'
 
       - name: Configure ASV
         working-directory: ${{ env.ASV_DIR }}
