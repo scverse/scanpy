@@ -71,7 +71,7 @@ def diffmap(
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
 
-    `adata.uns['diffmap_evals' | key_added]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.uns[f'{{key_added or "diffmap"}}_evals']` : :class:`numpy.ndarray` (dtype `float`)
         Array of size (number of eigen vectors).
         Eigenvalues of transition matrix.
 

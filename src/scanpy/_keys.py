@@ -53,7 +53,7 @@ def _embedding_keys(
     layout: str,
     key_added_ext: str | None = ...,
 ) -> _EmbeddingKeys: ...
-def _embedding_keys(  # noqa: PLR0911
+def _embedding_keys(
     embedding: _Embedding,
     key_added: str | None | Default | Preset = Default(),
     *,
@@ -67,22 +67,18 @@ def _embedding_keys(  # noqa: PLR0911
             "BasicEmbeddingPreset", getattr(key_added, embedding)
         ).key_added
     match embedding, key_added:
-        case "draw_graph", _:
-            return _draw_graph_keys(
-                key_added, layout=layout, key_added_ext=key_added_ext
-            )
-        case "pca", str():
-            return _PcaKeys(key_added, key_added, key_added)
-        case _, str():
-            return _EmbeddingKeys(key_added, key_added)
+        case "draw_graph", k:
+            return _draw_graph_keys(k, layout=layout, key_added_ext=key_added_ext)
         case "pca", None:
             return _PcaKeys("pca", "X_pca", "PCs")
-        case "tsne", None:
-            return _EmbeddingKeys("tsne", "X_tsne")
-        case "umap", None:
-            return _EmbeddingKeys("umap", "X_umap")
+        case "pca", str():
+            return _PcaKeys(key_added, key_added, key_added)
         case "diffmap", None:
             return _EmbeddingKeys("diffmap_evals", "X_diffmap")
+        case "diffmap", str():
+            return _EmbeddingKeys(f"{key_added}_evals", key_added)
+        case "umap" | "tsne" as e, k:
+            return _EmbeddingKeys(k or e, k or f"X_{e}")
         case _:
             assert_never(embedding)
 
