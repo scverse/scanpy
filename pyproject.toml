@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.11",
+    "anndata>=0.11.2",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
@@ -67,7 +67,7 @@ dependencies = [
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.14",
+    "scipy>=1.15",
     "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
