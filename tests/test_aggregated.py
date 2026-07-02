@@ -234,6 +234,23 @@ def test_aggregate_bad_dask_array(
         sc.get.aggregate(adata, ["louvain"], "sum")
 
 
+@needs.dask
+@pytest.mark.parametrize("func", [["count_nonzero"], ["sum", "mean", "count_nonzero"]])
+def test_aggregate_dask_multiple_funcs(func: list[AggType]) -> None:
+    """A multi-func list incl. count_nonzero/sum must survive `.compute()` on dask."""
+    import dask.array as da
+
+    adata = sc.datasets.blobs()
+    dask_adata = adata.copy()
+    dask_adata.X = da.from_array(adata.X, chunks=(adata.shape[0] // 2, -1))
+    expected = sc.get.aggregate(adata, "blobs", func=func)
+    result = sc.get.aggregate(dask_adata, "blobs", func=func)
+    for f in func:
+        np.testing.assert_allclose(
+            np.asarray(expected.layers[f]), np.asarray(result.layers[f])
+        )
+
+
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
 def test_aggregate_axis_specification(axis_name: Literal["obs", "var"]) -> None:
     axis, axis_name = _resolve_axis(axis_name)
