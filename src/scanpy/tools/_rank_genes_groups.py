@@ -15,7 +15,7 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase
-from .._settings import Default
+from .._settings import Default, Preset
 from .._settings.presets import DETest
 from .._utils import (
     _numba_thread_limit,
@@ -718,6 +718,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
+        if settings.preset is Preset.ScanpyV2Preview:
+            method = "wilcoxon_illico"
 
     mask_var = _check_mask(adata, mask_var, "var")
 
