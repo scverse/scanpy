@@ -116,10 +116,10 @@ def test_diffmap(
     ("key_added", "key_obsm", "key_uns"),
     [
         pytest.param(None, "X_diffmap", "diffmap_evals", id="None"),
-        pytest.param("custom_key", "custom_key", "custom_key", id="custom_key"),
+        pytest.param("custom_key", "custom_key", "custom_key_evals", id="custom_key"),
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", id="v1"),
         pytest.param(
-            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap"),
+            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap_evals"),
             marks=[needs.igraph, needs.skmisc],
             id="v2",
         ),
