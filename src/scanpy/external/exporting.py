@@ -14,6 +14,7 @@ import scipy.sparse
 from fast_array_utils.stats import mean_var
 from pandas.api.types import CategoricalDtype
 
+from .._keys import _existing_preset_keys
 from .._utils import NeighborsView
 
 if TYPE_CHECKING:
@@ -81,8 +82,14 @@ def spring_project(  # noqa: PLR0912, PLR0915
     if embedding_method not in adata.obsm:
         if f"X_{embedding_method}" in adata.obsm:
             embedding_method = f"X_{embedding_method}"
-        elif embedding_method in adata.uns:
-            embedding_method = f"X_{embedding_method}_{adata.uns[embedding_method]['params']['layout']}"
+        elif embedding_method in {"graph", "draw_graph"} and (
+            keys := _existing_preset_keys(
+                adata,
+                "draw_graph",
+                layout=adata.uns[embedding_method]["params"]["layout"],
+            )
+        ):
+            embedding_method = keys.obsm
         else:
             msg = f"Run the specified embedding method `{embedding_method}` first."
             raise ValueError(msg)
@@ -222,10 +229,10 @@ def spring_project(  # noqa: PLR0912, PLR0915
     )
 
     # Write some useful intermediates, if they exist
-    if "X_pca" in adata.obsm:
+    if keys := _existing_preset_keys(adata, "pca"):
         np.savez_compressed(
             subplot_dir / "intermediates.npz",
-            Epca=adata.obsm["X_pca"],
+            Epca=adata.obsm[keys.obsm],
             total_counts=total_counts,
         )
 
