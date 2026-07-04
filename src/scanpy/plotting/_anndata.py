@@ -838,8 +838,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
     Wrap multiple keys into a 2-column grid.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys=['S_score', 'G2M_score', 'n_counts'],
             multi_panel=True, ncols=2)
