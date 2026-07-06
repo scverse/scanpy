@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    labels:
+      - no milestone
     commit-message:
       prefix: ci
   - package-ecosystem: pip
