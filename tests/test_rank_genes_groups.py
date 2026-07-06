@@ -431,17 +431,18 @@ def test_illico(
     pbmc_illico = pbmc.copy()
 
     reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else "rest"
-    sc.tl.rank_genes_groups(
-        pbmc_illico,
-        groupby="bulk_labels",
-        method="wilcoxon_illico",
-        reference=reference if test == "ovo" else "rest",
-        n_genes=pbmc.n_vars,
-        tie_correct=tie_correct,
-        corr_method=corr_method,
-        mean_in_log_space=mean_in_log_space,
-        groups=groups,
-    )
+    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+        sc.tl.rank_genes_groups(
+            pbmc_illico,
+            groupby="bulk_labels",
+            method="wilcoxon",
+            reference=reference if test == "ovo" else "rest",
+            n_genes=pbmc.n_vars,
+            tie_correct=tie_correct,
+            corr_method=corr_method,
+            mean_in_log_space=mean_in_log_space,
+            groups=groups,
+        )
 
     sc.tl.rank_genes_groups(
         pbmc,
@@ -477,6 +478,21 @@ def test_illico(
                 atol=1e-6,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
+
+
+def test_illico_deprecation_warning():
+    pbmc = pbmc68k_reduced()
+    pbmc.raw.X.sum_duplicates()
+    pbmc.raw.X.sort_indices()
+    with pytest.warns(
+        DeprecationWarning, match=r"`wilcoxon_illico` flavor will be removed"
+    ):
+        sc.tl.rank_genes_groups(
+            pbmc,
+            groupby="bulk_labels",
+            method="wilcoxon_illico",
+            reference="rest",
+        )
 
 
 @pytest.mark.parametrize(

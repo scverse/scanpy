@@ -14,7 +14,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase
+from .._compat import CSBase, warn
 from .._settings import Default, Preset
 from .._settings.presets import DETest
 from .._utils import (
@@ -716,10 +716,18 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
+    # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
         if settings.preset is Preset.ScanpyV2Preview:
             method = "wilcoxon_illico"
+    # Otherwise, nudge people to use the presets.
+    elif "illico" in method:
+        msg = (
+            "`wilcoxon_illico` flavor will be removed in scanpy 2.0 and be simply the new `wilcoxon` implementation."
+            "To remove theis warning, you can locally do `with sc.settings.override(preset=sc.Preset.ScanpyV2Preview)`."
+        )
+        warn(msg, DeprecationWarning)
 
     mask_var = _check_mask(adata, mask_var, "var")
 
