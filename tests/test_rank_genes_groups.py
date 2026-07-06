@@ -480,6 +480,7 @@ def test_illico(
             )
 
 
+@needs.illico
 def test_illico_deprecation_warning():
     pbmc = pbmc68k_reduced()
     pbmc.raw.X.sum_duplicates()
