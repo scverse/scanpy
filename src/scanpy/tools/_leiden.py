@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
+    from igraph import Graph
 
     from .._compat import CSBase
     from .._settings.presets import LeidenFlavor
@@ -188,6 +190,7 @@ def leiden(  # noqa: PLR0913
     elif flavor == "networkit":
         from types import SimpleNamespace
 
+        _utils.ensure_networkit()
         import networkit
 
         seed = int(rng.integers(np.iinfo(np.int64).max))
@@ -214,6 +217,7 @@ def leiden(  # noqa: PLR0913
 
     else:
         g = _utils.get_igraph_from_adjacency(adjacency, directed=False)
+        _maybe_suggest_networkit(g)
         if use_weights:
             clustering_args["weights"] = "weight"
         if resolution is not None:
@@ -257,7 +261,7 @@ def leiden(  # noqa: PLR0913
 
 def _validate_flavor(
     flavor: str | None, *, partition_type: object | None, directed: bool | None
-) -> Literal["igraph", "leidenalg"]:
+) -> Literal["igraph", "leidenalg", "networkit"]:
     if was_default := (flavor is None or isinstance(flavor, Default)):
         from scanpy import settings
 
@@ -297,6 +301,20 @@ def _validate_flavor(
                 )
                 raise
         case _:
-            msg = f"flavor must be either 'igraph' or 'leidenalg', but {flavor!r} was passed."
+            msg = f"flavor must be either 'igraph', 'leidenalg', or 'networkit', but {flavor!r} was passed."
             raise ValueError(msg)
     return flavor
+
+
+def _maybe_suggest_networkit(g: Graph) -> None:
+    """Encourage users toward the parallel NetworKit backend on large graphs."""
+    _networkit_edge_heuristic = 500000
+    if g.ecount() < _networkit_edge_heuristic:
+        return
+    if importlib.util.find_spec("networkit") is None:
+        return
+    logg.hint(
+        f"Graph has {g.ecount():,} edges; NetworKit's parallel Leiden "
+        f"(`flavor='networkit'`) is typically several times faster than "
+        f"igraph's serial implementation."
+    )

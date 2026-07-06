@@ -27,9 +27,12 @@ def adata_neighbors() -> AnnData:
     params=[
         pytest.param("igraph", marks=needs.igraph),
         pytest.param("leidenalg", marks=needs.leidenalg),
+        pytest.param("networkit", marks=needs.networkit),
     ]
 )
-def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
+def flavor(
+    request: pytest.FixtureRequest,
+) -> Literal["igraph", "leidenalg", "networkit"]:
     return request.param
 
 
@@ -39,13 +42,13 @@ def flavor(request: pytest.FixtureRequest) -> Literal["igraph", "leidenalg"]:
 @pytest.mark.parametrize("n_iterations", [-1, 3])
 def test_leiden_basic(
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "networkit"],
     resolution: float,
     n_iterations: int,
 ) -> None:
     with (
         nullcontext()
-        if flavor == "igraph"
+        if flavor in {"igraph", "networkit"}
         else pytest.warns(
             UserWarning, match=r"The `igraph` implementation of leiden clustering"
         )
@@ -70,9 +73,11 @@ def test_leiden_basic(
 def test_leiden_random_state(
     subtests: pytest.Subtests,
     adata_neighbors: AnnData,
-    flavor: Literal["igraph", "leidenalg"],
+    flavor: Literal["igraph", "leidenalg", "networkit"],
     rng_arg: Literal["rng", "random_state"],
 ) -> None:
+    if flavor == "networkit":
+        pytest.skip("ParallelLeiden is not bit-for-bit reproducible")
     is_leiden_alg = flavor == "leidenalg"
     n_iterations = 2 if is_leiden_alg else -1
     adata_1, adata_1_again, adata_2 = (
