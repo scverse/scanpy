@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 import scanpy as sc
 from scanpy._settings.presets import _missing_scanpy2_deps
+from testing.scanpy._pytest.marks import _missing_scanpy2_deps as m2
 
 
 # TODO: reset everything
@@ -29,3 +32,12 @@ def test_preset_scanpy_v2_preview_checks_deps() -> None:
         assert sc.settings.preset is sc.Preset.ScanpyV2Preview
         sc.settings.preset = sc.Preset.ScanpyV1
     assert sc.settings.preset is sc.Preset.ScanpyV1
+
+
+def test_no_divergence() -> None:
+    """Unfortunately this function has to be duplicated.
+
+    - we can’t import `scanpy` too early for converage
+    - we can’t import `testing.scanpy` in `scanpy`
+    """
+    assert inspect.getsource(_missing_scanpy2_deps) == inspect.getsource(m2)

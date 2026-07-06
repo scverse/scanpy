@@ -1,9 +1,23 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from importlib.metadata import distributions, requires
 from importlib.util import find_spec
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+
+
+def _missing_scanpy2_deps() -> list[Requirement]:
+    dist_names = {canonicalize_name(d.name) for d in distributions()}
+    return [
+        r
+        for r in map(Requirement, requires("scanpy") or ())
+        if r.marker
+        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+        and canonicalize_name(r.name) not in dist_names
+    ]
 
 
 class QuietMarkDecorator(pytest.MarkDecorator):
@@ -27,6 +41,8 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
         return name.replace("_", "-")
 
     mod: str
+
+    scanpy2 = "scanpy[scanpy2]"
 
     colour = "colour-science"
     dask = auto()
@@ -64,6 +80,11 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
 
     @property
     def skip_reason(self) -> str | None:
+        if self._name_ == "scanpy2":
+            if not (missing := _missing_scanpy2_deps()):
+                return None
+            return f"scanpy 2 deps missing: {', '.join(m.name for m in missing)}"
+
         if find_spec(self._name_):
             return None
         reason = f"needs module `{self._name_}`"

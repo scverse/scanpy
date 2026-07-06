@@ -7,10 +7,11 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray
+from scanpy._compat import DaskArray, pkg_version
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -35,6 +36,10 @@ VALID_ARRAY_TYPES = [
         "dask_array_sparse",
     }
 ]
+
+needs_anndata_acc = pytest.mark.skipif(
+    pkg_version("anndata") < Version("0.13.0rc1"), reason="needs `anndata.acc`"
+)
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
@@ -546,6 +551,106 @@ def test_aggregate_obsm_labels() -> None:
     )
     result = sc.get.aggregate(adata, by="labels", func="sum", obsm="entry")
     assert_equal(expected, result)
+
+
+@needs_anndata_acc
+def test_aggregate_new_api_x() -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+
+    old = sc.get.aggregate(adata, "blobs", ["sum", "mean"])
+    new = sc.get.aggregate(adata, by=A.obs["blobs"], func=["sum", "mean"])
+
+    assert_equal(old, new)
+
+
+@needs_anndata_acc
+def test_aggregate_new_api_obsm_varm() -> None:
+    from anndata.acc import A
+
+    adata_obsm = sc.datasets.blobs()
+    adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
+    adata_obsm.obsm["test"] = adata_obsm.X[:, ::2].copy()
+    adata_varm = adata_obsm.T.copy()
+
+    old_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
+    new_obsm = sc.get.aggregate(
+        adata_obsm, by=A.obs["blobs"], func=["sum", "mean"], vec=A.obsm["test"]
+    )
+    assert_equal(old_obsm, new_obsm)
+
+    old_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
+    new_varm = sc.get.aggregate(
+        adata_varm, by=A.var["blobs"], func=["sum", "mean"], vec=A.varm["test"]
+    )
+    assert_equal(old_varm, new_varm)
+
+
+@needs_anndata_acc
+def test_aggregate_new_api_multi_by() -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obs["extra"] = np.tile(["a", "b"], adata.n_obs)[: adata.n_obs]
+
+    old = sc.get.aggregate(adata, ["blobs", "extra"], "sum")
+    new = sc.get.aggregate(adata, by=[A.obs["blobs"], A.obs["extra"]], func="sum")
+
+    assert_equal(old, new)
+
+
+@needs_anndata_acc
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        pytest.param(
+            dict(axis=0), TypeError, r"axis.*cannot be used", id="axis_with_adref"
+        ),
+        pytest.param(
+            dict(layer="x"),
+            TypeError,
+            r"layer.*obsm.*varm.*cannot be used",
+            id="layer_with_adref",
+        ),
+    ],
+)
+def test_aggregate_new_api_rejects_old_kwargs(
+    kwargs: dict, error: type[Exception], match: str
+) -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    with pytest.raises(error, match=match):
+        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", **kwargs)
+
+
+@needs_anndata_acc
+def test_aggregate_new_api_mismatched_by_dims() -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    with pytest.raises(ValueError, match="same single axis"):
+        sc.get.aggregate(adata, by=[A.obs["blobs"], A.var.index], func="sum")
+
+
+@needs_anndata_acc
+def test_aggregate_new_api_mismatched_vec_axis() -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.varm["test"] = adata.X.T[:, ::2].copy()
+    with pytest.raises(ValueError, match="grouping over `var`"):
+        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", vec=A.varm["test"])
+
+
+def test_aggregate_by_invalid_type() -> None:
+    adata = sc.datasets.blobs()
+    with pytest.raises(TypeError, match=r"`by` must be.*AdRef.*str"):
+        sc.get.aggregate(adata, by=123, func="sum")  # type: ignore[arg-type]
 
 
 def test_dispatch_not_implemented() -> None:

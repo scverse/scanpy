@@ -99,7 +99,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13rc3", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -118,14 +118,14 @@ test = [
     { include-group = "test-min" },
 ]
 docs = [
-    "ipython>=8.27",                        # for nbsphinx code highlighting
+    "ipython>=8.27",                                         # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",                           # type aliases
+    "numpy>=2.4",                                            # type aliases
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[dask-ml,leiden,paga,plotting]",
+    "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
     "scanpydoc>=0.16.1",
     "scverse-misc[sphinx]",
     "sphinx>=9.1",
@@ -137,7 +137,7 @@ docs = [
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
-    "sphinxext-opengraph",                  # for nice cards when sharing on social
+    "sphinxext-opengraph",                                   # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
@@ -274,6 +274,8 @@ filterwarnings = [
     "ignore:is_categorical_dtype is deprecated:FutureWarning",
     # Ignore numba PEP 456 warning specific to ARM machines
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
+    # Ignore numba macOS warnings
+    "ignore:Detected unsupported threading environment:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
     # we should set init=obsm["X_pca"] or so

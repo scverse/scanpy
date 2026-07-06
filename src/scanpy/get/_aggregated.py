@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Collection
 from functools import partial, singledispatch
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numba
@@ -24,9 +26,24 @@ from ._kernels import (
 from .get import _check_mask
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    import sys
+    from collections.abc import Iterable
 
     from numpy.typing import NDArray
+
+    if sys.version_info >= (3, 13):
+        from typing import TypeIs
+    else:
+        from typing_extensions import TypeIs
+
+if TYPE_CHECKING or find_spec("anndata.acc"):
+    from anndata.acc import A, AdRef, Idx2D, LayerAcc, MultiAcc
+else:
+    # older anndata without `anndata.acc`: stub classes nothing can be an instance of
+    AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    type Idx2D = object
+    LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
+    MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
 type Array = np.ndarray | CSBase | DaskArray
 type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
@@ -199,27 +216,106 @@ def _power(x: Array, power: float) -> Array:
     return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
+def _collection_of[T](thing: object, typ: type[T]) -> TypeIs[Collection[T]]:
+    return (
+        isinstance(thing, Collection)
+        and not isinstance(thing, typ)
+        and len(thing) > 0
+        and all(isinstance(e, typ) for e in thing)
+    )
+
+
+def _validate_by(
+    by: AdRef | Collection[AdRef] | str | Collection[str],
+) -> list[AdRef] | None:
+    """Normalize `by` to a list of :class:`~anndata.acc.AdRef` if possible, else `None`."""
+    if isinstance(by, AdRef):
+        return [by]
+    if _collection_of(by, AdRef):
+        return list(by)
+    if not isinstance(by, str) and not _collection_of(by, str):
+        msg = (
+            "`by` must be a single `AdRef`, a collection of `AdRef`, "
+            f"or a collection of strings, was {by!r}"
+        )
+        raise TypeError(msg)
+    return None
+
+
+def _resolve_by_and_axis[I: Idx2D | int](
+    by: AdRef[I, AnnData] | Collection[AdRef[I, AnnData]] | str | Collection[str],
+    axis: Literal["obs", 0, "var", 1] | None,
+    *,
+    layer: str | None,
+    obsm: str | None,
+    varm: str | None,
+) -> tuple[list[AdRef[I, AnnData]] | None, Literal["obs", "var"]]:
+    """Validate old-/new-API params aren't mixed, and resolve `by_refs`/`axis`/`axis_name`."""
+    n_old_vec = sum(p is not None for p in [varm, obsm, layer])
+    if (by_refs := _validate_by(by)) is None:
+        if n_old_vec > 1:
+            msg = "Please only provide one (or none) of varm, obsm, or layer"
+            raise TypeError(msg)
+        if axis is None:
+            axis = 1 if varm else 0
+        _, axis_name = _resolve_axis(axis)
+        if obsm and axis_name != "obs":
+            msg = "`obsm` can only be used when grouping over `obs`"
+            raise ValueError(msg)
+        if varm and axis_name != "var":
+            msg = "`varm` can only be used when grouping over `var`"
+            raise ValueError(msg)
+        return None, axis_name
+
+    if axis is not None:
+        msg = (
+            "`axis` cannot be used when `by` is given as AdRef(s); "
+            "the axis is inferred from `by`"
+        )
+        raise TypeError(msg)
+    if n_old_vec:
+        msg = (
+            "`layer`, `obsm`, and `varm` cannot be used when `by` is given as "
+            "AdRef(s); use `vec` instead"
+        )
+        raise TypeError(msg)
+    dims = {d for ref in by_refs for d in ref.dims}
+    if len(dims) != 1:
+        msg = (
+            "All `by` accessors must refer to the same single axis "
+            f"(`obs` or `var`), got {dims}"
+        )
+        raise ValueError(msg)
+    _, axis_name = _resolve_axis(next(iter(dims)))
+    return by_refs, axis_name
+
+
 def aggregate(  # noqa: PLR0912
     adata: AnnData,
-    by: str | Collection[str],
+    by: (
+        str
+        | Collection[str]
+        | AdRef[Idx2D | int, AnnData]
+        | Collection[AdRef[Idx2D | int, AnnData]]
+    ),
     func: AggType | Iterable[AggType],
     *,
-    axis: Literal["obs", 0, "var", 1] | None = None,
+    vec: LayerAcc | MultiAcc | None = None,
     mask: NDArray[np.bool] | str | None = None,
     dof: int = 1,
+    # old API
+    axis: Literal["obs", 0, "var", 1] | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     varm: str | None = None,
 ) -> AnnData:
-    """Aggregate data matrix based on some categorical grouping.
+    r"""Aggregate data matrix based on some categorical grouping.
 
     This function is useful for pseudobulking as well as plotting.
 
     Aggregation to perform is specified by `func`, which can be a single metric or a
     list of metrics. Each metric is computed over the group and results in a new layer
     in the output `AnnData` object.
-
-    If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
     .. array-support:: get.aggregate
 
@@ -228,21 +324,22 @@ def aggregate(  # noqa: PLR0912
     adata
         :class:`~anndata.AnnData` to be aggregated.
     by
-        Key of the column to be grouped-by.
+        References to the column(s) to be grouped-by.
     func
         How to aggregate.
-    axis
-        Axis on which to find group by column.
     mask
         Boolean mask (or key to column containing mask) to apply along the axis.
     dof
         Degrees of freedom for variance. Defaults to 1.
+    vec
+        If not None, accessor for aggregation data. New API only.
+    axis
+        Axis on which to find group by column.
+        (inferred from `by` if it is an :class:`~anndata.acc.AdRef`)
     layer
-        If not None, key for aggregation data.
     obsm
-        If not None, key for aggregation data.
     varm
-        If not None, key for aggregation data.
+        If not None, key for aggregation data. Use `vec` instead.
 
     Returns
     -------
@@ -278,6 +375,15 @@ def aggregate(  # noqa: PLR0912
 
     Note that this filters out any combination of groups that wasn't present in the original data.
 
+    The same computation using the new (:mod:`anndata.acc`-based) API:
+
+    >>> from anndata.acc import A
+    >>> sc.get.aggregate(pbmc, by=A.obs["louvain"], func=["mean", "count_nonzero"])
+    AnnData object with n_obs × n_vars = 8 × 13714
+        obs: 'louvain', 'n_obs_aggregated'
+        var: 'n_cells'
+        layers: 'mean', 'count_nonzero'
+
     """
     if not isinstance(adata, AnnData):
         msg = (
@@ -285,34 +391,42 @@ def aggregate(  # noqa: PLR0912
             f"was passed {type(adata)}."
         )
         raise NotImplementedError(msg)
-    if axis is None:
-        axis = 1 if varm else 0
-    axis, axis_name = _resolve_axis(axis)
+
+    by_refs, axis_name = _resolve_by_and_axis(
+        by, axis, layer=layer, obsm=obsm, varm=varm
+    )
+    del axis
     mask = _check_mask(adata, mask, axis_name)
-    data = adata.X
-    if sum(p is not None for p in [varm, obsm, layer]) > 1:
-        msg = "Please only provide one (or none) of varm, obsm, or layer"
-        raise TypeError(msg)
 
-    if varm is not None:
-        if axis != 1:
-            msg = "varm can only be used when axis is 1"
-            raise ValueError(msg)
-        data = adata.varm[varm]
-    elif obsm is not None:
-        if axis != 0:
-            msg = "obsm can only be used when axis is 0"
-            raise ValueError(msg)
-        data = adata.obsm[obsm]
-    elif layer is not None:
-        data = adata.layers[layer]
-        if axis == 1:
-            data = data.T
-    elif axis == 1:
-        # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
-        data = data.T
-
-    dim_df = getattr(adata, axis_name)
+    if by_refs is not None:
+        if vec is None:
+            vec = A.X
+        if not isinstance(vec, LayerAcc | MultiAcc):
+            msg = (
+                "`vec` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
+                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {vec!r}"
+            )
+            raise TypeError(msg)
+        data = adata[vec]
+        dim_df = pd.DataFrame({
+            ref.idx if isinstance(ref.idx, str) else str(ref): adata[ref]
+            for ref in by_refs
+        })
+    else:
+        match layer, obsm, varm, axis_name:
+            case None, None, None, "obs":
+                data = adata.X
+            case None, None, None, "var":
+                data = adata.X.T
+            case str(), None, None, "obs":
+                data = adata.layers[layer]
+            case str(), None, None, "var":
+                data = adata.layers[layer].T
+            case None, str(), None, "obs":
+                data = adata.obsm[obsm]
+            case None, None, str(), "var":
+                data = adata.varm[varm]
+        dim_df = getattr(adata, axis_name)
     categorical, new_label_df = _combine_categories(dim_df, by)
 
     # Add number of obs aggregated into each group (respecting the mask)
@@ -329,7 +443,7 @@ def aggregate(  # noqa: PLR0912
     )
 
     # Define new var dataframe
-    if obsm or varm:
+    if obsm or varm or isinstance(vec, MultiAcc):
         if isinstance(data, pd.DataFrame):
             # Check if there could be labels
             var = pd.DataFrame(index=data.columns)
@@ -337,15 +451,12 @@ def aggregate(  # noqa: PLR0912
             # Create them otherwise
             var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
     else:
-        var = getattr(adata, "var" if axis == 0 else "obs")
+        var = getattr(adata, "var" if axis_name == "obs" else "obs")
 
     # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)
 
-    if axis == 1:
-        return result.T
-    else:
-        return result
+    return result if axis_name == "obs" else result.T
 
 
 @singledispatch

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from datetime import datetime
@@ -126,6 +127,7 @@ nb_execution_mode = "cache"
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
 ]
+nb_execution_show_tb = bool(os.environ.get("READTHEDOCS"))
 nb_merge_streams = True
 
 ogp_site_url = "https://scanpy.scverse.org/en/stable/"
@@ -140,7 +142,8 @@ pygments_dark_style = "native"
 katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
-    anndata=("https://anndata.scverse.org/en/stable/", None),
+    # Needs latest until `.acc` is released in 0.13
+    anndata=("https://anndata.scverse.org/en/latest/", None),
     bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
     cuml=("https://docs.rapids.ai/api/cuml/stable/", None),
     cycler=("https://matplotlib.org/cycler/", None),
