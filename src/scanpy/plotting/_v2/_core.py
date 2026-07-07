@@ -292,11 +292,11 @@ def tracksplot(
     }
     if color is not None:
         curves = {vdim: c.groupby(color, hv.NdOverlay) for vdim, c in curves.items()}
+    layout = hv.NdLayout(curves, kdims=["marker"]).cols(1)
     return (
-        hv
-        .NdLayout(curves, kdims=["marker"])
-        .cols(1)
-        .opts(hv.opts.Curve(frame_width=300))
+        layout.opts(hv.opts.Curve(frame_width=300))
+        if hv.Store.current_backend == "bokeh"
+        else layout
     )
 
 
