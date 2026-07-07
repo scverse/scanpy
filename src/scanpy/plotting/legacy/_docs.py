@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..neighbors._doc import doc_neighbors_key
+from ...neighbors._doc import doc_neighbors_key
 
 doc_adata_color_etc = """\
 adata

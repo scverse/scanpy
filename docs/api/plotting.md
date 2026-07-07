@@ -21,10 +21,13 @@ See the {ref}`settings` section for all important plotting configurations.
 
 ## Generic
 
+Functions with both backends:
+
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: ../generated/
+   :template: function-dual
 
    pl.scatter
    pl.heatmap
@@ -33,8 +36,18 @@ See the {ref}`settings` section for all important plotting configurations.
    pl.violin
    pl.stacked_violin
    pl.matrixplot
-   pl.clustermap
    pl.ranking
+
+```
+
+Legacy (matplotlib) only:
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: ../generated/
+
+   pl.clustermap
    pl.dendrogram
 
 ```
@@ -62,6 +75,7 @@ Methods for visualizing quality control and results of preprocessing functions.
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
    pl.highest_expr_genes
    pl.highly_variable_genes
@@ -92,17 +106,18 @@ a method with the same name in `pl`.
 
 ### Embeddings
 
+Functions with both backends:
+
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
-   pl.tsne
    pl.umap
+   pl.tsne
    pl.diffmap
    pl.draw_graph
-   pl.spatial
-   pl.embedding
 ```
 
 Compute densities on embeddings.
@@ -111,8 +126,20 @@ Compute densities on embeddings.
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
    pl.embedding_density
+```
+
+Legacy (matplotlib) only:
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.spatial
+   pl.embedding
 ```
 
 ### Branching trajectories and pseudotime, clustering

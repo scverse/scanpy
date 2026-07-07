@@ -81,7 +81,7 @@ __all__ = [
 ]
 
 
-set_figure_params = settings._set_figure_params
+from .plotting.legacy.mpl_settings import set_figure_params
 
 annotate_doc_types(sys.modules[__name__], "scanpy")
 

@@ -12,7 +12,7 @@ import scanpy as sc
 
 HERE: Path = Path(__file__).parent
 ROOT = HERE.parent / "_images"
-DATA_DIR = HERE.parent / "_data"
+DATA_DIR = HERE.parent.parent.parent / "_data"
 
 
 pytestmark = [

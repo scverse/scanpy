@@ -15,11 +15,11 @@ from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams
 from matplotlib.patches import Circle
 
-from .. import logging as logg
-from .._compat import warn
-from .._settings import Default, settings
-from .._utils import NeighborsView, _get_basis_key
-from . import palettes
+from ... import logging as logg
+from ..._compat import set_module, warn
+from ..._settings import Default, settings
+from ..._utils import NeighborsView, _get_basis_key
+from . import mpl_settings, palettes
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -98,6 +98,7 @@ type _LegendLoc = Literal[
 type ColorLike = str | tuple[float, float, float] | tuple[float, float, float, float]
 
 
+@set_module("scanpy.pl")
 class _AxesSubplot(Axes, axes.SubplotBase):
     """Intersection between Axes and SubplotBase: Has methods of both."""
 
@@ -213,7 +214,7 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
             s=rcParams["lines.markersize"],
             c=c,
             label=var_name,
-            rasterized=settings._vector_friendly,
+            rasterized=mpl_settings.VECTOR_FRIENDLY,
             **(dict(cmap=color_map) if use_color_map else {}),
         )
     ylim = ax.get_ylim()
@@ -329,13 +330,11 @@ def _savefig(writekey, dpi=None, ext=None):
             not isinstance(rcParams["savefig.dpi"], str)
             and rcParams["savefig.dpi"] < 150
         ):
-            if settings._low_resolution_warning:
-                logg.warning(
-                    "You are using a low resolution (dpi<150) for saving figures.\n"
-                    "Consider running `set_figure_params(dpi_save=...)`, which will "
-                    "adjust `matplotlib.rcParams['savefig.dpi']`"
-                )
-                settings._low_resolution_warning = False
+            logg.warning(
+                "You are using a low resolution (dpi<150) for saving figures.\n"
+                "Consider running `set_figure_params(dpi_save=...)`, which will "
+                "adjust `matplotlib.rcParams['savefig.dpi']`"
+            )
         else:
             dpi = rcParams["savefig.dpi"]
     settings.figdir.mkdir(parents=True, exist_ok=True)
@@ -580,7 +579,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
                 edge_color=edges_color,
             )
             edge_collection.set_zorder(-2)
-            edge_collection.set_rasterized(settings._vector_friendly)
+            edge_collection.set_rasterized(mpl_settings.VECTOR_FRIENDLY)
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
@@ -613,7 +612,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             v[:, 0],
             v[:, 1],
             **quiver_kwds,
-            rasterized=settings._vector_friendly,
+            rasterized=mpl_settings.VECTOR_FRIENDLY,
         )
 
 
@@ -650,7 +649,7 @@ def scatter_group(
         edgecolors="none",
         s=size,
         label=adata.obs[key].cat.categories[cat_code],
-        rasterized=settings._vector_friendly,
+        rasterized=mpl_settings.VECTOR_FRIENDLY,
     )
     return mask_obs
 
@@ -827,7 +826,7 @@ def scatter_base(  # noqa: PLR0912, PLR0913, PLR0915
                 edgecolors="none",  # 'face',
                 s=sizes[icolor],
                 cmap=color_map,
-                rasterized=settings._vector_friendly,
+                rasterized=mpl_settings.VECTOR_FRIENDLY,
             )
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)

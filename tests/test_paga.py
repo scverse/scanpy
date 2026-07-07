@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = HERE / "plotting/legacy/_images"
 
 SKIP_IF_OLD_IGRAPH = pytest.mark.skipif(
     not find_spec("igraph") or pkg_version("igraph") < Version("1"),

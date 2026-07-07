@@ -16,7 +16,7 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc3k_processed
 
 if TYPE_CHECKING:
-    from scanpy.plotting._utils import _LegendLoc
+    from scanpy.plotting.legacy._utils import _LegendLoc
 
 
 HERE: Path = Path(__file__).parent
