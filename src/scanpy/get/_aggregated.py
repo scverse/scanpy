@@ -402,6 +402,8 @@ def aggregate(  # noqa: PLR0912
             )
             raise TypeError(msg)
         data = adata[acc]
+        if isinstance(acc, LayerAcc) and axis_name == "var":
+            data = data.T
         dim_df = pd.DataFrame({
             ref.idx if isinstance(ref.idx, str) else str(ref): adata[ref]
             for ref in by_refs

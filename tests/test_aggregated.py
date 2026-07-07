@@ -550,78 +550,63 @@ def test_aggregate_obsm_labels() -> None:
 
 
 @needs_anndata_acc
-def test_aggregate_acc_api_x() -> None:
-    from anndata.acc import A
+@pytest.mark.parametrize("axis", ["obs", "var"])
+@pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
+@pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
+def test_aggregate_acc_api(
+    *,
+    axis: Literal["obs", "var"],
+    attr: Literal["obsm", "varm", "layers"] | None,
+    by: str | list[str],
+) -> None:
+    if (attr == "obsm" and axis == "var") or (attr == "varm" and axis == "obs"):
+        pytest.skip()
 
-    adata = sc.datasets.blobs()
-    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
-
-    old = sc.get.aggregate(adata, "blobs", ["sum", "mean"])
-    new = sc.get.aggregate(adata, A.obs["blobs"], ["sum", "mean"])
-
-    assert_equal(old, new)
-
-
-@needs_anndata_acc
-def test_aggregate_acc_api_obsm_varm(subtests: pytest.Subtests) -> None:
-    from anndata.acc import A
-
-    adata_obsm = sc.datasets.blobs()
-    adata_obsm.obs["blobs"] = adata_obsm.obs["blobs"].astype(str)
-    adata_obsm.obsm["test"] = adata_obsm.X[:, ::2].copy()
-    adata_varm = adata_obsm.T.copy()
-
-    with subtests.test("obsm"):
-        old_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
-        new_obsm = sc.get.aggregate(
-            adata_obsm, A.obs["blobs"], ["sum", "mean"], acc=A.obsm["test"]
-        )
-        assert_equal(old_obsm, new_obsm)
-
-    with subtests.test("varm"):
-        old_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
-        new_varm = sc.get.aggregate(
-            adata_varm, A.var["blobs"], ["sum", "mean"], acc=A.varm["test"]
-        )
-        assert_equal(old_varm, new_varm)
-
-
-@needs_anndata_acc
-def test_aggregate_acc_api_multi_by() -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
     adata.obs["blobs"] = adata.obs["blobs"].astype(str)
     adata.obs["extra"] = np.tile(["a", "b"], adata.n_obs)[: adata.n_obs]
+    if attr == "layers":
+        adata.layers["test"] = adata.X.copy()
+        del adata.X
+    elif attr in {"obsm", "varm"}:
+        adata.obsm["test"] = adata.X[:, ::2].copy()
+        del adata.X
+    if axis == "var":
+        adata = adata.T.copy()
 
-    old = sc.get.aggregate(adata, ["blobs", "extra"], "sum")
-    new = sc.get.aggregate(adata, A.obs[["blobs", "extra"]], "sum")
+    if attr is None:
+        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis)
+    elif attr == "layers":
+        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, layer="test")
+    elif attr == "obsm":
+        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, obsm="test")
+    else:
+        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, varm="test")
+    new = sc.get.aggregate(
+        adata,
+        getattr(A, axis)[by],
+        ["sum", "mean"],
+        **({} if attr is None else dict(acc=getattr(A, attr)["test"])),
+    )
 
     assert_equal(old, new)
 
 
 @needs_anndata_acc
 @pytest.mark.parametrize(
-    ("kwargs", "error", "match"),
+    ("kwargs", "match"),
     [
-        pytest.param(
-            dict(axis=0), TypeError, r"axis.*cannot be used", id="axis_with_adref"
-        ),
-        pytest.param(
-            dict(layer="x"),
-            TypeError,
-            r"layer.*obsm.*varm.*cannot be used",
-            id="layer_with_adref",
-        ),
+        pytest.param(dict(axis=0), r"axis.*cannot be used", id="axis"),
+        pytest.param(dict(layer="x"), r"layer.*obsm.*varm.*cannot be used", id="layer"),
     ],
 )
-def test_aggregate_acc_api_rejects_old_kwargs(
-    kwargs: dict, error: type[Exception], match: str
-) -> None:
+def test_aggregate_acc_api_rejects_old_kwargs(kwargs: dict, match: str) -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
-    with pytest.raises(error, match=match):
+    with pytest.raises(TypeError, match=match):
         sc.get.aggregate(adata, A.obs["blobs"], "sum", **kwargs)
 
 
