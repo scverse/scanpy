@@ -109,6 +109,7 @@ matplotlib.use("module://matplotlib_inline.backend_inline")
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
 del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
 """
+holoviews_backends = ["bokeh", "matplotlib", "plotly"]
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
