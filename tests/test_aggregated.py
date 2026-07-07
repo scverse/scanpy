@@ -579,16 +579,12 @@ def test_aggregate_acc_api(
         adata = adata.T.copy()
 
     old = sc.get.aggregate(
-        adata,
-        by,
-        ["sum", "mean"],
+        *(adata, by, ["sum", "mean"]),
         axis=axis,
-        **({} if attr is None else {attr: "test"}),
+        **({} if attr is None else {attr.removesuffix("s"): "test"}),
     )
     new = sc.get.aggregate(
-        adata,
-        getattr(A, axis)[by],
-        ["sum", "mean"],
+        *(adata, getattr(A, axis)[by], ["sum", "mean"]),
         **({} if attr is None else dict(acc=getattr(A, attr)["test"])),
     )
 
