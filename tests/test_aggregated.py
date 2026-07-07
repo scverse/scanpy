@@ -53,18 +53,25 @@ def xfail_dask_median(
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-def test_mask(axis: Literal[0, 1]) -> None:
+@pytest.mark.parametrize("typ", ["str", pytest.param("ref", marks=needs.anndata_acc)])
+def test_mask(axis: Literal[0, 1] | None, typ: Literal["str", "ref"]) -> None:
     blobs = sc.datasets.blobs()
     mask = blobs.obs["blobs"] == 0
     blobs.obs["mask_col"] = mask
     if axis == 1:
         blobs = blobs.T
-    by_name = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask="mask_col")
+    if typ == "str":
+        ref = "mask_col"
+    elif typ == "ref":
+        from anndata.acc import A
+
+        ref = A.obs["mask_col"] if axis == 0 else A.var["mask_col"]
+
+    by_ref = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=ref)
     by_value = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=mask)
 
-    assert_equal(by_name, by_value)
-
-    assert np.all(by_name["0"].layers["sum"] == 0)
+    assert_equal(by_ref, by_value)
+    assert np.all(by_ref["0"].layers["sum"] == 0)
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)

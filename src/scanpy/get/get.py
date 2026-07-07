@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
@@ -17,9 +18,15 @@ if TYPE_CHECKING:
 
     from anndata._core.sparse_dataset import BaseCompressedSparseDataset
     from anndata._core.views import ArrayView
+    from anndata.acc import AdRef, Idx2D
 
     from .._compat import DaskArray
 
+
+if TYPE_CHECKING or find_spec("anndata.acc"):
+    from anndata.acc import AdRef
+else:
+    AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -477,7 +484,7 @@ def _set_obs_rep(
 
 def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
-    mask: str | M,
+    mask: str | AdRef[Idx2D | int, AnnData] | M,
     dim: Literal["obs", "var"],
     *,
     allow_probabilities: bool = False,
@@ -500,20 +507,11 @@ def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
         return mask
     desc = "mask/probabilities" if allow_probabilities else "mask"
 
-    if isinstance(mask, str):
+    if isinstance(mask, str | AdRef):
         if not isinstance(data, AnnData):
-            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
+            msg = f"Cannot use refererence for {desc} without providing anndata object as argument"
             raise ValueError(msg)
-
-        annot: pd.DataFrame = getattr(data, dim)
-        if mask not in annot.columns:
-            msg = (
-                f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the {desc} first to `adata.{dim}`"
-                f"or consider using the {desc} argument with an array."
-            )
-            raise ValueError(msg)
-        mask_array = annot[mask].to_numpy()
+        mask_array = _get_mask_by_ref(data, mask, dim, desc=desc)
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
             msg = f"The shape of the {desc} do not match the data."
@@ -531,3 +529,27 @@ def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
         raise ValueError(msg)
 
     return mask_array
+
+
+def _get_mask_by_ref(
+    adata: AnnData, mask: AdRef | str, dim: Literal["obs", "var"], *, desc: str
+) -> NDArray[np.bool] | NDArray[np.floating]:
+    if isinstance(mask, AdRef):
+        if next(iter(mask.dims)) != dim:
+            msg = f"Dimension of {desc} does not match {dim}."
+            raise ValueError(msg)
+        try:
+            return np.asarray(adata[mask])
+        except KeyError:
+            msg = f"Did not find `{mask}` in `adata`. "
+    else:
+        annot: pd.DataFrame = getattr(adata, dim)
+        if mask not in annot.columns:
+            msg = f"Did not find `adata.{dim}[{mask!r}]`. "
+            raise ValueError(msg)
+        return annot[mask].to_numpy()
+    msg += (
+        f"Either add the {desc} first to `adata.{dim}`"
+        f"or consider using the {desc} argument with an array."
+    )
+    raise ValueError(msg)

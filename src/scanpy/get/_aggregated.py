@@ -39,7 +39,6 @@ if TYPE_CHECKING:
 if TYPE_CHECKING or find_spec("anndata.acc"):
     from anndata.acc import A, AdRef, Idx2D, LayerAcc, MultiAcc
 else:
-    # older anndata without `anndata.acc`: stub classes nothing can be an instance of
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
     type Idx2D = object
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
@@ -294,7 +293,7 @@ def aggregate(  # noqa: PLR0912
     func: AggType | Iterable[AggType],
     *,
     acc: LayerAcc | MultiAcc | None = None,
-    mask: NDArray[np.bool] | str | None = None,
+    mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
     # old API
     axis: Literal["obs", 0, "var", 1] | None = None,
@@ -317,11 +316,13 @@ def aggregate(  # noqa: PLR0912
     adata
         :class:`~anndata.AnnData` to be aggregated.
     by
-        References to the column(s) to be grouped-by.
+        References to the vectors to be grouped-by.
+        Passing a str means using a `obs`/`var` column.
     func
         How to aggregate.
     mask
-        Boolean mask (or key to column containing mask) to apply along the axis.
+        Boolean mask (or reference to a mask vector) to apply along the axis.
+        Passing a str means using a `obs`/`var` column.
     dof
         Degrees of freedom for variance. Defaults to 1.
     acc
@@ -779,9 +780,8 @@ def _combine_categories(label_df: pd.DataFrame) -> tuple[pd.Categorical, pd.Data
     )
 
     # Calculating result codes
-    factors = np.ones(
-        len(label_df.columns) + 1, dtype=np.int32
-    )  # First factor needs to be 1
+    # First factor needs to be 1
+    factors = np.ones(len(label_df.columns) + 1, dtype=np.int32)
     np.cumprod(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
