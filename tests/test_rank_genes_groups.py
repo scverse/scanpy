@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
-from contextlib import nullcontext
 
 import numba
 import numpy as np
@@ -533,7 +533,11 @@ def test_mean_in_log_space(
         X=np.concatenate([group_a, group_b]),
         obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
     )
-    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview) if method == "wilcoxon_illico" else nullcontext():
+    with (
+        sc.settings.override(preset=sc.Preset.ScanpyV2Preview)
+        if method == "wilcoxon_illico"
+        else nullcontext()
+    ):
         rank_genes_groups(
             adata,
             groupby="bulk_labels",
