@@ -557,13 +557,13 @@ def test_aggregate_acc_api_x() -> None:
     adata.obs["blobs"] = adata.obs["blobs"].astype(str)
 
     old = sc.get.aggregate(adata, "blobs", ["sum", "mean"])
-    new = sc.get.aggregate(adata, by=A.obs["blobs"], func=["sum", "mean"])
+    new = sc.get.aggregate(adata, A.obs["blobs"], ["sum", "mean"])
 
     assert_equal(old, new)
 
 
 @needs_anndata_acc
-def test_aggregate_acc_api_obsm_varm() -> None:
+def test_aggregate_acc_api_obsm_varm(subtests: pytest.Subtests) -> None:
     from anndata.acc import A
 
     adata_obsm = sc.datasets.blobs()
@@ -571,17 +571,19 @@ def test_aggregate_acc_api_obsm_varm() -> None:
     adata_obsm.obsm["test"] = adata_obsm.X[:, ::2].copy()
     adata_varm = adata_obsm.T.copy()
 
-    old_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
-    new_obsm = sc.get.aggregate(
-        adata_obsm, by=A.obs["blobs"], func=["sum", "mean"], acc=A.obsm["test"]
-    )
-    assert_equal(old_obsm, new_obsm)
+    with subtests.test("obsm"):
+        old_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
+        new_obsm = sc.get.aggregate(
+            adata_obsm, A.obs["blobs"], ["sum", "mean"], acc=A.obsm["test"]
+        )
+        assert_equal(old_obsm, new_obsm)
 
-    old_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
-    new_varm = sc.get.aggregate(
-        adata_varm, by=A.var["blobs"], func=["sum", "mean"], acc=A.varm["test"]
-    )
-    assert_equal(old_varm, new_varm)
+    with subtests.test("varm"):
+        old_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
+        new_varm = sc.get.aggregate(
+            adata_varm, A.var["blobs"], ["sum", "mean"], acc=A.varm["test"]
+        )
+        assert_equal(old_varm, new_varm)
 
 
 @needs_anndata_acc
@@ -593,7 +595,7 @@ def test_aggregate_acc_api_multi_by() -> None:
     adata.obs["extra"] = np.tile(["a", "b"], adata.n_obs)[: adata.n_obs]
 
     old = sc.get.aggregate(adata, ["blobs", "extra"], "sum")
-    new = sc.get.aggregate(adata, by=[A.obs["blobs"], A.obs["extra"]], func="sum")
+    new = sc.get.aggregate(adata, A.obs[["blobs", "extra"]], "sum")
 
     assert_equal(old, new)
 
@@ -620,7 +622,7 @@ def test_aggregate_acc_api_rejects_old_kwargs(
 
     adata = sc.datasets.blobs()
     with pytest.raises(error, match=match):
-        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", **kwargs)
+        sc.get.aggregate(adata, A.obs["blobs"], "sum", **kwargs)
 
 
 @needs_anndata_acc
@@ -629,7 +631,7 @@ def test_aggregate_acc_api_mismatched_by_dims() -> None:
 
     adata = sc.datasets.blobs()
     with pytest.raises(ValueError, match="same single axis"):
-        sc.get.aggregate(adata, by=[A.obs["blobs"], A.var.index], func="sum")
+        sc.get.aggregate(adata, [A.obs["blobs"], A.var.index], "sum")
 
 
 @needs_anndata_acc
@@ -640,19 +642,19 @@ def test_aggregate_acc_api_mismatched_acc_axis() -> None:
     adata.obs["blobs"] = adata.obs["blobs"].astype(str)
     adata.varm["test"] = adata.X.T[:, ::2].copy()
     with pytest.raises(ValueError, match=r"`by`.*(obs).*`acc`.*(var)"):
-        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", acc=A.varm["test"])
+        sc.get.aggregate(adata, A.obs["blobs"], "sum", acc=A.varm["test"])
 
 
 def test_aggregate_by_invalid_type() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(TypeError, match=r"`by` must be.*AdRef.*str"):
-        sc.get.aggregate(adata, by=123, func="sum")  # type: ignore[arg-type]
+        sc.get.aggregate(adata, 123, "sum")  # type: ignore[arg-type]
 
 
 def test_dispatch_not_implemented() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(NotImplementedError):
-        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
+        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")  # type: ignore[arg-type]
 
 
 def test_factors() -> None:
