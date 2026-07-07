@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
+    from anndata.acc import AdAcc
     from numpy.typing import NDArray
 
     from scanpy._compat import CSRBase
@@ -194,13 +195,6 @@ def test_aggregate_entry() -> None:
     assert_equal(x_result_min, obsm_result)
     assert_equal(x_result.layers, obsm_result.layers)
     assert_equal(x_result.layers, varm_result.T.layers)
-
-
-def test_aggregate_incorrect_dim() -> None:
-    adata = pbmc3k_processed().raw.to_adata()
-
-    with pytest.raises(ValueError, match="was 'foo'"):
-        sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
 def to_bad_chunking(x: CSRBase) -> DaskArray:
@@ -555,7 +549,7 @@ def test_aggregate_obsm_labels() -> None:
 @pytest.mark.parametrize("axis", ["obs", "var"])
 @pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
 @pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
-def test_aggregate_acc_api(
+def test_acc_api(
     *,
     axis: Literal["obs", "var"],
     attr: Literal["obsm", "varm", "layers"] | None,
@@ -593,50 +587,112 @@ def test_aggregate_acc_api(
 
 @needs.anndata_acc
 @pytest.mark.parametrize(
-    ("kwargs", "match"),
+    ("mk_args", "exc_cls", "pat"),
     [
-        pytest.param(dict(axis=0), r"axis.*cannot be used", id="axis"),
-        pytest.param(dict(layer="x"), r"layer.*obsm.*varm.*cannot be used", id="layer"),
+        pytest.param(
+            lambda _: dict(axis=0), TypeError, r"axis.*cannot be used", id="axis"
+        ),
+        pytest.param(
+            lambda _: dict(layer="x"), TypeError, r"layer.*cannot be used", id="layer"
+        ),
+        pytest.param(
+            lambda a: dict(acc=a.obsp["connectivities"]),
+            TypeError,
+            r"`acc` must be a `LayerAcc`.*or.*`MultiAcc`",
+            id="acc-type",
+        ),
+        pytest.param(
+            lambda a: dict(by=[a.obs["blobs"], a.var.index]),
+            ValueError,
+            "same single axis",
+            id="by-dims",
+        ),
+        pytest.param(
+            lambda a: dict(acc=a.varm["test"]),
+            ValueError,
+            r"`by`.*(obs).*`acc`.*(var)",
+            id="acc-dim",
+        ),
     ],
 )
-def test_aggregate_acc_api_rejects_old_kwargs(kwargs: dict, match: str) -> None:
-    from anndata.acc import A
-
-    adata = sc.datasets.blobs()
-    with pytest.raises(TypeError, match=match):
-        sc.get.aggregate(adata, A.obs["blobs"], "sum", **kwargs)
-
-
-@needs.anndata_acc
-def test_aggregate_acc_api_mismatched_by_dims() -> None:
-    from anndata.acc import A
-
-    adata = sc.datasets.blobs()
-    with pytest.raises(ValueError, match="same single axis"):
-        sc.get.aggregate(adata, [A.obs["blobs"], A.var.index], "sum")
-
-
-@needs.anndata_acc
-def test_aggregate_acc_api_mismatched_acc_axis() -> None:
+def test_acc_api_errors(
+    mk_args: Callable[[AdAcc], dict], exc_cls: type[Exception], pat: str
+) -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
     adata.obs["blobs"] = adata.obs["blobs"].astype(str)
     adata.varm["test"] = adata.X.T[:, ::2].copy()
-    with pytest.raises(ValueError, match=r"`by`.*(obs).*`acc`.*(var)"):
-        sc.get.aggregate(adata, A.obs["blobs"], "sum", acc=A.varm["test"])
+    adata.obsp["connectivities"] = np.eye(adata.n_obs)
+    kwargs = mk_args(A)
+    kwargs.setdefault("by", A.obs["blobs"])
+
+    with pytest.raises(exc_cls, match=pat):
+        sc.get.aggregate(adata, func="sum", **kwargs)
 
 
-def test_aggregate_by_invalid_type() -> None:
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(
+            dict(layer="test", obsm="test"),
+            r"only provide one \(or none\) of varm, obsm, or layer",
+            id="layer-and-obsm",
+        ),
+        pytest.param(
+            dict(obsm="test", axis=1),
+            r"`obsm` can only be used when grouping over `obs`",
+            id="obsm-axis-var",
+        ),
+        pytest.param(
+            dict(varm="test", axis=0),
+            r"`varm` can only be used when grouping over `var`",
+            id="varm-axis-obs",
+        ),
+        pytest.param(dict(axis="foo"), r"was 'foo'", id="bad-axis-value"),
+    ],
+)
+def test_old_api_errors(kwargs: dict, match: str) -> None:
+    adata = sc.datasets.blobs()
+    adata.layers["test"] = adata.X.copy()
+    adata.obsm["test"] = adata.X.copy()
+    adata.varm["test"] = np.column_stack([adata.X[0], adata.X[1]])
+    with pytest.raises((TypeError, ValueError), match=match):
+        sc.get.aggregate(adata, by="blobs", func="sum", **kwargs)
+
+
+def test_error_by_invalid_type() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(TypeError, match=r"`by` must be.*AdRef.*str"):
         sc.get.aggregate(adata, 123, "sum")  # type: ignore[arg-type]
 
 
-def test_dispatch_not_implemented() -> None:
+def test_error_dispatch_not_implemented() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(NotImplementedError):
         sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")  # type: ignore[arg-type]
+
+
+@needs.anndata_acc
+def test_by_obsm_slice() -> None:
+    """Test that not only `.obs`/`.var` are supported."""
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obsm["thing"] = np.column_stack([
+        adata.obs["blobs"].astype(int).to_numpy(),
+        np.zeros(adata.n_obs, dtype=int),
+    ])
+
+    result = sc.get.aggregate(adata, by=A.obsm["thing"][:, 0], func=["sum", "mean"])
+    expected = sc.get.aggregate(adata, by="blobs", func=["sum", "mean"])
+
+    np.testing.assert_allclose(result.layers["sum"], expected.layers["sum"])
+    np.testing.assert_allclose(result.layers["mean"], expected.layers["mean"])
+    pd.testing.assert_series_equal(
+        result.obs["n_obs_aggregated"], expected.obs["n_obs_aggregated"]
+    )
 
 
 def test_factors() -> None:
