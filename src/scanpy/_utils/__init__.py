@@ -30,10 +30,9 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
+from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -58,6 +57,7 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
+    "_get_basis",
     "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
@@ -573,6 +573,14 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
     raise TypeError(msg)
 
 
+def _get_basis_key(adata: AnnData, basis: str) -> str | None:
+    if basis in adata.obsm:
+        return basis
+    if f"X_{basis}" in adata.obsm:
+        return f"X_{basis}"
+    return None
+
+
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
@@ -728,21 +736,9 @@ def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(x, axis=axis)
 
 
-if pkg_version("scipy") >= Version("1.15"):
-    # newer scipy versions support the `axis` argument for count_nonzero
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        return x.count_nonzero(axis=axis)
-
-else:
-    # older scipy versions don’t have any way to get the nnz of a sparse array
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        if isinstance(x, _CSArray):
-            from scipy.sparse import csc_array, csr_array  # noqa: TID251
-
-            x = (csr_array if x.format == "csr" else csc_array)(x)
-        return x.getnnz(axis=axis)
+@axis_nnz.register(CSBase)
+def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
+    return x.count_nonzero(axis=axis)
 
 
 @axis_nnz.register(DaskArray)

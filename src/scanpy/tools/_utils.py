@@ -6,6 +6,7 @@ import numpy as np
 
 from .. import logging as logg
 from .._compat import warn
+from .._keys import _existing_preset_keys
 from .._settings import settings
 from .._utils import _choose_graph
 
@@ -19,8 +20,8 @@ if TYPE_CHECKING:
 def _choose_representation(
     adata: AnnData,
     *,
-    use_rep: str | None = None,
-    n_pcs: int | None = None,
+    use_rep: str | None,
+    n_pcs: int | None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
     verbosity = settings.verbosity
@@ -51,30 +52,30 @@ def _choose_representation(
 
 
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:
+    from .._keys import _embedding_keys
+    from ..preprocessing._pca import pca
+
     if adata.n_vars <= settings.N_PCS:
         logg.info("    using data matrix X directly")
         return adata.X
 
-    pca_key = next((k for k in ("pca", "X_pca") if k in adata.obsm), None)
-    if pca_key is not None:
-        if n_pcs is not None and n_pcs > adata.obsm[pca_key].shape[1]:
-            msg = f"`{pca_key}` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
+    if keys := _existing_preset_keys(adata, "pca"):
+        if n_pcs is not None and n_pcs > adata.obsm[keys.obsm].shape[1]:
+            msg = f"`adata.obsm[{keys.obsm!r}]` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`."
             raise ValueError(msg)
-        x = adata.obsm[pca_key][:, :n_pcs]
-        logg.info(f"    using {pca_key!r} with n_pcs = {x.shape[1]}")
+        x = adata.obsm[keys.obsm][:, :n_pcs]
+        logg.info(f"    using {keys.obsm!r} with n_pcs = {x.shape[1]}")
         return x
-
-    from ..preprocessing import pca
 
     msg = (
         f"You’re trying to run this on {adata.n_vars} dimensions of `.X`, "
-        "if you really want this, set `use_rep='X'`.\n         "
+        "if you really want this, set `use_rep=’X’`.\n         "
         "Falling back to preprocessing with `sc.pp.pca` and default params."
     )
     warn(msg, UserWarning)
     n_pcs_pca = n_pcs if n_pcs is not None else settings.N_PCS
     pca(adata, n_comps=n_pcs_pca)
-    return adata.obsm[settings.preset.pca.key_added or "X_pca"]
+    return adata.obsm[_embedding_keys("pca").obsm]
 
 
 def get_init_pos_from_paga(

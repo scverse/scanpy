@@ -7,11 +7,10 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -84,19 +83,10 @@ def test_aggregate_vs_pandas(
     remove_unused_categories: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
-    anndata_has_settings = pkg_version("anndata") >= Version("0.11")
     cat_col = adata.obs["louvain"]
     categories = cat_col.cat.categories
-    if anndata_has_settings:
-        with ad.settings.override(remove_unused_categories=remove_unused_categories):
-            adata = adata[cat_col.isin(categories[:5]), :1_000].copy()
-    else:
-        del adata.obs["louvain"]
-        mask = cat_col.isin(categories[:5])
-        adata = adata[mask, :1_000].copy()
-        adata.obs["louvain"] = cat_col[mask]
-        if remove_unused_categories:
-            adata.obs["louvain"] = adata.obs["louvain"].cat.remove_unused_categories()
+    with ad.settings.override(remove_unused_categories=remove_unused_categories):
+        adata = adata[cat_col.isin(categories[:5]), :1_000].copy()
     adata.X = array_type(adata.X)
     if with_na:
         nas = list(range(0, adata.shape[0], 5))
@@ -242,6 +232,23 @@ def test_aggregate_bad_dask_array(
     adata.X = func(adata.X)
     with pytest.raises(ValueError, match=error_msg):
         sc.get.aggregate(adata, ["louvain"], "sum")
+
+
+@needs.dask
+@pytest.mark.parametrize("func", [["count_nonzero"], ["sum", "mean", "count_nonzero"]])
+def test_aggregate_dask_multiple_funcs(func: list[AggType]) -> None:
+    """A multi-func list incl. count_nonzero/sum must survive `.compute()` on dask."""
+    import dask.array as da
+
+    adata = sc.datasets.blobs()
+    dask_adata = adata.copy()
+    dask_adata.X = da.from_array(adata.X, chunks=(adata.shape[0] // 2, -1))
+    expected = sc.get.aggregate(adata, "blobs", func=func)
+    result = sc.get.aggregate(dask_adata, "blobs", func=func)
+    for f in func:
+        np.testing.assert_allclose(
+            np.asarray(expected.layers[f]), np.asarray(result.layers[f])
+        )
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])

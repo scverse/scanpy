@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 
 def cache_adata(dataset: Dataset, layer: KeyCount) -> None:
-    """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
     adata, batch_key = get_count_dataset(dataset, layer=layer)
     assert "lop1p" not in adata.uns
     adata.uns["batch_key"] = batch_key
@@ -40,6 +39,7 @@ class PreprocessingCountsSuite:  # noqa: D101
     param_names = ("dataset", "layer")
 
     def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         for dataset, layer in product(*self.params):
             cache_adata(dataset, layer)
 
