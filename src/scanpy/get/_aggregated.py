@@ -13,9 +13,9 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase, CSRBase, DaskArray, warn
-
+from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._utils import _resolve_axis, get_literal_vals
+from .._utils._doctests import doctest_needs
 from ._kernels import (
     agg_sum_csc,
     agg_sum_csr,
@@ -282,6 +282,7 @@ def _resolve_by_and_axis[I: Idx2D | int](
     return by_refs, axis_name
 
 
+@doctest_needs("anndata_acc")
 def aggregate(  # noqa: PLR0912
     adata: AnnData,
     by: (

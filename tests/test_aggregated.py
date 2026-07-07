@@ -7,11 +7,10 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
+from scanpy._compat import DaskArray
 from scanpy._utils import _resolve_axis, get_literal_vals
 from scanpy.get._aggregated import AggType
 from testing.scanpy._helpers import assert_equal
@@ -36,10 +35,6 @@ VALID_ARRAY_TYPES = [
         "dask_array_sparse",
     }
 ]
-
-needs_anndata_acc = pytest.mark.skipif(
-    pkg_version("anndata") < Version("0.13.0rc1"), reason="needs `anndata.acc`"
-)
 
 
 @pytest.fixture(params=get_literal_vals(AggType))
@@ -549,7 +544,7 @@ def test_aggregate_obsm_labels() -> None:
     assert_equal(expected, result)
 
 
-@needs_anndata_acc
+@needs.anndata_acc
 @pytest.mark.parametrize("axis", ["obs", "var"])
 @pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
 @pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
@@ -594,7 +589,7 @@ def test_aggregate_acc_api(
     assert_equal(old, new)
 
 
-@needs_anndata_acc
+@needs.anndata_acc
 @pytest.mark.parametrize(
     ("kwargs", "match"),
     [
@@ -610,7 +605,7 @@ def test_aggregate_acc_api_rejects_old_kwargs(kwargs: dict, match: str) -> None:
         sc.get.aggregate(adata, A.obs["blobs"], "sum", **kwargs)
 
 
-@needs_anndata_acc
+@needs.anndata_acc
 def test_aggregate_acc_api_mismatched_by_dims() -> None:
     from anndata.acc import A
 
@@ -619,7 +614,7 @@ def test_aggregate_acc_api_mismatched_by_dims() -> None:
         sc.get.aggregate(adata, [A.obs["blobs"], A.var.index], "sum")
 
 
-@needs_anndata_acc
+@needs.anndata_acc
 def test_aggregate_acc_api_mismatched_acc_axis() -> None:
     from anndata.acc import A
 
