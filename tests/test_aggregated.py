@@ -571,14 +571,13 @@ def test_aggregate_acc_api(
     if axis == "var":
         adata = adata.T.copy()
 
-    if attr is None:
-        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis)
-    elif attr == "layers":
-        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, layer="test")
-    elif attr == "obsm":
-        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, obsm="test")
-    else:
-        old = sc.get.aggregate(adata, by, ["sum", "mean"], axis=axis, varm="test")
+    old = sc.get.aggregate(
+        adata,
+        by,
+        ["sum", "mean"],
+        axis=axis,
+        **({} if attr is None else {attr: "test"}),
+    )
     new = sc.get.aggregate(
         adata,
         getattr(A, axis)[by],
