@@ -246,11 +246,12 @@ def _resolve_by_and_axis[I: Idx2D | int](
     by: AdRef[I, AnnData] | Collection[AdRef[I, AnnData]] | str | Collection[str],
     axis: Literal["obs", 0, "var", 1] | None,
     *,
+    acc: LayerAcc | MultiAcc | None,
     layer: str | None,
     obsm: str | None,
     varm: str | None,
 ) -> tuple[list[AdRef[I, AnnData]] | None, Literal["obs", "var"]]:
-    """Validate old-/new-API params aren't mixed, and resolve `by_refs`/`axis`/`axis_name`."""
+    """Resolve `axis_name` based on the accessor."""
     n_old_vec = sum(p is not None for p in [varm, obsm, layer])
     if (by_refs := _validate_by(by)) is None:
         if n_old_vec > 1:
@@ -259,34 +260,25 @@ def _resolve_by_and_axis[I: Idx2D | int](
         if axis is None:
             axis = 1 if varm else 0
         _, axis_name = _resolve_axis(axis)
-        if obsm and axis_name != "obs":
-            msg = "`obsm` can only be used when grouping over `obs`"
-            raise ValueError(msg)
-        if varm and axis_name != "var":
-            msg = "`varm` can only be used when grouping over `var`"
+        if axis_name != (ax_wanted := "var" if varm else "obs" if obsm else axis_name):
+            msg = f"`{ax_wanted}m` can only be used when grouping over `{ax_wanted}`"
             raise ValueError(msg)
         return None, axis_name
 
     if axis is not None:
-        msg = (
-            "`axis` cannot be used when `by` is given as AdRef(s); "
-            "the axis is inferred from `by`"
-        )
+        msg = "`axis` cannot be used when `by` is given as AdRef(s); the axis is inferred from `by`"
         raise TypeError(msg)
     if n_old_vec:
-        msg = (
-            "`layer`, `obsm`, and `varm` cannot be used when `by` is given as "
-            "AdRef(s); use `vec` instead"
-        )
+        msg = "`layer`, `obsm`, and `varm` cannot be used when `by` is given as AdRef(s); use `acc` instead"
         raise TypeError(msg)
     dims = {d for ref in by_refs for d in ref.dims}
     if len(dims) != 1:
-        msg = (
-            "All `by` accessors must refer to the same single axis "
-            f"(`obs` or `var`), got {dims}"
-        )
+        msg = f"All `by` accessors must refer to the same single axis (`obs` or `var`), got {dims}"
         raise ValueError(msg)
-    _, axis_name = _resolve_axis(next(iter(dims)))
+    axis_name = next(iter(dims))
+    if isinstance(acc, MultiAcc) and axis_name != acc.dim:
+        msg = f"`by`’s axis ({axis_name}) must match `acc`’s ({acc.dim})"
+        raise ValueError(msg)
     return by_refs, axis_name
 
 
@@ -300,7 +292,7 @@ def aggregate(  # noqa: PLR0912
     ),
     func: AggType | Iterable[AggType],
     *,
-    vec: LayerAcc | MultiAcc | None = None,
+    acc: LayerAcc | MultiAcc | None = None,
     mask: NDArray[np.bool] | str | None = None,
     dof: int = 1,
     # old API
@@ -331,15 +323,17 @@ def aggregate(  # noqa: PLR0912
         Boolean mask (or key to column containing mask) to apply along the axis.
     dof
         Degrees of freedom for variance. Defaults to 1.
-    vec
-        If not None, accessor for aggregation data. New API only.
+    acc
+        If not None, accessor for aggregation data.
+        Replaces `layer`, `obsm`, and `varm`.
     axis
         Axis on which to find group by column.
         (inferred from `by` if it is an :class:`~anndata.acc.AdRef`)
     layer
     obsm
     varm
-        If not None, key for aggregation data. Use `vec` instead.
+        If not None, key for aggregation data.
+        Use `acc` instead.
 
     Returns
     -------
@@ -393,21 +387,21 @@ def aggregate(  # noqa: PLR0912
         raise NotImplementedError(msg)
 
     by_refs, axis_name = _resolve_by_and_axis(
-        by, axis, layer=layer, obsm=obsm, varm=varm
+        by, axis, layer=layer, obsm=obsm, varm=varm, acc=acc
     )
     del axis
     mask = _check_mask(adata, mask, axis_name)
 
     if by_refs is not None:
-        if vec is None:
-            vec = A.X
-        if not isinstance(vec, LayerAcc | MultiAcc):
+        if acc is None:
+            acc = A.X
+        if not isinstance(acc, LayerAcc | MultiAcc):
             msg = (
-                "`vec` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
-                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {vec!r}"
+                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
+                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
             )
             raise TypeError(msg)
-        data = adata[vec]
+        data = adata[acc]
         dim_df = pd.DataFrame({
             ref.idx if isinstance(ref.idx, str) else str(ref): adata[ref]
             for ref in by_refs
@@ -426,8 +420,8 @@ def aggregate(  # noqa: PLR0912
                 data = adata.obsm[obsm]
             case None, None, str(), "var":
                 data = adata.varm[varm]
-        dim_df = getattr(adata, axis_name)
-    categorical, new_label_df = _combine_categories(dim_df, by)
+        dim_df = getattr(adata, axis_name)[[by] if isinstance(by, str) else list(by)]
+    categorical, new_label_df = _combine_categories(dim_df)
 
     # Add number of obs aggregated into each group (respecting the mask)
     new_label_df["n_obs_aggregated"] = pd.Series(
@@ -443,7 +437,7 @@ def aggregate(  # noqa: PLR0912
     )
 
     # Define new var dataframe
-    if obsm or varm or isinstance(vec, MultiAcc):
+    if obsm or varm or isinstance(acc, MultiAcc):
         if isinstance(data, pd.DataFrame):
             # Check if there could be labels
             var = pd.DataFrame(index=data.columns)
@@ -753,42 +747,43 @@ def aggregate_array(
     return result
 
 
-def _combine_categories(
-    label_df: pd.DataFrame, cols: Collection[str] | str
-) -> tuple[pd.Categorical, pd.DataFrame]:
+def _combine_categories(label_df: pd.DataFrame) -> tuple[pd.Categorical, pd.DataFrame]:
     """Return both the result categories and a dataframe labelling each row."""
     from itertools import product
 
-    if isinstance(cols, str):
-        cols = [cols]
-
     df = pd.DataFrame(
-        {c: pd.Categorical(label_df[c]).remove_unused_categories() for c in cols},
+        {
+            c: pd.Categorical(label_df[c]).remove_unused_categories()
+            for c in label_df.columns
+        },
     )
-    n_categories = [len(df[c].cat.categories) for c in cols]
+    n_categories = [len(df[c].cat.categories) for c in label_df.columns]
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
     result_categories = pd.Index([
-        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
+        "_".join(map(str, x))
+        for x in product(*[df[c].cat.categories for c in label_df.columns])
     ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
         {
             c: pd.Categorical.from_codes(code_combinations[i], df[c].cat.categories)
-            for i, c in enumerate(cols)
+            for i, c in enumerate(label_df.columns)
         },
         index=result_categories,
     )
 
     # Calculating result codes
-    factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
+    factors = np.ones(
+        len(label_df.columns) + 1, dtype=np.int32
+    )  # First factor needs to be 1
     np.cumprod(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
-    code_array = np.zeros((len(cols), df.shape[0]), dtype=np.int32)
-    for i, c in enumerate(cols):
+    code_array = np.zeros((len(label_df.columns), df.shape[0]), dtype=np.int32)
+    for i, c in enumerate(label_df.columns):
         code_array[i] = df[c].cat.codes
     code_array *= factors[:, None]
 

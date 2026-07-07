@@ -399,56 +399,50 @@ def test_aggregate_examples(
 
 
 @pytest.mark.parametrize(
-    ("label_cols", "cols", "expected"),
+    ("label_cols", "expected"),
     [
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
-            ),
-            ["a", "b"],
-            pd.Categorical(["a_d", "b_d", "c_f"]),
-            id="two_of_two",
-        ),
-        pytest.param(
-            dict(
-                a=pd.Categorical(["a", "b", "c"]),
-                b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "b", "c"],
             pd.Categorical(["a_d_g", "b_d_h", "c_f_h"]),
-            id="three_of_three",
+            id="three",
         ),
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
+            ),
+            pd.Categorical(["a_d", "b_d", "c_f"]),
+            id="two-1",
+        ),
+        pytest.param(
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "c"],
             pd.Categorical(["a_g", "b_h", "c_h"]),
-            id="two_of_three-1",
+            id="two-2",
         ),
         pytest.param(
             dict(
-                a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["b", "c"],
             pd.Categorical(["d_g", "d_h", "f_h"]),
-            id="two_of_three-2",
+            id="two-3",
         ),
     ],
 )
 def test_combine_categories(
-    label_cols: dict[str, pd.Categorical], cols: list[str], expected: pd.Categorical
+    label_cols: dict[str, pd.Categorical], expected: pd.Categorical
 ) -> None:
     from scanpy.get._aggregated import _combine_categories
 
     label_df = pd.DataFrame(label_cols)
-    result, result_label_df = _combine_categories(label_df, cols)
+    result, result_label_df = _combine_categories(label_df)
 
     assert isinstance(result, pd.Categorical)
 
@@ -459,7 +453,9 @@ def test_combine_categories(
     )
 
     reconstructed_df = pd.DataFrame(
-        [x.split("_") for x in result], columns=cols, index=result.astype(str)
+        [x.split("_") for x in result],
+        columns=list(label_cols),
+        index=result.astype(str),
     ).astype("category")
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
@@ -554,7 +550,7 @@ def test_aggregate_obsm_labels() -> None:
 
 
 @needs_anndata_acc
-def test_aggregate_new_api_x() -> None:
+def test_aggregate_acc_api_x() -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
@@ -567,7 +563,7 @@ def test_aggregate_new_api_x() -> None:
 
 
 @needs_anndata_acc
-def test_aggregate_new_api_obsm_varm() -> None:
+def test_aggregate_acc_api_obsm_varm() -> None:
     from anndata.acc import A
 
     adata_obsm = sc.datasets.blobs()
@@ -577,19 +573,19 @@ def test_aggregate_new_api_obsm_varm() -> None:
 
     old_obsm = sc.get.aggregate(adata_obsm, "blobs", ["sum", "mean"], obsm="test")
     new_obsm = sc.get.aggregate(
-        adata_obsm, by=A.obs["blobs"], func=["sum", "mean"], vec=A.obsm["test"]
+        adata_obsm, by=A.obs["blobs"], func=["sum", "mean"], acc=A.obsm["test"]
     )
     assert_equal(old_obsm, new_obsm)
 
     old_varm = sc.get.aggregate(adata_varm, "blobs", ["sum", "mean"], varm="test")
     new_varm = sc.get.aggregate(
-        adata_varm, by=A.var["blobs"], func=["sum", "mean"], vec=A.varm["test"]
+        adata_varm, by=A.var["blobs"], func=["sum", "mean"], acc=A.varm["test"]
     )
     assert_equal(old_varm, new_varm)
 
 
 @needs_anndata_acc
-def test_aggregate_new_api_multi_by() -> None:
+def test_aggregate_acc_api_multi_by() -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
@@ -617,7 +613,7 @@ def test_aggregate_new_api_multi_by() -> None:
         ),
     ],
 )
-def test_aggregate_new_api_rejects_old_kwargs(
+def test_aggregate_acc_api_rejects_old_kwargs(
     kwargs: dict, error: type[Exception], match: str
 ) -> None:
     from anndata.acc import A
@@ -628,7 +624,7 @@ def test_aggregate_new_api_rejects_old_kwargs(
 
 
 @needs_anndata_acc
-def test_aggregate_new_api_mismatched_by_dims() -> None:
+def test_aggregate_acc_api_mismatched_by_dims() -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
@@ -637,14 +633,14 @@ def test_aggregate_new_api_mismatched_by_dims() -> None:
 
 
 @needs_anndata_acc
-def test_aggregate_new_api_mismatched_vec_axis() -> None:
+def test_aggregate_acc_api_mismatched_acc_axis() -> None:
     from anndata.acc import A
 
     adata = sc.datasets.blobs()
     adata.obs["blobs"] = adata.obs["blobs"].astype(str)
     adata.varm["test"] = adata.X.T[:, ::2].copy()
-    with pytest.raises(ValueError, match="grouping over `var`"):
-        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", vec=A.varm["test"])
+    with pytest.raises(ValueError, match=r"`by`.*(obs).*`acc`.*(var)"):
+        sc.get.aggregate(adata, by=A.obs["blobs"], func="sum", acc=A.varm["test"])
 
 
 def test_aggregate_by_invalid_type() -> None:
