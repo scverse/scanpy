@@ -459,6 +459,8 @@ class _RankGenes:
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from illico import asymptotic_wilcoxon
 
+        from scanpy import settings
+
         illico_df = asymptotic_wilcoxon(
             AnnData(
                 X=self.X,
@@ -478,6 +480,7 @@ class _RankGenes:
             use_continuity=False,
             alternative="two-sided",
             use_rust=False,
+            n_threads=settings.n_jobs,
             groups=self.groups_order,
         )
         return _illico_results_to_iter(
@@ -638,16 +641,19 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
+        `'wilcoxon_illico'` uses the `illico <https://github.com/remydubois/illico>`__
+        implementation of the Wilcoxon rank-sum test (equivalent results, faster
+        with many groups; preferred via the ``ScanpyV2Preview`` preset),
         `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
     corr_method
         p-value correction method.
-        Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
+        Used only for the `'t-test'`, `'t-test_overestim_var'`, `'wilcoxon'`, and `'wilcoxon_illico'` methods.
     tie_correct
         Use tie correction for `'wilcoxon'` scores.
-        Used only for `'wilcoxon'`.
+        Used only for the `'wilcoxon'` and `'wilcoxon_illico'` methods.
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
@@ -683,7 +689,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     `adata.uns['rank_genes_groups' | key_added]['logfoldchanges']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
-        scores. Only provided if method is 't-test' like.
+        scores. Provided for every method except `'logreg'`.
         Note: if `mean_in_log_space=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
@@ -855,7 +861,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
                 "    'logfoldchanges', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals_adj', sorted np.recarray to be indexed by group ids"
-                if method in {"t-test", "t-test_overestim_var", "wilcoxon"}
+                if method != "logreg"
                 else ""
             )
         ),
