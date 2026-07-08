@@ -245,7 +245,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     row_center_key = None
     if return_anndata and layer is not None and isinstance(adata.uns.get(layer), dict):
-        row_center_key = adata.uns[layer].get("row_center_key")
+        layer_metadata = adata.uns[layer]
+        if layer_metadata.get("encoding_type") == "shifted_clr":
+            row_center_key = layer_metadata.get("row_center_key")
     if row_center_key is not None:
         if row_center_key not in adata_comp.obs:
             msg = f"{row_center_key!r} not found in `adata.obs`."

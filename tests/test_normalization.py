@@ -406,6 +406,7 @@ def test_normalize_clr_values(array_type, dtype):
     assert adata.layers["pflog"].nnz == sparse.csr_matrix(X_clr).nnz  # noqa: TID251
     assert adata.uns["pflog"]["encoding_type"] == "shifted_clr"
     assert adata.uns["pflog"]["row_center_key"] == "pflog_center"
+    assert adata.uns["pflog"]["params"]["target"] == "auto"
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
@@ -576,6 +577,16 @@ def test_normalize_clr_dask(sparse_blocks, densify):
         np.testing.assert_allclose(
             _materialize(adata.X), _clr_reference(X_clr), rtol=1e-5, atol=1e-5
         )
+
+
+@needs.dask
+def test_normalize_clr_dask_median_raises():
+    import dask.array as da
+
+    adata = AnnData(da.from_array(X_clr, chunks=(2, X_clr.shape[1])))
+
+    with pytest.raises(NotImplementedError, match=r"target='median'.*dask"):
+        sc.pp.normalize_clr(adata, target="median")
 
 
 def test_normalize_clr_view():

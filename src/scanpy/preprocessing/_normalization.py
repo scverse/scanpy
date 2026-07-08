@@ -408,12 +408,14 @@ def _normalize_clr_helper(  # noqa: PLR0912
         if target == "mean":
             target_sum = mean_depth
         elif target == "median":
-            depths = (
-                cell_depths.compute()
-                if isinstance(cell_depths, DaskArray)
-                else cell_depths
-            )
-            target_sum = float(np.median(depths))
+            if isinstance(cell_depths, DaskArray):
+                msg = (
+                    "`target='median'` is not supported for dask input; pass "
+                    "`target='auto'`, `target='mean'`, a positive numeric target, "
+                    "or explicit `alpha`."
+                )
+                raise NotImplementedError(msg)
+            target_sum = float(np.median(cell_depths))
         elif isinstance(target, bool) or not isinstance(target, int | float):
             msg = "`target` must be 'auto', 'mean', 'median', or a positive number."
             raise ValueError(msg)
@@ -427,15 +429,14 @@ def _normalize_clr_helper(  # noqa: PLR0912
             x, cell_depths / target_sum, op=truediv, axis=0, allow_divide_by_zero=False
         )
 
+    if alpha is not None:
+        x = x * scale
+
     if isinstance(x, DaskArray):
-        if alpha is not None:
-            x = x * scale
         log_values = x.map_blocks(
             _log1p_sparse_block, dtype=np.float64, meta=x._meta.astype(np.float64)
         )
     else:
-        if alpha is not None:
-            x = x * scale
         log_values = _log1p_sparse_block(x)
 
     row_center = stats.sum(log_values, axis=1) / x.shape[1]
@@ -559,12 +560,9 @@ def normalize_clr(
     dense_x = _densify_shifted_clr(log_values, row_center) if densify else None
     row_center_key = f"{key_added}_center"
     metadata = dict(
-        report,
-        method="PFlog",
         encoding_type="shifted_clr",
         row_center_key=row_center_key,
-        layer=layer,
-        densify=densify,
+        params=report | {"layer": layer, "densify": densify},
     )
     dat = dict(
         X=dense_x if densify else log_values,
