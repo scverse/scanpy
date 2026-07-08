@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from itertools import product
 
-from anndata import AnnData
+from anndata import concat
 
 import scanpy as sc
 import scanpy.external as sce
@@ -15,11 +15,12 @@ pytestmark = [needs.harmony]
 def test_load_timepoints_from_anndata_list():
     adata_ref = pbmc3k()
     start = [596, 615, 1682, 1663, 1409, 1432]
-    adata = AnnData.concatenate(
-        *(adata_ref[i : i + 1000] for i in start),
+    adata = concat(
+        [adata_ref[i : i + 1000] for i in start],
         join="outer",
-        batch_key="sample",
-        batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+        label="sample",
+        keys=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+        index_unique="-",
     )
     adata.obs["time_points"] = adata.obs["sample"].str.split("_", expand=True)[0]
     adata.obs["time_points"] = adata.obs["time_points"].astype("category")
