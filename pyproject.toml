@@ -98,7 +98,7 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-illico = [ "illico @ git+https://github.com/ilan-gold/illico@ig/dask_optional" ]
+illico = [ "illico >= 0.6" ]
 scanpy2 = [ "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
@@ -154,7 +154,6 @@ test-min = [
 [tool.hatch]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
-metadata.allow-direct-references = true
 build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
