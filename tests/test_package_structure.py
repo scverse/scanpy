@@ -94,11 +94,12 @@ copy_sigs["sc.pp.pca"]["first_name"] = "data"
 copy_sigs["sc.pp.scale"]["first_name"] = "data"
 copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
 # other partial exceptions
+copy_sigs["sc.pp.normalize_clr"]["return_ann"] = (
+    "AnnData | dict[str, np.ndarray | CSBase | DaskArray | dict[str, object]] | None"
+)
 copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
     "sc.experimental.pp.normalize_pearson_residuals"
-]["return_ann"] = copy_sigs["sc.pp.normalize_clr"]["return_ann"] = (
-    "AnnData | dict[str, np.ndarray] | None"
-)
+]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
 copy_sigs["sc.external.pp.magic"]["copy_default"] = None
 
 

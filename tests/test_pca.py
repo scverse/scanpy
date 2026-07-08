@@ -11,6 +11,7 @@ from anndata.tests import helpers
 from anndata.tests.helpers import assert_equal
 from packaging.version import Version
 from scipy import sparse
+from sklearn.decomposition import PCA
 
 import scanpy as sc
 from scanpy._compat import CSBase, DaskArray, pkg_version
@@ -329,6 +330,86 @@ def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     )
     np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[keys.obsm])
     np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[keys.varm])
+
+
+def test_pca_sparse_shifted_clr_layer():
+    counts = np.array(
+        [
+            [20, 1, 0, 3, 0, 0],
+            [22, 2, 0, 4, 0, 0],
+            [1, 18, 0, 0, 3, 0],
+            [0, 20, 1, 0, 4, 0],
+            [0, 0, 15, 1, 0, 5],
+            [0, 0, 18, 2, 0, 4],
+            [12, 0, 0, 7, 1, 0],
+            [0, 12, 0, 1, 7, 0],
+            [0, 0, 12, 0, 1, 7],
+        ],
+        dtype=np.float64,
+    )
+    adata = AnnData(sparse.csr_matrix(counts))  # noqa: TID251
+    sc.pp.normalize_clr(adata, alpha=0.5)
+    sc.pp.pca(adata, n_comps=3, layer="pflog", dtype=np.float64)
+
+    dense = (
+        adata.layers["pflog"].toarray() - adata.obs["pflog_center"].to_numpy()[:, None]
+    )
+    ref = PCA(n_components=3, svd_solver="full").fit(dense)
+    np.testing.assert_allclose(adata.uns["pca"]["variance"], ref.explained_variance_)
+    np.testing.assert_allclose(
+        adata.uns["pca"]["variance_ratio"], ref.explained_variance_ratio_
+    )
+    ref_scores = ref.transform(dense)
+    for i in range(3):
+        corr = abs(np.corrcoef(adata.obsm["X_pca"][:, i], ref_scores[:, i])[0, 1])
+        assert corr > 0.999
+
+
+def test_pca_sparse_shifted_clr_layer_matches_dense_wide():
+    rng = np.random.default_rng(0)
+    counts = rng.negative_binomial(4, 0.35, size=(15, 80)).astype(np.float64)
+    counts[rng.random(counts.shape) < 0.65] = 0
+    counts[:, 0] += 1  # avoid all-zero rows
+
+    adata = AnnData(sparse.csr_matrix(counts))  # noqa: TID251
+    sc.pp.normalize_clr(adata, alpha=0.5)
+    sc.pp.pca(adata, n_comps=5, layer="pflog", dtype=np.float64, random_state=0)
+
+    dense = (
+        adata.layers["pflog"].toarray() - adata.obs["pflog_center"].to_numpy()[:, None]
+    )
+    ref = PCA(n_components=5, svd_solver="full").fit(dense)
+    ref_scores = ref.transform(dense)
+
+    scores = adata.obsm["X_pca"].copy()
+    loadings = adata.varm["PCs"].copy()
+    for i in range(5):
+        if np.corrcoef(scores[:, i], ref_scores[:, i])[0, 1] < 0:
+            scores[:, i] *= -1
+            loadings[:, i] *= -1
+
+    np.testing.assert_allclose(
+        adata.uns["pca"]["variance"], ref.explained_variance_, rtol=1e-10
+    )
+    np.testing.assert_allclose(
+        adata.uns["pca"]["variance_ratio"],
+        ref.explained_variance_ratio_,
+        rtol=1e-10,
+    )
+    np.testing.assert_allclose(scores, ref_scores, rtol=1e-7, atol=1e-7)
+    np.testing.assert_allclose(loadings, ref.components_.T, rtol=1e-10, atol=1e-10)
+
+
+@needs.dask
+def test_pca_dask_shifted_clr_layer_raises():
+    import dask.array as da
+
+    counts = da.from_array(A_list.astype(np.float64), chunks=(2, A_list.shape[1]))
+    adata = AnnData(counts)
+    sc.pp.normalize_clr(adata, alpha=0.5)
+
+    with pytest.raises(NotImplementedError, match="in-memory sparse input"):
+        sc.pp.pca(adata, n_comps=2, layer="pflog")
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])

@@ -14,7 +14,7 @@ from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_obs_rep
 from .._docs import doc_mask_var
-from ._compat import _pca_compat_sparse
+from ._compat import _pca_compat_sparse, _pca_compat_sparse_row_center
 
 if TYPE_CHECKING:
     from collections.abc import Container
@@ -108,6 +108,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         or 1 - minimum dimension size of selected representation.
     layer
         If provided, which element of :attr:`~anndata.AnnData.layers` to use for PCA instead of `X`.
+        PFlog layers written by :func:`~scanpy.pp.normalize_clr` are represented
+        as sparse values plus a row-centering vector; PCA applies this centering
+        implicitly for in-memory sparse layers. Dask-backed PFlog layers are not
+        supported.
     obsm
         If provided, which element of :attr:`~anndata.AnnData.obsm` to use for PCA instead of `X`.
     zero_center
@@ -239,6 +243,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
+    row_center_key = None
+    if return_anndata and layer is not None and isinstance(adata.uns.get(layer), dict):
+        row_center_key = adata.uns[layer].get("row_center_key")
+    if row_center_key is not None:
+        if row_center_key not in adata_comp.obs:
+            msg = f"{row_center_key!r} not found in `adata.obs`."
+            raise KeyError(msg)
+        row_center = np.asarray(adata_comp.obs[row_center_key], dtype=np.float64)
+    else:
+        row_center = None
+
     if chunked:
         if not zero_center or svd_solver not in {None, "arpack"}:
             logg.debug("Ignoring zero_center, rng, svd_solver")
@@ -267,7 +282,17 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             chunk_dense = chunk.toarray() if isinstance(chunk, CSBase) else chunk
             x_pca[start:end] = pca_.transform(chunk_dense)
     elif zero_center:
-        if isinstance(x, CSBase) and svd_solver == "lobpcg":
+        if row_center is not None:
+            if not isinstance(x, CSBase):
+                msg = "Sparse PFlog PCA is only supported for in-memory sparse input."
+                raise NotImplementedError(msg)
+            if svd_solver not in {None, "arpack"}:
+                msg = "Ignoring svd_solver for sparse PFlog PCA; using 'arpack'."
+                warn(msg, UserWarning)
+            x_pca, pca_ = _pca_compat_sparse_row_center(
+                x, row_center, n_comps, solver="arpack", rng=rng
+            )
+        elif isinstance(x, CSBase) and svd_solver == "lobpcg":
             msg = (
                 f"{svd_solver=} for sparse relies on legacy code and will not be supported in the future. "
                 "Also the lobpcg solver has been observed to be inaccurate. Please use 'arpack' instead."
@@ -304,6 +329,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 )
             x_pca = pca_.fit_transform(x)
     else:
+        if row_center is not None:
+            msg = "Sparse PFlog PCA requires `zero_center=True`."
+            raise NotImplementedError(msg)
         if isinstance(x, DaskArray):
             if isinstance(x._meta, CSBase):
                 msg = (
