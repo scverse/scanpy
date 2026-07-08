@@ -16,7 +16,7 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, warn
-from .._settings import Default, Preset
+from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
     _numba_thread_limit,
@@ -460,8 +460,6 @@ class _RankGenes:
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from illico import asymptotic_wilcoxon
 
-        from scanpy import settings
-
         n_threads = settings.n_jobs if settings.n_jobs > 0 else (os.cpu_count() or 1)
         illico_df = asymptotic_wilcoxon(
             AnnData(
@@ -718,8 +716,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    from scanpy import settings
-
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):
