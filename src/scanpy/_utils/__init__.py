@@ -316,21 +316,16 @@ def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
 
 
 def get_networkit_from_adjacency(adjacency: CSBase, *, weighted: bool = True):
-    """Get a NetworKit graph from an adjacency matrix."""
+    """Get a NetworKit graph from an adjacency matrix.
+
+    Used func:`networkit.GraphFromCsr` (networkit/networkit#1422)
+    """
     import networkit as nk
     import scipy.sparse as sps
 
     assert adjacency.shape is not None
-    upper = sps.triu(adjacency, k=1).tocoo()
-    return nk.graph.GraphFromCoo(
-        (
-            upper.data.astype(np.float64),
-            (upper.row.astype(np.uint64), upper.col.astype(np.uint64)),
-        ),
-        n=adjacency.shape[0],
-        weighted=weighted,
-        directed=False,
-    )
+    upper = sps.triu(adjacency, k=1).tocsr()
+    return nk.GraphFromCsr(upper, directed=False, weighted=weighted)
 
 
 # --------------------------------------------------------------------------------
