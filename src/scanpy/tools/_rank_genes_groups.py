@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import numba
@@ -461,6 +462,7 @@ class _RankGenes:
 
         from scanpy import settings
 
+        n_threads = settings.n_jobs if settings.n_jobs > 0 else (os.cpu_count() or 1)
         illico_df = asymptotic_wilcoxon(
             AnnData(
                 X=self.X,
@@ -480,7 +482,7 @@ class _RankGenes:
             use_continuity=False,
             alternative="two-sided",
             use_rust=False,
-            n_threads=settings.n_jobs,
+            n_threads=n_threads,
             groups=self.groups_order,
         )
         return _illico_results_to_iter(
