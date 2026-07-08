@@ -41,6 +41,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     skimage = "scikit-image"
     skmisc = "scikit-misc"
     zarr = auto()
+    illico = auto()
     # external
     bbknn = auto()
     harmony = "harmonyTS"

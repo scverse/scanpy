@@ -33,7 +33,9 @@ __all__ = [
 ]
 
 
-type DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+type DETest = Literal[
+    "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
+]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 type LeidenFlavor = Literal["leidenalg", "igraph"]
 
@@ -233,7 +235,11 @@ class Preset(enum.StrEnum):
 
     @preset_property
     def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
-        """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
+        """
+        Correlation method for :func:`~scanpy.tl.rank_genes_groups`.
+
+        V2 `method` preset is for `illico` implementation of `wilcoxon` test.
+        """
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
                 method="t-test", mask_var=None, mean_in_log_space=True
