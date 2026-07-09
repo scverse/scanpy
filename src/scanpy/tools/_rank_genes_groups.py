@@ -640,19 +640,16 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         The default method is `'t-test'`,
         `'t-test_overestim_var'` overestimates variance of each group,
         `'wilcoxon'` uses Wilcoxon rank-sum,
-        `'wilcoxon_illico'` uses the `illico <https://github.com/remydubois/illico>`__
-        implementation of the Wilcoxon rank-sum test (equivalent results, faster
-        with many groups; preferred via the ``ScanpyV2Preview`` preset),
         `'logreg'` uses logistic regression. See :cite:t:`Ntranos2019`,
         `here <https://github.com/scverse/scanpy/issues/95>`__ and `here
         <https://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
     corr_method
         p-value correction method.
-        Used only for the `'t-test'`, `'t-test_overestim_var'`, `'wilcoxon'`, and `'wilcoxon_illico'` methods.
+        Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
     tie_correct
         Use tie correction for `'wilcoxon'` scores.
-        Used only for the `'wilcoxon'` and `'wilcoxon_illico'` methods.
+        Used only for `'wilcoxon'`.
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
