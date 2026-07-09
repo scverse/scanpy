@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 import numba
@@ -460,29 +459,29 @@ class _RankGenes:
     ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
         from illico import asymptotic_wilcoxon
 
-        n_threads = settings.n_jobs if settings.n_jobs > 0 else (os.cpu_count() or 1)
-        illico_df = asymptotic_wilcoxon(
-            AnnData(
-                X=self.X,
-                var=pd.DataFrame(index=self.var_names),
-                obs=pd.DataFrame(
-                    index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                    data={"group": self.group_col},
+        with _numba_thread_limit(settings.n_jobs) as n_threads:
+            illico_df = asymptotic_wilcoxon(
+                AnnData(
+                    X=self.X,
+                    var=pd.DataFrame(index=self.var_names),
+                    obs=pd.DataFrame(
+                        index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                        data={"group": self.group_col},
+                    ),
                 ),
-            ),
-            reference=self.groups_order[self.ireference]
-            if self.ireference is not None
-            else None,
-            group_keys="group",
-            return_as_scanpy=False,
-            is_log1p=True,
-            tie_correct=tie_correct,
-            use_continuity=False,
-            alternative="two-sided",
-            use_rust=False,
-            n_threads=n_threads,
-            groups=self.groups_order,
-        )
+                reference=self.groups_order[self.ireference]
+                if self.ireference is not None
+                else None,
+                group_keys="group",
+                return_as_scanpy=False,
+                is_log1p=True,
+                tie_correct=tie_correct,
+                use_continuity=False,
+                alternative="two-sided",
+                use_rust=False,
+                n_threads=n_threads,
+                groups=self.groups_order,
+            )
         return _illico_results_to_iter(
             illico_df,
             self.groups_order,
@@ -689,7 +688,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     `adata.uns['rank_genes_groups' | key_added]['logfoldchanges']` : structured :class:`numpy.ndarray` (dtype `object`)
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
-        scores. Provided for every method except `'logreg'`.
+        scores. Only provided if method is 't-test' like.
         Note: if `mean_in_log_space=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
@@ -859,7 +858,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
                 "    'logfoldchanges', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals', sorted np.recarray to be indexed by group ids\n"
                 "    'pvals_adj', sorted np.recarray to be indexed by group ids"
-                if method != "logreg"
+                if method in {"t-test", "t-test_overestim_var", "wilcoxon"}
                 else ""
             )
         ),
