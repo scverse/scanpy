@@ -14,7 +14,7 @@ from fast_array_utils import stats
 from hv_anndata import A, AdDim
 
 import scanpy as sc
-from scanpy.plotting._common import dot_size
+from scanpy.plotting._common import dot_area
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Mapping
@@ -516,8 +516,9 @@ def dotplot(
     By default encodes the mean expression as color,
     and the fraction of expressing cells as dot size.
 
-    Uses `dot_size` with default parameters to calculate size.
-    To override, use e.g. `.opts(size=dot_size(hv.dim('median'), ...)`.
+    Uses `dot_area` with default parameters to calculate size.
+    To override, use e.g. `.opts(s=dot_area(hv.dim('median'), ...))`
+    (or `size=dot_area(hv.dim('median'), ...) ** 0.5` on Bokeh/Plotly).
 
     Parameters
     ----------
@@ -559,9 +560,16 @@ def dotplot(
         ),
     )
 
+    opts: dict[str, str | hv.dim] = dict(funcs)
+    if (d := opts.pop("size", None)) is not None:
+        area = dot_area(hv.dim(d))
+        if hv.Store.current_backend == "matplotlib":
+            opts["s"] = area
+        else:
+            opts["size"] = area**0.5
+
     return hv.Points(stats_long, ["group", "marker"], list(funcs.values())).opts(
-        xrotation=30,
-        **{n: dot_size(hv.dim(f)) if n == "size" else f for n, f in funcs.items()},
+        xrotation=30, **opts
     )
 
 

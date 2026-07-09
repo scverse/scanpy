@@ -123,7 +123,6 @@ myst_heading_anchors = 3
 myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
-nb_output_stderr = "remove"
 nb_execution_mode = "cache"
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)

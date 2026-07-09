@@ -40,6 +40,17 @@ Functions with both backends:
 
 ```
 
+Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: ../generated/
+
+   pl.dot_area
+
+```
+
 Legacy (matplotlib) only:
 
 ```{eval-rst}

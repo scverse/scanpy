@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-__all__ = ["dot_size", "highest_expr_genes"]
+__all__ = ["dot_area", "highest_expr_genes"]
 
 
 def highest_expr_genes(
@@ -61,7 +61,7 @@ def highest_expr_genes(
     return pd.DataFrame(counts_top, index=adata.obs_names, columns=columns)
 
 
-def dot_size[V: NDArray[np.floating] | hv.dim](
+def dot_area[V: NDArray[np.floating] | hv.dim](
     vec: V,
     *,
     dot_min: float = 0,
@@ -70,11 +70,17 @@ def dot_size[V: NDArray[np.floating] | hv.dim](
     largest_dot: float = 20,
     size_exponent: float = 1.5,
 ) -> V:
-    """Dot size transform, e.g. for :func:`dotplot`.
+    """Dot area transform, e.g. for :func:`~scanpy.pl.dotplot`.
 
-    Normalizes ``func`` by its maximum, clips/rescales it between
+    Normalizes ``vec`` by its maximum, clips/rescales it between
     ``dot_min``/``dot_max``, raises it to ``size_exponent``,
     and finally scales it into ``[smallest_dot, largest_dot]``.
+
+    ``smallest_dot``/``largest_dot`` are marker *areas*, matching Matplotlib’s ``s``
+    (as used by the legacy, Matplotlib-only :func:`~scanpy.pl.dotplot`).
+    HoloViews' ``size`` style option means a diameter on Bokeh/Plotly,
+    unlike Matplotlib's area-based ``s``,
+    so callers targeting those backends need to take the square root of the result.
 
     Parameters
     ----------
@@ -85,17 +91,17 @@ def dot_size[V: NDArray[np.floating] | hv.dim](
     dot_max
         Normalized values above this are clipped to it.
     smallest_dot
-        The dot size mapped to ``dot_min``.
+        The dot area mapped to ``dot_min``.
     largest_dot
-        The dot size mapped to ``dot_max``.
+        The dot area mapped to ``dot_max``.
     size_exponent
         Exponent applied before rescaling to ``[smallest_dot, largest_dot]``.
 
     Returns
     -------
-    A :class:`~holoviews.core.dimension.dim` expression to pass as ``.opts(size=...)``.
+    Transformed vector or :class:`~holoviews.dim` expression to pass as ``.opts(s=...)``.
     """
     frac = vec / vec.max()
     if dot_min != 0 or dot_max != 1:
-        frac = frac.clip(dot_min, dot_max).norm((dot_min, dot_max))
+        frac = (frac.clip(dot_min, dot_max) - dot_min) / (dot_max - dot_min)
     return frac**size_exponent * (largest_dot - smallest_dot) + smallest_dot
