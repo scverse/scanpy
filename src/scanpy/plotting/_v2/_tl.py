@@ -56,10 +56,9 @@ def draw_graph(
         :backends: bokeh
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pp.neighbors(adata)
@@ -127,10 +126,9 @@ def ranking(
 
         import scanpy as sc
         import holoviews as hv
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         hv.Layout([
@@ -203,10 +201,9 @@ def embedding_density(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.embedding_density(adata, basis="umap", groupby="phase")

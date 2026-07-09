@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ._api import hv_init
 from ._core import (
     diffmap,
     dotplot,
@@ -25,6 +26,7 @@ __all__ = [
     "heatmap",
     "highest_expr_genes",
     "highly_variable_genes",
+    "hv_init",
     "matrixplot",
     "ranking",
     "scatter",

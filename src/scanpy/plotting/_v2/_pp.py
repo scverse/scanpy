@@ -41,10 +41,9 @@ def highest_expr_genes(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.highest_expr_genes(adata, layer="counts")
@@ -76,10 +75,9 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pp.highly_variable_genes(adata, layer="counts")  # TODO: this should be the default
@@ -133,10 +131,9 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         adata_sim = sc.pp.scrublet_simulate_doublets(adata)

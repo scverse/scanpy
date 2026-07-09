@@ -79,10 +79,8 @@ def scatter(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
-
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.scatter(adata, A.X[:, ["PSAP", "C1QA"]], color=A.obs["bulk_labels"]).opts(
@@ -130,10 +128,9 @@ Examples
 ..  holoviews::
 
     import scanpy as sc
-    from hv_anndata import register, A
 
     sc.settings.preset = sc.Preset.ScanpyV2Preview
-    register()
+    A = sc.pl.hv_init()
 
     adata = sc.datasets.pbmc68k_reduced()
     sc.tl.{key}(adata)
@@ -201,10 +198,9 @@ def heatmap(
 
         import scanpy as sc
         import holoviews as hv
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -263,10 +259,9 @@ def tracksplot(
 
         import scanpy as sc
         import holoviews as hv
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -406,10 +401,9 @@ def violin(
 
         import scanpy as sc
         import holoviews as hv
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, A.obs[["percent_mito", "n_counts", "n_genes"]]).opts(
@@ -419,10 +413,9 @@ def violin(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, A.obs["S_score"], color=A.obs["bulk_labels"]).opts(
@@ -472,10 +465,9 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
 
         import scanpy as sc
         import holoviews as hv
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -552,10 +544,9 @@ def dotplot(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -616,10 +607,9 @@ def matrixplot(
     ..  holoviews::
 
         import scanpy as sc
-        from hv_anndata import register, A
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        register()
+        A = sc.pl.hv_init()
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
