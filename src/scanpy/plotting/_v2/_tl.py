@@ -53,12 +53,12 @@ def draw_graph(
     --------
 
     ..  holoviews::
-        :backends: bokeh
+        :backends: bokeh,matplotlib
 
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pp.neighbors(adata)
@@ -71,6 +71,8 @@ def draw_graph(
             show_legend=True,
             legend_position="right",
         )
+
+    .. note:: The `"plotly"` backend does not support graphs: :issue:`holoviz/holoviews#6949`.
 
     """
     adata = adata.copy()
@@ -128,7 +130,7 @@ def ranking(
         import holoviews as hv
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         hv.Layout([
@@ -203,7 +205,7 @@ def embedding_density(
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.tl.embedding_density(adata, basis="umap", groupby="phase")

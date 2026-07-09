@@ -43,7 +43,7 @@ def highest_expr_genes(
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.highest_expr_genes(adata, layer="counts")
@@ -77,7 +77,7 @@ def highly_variable_genes(adata: AnnData) -> hv.Layout:
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pp.highly_variable_genes(adata, layer="counts")  # TODO: this should be the default
@@ -133,7 +133,7 @@ def scrublet_score_distribution(adata: AnnData) -> hv.Layout:
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         adata_sim = sc.pp.scrublet_simulate_doublets(adata)

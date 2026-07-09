@@ -80,7 +80,7 @@ def scatter(
 
         import scanpy as sc
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.scatter(adata, A.X[:, ["PSAP", "C1QA"]], color=A.obs["bulk_labels"]).opts(
@@ -130,7 +130,7 @@ Examples
     import scanpy as sc
 
     sc.settings.preset = sc.Preset.ScanpyV2Preview
-    A = sc.pl.hv_init()
+    A = sc.pl.hv_init(FAKE_BACKEND)
 
     adata = sc.datasets.pbmc68k_reduced()
     sc.tl.{key}(adata)
@@ -200,7 +200,7 @@ def heatmap(
         import holoviews as hv
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -261,7 +261,7 @@ def tracksplot(
         import holoviews as hv
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -403,7 +403,7 @@ def violin(
         import holoviews as hv
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, A.obs[["percent_mito", "n_counts", "n_genes"]]).opts(
@@ -412,12 +412,6 @@ def violin(
 
     ..  holoviews::
 
-        import scanpy as sc
-
-        sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
-
-        adata = sc.datasets.pbmc68k_reduced()
         sc.pl.violin(adata, A.obs["S_score"], color=A.obs["bulk_labels"]).opts(
             width=500, xrotation=30
         )
@@ -467,7 +461,7 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
         import holoviews as hv
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -546,7 +540,7 @@ def dotplot(
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
@@ -609,7 +603,7 @@ def matrixplot(
         import scanpy as sc
 
         sc.settings.preset = sc.Preset.ScanpyV2Preview
-        A = sc.pl.hv_init()
+        A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
