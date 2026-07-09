@@ -432,22 +432,15 @@ def aggregate(  # noqa: PLR0912
         _group_counts(categorical, mask), index=categorical.categories
     ).reindex(new_label_df.index)
     # Actual computation
-    layers = _aggregate(
-        data,
-        by=categorical,
-        func=func,
-        mask=mask,
-        dof=dof,
-    )
+    layers = _aggregate(data, by=categorical, func=func, mask=mask, dof=dof)
 
     # Define new var dataframe
     if obsm or varm or isinstance(acc, MultiAcc):
-        if isinstance(data, pd.DataFrame):
-            # Check if there could be labels
-            var = pd.DataFrame(index=data.columns)
-        else:
-            # Create them otherwise
-            var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
+        var = pd.DataFrame(  # Check if there could be labels, create them otherwise
+            index=data.columns
+            if isinstance(data, pd.DataFrame)
+            else pd.RangeIndex(data.shape[1]).astype(str)
+        )
     else:
         var = getattr(adata, "var" if axis_name == "obs" else "obs")
 
