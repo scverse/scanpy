@@ -10,6 +10,7 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .._compat import CSBase
 from .._docs import doc_rng
+from .._keys import _existing_preset_keys
 from .._settings import Default, settings
 from .._utils import (
     NeighborsView,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from pynndescent import NNDescent
     from umap import UMAP
 
+    from .._keys import _EmbeddingKeys
     from ..neighbors import RPForestDict
 
 
@@ -248,10 +250,10 @@ class Ingest:
         random_state = params.get("random_state", 0)
         return _LegacyRng(random_state)
 
-    def _init_umap(self, adata: AnnData) -> None:
+    def _init_umap(self, adata: AnnData, keys: _EmbeddingKeys) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns["umap"]["params"])
+        rng = self._get_rng(adata.uns[keys.uns]["params"])
         self._umap = UMAP(
             metric=self._metric,
             random_state=_legacy_random_state(rng),
@@ -265,7 +267,7 @@ class Ingest:
 
         self._umap._validate_parameters()
 
-        self._umap.embedding_ = adata.obsm["X_umap"]
+        self._umap.embedding_ = adata.obsm[keys.obsm]
         self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
@@ -275,8 +277,8 @@ class Ingest:
 
         self._umap._knn_search_index = self._nnd_idx
 
-        self._umap._a = adata.uns["umap"]["params"]["a"]
-        self._umap._b = adata.uns["umap"]["params"]["b"]
+        self._umap._a = adata.uns[keys.uns]["params"]["a"]
+        self._umap._b = adata.uns[keys.uns]["params"]["b"]
 
         self._umap._input_hash = None
 
@@ -388,8 +390,8 @@ class Ingest:
             )
             raise ValueError(msg)
 
-        if "X_umap" in adata.obsm:
-            self._init_umap(adata)
+        if keys := _existing_preset_keys(adata, "umap"):
+            self._init_umap(adata, keys)
 
         self._obsm = None
         self._obs = None
@@ -554,10 +556,10 @@ class Ingest:
                 self._obsm["rep"],
             ))
 
-        if "X_umap" in self._obsm:
-            adata.uns["umap"] = self._adata_ref.uns["umap"]
-        if "X_pca" in self._obsm:
-            adata.uns["pca"] = self._adata_ref.uns["pca"]
-            adata.varm["PCs"] = self._adata_ref.varm["PCs"]
+        if keys := _existing_preset_keys(self._adata_ref, "umap"):
+            adata.uns[keys.uns] = self._adata_ref.uns[keys.uns]
+        if keys := _existing_preset_keys(self._adata_ref, "pca"):
+            adata.varm[keys.varm] = self._adata_ref.varm[keys.varm]
+            adata.uns[keys.obsm] = self._adata_ref.uns[keys.obsm]
 
         return adata

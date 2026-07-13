@@ -8,6 +8,8 @@ import numpy as np
 from .. import _utils
 from .. import logging as logg
 from .._docs import doc_rng
+from .._keys import _embedding_keys
+from .._settings import Default
 from .._utils import _choose_graph, _doc_params, get_literal_vals
 from .._utils.random import (
     _accepts_legacy_random_state,
@@ -42,10 +44,12 @@ def draw_graph(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
     adjacency: CSBase | None = None,
-    key_added_ext: str | None = None,
+    key_added: str | None | Default = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
+    # deprecated
+    key_added_ext: str | None = None,
     **kwds,
 ) -> AnnData | None:
     """Force-directed graph drawing :cite:p:`Islam2011,Jacomy2014,Chippada2018`.
@@ -86,21 +90,21 @@ def draw_graph(  # noqa: PLR0913
         Applies to layouts with random initialization like `'fr'`.
     adjacency
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
-    key_added_ext
-        By default, append `layout`.
+    key_added
+        Template for the key. If `None`, uses `f'X_draw_graph_{{layout}}'` for `obsm`.
     proceed
-        Continue computation, starting off with 'X_draw_graph_`layout`'.
+        Continue computation, starting off with `f'X_draw_graph_{{layout}}'`.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
     neighbors_key
-        If not specified, draw_graph looks at .obsp['connectivities'] for connectivities
+        If not specified, draw_graph looks at `.obsp['connectivities']` for connectivities
         (default storage place for pp.neighbors).
         If specified, draw_graph looks at
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
+        `.obsp[.uns[neighbors_key]['connectivities_key']]` for connectivities.
     obsp
-        Use .obsp[obsp] as adjacency. You can't specify both
+        Use `.obsp[obsp]` as adjacency. You can't specify both
         `obsp` and `neighbors_key` at the same time.
     copy
         Return a copy instead of writing to adata.
@@ -113,7 +117,7 @@ def draw_graph(  # noqa: PLR0913
     -------
     Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following fields:
 
-    `adata.obsm['X_draw_graph_[layout | key_added_ext]']` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obsm[(f'X_draw_graph_{{layout}}' | key_added).format(layout=layout)]` : :class:`numpy.ndarray` (dtype `float`)
         Coordinates of graph layout. E.g. for `layout='fa'` (the default),
         the field is called `'X_draw_graph_fa'`. `key_added_ext` overwrites `layout`.
     `adata.uns['draw_graph']`: :class:`dict`
@@ -121,6 +125,10 @@ def draw_graph(  # noqa: PLR0913
 
     """
     start = logg.info(f"drawing single-cell graph using layout {layout!r}")
+    layout = coerce_fa2_layout(layout)
+    keys = _embedding_keys(
+        "draw_graph", key_added, layout=layout, key_added_ext=key_added_ext
+    )
     rng = np.random.default_rng(rng)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
@@ -145,7 +153,6 @@ def draw_graph(  # noqa: PLR0913
     else:
         _if_legacy_apply_global(rng)
         init_coords = rng.random((adjacency.shape[0], 2))
-    layout = coerce_fa2_layout(layout)
     # actual drawing
     if layout == "fa":
         positions = np.array(fa2_positions(adjacency, init_coords, **kwds))
@@ -161,14 +168,15 @@ def draw_graph(  # noqa: PLR0913
             else:
                 ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
-    adata.uns["draw_graph"] = {}
-    adata.uns["draw_graph"]["params"] = dict(layout=layout, **meta_random_state)
-    key_added = f"X_draw_graph_{key_added_ext or layout}"
-    adata.obsm[key_added] = positions
+    adata.uns[keys.uns] = {}
+    adata.uns[keys.uns]["params"] = dict(layout=layout, **meta_random_state)
+    adata.obsm[keys.obsm] = positions
     logg.info(
         "    finished",
         time=start,
-        deep=f"added\n    {key_added!r}, graph_drawing coordinates (adata.obsm)",
+        deep="added"
+        f"\n    {keys.obsm!r}, draw_graph coordinates (adata.obsm)"
+        f"\n    {keys.uns!r}, draw_graph parameters (adata.uns)",
     )
     return adata if copy else None
 

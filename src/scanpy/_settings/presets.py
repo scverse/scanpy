@@ -33,7 +33,9 @@ __all__ = [
 ]
 
 
-type DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+type DETest = Literal[
+    "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
+]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 type LeidenFlavor = Literal["leidenalg", "igraph", "networkit"]
 
@@ -76,13 +78,20 @@ class HVGPreset(NamedTuple):
     return_df: bool
 
 
-class PcaPreset(NamedTuple):
+class BasicEmbeddingPreset(NamedTuple):
     key_added: str | None
+
+
+# replace once they diverge
+PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
+    BasicEmbeddingPreset
+)
 
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mask_var: str | None
+    mean_in_log_space: bool
 
 
 class ScalePreset(NamedTuple):
@@ -193,12 +202,50 @@ class Preset(enum.StrEnum):
         }
 
     @preset_property
-    def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
-        """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
+    def umap() -> Mapping[Preset, UmapPreset]:
+        """Settings for :func:`~scanpy.tl.umap`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test", mask_var=None),
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="umap"),
+        }
+
+    @preset_property
+    def tsne() -> Mapping[Preset, UmapPreset]:
+        """Settings for :func:`~scanpy.tl.tsne`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="tsne"),
+        }
+
+    @preset_property
+    def diffmap() -> Mapping[Preset, DiffmapPreset]:
+        """Settings for :func:`~scanpy.tl.diffmap`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="diffmap"),
+        }
+
+    @preset_property
+    def draw_graph() -> Mapping[Preset, DrawGraphPreset]:
+        """Settings for :func:`~scanpy.tl.draw_graph`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DrawGraphPreset(key_added=None),
+            Preset.ScanpyV2Preview: DrawGraphPreset(key_added="graph_{layout}"),
+        }
+
+    @preset_property
+    def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
+        """
+        Correlation method for :func:`~scanpy.tl.rank_genes_groups`.
+
+        V2 `method` preset is for `illico` implementation of `wilcoxon` test.
+        """
+        return {
+            Preset.ScanpyV1: RankGenesGroupsPreset(
+                method="t-test", mask_var=None, mean_in_log_space=True
+            ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None
+                method="wilcoxon", mask_var=None, mean_in_log_space=False
             ),
         }
 

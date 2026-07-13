@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
 import anndata as ad
@@ -67,19 +68,44 @@ def test_mask(axis: Literal[0, 1]) -> None:
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+@pytest.mark.parametrize("use_mask", [True, False], ids=["masked", "unmasked"])
+@pytest.mark.parametrize("with_na", [True, False], ids=["na", "no_na"])
+@pytest.mark.parametrize(
+    "remove_unused_categories", [True, False], ids=["removed_unused", "all_categories"]
+)
 def test_aggregate_vs_pandas(
-    metric: AggType, array_type, request: pytest.FixtureRequest
+    metric: AggType,
+    array_type,
+    request: pytest.FixtureRequest,
+    *,
+    use_mask: bool,
+    with_na: bool,
+    remove_unused_categories: bool,
 ) -> None:
     adata = pbmc3k_processed().raw.to_adata()
-    adata = adata[
-        adata.obs["louvain"].isin(adata.obs["louvain"].cat.categories[:5]), :1_000
-    ].copy()
+    cat_col = adata.obs["louvain"]
+    categories = cat_col.cat.categories
+    with ad.settings.override(remove_unused_categories=remove_unused_categories):
+        adata = adata[cat_col.isin(categories[:5]), :1_000].copy()
     adata.X = array_type(adata.X)
+    if with_na:
+        nas = list(range(0, adata.shape[0], 5))
+        adata.obs.iloc[nas, adata.obs.columns.get_loc("louvain")] = pd.NA
+    kwargs = {}
+    if use_mask:
+        mask = np.ones(adata.shape[0], dtype=bool)
+        for excluded in range(0, adata.shape[0], 4):
+            mask[excluded] = False
+        kwargs["mask"] = mask
     xfail_dask_median(adata, metric, request)
     adata.obs["percent_mito_binned"] = pd.cut(adata.obs["percent_mito"], bins=5)
-    result = sc.get.aggregate(adata, ["louvain", "percent_mito_binned"], metric)
+    result = sc.get.aggregate(
+        adata, ["louvain", "percent_mito_binned"], metric, **kwargs
+    )
     if isinstance(adata.X, DaskArray):
         adata.X = adata.X.compute()
+    if use_mask:
+        adata = adata[mask]
     if metric == "count_nonzero":
         expected = (
             (adata.to_df() != 0)
@@ -105,7 +131,10 @@ def test_aggregate_vs_pandas(
     result_df = result.to_df(layer=metric)
     result_df.index.name = None
     result_df.columns.name = None
-
+    expected_counts = adata.obs.groupby(
+        ["louvain", "percent_mito_binned"], observed=True
+    ).size()
+    assert result.obs["n_obs_aggregated"].tolist() == expected_counts.tolist()
     pd.testing.assert_frame_equal(result_df, expected, check_dtype=False, atol=1e-5)
 
 
@@ -203,6 +232,23 @@ def test_aggregate_bad_dask_array(
     adata.X = func(adata.X)
     with pytest.raises(ValueError, match=error_msg):
         sc.get.aggregate(adata, ["louvain"], "sum")
+
+
+@needs.dask
+@pytest.mark.parametrize("func", [["count_nonzero"], ["sum", "mean", "count_nonzero"]])
+def test_aggregate_dask_multiple_funcs(func: list[AggType]) -> None:
+    """A multi-func list incl. count_nonzero/sum must survive `.compute()` on dask."""
+    import dask.array as da
+
+    adata = sc.datasets.blobs()
+    dask_adata = adata.copy()
+    dask_adata.X = da.from_array(adata.X, chunks=(adata.shape[0] // 2, -1))
+    expected = sc.get.aggregate(adata, "blobs", func=func)
+    result = sc.get.aggregate(dask_adata, "blobs", func=func)
+    for f in func:
+        np.testing.assert_allclose(
+            np.asarray(expected.layers[f]), np.asarray(result.layers[f])
+        )
 
 
 @pytest.mark.parametrize("axis_name", ["obs", "var"])
@@ -544,3 +590,103 @@ def test_nan() -> None:
         "s2_control_C",
     ]
     assert adata_agg.obs["n_obs_aggregated"].tolist() == [1, 2, 1]
+
+
+@pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
+def test_var_no_catastrophic_cancellation(array_type) -> None:
+    # Values of the form `offset + tiny_noise` make the textbook two-pass
+    # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
+    # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
+    # the variance ~1e-3, far below the rounding noise. Welford's online
+    # algorithm and Chan's parallel combine (per chunk in dask, and for the
+    # zero-block merge in sparse paths) avoid the subtraction entirely.
+
+    n_per_group, n_features = 1000, 4
+    offset, std = 1e8, 1e-3
+    groups = ["a", "b"]
+    x = np.vstack([
+        offset
+        + std * np.random.default_rng().standard_normal((n_per_group, n_features))
+        for _ in groups
+    ])
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(np.repeat(groups, n_per_group))},
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    adata = ad.AnnData(X=array_type(x), obs=obs)
+
+    expected = np.vstack([
+        np.var(x[i * n_per_group : (i + 1) * n_per_group], axis=0, ddof=0)
+        for i in range(len(groups))
+    ])
+    # Sanity: textbook formula on this data is either catastrophically wrong by a large magnitude relative to the expected
+    # or the sum-sq and sq-sum in naive are literally identical due to precision errors at the upper bound of the range.
+    naive = np.vstack([
+        (xg**2).mean(axis=0) - xg.mean(axis=0) ** 2
+        for xg in (
+            x[i * n_per_group : (i + 1) * n_per_group] for i in range(len(groups))
+        )
+    ])
+    diff_magnitude = np.abs(naive - expected) / expected
+    all_large = (diff_magnitude > 1e5).all()
+    if not all_large:
+        does_naive_fully_cancel = naive == 0
+        assert does_naive_fully_cancel.any()
+        assert (diff_magnitude[does_naive_fully_cancel] == 1).all()
+
+    result = sc.get.aggregate(adata, by="group", func="var", dof=0).layers["var"]
+    if isinstance(result, DaskArray):
+        result = result.compute()
+    np.testing.assert_allclose(result, expected, rtol=1e-4)
+
+
+@needs.dask
+@pytest.mark.parametrize("dof", [0, 1, 4])
+def test_aggregate_var_group_matches_dof(dof: int) -> None:
+    # Guards that a one-observation (or n_obs==dof) group's variance is nan (not 0), and that a
+    # group split into single-observation chunks keeps its correct variance
+    # rather than being corrupted to nan by the dask per-chunk combine.
+    import dask.array as da
+
+    run_size = max(1, dof)
+    x = np.array(([1.0] * run_size) + ([2.0] * run_size) + ([3.0] * run_size)).reshape(
+        3 * run_size, 1
+    )
+    obs = pd.DataFrame(
+        {
+            "group": pd.Categorical(
+                (["a"] * run_size) + (["b"] * run_size) + (["a"] * run_size)
+            )
+        },
+        index=[f"cell_{i}" for i in range(x.shape[0])],
+    )
+    with (
+        pytest.warns(RuntimeWarning, match=r".*groups \['b'\] will be nan.*")
+        if dof > 0
+        else nullcontext()
+    ):
+        in_memory = sc.get.aggregate(
+            ad.AnnData(X=x, obs=obs), "group", "var", dof=dof
+        ).layers["var"]
+    # tests chunks that contain run_size item i.e., chunk matches dof
+    dask_x = da.from_array(x, chunks=(run_size, -1))
+    dask = (
+        sc.get
+        .aggregate(ad.AnnData(X=dask_x, obs=obs), "group", "var", dof=dof)
+        .layers["var"]
+        .compute()
+    )
+    # equal_nan=True by default
+    np.testing.assert_allclose(in_memory, dask)
+    var = dict(zip(["a", "b"], in_memory[:, 0], strict=True))
+    for cat in ["a", "b"]:
+        with (
+            pytest.warns(
+                RuntimeWarning, match=r"((Degrees of freedom.*)|(.*invalid value.*))"
+            )
+            if dof > 0 and cat == "b"
+            else nullcontext()
+        ):
+            np.testing.assert_equal(
+                var[cat], np.var(x[(obs["group"] == cat).to_numpy()], ddof=dof)
+            )
