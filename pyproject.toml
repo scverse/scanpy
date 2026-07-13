@@ -324,7 +324,7 @@ filename = "docs/release-notes/{version}.md"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
 issue_format = "{{pr}}`{issue}`"
 single_file = false
-fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
+fragment.breaking.name = "Breaking changes"                             # add `!` to commit type (e.g. “feature!:”)
 fragment.chore.name = "Miscellaneous changes"
 fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
@@ -334,4 +334,3 @@ fragment.feat.name = "Features"
 fragment.fix.name = "Bug fixes"
 fragment.perf.name = "Performance"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"   # add `!` to commit type (e.g. “feature!:”)
