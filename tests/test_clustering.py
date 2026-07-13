@@ -113,6 +113,12 @@ def test_leiden_igraph_directed(adata_neighbors):
         sc.tl.leiden(adata_neighbors, flavor="igraph", directed=True)
 
 
+@needs.networkit
+def test_leiden_networkit_directed(adata_neighbors):
+    with pytest.raises(ValueError, match=r"Cannot use NetworKit's leiden.*directed"):
+        sc.tl.leiden(adata_neighbors, flavor="networkit", directed=True)
+
+
 @needs.igraph
 def test_leiden_wrong_flavor(adata_neighbors):
     with pytest.raises(ValueError, match=r"flavor must be.*'igraph'.*'leidenalg'.*but"):

@@ -193,10 +193,18 @@ def leiden(  # noqa: PLR0913
         _utils.ensure_networkit()
         import networkit
 
+        # Seeding controls which nodes are tried and in what order, but not
+        # which thread wins when two move neighboring nodes simultaneously.
+        # So runs are statistically reproducible for a fixed thread count,
+        # but not bit-for-bit identical.
         seed = int(rng.integers(np.iinfo(np.int64).max))
         networkit.setSeed(seed, useThreadId=True)
+
         # only undirected for Parallel Leiden
         g = _utils.get_networkit_from_adjacency(adjacency, weighted=use_weights)
+        # NetworKit's `iterations` caps Leiden passes (stops early on convergence; default is 3).
+        # We map scanpy's `n_iterations=-1` ("run until done") to this default,
+        # while any positive value explicitly overrides it.
         iterations = n_iterations if n_iterations > 0 else 3
         gamma = 1.0 if resolution is None else resolution
         # randomization was removed as an option, so it is randomize = True
