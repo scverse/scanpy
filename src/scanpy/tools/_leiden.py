@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     rng=doc_rng,
 )
 @_accepts_legacy_random_state(0)
-def leiden(  # noqa: PLR0913
+def leiden(  # noqa: PLR0913, PLR0915
     adata: AnnData,
     resolution: float = 1,
     *,
