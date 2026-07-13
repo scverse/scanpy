@@ -22,7 +22,7 @@ from .._utils import (
     get_literal_vals,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask, _get_obs_rep, aggregate
+from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
 
 if TYPE_CHECKING:
@@ -1101,7 +1101,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     if use_raw is None:
         use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
 
-    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use_raw=use_raw, layer=layer)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby

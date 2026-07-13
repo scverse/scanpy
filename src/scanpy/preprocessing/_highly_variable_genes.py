@@ -20,7 +20,7 @@ from .._utils import (
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
-from ..get import _get_obs_rep, aggregate
+from ..get import _get_arr, aggregate
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -155,7 +155,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         e.add_note("Please install `scikit-misc` and try again.")
         raise
     df = pd.DataFrame(index=adata.var_names)
-    data = _get_obs_rep(adata, layer=layer)
+    data = _get_arr(adata, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
@@ -382,7 +382,7 @@ def _highly_variable_genes_single_batch(
     flavor = kwargs["flavor"]
     n_bins = kwargs["n_bins"]
 
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
 
     # Filter to genes that are expressed
     if filter_unexpressed_genes:
@@ -568,7 +568,7 @@ def _highly_variable_genes_batched(
     cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
 
     func = _per_batch_func
     if is_dask := isinstance(x, DaskArray):

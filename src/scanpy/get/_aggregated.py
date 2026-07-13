@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Collection
 from functools import partial, singledispatch
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
@@ -23,18 +22,12 @@ from ._kernels import (
     mean_var_csr,
     mean_var_dense,
 )
-from .get import _check_mask
+from .get import _check_mask, _get_arr, _get_vec, _refs_dim, _resolve_ref
 
 if TYPE_CHECKING:
-    import sys
-    from collections.abc import Iterable
+    from collections.abc import Collection, Iterable
 
     from numpy.typing import NDArray
-
-    if sys.version_info >= (3, 13):
-        from typing import TypeIs
-    else:
-        from typing_extensions import TypeIs
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
     from anndata.acc import A, AdRef, Idx2D, LayerAcc, MultiAcc
@@ -215,83 +208,45 @@ def _power(x: Array, power: float) -> Array:
     return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
-def _collection_of[T](thing: object, typ: type[T]) -> TypeIs[Collection[T]]:
-    return (
-        isinstance(thing, Collection)
-        and not isinstance(thing, typ)
-        and len(thing) > 0
-        and all(isinstance(e, typ) for e in thing)
-    )
-
-
-def _validate_by(
-    by: AdRef | Collection[AdRef] | str | Collection[str],
-) -> list[AdRef] | None:
-    """Normalize `by` to a list of :class:`~anndata.acc.AdRef` if possible, else `None`."""
-    if isinstance(by, AdRef):
-        return [by]
-    if _collection_of(by, AdRef):
-        return list(by)
-    if not isinstance(by, str) and not _collection_of(by, str):
-        msg = (
-            "`by` must be a single `AdRef`, a collection of `AdRef`, "
-            f"or a collection of strings, was {by!r}"
-        )
-        raise TypeError(msg)
-    return None
-
-
-def _resolve_by_and_axis[I: Idx2D | int](
+def _normalize_by[I: Idx2D | int](
     by: AdRef[I, AnnData] | Collection[AdRef[I, AnnData]] | str | Collection[str],
     axis: Literal["obs", 0, "var", 1] | None,
     *,
-    acc: LayerAcc | MultiAcc | None,
-    layer: str | None,
     obsm: str | None,
     varm: str | None,
-) -> tuple[list[AdRef[I, AnnData]] | None, Literal["obs", "var"]]:
-    """Resolve `axis_name` based on the accessor."""
-    n_old_vec = sum(p is not None for p in [varm, obsm, layer])
-    if (by_refs := _validate_by(by)) is None:
-        if n_old_vec > 1:
-            msg = "Please only provide one (or none) of varm, obsm, or layer"
-            raise TypeError(msg)
-        if axis is None:
-            axis = 1 if varm else 0
-        _, axis_name = _resolve_axis(axis)
-        if axis_name != (ax_wanted := "var" if varm else "obs" if obsm else axis_name):
-            msg = f"`{ax_wanted}m` can only be used when grouping over `{ax_wanted}`"
-            raise ValueError(msg)
-        return None, axis_name
+) -> tuple[list[AdRef[I, AnnData]] | list[str], Literal["obs", "var"]]:
+    """Normalize `by` to a homogeneous list, and detect which dim they refer to."""
+    by_list = _resolve_ref([by] if isinstance(by, str | AdRef) else by)
+    is_refs = isinstance(by_list[0], AdRef)
 
-    if axis is not None:
+    if is_refs and axis is not None:
         msg = "`axis` cannot be used when `by` is given as AdRef(s); the axis is inferred from `by`"
         raise TypeError(msg)
-    if n_old_vec:
-        msg = "`layer`, `obsm`, and `varm` cannot be used when `by` is given as AdRef(s); use `acc` instead"
-        raise TypeError(msg)
-    dims = {d for ref in by_refs for d in ref.dims}
-    if len(dims) != 1:
-        msg = f"All `by` accessors must refer to the same single axis (`obs` or `var`), got {dims}"
-        raise ValueError(msg)
-    axis_name = next(iter(dims))
-    if isinstance(acc, MultiAcc) and axis_name != acc.dim:
-        msg = f"`by`’s axis ({axis_name}) must match `acc`’s ({acc.dim})"
-        raise ValueError(msg)
-    return by_refs, axis_name
+
+    dim = None
+    if not is_refs:
+        if axis is not None:
+            dim = _resolve_axis(axis)[1]
+        elif varm:
+            dim = "var"
+        elif obsm:
+            dim = "obs"
+    # derive (or validate, if already hinted at above) the single dim `by_list` refers to
+    dim = _refs_dim(by_list, dim=dim)
+    return by_list, dim
 
 
 @doctest_needs("anndata_acc")
-def aggregate(  # noqa: PLR0912
+def aggregate(
     adata: AnnData,
     by: (
         str
-        | Collection[str]
+        | Collection[str | AdRef[Idx2D | int, AnnData]]
         | AdRef[Idx2D | int, AnnData]
-        | Collection[AdRef[Idx2D | int, AnnData]]
     ),
     func: AggType | Iterable[AggType],
     *,
+    # TODO: allow str once `.resolve` supports accs
     acc: LayerAcc | MultiAcc | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
@@ -316,13 +271,11 @@ def aggregate(  # noqa: PLR0912
     adata
         :class:`~anndata.AnnData` to be aggregated.
     by
-        References to the vectors to be grouped-by.
-        Passing a str means using a `obs`/`var` column.
+        References to the vectors to be grouped-by\ [#ref]_.
     func
         How to aggregate.
     mask
-        Boolean mask (or reference to a mask vector) to apply along the axis.
-        Passing a str means using a `obs`/`var` column.
+        Boolean mask (or reference to a mask vector) to apply along the axis\ [#ref]_.
     dof
         Degrees of freedom for variance. Defaults to 1.
     acc
@@ -380,6 +333,10 @@ def aggregate(  # noqa: PLR0912
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
+    .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
+       :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
+       otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
+
     """
     if not isinstance(adata, AnnData):
         msg = (
@@ -388,43 +345,26 @@ def aggregate(  # noqa: PLR0912
         )
         raise NotImplementedError(msg)
 
-    by_refs, axis_name = _resolve_by_and_axis(
-        by, axis, layer=layer, obsm=obsm, varm=varm, acc=acc
-    )
+    by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
     del axis
-    mask = _check_mask(adata, mask, axis_name)
 
-    if by_refs is not None:
-        if acc is None:
-            acc = A.X
-        if not isinstance(acc, LayerAcc | MultiAcc):
-            msg = (
-                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
-                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
-            )
-            raise TypeError(msg)
-        data = adata[acc]
-        if isinstance(acc, LayerAcc) and axis_name == "var":
-            data = data.T
-        dim_df = pd.DataFrame({
-            ref.idx if isinstance(ref.idx, str) else str(ref): adata[ref]
-            for ref in by_refs
-        })
-    else:
-        match layer, obsm, varm, axis_name:
-            case None, None, None, "obs":
-                data = adata.X
-            case None, None, None, "var":
-                data = adata.X.T
-            case str(), None, None, "obs":
-                data = adata.layers[layer]
-            case str(), None, None, "var":
-                data = adata.layers[layer].T
-            case None, str(), None, "obs":
-                data = adata.obsm[obsm]
-            case None, None, str(), "var":
-                data = adata.varm[varm]
-        dim_df = getattr(adata, axis_name)[[by] if isinstance(by, str) else list(by)]
+    if isinstance(by[0], AdRef) and acc is None:
+        acc = A.X
+    data = _get_arr(adata, acc, dim=dim, layer=layer, obsm=obsm, varm=varm)
+
+    values = _get_vec(adata, by, dim=dim)
+    dim_df = pd.DataFrame({
+        (
+            ref
+            if isinstance(ref, str)
+            else ref.idx
+            if isinstance(ref.idx, str)
+            else str(ref)
+        ): value
+        for ref, value in zip(by, values, strict=True)
+    })
+
+    mask = _check_mask(adata, mask, dim)
     categorical, new_label_df = _combine_categories(dim_df)
 
     # Add number of obs aggregated into each group (respecting the mask)
@@ -442,12 +382,12 @@ def aggregate(  # noqa: PLR0912
             else pd.RangeIndex(data.shape[1]).astype(str)
         )
     else:
-        var = getattr(adata, "var" if axis_name == "obs" else "obs")
+        var = getattr(adata, "var" if dim == "obs" else "obs")
 
     # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)
 
-    return result if axis_name == "obs" else result.T
+    return result if dim == "obs" else result.T
 
 
 @singledispatch

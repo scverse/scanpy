@@ -593,7 +593,10 @@ def test_acc_api(
             lambda _: dict(axis=0), TypeError, r"axis.*cannot be used", id="axis"
         ),
         pytest.param(
-            lambda _: dict(layer="x"), TypeError, r"layer.*cannot be used", id="layer"
+            lambda _: dict(layer="x"),
+            TypeError,
+            r"acc.*cannot be combined.*layer",
+            id="layer",
         ),
         pytest.param(
             lambda a: dict(acc=a.obsp["connectivities"]),
@@ -610,7 +613,7 @@ def test_acc_api(
         pytest.param(
             lambda a: dict(acc=a.varm["test"]),
             ValueError,
-            r"`by`.*(obs).*`acc`.*(var)",
+            r"`dim`.*'obs'.*`acc`.*'var'",
             id="acc-dim",
         ),
     ],
@@ -636,17 +639,17 @@ def test_acc_api_errors(
     [
         pytest.param(
             dict(layer="test", obsm="test"),
-            r"only provide one \(or none\) of varm, obsm, or layer",
+            r"Only one of `layer`, or `obsm` can be specified",
             id="layer-and-obsm",
         ),
         pytest.param(
             dict(obsm="test", axis=1),
-            r"`obsm` can only be used when grouping over `obs`",
+            r"`obsm` cannot be used when `dim` is `var`",
             id="obsm-axis-var",
         ),
         pytest.param(
             dict(varm="test", axis=0),
-            r"`varm` can only be used when grouping over `var`",
+            r"`varm` cannot be used when `dim` is `obs`",
             id="varm-axis-obs",
         ),
         pytest.param(dict(axis="foo"), r"was 'foo'", id="bad-axis-value"),
@@ -663,7 +666,7 @@ def test_old_api_errors(kwargs: dict, match: str) -> None:
 
 def test_error_by_invalid_type() -> None:
     adata = sc.datasets.blobs()
-    with pytest.raises(TypeError, match=r"`by` must be.*AdRef.*str"):
+    with pytest.raises(TypeError, match=r"not iterable"):
         sc.get.aggregate(adata, 123, "sum")  # type: ignore[arg-type]
 
 

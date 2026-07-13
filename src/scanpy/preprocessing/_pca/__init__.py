@@ -12,7 +12,7 @@ from ..._keys import _embedding_keys
 from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ...get import _check_mask, _get_obs_rep
+from ...get import _check_mask, _get_arr
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
@@ -232,7 +232,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_obs_rep(adata_comp, layer=layer, obsm=obsm)
+    x = _get_arr(adata_comp, layer=layer, obsm=obsm)
     if is_backed_type(x) and (layer is not None or obsm is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)

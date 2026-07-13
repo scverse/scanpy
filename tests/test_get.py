@@ -538,9 +538,9 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
     assert "b" in dedf["group"].unique()
 
 
-######################
-# _get_obs_rep tests #
-######################
+##################
+# _get_arr tests #
+##################
 
 
 @pytest.mark.parametrize(
@@ -555,11 +555,11 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
         pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
     ],
 )
-def test_get_obs_rep_errors(kw: sc.get._ObsRep, cls: type[Exception], msg: str) -> None:
+def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None:
     adata = AnnData(
         np.zeros((10, 10)),
         layers={"a": np.zeros((10, 10))},
         obsm={"b": np.zeros((10, 5))},
     )
     with pytest.raises(cls, match=msg):
-        sc.get._get_obs_rep(adata, **kw)
+        sc.get._get_arr(adata, **kw)
