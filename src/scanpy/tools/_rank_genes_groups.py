@@ -7,14 +7,15 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import CSBase
-from .._settings import Default
+from .._compat import CSBase, warn
+from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
     _numba_thread_limit,
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Literal
 
-    from anndata import AnnData
     from numpy.typing import NDArray
 
 
@@ -45,6 +45,35 @@ def _select_top_n(scores: NDArray, n_top: int):
     global_indices = reference_indices[partition][partial_indices]
 
     return global_indices
+
+
+def _illico_results_to_iter(
+    illico_df: pd.DataFrame,
+    groups_order: NDArray,
+    ireference: int | None,
+    *,
+    copy_pvalues: bool,
+) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]]]:
+    """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
+
+    illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
+    and columns including ``z_score`` and ``p_value``. We stream one group
+    at a time via `pandas.Series.loc`, trusting illico_df groups are ordered
+    by ``var_name``.
+    """
+    ref_label = None if ireference is None else groups_order[ireference]
+    z_series = illico_df["z_score"]
+    p_series = illico_df["p_value"]
+    illico_groups = set(illico_df.index.unique(level="pert"))
+    return (
+        (
+            group_index,
+            z_series.loc[group_name].to_numpy(),
+            p_series.loc[group_name].to_numpy(copy=copy_pvalues),
+        )
+        for group_index, group_name in enumerate(groups_order)
+        if group_name != ref_label and group_name in illico_groups
+    )
 
 
 @njit
@@ -141,6 +170,7 @@ class _RankGenes:
             self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
+        self.group_col = adata.obs[groupby].array
 
         self.groups_order, self.groups_masks_obs = _utils.select_groups(
             adata, groups, groupby
@@ -424,6 +454,42 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
+    def illico(
+        self, *, tie_correct: bool, corr_method: _CorrMethod
+    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+        from illico import asymptotic_wilcoxon
+
+        with _numba_thread_limit(settings.n_jobs) as n_threads:
+            illico_df = asymptotic_wilcoxon(
+                AnnData(
+                    X=self.X,
+                    var=pd.DataFrame(index=self.var_names),
+                    obs=pd.DataFrame(
+                        index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                        data={"group": self.group_col},
+                    ),
+                ),
+                reference=self.groups_order[self.ireference]
+                if self.ireference is not None
+                else None,
+                group_keys="group",
+                return_as_scanpy=False,
+                is_log1p=True,
+                tie_correct=tie_correct,
+                use_continuity=False,
+                alternative="two-sided",
+                use_rust=False,
+                n_threads=n_threads,
+                groups=self.groups_order,
+            )
+        return _illico_results_to_iter(
+            illico_df,
+            self.groups_order,
+            self.ireference,
+            # p-values are altered by this correction method
+            copy_pvalues=corr_method == "benjamini-hochberg",
+        )
+
     def compute_statistics(  # noqa: PLR0912
         self,
         method: DETest,
@@ -441,8 +507,12 @@ class _RankGenes:
             if not mean_in_log_space:
                 # If we are not exponentiating after the mean aggregation, we need to recalculate the stats.
                 self._basic_stats(exponentiate_values=True)
-        elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+        elif "wilcoxon" in method:
+            generate_test_results = (
+                self.illico(tie_correct=tie_correct, corr_method=corr_method)
+                if "illico" in method
+                else self.wilcoxon(tie_correct=tie_correct)
+            )
             # If we're not exponentiating after the mean aggregation, then do it now.
             self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
@@ -451,7 +521,6 @@ class _RankGenes:
         self.stats = None
 
         n_genes = self.X.shape[1]
-
         for group_index, scores, pvals in generate_test_results:
             group_name = str(self.groups_order[group_index])
 
@@ -643,14 +712,22 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    from scanpy import settings
-
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
+    # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
+        if settings.preset is Preset.ScanpyV2Preview:
+            method = "wilcoxon_illico"
+    # Otherwise, nudge people to use the presets.
+    elif "illico" in method:
+        msg = (
+            "`wilcoxon_illico` flavor will be removed in scanpy 2.0 and be simply the new `wilcoxon` implementation."
+            "To remove theis warning, you can locally do `with sc.settings.override(preset=sc.Preset.ScanpyV2Preview)`."
+        )
+        warn(msg, DeprecationWarning)
 
     mask_var = _check_mask(adata, mask_var, "var")
 
