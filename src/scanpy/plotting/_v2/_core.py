@@ -288,11 +288,7 @@ def tracksplot(
     if color is not None:
         curves = {vdim: c.groupby(color, hv.NdOverlay) for vdim, c in curves.items()}
     layout = hv.NdLayout(curves, kdims=["marker"]).cols(1)
-    return (
-        layout.opts(hv.opts.Curve(frame_width=300))
-        if hv.Store.current_backend == "bokeh"
-        else layout
-    )
+    return layout.opts(_supported_opts(hv.Curve, frame_width=300))
 
 
 def _tracksplot2(
@@ -465,9 +461,7 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
 
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
-        sc.pl.stacked_violin(
-            adata[:, markers], A.var.index, A.obs["bulk_labels"]
-        ).opts(hv.opts.Violin(aspect="square"))
+        sc.pl.stacked_violin(adata[:, markers], A.var.index, A.obs["bulk_labels"])
 
     """
     if len(xdim.dims) != 1 or len(ydim.dims) != 1:
@@ -491,7 +485,9 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
     return hv.GridSpace(
         {
             # TODO: should Violin vdim be able to be 2D?
-            (x, y): hv.Violin(idx(x, y), vdims=[A.X[:, :]]).opts(inner=None)
+            (x, y): hv.Violin(idx(x, y), vdims=[A.X[:, :]]).opts(
+                _supported_opts(hv.Violin, inner=None)
+            )
             for x in _get_categories(xvals)
             for y in _get_categories(yvals)
         },
@@ -560,13 +556,10 @@ def dotplot(
         ),
     )
 
-    opts: dict[str, str | hv.dim] = dict(funcs)
+    opts: dict[str, object] = dict(funcs)
     if (d := opts.pop("size", None)) is not None:
         area = dot_area(hv.dim(d))
-        if hv.Store.current_backend == "matplotlib":
-            opts["s"] = area
-        else:
-            opts["size"] = area**0.5
+        opts.update(_supported_opts(hv.Points, s=area, size=area**0.5).options)
 
     return hv.Points(stats_long, ["group", "marker"], list(funcs.values())).opts(
         xrotation=30, **opts
@@ -648,6 +641,18 @@ def _get_categories(
 
 
 def _add_hover[D: hv.core.dimension.Dimensioned](obj: D) -> D:
-    if hv.Store.current_backend == "bokeh":
-        return obj.opts(tools=["hover"])
-    return obj
+    return obj.opts(**_supported_opts(type(obj), tools=["hover"]))
+
+
+def _supported_opts(
+    cls: type[hv.core.dimension.Dimensioned], **opts: object
+) -> hv.Options:
+    """Filter `opts` down to holoviews plot/style options valid for `cls` on the current backend."""
+    plot_cls = hv.Store.registry[hv.Store.current_backend].get(cls)
+    if plot_cls is None:
+        return hv.Options()
+    return getattr(hv.opts, cls.__name__)({
+        k: v
+        for k, v in opts.items()
+        if k in plot_cls.param or k in getattr(plot_cls, "style_opts", ())
+    })

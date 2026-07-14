@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Any
 
+    from ._v2 import *  # noqa: F403
+
+
 __all__ = ["dot_area", "legacy"]
 
 
