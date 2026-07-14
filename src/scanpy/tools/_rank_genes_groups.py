@@ -14,7 +14,7 @@ from scipy import sparse
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
-from .._settings import Default, Preset
+from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
     _numba_thread_limit,
@@ -621,27 +621,29 @@ class _RankGenes:
     ) -> Generator[_TestResult, None, None]:
         from illico import asymptotic_wilcoxon
 
-        illico_df = asymptotic_wilcoxon(
-            AnnData(
-                X=self.X,
-                var=pd.DataFrame(index=self.var_names),
-                obs=pd.DataFrame(
-                    index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                    data={"group": self.group_col},
+        with _numba_thread_limit(settings.n_jobs) as n_threads:
+            illico_df = asymptotic_wilcoxon(
+                AnnData(
+                    X=self.X,
+                    var=pd.DataFrame(index=self.var_names),
+                    obs=pd.DataFrame(
+                        index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                        data={"group": self.group_col},
+                    ),
                 ),
-            ),
-            reference=self.groups_order[self.ireference]
-            if self.ireference is not None
-            else None,
-            group_keys="group",
-            return_as_scanpy=False,
-            is_log1p=True,
-            tie_correct=tie_correct,
-            use_continuity=False,
-            alternative="two-sided",
-            use_rust=False,
-            groups=self.groups_order,
-        )
+                reference=self.groups_order[self.ireference]
+                if self.ireference is not None
+                else None,
+                group_keys="group",
+                return_as_scanpy=False,
+                is_log1p=True,
+                tie_correct=tie_correct,
+                use_continuity=False,
+                alternative="two-sided",
+                use_rust=False,
+                n_threads=n_threads,
+                groups=self.groups_order,
+            )
         return _illico_results_to_iter(
             illico_df,
             self.groups_order,
@@ -890,8 +892,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    from scanpy import settings
-
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):
