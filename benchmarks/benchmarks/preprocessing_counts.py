@@ -230,6 +230,7 @@ class RankGenesGroups:  # noqa: D101
             groupby="PatientNumber",
             method="wilcoxon_illico",
             reference=self.reference,
+            layer="counts",
         )
 
     def peakmem_agg(self, *_) -> None:
@@ -238,4 +239,5 @@ class RankGenesGroups:  # noqa: D101
             groupby="PatientNumber",
             method="wilcoxon_illico",
             reference=self.reference,
+            layer="counts",
         )
