@@ -66,6 +66,12 @@ class DotPlot(BasePlot):
     mean_only_expressed
         If True, gene expression is averaged only over the cells
         expressing the given genes.
+    min_cells
+        Minimum number of cells (observations) a ``groupby`` combination must
+        contain to be shown. Combinations with fewer than ``min_cells`` cells are
+        removed before computing the fraction and mean statistics. The default of
+        ``0`` disables filtering. Useful when ``groupby`` is a sequence and some
+        combinations contain too few cells for robust summary statistics.
     standard_scale
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
@@ -131,6 +137,7 @@ class DotPlot(BasePlot):
         layer: str | None = None,
         expression_cutoff: float = 0.0,
         mean_only_expressed: bool = False,
+        min_cells: int = 0,
         standard_scale: Literal["var", "group"] | None = None,
         dot_color_df: pd.DataFrame | None = None,
         dot_size_df: pd.DataFrame | None = None,
@@ -165,6 +172,32 @@ class DotPlot(BasePlot):
             norm=norm,
             **kwds,
         )
+
+        # Drop groupby combinations with fewer than ``min_cells`` cells, keeping
+        # ``obs_tidy``, ``categories`` and ``categories_order`` mutually
+        # consistent before the dot statistics are computed.
+        self.min_cells = min_cells
+        self._min_cells_mask = None
+        if min_cells > 0:
+            counts = self.obs_tidy.groupby(level=0, observed=True).size()
+            keep = counts.index[counts >= min_cells]
+            if len(keep) == 0:
+                msg = (
+                    f"`min_cells={min_cells}` filtered out every group; "
+                    f"the largest group has only {int(counts.max())} cells."
+                )
+                raise ValueError(msg)
+            if len(keep) < len(counts):
+                keep_set = set(keep)
+                self._min_cells_mask = self.obs_tidy.index.isin(keep_set)
+                self.obs_tidy = self.obs_tidy[self._min_cells_mask]
+                # drop now-unused categories so grouping and ``.loc`` stay aligned
+                self.obs_tidy.index = self.obs_tidy.index.remove_unused_categories()
+                self.categories = self.obs_tidy.index.categories
+                if self.categories_order is not None:
+                    self.categories_order = [
+                        c for c in self.categories_order if c in keep_set
+                    ]
 
         # Set default style parameters
         self.cmap = self.DEFAULT_COLORMAP
@@ -308,6 +341,25 @@ class DotPlot(BasePlot):
         )
 
         return dot_color_df, dot_size_df
+
+    def _reorder_categories_after_dendrogram(self, dendrogram_key: str | None) -> None:
+        if self._min_cells_mask is not None:
+            # ``min_cells`` dropped some groups. Restrict ``adata`` to the
+            # surviving cells and drop any cached dendrogram so it is recomputed
+            # over the groups actually shown (a cache, if present, was built over
+            # all groups and would otherwise mismatch the filtered categories).
+            self.adata = self.adata[self._min_cells_mask].copy()
+            # explicitly drop the now-empty categories so the recomputed
+            # dendrogram is aligned with the surviving groups regardless of
+            # ``anndata.settings.remove_unused_categories``
+            for group in self.groupby:
+                col = self.adata.obs[group]
+                if hasattr(col, "cat"):
+                    self.adata.obs[group] = col.cat.remove_unused_categories()
+            key = dendrogram_key or f"dendrogram_{'_'.join(self.groupby)}"
+            self.adata.uns.pop(key, None)
+            self._min_cells_mask = None
+        super()._reorder_categories_after_dendrogram(dendrogram_key)
 
     def style(  # noqa: PLR0913
         self,
@@ -961,6 +1013,7 @@ def dotplot(  # noqa: PLR0913
     categories_order: Sequence[str] | None = None,
     expression_cutoff: float = 0.0,
     mean_only_expressed: bool = False,
+    min_cells: int = 0,
     standard_scale: Literal["var", "group"] | None = None,
     title: str | None = None,
     colorbar_title: str | None = DotPlot.DEFAULT_COLOR_LEGEND_TITLE,
@@ -1023,6 +1076,12 @@ def dotplot(  # noqa: PLR0913
     mean_only_expressed
         If True, gene expression is averaged only over the cells
         expressing the given genes.
+    min_cells
+        Minimum number of cells (observations) a ``groupby`` combination must
+        contain to be shown. Combinations with fewer than ``min_cells`` cells are
+        removed before computing the fraction and mean statistics. The default of
+        ``0`` disables filtering. Useful when ``groupby`` is a sequence and some
+        combinations contain too few cells for robust summary statistics.
     group_colors
         A mapping of group names to colors.
         e.g. `{{'T-cell': 'blue', 'B-cell': '#aa40fc'}}`.
@@ -1116,6 +1175,7 @@ def dotplot(  # noqa: PLR0913
         categories_order=categories_order,
         expression_cutoff=expression_cutoff,
         mean_only_expressed=mean_only_expressed,
+        min_cells=min_cells,
         standard_scale=standard_scale,
         title=title,
         figsize=figsize,
