@@ -84,6 +84,14 @@ def scale[A: _Array](
     """Scale data to unit variance and zero mean.
 
     .. note::
+        Variance and standard deviation are computed with Bessel's correction,
+        i.e. dividing by ``n_obs - 1`` (``ddof=1``), matching :func:`numpy.std`
+        with ``ddof=1`` rather than the numpy default of ``ddof=0`` (population
+        variance). The difference is negligible for large `n_obs` but can matter for
+        small datasets, where it also slightly shifts where `max_value`
+        clipping takes effect.
+
+    .. note::
         Variables (genes) that do not display any variation (are constant across
         all observations) are retained and (for zero_center==True) set to 0
         during this operation. In the future, they might be set to NaNs.
