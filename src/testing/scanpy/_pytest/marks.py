@@ -19,10 +19,19 @@ def _missing_scanpy2_deps() -> list[Requirement]:
     return [
         r
         for r in map(Requirement, requires("scanpy") or ())
-        if r.marker
-        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
-        and canonicalize_name(r.name) not in dist_names()
+        if (
+            r.marker
+            and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+            and not _req_satisfied(r)
+        )
     ]
+
+
+def _req_satisfied(req: Requirement) -> bool:
+    return (
+        canonicalize_name(req.name) in dist_names()
+        and version(req.name) in req.specifier
+    )
 
 
 @cache

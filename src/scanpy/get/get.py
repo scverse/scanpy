@@ -17,7 +17,6 @@ from .._settings import Preset
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable
-    from types import UnionType
     from typing import Any, Literal, Unpack
 
     from anndata.acc import Idx2D
@@ -31,9 +30,10 @@ if TYPE_CHECKING:
 
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import AdRef, LayerAcc, MultiAcc
+    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
 else:
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
@@ -416,7 +416,9 @@ def var_df(
     return df
 
 
-def _collection_of[T](thing: object, typ: type[T] | UnionType) -> TypeIs[Collection[T]]:
+def _collection_of[T](
+    thing: object, typ: type[T] | tuple[type[T], ...]
+) -> TypeIs[Collection[T]]:
     return (
         isinstance(thing, Collection)
         and not isinstance(thing, typ)
@@ -434,37 +436,45 @@ class _Rep(TypedDict, total=False):
     varp: str | None
 
 
+type ArrAcc = GraphAcc | LayerAcc | MultiAcc
+
+
 @overload
 def _get_arr(
     adata: AnnData,
-    acc: Collection[LayerAcc | MultiAcc],
+    acc: Collection[ArrAcc | str],
     *,
     dim: Literal["obs", "var"] | None = None,
 ) -> list[Any]: ...
 @overload
 def _get_arr(
     adata: AnnData,
-    acc: LayerAcc | MultiAcc | None = None,
+    acc: ArrAcc | str | None = None,
     *,
     dim: Literal["obs", "var"] | None = None,
     **choices: Unpack[_Rep],
 ) -> Any: ...
 def _get_arr(  # noqa: PLR0911, PLR0912
     adata: AnnData,
-    acc: LayerAcc | MultiAcc | Collection[LayerAcc | MultiAcc] | None = None,
+    acc: ArrAcc | str | Collection[ArrAcc | str] | None = None,
     *,
     dim: Literal["obs", "var"] | None = None,
     **choices: Unpack[_Rep],
 ) -> Any:
     """Get a 2D array aligned with `dim`, via an `anndata.acc` accessor or old-style choices."""
-    if _collection_of(acc, LayerAcc | MultiAcc):
+    if _collection_of(acc, (LayerAcc, MultiAcc, str)):
         return [_get_arr(adata, a, dim=dim, **choices) for a in acc]
 
     if acc is not None:
+        if isinstance(acc, str):
+            from anndata.acc import A
+
+            acc = A.resolve(acc, vec=False)
+
         if any(v not in (None, False) for v in choices.values()):
             msg = "`acc` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
             raise TypeError(msg)
-        if not isinstance(acc, LayerAcc | MultiAcc):
+        if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc):
             msg = (
                 "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
                 f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
@@ -627,7 +637,7 @@ def _resolve_ref(
         return ref
     from anndata.acc import A
 
-    return A.resolve(ref)
+    return A.resolve(ref, vec=True)
 
 
 def _ref_dim(
@@ -683,7 +693,7 @@ def _get_vec(
     dim: Literal["obs", "var"] | None = None,
 ) -> Any:
     """Get the 1D array a `ref`erence points to, resolving plain strings first."""
-    if _collection_of(ref, AdRef | str):
+    if _collection_of(ref, (AdRef, str)):
         dim = _refs_dim(ref, dim=dim)
         return [_fetch_vec(adata, r, dim=dim) for r in ref]
 

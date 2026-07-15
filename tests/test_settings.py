@@ -34,7 +34,9 @@ def test_preset_scanpy_v2_preview_checks_deps() -> None:
     assert sc.settings.preset is sc.Preset.ScanpyV1
 
 
-@pytest.mark.parametrize("func", ["_missing_scanpy2_deps", "dist_names"])
+@pytest.mark.parametrize(
+    "func", ["_missing_scanpy2_deps", "_req_satisfied", "dist_names"]
+)
 def test_no_divergence(func: str) -> None:
     """Unfortunately this function has to be duplicated.
 

@@ -246,8 +246,7 @@ def aggregate(
     ),
     func: AggType | Iterable[AggType],
     *,
-    # TODO: allow str once `.resolve` supports accs
-    acc: LayerAcc | MultiAcc | None = None,
+    acc: LayerAcc | MultiAcc | str | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
     # old API

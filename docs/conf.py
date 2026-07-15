@@ -142,8 +142,7 @@ pygments_dark_style = "native"
 katex_prerender = shutil.which(NODEJS_BINARY) is not None
 
 intersphinx_mapping = dict(
-    # Needs latest until `.acc` is released in 0.13
-    anndata=("https://anndata.scverse.org/en/latest/", None),
+    anndata=("https://anndata.scverse.org/en/stable/", None),
     bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
     cuml=("https://docs.rapids.ai/api/cuml/stable/", None),
     cycler=("https://matplotlib.org/cycler/", None),
