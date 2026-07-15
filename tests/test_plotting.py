@@ -6,6 +6,7 @@ from itertools import chain, combinations, repeat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import anndata
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -600,7 +601,9 @@ def test_dotplot_min_cells_with_dendrogram() -> None:
 def test_dotplot_min_cells_dendrogram_keeps_unused_categories(monkeypatch) -> None:
     # the dendrogram + min_cells path must recompute over the surviving groups
     # even when anndata does not implicitly drop unused categories on subsetting
-    monkeypatch.setattr("anndata.settings.remove_unused_categories", False)
+    if not hasattr(anndata.settings, "remove_unused_categories"):
+        pytest.skip("anndata.settings.remove_unused_categories is unavailable")
+    monkeypatch.setattr(anndata.settings, "remove_unused_categories", False)
     pbmc = pbmc68k_reduced()
     genes = ["CD79A", "MS4A1", "CD3D", "CD8A", "LYZ", "NKG7"]
     min_cells = 20
