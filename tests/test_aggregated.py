@@ -599,7 +599,7 @@ def test_acc_api(
             id="layer",
         ),
         pytest.param(
-            lambda a: dict(acc=a.obsp["connectivities"]),
+            lambda a: dict(acc=a.obsm["test"][:, 0]),
             TypeError,
             r"`acc` must be a `LayerAcc`.*or.*`MultiAcc`",
             id="acc-type",
