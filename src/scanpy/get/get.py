@@ -476,11 +476,12 @@ def _get_arr(  # noqa: PLR0911, PLR0912
             raise TypeError(msg)
         if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc):
             msg = (
-                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or "
+                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`), "
+                "`GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`), or "
                 f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
             )
             raise TypeError(msg)
-        if isinstance(acc, MultiAcc) and dim is not None and dim != acc.dim:
+        if isinstance(acc, MultiAcc | GraphAcc) and dim is not None and dim != acc.dim:
             msg = f"`dim` ({dim!r}) does not match `acc`'s ({acc.dim!r})"
             raise ValueError(msg)
         data = adata[acc]

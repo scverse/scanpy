@@ -501,6 +501,35 @@ def test_aggregate_obsm_varm() -> None:
     assert_equal(expected_mean.values, result_obsm.layers["mean"])
 
 
+@needs.anndata_acc
+def test_aggregate_obsp_varp() -> None:
+    from anndata.acc import A
+
+    adata_obsp = sc.datasets.blobs()
+    adata_obsp.obs["blobs"] = adata_obsp.obs["blobs"].astype(str)
+    rng = np.random.default_rng(0)
+    adata_obsp.obsp["test"] = rng.random((adata_obsp.n_obs, adata_obsp.n_obs))
+    adata_varp = adata_obsp.T.copy()
+
+    result_obsp = sc.get.aggregate(
+        adata_obsp, A.obs["blobs"], "sum", acc=A.obsp["test"]
+    )
+    result_varp = sc.get.aggregate(
+        adata_varp, A.var["blobs"], "sum", acc=A.varp["test"]
+    )
+
+    assert_equal(result_obsp, result_varp.T)
+
+    expected_sum = (
+        pd
+        .DataFrame(adata_obsp.obsp["test"], index=adata_obsp.obs_names)
+        .groupby(adata_obsp.obs["blobs"], observed=True)
+        .sum()
+    )
+    assert_equal(expected_sum.values, result_obsp.layers["sum"])
+    assert_equal(adata_obsp.obs_names, result_obsp.var_names)
+
+
 def test_aggregate_obsm_labels() -> None:
     from itertools import chain, repeat
 

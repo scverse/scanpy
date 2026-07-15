@@ -30,9 +30,10 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import A, AdRef, Idx2D, LayerAcc, MultiAcc
+    from anndata.acc import A, AdRef, GraphAcc, Idx2D, LayerAcc, MultiAcc
 else:
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
     type Idx2D = object
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
@@ -246,7 +247,7 @@ def aggregate(
     ),
     func: AggType | Iterable[AggType],
     *,
-    acc: LayerAcc | MultiAcc | str | None = None,
+    acc: LayerAcc | MultiAcc | GraphAcc | str | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
     # old API
@@ -280,6 +281,8 @@ def aggregate(
     acc
         If not None, accessor for aggregation data.
         Replaces `layer`, `obsm`, and `varm`.
+        Can also be a :class:`~anndata.acc.GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`)
+        to aggregate a graph, reducing it along the grouped axis only.
     axis
         Axis on which to find group by column.
         (inferred from `by` if it is an :class:`~anndata.acc.AdRef`)
@@ -380,7 +383,10 @@ def aggregate(
             if isinstance(data, pd.DataFrame)
             else pd.RangeIndex(data.shape[1]).astype(str)
         )
-    else:
+    elif isinstance(acc, GraphAcc):
+        # Square graph: the un-grouped axis still indexes the original `dim`
+        var = getattr(adata, dim)
+    else:  # layer
         var = getattr(adata, "var" if dim == "obs" else "obs")
 
     # It's all coming together
