@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 import numpy as np
 import scipy
+from fast_array_utils.types import HasArrayNamespace
 from packaging.version import Version
 from scipy import sparse
 
@@ -644,7 +645,7 @@ class Neighbors:
         from .._compat import is_array_api
 
         x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
-        if is_array_api(x):
+        if isinstance(x, HasArrayNamespace):
             # sklearn transformers require numpy, so need to convert at boundary
             x = np.asarray(x)
         self._distances = transformer.fit_transform(x)

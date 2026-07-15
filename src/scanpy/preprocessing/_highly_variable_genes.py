@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils import stats
+from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -363,19 +364,16 @@ def _highly_variable_genes_single_batch(
     if n_removed:
         x = x[:, filt].copy()
 
-    from .._compat import get_namespace, is_array_api  ### double check
+    from .._compat import get_namespace  ### double check
 
     if flavor == "seurat":
         x = x.copy()
         if (base := adata.uns.get("log1p", {}).get("base")) is not None:
-            if is_array_api(x):
-                x = x * float(np.log(base))
-            else:
-                x *= np.log(base)
+            x *= np.log(base)
         # use out if possible. only possible since we copy the data matrix
         if isinstance(x, np.ndarray):
             np.expm1(x, out=x)
-        elif is_array_api(x):
+        elif isinstance(x, HasArrayNamespace):
             xp = get_namespace(x)
             x = xp.expm1(x)
         else:
@@ -383,7 +381,8 @@ def _highly_variable_genes_single_batch(
 
     mean, var = materialize_as_ndarray(stats.mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
-    mean[mean == 0] = 1e-12  # set entries equal to zero to small value
+    # allocating a fresh writiable array = jax issue
+    mean = np.where(mean == 0, 1e-12, mean)  # set entries equal to zero to small value
     dispersion = var / mean
     if flavor == "seurat":  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan

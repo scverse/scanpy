@@ -9,9 +9,10 @@ import numpy as np
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, get_namespace, warn
 from .._settings import Default, settings
 from .._utils import (
     axis_mul_or_truediv,
@@ -32,16 +33,18 @@ type _Array = CSBase | np.ndarray | DaskArray
 def clip[A: _Array](
     x: ArrayLike | A, *, max_value: float, zero_center: bool = True
 ) -> A:
-    # clip_array cannot trace JAX arrays = example
-    from .._compat import get_namespace, is_array_api
+    raise NotImplementedError
 
-    if is_array_api(x):
-        xp = get_namespace(x)
-        if zero_center:
-            return xp.clip(x, -max_value, max_value)  ### double check
-        return xp.clip(x, None, max_value)
 
+@clip.register(np.ndarray)
+def _(x: np.ndarray, *, max_value: float, zero_center: bool = True) -> np.ndarray:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
+
+
+@clip.register(HasArrayNamespace)
+def _(x, *, max_value: float, zero_center: bool = True):
+    xp = get_namespace(x)
+    return xp.clip(x, min=-max_value if zero_center else None, max=max_value)
 
 
 @clip.register(CSBase)
@@ -150,6 +153,7 @@ def scale[A: _Array](
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
+@scale.register(HasArrayNamespace)
 def scale_array[A: _Array](
     x: A,
     *,
@@ -178,12 +182,14 @@ def scale_array[A: _Array](
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
-    from .._compat import get_namespace, is_array_api
 
-    if is_array_api(x):
+    if isinstance(x, HasArrayNamespace):
         xp = get_namespace(x)
-        if xp.isdtype(x.dtype, "integral"):  ### double check if integral is needed
-            logg.info("...")
+        if xp.isdtype(x.dtype, "integral"):
+            logg.info(
+                "... as scaling leads to float results, integer "
+                "input is cast to float, returning copy."
+            )
             x = xp.astype(x, xp.float64)
 
     elif np.issubdtype(x.dtype, np.integer):
@@ -208,17 +214,16 @@ def scale_array[A: _Array](
             max_value=max_value,
             return_mean_std=return_mean_std,
         )
-    from .._compat import get_namespace, is_array_api
 
     mean, var = mean_var(x, axis=0, correction=1)
 
-    if is_array_api(x):
+    if isinstance(x, HasArrayNamespace):
         xp = get_namespace(x)
         std = xp.sqrt(var)
         std = xp.where(std == 0, xp.ones_like(std), std)
 
         if zero_center:
-            x = x - mean  ### double check this formula
+            x = x - mean
     else:
         std = np.sqrt(var)
         std[std == 0] = 1

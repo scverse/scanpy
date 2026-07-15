@@ -158,9 +158,9 @@ def possible_solvers(
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
         case (type() as dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
-        case (helpers.asarray, True):
+        case (helpers.asarray | helpers.as_dense_jax_array, True):
             svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
-        case (helpers.asarray, False):
+        case (helpers.asarray | helpers.as_dense_jax_array, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
             pytest.fail(f"Unknown {array_type=} ({zero_center=}) ({id=})")

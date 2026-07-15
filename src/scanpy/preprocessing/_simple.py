@@ -18,6 +18,7 @@ from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
@@ -828,7 +829,9 @@ def sample(  # noqa: PLR0912
         return subset.to_memory() if data.isbacked else subset.copy()
 
     # overload 3: return array and indices
-    assert isinstance(subset, np.ndarray | CSBase | DaskArray), type(subset)
+    assert isinstance(subset, np.ndarray | CSBase | DaskArray | HasArrayNamespace), (
+        type(subset)
+    )
     if copy:
         subset = subset.copy()
     return subset, indices

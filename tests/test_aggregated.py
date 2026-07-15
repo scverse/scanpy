@@ -16,7 +16,7 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM, param_with
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,7 +27,14 @@ if TYPE_CHECKING:
     from scanpy._compat import CSRBase
 
 VALID_ARRAY_TYPES = [
-    at
+    param_with(
+        at,
+        marks=[
+            pytest.mark.xfail(reason="aggregate not implemented for array-api arrays")
+        ],
+    )
+    if at.id == "jax_array"
+    else at
     for at in ARRAY_TYPES_ALL
     if at.id
     not in {
