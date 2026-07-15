@@ -46,4 +46,4 @@ def hv_init(*backends: _Backend | None) -> AdAcc:
 
 
 def _all_match(backends: Iterable[object]) -> TypeGuard[Iterable[_Backend]]:
-    return set(backends) <= get_literal_vals(hv.extension)
+    return set(backends) <= get_literal_vals(_Backend)
