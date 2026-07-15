@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
@@ -18,13 +19,14 @@ from scanpy._utils import select_groups
 from scanpy._utils.random import _LegacyRng
 from scanpy.get import rank_genes_groups_df
 from scanpy.tools import rank_genes_groups
-from scanpy.tools._rank_genes_groups import _RankGenes
+from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from typing import Any, Literal
 
     from numpy.lib.npyio import NpzFile
@@ -77,6 +79,25 @@ def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
     ):
         expected = dict(z)
     return Expected(names=expected["names"].astype("T"), scores=expected["scores"])
+
+
+def get_illico_results_df(
+    n_groups: int, n_genes: int, *, seed: int = 0
+) -> pd.DataFrame:
+    """Synthetic illico-shaped output used by the _illico_results_to_iter tests.
+
+    Features are in deliberately non-ascending to test ``var_name`` ordering.
+    """
+    rng = np.random.default_rng(seed)
+    groups = [f"g{i}" for i in range(n_groups)]
+    features = [f"f{n_genes - 1 - j}" for j in range(n_genes)]  # reversed -> not sorted
+    return pd.DataFrame(
+        {
+            "z_score": rng.normal(size=n_groups * n_genes),
+            "p_value": rng.uniform(size=n_groups * n_genes),
+        },
+        index=pd.MultiIndex.from_product([groups, features], names=["pert", "feature"]),
+    )
 
 
 # TODO: Make dask compatible
@@ -364,6 +385,130 @@ def test_mask_not_equal():
 
 
 @pytest.mark.parametrize(
+    ("groups_order", "ireference", "expected_indices"),
+    [
+        (["g0", "g1", "g2"], None, [0, 1, 2]),
+        (["g0", "g1", "g2"], 1, [0, 2]),
+    ],
+    ids=["vs_rest", "vs_reference"],
+)
+@pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+def test_illico_iter(
+    groups_order: list[str],
+    ireference: int | None,
+    expected_indices: list[int],
+    corr_method: Literal["benjamini-hochberg", "bonferroni"],
+):
+    df = get_illico_results_df(n_groups=3, n_genes=4)
+    feature_order = df.index.unique(level="feature")
+    out = list(
+        _illico_results_to_iter(
+            df,
+            np.array(groups_order),
+            ireference,
+            copy_pvalues=corr_method == "benjamini-hochberg",
+        )
+    )
+    assert sorted(t[0] for t in out) == sorted(expected_indices)
+    for gi, z, p in out:
+        sub = df.xs(groups_order[gi], level=0).reindex(feature_order)
+        np.testing.assert_array_equal(z, sub["z_score"].to_numpy())
+        np.testing.assert_array_equal(p, sub["p_value"].to_numpy())
+
+
+@pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])  # pairwise or vs. rest
+@pytest.mark.parametrize(
+    "mean_in_log_space", [True, False], ids=["log_space_mean", "linear_space_mean"]
+)
+@pytest.mark.parametrize(
+    "tie_correct", [True, False], ids=["tie_correct", "no_tie_correct"]
+)
+@pytest.mark.parametrize("groups", [["CD14+ Monocyte", "Dendritic"], "all"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
+@needs.illico
+def test_illico(
+    test: Literal["ovo", "ovr"],
+    corr_method: Literal["benjamini-hochberg", "bonferroni"],
+    subtests: pytest.Subtests,
+    groups: Literal["all"] | Sequence[str],
+    *,
+    mean_in_log_space: bool,
+    tie_correct: bool,
+):
+
+    pbmc = pbmc68k_reduced()
+    pbmc.raw.X.sum_duplicates()
+    pbmc.raw.X.sort_indices()
+    pbmc_illico = pbmc.copy()
+
+    reference = pbmc.obs["bulk_labels"].iloc[0] if test == "ovo" else "rest"
+    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+        sc.tl.rank_genes_groups(
+            pbmc_illico,
+            groupby="bulk_labels",
+            method="wilcoxon",
+            reference=reference if test == "ovo" else "rest",
+            n_genes=pbmc.n_vars,
+            tie_correct=tie_correct,
+            corr_method=corr_method,
+            mean_in_log_space=mean_in_log_space,
+            groups=groups,
+        )
+
+    sc.tl.rank_genes_groups(
+        pbmc,
+        groupby="bulk_labels",
+        method="wilcoxon",
+        reference=reference if test == "ovo" else "rest",
+        n_genes=pbmc.n_vars,
+        tie_correct=tie_correct,
+        corr_method=corr_method,
+        mean_in_log_space=mean_in_log_space,
+        groups=groups,
+    )
+    scanpy_results = pbmc.uns["rank_genes_groups"]
+    illico_results = pbmc_illico.uns["rank_genes_groups"]
+    assert set(illico_results.keys()) == set(scanpy_results.keys()), (
+        "Output keys do not match Scanpy's output format."
+    )
+
+    for k, ref in scanpy_results.items():
+        with subtests.test(k):
+            if k in ["params", "names"]:
+                # We can skip names ordering check as if incorrect, other values will mismatch
+                continue
+            res = np.array(illico_results[k].tolist())
+            ref_arr = np.array(ref.tolist())
+            mask = np.isfinite(ref_arr) * np.isfinite(
+                res
+            )  # Mask to ignore inf values in the comparison
+            np.testing.assert_allclose(
+                ref_arr[mask],
+                res[mask],
+                rtol=0,
+                atol=1e-6,
+                err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+            )
+
+
+@needs.illico
+def test_illico_deprecation_warning():
+    pbmc = pbmc68k_reduced()
+    pbmc.raw.X.sum_duplicates()
+    pbmc.raw.X.sort_indices()
+    with pytest.warns(
+        DeprecationWarning, match=r"`wilcoxon_illico` flavor will be removed"
+    ):
+        sc.tl.rank_genes_groups(
+            pbmc,
+            groupby="bulk_labels",
+            method="wilcoxon_illico",
+            reference="rest",
+        )
+
+
+@pytest.mark.parametrize(
     ("mean_in_log_space", "expected_logfc"),
     [
         # exp after agg: log2(expm1(mean_log_a) / expm1(mean_log_b))
@@ -374,10 +519,18 @@ def test_mask_not_equal():
         (False, -1.0),
     ],
 )
-@pytest.mark.parametrize("method", ["wilcoxon", "t-test", "t-test_overestim_var"])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "wilcoxon",
+        "t-test",
+        "t-test_overestim_var",
+        pytest.param("wilcoxon_illico", marks=needs.illico),
+    ],
+)
 def test_mean_in_log_space(
     expected_logfc: float,
-    method: Literal["wilcoxon", "t-test", "t-test_overestim_var"],
+    method: Literal["wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var"],
     *,
     mean_in_log_space: bool,
 ):
@@ -391,14 +544,18 @@ def test_mean_in_log_space(
         X=np.concatenate([group_a, group_b]),
         obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
     )
-
-    rank_genes_groups(
-        adata,
-        groupby="bulk_labels",
-        groups=["a"],
-        reference="b",
-        method=method,
-        mean_in_log_space=mean_in_log_space,
-    )
+    with (
+        sc.settings.override(preset=sc.Preset.ScanpyV2Preview)
+        if method == "wilcoxon_illico"
+        else nullcontext()
+    ):
+        rank_genes_groups(
+            adata,
+            groupby="bulk_labels",
+            groups=["a"],
+            reference="b",
+            method="wilcoxon" if "illico" in method else method,
+            mean_in_log_space=mean_in_log_space,
+        )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)

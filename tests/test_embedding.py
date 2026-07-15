@@ -7,6 +7,7 @@ import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
+from scanpy._settings import Default
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
@@ -109,3 +110,59 @@ def test_diffmap(
         assert_array_equal(d1, d2)
     with subtests.test("different embedding"):
         assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+@pytest.mark.parametrize(
+    ("key_added", "key_obsm", "key_uns", "is_dict"),
+    [
+        pytest.param(None, "X_diffmap", "diffmap_evals", False, id="None"),
+        pytest.param("custom_key", "custom_key", "custom_key", True, id="custom_key"),
+        pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
+            marks=[needs.igraph, needs.skmisc],
+            id="v2",
+        ),
+    ],
+)
+def test_diffmap_key_added(
+    *,
+    key_added: str | None | Default | sc.Preset,
+    key_obsm: str,
+    key_uns: str,
+    is_dict: bool,
+) -> None:
+    pbmc = pbmc68k_reduced()[:300, :100].copy()
+    if isinstance(key_added, sc.Preset):
+        sc.settings.preset = key_added
+        key_added = Default()
+    adata = sc.tl.diffmap(pbmc, key_added=key_added, copy=True)
+    assert key_obsm in adata.obsm
+    assert key_uns in adata.uns
+    assert isinstance(adata.uns[key_uns], dict if is_dict else np.ndarray)
+
+
+@needs.igraph
+@pytest.mark.parametrize(
+    ("key_added", "key_obsm", "key_uns"),
+    [
+        pytest.param(None, "X_draw_graph_fr", "draw_graph", id="None"),
+        pytest.param("custom_{layout}", "custom_fr", "custom_fr", id="custom_template"),
+        pytest.param(sc.Preset.ScanpyV1, "X_draw_graph_fr", "draw_graph", id="v1"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "graph_fr", "graph_fr"),
+            marks=needs.skmisc,
+            id="v2",
+        ),
+    ],
+)
+def test_draw_graph_key_added(
+    key_added: str | None | Default | sc.Preset, key_obsm: str, key_uns: str
+) -> None:
+    pbmc = pbmc68k_reduced()[:100, :100].copy()
+    if isinstance(key_added, sc.Preset):
+        sc.settings.preset = key_added
+        key_added = Default()
+    adata = sc.tl.draw_graph(pbmc, layout="fr", key_added=key_added, copy=True)
+    assert key_obsm in adata.obsm
+    assert key_uns in adata.uns

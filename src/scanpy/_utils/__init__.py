@@ -34,7 +34,7 @@ from fast_array_utils.types import HasArrayNamespace
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
+from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -59,6 +59,7 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
+    "_get_basis",
     "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
@@ -572,6 +573,14 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
         return dict.fromkeys(get_args(typ)).keys()
     msg = f"{typ!r} ({type(typ).__name__}) is not a valid Literal"
     raise TypeError(msg)
+
+
+def _get_basis_key(adata: AnnData, basis: str) -> str | None:
+    if basis in adata.obsm:
+        return basis
+    if f"X_{basis}" in adata.obsm:
+        return f"X_{basis}"
+    return None
 
 
 # --------------------------------------------------------------------------------

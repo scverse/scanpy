@@ -16,12 +16,13 @@ from anndata.tests.helpers import asarray, assert_equal
 from packaging.version import Version
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from numpy.typing import NDArray
+
+    from scanpy._compat import DaskArray
 
 
 # TODO: Report more context on the fields being compared on error
@@ -128,14 +129,6 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
-    # Newer versions of as_dense_dask_array chunk all axes by halve when the input is not a dask array.
-    if (
-        pkg_version("anndata") < Version("0.11")
-        and not isinstance(args[0], DaskArray)  # keep chunksize intact
-    ):
-        from anndata.tests.helpers import _half_chunk_size
-
-        a = a.rechunk(_half_chunk_size(a.shape))
     return a
 
 

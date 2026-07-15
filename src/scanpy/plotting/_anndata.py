@@ -161,8 +161,7 @@ def scatter(  # noqa: PLR0913
     --------
     Plot two `.obs` annotations against each other and colour by a third.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -170,15 +169,13 @@ def scatter(  # noqa: PLR0913
 
     Plot expression of two genes against each other.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.scatter(adata, x="CD79A", y="CD3D", color="bulk_labels")
 
     Use a precomputed embedding via the `basis` argument.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.scatter(adata, basis="umap", color="bulk_labels")
 
@@ -618,8 +615,7 @@ def ranking(  # noqa: PLR0912, PLR0913
     PCA in :func:`~scanpy.datasets.pbmc68k_reduced` was computed on highly-variable
     genes only, so we subset to those genes before ranking.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -628,8 +624,7 @@ def ranking(  # noqa: PLR0912, PLR0913
 
     Include the lowest-loading genes alongside the highest.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.ranking(adata_hv, attr="varm", keys="PCs", indices=[0, 1, 2], include_lowest=True)
 
@@ -734,6 +729,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     density_norm: DensityNorm = "width",
     order: Sequence[str] | None = None,
     multi_panel: bool = False,
+    ncols: int | None = None,
     xlabel: str = "",
     ylabel: str | Sequence[str] | None = None,
     rotation: float | None = None,
@@ -782,6 +778,12 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         Order in which to show the categories.
     multi_panel
         Display keys in multiple panels also when `groupby is not None`.
+    ncols
+        Number of panels per row. If ``None`` (default), all panels are placed
+        in a single row (the original layout). If set to an integer, panels
+        wrap into a grid with this many columns. Effective in the
+        ``multi_panel=True`` path (no ``groupby``) and in the multi-key
+        ``groupby`` path; ignored when only a single panel would be produced.
     xlabel
         Label of the x axis. Defaults to `groupby` if `rotation` is `None`,
         otherwise, no label is shown.
@@ -801,8 +803,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -810,15 +811,13 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot by category. Rotate x-axis labels so that they do not overlap.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90)
 
     Set order of categories to be plotted or select specific categories to be plotted.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         groupby_order = ['CD34+', 'CD19+ B']
         sc.pl.violin(adata, keys='S_score', groupby='bulk_labels', rotation=90,
@@ -826,18 +825,23 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot multiple keys.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys=['S_score', 'G2M_score'], groupby='bulk_labels',
             rotation=90)
 
     For large datasets consider omitting the overlaid scatter plot.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.violin(adata, keys='S_score', stripplot=False)
+
+    Wrap multiple keys into a 2-column grid.
+
+    ..  exec-jupyter::
+
+        sc.pl.violin(adata, keys=['S_score', 'G2M_score', 'n_counts'],
+            multi_panel=True, ncols=2)
 
     .. currentmodule:: scanpy
 
@@ -907,6 +911,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
             density_norm=density_norm,
             col=x,
             col_order=keys,
+            col_wrap=ncols,
             sharey=False,
             cut=0,
             inner=None,
@@ -915,20 +920,20 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
 
         if stripplot:
             grouped_df = obs_tidy.groupby(x, observed=True)
-            for ax_id, key in zip(range(g.axes.shape[1]), keys, strict=True):
+            for key in keys:
                 sns.stripplot(
                     y=y,
                     data=grouped_df.get_group(key),
                     jitter=jitter,
                     size=size,
                     color="black",
-                    ax=g.axes[0, ax_id],
+                    ax=g.axes_dict[key],
                 )
         if log:
             g.set(yscale="log")
         g.set_titles(col_template="{col_name}").set_xlabels("")
         if rotation is not None:
-            for ax_base in g.axes[0]:
+            for ax_base in g.axes_dict.values():
                 ax_base.tick_params(axis="x", labelrotation=rotation)
     else:
         # set by default the violin plot cut=0 to limit the extend
@@ -936,15 +941,30 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         kwds.setdefault("cut", 0)
         kwds.setdefault("inner")
 
-        if ax is None:
+        if ax is not None:
+            if ncols is not None:
+                msg = "`ncols` cannot be combined with a pre-supplied `ax`."
+                raise ValueError(msg)
+            axs = [ax]
+        elif ncols is not None:
+            # Lazy import to avoid the _tools/__init__.py ↔ _anndata.py cycle.
+            from ._tools.scatterplots import _panel_grid
+
+            panels = ["x"] if groupby is None else list(keys)
+            fig, gs = _panel_grid(
+                hspace=0.25,
+                wspace=0.1,
+                ncols=ncols,
+                num_panels=len(panels),
+            )
+            axs = [fig.add_subplot(gs[i]) for i in range(len(panels))]
+        else:
             axs, _, _, _ = setup_axes(
                 ax,
                 panels=["x"] if groupby is None else keys,
                 show_ticks=True,
                 right_margin=0.3,
             )
-        else:
-            axs = [ax]
         for ax_base, y, ylab in zip(axs, ys, ylabel, strict=True):
             sns.violinplot(
                 x=x,
@@ -1022,15 +1042,13 @@ def clustermap(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.krumsiek11()
         sc.pl.clustermap(adata)
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.clustermap(adata, obs_keys='cell_type')
 
@@ -1126,8 +1144,7 @@ def heatmap(  # noqa: PLR0912, PLR0913, PLR0915
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1495,8 +1512,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     Using var_names as list:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1505,8 +1521,7 @@ def tracksplot(  # noqa: PLR0912, PLR0913, PLR0915
 
     Using var_names as dict:
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
         sc.pl.tracksplot(adata, markers, groupby='bulk_labels', dendrogram=True)
@@ -1754,8 +1769,7 @@ def dendrogram(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1829,8 +1843,7 @@ def correlation_matrix(  # noqa: PLR0912, PLR0913, PLR0915
     --------
     Plot correlation matrix between cell type groups.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()

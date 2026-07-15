@@ -10,6 +10,7 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
+import zarr
 
 import scanpy as sc
 from scanpy._utils import get_literal_vals
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
 
 
 def cache_adata(dataset: Dataset, layer: KeyCount) -> None:
-    """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
     adata, batch_key = get_count_dataset(dataset, layer=layer)
     assert "lop1p" not in adata.uns
     adata.uns["batch_key"] = batch_key
@@ -39,6 +39,7 @@ class PreprocessingCountsSuite:  # noqa: D101
     param_names = ("dataset", "layer")
 
     def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         for dataset, layer in product(*self.params):
             cache_adata(dataset, layer)
 
@@ -151,22 +152,42 @@ class FastSuite:
 
 
 class Agg:  # noqa: D101
-    params: tuple[list[AggType], list[bool]] = (
+    params: tuple[list[AggType], list[bool], list[bool]] = (
         list(get_literal_vals(AggType)),
         [True, False],
+        [True, False],
     )
-    param_names = ("agg_name", "use_csc")
+    param_names = ("agg_name", "use_csc", "use_dask")
 
     def setup_cache(self) -> None:
         """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
         adata, _ = get_dataset("lung93k")
-        adata.write_h5ad("lung93k.h5ad")
+        adata.layers["counts_csc"] = adata.layers["counts"].tocsc()
+        adata.write_zarr("lung93k.zarr")
 
-    def setup(self, agg_name: AggType, use_csc: bool) -> None:  # noqa: FBT001
-        self.adata = ad.read_h5ad("lung93k.h5ad")
-        if use_csc:
-            self.adata.layers["counts"] = self.adata.layers["counts"].tocsc()
-        self.agg_name = agg_name
+    def setup(self, agg_name: AggType, use_csc: bool, use_dask: bool) -> None:  # noqa: FBT001
+        counts_src_key = "counts_csc" if use_csc else "counts"
+        if use_dask:
+            if agg_name == "median":
+                # Skip this one: https://asv.readthedocs.io/en/stable/writing_benchmarks.html#setup-and-teardown-functions
+                raise NotImplementedError()
+            z = zarr.open("lung93k.zarr")
+            self.adata = ad.AnnData(
+                obs=ad.io.read_elem(z["obs"]),
+                var=ad.io.read_elem(z["var"]),
+                layers={
+                    "counts": ad.experimental.read_elem_lazy(
+                        z["layers"][counts_src_key]
+                    )
+                },
+                X=ad.experimental.read_elem_lazy(z["X"]),
+            )
+        else:
+            self.adata = ad.read_zarr("lung93k.zarr")
+            if counts_src_key != "counts":
+                self.adata.layers["counts"] = self.adata.layers[counts_src_key]
+                del self.adata.layers[counts_src_key]
+        self.agg_name: AggType = agg_name
 
     def time_agg(self, *_) -> None:
         sc.get.aggregate(

@@ -21,7 +21,7 @@ from .._utils import (
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
-from ..get import _get_obs_rep
+from ..get import _get_obs_rep, aggregate
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 @singledispatch
 def clip_square_sum(
     data_batch: np.ndarray, clip_val: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray] | tuple[DaskArray, DaskArray]:
     """Clip data_batch by clip_val.
 
     Parameters
@@ -65,24 +65,19 @@ def clip_square_sum(
 
 
 @clip_square_sum.register(DaskArray)
-def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _(data_batch: DaskArray, clip_val: np.ndarray) -> tuple[DaskArray, DaskArray]:
     n_blocks = data_batch.blocks.size
 
     def sum_and_sum_squares_clipped_from_block(block):
         return np.vstack(clip_square_sum(block, clip_val))[None, ...]
 
-    squared_batch_counts_sum, batch_counts_sum = (
-        data_batch
-        .map_blocks(
-            sum_and_sum_squares_clipped_from_block,
-            new_axis=(1,),
-            chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
-            meta=np.array([]),
-            dtype=np.float64,
-        )
-        .sum(axis=0)
-        .compute()
-    )
+    squared_batch_counts_sum, batch_counts_sum = data_batch.map_blocks(
+        sum_and_sum_squares_clipped_from_block,
+        new_axis=(1,),
+        chunks=((1,) * n_blocks, (2,), (data_batch.shape[1],)),
+        meta=np.array([]),
+        dtype=np.float64,
+    ).sum(axis=0)
     return squared_batch_counts_sum, batch_counts_sum
 
 
@@ -173,17 +168,52 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     batch_info = (
         pd.Categorical(np.zeros(adata.shape[0], dtype=int))
         if batch_key is None
-        else adata.obs[batch_key].to_numpy()
+        else adata.obs[batch_key]
     )
-
     norm_gene_vars = []
+
+    adata_agg = AnnData(
+        X=data,
+        var=pd.DataFrame(index=adata.var_names),
+        obs=pd.DataFrame(
+            index=adata.obs_names, data={"__hvg_v3_batch_info__": batch_info}
+        ),
+    )
+    if batch_key is not None:
+        aggregated_mean_var = aggregate(
+            adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
+        )
+        aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
+            materialize_as_ndarray(
+                tuple(aggregated_mean_var.layers[l] for l in ["mean", "var"])
+            )
+        )
+    else:
+        aggregated_mean_var = AnnData(
+            var=pd.DataFrame(index=adata.var_names),
+            obs=pd.DataFrame(
+                index=np.array(["one"]), data={"__hvg_v3_batch_info__": np.array([0])}
+            ),
+            layers={
+                "mean": df["means"].to_numpy().reshape((1, -1)),
+                "var": df["variances"].to_numpy().reshape((1, -1)),
+            },
+        )
+    batch_info = batch_info.to_numpy()
     for b in np.unique(batch_info):
         data_batch = data[batch_info == b]
-
-        mean, var = stats.mean_var(data_batch, axis=0, correction=1)
-        # These get computed anyway for loess
-        if isinstance(mean, DaskArray):
-            mean, var = mean.compute(), var.compute()
+        mean, var = (
+            aggregated_mean_var[
+                aggregated_mean_var.obs["__hvg_v3_batch_info__"] == b
+            ].layers[l]
+            for l in ["mean", "var"]
+        )
+        if isinstance(mean, CSBase):
+            mean = mean.toarray()
+        mean = mean.ravel()
+        if isinstance(var, CSBase):
+            var = var.toarray()
+        var = var.ravel()
         estimat_var = np.zeros(data.shape[1], dtype=np.float64)
         if (not_const := var > 0).any():
             y = np.log10(var[not_const])
@@ -205,8 +235,13 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
             + squared_batch_counts_sum
             - 2 * batch_counts_sum * mean
         )
-        norm_gene_vars.append(norm_gene_var.reshape(1, -1))
+        norm_gene_vars.append(norm_gene_var)
+    if any(isinstance(e, DaskArray) for e in norm_gene_vars):
+        import dask.array as da
 
+        norm_gene_vars = da.compute(*norm_gene_vars)
+
+    norm_gene_vars = [ngv.reshape(1, -1) for ngv in norm_gene_vars]
     norm_gene_vars = np.concatenate(norm_gene_vars, axis=0)
     # argsort twice gives ranks, small rank means most variable
     ranked_norm_gene_vars = np.argsort(np.argsort(-norm_gene_vars, axis=1), axis=1)

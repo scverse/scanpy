@@ -14,6 +14,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase, DaskArray, pkg_version
+from scanpy._keys import _PcaKeys
 from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
@@ -301,13 +302,13 @@ def test_pca_shapes():
 
 
 @pytest.mark.parametrize(
-    ("key_added", "keys_expected"),
+    ("key_added", "keys"),
     [
-        pytest.param(None, ("X_pca", "PCs", "pca"), id="None"),
-        pytest.param("custom_key", ("custom_key",) * 3, id="custom_key"),
+        pytest.param(None, _PcaKeys("pca", "X_pca", "PCs"), id="None"),
+        pytest.param("custom_key", _PcaKeys(*(["custom_key"] * 3)), id="custom_key"),
     ],
 )
-def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
+def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     """Tests implicitly centered pca on sparse arrays.
 
     Checks if it returns equivalent results to explicit centering on dense arrays.
@@ -320,16 +321,14 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
 
-    key_obsm, key_varm, key_uns = keys_expected
-
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance"], explicit.uns[key_uns]["variance"]
+        implicit.uns["pca"]["variance"], explicit.uns[keys.uns]["variance"]
     )
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns[key_uns]["variance_ratio"]
+        implicit.uns["pca"]["variance_ratio"], explicit.uns[keys.uns]["variance_ratio"]
     )
-    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[key_obsm])
-    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
+    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[keys.obsm])
+    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[keys.varm])
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])

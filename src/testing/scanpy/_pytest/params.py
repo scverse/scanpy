@@ -24,11 +24,6 @@ if TYPE_CHECKING:
     from ....scanpy._compat import DaskArray
 
 
-skipif_no_sparray = pytest.mark.skipif(
-    Version(version("anndata")) < Version("0.11"),
-    reason="scipy cs{rc}_array not supported in anndata<0.11",
-)
-
 anndata_test_utils_supports_typ_kwarg = Version(version("anndata")) >= Version("0.12.6")
 
 
@@ -87,7 +82,7 @@ MAP_ARRAY_TYPES: dict[
     ("mem", "sparse"): (
         pytest.param(sparse.csr_matrix, id="scipy_csr_mat"),  # noqa: TID251
         pytest.param(sparse.csc_matrix, id="scipy_csc_mat"),  # noqa: TID251
-        pytest.param(sparse.csr_array, id="scipy_csr_arr", marks=[skipif_no_sparray]),  # noqa: TID251
+        pytest.param(sparse.csr_array, id="scipy_csr_arr"),  # noqa: TID251
     ),
     ("dask", "dense"): tuple(
         pytest.param(

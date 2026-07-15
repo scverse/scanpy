@@ -18,6 +18,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
+from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -323,20 +324,6 @@ class FlatTree(NamedTuple):  # noqa: D101
     indices: None
 
 
-def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
-    if "X_diffmap0" in adata.obs:
-        return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
-    else:
-        return adata.obsm["X_diffmap"]
-
-
-def _backwards_compat_get_full_eval(adata: AnnData):
-    if "X_diffmap0" in adata.obs:
-        return np.r_[1, adata.uns["diffmap_evals"]]
-    else:
-        return adata.uns["diffmap_evals"]
-
-
 def _make_forest_dict(forest):
     d = {}
     props = ("hyperplanes", "offsets", "children", "indices")
@@ -433,6 +420,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
+        diffmap_key: str | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -485,9 +473,14 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm:
-            self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
+
+        if keys := (
+            _EmbeddingKeys(diffmap_key, diffmap_key)
+            if diffmap_key
+            else _existing_preset_keys(adata, "diffmap")
+        ):
+            self._eigen_values = adata.uns[keys.uns]
+            self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (

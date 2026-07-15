@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.10.8",
+    "anndata>=0.11.2",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
@@ -67,7 +67,7 @@ dependencies = [
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.14",
+    "scipy>=1.15",
     "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
@@ -98,7 +98,8 @@ scanorama = [ "scanorama" ]
 scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
+illico = [ "illico>=0.6" ]
+scanpy2 = [ "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -108,6 +109,7 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
@@ -115,7 +117,7 @@ test = [
     "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-doc = [
+docs = [
     "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
@@ -131,6 +133,7 @@ doc = [
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
+    "sphinx-exec-jupyter>=0.2.1",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
@@ -273,7 +276,8 @@ filterwarnings = [
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                                    # we should set init=obsm["X_pca"] or so
+    # we should set init=obsm["X_pca"] or so
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
