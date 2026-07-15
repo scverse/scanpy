@@ -100,7 +100,7 @@ def blobs(
     >>> sc.datasets.blobs()
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'blobs'
-        layers: None
+        layers: None (.X)
 
     """
     import sklearn.datasets
@@ -137,7 +137,7 @@ def burczynski06() -> AnnData:
         ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
-        layers: None
+        layers: None (.X)
 
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
@@ -171,7 +171,7 @@ def krumsiek11() -> AnnData:
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
-        layers: None
+        layers: None (.X)
 
     """  # noqa: D401
     with settings.verbosity.override("error"):  # suppress output...
@@ -217,7 +217,7 @@ def moignard15() -> AnnData:
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
-        layers: None
+        layers: None (.X)
 
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
@@ -273,7 +273,7 @@ def paul15() -> AnnData:
     AnnData object with n_obs × n_vars = 2730 × 3451
         obs: 'paul15_clusters'
         uns: 'iroot'
-        layers: None
+        layers: None (.X)
 
     """
     import h5py
@@ -333,7 +333,7 @@ def toggleswitch() -> AnnData:
         ...
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
-        layers: None
+        layers: None (.X)
 
     """  # noqa: D401
     filename = HERE / "toggleswitch.txt"
@@ -373,7 +373,7 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
-        layers: None
+        layers: None (.X)
 
     """
     return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
@@ -424,7 +424,7 @@ def pbmc3k() -> AnnData:
     >>> sc.datasets.pbmc3k()
     AnnData object with n_obs × n_vars = 2700 × 32738
         var: 'gene_ids'
-        layers: None
+        layers: None (.X)
 
     """
     url = "https://exampledata.scverse.org/scanpy/pbmc3k_raw.h5ad"
@@ -466,7 +466,7 @@ def pbmc3k_processed() -> AnnData:
         obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
         varm: 'PCs'
         obsp: 'distances', 'connectivities'
-        layers: None
+        layers: None (.X)
 
     """  # noqa: D401
     url = "https://exampledata.scverse.org/scanpy/pbmc3k.h5ad"
@@ -573,7 +573,7 @@ def visium_sge(
         var: 'gene_ids', 'feature_types', 'genome'
         uns: 'spatial'
         obsm: 'spatial'
-        layers: None
+        layers: None (.X)
 
     """  # noqa: D401
     from ..readwrite import read_visium
