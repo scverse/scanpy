@@ -483,12 +483,15 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     )
 
 
-def test_mask_defaults(array_type, float_dtype):
+def test_mask_defaults(request: pytest.FixtureRequest, array_type, float_dtype):
     """Test if PCA behavior in relation to highly variable genes.
 
     1. That it’s equal withwithout and with – but mask is None
     2. If pca takes highly variable as mask as default
     """
+    if array_type is helpers.as_dense_jax_array:
+        reason = "anndata IndexManager.get_for_array uses from_dlpack on a read only numpy index (numpy/numpy#20742): https://github.com/numpy/numpy/issues/20742"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     a = array_type(A_list).astype("float64")
     adata = AnnData(a)
 

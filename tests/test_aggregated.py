@@ -6,6 +6,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
+from anndata.tests import helpers
 from scipy import sparse
 
 import scanpy as sc
@@ -555,12 +556,18 @@ def test_nan() -> None:
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
-def test_var_no_catastrophic_cancellation(array_type) -> None:
+def test_var_no_catastrophic_cancellation(
+    request: pytest.FixtureRequest, array_type
+) -> None:
     # Values of the form `offset + tiny_noise` make the textbook two-pass
     # formula sum(x**2)/n - (sum(x)/n)**2 lose ~all precision: both terms are
     # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
     # the variance ~1e-3, far below the rounding noise. Welford's online
     # algorithm avoids the subtraction entirely.
+    if array_type is helpers.as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(reason="aggregate not implemented for jax arrays")
+        )
     n_per_group, n_features = 1000, 4
     offset, std = 1e8, 1e-3
     groups = ["a", "b"]

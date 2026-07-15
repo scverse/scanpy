@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from anndata.tests import helpers
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -107,7 +108,10 @@ def test_results(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(
-    subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
+    request: pytest.FixtureRequest,
+    subtests: pytest.Subtests,
+    array_type,
+    method: Literal["t-test", "wilcoxon"],
 ) -> None:
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
@@ -116,6 +120,13 @@ def test_results_layers(
     x[mask] = 0
     adata.X = array_type(x)
     scores = get_true_scores(method)["scores"]
+
+    if array_type is helpers.as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="test mutates .X in-place; jax arrays are immutable"
+            )
+        )
 
     with subtests.test("layer"):
         rank_genes_groups(
