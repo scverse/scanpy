@@ -98,7 +98,7 @@ def _resolve_vals(val: object):
 
 
 @_resolve_vals.register(HasArrayNamespace)
-def _(val: HasArrayNamespace) -> NDArray:
+def _resolve_vals_array_api(val: HasArrayNamespace) -> NDArray:
     # Moran's I / Geary's C use numba kernels, so convert at the boundary
     return np.asarray(val)
 
