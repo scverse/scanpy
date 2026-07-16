@@ -237,7 +237,7 @@ def _vars_rest(
             else:
                 # g == 0 has no groups before it, so its rest is just the groups after
                 n_r, m2_r = stats_after_g[0], stats_after_g[2]
-            denom = n_r - 1.0 if n_r >= 2.0 else 1.0
+            denom = n_r - 1.0
             v = m2_r / denom
             vars_rest[g, j] = v
     return vars_rest
