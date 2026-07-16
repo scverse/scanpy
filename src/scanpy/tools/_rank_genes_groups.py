@@ -52,28 +52,21 @@ def _illico_results_to_iter(
     illico_df: pd.DataFrame,
     groups_order: NDArray,
     ireference: int | None,
-    *,
-    copy_pvalues: bool,
 ) -> Generator[_TestResult]:
-    """Yield per-group ``(index, z, p)`` tuples from illico's long-form output.
+    """Yield per-group ``(index, z, p)`` from illico's long-form output.
 
-    illico returns a DataFrame with a 2-level MultiIndex ``(pert, feature)``
-    and columns including ``z_score`` and ``p_value``. We stream one group
-    at a time via `pandas.Series.loc`, trusting illico_df groups are ordered
-    by ``var_name``.
+    illico's frame is group-major with features in ``var`` order, so its
+    ``z_score``/``p_value`` columns reshape directly to ``(n_present_groups, n_genes)``.
     """
-    ref_label = None if ireference is None else groups_order[ireference]
-    z_series = illico_df["z_score"]
-    p_series = illico_df["p_value"]
-    illico_groups = set(illico_df.index.unique(level="pert"))
+    reference = None if ireference is None else groups_order[ireference]
+    group_names = illico_df.index.get_level_values("pert").unique()
+    zscores = illico_df["z_score"].to_numpy().reshape(len(group_names), -1)
+    pvals = illico_df["p_value"].to_numpy().reshape(len(group_names), -1)
+    group_index = {name: i for i, name in enumerate(groups_order)}
     return (
-        (
-            group_index,
-            z_series.loc[group_name].to_numpy(),
-            p_series.loc[group_name].to_numpy(copy=copy_pvalues),
-        )
-        for group_index, group_name in enumerate(groups_order)
-        if group_name != ref_label and group_name in illico_groups
+        (group_index[name], zscores[row], pvals[row])
+        for row, name in enumerate(group_names)
+        if name != reference
     )
 
 
@@ -317,8 +310,6 @@ class _RankGenes:
         self.pts_rest = None
 
         self.stats = None
-        # scanpy-formatted uns record-arrays produced directly by illico (fast path)
-        self.uns_records = None
 
         # for logreg only
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
@@ -618,15 +609,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def illico(
-        self,
-        *,
-        tie_correct: bool,
-        corr_method: _CorrMethod,
-        n_genes_user: int | None,
-        mean_in_log_space: bool,
-        rankby_abs: bool,
-    ) -> Generator[_TestResult, None, None] | dict[str, NDArray]:
+    def illico(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
         from illico import asymptotic_wilcoxon
 
         adata = AnnData(
@@ -640,22 +623,6 @@ class _RankGenes:
         reference = (
             self.groups_order[self.ireference] if self.ireference is not None else None
         )
-        # illico can emit scanpy-formatted record arrays directly, skipping the
-        # per-group `.loc` reshuffle and the wide-DataFrame rebuild. It can't
-        # reproduce abs-value ranking or a non-natural log base, so fall back to
-        # the streamed iterator in those cases. `exp_post_agg` mirrors
-        # `mean_in_log_space` so illico's log-fold-changes match scanpy's.
-        native = not rankby_abs and self.expm1_func is np.expm1
-        scanpy_kwargs = (
-            dict(
-                return_as_scanpy=True,
-                n_genes=n_genes_user,
-                corr_method=corr_method,
-                exp_post_agg=mean_in_log_space,
-            )
-            if native
-            else dict(return_as_scanpy=False)
-        )
         with _numba_thread_limit(settings.n_jobs) as n_threads:
             result = asymptotic_wilcoxon(
                 adata,
@@ -668,20 +635,9 @@ class _RankGenes:
                 use_rust=False,
                 n_threads=n_threads,
                 groups=self.groups_order,
-                **scanpy_kwargs,
+                return_as_scanpy=False,
             )
-        if native:
-            return {
-                field: result[field]
-                for field in ("names", "scores", "pvals", "pvals_adj", "logfoldchanges")
-            }
-        return _illico_results_to_iter(
-            result,
-            self.groups_order,
-            self.ireference,
-            # p-values are altered by this correction method
-            copy_pvalues=corr_method == "benjamini-hochberg",
-        )
+        return _illico_results_to_iter(result, self.groups_order, self.ireference)
 
     def compute_statistics(
         self,
@@ -699,35 +655,23 @@ class _RankGenes:
             self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
-            result = (
-                self.illico(
-                    tie_correct=tie_correct,
-                    corr_method=corr_method,
-                    n_genes_user=n_genes_user,
-                    mean_in_log_space=mean_in_log_space,
-                    rankby_abs=rankby_abs,
-                )
+            generate_test_results = (
+                self.illico(tie_correct=tie_correct)
                 if "illico" in method
                 else self.wilcoxon(tie_correct=tie_correct)
             )
-            if isinstance(result, dict):
-                self.uns_records = result
-            else:
-                generate_test_results = result
-            if self.uns_records is None or self.comp_pts:
-                self._basic_stats(exponentiate_values=not mean_in_log_space)
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
-        if self.uns_records is None:
-            self.stats = _build_stats_dataframe(
-                self,
-                generate_test_results,
-                corr_method=corr_method,
-                n_genes_user=n_genes_user,
-                rankby_abs=rankby_abs,
-                mean_in_log_space=mean_in_log_space,
-            )
+        self.stats = _build_stats_dataframe(
+            self,
+            generate_test_results,
+            corr_method=corr_method,
+            n_genes_user=n_genes_user,
+            rankby_abs=rankby_abs,
+            mean_in_log_space=mean_in_log_space,
+        )
 
 
 def _build_stats_dataframe(
@@ -748,7 +692,7 @@ def _build_stats_dataframe(
     from statsmodels.stats.multitest import multipletests
 
     n_genes_total = rg.X.shape[1]
-    df: pd.DataFrame | None = None
+    cols: dict[tuple[str, str], NDArray] = {}
 
     for group_index, scores, pvals in results:
         group_name = str(rg.groups_order[group_index])
@@ -756,27 +700,21 @@ def _build_stats_dataframe(
         if n_genes_user is not None:
             scores_sort = np.abs(scores) if rankby_abs else scores
             global_indices = _select_top_n(scores_sort, n_genes_user)
-            first_col = "names"
+            cols[group_name, "names"] = rg.var_names[global_indices]
         else:
             global_indices = slice(None)
-            first_col = "scores"
-
-        if df is None:
-            idx = pd.MultiIndex.from_tuples([(group_name, first_col)])
-            df = pd.DataFrame(columns=idx)
-
-        if n_genes_user is not None:
-            df[group_name, "names"] = rg.var_names[global_indices]
-        df[group_name, "scores"] = scores[global_indices]
+        cols[group_name, "scores"] = scores[global_indices]
 
         if pvals is not None:
-            df[group_name, "pvals"] = pvals[global_indices]
+            cols[group_name, "pvals"] = pvals[global_indices]
             if corr_method == "benjamini-hochberg":
-                pvals[np.isnan(pvals)] = 1
-                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method="fdr_bh")
+                pvals_no_nan = np.where(np.isnan(pvals), 1.0, pvals)
+                _, pvals_adj, _, _ = multipletests(
+                    pvals_no_nan, alpha=0.05, method="fdr_bh"
+                )
             elif corr_method == "bonferroni":
                 pvals_adj = np.minimum(pvals * n_genes_total, 1.0)
-            df[group_name, "pvals_adj"] = pvals_adj[global_indices]
+            cols[group_name, "pvals_adj"] = pvals_adj[global_indices]
 
         if rg.means is not None:
             mean_group = rg.means[group_index]
@@ -790,9 +728,13 @@ def _build_stats_dataframe(
                 if mean_in_log_space
                 else (mean_group + 1e-9) / (mean_rest + 1e-9)
             )  # add small value to avoid zeros
-            df[group_name, "logfoldchanges"] = np.log2(foldchanges[global_indices])
+            cols[group_name, "logfoldchanges"] = np.log2(foldchanges[global_indices])
 
-    if df is not None and n_genes_user is None:
+    if not cols:
+        return None
+    df = pd.DataFrame(cols)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    if n_genes_user is None:
         df.index = rg.var_names
     return df
 
@@ -1052,23 +994,20 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
-    if test_obj.uns_records is not None:
-        adata.uns[key_added].update(test_obj.uns_records)
-    else:
-        test_obj.stats.columns = test_obj.stats.columns.swaplevel()
+    test_obj.stats.columns = test_obj.stats.columns.swaplevel()
 
-        dtypes = {
-            "names": "O",
-            "scores": "float32",
-            "logfoldchanges": "float32",
-            "pvals": "float64",
-            "pvals_adj": "float64",
-        }
+    dtypes = {
+        "names": "O",
+        "scores": "float32",
+        "logfoldchanges": "float32",
+        "pvals": "float64",
+        "pvals_adj": "float64",
+    }
 
-        for col in test_obj.stats.columns.levels[0]:
-            adata.uns[key_added][col] = test_obj.stats[col].to_records(
-                index=False, column_dtypes=dtypes[col]
-            )
+    for col in test_obj.stats.columns.levels[0]:
+        adata.uns[key_added][col] = test_obj.stats[col].to_records(
+            index=False, column_dtypes=dtypes[col]
+        )
 
     logg.info(
         "    finished",

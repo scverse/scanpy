@@ -401,7 +401,6 @@ def test_illico_iter(
             df,
             np.array(groups_order),
             ireference,
-            copy_pvalues=corr_method == "benjamini-hochberg",
         )
     )
     assert sorted(t[0] for t in out) == sorted(expected_indices)
