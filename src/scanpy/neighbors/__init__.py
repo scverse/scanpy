@@ -635,7 +635,6 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        from .._compat import is_array_api
 
         x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         if isinstance(x, HasArrayNamespace):

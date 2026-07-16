@@ -162,7 +162,7 @@ def scale[A: _Array](
 @scale.register(DaskArray)
 @scale.register(CSBase)
 @scale.register(HasArrayNamespace)
-def scale_array[A: _Array](
+def scale_array[A: _Array](  # noqa: PLR0912
     x: A,
     *,
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
