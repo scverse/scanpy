@@ -78,16 +78,17 @@ def scale[A: _Array](
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool] | str | None = None,
+    ddof: int = 1,
 ) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
 
     .. note::
-        Variance and standard deviation are computed with Bessel's correction,
-        i.e. dividing by ``n_obs - 1`` (``ddof=1``), matching :func:`numpy.std`
-        with ``ddof=1`` rather than the numpy default of ``ddof=0`` (population
-        variance). The difference is negligible for large `n_obs` but can matter for
-        small datasets, where it also slightly shifts where `max_value`
-        clipping takes effect.
+        By default, variance and standard deviation are computed with Bessel's
+        correction, i.e. dividing by ``n_obs - 1`` (``ddof=1``), matching
+        :func:`numpy.std` with ``ddof=1`` rather than the numpy default of
+        ``ddof=0`` (population variance). The difference is negligible for large
+        `n_obs` but can matter for small datasets, where it also slightly shifts
+        where `max_value` clipping takes effect.
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
@@ -119,6 +120,10 @@ def scale[A: _Array](
         to a certain set of observations. The mask is specified as a boolean array
         or a string referring to an array in :attr:`~anndata.AnnData.obs`.
         This will transform data from csc to csr format if `issparse(data)`.
+    ddof
+        Delta degrees of freedom. The divisor used to compute variance is
+        ``N - ddof``, where ``N`` is the number of observations used to calculate
+        the scaling parameters. Defaults to ``1``.
 
     Returns
     -------
@@ -142,7 +147,12 @@ def scale[A: _Array](
         msg = f"`obsm` argument inappropriate for value of type {type(data)}"
         raise ValueError(msg)
     return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
+        data,
+        zero_center=zero_center,
+        max_value=max_value,
+        copy=copy,
+        mask_obs=mask_obs,
+        ddof=ddof,
     )
 
 
@@ -157,6 +167,7 @@ def scale_array[A: _Array](
     copy: bool = False,
     return_mean_std: bool = False,
     mask_obs: NDArray[np.bool] | None = None,
+    ddof: int = 1,
 ) -> (
     A
     | tuple[
@@ -199,9 +210,10 @@ def scale_array[A: _Array](
             zero_center=zero_center,
             max_value=max_value,
             return_mean_std=return_mean_std,
+            ddof=ddof,
         )
 
-    mean, var = mean_var(x, axis=0, correction=1)
+    mean, var = mean_var(x, axis=0, correction=ddof)
     std = np.sqrt(var)
     std[std == 0] = 1
     if zero_center:
@@ -237,6 +249,7 @@ def scale_array_masked[A: _Array](
     zero_center: bool = True,
     max_value: float | None = None,
     return_mean_std: bool = False,
+    ddof: int = 1,
 ) -> (
     A
     | tuple[
@@ -248,7 +261,7 @@ def scale_array_masked[A: _Array](
     if isinstance(x, CSBase) and not zero_center:
         if isinstance(x, CSCBase):
             x = x.tocsr()
-        mean, var = mean_var(x[mask_obs, :], axis=0, correction=1)
+        mean, var = mean_var(x[mask_obs, :], axis=0, correction=ddof)
         std = np.sqrt(var)
         std[std == 0] = 1
 
@@ -266,6 +279,7 @@ def scale_array_masked[A: _Array](
             zero_center=zero_center,
             max_value=max_value,
             return_mean_std=True,
+            ddof=ddof,
         )
 
     if return_mean_std:
@@ -303,6 +317,7 @@ def scale_anndata(
     layer: str | None = None,
     obsm: str | None = None,
     mask_obs: NDArray[np.bool] | str | None = None,
+    ddof: int = 1,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
@@ -322,6 +337,7 @@ def scale_anndata(
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
         mask_obs=mask_obs,
+        ddof=ddof,
     )
     _set_obs_rep(adata, x, layer=layer, obsm=obsm)
     return adata if copy else None
