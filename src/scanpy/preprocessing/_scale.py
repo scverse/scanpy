@@ -190,8 +190,14 @@ def scale_array[A: _Array](
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
-
-    if isinstance(x, HasArrayNamespace):
+    if isinstance(x, np.ndarray | CSBase | DaskArray):
+        if np.issubdtype(x.dtype, np.integer):
+            logg.info(
+                "... as scaling leads to float results, integer "
+                "input is cast to float, returning copy."
+            )
+            x = x.astype(np.float64)
+    else:
         xp = get_namespace(x)
         if xp.isdtype(x.dtype, "integral"):
             logg.info(
@@ -199,13 +205,6 @@ def scale_array[A: _Array](
                 "input is cast to float, returning copy."
             )
             x = xp.astype(x, xp.float64)
-
-    elif np.issubdtype(x.dtype, np.integer):
-        logg.info(
-            "... as scaling leads to float results, integer "
-            "input is cast to float, returning copy."
-        )
-        x = x.astype(np.float64)
 
     mask_obs = (
         # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
@@ -225,14 +224,7 @@ def scale_array[A: _Array](
 
     mean, var = mean_var(x, axis=0, correction=1)
 
-    if isinstance(x, HasArrayNamespace):
-        xp = get_namespace(x)
-        std = xp.sqrt(var)
-        std = xp.where(std == 0, xp.ones_like(std), std)
-
-        if zero_center:
-            x = x - mean
-    else:
+    if isinstance(x, np.ndarray | CSBase | DaskArray):
         std = np.sqrt(var)
         std[std == 0] = 1
         if zero_center:
@@ -243,6 +235,13 @@ def scale_array[A: _Array](
                 warn(msg, UserWarning)
             x -= mean
             x = dematrix(x)
+    else:
+        xp = get_namespace(x)
+        std = xp.sqrt(var)
+        std = xp.where(std == 0, xp.ones_like(std), std)
+
+        if zero_center:
+            x = x - mean
 
     x = axis_mul_or_truediv(
         x,

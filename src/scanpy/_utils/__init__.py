@@ -34,7 +34,15 @@ from fast_array_utils.types import HasArrayNamespace
 from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, SpBase, warn
+from .._compat import (
+    CSBase,
+    DaskArray,
+    SpBase,
+    _CSArray,
+    get_namespace,
+    pkg_version,
+    warn,
+)
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -646,7 +654,6 @@ def _(
     allow_divide_by_zero: bool = True,
     out: ArrayLike | None = None,
 ) -> Any:
-    from .._compat import get_namespace
 
     _check_op(op)
     scaling_array = _broadcast_axis(scaling_array, axis)
@@ -785,7 +792,6 @@ def _(x: np.ndarray, /, axis: Literal[0, 1]) -> np.ndarray:
 
 @axis_nnz.register(HasArrayNamespace)
 def _(x: HasArrayNamespace, /, axis: Literal[0, 1]) -> Any:
-    from .._compat import get_namespace
 
     xp = get_namespace(x)
     return xp.count_nonzero(x, axis=axis)
@@ -826,7 +832,6 @@ def check_nonnegative_integers(x: _SupportedArray, /) -> bool | DaskArray:
 
 @check_nonnegative_integers.register(HasArrayNamespace)
 def _check_nonnegative_integers_array_api(x: HasArrayNamespace, /) -> bool:
-    from .._compat import get_namespace
 
     xp = get_namespace(x)
     if bool(xp.any(x < 0)):

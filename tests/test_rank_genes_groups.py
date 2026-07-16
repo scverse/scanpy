@@ -134,13 +134,6 @@ def test_results_layers(
     array_type,
     method: Literal["t-test", "wilcoxon"],
 ) -> None:
-    adata = get_example_data(array_type, rng=_LegacyRng(1234))
-    adata.layers["to_test"] = adata.X.copy()
-    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
-    mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
-    x[mask] = 0
-    adata.X = array_type(x)
-    scores = get_true_scores(method)["scores"]
 
     if array_type is helpers.as_dense_jax_array:
         request.applymarker(
@@ -148,6 +141,13 @@ def test_results_layers(
                 reason="test mutates .X in-place; jax arrays are immutable"
             )
         )
+    adata = get_example_data(array_type, rng=_LegacyRng(1234))
+    adata.layers["to_test"] = adata.X.copy()
+    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
+    mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
+    x[mask] = 0
+    adata.X = array_type(x)
+    scores = get_true_scores(method)["scores"]
 
     with subtests.test("layer"):
         rank_genes_groups(
