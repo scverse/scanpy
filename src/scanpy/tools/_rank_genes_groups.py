@@ -317,6 +317,8 @@ class _RankGenes:
         self.pts_rest = None
 
         self.stats = None
+        # scanpy-formatted uns record-arrays produced directly by illico (fast path)
+        self.uns_records = None
 
         # for logreg only
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
@@ -617,25 +619,48 @@ class _RankGenes:
                 break
 
     def illico(
-        self, *, tie_correct: bool, corr_method: _CorrMethod
-    ) -> Generator[_TestResult, None, None]:
+        self,
+        *,
+        tie_correct: bool,
+        corr_method: _CorrMethod,
+        n_genes_user: int | None,
+        mean_in_log_space: bool,
+        rankby_abs: bool,
+    ) -> Generator[_TestResult, None, None] | dict[str, NDArray]:
         from illico import asymptotic_wilcoxon
 
+        adata = AnnData(
+            X=self.X,
+            var=pd.DataFrame(index=self.var_names),
+            obs=pd.DataFrame(
+                index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                data={"group": self.group_col},
+            ),
+        )
+        reference = (
+            self.groups_order[self.ireference] if self.ireference is not None else None
+        )
+        # illico can emit scanpy-formatted record arrays directly, skipping the
+        # per-group `.loc` reshuffle and the wide-DataFrame rebuild. It can't
+        # reproduce abs-value ranking or a non-natural log base, so fall back to
+        # the streamed iterator in those cases. `exp_post_agg` mirrors
+        # `mean_in_log_space` so illico's log-fold-changes match scanpy's.
+        native = not rankby_abs and self.expm1_func is np.expm1
+        scanpy_kwargs = (
+            dict(
+                return_as_scanpy=True,
+                n_genes=n_genes_user,
+                corr_method=corr_method,
+                exp_post_agg=mean_in_log_space,
+            )
+            if native
+            else dict(return_as_scanpy=False)
+        )
         with _numba_thread_limit(settings.n_jobs) as n_threads:
-            illico_df = asymptotic_wilcoxon(
-                AnnData(
-                    X=self.X,
-                    var=pd.DataFrame(index=self.var_names),
-                    obs=pd.DataFrame(
-                        index=pd.RangeIndex(self.X.shape[0]).astype("str"),
-                        data={"group": self.group_col},
-                    ),
-                ),
-                reference=self.groups_order[self.ireference]
-                if self.ireference is not None
-                else None,
+            result = asymptotic_wilcoxon(
+                adata,
+                reference=reference,
                 group_keys="group",
-                return_as_scanpy=False,
                 is_log1p=True,
                 tie_correct=tie_correct,
                 use_continuity=False,
@@ -643,9 +668,15 @@ class _RankGenes:
                 use_rust=False,
                 n_threads=n_threads,
                 groups=self.groups_order,
+                **scanpy_kwargs,
             )
+        if native:
+            return {
+                field: result[field]
+                for field in ("names", "scores", "pvals", "pvals_adj", "logfoldchanges")
+            }
         return _illico_results_to_iter(
-            illico_df,
+            result,
             self.groups_order,
             self.ireference,
             # p-values are altered by this correction method
@@ -663,28 +694,40 @@ class _RankGenes:
         mean_in_log_space: bool,
         **kwds,
     ) -> None:
+        generate_test_results = None
         if method in {"t-test", "t-test_overestim_var"}:
             self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
             generate_test_results = self.t_test(method)
         elif "wilcoxon" in method:
-            generate_test_results = (
-                self.illico(tie_correct=tie_correct, corr_method=corr_method)
+            result = (
+                self.illico(
+                    tie_correct=tie_correct,
+                    corr_method=corr_method,
+                    n_genes_user=n_genes_user,
+                    mean_in_log_space=mean_in_log_space,
+                    rankby_abs=rankby_abs,
+                )
                 if "illico" in method
                 else self.wilcoxon(tie_correct=tie_correct)
             )
-            # If we're not exponentiating after the mean aggregation, then do it now.
-            self._basic_stats(exponentiate_values=not mean_in_log_space)
+            if isinstance(result, dict):
+                self.uns_records = result
+            else:
+                generate_test_results = result
+            if self.uns_records is None or self.comp_pts:
+                self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
-        self.stats = _build_stats_dataframe(
-            self,
-            generate_test_results,
-            corr_method=corr_method,
-            n_genes_user=n_genes_user,
-            rankby_abs=rankby_abs,
-            mean_in_log_space=mean_in_log_space,
-        )
+        if self.uns_records is None:
+            self.stats = _build_stats_dataframe(
+                self,
+                generate_test_results,
+                corr_method=corr_method,
+                n_genes_user=n_genes_user,
+                rankby_abs=rankby_abs,
+                mean_in_log_space=mean_in_log_space,
+            )
 
 
 def _build_stats_dataframe(
@@ -1009,20 +1052,23 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             test_obj.pts_rest.T, index=test_obj.var_names, columns=groups_names
         )
 
-    test_obj.stats.columns = test_obj.stats.columns.swaplevel()
+    if test_obj.uns_records is not None:
+        adata.uns[key_added].update(test_obj.uns_records)
+    else:
+        test_obj.stats.columns = test_obj.stats.columns.swaplevel()
 
-    dtypes = {
-        "names": "O",
-        "scores": "float32",
-        "logfoldchanges": "float32",
-        "pvals": "float64",
-        "pvals_adj": "float64",
-    }
+        dtypes = {
+            "names": "O",
+            "scores": "float32",
+            "logfoldchanges": "float32",
+            "pvals": "float64",
+            "pvals_adj": "float64",
+        }
 
-    for col in test_obj.stats.columns.levels[0]:
-        adata.uns[key_added][col] = test_obj.stats[col].to_records(
-            index=False, column_dtypes=dtypes[col]
-        )
+        for col in test_obj.stats.columns.levels[0]:
+            adata.uns[key_added][col] = test_obj.stats[col].to_records(
+                index=False, column_dtypes=dtypes[col]
+            )
 
     logg.info(
         "    finished",
