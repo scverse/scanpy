@@ -239,7 +239,7 @@ def _vars_rest(
                 n_r, m2_r = stats_after_g[0], stats_after_g[2]
             denom = n_r - 1.0 if n_r >= 2.0 else 1.0
             v = m2_r / denom
-            vars_rest[g, j] = v if v > 0.0 else 0.0
+            vars_rest[g, j] = v
     return vars_rest
 
 
