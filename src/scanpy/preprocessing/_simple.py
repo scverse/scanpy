@@ -24,7 +24,7 @@ from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray
+from .._compat import CSBase, CSRBase, DaskArray, get_namespace
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (
@@ -350,18 +350,19 @@ def log1p(
     Returns or updates `data`, depending on `copy`.
 
     """
-    from .._compat import get_namespace, is_array_api
-
     check_array_function_arguments(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
-    if is_array_api(data):
-        xp = get_namespace(data)
-        result = xp.log1p(data)
-        if base is not None:
-            result = result / float(np.log(base))
-        return result
     return log1p_array(data, copy=copy, base=base)
+
+
+@log1p.register(HasArrayNamespace)
+def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
+    xp = get_namespace(x)
+    result = xp.log1p(x)
+    if base is not None:
+        result = result / float(np.log(base))
+    return result
 
 
 @log1p.register(CSBase)

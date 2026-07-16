@@ -15,18 +15,15 @@ from ..get import _get_obs_rep, _set_obs_rep
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from fast_array_utils.types import HasArrayNamespace
 
 
-def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+def _compute_nnz_median(
+    counts: np.ndarray | DaskArray | HasArrayNamespace,
+) -> np.floating:
     """Given a 1D array of counts, compute the median of the non-zero counts."""
-    from .._compat import is_array_api
-
     if isinstance(counts, DaskArray):
         counts = counts.compute()
-
-    if is_array_api(counts):
-        # there is no xp.median? ### double check
-        counts = np.asarray(counts)
 
     counts_greater_than_zero = counts[counts > 0]
     median = np.median(counts_greater_than_zero)
