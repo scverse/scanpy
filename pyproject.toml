@@ -121,11 +121,11 @@ test = [
     { include-group = "test-min" },
 ]
 docs = [
-    "ipython>=8.27",  # for nbsphinx code highlighting
+    "ipython>=8.27",                        # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",     # type aliases
+    "numpy>=2.4",                           # type aliases
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting]",
@@ -157,8 +157,8 @@ test-min = [
 [tool.hatch]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
-build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 metadata.allow-direct-references = true
+build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
 src = [ "src" ]
@@ -217,7 +217,7 @@ lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
 lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
-lint.flake8-type-checking.exempt-modules = [  ]
+lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
@@ -324,7 +324,7 @@ filename = "docs/release-notes/{version}.md"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
 issue_format = "{{pr}}`{issue}`"
 single_file = false
-fragment.breaking.name = "Breaking changes"                             # add `!` to commit type (e.g. “feature!:”)
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
 fragment.chore.name = "Miscellaneous changes"
 fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
