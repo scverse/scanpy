@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from datetime import datetime
@@ -126,6 +127,7 @@ nb_execution_mode = "cache"
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
 ]
+nb_execution_show_tb = bool(os.environ.get("READTHEDOCS"))
 nb_merge_streams = True
 
 ogp_site_url = "https://scanpy.scverse.org/en/stable/"

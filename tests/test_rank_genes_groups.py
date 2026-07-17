@@ -420,7 +420,7 @@ def test_illico_iter(
 )
 @pytest.mark.parametrize("groups", [["CD14+ Monocyte", "Dendritic"], "all"])
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
-@needs.illico
+@needs.scanpy2
 def test_illico(
     test: Literal["ovo", "ovr"],
     corr_method: Literal["benjamini-hochberg", "bonferroni"],
@@ -519,7 +519,7 @@ def test_illico_deprecation_warning():
         "wilcoxon",
         "t-test",
         "t-test_overestim_var",
-        pytest.param("wilcoxon_illico", marks=needs.illico),
+        pytest.param("wilcoxon_illico", marks=needs.scanpy2),
     ],
 )
 def test_mean_in_log_space(

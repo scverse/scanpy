@@ -20,7 +20,7 @@ from .._utils import (
     raise_not_implemented_error_if_backed_type,
     view_to_actual,
 )
-from ..get import _check_mask, _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -313,7 +313,7 @@ def scale_anndata(
             str_mean_std = ("mean with mask", "std with mask")
         mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     raise_not_implemented_error_if_backed_type(x, "scale")
     x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
         x,
