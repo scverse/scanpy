@@ -420,7 +420,7 @@ def test_illico_iter(
 )
 @pytest.mark.parametrize("groups", [["CD14+ Monocyte", "Dendritic"], "all"])
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
-@needs.illico
+@needs.scanpy2
 def test_illico(
     test: Literal["ovo", "ovr"],
     corr_method: Literal["benjamini-hochberg", "bonferroni"],
