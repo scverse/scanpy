@@ -79,7 +79,7 @@ X_scaled_for_mask_clipped = [
 @pytest.mark.parametrize("container", ["anndata", "array"])
 @pytest.mark.parametrize("dtype", [np.float32, np.int64])
 @pytest.mark.parametrize("zero_center", [True, False], ids=["center", "no_center"])
-@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize("correction", [0, 0.5, 1])
 @pytest.mark.parametrize(
     ("mask_obs", "x", "x_centered", "x_scaled"),
     [
@@ -96,12 +96,21 @@ X_scaled_for_mask_clipped = [
     ],
 )
 def test_scale(
-    *, typ, container, zero_center, dtype, ddof, mask_obs, x, x_centered, x_scaled
+    *,
+    typ,
+    container,
+    zero_center,
+    dtype,
+    correction,
+    mask_obs,
+    x,
+    x_centered,
+    x_scaled,
 ):
     values = np.asarray(x, dtype=np.float64)
     selected = slice(None) if mask_obs is None else mask_obs
     mean = values[selected].mean(axis=0)
-    std = values[selected].std(axis=0, ddof=ddof)
+    std = values[selected].std(axis=0, ddof=correction)
     std[std == 0] = 1
 
     expected = values.copy()
@@ -110,7 +119,7 @@ def test_scale(
     else:
         expected[selected] /= std
 
-    if ddof == 1:
+    if correction == 1:
         expected_original = x_centered if zero_center else x_scaled
         assert np.allclose(expected, expected_original)
 
@@ -129,7 +138,7 @@ def test_scale(
                 zero_center=zero_center,
                 copy=container == "array",
                 mask_obs=mask_obs,
-                ddof=ddof,
+                correction=correction,
             )
     received = sparse.csr_matrix(  # noqa: TID251
         x.X if scaled is None else scaled
