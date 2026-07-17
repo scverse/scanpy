@@ -39,12 +39,6 @@ class ToolsSuite:  # noqa: D101
     def peakmem_leiden(self) -> None:
         sc.tl.leiden(self.adata, flavor="igraph")
 
-    def time_rank_genes_groups(self) -> None:
-        sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
-
-    def peakmem_rank_genes_groups(self) -> None:
-        sc.tl.rank_genes_groups(self.adata, "bulk_labels", method="wilcoxon")
-
     def time_combat(self) -> None:
         sc.pp.combat(self.adata, key="bulk_labels")
 
