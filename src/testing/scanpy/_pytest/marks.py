@@ -103,7 +103,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
         if self._name_ == "scanpy2":
             if not (missing := _missing_scanpy2_deps()):
                 return None
-            return f"scanpy 2 deps missing: {', '.join(m.name for m in missing)}"
+            return f"scanpy 2 deps missing: {', '.join(map(str, missing))}"
 
         if (
             canonicalize_name(self.req.name) in dist_names()
