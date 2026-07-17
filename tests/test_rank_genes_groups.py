@@ -519,7 +519,7 @@ def test_illico_deprecation_warning():
         "wilcoxon",
         "t-test",
         "t-test_overestim_var",
-        pytest.param("wilcoxon_illico", marks=needs.illico),
+        pytest.param("wilcoxon_illico", marks=needs.scanpy2),
     ],
 )
 def test_mean_in_log_space(
