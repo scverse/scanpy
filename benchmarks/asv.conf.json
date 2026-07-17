@@ -87,6 +87,7 @@
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
         "scikit-misc": [""],
         "dask": [""],
+        "pip+illico": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included
