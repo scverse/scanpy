@@ -351,7 +351,7 @@ def aggregate(
     if settings.preset is Preset.ScanpyV2Preview and any(
         v is not None for v in (axis, layer, obsm, varm)
     ):
-        msg = "Use `acc` instead of `layer`, `obsm`, and `varm`."
+        msg = "`acc` will replace `layer`, `obsm`, and `varm` arguments in scanpy 2."
         if axis is not None:
             msg += " `axis` is no longer necessary as it is inferred from `by`."
         warn(msg, FutureWarning)
