@@ -205,6 +205,14 @@ def heatmap(
         adata = sc.datasets.pbmc68k_reduced()
         markers = ["C1QA", "PSAP", "CD79A", "CD79B", "CST3", "LYZ"]
         sc.pl.heatmap(
+            adata[:, markers], A.X, [A.obs["n_counts"]]
+        ).opts(hv.opts.HeatMap(xticks=0, aspect=2))
+
+    With dendrogram:
+
+    ..  holoviews::
+
+        sc.pl.heatmap(
             adata[:, markers], A.X, [A.obs["n_counts"]], add_dendrogram="obs"
         ).opts(hv.opts.HeatMap(xticks=0, aspect=2))
 
@@ -217,6 +225,8 @@ def heatmap(
     if transpose:
         kdims.reverse()
     hm = hv.HeatMap(adata, kdims, [base[:, :], *vdims])
+    shape = hm.gridded.interface.shape(hm.gridded, gridded=True)
+    hm = hm.opts(_supported_opts(hv.HeatMap, show_values=sum(shape) < 80))
     if isinstance(base, GraphAcc):
         hm = hm.opts(aspect="square")
     if add_dendrogram:
