@@ -13,6 +13,7 @@ from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._settings import Preset, settings
 from .._utils import _resolve_axis, get_literal_vals
 from .._utils._doctests import doctest_needs
 from ._kernels import (
@@ -346,6 +347,14 @@ def aggregate(
             f"was passed {type(adata)}."
         )
         raise NotImplementedError(msg)
+
+    if settings.preset is Preset.ScanpyV2Preview and any(
+        v is not None for v in (axis, layer, obsm, varm)
+    ):
+        msg = "Use `acc` instead of `layer`, `obsm`, and `varm`."
+        if axis is not None:
+            msg += " `axis` is no longer necessary as it is inferred from `by`."
+        warn(msg, FutureWarning)
 
     by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
     del axis

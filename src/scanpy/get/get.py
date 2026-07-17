@@ -462,7 +462,7 @@ def _get_arr(  # noqa: PLR0911, PLR0912
     **choices: Unpack[_Rep],
 ) -> Any:
     """Get a 2D array aligned with `dim`, via an `anndata.acc` accessor or old-style choices."""
-    if _collection_of(acc, (LayerAcc, MultiAcc, str)):
+    if _collection_of(acc, (GraphAcc, LayerAcc, MultiAcc, str)):
         return [_get_arr(adata, a, dim=dim, **choices) for a in acc]
 
     if acc is not None:
