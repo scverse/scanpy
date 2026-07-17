@@ -51,10 +51,10 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.13.2",
+    "anndata>=0.11.2",
     "array-api-compat",
     "certifi",
-    "fast-array-utils[accel,sparse] @ git+https://github.com/scverse/fast-array-utils.git@main",
+    "fast-array-utils[accel,sparse]>=1.5",
     "h5py>=3.11",
     "joblib",
     # skip 3.11.0 series for now: https://github.com/matplotlib/matplotlib/issues/31575
