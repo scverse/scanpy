@@ -17,6 +17,7 @@ from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._settings import Default, Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
+    obs_acc,
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
@@ -180,7 +181,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     )
     if batch_key is not None:
         aggregated_mean_var = aggregate(
-            adata_agg, by="__hvg_v3_batch_info__", func=["mean", "var"]
+            adata_agg, by=obs_acc("__hvg_v3_batch_info__"), func=["mean", "var"]
         )
         aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
             materialize_as_ndarray(

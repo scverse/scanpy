@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
     from pandas._typing import Dtype as PdDtype
@@ -75,6 +76,7 @@ __all__ = [
     "indent",
     "is_backed_type",
     "is_backed_type",
+    "obs_acc",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -994,6 +996,16 @@ def _resolve_axis(
         return (1, "var")
     msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
     raise ValueError(msg)
+
+
+def obs_acc(obs_col: str) -> str | AdRef:
+    from .._settings import Preset, settings
+
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        return A.obs[obs_col]
+    return obs_col
 
 
 def is_backed_type(x: object, /) -> bool:

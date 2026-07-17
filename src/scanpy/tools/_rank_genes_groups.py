@@ -20,6 +20,7 @@ from .._utils import (
     _numba_thread_limit,
     check_nonnegative_integers,
     get_literal_vals,
+    obs_acc,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask, _get_arr, aggregate
@@ -364,7 +365,7 @@ class _RankGenes:
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
-        out = aggregate(agg_adata, by="_g", func=funcs, dof=1)
+        out = aggregate(agg_adata, by=obs_acc("_g"), func=funcs, dof=1)
         idx = out.obs_names.astype(int).to_numpy()
         mean[idx] = np.asarray(out.layers["mean"])
         if need_var:
