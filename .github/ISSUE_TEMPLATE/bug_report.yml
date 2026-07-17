@@ -1,6 +1,6 @@
 name: Bug report
 description: Report something that is broken or incorrect
-type: Bug
+labels: bug
 body:
   - type: markdown
     attributes:

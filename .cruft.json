@@ -1,7 +1,7 @@
 {
-  "template": "https://github.com/scverse/cookiecutter-scverse",
-  "commit": "6ff5b92b5d44ea6d8a88e47538475718d467db95",
-  "checkout": "v0.7.0",
+  "template": "/tmp/tmpvf8ta0q7",
+  "commit": "6518dfa1abde7379ea7255daf0ce09c23f2b4c94",
+  "checkout": "v0.8.0",
   "context": {
     "cookiecutter": {
       "project_name": "scanpy",
@@ -13,6 +13,7 @@
       "github_repo": "scanpy",
       "license": "BSD 3-Clause License",
       "ide_integration": true,
+      "issue_categorization": "",
       "_copy_without_render": [
         ".github/workflows/build.yaml",
         ".github/workflows/test.yaml",
@@ -35,9 +36,11 @@
         "lstrip_blocks": true,
         "trim_blocks": true
       },
-      "_template": "https://github.com/scverse/cookiecutter-scverse",
-      "_commit": "6ff5b92b5d44ea6d8a88e47538475718d467db95"
-    }
+      "_template": "/tmp/tmpvf8ta0q7",
+      "_commit": "4d6aa34fd5be7523ca3bd49fbd81a882dde01d1f"
+    },
+    "_commit": "6518dfa1abde7379ea7255daf0ce09c23f2b4c94",
+    "_template": "https://github.com/scverse/cookiecutter-scverse"
   },
   "directory": null
 }
