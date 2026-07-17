@@ -99,7 +99,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "anndata>=0.13rc3.2", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13rc3", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
