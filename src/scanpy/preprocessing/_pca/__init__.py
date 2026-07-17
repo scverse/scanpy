@@ -159,8 +159,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.
     {mask_var}
-    layer
-        Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
     key_added
