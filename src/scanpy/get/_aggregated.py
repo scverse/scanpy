@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, TypedDict, get_args
 
 import numba
@@ -11,9 +12,10 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
-from scanpy._compat import CSBase, CSRBase, DaskArray, warn
-
+from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._settings import Preset, settings
 from .._utils import _resolve_axis, get_literal_vals
+from .._utils._doctests import doctest_needs
 from ._kernels import (
     agg_sum_csc,
     agg_sum_csr,
@@ -21,12 +23,21 @@ from ._kernels import (
     mean_var_csr,
     mean_var_dense,
 )
-from .get import _check_mask
+from .get import _check_mask, _get_arr, _get_vec, _refs_dim, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
 
     from numpy.typing import NDArray
+
+if TYPE_CHECKING or find_spec("anndata.acc"):
+    from anndata.acc import A, AdRef, GraphAcc, Idx2D, LayerAcc, MultiAcc
+else:
+    AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
+    type Idx2D = object
+    LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
+    MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
 type Array = np.ndarray | CSBase | DaskArray
 type ConstantDtypeAgg = Literal["count_nonzero", "sum", "median"]
@@ -199,27 +210,60 @@ def _power(x: Array, power: float) -> Array:
     return x**power if isinstance(x, np.ndarray) else x.power(power)
 
 
-def aggregate(  # noqa: PLR0912
+def _normalize_by[I: Idx2D | int](
+    by: AdRef[I, AnnData] | Collection[AdRef[I, AnnData]] | str | Collection[str],
+    axis: Literal["obs", 0, "var", 1] | None,
+    *,
+    obsm: str | None,
+    varm: str | None,
+) -> tuple[list[AdRef[I, AnnData]] | list[str], Literal["obs", "var"]]:
+    """Normalize `by` to a homogeneous list, and detect which dim they refer to."""
+    by_list = _resolve_ref([by] if isinstance(by, str | AdRef) else by)
+    is_refs = isinstance(by_list[0], AdRef)
+
+    if is_refs and axis is not None:
+        msg = "`axis` cannot be used when `by` is given as AdRef(s); the axis is inferred from `by`"
+        raise TypeError(msg)
+
+    dim = None
+    if not is_refs:
+        if axis is not None:
+            dim = _resolve_axis(axis)[1]
+        elif varm:
+            dim = "var"
+        elif obsm:
+            dim = "obs"
+    # derive (or validate, if already hinted at above) the single dim `by_list` refers to
+    dim = _refs_dim(by_list, dim=dim)
+    return by_list, dim
+
+
+@doctest_needs("anndata_acc")
+def aggregate(
     adata: AnnData,
-    by: str | Collection[str],
+    by: (
+        str
+        | Collection[str | AdRef[Idx2D | int, AnnData]]
+        | AdRef[Idx2D | int, AnnData]
+    ),
     func: AggType | Iterable[AggType],
     *,
-    axis: Literal["obs", 0, "var", 1] | None = None,
-    mask: NDArray[np.bool] | str | None = None,
+    acc: LayerAcc | MultiAcc | GraphAcc | str | None = None,
+    mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
+    # old API
+    axis: Literal["obs", 0, "var", 1] | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     varm: str | None = None,
 ) -> AnnData:
-    """Aggregate data matrix based on some categorical grouping.
+    r"""Aggregate data matrix based on some categorical grouping.
 
     This function is useful for pseudobulking as well as plotting.
 
     Aggregation to perform is specified by `func`, which can be a single metric or a
     list of metrics. Each metric is computed over the group and results in a new layer
     in the output `AnnData` object.
-
-    If none of `layer`, `obsm`, or `varm` are passed in, `X` will be used for aggregation data.
 
     .. array-support:: get.aggregate
 
@@ -228,21 +272,26 @@ def aggregate(  # noqa: PLR0912
     adata
         :class:`~anndata.AnnData` to be aggregated.
     by
-        Key of the column to be grouped-by.
+        References to the vectors to be grouped-by\ [#ref]_.
     func
         How to aggregate.
-    axis
-        Axis on which to find group by column.
     mask
-        Boolean mask (or key to column containing mask) to apply along the axis.
+        Boolean mask (or reference to a mask vector) to apply along the axis\ [#ref]_.
     dof
         Degrees of freedom for variance. Defaults to 1.
+    acc
+        If not None, accessor for aggregation data.
+        Replaces `layer`, `obsm`, and `varm`.
+        Can also be a :class:`~anndata.acc.GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`)
+        to aggregate a graph, reducing it along the grouped axis only.
+    axis
+        Axis on which to find group by column.
+        (inferred from `by` if it is an :class:`~anndata.acc.AdRef`)
     layer
-        If not None, key for aggregation data.
     obsm
-        If not None, key for aggregation data.
     varm
         If not None, key for aggregation data.
+        Use `acc` instead.
 
     Returns
     -------
@@ -278,6 +327,19 @@ def aggregate(  # noqa: PLR0912
 
     Note that this filters out any combination of groups that wasn't present in the original data.
 
+    The same computation using the new (:mod:`anndata.acc`-based) API:
+
+    >>> from anndata.acc import A
+    >>> sc.get.aggregate(pbmc, by=A.obs["louvain"], func=["mean", "count_nonzero"])
+    AnnData object with n_obs × n_vars = 8 × 13714
+        obs: 'louvain', 'n_obs_aggregated'
+        var: 'n_cells'
+        layers: 'mean', 'count_nonzero'
+
+    .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
+       :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
+       otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
+
     """
     if not isinstance(adata, AnnData):
         msg = (
@@ -285,67 +347,61 @@ def aggregate(  # noqa: PLR0912
             f"was passed {type(adata)}."
         )
         raise NotImplementedError(msg)
-    if axis is None:
-        axis = 1 if varm else 0
-    axis, axis_name = _resolve_axis(axis)
-    mask = _check_mask(adata, mask, axis_name)
-    data = adata.X
-    if sum(p is not None for p in [varm, obsm, layer]) > 1:
-        msg = "Please only provide one (or none) of varm, obsm, or layer"
-        raise TypeError(msg)
 
-    if varm is not None:
-        if axis != 1:
-            msg = "varm can only be used when axis is 1"
-            raise ValueError(msg)
-        data = adata.varm[varm]
-    elif obsm is not None:
-        if axis != 0:
-            msg = "obsm can only be used when axis is 0"
-            raise ValueError(msg)
-        data = adata.obsm[obsm]
-    elif layer is not None:
-        data = adata.layers[layer]
-        if axis == 1:
-            data = data.T
-    elif axis == 1:
-        # i.e., all of `varm`, `obsm`, `layers` are None so we use `X` which must be transposed
-        data = data.T
+    if settings.preset is Preset.ScanpyV2Preview and any(
+        v is not None for v in (axis, layer, obsm, varm)
+    ):
+        msg = "`acc` will replace `layer`, `obsm`, and `varm` arguments in scanpy 2."
+        if axis is not None:
+            msg += " `axis` is no longer necessary as it is inferred from `by`."
+        warn(msg, FutureWarning)
 
-    dim_df = getattr(adata, axis_name)
-    categorical, new_label_df = _combine_categories(dim_df, by)
+    by, dim = _normalize_by(by, axis, obsm=obsm, varm=varm)
+    del axis
+
+    if isinstance(by[0], AdRef) and acc is None:
+        acc = A.X
+    data = _get_arr(adata, acc, dim=dim, layer=layer, obsm=obsm, varm=varm)
+
+    values = _get_vec(adata, by, dim=dim)
+    dim_df = pd.DataFrame({
+        (
+            ref
+            if isinstance(ref, str)
+            else ref.idx
+            if isinstance(ref.idx, str)
+            else str(ref)
+        ): value
+        for ref, value in zip(by, values, strict=True)
+    })
+
+    mask = _check_mask(adata, mask, dim)
+    categorical, new_label_df = _combine_categories(dim_df)
 
     # Add number of obs aggregated into each group (respecting the mask)
     new_label_df["n_obs_aggregated"] = pd.Series(
         _group_counts(categorical, mask), index=categorical.categories
     ).reindex(new_label_df.index)
     # Actual computation
-    layers = _aggregate(
-        data,
-        by=categorical,
-        func=func,
-        mask=mask,
-        dof=dof,
-    )
+    layers = _aggregate(data, by=categorical, func=func, mask=mask, dof=dof)
 
     # Define new var dataframe
-    if obsm or varm:
-        if isinstance(data, pd.DataFrame):
-            # Check if there could be labels
-            var = pd.DataFrame(index=data.columns)
-        else:
-            # Create them otherwise
-            var = pd.DataFrame(index=pd.RangeIndex(data.shape[1]).astype(str))
-    else:
-        var = getattr(adata, "var" if axis == 0 else "obs")
+    if obsm or varm or isinstance(acc, MultiAcc):
+        var = pd.DataFrame(  # Check if there could be labels, create them otherwise
+            index=data.columns
+            if isinstance(data, pd.DataFrame)
+            else pd.RangeIndex(data.shape[1]).astype(str)
+        )
+    elif isinstance(acc, GraphAcc):
+        # Square graph: the un-grouped axis still indexes the original `dim`
+        var = getattr(adata, dim)
+    else:  # layer
+        var = getattr(adata, "var" if dim == "obs" else "obs")
 
     # It's all coming together
     result = AnnData(layers=layers, obs=new_label_df, var=var)
 
-    if axis == 1:
-        return result.T
-    else:
-        return result
+    return result if dim == "obs" else result.T
 
 
 @singledispatch
@@ -642,42 +698,42 @@ def aggregate_array(
     return result
 
 
-def _combine_categories(
-    label_df: pd.DataFrame, cols: Collection[str] | str
-) -> tuple[pd.Categorical, pd.DataFrame]:
+def _combine_categories(label_df: pd.DataFrame) -> tuple[pd.Categorical, pd.DataFrame]:
     """Return both the result categories and a dataframe labelling each row."""
     from itertools import product
 
-    if isinstance(cols, str):
-        cols = [cols]
-
     df = pd.DataFrame(
-        {c: pd.Categorical(label_df[c]).remove_unused_categories() for c in cols},
+        {
+            c: pd.Categorical(label_df[c]).remove_unused_categories()
+            for c in label_df.columns
+        },
     )
-    n_categories = [len(df[c].cat.categories) for c in cols]
+    n_categories = [len(df[c].cat.categories) for c in label_df.columns]
 
     # It's like np.concatenate([x for x in product(*[range(n) for n in n_categories])])
     code_combinations = np.indices(n_categories).reshape(len(n_categories), -1)
     result_categories = pd.Index([
-        "_".join(map(str, x)) for x in product(*[df[c].cat.categories for c in cols])
+        "_".join(map(str, x))
+        for x in product(*[df[c].cat.categories for c in label_df.columns])
     ])
 
     # Dataframe with unique combination of categories for each row
     new_label_df = pd.DataFrame(
         {
             c: pd.Categorical.from_codes(code_combinations[i], df[c].cat.categories)
-            for i, c in enumerate(cols)
+            for i, c in enumerate(label_df.columns)
         },
         index=result_categories,
     )
 
     # Calculating result codes
-    factors = np.ones(len(cols) + 1, dtype=np.int32)  # First factor needs to be 1
+    # First factor needs to be 1
+    factors = np.ones(len(label_df.columns) + 1, dtype=np.int32)
     np.cumprod(n_categories[::-1], out=factors[1:])
     factors = factors[:-1][::-1]
 
-    code_array = np.zeros((len(cols), df.shape[0]), dtype=np.int32)
-    for i, c in enumerate(cols):
+    code_array = np.zeros((len(label_df.columns), df.shape[0]), dtype=np.int32)
+    for i, c in enumerate(label_df.columns):
         code_array[i] = df[c].cat.codes
     code_array *= factors[:, None]
 

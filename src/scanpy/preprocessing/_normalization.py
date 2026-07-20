@@ -13,7 +13,7 @@ from scipy import sparse
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -258,7 +258,7 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:
