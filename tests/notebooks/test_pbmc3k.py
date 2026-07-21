@@ -11,13 +11,12 @@
 # from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 from __future__ import annotations
 
-import warnings
 from functools import partial
 from pathlib import Path
 
 import numpy as np
 import pytest
-from sklearn.exceptions import ConvergenceWarning
+import threadpoolctl
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -95,7 +94,9 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     # PCA
 
-    sc.pp.pca(adata, svd_solver="arpack")
+    # ARPACK's SVD solver is sensitive to BLAS thread count
+    with threadpoolctl.threadpool_limits(limits=1):
+        sc.pp.pca(adata, svd_solver="arpack")
     with subtests.test("pca"):
         sc.pl.pca(adata, color="CST3", show=False)
         save_and_compare_images("pca")
@@ -154,10 +155,7 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
         sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
         save_and_compare_images("rank_genes_groups_1")
 
-    with warnings.catch_warnings():
-        # This seems to only happen with older versions of scipy for some reason
-        warnings.filterwarnings("always", category=ConvergenceWarning)
-        sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
+    sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon")
     with subtests.test("rank_genes_groups_2"):
         sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
         save_and_compare_images("rank_genes_groups_2")
