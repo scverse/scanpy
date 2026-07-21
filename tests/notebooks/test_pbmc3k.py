@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import threadpoolctl
 from sklearn.exceptions import ConvergenceWarning
 
 import scanpy as sc
@@ -157,7 +158,12 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
     with warnings.catch_warnings():
         # This seems to only happen with older versions of scipy for some reason
         warnings.filterwarnings("always", category=ConvergenceWarning)
-        sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
+        # The logreg coefficients (and thus the gene ranking) are sensitive to
+        # BLAS thread count: on the same data and machine, running single- vs
+        # multi-threaded changes which genes end up at the top. Pin to a single
+        # thread so the result doesn't depend on the runner's core count.
+        with threadpoolctl.threadpool_limits(limits=1):
+            sc.tl.rank_genes_groups(adata, "leiden", method="logreg")
     with subtests.test("rank_genes_groups_2"):
         sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
         save_and_compare_images("rank_genes_groups_2")
