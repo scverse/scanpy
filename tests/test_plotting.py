@@ -18,6 +18,7 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from testing.scanpy._helpers import image_root
 from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
@@ -37,11 +38,19 @@ if TYPE_CHECKING:
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = image_root(HERE / "_images")
+
+# The matplotlib>=3.11 reference images were captured with pandas 3,
+# so they already reflect seaborn’s broken pandas-3 violin plot rendering;
+# the matplotlib<3.11 set (rendered before pandas 3 was released) still needs the xfail.
+# See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+SEABORN_PANDAS3_XFAIL = pkg_version("pandas").major >= 3 and pkg_version(
+    "matplotlib"
+) < Version("3.11")
 
 xfail_seaborn_pandas3 = (
     [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
-    if pkg_version("pandas").major >= 3
+    if SEABORN_PANDAS3_XFAIL
     else []
 )
 
@@ -481,8 +490,7 @@ def test_stacked_violin_obj(image_comparer, plt):
 def test_stacked_violin_swap_axes_match(
     request: pytest.FixtureRequest, image_comparer
 ) -> None:
-    if pkg_version("pandas").major >= 3:
-        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
+    if SEABORN_PANDAS3_XFAIL:
         reason = "seaborn violin plot is incompatible with pandas 3"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -595,9 +603,8 @@ def test_violin(
             show=False,
             rotation=90,
         )
-        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
         with context.xfail(
-            pkg_version("pandas").major >= 3,
+            SEABORN_PANDAS3_XFAIL,
             reason="seaborn violin plot is incompatible with pandas 3",
             raises=AssertionError,
         ):
@@ -641,9 +648,8 @@ def test_violin(
             rotation=90,
         )
         assert len(plt.gcf().axes) == 3
-        # Same pandas-3 / seaborn rendering caveat as the multi_panel subtest.
         with context.xfail(
-            pkg_version("pandas").major >= 3,
+            SEABORN_PANDAS3_XFAIL,
             reason="seaborn violin plot is incompatible with pandas 3",
             raises=AssertionError,
         ):
@@ -943,7 +949,8 @@ def test_rank_genes_groups(
 def test_rank_genes_group_axes(image_comparer):
     fn = next(p.values[0] for p in _RANK_GENES_GROUPS_PARAMS if p.id == "basic")  # noqa: PD011
 
-    save_and_compare_images = partial(image_comparer, ROOT, tol=23)
+    # tol bumped for matplotlib>=3.11’s font rendering, see image_root()
+    save_and_compare_images = partial(image_comparer, ROOT, tol=30)
 
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
