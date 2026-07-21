@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.stats import mean
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -312,6 +313,13 @@ class Ingest:
         else:
             self._pca_basis = adata.varm["PCs"]
 
+        x = adata.X
+        if self._pca_use_hvg:
+            x = x[:, adata.var[mask].to_numpy()]
+        self._pca_mean = (
+            np.asarray(mean(x, axis=0)).ravel() if self._pca_centered else None
+        )
+
     def __init__(self, adata: AnnData, neighbors_key: str | None = None):
         # assume rep is X if all initializations fail to identify it
         self._rep = adata.X
@@ -349,12 +357,12 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         x = self._adata_new.X
-        x = x.toarray() if isinstance(x, CSBase) else x.copy()
         if self._pca_use_hvg:
-            x = x[:, self._adata_ref.var["highly_variable"]]
-        if self._pca_centered:
-            x -= x.mean(axis=0)
-        x_pca = np.dot(x, self._pca_basis[:, :n_pcs])
+            x = x[:, self._adata_ref.var["highly_variable"].to_numpy()]
+        basis = self._pca_basis[:, :n_pcs]
+        x_pca = np.asarray(x @ basis)
+        if self._pca_mean is not None:
+            x_pca -= self._pca_mean @ basis
         return x_pca
 
     def _same_rep(self):
