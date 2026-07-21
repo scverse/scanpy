@@ -18,6 +18,7 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from testing.scanpy._helpers import image_root
 from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = image_root(HERE / "_images")
 
 xfail_seaborn_pandas3 = (
     [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
