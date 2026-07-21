@@ -142,7 +142,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
-        layers: None
+        layers: None (.X)
 
     """
     experiment_dir = settings.datasetdir / accession

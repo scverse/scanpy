@@ -15,7 +15,7 @@ from .._docs import doc_rng
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _get_obs_rep
+from ..get import _get_arr
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
@@ -252,7 +252,7 @@ def _check_score_genes_args(
         raise ValueError(msg)
 
     def get_subset(genes: pd.Index[str]):
-        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, use_raw=use_raw, layer=layer)
         if len(genes) == len(var_names):
             return x
         idx = var_names.get_indexer(genes)
