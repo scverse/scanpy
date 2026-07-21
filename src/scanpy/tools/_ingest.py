@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.stats import mean
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -19,6 +20,7 @@ from .._utils import (
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
+from ..get import _check_mask
 from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
@@ -233,8 +235,9 @@ class Ingest:
     _umap: UMAP
     # pca
     _pca_centered: bool
-    _pca_mask: str | None
+    _pca_mask: np.ndarray | None
     _pca_basis: np.ndarray
+    _pca_mean: np.ndarray | None
     # adata
     _adata_ref: AnnData
     _adata_new: AnnData | None
@@ -340,16 +343,21 @@ class Ingest:
 
     def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
-        self._pca_mask = adata.uns["pca"]["params"]["mask_var"]
+        self._pca_mask = _check_mask(
+            adata, adata.uns["pca"]["params"]["mask_var"], "var"
+        )
 
-        if self._pca_mask and self._pca_mask not in adata.var.columns:
-            msg = f"Did not find `adata.var[{self._pca_mask!r}']`."
-            raise ValueError(msg)
-
-        if self._pca_mask:
-            self._pca_basis = adata.varm["PCs"][adata.var[self._pca_mask]]
+        if self._pca_mask is not None:
+            self._pca_basis = adata.varm["PCs"][self._pca_mask]
         else:
             self._pca_basis = adata.varm["PCs"]
+
+        x = adata.X
+        if self._pca_mask is not None:
+            x = x[:, self._pca_mask]
+        self._pca_mean = (
+            np.asarray(mean(x, axis=0)).ravel() if self._pca_centered else None
+        )
 
     def __init__(
         self,
@@ -402,12 +410,12 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         x = self._adata_new.X
-        x = x.toarray() if isinstance(x, CSBase) else x.copy()
-        if self._pca_mask:
-            x = x[:, self._adata_ref.var["highly_variable"]]
-        if self._pca_centered:
-            x -= x.mean(axis=0)
-        x_pca = np.dot(x, self._pca_basis[:, :n_pcs])
+        if self._pca_mask is not None:
+            x = x[:, self._pca_mask]
+        basis = self._pca_basis[:, :n_pcs]
+        x_pca = np.asarray(x @ basis)
+        if self._pca_mean is not None:
+            x_pca -= self._pca_mean @ basis
         return x_pca
 
     def _same_rep(self):
