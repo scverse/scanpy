@@ -9,9 +9,10 @@ import pytest
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
+from testing.scanpy._helpers import image_root
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE.parent / "_images"
+ROOT = image_root(HERE.parent / "_images")
 DATA_DIR = HERE.parent / "_data"
 
 

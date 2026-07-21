@@ -21,11 +21,12 @@ from sklearn.exceptions import ConvergenceWarning
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from testing.scanpy._helpers import image_root
 from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images_pbmc3k"
+ROOT = image_root(HERE / "_images_pbmc3k")
 
 
 @needs.leidenalg

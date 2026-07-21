@@ -56,9 +56,8 @@ dependencies = [
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    "legacy-api-wrap>=1.5",                            # for positional API deprecations
-    # skip 3.11.0 series for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.10,!=3.11.0rc1,!=3.11.0rc2,!=3.11",
+    "legacy-api-wrap>=1.5",                     # for positional API deprecations
+    "matplotlib>=3.10",
     "natsort",
     "networkx>=2.8.8",
     "numba>=0.60",

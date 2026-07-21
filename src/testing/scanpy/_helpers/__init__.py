@@ -21,8 +21,19 @@ from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, MutableSequence
+    from pathlib import Path
 
     from numpy.typing import NDArray
+
+
+def image_root(base: Path) -> Path:
+    """Pick the `base`'s subdirectory of reference images matching the installed matplotlib.
+
+    Matplotlib 3.11 changed font rendering, see
+    <https://github.com/matplotlib/matplotlib/issues/31575>.
+    """
+    mpl_dir = "3.11" if pkg_version("matplotlib") >= Version("3.11") else "3.10"
+    return base / mpl_dir
 
 
 # TODO: Report more context on the fields being compared on error

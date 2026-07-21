@@ -218,16 +218,18 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
     if ax is None:
         ax = plt.subplot()
     for (x, y), m, c, var_name in zip(subsets, marker, colors, var_names, strict=True):
+        # `c` triggers value-mapping (and matplotlib’s single-RGB(A)-sequence
+        # ambiguity warning); `color` is unambiguous for a single flat color.
+        color_kwargs = dict(c=c, cmap=color_map) if use_color_map else dict(color=c)
         ax.scatter(
             x,
             y,
             marker=m,
             edgecolor="face",
             s=rcParams["lines.markersize"],
-            c=c,
             label=var_name,
             rasterized=settings._vector_friendly,
-            **(dict(cmap=color_map) if use_color_map else {}),
+            **color_kwargs,
         )
     ylim = ax.get_ylim()
     for h in highlights_x:

@@ -11,11 +11,12 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from testing.scanpy._helpers import image_root
 from testing.scanpy._helpers.data import pbmc3k_processed, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "_images"
+ROOT = image_root(HERE / "_images")
 
 SKIP_IF_OLD_IGRAPH = pytest.mark.skipif(
     not find_spec("igraph") or pkg_version("igraph") < Version("1"),
