@@ -13,6 +13,7 @@ from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
+from testing.scanpy._helpers import image_root
 from testing.scanpy._helpers.data import pbmc3k_processed
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE.parent / "_images"
+ROOT = image_root(HERE.parent / "_images")
 
 MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 
