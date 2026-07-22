@@ -86,6 +86,12 @@ class Harmony:
             ):
                 msg = f"batch_prune_threshold must be in [0, 1] or None, got {self.batch_prune_threshold}."
                 raise ValueError(msg)
+        elif not np.isfinite(self.ridge_lambda) or self.ridge_lambda <= 0:
+            msg = (
+                "ridge_lambda must be a finite positive number when "
+                f"dynamic_lambda=False, got {self.ridge_lambda}."
+            )
+            raise ValueError(msg)
 
         # Process batch keys
         self.batch_codes, self.n_levels = _get_batch_codes(batch_df, batch_key)

@@ -276,7 +276,11 @@ def test_harmony_multikey_correction_matches_dense_design(
     np.testing.assert_allclose(result, expected, atol=atol, rtol=atol)
 
 
-def test_harmony_multikey_singular_correction_is_finite() -> None:
+@pytest.mark.parametrize("ridge_lambda", [0.0, -0.1, float("inf"), float("nan")])
+@pytest.mark.parametrize("multikey", [False, True])
+def test_harmony1_rejects_bad_ridge_lambda(
+    ridge_lambda: float, *, multikey: bool
+) -> None:
     rng = np.random.default_rng(734)
     batch = np.resize(["a", "b", "c"], 60)
     adata = AnnData(
@@ -287,20 +291,20 @@ def test_harmony_multikey_singular_correction_is_finite() -> None:
         ),
         obsm={"X_pca": rng.normal(size=(60, 6)).astype(np.float32)},
     )
+    key = ["batch", "duplicate_batch"] if multikey else "batch"
 
-    harmony_integrate(
-        adata,
-        ["batch", "duplicate_batch"],
-        flavor="harmony1",
-        ridge_lambda=0.0,
-        n_clusters=3,
-        max_iter_harmony=1,
-        max_iter_clustering=2,
-        block_proportion=1.0,
-        rng=734,
-    )
-
-    assert np.isfinite(adata.obsm["X_pca_harmony"]).all()
+    with pytest.raises(ValueError, match="ridge_lambda must be a finite positive"):
+        harmony_integrate(
+            adata,
+            key,
+            flavor="harmony1",
+            ridge_lambda=ridge_lambda,
+            n_clusters=3,
+            max_iter_harmony=1,
+            max_iter_clustering=2,
+            block_proportion=1.0,
+            rng=734,
+        )
 
 
 @pytest.mark.parametrize(
@@ -488,28 +492,6 @@ def test_compute_lambda_kb_dynamic_false(dtype: type[np.floating]) -> None:
         dynamic_lambda=False,
     )
     np.testing.assert_array_equal(result, np.full_like(e, 1.0))
-
-
-@pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_compute_lambda_kb_fixed_ridge_zero(dtype: type[np.floating]) -> None:
-    """Fixed zero ridge still guards a zero correction denominator."""
-    sentinel = dtype(_SUPPRESS_PENALTY)
-    e = np.array([[5.0, 0.0]], dtype=dtype)
-    o = np.array([[10.0, 0.0]], dtype=dtype)
-    n_b = np.array([100.0], dtype=dtype)
-
-    result = _compute_lambda_kb(
-        e,
-        o=o,
-        n_b=n_b,
-        alpha=0.2,
-        threshold=None,
-        ridge_lambda=0.0,
-        dynamic_lambda=False,
-    )
-
-    assert result[0, 0] == dtype(0.0)
-    assert result[0, 1] == sentinel
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
