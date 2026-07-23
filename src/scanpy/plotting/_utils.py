@@ -18,7 +18,7 @@ from matplotlib.patches import Circle
 from .. import logging as logg
 from .._compat import warn
 from .._settings import Default, settings
-from .._utils import NeighborsView
+from .._utils import NeighborsView, _get_basis_key
 from . import palettes
 
 if TYPE_CHECKING:
@@ -205,16 +205,18 @@ def timeseries_subplot(  # noqa: PLR0912, PLR0913
     if ax is None:
         ax = plt.subplot()
     for (x, y), m, c, var_name in zip(subsets, marker, colors, var_names, strict=True):
+        # `c` triggers value-mapping (and matplotlib’s single-RGB(A)-sequence
+        # ambiguity warning); `color` is unambiguous for a single flat color.
+        color_kwargs = dict(c=c, cmap=color_map) if use_color_map else dict(color=c)
         ax.scatter(
             x,
             y,
             marker=m,
             edgecolor="face",
             s=rcParams["lines.markersize"],
-            c=c,
             label=var_name,
             rasterized=settings._vector_friendly,
-            **(dict(cmap=color_map) if use_color_map else {}),
+            **color_kwargs,
         )
     ylim = ax.get_ylim()
     for h in highlights_x:
@@ -567,7 +569,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color, *, neighbors_key=Non
         raise ValueError(msg)
     neighbors = NeighborsView(adata, neighbors_key)
     g = nx.Graph(neighbors["connectivities"])
-    basis_key = _get_basis(adata, basis)
+    basis_key = _get_basis_key(adata, basis)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -602,7 +604,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
             "Prefer using `scv.pl.velocity_embedding` to `arrows=True`."
         )
 
-    basis_key = _get_basis(adata, basis)
+    basis_key = _get_basis_key(adata, basis)
     x = adata.obsm[basis_key]
     v = adata.obsm[f"{v_prefix}_{basis}"]
     for ax in axs:
@@ -1025,16 +1027,6 @@ def fix_kwds(kwds_dict, **kwargs):
     kwargs.update(kwds_dict)
 
     return kwargs
-
-
-def _get_basis(adata: AnnData, basis: str):
-    if basis in adata.obsm:
-        basis_key = basis
-
-    elif f"X_{basis}" in adata.obsm:
-        basis_key = f"X_{basis}"
-
-    return basis_key
 
 
 def check_colornorm(vmin=None, vmax=None, vcenter=None, norm=None):

@@ -7,33 +7,35 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from fast_array_utils.numba import njit
-from fast_array_utils.stats import mean_var
 from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
 from .._backends import backend_dispatch
-from .._compat import CSBase
-from .._settings import Default
+from .._compat import CSBase, DaskArray, warn
+from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
     _numba_thread_limit,
     check_nonnegative_integers,
     get_literal_vals,
+    obs_acc,
     raise_not_implemented_error_if_backed_type,
 )
-from ..get import _check_mask, _get_obs_rep
+from ..get import _check_mask, _get_arr, aggregate
+from ..get._aggregated import _chan_combine
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Literal
 
-    from anndata import AnnData
     from numpy.typing import NDArray
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
+type _TestResult = tuple[int, NDArray[np.floating], NDArray[np.floating] | None]
 
 _CONST_MAX_SIZE: int = 10_000_000
 
@@ -46,6 +48,28 @@ def _select_top_n(scores: NDArray, n_top: int):
     global_indices = reference_indices[partition][partial_indices]
 
     return global_indices
+
+
+def _illico_results_to_iter(
+    illico_df: pd.DataFrame,
+    groups_order: NDArray,
+    ireference: int | None,
+) -> Generator[_TestResult]:
+    """Yield per-group ``(index, z, p)`` from illico's long-form output.
+
+    illico's frame is group-major with features in ``var`` order, so its
+    ``z_score``/``p_value`` columns reshape directly to ``(n_present_groups, n_genes)``.
+    """
+    reference = None if ireference is None else groups_order[ireference]
+    group_names = illico_df.index.get_level_values("pert").unique()
+    zscores = illico_df["z_score"].to_numpy().reshape(len(group_names), -1)
+    pvals = illico_df["p_value"].to_numpy().reshape(len(group_names), -1)
+    group_index = {name: i for i, name in enumerate(groups_order)}
+    return (
+        (group_index[name], zscores[row], pvals[row])
+        for row, name in enumerate(group_names)
+        if name != reference
+    )
 
 
 @njit
@@ -124,6 +148,96 @@ def _ranks(
         yield ranks, left, right
 
 
+def _apply_expm1_preserving_sparsity(x, expm1_func):
+    """Apply ``expm1`` to ``x`` while keeping sparse data sparse.
+
+    Applied lazily and chunk-wise for dask; ``expm1(0) == 0`` preserves sparsity.
+    """
+    if isinstance(x, DaskArray):
+        return x.map_blocks(
+            _apply_expm1_preserving_sparsity,
+            expm1_func,
+            dtype=x.dtype,
+            meta=x._meta,
+        )
+    if isinstance(x, CSBase):
+        xp = x.copy()
+        xp.data = expm1_func(xp.data)
+        return xp
+    return expm1_func(x)
+
+
+@numba.njit  # noqa: TID251  (inner kernel called from _vars_rest's nopython loop)
+def _chan_accumulate(
+    group_counts: NDArray[np.float64],
+    mean: NDArray[np.float64],
+    m2: NDArray[np.float64],
+    j: int,
+    direction: int,
+) -> NDArray[np.float64]:
+    """Accumulate a running Chan combine of the groups for gene ``j``.
+
+    ``acc[i]`` holds the combined ``(count, mean, M2)`` of group ``i`` together with
+    every group toward ``direction``: ``+1`` gives groups ``0..i`` (forward),
+    ``-1`` gives groups ``i..end`` (backward).
+    """
+    n_groups = group_counts.shape[0]
+    acc = np.empty((n_groups, 3))
+    # accumulated (count, mean, M2) of the groups visited so far
+    acc_count = acc_mean = acc_m2 = 0.0
+    # visit groups forward (direction +1) or backward (-1)
+    group_order = range(n_groups) if direction == 1 else range(n_groups - 1, -1, -1)
+    for i in group_order:
+        acc_count, acc_mean, acc_m2 = _chan_combine(
+            acc_count, acc_mean, acc_m2, group_counts[i], mean[i, j], m2[i, j]
+        )
+        acc[i, 0], acc[i, 1], acc[i, 2] = acc_count, acc_mean, acc_m2
+    return acc
+
+
+@njit
+def _vars_rest(
+    group_counts: NDArray[np.float64],
+    mean: NDArray[np.float64],
+    m2: NDArray[np.float64],
+    k: int,
+) -> NDArray[np.float64]:
+    """Leave-one-out variance for each selected group, parallel over genes.
+
+    Group ``g``'s "rest" is every other group combined — the groups up to ``g - 1``
+    pooled with the groups from ``g + 1`` — so variances are never subtracted
+    (Chan's cancellation-free combine).
+    """
+    n_genes = mean.shape[1]
+    vars_rest = np.zeros((k, n_genes))
+    for j in numba.prange(n_genes):
+        # combined (count, mean, M2) of groups 0..i (forward) and i..end (backward)
+        combined_stats_upto_group = _chan_accumulate(group_counts, mean, m2, j, 1)
+        combined_stats_from_group = _chan_accumulate(group_counts, mean, m2, j, -1)
+
+        # each group g's "rest" stats = the groups before g pooled with the groups after g
+        for g in range(k):
+            stats_after_g = combined_stats_from_group[g + 1]
+            if g >= 1:
+                stats_before_g = combined_stats_upto_group[g - 1]
+                # each stats row is (count, mean, M2)
+                n_r, _, m2_r = _chan_combine(
+                    n_a=stats_before_g[0],
+                    mean_a=stats_before_g[1],
+                    m2_a=stats_before_g[2],
+                    n_b=stats_after_g[0],
+                    mean_b=stats_after_g[1],
+                    m2_b=stats_after_g[2],
+                )
+            else:
+                # g == 0 has no groups before it, so its rest is just the groups after
+                n_r, m2_r = stats_after_g[0], stats_after_g[2]
+            denom = n_r - 1.0
+            v = m2_r / denom
+            vars_rest[g, j] = v
+    return vars_rest
+
+
 class _RankGenes:
     def __init__(
         self,
@@ -142,6 +256,7 @@ class _RankGenes:
             self.expm1_func = lambda x: np.expm1(x * np.log(base))
         else:
             self.expm1_func = np.expm1
+        self.group_col = adata.obs[groupby].array
 
         self.groups_order, self.groups_masks_obs = _utils.select_groups(
             adata, groups, groupby
@@ -189,7 +304,6 @@ class _RankGenes:
 
         self.means = None
         self.vars = None
-
         self.means_rest = None
         self.vars_rest = None
 
@@ -203,65 +317,145 @@ class _RankGenes:
         self.grouping_mask = adata.obs[groupby].isin(self.groups_order)
         self.grouping = adata.obs.loc[self.grouping_mask, groupby]
 
-    def _basic_stats(self) -> None:
-        """Set self.{means,vars,pts}{,_rest} depending on X."""
-        n_genes = self.X.shape[1]
-        n_groups = self.groups_masks_obs.shape[0]
+    def _basic_stats(
+        self, *, exponentiate_values: bool = False, need_var: bool = False
+    ) -> None:
+        """Populate per-group stats, and (in vs_rest mode) rest-group stats.
 
-        self.means = np.zeros((n_groups, n_genes))
-        self.vars = np.zeros((n_groups, n_genes))
-        self.pts = np.zeros((n_groups, n_genes)) if self.comp_pts else None
-
+        ``need_var`` controls whether variance (per-group and per-rest) is
+        computed; only the t-test family reads it. In vs_rest mode every cell
+        is assigned to its selected group or a single "remainder" group (cells
+        in no selected group), and each group's "rest" is the forward
+        Chan-combine of all other groups — a sum of non-negative terms, hence
+        free of catastrophic cancellation for any group sizes.
+        """
+        x = (
+            _apply_expm1_preserving_sparsity(self.X, self.expm1_func)
+            if exponentiate_values
+            else self.X
+        )
         if self.ireference is None:
-            self.means_rest = np.zeros((n_groups, n_genes))
-            self.vars_rest = np.zeros((n_groups, n_genes))
-            self.pts_rest = np.zeros((n_groups, n_genes)) if self.comp_pts else None
+            self._stats_vs_rest(x, need_var=need_var)
         else:
-            mask_rest = self.groups_masks_obs[self.ireference]
-            x_rest = self.X[mask_rest]
-            self.means[self.ireference], self.vars[self.ireference] = mean_var(
-                x_rest, axis=0, correction=1
-            )
-            # deleting the next line causes a memory leak for some reason
-            del x_rest
+            self._stats_vs_reference(x, need_var=need_var)
 
-        if isinstance(self.X, CSBase):
-            get_nonzeros = lambda x: x.getnnz(axis=0)
+    def _aggregate_group_stats(
+        self, x_used, codes: NDArray[np.int64], n_groups: int, *, need_var: bool
+    ):
+        """Aggregate ``x_used`` in one batched :func:`scanpy.get.aggregate`.
+
+        Grouped by ``codes`` (values ``0 .. n_groups-1``). Returns ``(mean, var,
+        nnz)`` of shape ``(n_groups, n_genes)``, zero-filled for groups with
+        no cells. ``var`` is ``None`` unless ``need_var``; ``nnz`` is ``None``
+        unless ``self.comp_pts``.
+        """
+        n_genes = x_used.shape[1]
+        mean = np.zeros((n_groups, n_genes))
+        var = np.zeros((n_groups, n_genes)) if need_var else None
+        nnz = np.zeros((n_groups, n_genes)) if self.comp_pts else None
+
+        funcs = ["mean"]
+        if need_var:
+            funcs.append("var")
+        if self.comp_pts:
+            funcs.append("count_nonzero")
+        agg_adata = AnnData(
+            X=x_used,
+            obs=pd.DataFrame(
+                {"_g": pd.Categorical(codes, categories=range(n_groups))},
+                index=pd.RangeIndex(len(codes)).astype(str),
+            ),
+        )
+        out = aggregate(agg_adata, by=obs_acc("_g"), func=funcs, dof=1)
+        idx = out.obs_names.astype(int).to_numpy()
+        mean[idx] = np.asarray(out.layers["mean"])
+        if need_var:
+            var[idx] = np.asarray(out.layers["var"])
+        if self.comp_pts:
+            nnz[idx] = np.asarray(out.layers["count_nonzero"])
+        return mean, var, nnz
+
+    def _stats_vs_reference(self, x, *, need_var: bool) -> None:
+        """Aggregate the selected-group cells only (vs-reference; no rest derivation).
+
+        The reference is itself one of the selected groups.
+        """
+        mask = self.grouping_mask.to_numpy()
+        x_used = x if mask.all() else x[mask]
+        codes = pd.Index(self.groups_order).get_indexer(self.grouping)
+        k = self.groups_masks_obs.shape[0]
+
+        self.means, self.vars, nnz = self._aggregate_group_stats(
+            x_used, codes, k, need_var=need_var
+        )
+        if self.comp_pts:
+            n_per_group = self.groups_masks_obs.sum(axis=1)
+            self.pts = nnz / n_per_group[:, None]
         else:
-            get_nonzeros = lambda x: np.count_nonzero(x, axis=0)
+            self.pts = None
 
-        for group_index, mask_obs in enumerate(self.groups_masks_obs):
-            x_mask = self.X[mask_obs]
+    def _stats_vs_rest(self, x, *, need_var: bool) -> None:
+        """Assign every cell to one of the ``k`` selected groups or a remainder group.
 
-            if self.comp_pts:
-                self.pts[group_index] = get_nonzeros(x_mask) / x_mask.shape[0]
+        The remainder group holds cells in no selected group (non-selected
+        groups and unassigned/NaN). Each group's "rest" is the forward
+        Chan-combine of every other group.
+        """
+        k = self.groups_masks_obs.shape[0]
 
-            if self.ireference is not None and group_index == self.ireference:
-                continue
+        # each cell's selected-group index, or `k` (the remainder group) for
+        # cells in no selected group (non-selected / NaN)
+        sel = pd.Index(self.groups_order).get_indexer(self.group_col)
+        codes = np.where(sel >= 0, sel, k).astype(np.int64)
+        group_counts = np.bincount(codes, minlength=k + 1)  # group k == remainder
+        n_sel = group_counts[:k]
 
-            self.means[group_index], self.vars[group_index] = mean_var(
-                x_mask, axis=0, correction=1
+        mean, var, nnz = self._aggregate_group_stats(x, codes, k + 1, need_var=need_var)
+
+        # selected-group arm of the test (the remainder group is excluded)
+        self.means = mean[:k]
+        self.vars = var[:k] if need_var else None
+        self.pts = nnz[:k] / n_sel[:, None] if self.comp_pts else None
+
+        # m2 = var * (n - 1); forced to 0 for groups with <= 1 cell so a
+        # singleton remainder (aggregate var undefined there) is harmless
+        if need_var:
+            with np.errstate(invalid="ignore"):
+                m2 = var * (group_counts[:, None] - 1)
+            m2[group_counts <= 1] = 0.0
+        else:
+            m2 = None
+
+        self._derive_rest_stats(group_counts, mean, m2, nnz, k, need_var=need_var)
+
+    def _derive_rest_stats(
+        self, group_counts, mean, m2, nnz, k: int, *, need_var: bool
+    ) -> None:
+        """Set ``means_rest``/``vars_rest``/``pts_rest`` for each selected group ``g``.
+
+        Statistics are over every cell *not* in ``g``. ``means_rest`` and
+        ``pts_rest`` are linear in the groups, so they are the exact
+        total-minus-group difference. Variance would lose precision under such
+        subtraction, so ``vars_rest`` uses the cancellation-free Chan
+        leave-one-out scan (:func:`_vars_rest`) — only the variance-based tests
+        request it.
+        """
+        n_rest = (self.X.shape[0] - group_counts[:k])[:, None]
+        total = (group_counts[:, None] * mean).sum(axis=0)
+        self.means_rest = (total - group_counts[:k, None] * mean[:k]) / n_rest
+        self.vars_rest = (
+            _vars_rest(
+                np.ascontiguousarray(group_counts, dtype=np.float64), mean, m2, k
             )
-
-            if self.ireference is None:
-                mask_rest = ~mask_obs
-                x_rest = self.X[mask_rest]
-                (
-                    self.means_rest[group_index],
-                    self.vars_rest[group_index],
-                ) = mean_var(x_rest, axis=0, correction=1)
-                # this can be costly for sparse data
-                if self.comp_pts:
-                    self.pts_rest[group_index] = get_nonzeros(x_rest) / x_rest.shape[0]
-                # deleting the next line causes a memory leak for some reason
-                del x_rest
+            if need_var
+            else None
+        )
+        self.pts_rest = (nnz.sum(axis=0) - nnz[:k]) / n_rest if self.comp_pts else None
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
-    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    ) -> Generator[_TestResult, None, None]:
         from scipy import stats
-
-        self._basic_stats()
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
             zip(self.groups_masks_obs, self.means, self.vars, strict=True)
@@ -309,12 +503,8 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(
-        self, *, tie_correct: bool
-    ) -> Generator[tuple[int, NDArray[np.floating], NDArray[np.floating]], None, None]:
+    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
         from scipy import stats
-
-        self._basic_stats()
 
         n_genes = self.X.shape[1]
         # First loop: Loop over all genes
@@ -390,9 +580,7 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(
-        self, **kwds
-    ) -> Generator[tuple[int, NDArray[np.floating], None], None, None]:
+    def logreg(self, **kwds) -> Generator[_TestResult, None, None]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -423,75 +611,134 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def compute_statistics(  # noqa: PLR0912
+    def illico(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+        from illico import asymptotic_wilcoxon
+
+        adata = AnnData(
+            X=self.X,
+            var=pd.DataFrame(index=self.var_names),
+            obs=pd.DataFrame(
+                index=pd.RangeIndex(self.X.shape[0]).astype("str"),
+                data={"group": self.group_col},
+            ),
+        )
+        reference = (
+            self.groups_order[self.ireference] if self.ireference is not None else None
+        )
+        with _numba_thread_limit(settings.n_jobs) as n_threads:
+            result = asymptotic_wilcoxon(
+                adata,
+                reference=reference,
+                group_keys="group",
+                is_log1p=True,
+                tie_correct=tie_correct,
+                use_continuity=False,
+                alternative="two-sided",
+                use_rust=False,
+                n_threads=n_threads,
+                groups=self.groups_order,
+                return_as_scanpy=False,
+            )
+        return _illico_results_to_iter(result, self.groups_order, self.ireference)
+
+    def compute_statistics(
         self,
         method: DETest,
         *,
-        corr_method: _CorrMethod = "benjamini-hochberg",
-        n_genes_user: int | None = None,
-        rankby_abs: bool = False,
-        tie_correct: bool = False,
+        corr_method: _CorrMethod,
+        n_genes_user: int | None,
+        rankby_abs: bool,
+        tie_correct: bool,
+        mean_in_log_space: bool,
         **kwds,
     ) -> None:
+        generate_test_results = None
         if method in {"t-test", "t-test_overestim_var"}:
+            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
             generate_test_results = self.t_test(method)
-        elif method == "wilcoxon":
-            generate_test_results = self.wilcoxon(tie_correct=tie_correct)
+        elif "wilcoxon" in method:
+            generate_test_results = (
+                self.illico(tie_correct=tie_correct)
+                if "illico" in method
+                else self.wilcoxon(tie_correct=tie_correct)
+            )
+            self._basic_stats(exponentiate_values=not mean_in_log_space)
         elif method == "logreg":
             generate_test_results = self.logreg(**kwds)
 
-        self.stats = None
+        self.stats = _build_stats_dataframe(
+            self,
+            generate_test_results,
+            corr_method=corr_method,
+            n_genes_user=n_genes_user,
+            rankby_abs=rankby_abs,
+            mean_in_log_space=mean_in_log_space,
+        )
 
-        n_genes = self.X.shape[1]
 
-        for group_index, scores, pvals in generate_test_results:
-            group_name = str(self.groups_order[group_index])
+def _build_stats_dataframe(
+    rg: _RankGenes,
+    results: Iterable[_TestResult],
+    *,
+    corr_method: _CorrMethod,
+    n_genes_user: int | None,
+    rankby_abs: bool,
+    mean_in_log_space: bool,
+) -> pd.DataFrame | None:
+    """Drain the per-group ``(group_index, scores, pvals)`` iterator into a DataFrame.
 
-            if n_genes_user is not None:
-                scores_sort = np.abs(scores) if rankby_abs else scores
-                global_indices = _select_top_n(scores_sort, n_genes_user)
-                first_col = "names"
-            else:
-                global_indices = slice(None)
-                first_col = "scores"
+    Builds a wide-form ``(group, statistic)`` MultiIndex frame: top-N selection,
+    multiple-testing correction, and (when ``rg.means`` is set) log2
+    fold-change. Read-only on ``rg``.
+    """
+    from statsmodels.stats.multitest import multipletests
 
-            if self.stats is None:
-                idx = pd.MultiIndex.from_tuples([(group_name, first_col)])
-                self.stats = pd.DataFrame(columns=idx)
+    n_genes_total = rg.X.shape[1]
+    cols: dict[tuple[str, str], NDArray] = {}
 
-            if n_genes_user is not None:
-                self.stats[group_name, "names"] = self.var_names[global_indices]
+    for group_index, scores, pvals in results:
+        group_name = str(rg.groups_order[group_index])
 
-            self.stats[group_name, "scores"] = scores[global_indices]
+        if n_genes_user is not None:
+            scores_sort = np.abs(scores) if rankby_abs else scores
+            global_indices = _select_top_n(scores_sort, n_genes_user)
+            cols[group_name, "names"] = rg.var_names[global_indices]
+        else:
+            global_indices = slice(None)
+        cols[group_name, "scores"] = scores[global_indices]
 
-            if pvals is not None:
-                self.stats[group_name, "pvals"] = pvals[global_indices]
-                if corr_method == "benjamini-hochberg":
-                    from statsmodels.stats.multitest import multipletests
-
-                    pvals[np.isnan(pvals)] = 1
-                    _, pvals_adj, _, _ = multipletests(
-                        pvals, alpha=0.05, method="fdr_bh"
-                    )
-                elif corr_method == "bonferroni":
-                    pvals_adj = np.minimum(pvals * n_genes, 1.0)
-                self.stats[group_name, "pvals_adj"] = pvals_adj[global_indices]
-
-            if self.means is not None:
-                mean_group = self.means[group_index]
-                if self.ireference is None:
-                    mean_rest = self.means_rest[group_index]
-                else:
-                    mean_rest = self.means[self.ireference]
-                foldchanges = (self.expm1_func(mean_group) + 1e-9) / (
-                    self.expm1_func(mean_rest) + 1e-9
-                )  # add small value to remove 0's
-                self.stats[group_name, "logfoldchanges"] = np.log2(
-                    foldchanges[global_indices]
+        if pvals is not None:
+            cols[group_name, "pvals"] = pvals[global_indices]
+            if corr_method == "benjamini-hochberg":
+                pvals_no_nan = np.where(np.isnan(pvals), 1.0, pvals)
+                _, pvals_adj, _, _ = multipletests(
+                    pvals_no_nan, alpha=0.05, method="fdr_bh"
                 )
+            elif corr_method == "bonferroni":
+                pvals_adj = np.minimum(pvals * n_genes_total, 1.0)
+            cols[group_name, "pvals_adj"] = pvals_adj[global_indices]
 
-        if n_genes_user is None:
-            self.stats.index = self.var_names
+        if rg.means is not None:
+            mean_group = rg.means[group_index]
+            mean_rest = (
+                rg.means_rest[group_index]
+                if rg.ireference is None
+                else rg.means[rg.ireference]
+            )
+            foldchanges = (
+                (rg.expm1_func(mean_group) + 1e-9) / (rg.expm1_func(mean_rest) + 1e-9)
+                if mean_in_log_space
+                else (mean_group + 1e-9) / (mean_rest + 1e-9)
+            )  # add small value to avoid zeros
+            cols[group_name, "logfoldchanges"] = np.log2(foldchanges[global_indices])
+
+    if not cols:
+        return None
+    df = pd.DataFrame(cols)
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    if n_genes_user is None:
+        df.index = rg.var_names
+    return df
 
 
 @backend_dispatch
@@ -514,9 +761,12 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
     layer: str | None = None,
+    mean_in_log_space: bool | Default = Default(
+        preset=("rank_genes_groups", "mean_in_log_space")
+    ),
     **kwds,
 ) -> AnnData | None:
-    """Rank genes for characterizing groups.
+    r"""Rank genes for characterizing groups.
 
     Expects logarithmized data.
 
@@ -577,6 +827,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         The key in `adata.uns` information is saved to.
     copy
         Whether to copy `adata` or modify it inplace.
+    mean_in_log_space
+        Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
+        or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
+        The former is accurate, while the latter is a faster approximation
+        that underestimates this accurate result in the presence of many outliers.
     kwds
         Are passed to test methods. Currently this affects only parameters that
         are passed to :class:`sklearn.linear_model.LogisticRegression`.
@@ -599,7 +854,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
-        Note: this is an approximation calculated from mean-log values.
+        Note: if `mean_in_log_space=True`, this is an approximation calculated from mean-log values.
     `adata.uns['rank_genes_groups' | key_added]['pvals']` : structured :class:`numpy.ndarray` (dtype `float`)
         p-values.
     `adata.uns['rank_genes_groups' | key_added]['pvals_adj']` : structured :class:`numpy.ndarray` (dtype `float`)
@@ -625,12 +880,22 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    from scanpy import settings
-
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
+    if isinstance(mean_in_log_space, Default):
+        mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
+    # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
     if method is None or isinstance(method, Default):
         method = settings.preset.rank_genes_groups.method
+        if settings.preset is Preset.ScanpyV2Preview:
+            method = "wilcoxon_illico"
+    # Otherwise, nudge people to use the presets.
+    elif "illico" in method:
+        msg = (
+            "`wilcoxon_illico` flavor will be removed in scanpy 2.0 and be simply the new `wilcoxon` implementation."
+            "To remove theis warning, you can locally do `with sc.settings.override(preset=sc.Preset.ScanpyV2Preview)`."
+        )
+        warn(msg, DeprecationWarning)
 
     mask_var = _check_mask(adata, mask_var, "var")
 
@@ -718,6 +983,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
             n_genes_user=n_genes_user,
             rankby_abs=rankby_abs,
             tie_correct=tie_correct,
+            mean_in_log_space=mean_in_log_space,
             **kwds,
         )
 
@@ -838,7 +1104,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     if use_raw is None:
         use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
 
-    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use_raw=use_raw, layer=layer)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby

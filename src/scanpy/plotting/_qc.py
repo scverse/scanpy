@@ -71,8 +71,7 @@ def highest_expr_genes(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k()
@@ -80,8 +79,7 @@ def highest_expr_genes(
 
     Show only the top 10 genes
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.highest_expr_genes(adata, n_top=10)
 

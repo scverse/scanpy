@@ -68,13 +68,13 @@ def mnn_correct(  # noqa: PLR0913
         correction. Typically, a list of highly variable genes (HVGs).
         When set to `None`, uses all vars.
     batch_key
-        The `batch_key` for :meth:`~anndata.AnnData.concatenate`.
+        The `batch_key` for :func:`~anndata.concat`.
         Only valid when `do_concatenate` and supplying `AnnData` objects.
     index_unique
-        The `index_unique` for :meth:`~anndata.AnnData.concatenate`.
+        The `index_unique` for :func:`~anndata.concat`.
         Only valid when `do_concatenate` and supplying `AnnData` objects.
     batch_categories
-        The `batch_categories` for :meth:`~anndata.AnnData.concatenate`.
+        The `batch_categories` for :func:`~anndata.concat`.
         Only valid when `do_concatenate` and supplying AnnData objects.
     k
         Number of mutual nearest neighbors.

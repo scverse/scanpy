@@ -8,7 +8,7 @@ import numpy as np
 
 from .. import logging as logg
 from .._backends import backend_dispatch
-from .._utils import sanitize_anndata
+from .._utils import _get_basis_key, sanitize_anndata
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -90,8 +90,7 @@ def embedding_density(  # noqa: PLR0912
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -101,8 +100,7 @@ def embedding_density(  # noqa: PLR0912
             adata, basis='umap', key='umap_density_phase', group='G1'
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding_density(
             adata, basis='umap', key='umap_density_phase', group='S'
@@ -127,7 +125,7 @@ def embedding_density(  # noqa: PLR0912
     if basis == "fa":
         basis = "draw_graph_fa"
 
-    if f"X_{basis}" not in adata.obsm:
+    if _get_basis_key(adata, basis) is None:
         msg = (
             "Cannot find the embedded representation "
             f"`adata.obsm['X_{basis}']`. Compute the embedding first."

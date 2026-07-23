@@ -604,7 +604,11 @@ def _read_mtx(
     from scipy.io import mmread
     from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
 
-    x = mmread(filename)
+    # TODO: Replace with xxx_array when we make the switch
+    x = mmread(
+        filename,
+        **({"spmatrix": True} if pkg_version("scipy") >= Version("1.18.0rc1") else {}),
+    )
     if x.dtype != np.dtype(dtype):
         x = x.astype(dtype)
     if sparse_format == "csr":
@@ -1080,6 +1084,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     from ssl import create_default_context
+    from tempfile import NamedTemporaryFile
     from urllib.request import Request, urlopen
 
     from certifi import contents
@@ -1088,6 +1093,8 @@ def _download(url: str, path: Path):
     blocksize = 1024 * 8
     blocknum = 0
 
+    # Write to a temp file and rename so readers never see a partial file (#4097).
+    tmp_path: Path | None = None
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
@@ -1101,8 +1108,14 @@ def _download(url: str, path: Path):
                     unit_divisor=1024,
                     total=total if total is None else int(total),
                 ) as t,
-                path.open("wb") as f,
+                NamedTemporaryFile(
+                    dir=path.parent,
+                    prefix=f"{path.name}.",
+                    suffix=".part",
+                    delete=False,
+                ) as f,
             ):
+                tmp_path = Path(f.name)
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)
@@ -1110,10 +1123,13 @@ def _download(url: str, path: Path):
                     t.update(len(block))
                     block = resp.read(blocksize)
 
+        tmp_path.replace(path)
+        tmp_path = None
+
     except (KeyboardInterrupt, Exception):
-        # Make sure file doesn’t exist half-downloaded
-        if path.is_file():
-            path.unlink()
+        # Only remove our own temp file; leave path, which may be another process's.
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
         raise
 
 

@@ -61,7 +61,7 @@ def random_csr(rng: np.random.Generator, size: tuple[int, int]) -> CSRBase:
 
 
 @pytest.fixture(
-    params=[np.random.Generator.standard_normal, random_csr], ids=["sparse", "dense"]
+    params=[np.random.Generator.standard_normal, random_csr], ids=["dense", "sparse"]
 )
 def backed_adata(request: pytest.FixtureRequest, tmp_path: Path) -> AnnData:
     rng = np.random.default_rng()

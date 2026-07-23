@@ -7,7 +7,9 @@ import numpy as np
 from anndata import AnnData
 
 from ... import logging as logg
+from ... import settings
 from ..._compat import CSBase, warn
+from ..._keys import _embedding_keys
 from ..._settings import Default
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ..._utils.random import _accepts_legacy_random_state
@@ -20,7 +22,7 @@ from ...experimental._docs import (
     doc_layer,
     doc_pca_chunk,
 )
-from ...get import _check_mask, _get_obs_rep, _set_obs_rep
+from ...get import _check_mask, _get_arr, _set_obs_rep
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import pca
 
@@ -131,7 +133,7 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
@@ -207,19 +209,21 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
         The used value of the clipping parameter.
 
-    `.obsm['X_pca']`
+    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
-    `.varm['PCs']`
+    `.varm[kwargs_pca.get('key_added', 'PCs')]`
         The principal components containing the loadings. When `inplace=True` and
         `mask_var is not None`, this will contain empty rows for the genes not
         selected.
-    `.uns['pca']['variance_ratio']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
         Ratio of explained variance.
-    `.uns['pca']['variance']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
+    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
+    keys = _embedding_keys("pca", key_added)
     if isinstance(mask_var, Default):
         mask_var = "highly_variable" if "highly_variable" in adata.var else None
     mask_var = _check_mask(adata, mask_var, "var")
@@ -236,19 +240,19 @@ def normalize_pearson_residuals_pca(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
     pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
-    n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
+    n_comps = adata_pca.obsm[keys.obsm].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
         if mask_var is not None:
-            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][mask_var] = adata_pca.varm["PCs"]
+            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm[keys.varm][mask_var] = adata_pca.varm[keys.varm]
         else:
-            adata.varm["PCs"] = adata_pca.varm["PCs"]
-        adata.uns["pca"] = adata_pca.uns["pca"]
+            adata.varm[keys.varm] = adata_pca.varm[keys.varm]
+        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
         adata.uns["pearson_residuals_normalization"] = norm_dict
-        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
+        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca

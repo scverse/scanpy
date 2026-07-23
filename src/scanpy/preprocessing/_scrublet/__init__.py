@@ -14,7 +14,7 @@ from ..._backends import backend_dispatch
 from ..._docs import doc_rng
 from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ...get import _get_obs_rep
+from ...get import _get_arr
 from . import pipeline
 from .core import Scrublet
 
@@ -550,7 +550,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(

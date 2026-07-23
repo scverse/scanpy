@@ -3,7 +3,7 @@ installer = "uv"
 dependency-groups = [ "dev" ]
 
 [envs.docs]
-dependency-groups = [ "doc" ]
+dependency-groups = [ "docs" ]
 extra-dependencies = [ "pandas>=3" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
@@ -26,13 +26,14 @@ overrides.matrix.deps.env-vars = [
 overrides.matrix.deps.pre-install-commands = [
     { if = [
         "low-vers",
-    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --groups=test -o ci/scanpy-low-vers.txt" },
+    ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --skip-extras=scanpy2 --groups=test -o ci/scanpy-low-vers.txt" },
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "stable" ], value = "scipy>=1.17" },
+    { if = [ "pre" ], value = "scanpy[scanpy2]" },
     { if = [ "pre" ], value = "anndata @ git+https://github.com/scverse/anndata.git" },
     { if = [ "pre" ], value = "pandas>=3" },
 ]

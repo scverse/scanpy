@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import operator
 from collections.abc import Mapping, Sequence
-from copy import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -13,7 +12,7 @@ from matplotlib import pyplot as plt
 
 from ... import logging as logg
 from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata, with_cat_dtype
+from ..._utils import _doc_params, _get_basis_key, sanitize_anndata, with_cat_dtype
 from ..._utils.random import _LegacyRng
 from ...get import obs_df, rank_genes_groups_df
 from .._anndata import ranking
@@ -81,8 +80,7 @@ def pca_overview(adata: AnnData, **params):
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -99,10 +97,6 @@ def pca_overview(adata: AnnData, **params):
     pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
-
-
-# backwards compat
-pca_scatter = pca
 
 
 def pca_loadings(
@@ -136,16 +130,14 @@ def pca_loadings(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
 
     Show first 3 components loadings
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca_loadings(adata, components = '1,2,3')
 
@@ -206,8 +198,7 @@ def pca_variance_ratio(
     --------
     Plot the variance ratio for the first 30 PCs.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -215,8 +206,7 @@ def pca_variance_ratio(
 
     Plot on a logarithmic scale.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca_variance_ratio(adata, log=True)
 
@@ -386,8 +376,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -396,8 +385,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot top 10 genes (default 20 genes)
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups(adata, n_genes=10)
 
@@ -717,8 +705,7 @@ def rank_genes_groups_heatmap(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -727,15 +714,13 @@ def rank_genes_groups_heatmap(
 
     Show gene names per group on the heatmap
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True)
 
     Plot top 5 genes per group (default 10 genes)
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_heatmap(adata, n_genes=5, show_gene_labels=True)
 
@@ -790,8 +775,7 @@ def rank_genes_groups_tracksplot(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -865,8 +849,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -874,15 +857,13 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
 
     Plot top 2 genes per group.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_dotplot(adata,n_genes=2)
 
     Plot with scaled expressions for easier identification of differences.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_dotplot(adata, n_genes=2, standard_scale='var')
 
@@ -891,8 +872,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     and maximum values to plot are set to -4 and 4 respectively.
     Also, only genes with a log fold change of 3 or more are shown.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_dotplot(
             adata,
@@ -907,8 +887,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     Also, the last genes can be plotted. This can be useful to identify genes
     that are lowly expressed in a group. For this `n_genes=-4` is used
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_dotplot(
             adata,
@@ -924,8 +903,7 @@ def rank_genes_groups_dotplot(  # noqa: PLR0913
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         var_names = {{'T-cell': ['CD3D', 'CD3E', 'IL32'],
                       'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
@@ -1005,8 +983,7 @@ def rank_genes_groups_stacked_violin(  # noqa: PLR0913
     --------
     Plot top marker genes per group as a stacked violin.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1081,8 +1058,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1094,8 +1070,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     Also, only genes with a log fold change of 3 or more are shown.
 
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_matrixplot(
             adata,
@@ -1111,8 +1086,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     Also, the last genes can be plotted. This can be useful to identify genes
     that are lowly expressed in a group. For this `n_genes=-4` is used
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.rank_genes_groups_matrixplot(
             adata,
@@ -1128,8 +1102,7 @@ def rank_genes_groups_matrixplot(  # noqa: PLR0913
     A list specific genes can be given to check their log fold change. If a
     dictionary, the dictionary keys will be added as labels in the plot.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         var_names = {{"T-cell": ['CD3D', 'CD3E', 'IL32'],
                       'B-cell': ['CD79A', 'CD79B', 'MS4A1'],
@@ -1220,8 +1193,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     --------
     Plot violin distributions of top-ranked genes per group.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1448,8 +1420,7 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -1458,15 +1429,13 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
 
     Plot all categories be default
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
 
     Plot selected categories
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding_density(
             adata,
@@ -1499,9 +1468,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is not None:
         key += f"_{groupby}"
 
-    if f"X_{basis}" not in adata.obsm:
+    if _get_basis_key(adata, basis) is None:
         msg = (
-            f"Cannot find the embedded representation `adata.obsm['X_{basis}']`. "
+            f"Cannot find the embedded representation `adata.obsm[{basis!r} | 'X_{basis}']`. "
             "Compute the embedding first."
         )
         raise ValueError(msg)
@@ -1552,11 +1521,9 @@ def embedding_density(  # noqa: PLR0912, PLR0913, PLR0915
         wspace = 0.75 / rcParams["figure.figsize"][0] + 0.02
 
     # Make the color map
-    if isinstance(color_map, str):
-        color_map = copy(colormaps.get_cmap(color_map))
-
-    color_map.set_over("black")
-    color_map.set_under("lightgray")
+    color_map = colormaps.get_cmap(color_map).with_extremes(
+        over="black", under="lightgray"
+    )
     # a name to store the density values is needed. To avoid
     # overwriting a user name a new random name is created
     rng = np.random.default_rng()

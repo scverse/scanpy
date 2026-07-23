@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.stats import mean
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
 from .._compat import CSBase
 from .._docs import doc_rng
+from .._keys import _existing_preset_keys
 from .._settings import Default, settings
 from .._utils import (
     NeighborsView,
@@ -18,6 +20,7 @@ from .._utils import (
 )
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
+from ..get import _check_mask
 from ..neighbors import FlatTree
 
 if TYPE_CHECKING:
@@ -27,6 +30,7 @@ if TYPE_CHECKING:
     from pynndescent import NNDescent
     from umap import UMAP
 
+    from .._keys import _EmbeddingKeys
     from ..neighbors import RPForestDict
 
 
@@ -231,8 +235,9 @@ class Ingest:
     _umap: UMAP
     # pca
     _pca_centered: bool
-    _pca_mask: str | None
+    _pca_mask: np.ndarray | None
     _pca_basis: np.ndarray
+    _pca_mean: np.ndarray | None
     # adata
     _adata_ref: AnnData
     _adata_new: AnnData | None
@@ -248,10 +253,10 @@ class Ingest:
         random_state = params.get("random_state", 0)
         return _LegacyRng(random_state)
 
-    def _init_umap(self, adata: AnnData) -> None:
+    def _init_umap(self, adata: AnnData, keys: _EmbeddingKeys) -> None:
         from umap import UMAP
 
-        rng = self._get_rng(adata.uns["umap"]["params"])
+        rng = self._get_rng(adata.uns[keys.uns]["params"])
         self._umap = UMAP(
             metric=self._metric,
             random_state=_legacy_random_state(rng),
@@ -265,7 +270,7 @@ class Ingest:
 
         self._umap._validate_parameters()
 
-        self._umap.embedding_ = adata.obsm["X_umap"]
+        self._umap.embedding_ = adata.obsm[keys.obsm]
         self._umap._sparse_data = isinstance(self._rep, CSBase)
         self._umap._small_data = self._rep.shape[0] < 4096
         self._umap._metric_kwds = self._metric_kwds
@@ -275,8 +280,8 @@ class Ingest:
 
         self._umap._knn_search_index = self._nnd_idx
 
-        self._umap._a = adata.uns["umap"]["params"]["a"]
-        self._umap._b = adata.uns["umap"]["params"]["b"]
+        self._umap._a = adata.uns[keys.uns]["params"]["a"]
+        self._umap._b = adata.uns[keys.uns]["params"]["b"]
 
         self._umap._input_hash = None
 
@@ -338,16 +343,21 @@ class Ingest:
 
     def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
-        self._pca_mask = adata.uns["pca"]["params"]["mask_var"]
+        self._pca_mask = _check_mask(
+            adata, adata.uns["pca"]["params"]["mask_var"], "var"
+        )
 
-        if self._pca_mask and self._pca_mask not in adata.var.columns:
-            msg = f"Did not find `adata.var[{self._pca_mask!r}']`."
-            raise ValueError(msg)
-
-        if self._pca_mask:
-            self._pca_basis = adata.varm["PCs"][adata.var[self._pca_mask]]
+        if self._pca_mask is not None:
+            self._pca_basis = adata.varm["PCs"][self._pca_mask]
         else:
             self._pca_basis = adata.varm["PCs"]
+
+        x = adata.X
+        if self._pca_mask is not None:
+            x = x[:, self._pca_mask]
+        self._pca_mean = (
+            np.asarray(mean(x, axis=0)).ravel() if self._pca_centered else None
+        )
 
     def __init__(
         self,
@@ -388,8 +398,8 @@ class Ingest:
             )
             raise ValueError(msg)
 
-        if "X_umap" in adata.obsm:
-            self._init_umap(adata)
+        if keys := _existing_preset_keys(adata, "umap"):
+            self._init_umap(adata, keys)
 
         self._obsm = None
         self._obs = None
@@ -400,12 +410,12 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         x = self._adata_new.X
-        x = x.toarray() if isinstance(x, CSBase) else x.copy()
-        if self._pca_mask:
-            x = x[:, self._adata_ref.var["highly_variable"]]
-        if self._pca_centered:
-            x -= x.mean(axis=0)
-        x_pca = np.dot(x, self._pca_basis[:, :n_pcs])
+        if self._pca_mask is not None:
+            x = x[:, self._pca_mask]
+        basis = self._pca_basis[:, :n_pcs]
+        x_pca = np.asarray(x @ basis)
+        if self._pca_mean is not None:
+            x_pca -= self._pca_mean @ basis
         return x_pca
 
     def _same_rep(self):
@@ -554,10 +564,10 @@ class Ingest:
                 self._obsm["rep"],
             ))
 
-        if "X_umap" in self._obsm:
-            adata.uns["umap"] = self._adata_ref.uns["umap"]
-        if "X_pca" in self._obsm:
-            adata.uns["pca"] = self._adata_ref.uns["pca"]
-            adata.varm["PCs"] = self._adata_ref.varm["PCs"]
+        if keys := _existing_preset_keys(self._adata_ref, "umap"):
+            adata.uns[keys.uns] = self._adata_ref.uns[keys.uns]
+        if keys := _existing_preset_keys(self._adata_ref, "pca"):
+            adata.varm[keys.varm] = self._adata_ref.varm[keys.varm]
+            adata.uns[keys.obsm] = self._adata_ref.uns[keys.obsm]
 
         return adata

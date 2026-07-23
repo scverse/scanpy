@@ -18,8 +18,9 @@ from matplotlib.markers import MarkerStyle
 from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
+from ..._keys import _existing_preset_keys
 from ..._settings import Default, settings
-from ..._utils import _doc_params, sanitize_anndata
+from ..._utils import _doc_params, _get_basis_key, sanitize_anndata
 from ..._utils._doctests import doctest_internet
 from ...get import _check_mask
 from .. import _utils
@@ -120,6 +121,23 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
 
+    Examples
+    --------
+    Plot a precomputed UMAP embedding coloured by the `'bulk_labels'` cell-type annotation.
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.pl.embedding(adata, basis="umap", color="bulk_labels")
+
+    Show several panels in a single call by passing a list of keys to `color`,
+    mixing categorical annotations and gene expression.
+
+    ..  exec-jupyter::
+
+        sc.pl.embedding(adata, basis="umap", color=["bulk_labels", "CD3D", "LYZ"])
+
     """
     #####################
     # Argument handling #
@@ -128,7 +146,7 @@ def embedding(  # noqa: PLR0912, PLR0913, PLR0915
     check_projection(projection)
     sanitize_anndata(adata)
 
-    basis_values = _get_basis(adata, basis)
+    basis_values = _get_basis_arr(adata, basis)
     dimensions = _components_to_dimensions(
         components, dimensions, projection=projection, total_dims=basis_values.shape[1]
     )
@@ -670,8 +688,7 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -679,22 +696,19 @@ def umap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color="HES4")
 
     Plot muliple umaps for different gene expressions.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.umap(adata, color=["HES4", "TNFRSF4"])
 
@@ -731,8 +745,7 @@ def tsne(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -770,8 +783,7 @@ def diffmap(adata: AnnData, **kwargs) -> Figure | Axes | list[Axes] | None:
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -816,8 +828,7 @@ def draw_graph(
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -832,13 +843,11 @@ def draw_graph(
 
     """
     if layout is None:
-        layout = str(adata.uns["draw_graph"]["params"]["layout"])
-    basis = f"draw_graph_{layout}"
-    if f"X_{basis}" not in adata.obsm:
-        msg = f"Did not find {basis} in adata.obs. Did you compute layout {layout}?"
-        raise ValueError(msg)
-
-    return embedding(adata, basis, **kwargs)
+        layout = adata.uns["draw_graph"]["params"]["layout"]
+    if keys := _existing_preset_keys(adata, "draw_graph", layout=layout):
+        return embedding(adata, keys.obsm, **kwargs)
+    msg = f"Did not find `adata.obsm['draw_graph_{layout}']`. Did you compute layout {layout}?"
+    raise ValueError(msg)
 
 
 @_wraps_plot_scatter
@@ -874,8 +883,7 @@ def pca(
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc3k_processed()
@@ -883,15 +891,13 @@ def pca(
 
     Colour points by discrete variable (Louvain clusters).
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="louvain")
 
     Colour points by gene expression.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.pca(adata, color="CST3")
 
@@ -906,7 +912,7 @@ def pca(
         return embedding(
             adata, "pca", show=show, return_fig=return_fig, save=save, **kwargs
         )
-    if "pca" not in adata.obsm and "X_pca" not in adata.obsm:
+    if not _existing_preset_keys(adata, "pca"):
         msg = (
             f"Could not find entry in `obsm` for 'pca'.\n"
             f"Available keys are: {list(adata.obsm.keys())}."
@@ -1183,15 +1189,12 @@ def _add_categorical_legend(  # noqa: PLR0913
             ax.legend(loc=legend_loc, fontsize=legend_fontsize)
 
 
-def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
+def _get_basis_arr(adata: AnnData, basis: str) -> np.ndarray:
     """Get array for basis from anndata. Just tries to add 'X_'."""
-    if basis in adata.obsm:
-        return adata.obsm[basis]
-    elif f"X_{basis}" in adata.obsm:
-        return adata.obsm[f"X_{basis}"]
-    else:
-        msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
-        raise KeyError(msg)
+    if basis_key := _get_basis_key(adata, basis):
+        return adata.obsm[basis_key]
+    msg = f"Could not find {basis!r} or 'X_{basis}' in .obsm"
+    raise KeyError(msg)
 
 
 def _get_color_source_vector(

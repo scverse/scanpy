@@ -51,25 +51,24 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.10.8",
+    "anndata>=0.11.2",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
-    # skip 3.11.0rc1 for now: https://github.com/matplotlib/matplotlib/issues/31575
-    "matplotlib>=3.9,!=3.11.0rc1",
+    "matplotlib>=3.10",
     "natsort",
-    "networkx>=2.8.8",
-    "numba>=0.60",
-    "numpy>=2",
+    "networkx>=3.4",
+    "numba>=0.61",
+    "numpy>=2.1",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
-    "scipy>=1.13",
+    "scipy>=1.15",
     "scverse-backends>=0.0.3,<0.1",
-    "scverse-misc[settings]>=0.0.5",
+    "scverse-misc[settings]>=0.1.1",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
@@ -96,10 +95,11 @@ magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
 plotting = [ "colour-science" ]
 scanorama = [ "scanorama" ]
-scrublet = [ "scikit-image>=0.23.1" ]
+scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
-scanpy2 = [ "igraph>=0.10.8", "scikit-misc>=0.5.1" ]
+illico = [ "illico>=0.6" ]
+scanpy2 = [ "anndata>=0.13.2", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -109,6 +109,7 @@ dev = [
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
+    "scanpy[illico]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
@@ -116,25 +117,27 @@ test = [
     "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
-doc = [
-    "ipython>=7.20",                        # for nbsphinx code highlighting
+docs = [
+    "ipython>=8.27",                                         # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",                           # type aliases
+    "numpy>=2.4",                                            # type aliases
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
-    "scanpy[dask-ml,leiden,paga,plotting]",
+    "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
     "scanpydoc>=0.16.1",
+    "scverse-misc[sphinx]",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
+    "sphinx-exec-jupyter>=0.2.1",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
-    "sphinxext-opengraph",                  # for nice cards when sharing on social
+    "sphinxext-opengraph",                                   # for nice cards when sharing on social
 ]
 test-min = [
     "dependency-groups",    # for CI scripts doctests
@@ -149,9 +152,9 @@ test-min = [
 ]
 
 [tool.hatch]
-build.targets.wheel.packages = [ "src/testing", "src/scanpy" ]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
 src = [ "src" ]
@@ -245,21 +248,12 @@ expand_tables = [
 ]
 
 [tool.pytest]
-strict = true
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
     "--doctest-modules",
     "-ptesting.scanpy._pytest",
     "--pyargs",
-]
-testpaths = [ "./tests", "./ci", "scanpy" ]
-norecursedirs = [ "tests/_images" ]
-junit_family = "xunit1"
-markers = [
-    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
-    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
-    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
 filterwarnings = [
     "error",
@@ -280,9 +274,12 @@ filterwarnings = [
     "ignore:is_categorical_dtype is deprecated:FutureWarning",
     # Ignore numba PEP 456 warning specific to ARM machines
     "ignore:FNV hashing is not implemented in Numba.*:UserWarning",
+    # Ignore numba macOS warnings
+    "ignore:Detected unsupported threading environment:UserWarning",
     # we want to see and eventually fix these
     "default::numba.core.errors.NumbaPerformanceWarning",
-    "default:.*TSNE.*random.*to.*pca:FutureWarning",                                    # we should set init=obsm["X_pca"] or so
+    # we should set init=obsm["X_pca"] or so
+    "default:.*TSNE.*random.*to.*pca:FutureWarning",
     # igraph vs leidenalg warning
     "ignore:The `igraph` implementation of leiden clustering:UserWarning",
     # everybody uses this zarr 3 feature, including us, XArray, lots of data out there …
@@ -290,6 +287,15 @@ filterwarnings = [
     # joblib fallback to serial mode in restricted multiprocessing environments
     "ignore:.*joblib will operate in serial mode:UserWarning",
 ]
+junit_family = "xunit1"
+markers = [
+    "internet: tests which rely on internet resources (enable with `--internet-tests`)",
+    "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
+    "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
+]
+norecursedirs = [ "tests/_images" ]
+strict = true
+testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
 run.concurrency = [ "multiprocessing" ]
@@ -310,19 +316,19 @@ xml.output = "test-data/coverage.xml"
 [tool.towncrier]
 name = "scanpy"
 package = "scanpy"
+package_dir = "src"
 directory = "docs/release-notes"
 filename = "docs/release-notes/{version}.md"
-single_file = false
-package_dir = "src"
-issue_format = "{{pr}}`{issue}`"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
+issue_format = "{{pr}}`{issue}`"
+single_file = false
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
+fragment.chore.name = "Miscellaneous changes"
+fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):
 # https://github.com/commitizen/conventional-commit-types/blob/master/index.json
 # style, refactor, test, build, ci: should not go into changelog
 fragment.feat.name = "Features"
 fragment.fix.name = "Bug fixes"
-fragment.docs.name = "Documentation"
 fragment.perf.name = "Performance"
-fragment.chore.name = "Miscellaneous changes"
 fragment.revert.name = "Revert"
-fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)

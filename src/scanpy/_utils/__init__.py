@@ -30,10 +30,9 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, _CSArray, pkg_version, warn
+from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
@@ -42,6 +41,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
     from pandas._typing import Dtype as PdDtype
@@ -58,6 +58,7 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
+    "_get_basis",
     "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
@@ -70,10 +71,12 @@ __all__ = [
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
     "ensure_igraph",
+    "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
     "is_backed_type",
+    "obs_acc",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -273,9 +276,19 @@ def check_use_raw(
 # --------------------------------------------------------------------------------
 
 
-def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool = False) -> Graph:
+def get_igraph_from_adjacency(adjacency: CSBase, *, directed: bool) -> Graph:
     """Get igraph graph from adjacency matrix."""
     import igraph as ig
+    import scipy.sparse as sps
+
+    import scanpy as sc
+
+    if sc.settings.preset is sc.Preset.ScanpyV2Preview:
+        # TODO: replace all call sites with this line
+        return ig.Graph.Weighted_Adjacency(
+            sps.coo_matrix(adjacency) if isinstance(adjacency, SpBase) else adjacency,
+            mode=ig.ADJ_DIRECTED if directed else ig.ADJ_UNDIRECTED,
+        )
 
     sources, targets = adjacency.nonzero()
     weights = dematrix(adjacency[sources, targets]).ravel() if len(sources) else []
@@ -562,6 +575,14 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
     raise TypeError(msg)
 
 
+def _get_basis_key(adata: AnnData, basis: str) -> str | None:
+    if basis in adata.obsm:
+        return basis
+    if f"X_{basis}" in adata.obsm:
+        return f"X_{basis}"
+    return None
+
+
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
@@ -717,21 +738,9 @@ def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(x, axis=axis)
 
 
-if pkg_version("scipy") >= Version("1.15"):
-    # newer scipy versions support the `axis` argument for count_nonzero
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        return x.count_nonzero(axis=axis)
-
-else:
-    # older scipy versions don’t have any way to get the nnz of a sparse array
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        if isinstance(x, _CSArray):
-            from scipy.sparse import csc_array, csr_array  # noqa: TID251
-
-            x = (csr_array if x.format == "csr" else csc_array)(x)
-        return x.getnnz(axis=axis)
+@axis_nnz.register(CSBase)
+def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
+    return x.count_nonzero(axis=axis)
 
 
 @axis_nnz.register(DaskArray)
@@ -987,6 +996,16 @@ def _resolve_axis(
         return (1, "var")
     msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
     raise ValueError(msg)
+
+
+def obs_acc(obs_col: str) -> str | AdRef:
+    from .._settings import Preset, settings
+
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        return A.obs[obs_col]
+    return obs_col
 
 
 def is_backed_type(x: object, /) -> bool:

@@ -37,7 +37,7 @@ from .._utils import (
     view_to_actual,
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _check_mask, _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_arr, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -411,7 +411,7 @@ def log1p_anndata(
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        x = _get_arr(adata, layer=layer, obsm=obsm)
         if is_backed_type(x):
             msg = f"log1p is not implemented for matrices of type {type(x)}"
             if layer is not None:
@@ -562,7 +562,7 @@ def regress_out(
     if isinstance(keys, str):
         keys = [keys]
 
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
 
     if isinstance(x, CSBase):

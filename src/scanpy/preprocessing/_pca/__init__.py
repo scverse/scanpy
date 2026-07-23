@@ -4,16 +4,16 @@ from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 from anndata import AnnData
-from packaging.version import Version
 
 from ... import logging as logg
 from ..._backends import backend_dispatch
-from ..._compat import CSBase, DaskArray, pkg_version, warn
+from ..._compat import CSBase, DaskArray, warn
 from ..._docs import doc_rng
+from ..._keys import _embedding_keys
 from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ...get import _check_mask, _get_obs_rep
+from ...get import _check_mask, _get_arr
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
@@ -36,10 +36,7 @@ type SvdSolvPCADaskML = Literal["auto", "full", "tsqr", "randomized"]
 type SvdSolvTruncatedSVDDaskML = Literal["tsqr", "randomized"]
 type SvdSolvDaskML = SvdSolvPCADaskML | SvdSolvTruncatedSVDDaskML
 
-if pkg_version("scikit-learn") >= Version("1.5") or TYPE_CHECKING:
-    type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
-else:
-    type SvdSolvPCASparseSklearn = Literal["arpack"]
+type SvdSolvPCASparseSklearn = Literal["arpack", "covariance_eigh"]
 type SvdSolvPCADenseSklearn = (
     Literal["auto", "full", "randomized"] | SvdSolvPCASparseSklearn
 )
@@ -164,8 +161,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         Only relevant when not passing an :class:`~anndata.AnnData`:
         see “Returns”.
     {mask_var}
-    layer
-        Layer of `adata` to use as expression values.
     dtype
         Numpy data type string to which to convert the result.
     key_added
@@ -209,8 +204,6 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         # Current chunking implementation relies on pca being called on X
         msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
-    if isinstance(key_added, Default):
-        key_added = settings.preset.pca.key_added
 
     # chunked calculation is not randomized, anyways
     if svd_solver in {"auto", "randomized"} and not chunked:
@@ -241,7 +234,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_obs_rep(adata_comp, layer=layer, obsm=obsm)
+    x = _get_arr(adata_comp, layer=layer, obsm=obsm)
     if is_backed_type(x) and (layer is not None or obsm is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
@@ -343,20 +336,18 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         x_pca = x_pca.astype(dtype)
 
     if return_anndata:
-        key_obsm, key_varm, key_uns = (
-            ("X_pca", "PCs", "pca") if key_added is None else [key_added] * 3
-        )
-        adata.obsm[key_obsm] = x_pca
+        keys = _embedding_keys("pca", key_added)
+        adata.obsm[keys.obsm] = x_pca
 
         if obsm:
             pass  # see below, components are stored in `uns`.
         elif mask_var is not None:
-            adata.varm[key_varm] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm[key_varm][mask_var] = pca_.components_.T
+            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm[keys.varm][mask_var] = pca_.components_.T
         else:
-            adata.varm[key_varm] = pca_.components_.T
+            adata.varm[keys.varm] = pca_.components_.T
 
-        adata.uns[key_uns] = dict(
+        adata.uns[keys.uns] = dict(
             params=dict(
                 zero_center=zero_center,
                 mask_var=mask_var_param,
@@ -371,10 +362,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         logg.info("    finished", time=logg_start)
         logg.debug(
             "and added\n"
-            f"    {key_obsm!r}, the PCA coordinates (adata.obs)\n"
-            f"    {key_varm!r}, the loadings (adata.varm)\n"
-            f"    'pca_variance', the variance / eigenvalues (adata.uns[{key_uns!r}])\n"
-            f"    'pca_variance_ratio', the variance ratio (adata.uns[{key_uns!r}])"
+            f"    {keys.obsm!r}, the PCA coordinates (adata.obs)\n"
+            f"    {keys.varm!r}, the loadings (adata.varm)\n"
+            f"    'pca_variance', the variance / eigenvalues (adata.uns[{keys.uns!r}])\n"
+            f"    'pca_variance_ratio', the variance ratio (adata.uns[{keys.uns!r}])"
         )
         return adata if copy else None
     else:

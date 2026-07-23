@@ -5,8 +5,8 @@ import inspect
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import cached_property, partial, wraps
-from importlib.metadata import distributions, requires
+from functools import cache, cached_property, partial, wraps
+from importlib.metadata import distributions, requires, version
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from packaging.requirements import Requirement
@@ -17,7 +17,10 @@ from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
+    from collections.abc import Set as AbstractSet
     from typing import Self
+
+    from packaging.utils import NormalizedName
 
 
 __all__ = [
@@ -33,7 +36,9 @@ __all__ = [
 ]
 
 
-type DETest = Literal["logreg", "t-test", "wilcoxon", "t-test_overestim_var"]
+type DETest = Literal[
+    "logreg", "t-test", "wilcoxon", "wilcoxon_illico", "t-test_overestim_var"
+]
 type HVGFlavor = Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"]
 type LeidenFlavor = Literal["leidenalg", "igraph"]
 
@@ -76,13 +81,20 @@ class HVGPreset(NamedTuple):
     return_df: bool
 
 
-class PcaPreset(NamedTuple):
+class BasicEmbeddingPreset(NamedTuple):
     key_added: str | None
+
+
+# replace once they diverge
+PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
+    BasicEmbeddingPreset
+)
 
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
     mask_var: str | None
+    mean_in_log_space: bool
 
 
 class ScalePreset(NamedTuple):
@@ -162,11 +174,19 @@ class Preset(enum.StrEnum):
         # lower-kebap-case
         return "-".join(part.lower() for part in re.split(r"(?=[A-Z])", name) if part)
 
+    # TODO: make the docstrings appear in the docs: https://github.com/sphinx-doc/sphinx/issues/857
+
     ScanpyV1 = enum.auto()
-    """: Scanpy 1.*’s default settings."""
+    """Scanpy 1.*’s default settings."""
 
     ScanpyV2Preview = enum.auto()
-    """: Scanpy 2.*’s feature default settings. (Preview: subject to change!)"""
+    """Scanpy 2.*’s feature default settings. (Preview: subject to change!)
+
+    Apart from changing the functions referenced below, this preset will also:
+
+    - change all functions using `igraph` to no longer create duplicate edges,
+      slightly changing community detection and modularity scores.
+    """
 
     @preset_property
     def highly_variable_genes() -> Mapping[Preset, HVGPreset]:
@@ -185,12 +205,50 @@ class Preset(enum.StrEnum):
         }
 
     @preset_property
-    def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
-        """Correlation method for :func:`~scanpy.tl.rank_genes_groups`."""
+    def umap() -> Mapping[Preset, UmapPreset]:
+        """Settings for :func:`~scanpy.tl.umap`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: RankGenesGroupsPreset(method="t-test", mask_var=None),
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="umap"),
+        }
+
+    @preset_property
+    def tsne() -> Mapping[Preset, UmapPreset]:
+        """Settings for :func:`~scanpy.tl.tsne`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="tsne"),
+        }
+
+    @preset_property
+    def diffmap() -> Mapping[Preset, DiffmapPreset]:
+        """Settings for :func:`~scanpy.tl.diffmap`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DiffmapPreset(key_added=None),
+            Preset.ScanpyV2Preview: DiffmapPreset(key_added="diffmap"),
+        }
+
+    @preset_property
+    def draw_graph() -> Mapping[Preset, DrawGraphPreset]:
+        """Settings for :func:`~scanpy.tl.draw_graph`."""  # noqa: D401
+        return {
+            Preset.ScanpyV1: DrawGraphPreset(key_added=None),
+            Preset.ScanpyV2Preview: DrawGraphPreset(key_added="graph_{layout}"),
+        }
+
+    @preset_property
+    def rank_genes_groups() -> Mapping[Preset, RankGenesGroupsPreset]:
+        """
+        Correlation method for :func:`~scanpy.tl.rank_genes_groups`.
+
+        V2 `method` preset is for `illico` implementation of `wilcoxon` test.
+        """
+        return {
+            Preset.ScanpyV1: RankGenesGroupsPreset(
+                method="t-test", mask_var=None, mean_in_log_space=True
+            ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None
+                method="wilcoxon", mask_var=None, mean_in_log_space=False
             ),
         }
 
@@ -258,14 +316,27 @@ class Preset(enum.StrEnum):
 
 
 def _missing_scanpy2_deps() -> list[Requirement]:
-    dist_names = {canonicalize_name(d.name) for d in distributions()}
     return [
         r
         for r in map(Requirement, requires("scanpy") or ())
-        if r.marker
-        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
-        and canonicalize_name(r.name) not in dist_names
+        if (
+            r.marker
+            and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+            and not _req_satisfied(r)
+        )
     ]
+
+
+def _req_satisfied(req: Requirement) -> bool:
+    return (
+        canonicalize_name(req.name) in dist_names()
+        and version(req.name) in req.specifier
+    )
+
+
+@cache
+def dist_names() -> AbstractSet[NormalizedName]:
+    return dict.fromkeys(canonicalize_name(d.name) for d in distributions()).keys()
 
 
 for postprocess in preset_postprocessors:

@@ -12,7 +12,7 @@ from .. import logging as logg
 from .._backends import backend_dispatch
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -205,7 +205,7 @@ def normalize_total(  # noqa: PLR0912
     >>> import scanpy as sc
     >>> sc.settings.verbosity = "info"
     >>> sc.settings.logfile = sys.stdout  # for doctests
-    >>> np.set_printoptions(precision=2)
+    >>> np.set_printoptions(precision=2) and None
     >>> adata = AnnData(
     ...     np.array(
     ...         [
@@ -256,7 +256,7 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:
