@@ -120,7 +120,7 @@ def test_diffmap(
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
         pytest.param(
             *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
-            marks=[needs.scanpy2],
+            marks=needs.scanpy2,
             id="v2",
         ),
     ],

@@ -13,7 +13,7 @@ from testing.scanpy._helpers import image_root
 
 HERE: Path = Path(__file__).parent
 ROOT = image_root(HERE.parent / "_images")
-DATA_DIR = HERE.parent / "_data"
+DATA_DIR = HERE.parent.parent.parent / "_data"
 
 
 pytestmark = [

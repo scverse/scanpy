@@ -5,7 +5,6 @@
 
 # Docs
 /docs/_build/
-/docs/generated/
 /docs/data/
 /docs/api/generated
 /docs/external/generated

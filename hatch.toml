@@ -4,7 +4,8 @@ dependency-groups = [ "dev" ]
 
 [envs.docs]
 dependency-groups = [ "docs" ]
-extra-dependencies = [ "pandas>=3" ]
+# TODO: remove git again after anndata 0.13.0rc4
+extra-dependencies = [ "pandas>=3", "anndata @ git+https://github.com/scverse/anndata.git" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"

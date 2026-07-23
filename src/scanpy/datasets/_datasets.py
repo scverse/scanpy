@@ -377,7 +377,14 @@ def pbmc68k_reduced() -> AnnData:
         layers: None (.X)
 
     """
-    return read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
+    from scanpy._settings import Preset, settings
+
+    adata = read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
+    if settings.preset is Preset.ScanpyV2Preview:
+        adata.layers["counts"] = adata.raw.X
+        del adata.raw
+        adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
+    return adata
 
 
 @_doctest_skipif_old_anndata

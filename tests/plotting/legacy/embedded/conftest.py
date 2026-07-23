@@ -9,7 +9,7 @@ import pytest
 
 import scanpy as sc
 
-HERE: Path = Path(__file__).parent
+PROJECT_DIR: Path = Path(sc.__file__).parent.parent.parent
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +20,7 @@ def adata():
     from sklearn.datasets import make_blobs
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(HERE.parent.parent / "docs/_static/img/Scanpy_Logo_RGB.png")
+    image = imread(PROJECT_DIR / "docs/_static/img/Scanpy_Logo_RGB.png")
     x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
 
     # Just using to calculate the hex coords

@@ -10,6 +10,7 @@ from .get import (
     _Rep,
     _set_obs_rep,
     obs_df,
+    pca,
     rank_genes_groups_df,
     var_df,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "_set_obs_rep",
     "aggregate",
     "obs_df",
+    "pca",
     "rank_genes_groups_df",
     "var_df",
 ]
