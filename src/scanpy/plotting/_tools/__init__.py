@@ -102,10 +102,6 @@ def pca_overview(adata: AnnData, **params):
     pca_variance_ratio(adata, show=show)
 
 
-# backwards compat
-pca_scatter = pca
-
-
 @old_positionals("include_lowest", "n_points", "show", "save")
 def pca_loadings(
     adata: AnnData,
