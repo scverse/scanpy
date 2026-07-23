@@ -11,15 +11,21 @@ from fast_array_utils import conv, stats
 from scipy import sparse
 
 import scanpy as sc
+from scanpy._compat import CSBase
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
     check_rep_mutation,
     check_rep_results,
 )
+from testing.scanpy._pytest.marks import needs
 
 # TODO: Add support for sparse-in-dask
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_DENSE
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_DENSE,
+    ARRAY_TYPES_MEM,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -329,3 +335,263 @@ def test_compute_nnz_median(array_type, dtype):
     data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
     data = array_type(data)
     np.testing.assert_allclose(_compute_nnz_median(data), 5)
+
+
+# ------------------------------------------------------------------------------
+# normalize_clr (shifted CLR / PFlog)
+# ------------------------------------------------------------------------------
+
+# A small count matrix with no empty cells, used for the value/equivalence tests.
+X_clr = np.array(
+    [[5, 0, 3, 2], [1, 1, 0, 4], [0, 7, 2, 1], [3, 3, 3, 3]], dtype="float32"
+)
+
+
+def _estimate_alpha_reference(x) -> float:
+    """Calculate OLS overdispersion for reference."""
+    x = np.asarray(to_ndarray(x), dtype=np.float64)
+    mu = x.mean(axis=0)
+    var = (x**2).mean(axis=0) - mu**2
+    mu2 = mu**2
+    return float(np.sum((var - mu) * mu2) / np.sum(mu2 * mu2))
+
+
+def _clr_reference(x, *, target="auto", alpha=None) -> np.ndarray:
+    """Calculate shifted CLR densely for reference.
+
+    PFlog uses a constant log1p(4 * alpha * x) scale. Depth targets use the
+    fixed-target scale log1p(K * x / depth). Empty cells are left as all-zero rows.
+    """
+    x = np.asarray(to_ndarray(x), dtype=np.float64)
+    depths = x.sum(axis=1)
+    if alpha is not None:
+        log_u = np.log1p(4.0 * alpha * x)
+    elif target == "auto":
+        log_u = np.log1p(4.0 * _estimate_alpha_reference(x) * x)
+    else:
+        if target == "mean":
+            target_sum = depths.mean()
+        elif target == "median":
+            target_sum = np.median(depths)
+        else:
+            target_sum = float(target)
+        safe_depths = np.where(depths == 0, 1.0, depths)
+        log_u = np.log1p(x * (target_sum / safe_depths)[:, None])
+    return log_u - log_u.mean(axis=1, keepdims=True)
+
+
+def _reconstruct_clr(adata, key="pflog") -> np.ndarray:
+    return (
+        to_ndarray(adata.layers[key]) - adata.obs[f"{key}_center"].to_numpy()[:, None]
+    )
+
+
+def _materialize(x):
+    if hasattr(x, "compute"):
+        x = x.compute()
+    return to_ndarray(x)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+def test_normalize_clr_values(array_type, dtype):
+    """Check values against the reference and zero-sum cells."""
+    adata = AnnData(array_type(X_clr).astype(dtype))
+    sc.pp.normalize_clr(adata)
+    result = _reconstruct_clr(adata)
+
+    np.testing.assert_allclose(result, _clr_reference(X_clr), rtol=1e-5, atol=1e-5)
+    # zero-sum (Aitchison) hyperplane
+    np.testing.assert_allclose(result.sum(axis=1), 0.0, atol=1e-5)
+    assert adata.layers["pflog"].nnz == sparse.csr_matrix(X_clr).nnz  # noqa: TID251
+    assert adata.uns["pflog"]["encoding_type"] == "shifted_clr"
+    assert adata.uns["pflog"]["row_center_key"] == "pflog_center"
+    assert adata.uns["pflog"]["params"]["target"] == "auto"
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.parametrize(
+    "kwargs",
+    [{}, {"target": 1e4}, {"target": "mean"}, {"target": "median"}, {"alpha": 0.5}],
+    ids=["default", "fixed_target", "mean_target", "median_target", "alpha"],
+)
+def test_normalize_clr_params(array_type, kwargs):
+    adata = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(adata, **kwargs)
+    np.testing.assert_allclose(
+        _reconstruct_clr(adata), _clr_reference(X_clr, **kwargs), rtol=1e-5, atol=1e-5
+    )
+
+
+def test_normalize_clr_alpha_is_constant_scale_and_overrides_target():
+    """`alpha` stores uncentered log1p(4 * alpha * x), independent of depth."""
+    alpha = 0.5
+
+    via_alpha = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(via_alpha, alpha=alpha)
+    np.testing.assert_allclose(
+        via_alpha.layers["pflog"].toarray(),
+        np.log1p(4.0 * alpha * X_clr),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+    both = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(both, alpha=alpha, target=999.0)
+    np.testing.assert_allclose(
+        _reconstruct_clr(both), _reconstruct_clr(via_alpha), rtol=1e-5, atol=1e-5
+    )
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_normalize_clr_alpha_auto(array_type):
+    """Check that `target="auto"` matches explicit alpha."""
+    estimated = _estimate_alpha_reference(X_clr)
+    assert estimated > 0
+
+    auto = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(auto)
+
+    explicit = AnnData(array_type(X_clr).astype("float32"))
+    sc.pp.normalize_clr(explicit, alpha=estimated)
+    np.testing.assert_allclose(
+        _reconstruct_clr(auto), _reconstruct_clr(explicit), rtol=1e-5, atol=1e-5
+    )
+
+
+@pytest.mark.parametrize("alpha", [0.0, -0.5], ids=["zero", "negative"])
+def test_normalize_clr_nonpositive_alpha_raises(alpha):
+    """Raise for non-positive `alpha`."""
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    with pytest.raises(ValueError, match=r"alpha.*positive"):
+        sc.pp.normalize_clr(adata, alpha=alpha)
+
+
+def test_normalize_clr_alpha_auto_zero_mean_raises():
+    """`target="auto"` cannot estimate overdispersion when every gene mean is zero."""
+    adata = AnnData(np.zeros((3, 4), dtype="float32"))
+    with pytest.raises(ValueError, match="Cannot estimate overdispersion"):
+        sc.pp.normalize_clr(adata)
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_normalize_clr_zero_cell(array_type):
+    """Keep an empty cell finite and all-zero."""
+    x = X_clr.copy()
+    x[1] = 0  # make the second cell empty
+    adata = AnnData(array_type(x))
+    with pytest.warns(UserWarning, match="Some cells have zero counts"):
+        sc.pp.normalize_clr(adata)
+    result = _reconstruct_clr(adata)
+    assert np.isfinite(result).all()
+    np.testing.assert_allclose(result[1], 0.0, atol=1e-6)
+
+
+def test_normalize_clr_inplace_false():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    x_before = to_ndarray(adata.X).copy()
+    out = sc.pp.normalize_clr(adata, inplace=False)
+
+    assert isinstance(out, dict)
+    np.testing.assert_allclose(
+        to_ndarray(out["X"]) - out["row_center"][:, None],
+        _clr_reference(X_clr),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+    # input is left untouched
+    assert isinstance(adata.X, CSBase)
+    np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
+
+
+def test_normalize_clr_copy():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    returned = sc.pp.normalize_clr(adata, copy=True)
+
+    assert isinstance(returned, AnnData)
+    assert returned is not adata
+    np.testing.assert_allclose(
+        _reconstruct_clr(returned), _clr_reference(X_clr), rtol=1e-5, atol=1e-5
+    )
+    # original is left untouched
+    assert isinstance(adata.X, CSBase)
+
+
+def test_normalize_clr_copy_inplace_error():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    with pytest.raises(
+        ValueError, match="`copy=True` cannot be used with `inplace=False`"
+    ):
+        sc.pp.normalize_clr(adata, copy=True, inplace=False)
+
+
+def test_normalize_clr_layer():
+    """`layer` selects the input layer and leaves `X` untouched."""
+    adata = AnnData(
+        sparse.csr_matrix(X_clr),  # noqa: TID251
+        layers={"counts": sparse.csr_matrix(X_clr)},  # noqa: TID251
+    )
+    x_before = to_ndarray(adata.X).copy()
+    sc.pp.normalize_clr(adata, layer="counts")
+
+    np.testing.assert_array_equal(to_ndarray(adata.X), x_before)
+    np.testing.assert_allclose(
+        _reconstruct_clr(adata),
+        _clr_reference(X_clr),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+
+def test_normalize_clr_densify():
+    adata = AnnData(sparse.csr_matrix(X_clr))  # noqa: TID251
+    sc.pp.normalize_clr(adata, densify=True)
+    np.testing.assert_allclose(to_ndarray(adata.X), _clr_reference(X_clr), rtol=1e-5)
+    assert "pflog" in adata.layers
+
+
+@needs.dask
+@pytest.mark.parametrize("densify", [False, True], ids=["sparse_encoded", "densified"])
+@pytest.mark.parametrize(
+    "sparse_blocks", [False, True], ids=["dense_dask", "sparse_dask"]
+)
+def test_normalize_clr_dask(sparse_blocks, densify):
+    import dask.array as da
+
+    chunks = (2, X_clr.shape[1])
+    x = (
+        da.from_array(sparse.csr_matrix(X_clr), chunks=chunks, asarray=False)  # noqa: TID251
+        if sparse_blocks
+        else da.from_array(X_clr, chunks=chunks)
+    )
+    adata = AnnData(x.astype("float32"))
+
+    sc.pp.normalize_clr(adata, densify=densify)
+
+    result = (
+        _materialize(adata.layers["pflog"])
+        - adata.obs["pflog_center"].to_numpy()[:, None]
+    )
+    np.testing.assert_allclose(result, _clr_reference(X_clr), rtol=1e-5, atol=1e-5)
+    if densify:
+        np.testing.assert_allclose(
+            _materialize(adata.X), _clr_reference(X_clr), rtol=1e-5, atol=1e-5
+        )
+
+
+@needs.dask
+def test_normalize_clr_dask_median_raises():
+    import dask.array as da
+
+    adata = AnnData(da.from_array(X_clr, chunks=(2, X_clr.shape[1])))
+
+    with pytest.raises(NotImplementedError, match=r"target='median'.*dask"):
+        sc.pp.normalize_clr(adata, target="median")
+
+
+def test_normalize_clr_view():
+    adata = AnnData(X_clr.copy())
+    v = adata[:, :]
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.normalize_clr(v)
+    assert not v.is_view
