@@ -15,6 +15,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
@@ -83,8 +84,9 @@ class NeighborsParams(TypedDict):  # noqa: D101
     n_pcs: NotRequired[int]
 
 
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 @_accepts_legacy_random_state(_DEFAULT_SEED := 0)
+@backend_dispatch
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,

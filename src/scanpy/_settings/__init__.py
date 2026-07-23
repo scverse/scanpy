@@ -171,6 +171,37 @@ class Settings(scverse_misc.Settings):
 
     @computed_field
     @property
+    def backend(self) -> str:
+        """Active computational backend (default ``'cpu'``)."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.backend
+
+    @backend.setter
+    def backend(self, backend: str) -> None:
+        from .._backends import settings as backend_settings
+
+        backend_settings.backend = backend
+
+    def use_backend(self, backend: str):
+        """Temporarily set the active computational backend."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.use_backend(backend)
+
+    def available_backends(self) -> list[str]:
+        """Return canonical names of installed computational backends."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.available_backends()
+
+    def get_backend(self, name: str):
+        """Look up an installed computational backend by name or alias."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.get_backend(name)
+
+    @property
     def logpath(self) -> Path | None:
         """The file path `logfile` was set to."""
         if self.logfile is _default_logfile():

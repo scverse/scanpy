@@ -13,6 +13,7 @@ from scipy import sparse
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import CSBase, DaskArray, warn
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
@@ -740,6 +741,7 @@ def _build_stats_dataframe(
     return df
 
 
+@backend_dispatch
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,

@@ -10,6 +10,7 @@ from scipy import sparse
 
 from ... import logging as logg
 from ... import preprocessing as pp
+from ..._backends import backend_dispatch
 from ..._docs import doc_rng
 from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 
 @_accepts_legacy_random_state(0)
+@backend_dispatch
 @_doc_params(rng=doc_rng)
 def scrublet(  # noqa: PLR0913
     adata: AnnData,
@@ -497,6 +499,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
 
 
 @_accepts_legacy_random_state(0)
+@backend_dispatch
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,

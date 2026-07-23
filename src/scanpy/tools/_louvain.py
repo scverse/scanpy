@@ -11,6 +11,7 @@ from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import pkg_version
 from .._utils import _choose_graph, _doc_params
 from ._docs import (
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
             )
 
 
+@backend_dispatch
 @deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
 @_doc_params(
     doc_adata=doc_adata,

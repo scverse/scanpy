@@ -8,6 +8,7 @@ from natsort import natsorted
 
 from .. import _utils
 from .. import logging as logg
+from .._backends import backend_dispatch
 from .._compat import warn
 from .._docs import doc_rng
 from .._settings import Default
@@ -43,6 +44,8 @@ if TYPE_CHECKING:
             )
 
 
+@_accepts_legacy_random_state(0)
+@backend_dispatch
 @_doc_params(
     doc_adata=doc_adata,
     restrict_to=doc_restrict_to,
@@ -51,7 +54,6 @@ if TYPE_CHECKING:
     obsp=doc_obsp,
     rng=doc_rng,
 )
-@_accepts_legacy_random_state(0)
 def leiden(  # noqa: PLR0913
     adata: AnnData,
     resolution: float = 1,

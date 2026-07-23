@@ -12,6 +12,7 @@ from fast_array_utils.numba import njit
 from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
+from .._backends import backend_dispatch
 from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._settings import Preset, settings
 from .._utils import _resolve_axis, get_literal_vals
@@ -238,6 +239,7 @@ def _normalize_by[I: Idx2D | int](
     return by_list, dim
 
 
+@backend_dispatch
 @doctest_needs("anndata_acc")
 def aggregate(
     adata: AnnData,
