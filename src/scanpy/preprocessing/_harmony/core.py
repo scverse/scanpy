@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import KW_ONLY, InitVar, dataclass, field
-from itertools import product
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -15,7 +14,6 @@ from ..._utils.random import _legacy_random_state
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal
 
     import pandas as pd
 
@@ -53,7 +51,6 @@ class Harmony:
     tol_harmony: float
     tol_clustering: float
     ridge_lambda: float
-    correction_method: Literal["fast", "original"]
     block_proportion: float
     tau: int
     rng: InitVar[SeedLike | RNGLike | None]
@@ -63,7 +60,9 @@ class Harmony:
     batch_prune_threshold: float | None = 1e-5
 
     batch_codes: np.ndarray = field(init=False)
+    n_levels: np.ndarray = field(init=False)
     n_batches: int = field(init=False)
+    n_covariates: int = field(init=False)
     _rng: np.random.Generator = field(init=False)
 
     def __post_init__(
@@ -87,9 +86,17 @@ class Harmony:
             ):
                 msg = f"batch_prune_threshold must be in [0, 1] or None, got {self.batch_prune_threshold}."
                 raise ValueError(msg)
+        elif not np.isfinite(self.ridge_lambda) or self.ridge_lambda <= 0:
+            msg = (
+                "ridge_lambda must be a finite positive number when "
+                f"dynamic_lambda=False, got {self.ridge_lambda}."
+            )
+            raise ValueError(msg)
 
         # Process batch keys
-        self.batch_codes, self.n_batches = _get_batch_codes(batch_df, batch_key)
+        self.batch_codes, self.n_levels = _get_batch_codes(batch_df, batch_key)
+        self.n_batches = int(self.n_levels.sum())
+        self.n_covariates = int(self.n_levels.size)
 
     def fit(self, x: np.ndarray) -> np.ndarray:
         """Run Harmony.
@@ -107,15 +114,12 @@ class Harmony:
         z_norm = _normalize_rows_l2(x)
 
         # Compute batch proportions
-        n_b = np.bincount(self.batch_codes, minlength=self.n_batches).astype(x.dtype)
+        n_b = np.bincount(self.batch_codes.ravel(), minlength=self.n_batches).astype(
+            x.dtype
+        )
         pr_b = (n_b / n_cells).reshape(-1, 1)
 
-        # Set default theta
-        if isinstance(self.theta, (int, float)):
-            theta_arr = np.ones(self.n_batches, dtype=x.dtype) * float(self.theta)
-        else:
-            theta_arr = np.array(self.theta, dtype=x.dtype)
-        theta_arr = theta_arr.reshape(1, -1)
+        theta_arr = _get_theta_array(self.theta, self.n_levels, x.dtype)
 
         # Set default n_clusters (needed before tau discounting)
         if self.n_clusters is None:
@@ -222,43 +226,88 @@ class Harmony:
         lambda_kb: np.ndarray,
     ) -> np.ndarray:
         """Perform correction step."""
-        if self.correction_method == "fast":
-            return _correction_fast(
-                x,
-                self.batch_codes,
-                self.n_batches,
-                r,
-                o,
-                lambda_kb=lambda_kb,
-            )
-        else:
-            return _correction_original(
+        if self.n_covariates > 1:
+            return _correction_multi(
                 x,
                 self.batch_codes,
                 self.n_batches,
                 r,
                 lambda_kb=lambda_kb,
             )
+
+        batch_codes = self.batch_codes[:, 0]
+        return _correction_fast(
+            x,
+            batch_codes,
+            self.n_batches,
+            r,
+            o,
+            lambda_kb=lambda_kb,
+        )
 
 
 def _get_batch_codes(
     batch_df: pd.DataFrame,
     batch_key: str | Sequence[str],
-) -> tuple[np.ndarray, int]:
-    """Get batch codes from DataFrame."""
-    if isinstance(batch_key, str):
-        batch_vec = batch_df[batch_key]
-    elif len(batch_key) == 1:
-        batch_vec = batch_df[batch_key[0]]
-    else:
-        df = batch_df[list(batch_key)].astype("str")
-        batch_vec = df.apply(",".join, axis=1)
+) -> tuple[np.ndarray, np.ndarray]:
+    """Encode each batch variable into a disjoint range of marginal codes."""
+    keys = [batch_key] if isinstance(batch_key, str) else list(batch_key)
+    if not keys:
+        msg = "batch_key must contain at least one column name"
+        raise ValueError(msg)
 
-    batch_cat = batch_vec.astype("category")
-    codes = batch_cat.cat.codes.to_numpy(copy=True)
-    n_batches = len(batch_cat.cat.categories)
+    codes = np.empty((len(batch_df), len(keys)), dtype=np.int32)
+    n_levels = np.empty(len(keys), dtype=np.int32)
+    offset = 0
 
-    return codes.astype(np.int32), n_batches
+    for covariate, key in enumerate(keys):
+        batch_vec = batch_df[key].astype("category")
+        local_codes = batch_vec.cat.codes.to_numpy(dtype=np.int32, copy=False)
+        if np.any(local_codes < 0):
+            msg = f"Batch variable {key!r} contains missing values"
+            raise ValueError(msg)
+
+        n_categories = batch_vec.cat.categories.size
+        n_levels[covariate] = n_categories
+        codes[:, covariate] = local_codes + offset
+        offset += n_categories
+
+    return codes, n_levels
+
+
+def _get_theta_array(
+    theta: float | Sequence[float],
+    n_levels: np.ndarray,
+    dtype: np.dtype,
+) -> np.ndarray:
+    """Normalize scalar, per-variable, or per-category theta values."""
+    levels = np.atleast_1d(n_levels).astype(np.int64, copy=False)
+    n_covariates = levels.size
+    n_categories = int(levels.sum())
+
+    try:
+        theta_array = np.asarray(theta, dtype=dtype)
+    except (TypeError, ValueError) as e:
+        msg = (
+            "theta must be a scalar or an array-like collection of numeric values, "
+            f"got {type(theta).__name__}"
+        )
+        raise ValueError(msg) from e
+
+    if theta_array.ndim == 0:
+        return np.full((1, n_categories), theta_array.item(), dtype=dtype)
+
+    theta_array = theta_array.ravel()
+    if theta_array.size == n_covariates:
+        theta_array = np.repeat(theta_array, levels)
+    elif theta_array.size != n_categories:
+        msg = (
+            f"theta array size ({theta_array.size}) must match the number of batch "
+            f"variables ({n_covariates}) or categorical levels ({n_categories})"
+        )
+        raise ValueError(msg)
+
+    return theta_array.reshape(1, -1)
 
 
 def _normalize_rows_l2(x: np.ndarray) -> np.ndarray:
@@ -291,7 +340,6 @@ def _initialize_centroids(
     kmeans = KMeans(
         n_clusters=n_clusters,
         random_state=_legacy_random_state(rng, always_state=True),
-        n_init=10,
         max_iter=25,
     )
     kmeans.fit(z_norm)
@@ -308,9 +356,10 @@ def _initialize_centroids(
     # Initialize e (expected) and o (observed)
     r_sum = r.sum(axis=0)
     e = pr_b @ r_sum.reshape(1, -1)
-    # o[b, k] = sum of r[i, k] for cells i in batch b
+    # o[b, k] = sum of r[i, k] for cells in marginal category b
     o = np.zeros((n_batches, n_clusters), dtype=z_norm.dtype)
-    np.add.at(o, batch_codes, r)
+    for codes in batch_codes.T:
+        np.add.at(o, codes, r)
 
     # Compute initial objective
     obj = _compute_objective(
@@ -376,34 +425,35 @@ def _clustering(  # noqa: PLR0913
         # Randomly shuffle cell indices
         idx_list = rng.permutation(n_cells)
 
-        # Process blocks
-        for block_idx, b in product(
-            np.array_split(idx_list, n_blocks), range(n_batches)
-        ):
-            mask = batch_codes[block_idx] == b
-            if not np.any(mask):
-                continue
+        # Process blocks. Every cell contributes once to each batch variable,
+        # while the expected counts depend only on its cluster assignment.
+        for cell_idx in np.array_split(idx_list, n_blocks):
+            cell_codes = batch_codes[cell_idx]
 
-            cell_idx = block_idx[mask]
-
-            # Remove old r contribution from o and e
-            r_old = r[cell_idx, :]
+            # Remove old r contribution from all marginal categories and from e.
+            r_old = r[cell_idx]
             r_old_sum = r_old.sum(axis=0)
-            o[b, :] -= r_old_sum
+            for codes in cell_codes.T:
+                np.add.at(o, codes, -r_old)
             e -= pr_b * r_old_sum
 
             # Compute new r values
             dots = z_norm[cell_idx, :] @ y_norm.T
-            r_new = np.exp(term * (1.0 - dots))
+            r_new = np.empty_like(dots)
 
-            # Apply penalty (Harmony1 vs Harmony2)
+            # Apply the product of the marginal penalties in log space. This
+            # both follows the Harmony formulation and avoids overflow when
+            # several variables have large finite penalty factors.
             if stabilized_penalty:
                 # Harmony2: denominator is (O + E + 1)
-                penalty = ((e[b, :] + 1.0) / (o[b, :] + e[b, :] + 1.0)) ** theta[0, b]
+                log_penalty = theta.T * (np.log(e + 1.0) - np.log(o + e + 1.0))
             else:
                 # Harmony1: denominator is (O + 1)
-                penalty = ((e[b, :] + 1.0) / (o[b, :] + 1.0)) ** theta[0, b]
-            r_new *= penalty
+                log_penalty = theta.T * (np.log(e + 1.0) - np.log(o + 1.0))
+            log_r_new = term * (1.0 - dots)
+            log_r_new += log_penalty[cell_codes].sum(axis=1)
+            log_r_new -= log_r_new.max(axis=1, keepdims=True)
+            np.exp(log_r_new, out=r_new)
 
             # Normalize rows to sum to 1
             row_sums = r_new.sum(axis=1, keepdims=True)
@@ -415,7 +465,8 @@ def _clustering(  # noqa: PLR0913
 
             # Add new r contribution to o and e
             r_new_sum = r_new.sum(axis=0)
-            o[b, :] += r_new_sum
+            for codes in cell_codes.T:
+                np.add.at(o, codes, r_new)
             e += pr_b * r_new_sum
 
         # Compute objective
@@ -468,7 +519,7 @@ def _compute_lambda_kb(
     return lambda_kb
 
 
-def _correction_original(
+def _correction_multi(
     x: np.ndarray,
     batch_codes: np.ndarray,
     n_batches: int,
@@ -476,43 +527,53 @@ def _correction_original(
     *,
     lambda_kb: np.ndarray,
 ) -> np.ndarray:
-    """Original correction method - per-cluster ridge regression."""
+    """Apply the exact ridge correction for a multi-covariate design."""
     _, d = x.shape
-
     z = x.copy()
+    sentinel = x.dtype.type(_SUPPRESS_PENALTY)
 
     for k_idx, r_k in enumerate(r.T):
-        # Build per-cluster lambda diagonal
-        lambda_diag = np.zeros(n_batches + 1, dtype=x.dtype)
-        lambda_diag[1:] = lambda_kb[:, k_idx]
-        lambda_mat = np.diag(lambda_diag)
+        marginal_r = np.zeros(n_batches, dtype=x.dtype)
+        rhs = np.zeros((n_batches + 1, d), dtype=x.dtype)
+        weighted_x = r_k[:, np.newaxis] * x
+        rhs[0] = weighted_x.sum(axis=0)
+        for codes in batch_codes.T:
+            np.add.at(marginal_r, codes, r_k)
+            np.add.at(rhs, codes + 1, weighted_x)
 
-        r_sum_total = r_k.sum()
-        r_sum_per_batch = np.zeros(n_batches, dtype=x.dtype)
-        for b in range(n_batches):
-            r_sum_per_batch[b] = r_k[batch_codes == b].sum()
+        gram = np.zeros((n_batches + 1, n_batches + 1), dtype=x.dtype)
+        gram[0, 0] = r_k.sum()
+        gram[0, 1:] = marginal_r
+        gram[1:, 0] = marginal_r
+        gram[np.arange(1, n_batches + 1), np.arange(1, n_batches + 1)] = marginal_r
+        for left in range(batch_codes.shape[1] - 1):
+            left_codes = batch_codes[:, left] + 1
+            for right in range(left + 1, batch_codes.shape[1]):
+                right_codes = batch_codes[:, right] + 1
+                np.add.at(gram, (left_codes, right_codes), r_k)
+                np.add.at(gram, (right_codes, left_codes), r_k)
 
-        phi_t_phi = np.zeros((n_batches + 1, n_batches + 1), dtype=x.dtype)
-        phi_t_phi[0, 0] = r_sum_total
-        phi_t_phi[0, 1:] = r_sum_per_batch
-        phi_t_phi[1:, 0] = r_sum_per_batch
-        phi_t_phi[1:, 1:] = np.diag(r_sum_per_batch)
-        phi_t_phi += lambda_mat
+        active = lambda_kb[:, k_idx] < sentinel
+        retained = np.concatenate(([True], active))
+        retained_idx = np.flatnonzero(retained)
+        gram[retained_idx[1:], retained_idx[1:]] += lambda_kb[active, k_idx]
 
-        phi_t_x = np.zeros((n_batches + 1, d), dtype=x.dtype)
-        phi_t_x[0, :] = r_k @ x
-        for b in range(n_batches):
-            mask = batch_codes == b
-            phi_t_x[b + 1, :] = r_k[mask] @ x[mask]
-
+        gram_reduced = gram[np.ix_(retained_idx, retained_idx)]
+        rhs_reduced = rhs[retained]
         try:
-            w = np.linalg.solve(phi_t_phi, phi_t_x)
+            if np.linalg.matrix_rank(gram_reduced) < gram_reduced.shape[0]:
+                raise np.linalg.LinAlgError
+            w_reduced = np.linalg.solve(gram_reduced, rhs_reduced)
         except np.linalg.LinAlgError:
-            w = np.linalg.lstsq(phi_t_phi, phi_t_x, rcond=None)[0]
+            w_reduced = np.linalg.lstsq(gram_reduced, rhs_reduced, rcond=None)[0]
 
-        w[0, :] = 0
-        w_batch = w[batch_codes + 1, :]
-        z -= r_k[:, np.newaxis] * w_batch
+        w = np.zeros((n_batches + 1, d), dtype=x.dtype)
+        w[retained] = w_reduced
+        w[0] = 0
+        correction = np.zeros_like(x)
+        for codes in batch_codes.T:
+            correction += w[codes + 1]
+        z -= r_k[:, np.newaxis] * correction
 
     return z
 
@@ -533,6 +594,15 @@ def _correction_fast(
     dtype = x.dtype
     p = np.eye(n_batches + 1, dtype=dtype)
 
+    # Compute all cluster/category right-hand sides together. This avoids
+    # rebuilding the same batch masks once per cluster and lets BLAS process
+    # the full responsibility matrix for each category.
+    phi_t_x = np.empty((r.shape[1], n_batches + 1, d), dtype=dtype)
+    phi_t_x[:, 0] = r.T @ x
+    for batch in range(n_batches):
+        mask = batch_codes == batch
+        phi_t_x[:, batch + 1] = r[mask].T @ x[mask]
+
     for k_idx, (o_k, r_k) in enumerate(zip(o.T, r.T, strict=True)):
         lam_k = lambda_kb[:, k_idx]
 
@@ -549,13 +619,7 @@ def _correction_fast(
 
         inv_mat = p_t_b_inv @ p
 
-        phi_t_x = np.zeros((n_batches + 1, d), dtype=x.dtype)
-        phi_t_x[0, :] = r_k @ x
-        for b in range(n_batches):
-            mask = batch_codes == b
-            phi_t_x[b + 1, :] = r_k[mask] @ x[mask]
-
-        w = inv_mat @ phi_t_x
+        w = inv_mat @ phi_t_x[k_idx]
         w[0, :] = 0
 
         w_batch = w[batch_codes + 1, :]
