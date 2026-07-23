@@ -71,6 +71,16 @@ def test_visium_empty_img_key(image_comparer):  # visium coordinates but image e
     save_and_compare_images("spatial_visium_embedding")
 
 
+def test_spatial_bw_no_img():  # bw=True with no image should not raise
+    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+    adata.obs = adata.obs.astype({"array_row": "str"})
+    adata.uns.pop("spatial")  # no image available anywhere
+    spot_size = 1.0
+
+    sc.pl.spatial(adata, color="array_row", bw=True, spot_size=spot_size, show=False)
+    plt.close()
+
+
 def test_spatial_general(image_comparer):  # general coordinates
     save_and_compare_images = partial(image_comparer, ROOT, tol=15)
 

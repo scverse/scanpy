@@ -1382,7 +1382,7 @@ def _check_img(
         )  # Throws StopIteration Error if keys not present
     if img is None and spatial_data is not None and img_key is not None:
         img = spatial_data["images"][img_key]
-    if bw:
+    if bw and img is not None:
         img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
     return img, img_key
 
