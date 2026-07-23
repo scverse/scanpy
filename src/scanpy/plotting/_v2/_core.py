@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Collection
-from functools import partial, reduce
+from functools import partial, reduce, update_wrapper
 from types import MappingProxyType
 from typing import TYPE_CHECKING, assert_never, overload
 
@@ -136,6 +136,8 @@ def _scatter(
 
 def _embedding(key: str, name: str, /) -> partial:
     p = partial(_scatter, A.obsm[key][:, [0, 1]])
+    update_wrapper(p, scatter, updated=())
+    p.__name__ = p.__qualname__ = key
 
     scatter_doc = inspect.getdoc(scatter) or ""
     examples = scatter_doc[scatter_doc.index("Examples\n-------") :]
