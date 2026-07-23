@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
-      - uses: astral-sh/setup-uv@v8.3.2
+      - uses: astral-sh/setup-uv@v9.0.0
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
