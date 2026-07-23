@@ -18,12 +18,13 @@ from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray
+from .._compat import CSBase, CSRBase, DaskArray, get_namespace
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (
@@ -353,6 +354,15 @@ def log1p(
         chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
     )
     return log1p_array(data, copy=copy, base=base)
+
+
+@log1p.register(HasArrayNamespace)
+def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
+    xp = get_namespace(x)
+    result = xp.log1p(x)
+    if base is not None:
+        result = result / float(np.log(base))
+    return result
 
 
 @log1p.register(CSBase)
@@ -820,7 +830,9 @@ def sample(  # noqa: PLR0912
         return subset.to_memory() if data.isbacked else subset.copy()
 
     # overload 3: return array and indices
-    assert isinstance(subset, np.ndarray | CSBase | DaskArray), type(subset)
+    assert isinstance(subset, np.ndarray | CSBase | DaskArray | HasArrayNamespace), (
+        type(subset)
+    )
     if copy:
         subset = subset.copy()
     return subset, indices

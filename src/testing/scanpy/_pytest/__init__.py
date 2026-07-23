@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from importlib.util import find_spec
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,10 @@ from .marks import needs
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
 
+if find_spec("jax"):
+    import jax
+
+    jax.config.update("jax_enable_x64", True)  # noqa: FBT003
 
 MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
     reruns=5,

@@ -52,8 +52,9 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.11.2",
+    "array-api-compat",
     "certifi",
-    "fast-array-utils[accel,sparse]>=1.4",
+    "fast-array-utils[accel,sparse]>=1.5",
     "h5py>=3.11",
     "joblib",
     "matplotlib>=3.10",
@@ -86,6 +87,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+jax = [ "jax" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
@@ -109,6 +111,7 @@ test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
     "scanpy[illico]",
+    "scanpy[jax]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",
@@ -153,6 +156,7 @@ test-min = [
 [tool.hatch]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+metadata.allow-direct-references = true
 build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]

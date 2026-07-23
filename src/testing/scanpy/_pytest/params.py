@@ -7,7 +7,7 @@ from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 import pytest
-from anndata.tests.helpers import asarray
+from anndata.tests.helpers import as_dense_jax_array, asarray
 from packaging.version import Version
 from scipy import sparse
 
@@ -75,7 +75,10 @@ MAP_ARRAY_TYPES: dict[
     tuple[Literal["mem", "dask"], Literal["dense", "sparse"]],
     tuple[ParameterSet, ...],
 ] = {
-    ("mem", "dense"): (pytest.param(asarray, id="numpy_ndarray"),),
+    ("mem", "dense"): (
+        pytest.param(asarray, id="numpy_ndarray"),
+        pytest.param(as_dense_jax_array, marks=[needs.jax], id="jax_array"),
+    ),
     ("mem", "sparse"): (
         pytest.param(sparse.csr_matrix, id="scipy_csr_mat"),  # noqa: TID251
         pytest.param(sparse.csc_matrix, id="scipy_csc_mat"),  # noqa: TID251

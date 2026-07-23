@@ -69,6 +69,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     dask_ml = auto()
     fa2 = auto()
     gprofiler = "gprofiler-official"
+    jax = auto()
     leidenalg = auto()
     louvain = auto()
     openpyxl = auto()

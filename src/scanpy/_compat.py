@@ -22,6 +22,7 @@ __all__ = [
     "DaskArray",
     "SpBase",
     "fullname",
+    "get_namespace",
     "pkg_metadata",
     "pkg_version",
     "set_module",
@@ -64,6 +65,13 @@ def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
     return metadata(package)
+
+
+def get_namespace(x):
+    # get array-api namespace for x
+    from array_api_compat import get_namespace
+
+    return get_namespace(x)
 
 
 @cache
