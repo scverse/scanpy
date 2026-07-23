@@ -57,3 +57,16 @@ def test_dot_area_matches_hv_dim(dot_min: float, dot_max: float) -> None:
     arr_result = sc.pl.dot_area(vec, dot_min=dot_min, dot_max=dot_max)
     dim_result = sc.pl.dot_area(hv.dim("x"), dot_min=dot_min, dot_max=dot_max).apply(ds)
     np.testing.assert_allclose(arr_result, dim_result)
+
+
+@needs.scanpy2
+def test_supported_opts_keeps_dim_expressions() -> None:
+    import holoviews as hv
+
+    from scanpy.plotting._v2._core import _supported_opts
+
+    hv.extension("bokeh")
+    size = hv.dim("x") * 2
+    opts = _supported_opts(hv.Points, size=size, s=size)  # "s" is matplotlib-only
+
+    assert opts.options == {"size": size}

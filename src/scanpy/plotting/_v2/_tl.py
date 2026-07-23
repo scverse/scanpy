@@ -123,6 +123,8 @@ def ranking(
 
     Examples
     --------
+    Rank genes by their loading on a principal component
+    (replaces the legacy :func:`~scanpy.pl.pca_loadings`):
 
     ..  holoviews::
 
@@ -138,6 +140,15 @@ def ranking(
             sc.pl.ranking(adata, A.varm["PCs"][0], include_lowest=False).opts(aspect=0.6),
         ]).opts(shared_axes=False)
 
+    Rank principal components by their explained variance ratio
+    (replaces the legacy :func:`~scanpy.pl.pca_variance_ratio`),
+    using :func:`~scanpy.get.pca` to expose it as a `.var` column:
+
+    ..  holoviews::
+
+        pca_adata = sc.get.pca(adata)
+        sc.pl.ranking(pca_adata, A.var["variance_ratio"], include_lowest=False)
+
     """
     [dim] = ref.dims
     if label_dim is None:
@@ -146,9 +157,11 @@ def ranking(
     scores = adata[ref]
     labels = adata[label_dim]
 
-    # subset
-    idx = np.argsort(scores)
-    idx_top, idx_bot = idx[-n_points:][::-1], idx[:n_points][::-1]
+    # subset, ignoring entries without a score (`np.argsort` would otherwise
+    # sort `NaN`s to the top, e.g. genes masked out of a restricted PCA)
+    valid = np.flatnonzero(~np.isnan(scores))
+    order = valid[np.argsort(scores[valid])]
+    idx_top, idx_bot = order[-n_points:][::-1], order[:n_points][::-1]
     scores = np.r_[scores[idx_top], np.nan, scores[idx_bot]]
     labels = np.r_[labels[idx_top], ["⋯"], labels[idx_bot]]
 

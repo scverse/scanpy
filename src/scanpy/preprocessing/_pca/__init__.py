@@ -9,7 +9,7 @@ from ... import logging as logg
 from ..._compat import CSBase, DaskArray, warn
 from ..._docs import doc_rng
 from ..._keys import _embedding_keys
-from ..._settings import Default, settings
+from ..._settings import Default, Preset, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_arr
@@ -219,7 +219,12 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         adata = AnnData(data)
 
     if isinstance(mask_var, Default):
-        mask_var = "highly_variable" if "highly_variable" in adata.var else None
+        if "highly_variable" not in adata.var:
+            mask_var = None
+        elif settings.preset is Preset.ScanpyV2Preview:
+            mask_var = "var.highly_variable"
+        else:
+            mask_var = "highly_variable"
     elif mask_var is not None and obsm is not None:
         msg = "Argument `mask_var` is incompatible with `obsm`."
         raise ValueError(msg)

@@ -106,8 +106,19 @@ a method with the same name in `pl`.
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
    pl.pca
+   pl.ranking
+```
+
+{func}`~scanpy.pl.ranking` replaces {func}`~scanpy.pl.pca_loadings` and {func}`~scanpy.pl.pca_variance_ratio` in the new (HoloViews) backend.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
    pl.pca_loadings
    pl.pca_variance_ratio
    pl.pca_overview
