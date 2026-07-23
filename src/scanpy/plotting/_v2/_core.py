@@ -752,7 +752,7 @@ def _supported_opts(
     plot_cls = hv.Store.registry[hv.Store.current_backend].get(cls)
     if plot_cls is None:
         return hv.Options()
-    return getattr(hv.opts, cls.__name__)({
+    return getattr(hv.opts, cls.__name__)(**{
         k: v
         for k, v in opts.items()
         if k in plot_cls.param or k in getattr(plot_cls, "style_opts", ())
