@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Collection
 from functools import partial, reduce
 from types import MappingProxyType
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, assert_never, overload
 
 import holoviews as hv
 import numpy as np
@@ -17,7 +19,7 @@ import scanpy as sc
 from scanpy.plotting._common import dot_area
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
     from typing import Literal
 
     from anndata import AnnData
@@ -48,8 +50,8 @@ def scatter(
     kdims: Collection[AdDim],
     vdims: Collection[AdDim] = (),
     *,
-    color: AdDim | None = None,
-) -> hv.Scatter:
+    color: AdDim | Collection[AdDim] | None = None,
+) -> hv.Scatter | hv.Layout:
     """Shortcut for a scatter plot.
 
     Basically just
@@ -68,10 +70,13 @@ def scatter(
         The value dimensions (``color`` will be added automatically).
     color
         The color dimension.
+        If a collection of refs is given (e.g. ``A.obs[["v1", "v2"]]``),
+        returns a :class:`~holoviews.Layout` with one scatter plot per ref.
 
     Returns
     -------
-    A scatter plot object
+    A scatter plot object,
+    or a :class:`~holoviews.Layout` of them if ``color`` is a collection.
 
     Examples
     --------
@@ -83,8 +88,19 @@ def scatter(
         A = sc.pl.hv_init(FAKE_BACKEND)
 
         adata = sc.datasets.pbmc68k_reduced()
+
         sc.pl.scatter(adata, A.X[:, ["PSAP", "C1QA"]], color=A.obs["bulk_labels"]).opts(
             cmap="tab10", show_legend=False
+        )
+
+    If you use faceting, make sure to apply options to the plots and not the :class:`~holoviews.Layout`:
+
+    ..  holoviews::
+
+        import holoviews as hv
+
+        sc.pl.scatter(adata, A.obs[["n_counts", "n_genes"]], color=A.obs[["S_score", "G2M_score"]]).opts(
+            hv.opts.Scatter(cmap="viridis", show_legend=False)
         )
 
     """
@@ -93,6 +109,9 @@ def scatter(
     except ValueError:
         msg = "kdims must have length 2"
         raise ValueError(msg) from None
+
+    if color is not None and not isinstance(color, AdDim):
+        return _facet(color, lambda c: scatter(adata, kdims, vdims, color=c))
 
     if color is not None:
         vdims = [*vdims, color]
@@ -109,42 +128,37 @@ def _scatter(
     /,
     vdims: Collection[AdDim] = (),
     *,
-    color: AdDim | None = None,
-) -> hv.Scatter:
+    color: AdDim | Collection[AdDim] | None = None,
+) -> hv.Scatter | hv.Layout:
     __tracebackhide__ = True
     return scatter(adata, kdims, vdims, color=color)
 
 
 def _embedding(key: str, name: str, /) -> partial:
     p = partial(_scatter, A.obsm[key][:, [0, 1]])
+
+    scatter_doc = inspect.getdoc(scatter) or ""
+    examples = scatter_doc[scatter_doc.index("Examples\n-------") :]
+    for needle in ['A.X[:, ["PSAP", "C1QA"]]', 'A.obs[["n_counts", "n_genes"]]']:
+        needle = f"scatter(adata, {needle}"  # noqa: PLW2901
+        assert needle in examples, (needle, examples)
+        examples = examples.replace(needle, f"{key}(adata")
+
+    setup = "    adata = sc.datasets.pbmc68k_reduced()\n"
+    assert setup in examples, (setup, examples)
+    examples = examples.replace(setup, f"{setup}    sc.tl.{key}(adata)\n")
+
     p.__doc__ = f"""\
 Shortcut for a {name} scatter plot.
 
 See :func:`scanpy.pl.scatter`.
 
-Examples
---------
-
-..  holoviews::
-
-    import scanpy as sc
-
-    sc.settings.preset = sc.Preset.ScanpyV2Preview
-    A = sc.pl.hv_init(FAKE_BACKEND)
-
-    adata = sc.datasets.pbmc68k_reduced()
-    sc.tl.{key}(adata)
-    sc.pl.{key}(adata, color=A.obs["bulk_labels"]).opts(
-        cmap="tab10", show_legend=False
-    )
-
-Returns
--------
-A scatter plot object
+{examples}
 """
     return p
 
 
+pca = _embedding("pca", "PCA")
 umap = _embedding("umap", "UMAP")
 tsne = _embedding("tsne", "t-SNE")
 diffmap = _embedding("diffmap", "diffusion map")
@@ -359,46 +373,67 @@ def violin(
 def violin(
     adata: AnnData,
     /,
+    vdims: AdDim,
+    *,
+    kdims: Collection[AdDim] = (),
+    color: Collection[AdDim],
+) -> hv.Layout: ...
+@overload
+def violin(
+    adata: AnnData,
+    /,
     vdims: Collection[AdDim],
     *,
     kdims: Collection[AdDim] = (),
     color: AdDim | None = None,
 ) -> hv.Layout: ...
+@overload
+def violin(
+    adata: AnnData,
+    /,
+    vdims: Collection[AdDim],
+    *,
+    kdims: Collection[AdDim] = (),
+    color: Collection[AdDim],
+) -> hv.NdLayout: ...
 def violin(
     adata: AnnData,
     /,
     vdims: Collection[AdDim] | AdDim,
     *,
     kdims: Collection[AdDim] = (),
-    color: AdDim | None = None,
-) -> hv.Violin | hv.Layout:
+    color: AdDim | Collection[AdDim] | None = None,
+) -> hv.Violin | hv.Layout | hv.NdLayout:
     """Shortcut for a violin plot.
 
     If ``vdims`` is an ``AdDim``, a single violin is returned:
 
     >>> hv.Violin(adata, kdims, [vdims, color]).opts(violin_fill_color=color, ...)
 
-    Otherwise, a layout is returned:
+    If either ``vdims`` or ``color`` is a collection (not both), a layout is returned:
 
     >>> hv.Layout([violin(adata, kdims, vdim, ...) for vdim in vdims]).opts(...)
+
+    If both are collections, a 2D :class:`~holoviews.NdLayout` grid is returned,
+    one violin per ``(vdim, color)`` combination.
 
     Parameters
     ----------
     adata
         The AnnData object.
     vdims
-        The value dimension(s). If multiple, a :class:`~holoviews.Layout` is returned.
+        The value dimension(s).
+        If a collection is passed, multiple plots are created (see above).
     kdims
         The key dimensions (``color`` will be added automatically).
     color
-        The color dimension.
+        The (categorical) color dimension: for each category, a violin is drawn.
+        If a collection is passed, multiple plots are created (see above).
 
     Returns
     -------
-    ``if isinstance(vdims, AdDim):``
-        A :class:`~holoviews.Violin` plot.
-    ``else:``
-        A :class:`~holoviews.Layout` containing :class:`~holoviews.Violin` plots.
+    A :class:`~holoviews.Violin` plot or a :class:`~holoviews.Layout` / :class:`~holoviews.NdLayout`
+    containing multiple violin plots.
 
     Examples
     --------
@@ -422,22 +457,47 @@ def violin(
             width=500, xrotation=30
         )
 
-    """
-    if not isinstance(vdims, AdDim):
-        vdims = list(vdims)
-        if not all(isinstance(vdim, AdDim) for vdim in vdims):
-            msg = f"vdims must be an AdDim or a collection of AdDims, got {vdims!r}."
-            raise TypeError(msg)
-        return hv.Layout([
-            violin(adata, vdim, color=color).opts(title=vdim.label, ylabel="")
-            for vdim in vdims
-        ]).opts(axiswise=True)
+    ..  holoviews::
 
-    kdims = list(kdims)
-    if color and color not in kdims:
-        kdims.append(color)
-    opts = dict(violin_fill_color=color) if color else {}
-    return hv.Violin(adata, kdims, vdims).opts(**opts, ylabel=vdims.label)
+        sc.pl.violin(
+            adata,
+            vdims=A.obs[["percent_mito", "n_counts", "n_genes"]],
+            color=A.obs[["phase", "louvain"]],
+        )
+
+    """
+    match vdims, color:
+        case AdDim(), AdDim() | None:
+            kdims = list(kdims)
+            if color and color not in kdims:
+                kdims.append(color)
+            opts = dict(violin_fill_color=color) if color else {}
+            return hv.Violin(adata, kdims, vdims).opts(**opts, ylabel=vdims.label)
+        case AdDim(), Collection():
+            color = _check_categorical_color(adata, color)
+            return _facet(color, lambda c: violin(adata, vdims, kdims=kdims, color=c))
+        case Collection(), AdDim() | None:
+            vdims = _as_vdims_list(vdims)
+            return hv.Layout([
+                violin(adata, vdim, color=color).opts(title=vdim.label, ylabel="")
+                for vdim in vdims
+            ]).opts(axiswise=True)
+        case Collection(), Collection():
+            vdims = _as_vdims_list(vdims)
+            color = _check_categorical_color(adata, color)
+            return hv.NdLayout(
+                {
+                    (vdim.label, c.label): violin(
+                        adata, vdim, kdims=kdims, color=c
+                    ).opts(title="", ylabel=vdim.label)
+                    for vdim in vdims
+                    for c in color
+                },
+                kdims=["vdim", "color"],
+            ).cols(len(color))
+        case _:
+            msg = f"vdims and color must be AdDim or a collection of AdDims, got {vdims!r} and {color!r}."
+            raise TypeError(msg)
 
 
 def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
@@ -490,7 +550,7 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
         case "var", "obs":
             idx = lambda x, y: adata[yvals == y, xvals == x]  # noqa: E731
         case _:
-            raise AssertionError
+            assert_never()
 
     return hv.GridSpace(
         {
@@ -638,6 +698,35 @@ def matrixplot(
         xlabel="",  # TODO: holoviews issue
     )
     return hv.AdjointLayout([_add_hover(heatmap), _add_hover(bars)])
+
+
+def _as_vdims_list(vdims: Collection[AdDim], /) -> list[AdDim]:
+    vdims = list(vdims)
+    if not all(isinstance(vdim, AdDim) for vdim in vdims):
+        msg = f"vdims must be an AdDim or a collection of AdDims, got {vdims!r}."
+        raise TypeError(msg)
+    return vdims
+
+
+def _check_categorical_color(
+    adata: AnnData, color: Collection[AdDim], /
+) -> Collection[AdDim]:
+    """Validate that all ``color`` dims are categorical (violin groups by them)."""
+    non_cat = [c for c in color if not isinstance(adata[c], pd.Categorical)]
+    if non_cat:
+        msg = (
+            "violin's `color` groups violins by category when faceted over a "
+            f"collection; got non-categorical dimension(s): {non_cat!r}."
+        )
+        raise TypeError(msg)
+    return color
+
+
+def _facet[D: hv.core.dimension.Dimensioned](
+    dims: Collection[AdDim], plot: Callable[[AdDim], D], /
+) -> hv.Layout:
+    """Facet a plot over multiple ``color`` dimensions into a `hv.Layout`."""
+    return hv.Layout([plot(c).opts(title=c.label) for c in dims]).opts(axiswise=True)
 
 
 def _get_categories(
