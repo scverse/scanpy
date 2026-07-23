@@ -3,6 +3,7 @@ from __future__ import annotations
 import anndata
 import numpy as np
 import pytest
+from scipy import sparse
 from sklearn.neighbors import KDTree
 from umap import UMAP
 
@@ -67,6 +68,52 @@ def test_representation(adatas):
 
     assert ing._use_rep == "X"
     assert ing._obsm["rep"] is adata_new.X
+
+
+@pytest.mark.parametrize("as_sparse", [False, True])
+def test_pca_transform_uses_reference_mean(
+    as_sparse, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mask = np.tile([True, False, True, True, True], 12)
+    ref_values = np.tile(X, (1, 12))
+    query_values = np.tile(T, (1, 12))
+    ref_values[:, ~mask] = np.nan
+    query_values[:, ~mask] = np.inf
+    if as_sparse:
+        ref_x = sparse.csr_matrix(ref_values)  # noqa: TID251
+        query_x = sparse.csr_matrix(query_values)  # noqa: TID251
+    else:
+        ref_x = ref_values
+        query_x = query_values
+    adata_ref = sc.AnnData(ref_x)
+    adata_new = sc.AnnData(query_x)
+    adata_ref.var["highly_variable"] = mask
+    sc.pp.pca(adata_ref, n_comps=3, mask_var="highly_variable")
+    sc.pp.neighbors(adata_ref, n_neighbors=3, n_pcs=2)
+    ing = sc.tl.Ingest(adata_ref)
+
+    if as_sparse:
+
+        def fail_toarray(*args, **kwargs) -> None:
+            pytest.fail("PCA ingest must not densify the query matrix")
+
+        monkeypatch.setattr(type(adata_new.X), "toarray", fail_toarray)
+
+    expected = (query_values[:, mask] - ref_values[:, mask].mean(axis=0)) @ (
+        adata_ref.varm["PCs"][mask]
+    )
+    ing.fit(adata_new)
+    np.testing.assert_allclose(ing._obsm["rep"], expected[:, :2], rtol=1e-5, atol=1e-5)
+    ing.map_embedding("pca")
+    np.testing.assert_allclose(ing._obsm["X_pca"], expected, rtol=1e-5, atol=1e-5)
+
+    individual = []
+    for i in range(adata_new.n_obs):
+        ing.fit(adata_new[[i]].copy())
+        ing.map_embedding("pca")
+        individual.append(ing._obsm["X_pca"])
+    individual = np.vstack(individual)
+    np.testing.assert_allclose(individual, expected, rtol=1e-5, atol=1e-5)
 
 
 def test_neighbors(adatas):
