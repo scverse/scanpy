@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     [
         pytest.param(
             np.array([0.0, 0.5, 1.0]),
-            np.array([0.0, 0.5**1.5 * 20, 20.0]),
+            np.array([0.0, 0.5**1.5 * 200, 200.0]),
             dict(),
             id="default",
         ),
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
             np.array([0.1, 0.5, 1.0]),
             # 0.1 is clipped up to dot_min, 1.0 is already at dot_max,
             # 0.5 lands 3/7 of the way in between
-            np.array([0.0, (3 / 7) ** 1.5 * 20, 20.0]),
+            np.array([0.0, (3 / 7) ** 1.5 * 200, 200.0]),
             dict(dot_min=0.2, dot_max=0.9),
             id="clips_and_rescales",
         ),
