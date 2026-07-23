@@ -890,6 +890,7 @@ def pca(
     ..  exec-jupyter::
 
         import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV1
         adata = sc.datasets.pbmc3k_processed()
         sc.pl.pca(adata)
 
