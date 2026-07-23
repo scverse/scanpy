@@ -757,7 +757,7 @@ def _get_categories(
 
 
 def _add_hover[D: hv.core.dimension.Dimensioned](obj: D) -> D:
-    return obj.opts(**_supported_opts(type(obj), tools=["hover"]))
+    return obj.opts(_supported_opts(type(obj), tools=["hover"]))
 
 
 def _supported_opts(
