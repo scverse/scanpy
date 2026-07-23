@@ -6,6 +6,7 @@ from itertools import chain, combinations, repeat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import anndata
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -434,6 +435,199 @@ def test_dotplot_add_totals(image_comparer):
         pbmc, markers, "bulk_labels", return_fig=True
     ).add_totals().make_figure()
     save_and_compare_images("dotplot_totals")
+
+
+def _dotplot_min_cells_adata() -> AnnData:
+    """Tiny deterministic AnnData with known per-group cell counts."""
+    group_sizes = {"A": 10, "B": 6, "C": 3, "D": 1}
+    groups = list(chain.from_iterable(repeat(g, n) for g, n in group_sizes.items()))
+    rng = np.random.default_rng(0)
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(groups)},
+        index=[f"cell{i}" for i in range(len(groups))],
+    )
+    return AnnData(
+        rng.random((len(groups), 3), dtype=np.float32),
+        obs=obs,
+        var=pd.DataFrame(index=["g1", "g2", "g3"]),
+    )
+
+
+@pytest.mark.parametrize(
+    ("min_cells", "expected"),
+    [
+        pytest.param(2, {"A", "B", "C"}, id="drop-smallest"),
+        pytest.param(4, {"A", "B"}, id="drop-two"),
+        pytest.param(7, {"A"}, id="keep-one"),
+    ],
+)
+def test_dotplot_min_cells_filters_small_groups(
+    min_cells: int, expected: set[str]
+) -> None:
+    # groups have sizes A=10, B=6, C=3, D=1
+    adata = _dotplot_min_cells_adata()
+    dp = sc.pl.dotplot(
+        adata,
+        ["g1", "g2", "g3"],
+        groupby="group",
+        min_cells=min_cells,
+        return_fig=True,
+    )
+    assert set(dp.dot_size_df.index) == expected
+    assert set(dp.dot_color_df.index) == expected
+    assert set(dp.categories) == expected
+
+
+def test_dotplot_min_cells_zero_is_noop() -> None:
+    adata = _dotplot_min_cells_adata()
+    genes = ["g1", "g2", "g3"]
+    default = sc.pl.dotplot(adata, genes, groupby="group", return_fig=True)
+    explicit = sc.pl.dotplot(
+        adata, genes, groupby="group", min_cells=0, return_fig=True
+    )
+    # min_cells=0 keeps every group (no filtering at all) ...
+    assert set(default.dot_size_df.index) == {"A", "B", "C", "D"}
+    # ... and is identical to omitting the parameter
+    pd.testing.assert_frame_equal(default.dot_size_df, explicit.dot_size_df)
+    pd.testing.assert_frame_equal(default.dot_color_df, explicit.dot_color_df)
+
+
+def test_dotplot_min_cells_raises_when_all_filtered() -> None:
+    adata = _dotplot_min_cells_adata()
+    with pytest.raises(ValueError, match="min_cells"):
+        sc.pl.dotplot(
+            adata,
+            ["g1", "g2", "g3"],
+            groupby="group",
+            min_cells=10**9,
+            return_fig=True,
+        )
+
+
+def test_dotplot_min_cells_sequence_groupby() -> None:
+    # combination sizes: A_x=10, A_y=5, B_x=4, B_y=1, C_x=2
+    combos = {
+        ("A", "x"): 10,
+        ("A", "y"): 5,
+        ("B", "x"): 4,
+        ("B", "y"): 1,
+        ("C", "x"): 2,
+    }
+    rows = list(chain.from_iterable(repeat(k, n) for k, n in combos.items()))
+    rng = np.random.default_rng(1)
+    obs = pd.DataFrame(
+        {
+            "l1": pd.Categorical([a for a, _ in rows]),
+            "l2": pd.Categorical([b for _, b in rows]),
+        },
+        index=[f"cell{i}" for i in range(len(rows))],
+    )
+    adata = AnnData(
+        rng.random((len(rows), 3), dtype=np.float32),
+        obs=obs,
+        var=pd.DataFrame(index=["g1", "g2", "g3"]),
+    )
+    dp = sc.pl.dotplot(
+        adata,
+        ["g1", "g2", "g3"],
+        groupby=["l1", "l2"],
+        min_cells=4,
+        return_fig=True,
+    )
+    # only combinations with >= 4 cells survive
+    assert set(dp.dot_size_df.index) == {"A_x", "A_y", "B_x"}
+
+
+def test_dotplot_min_cells_respects_categories_order() -> None:
+    adata = _dotplot_min_cells_adata()
+    dp = sc.pl.dotplot(
+        adata,
+        ["g1", "g2", "g3"],
+        groupby="group",
+        categories_order=["D", "C", "B", "A"],
+        min_cells=4,
+        return_fig=True,
+    )
+    # surviving groups keep the user-provided order, minus the dropped ones
+    assert list(dp.dot_size_df.index) == ["B", "A"]
+
+
+def test_dotplot_min_cells_with_precomputed_dataframes() -> None:
+    # `min_cells` must filter the user-supplied dot_color_df / dot_size_df path
+    # coherently (consistent shapes, surviving groups only).
+    adata = _dotplot_min_cells_adata()
+    genes = ["g1", "g2", "g3"]
+    full = sc.pl.dotplot(adata, genes, groupby="group", return_fig=True)
+    dp = sc.pl.DotPlot(
+        adata,
+        genes,
+        "group",
+        min_cells=4,
+        dot_color_df=full.dot_color_df.copy(),
+        dot_size_df=full.dot_size_df.copy(),
+    )
+    assert set(dp.dot_color_df.index) == {"A", "B"}
+    assert set(dp.dot_size_df.index) == {"A", "B"}
+    assert dp.dot_color_df.shape == dp.dot_size_df.shape
+
+
+def test_dotplot_min_cells_with_dendrogram() -> None:
+    pbmc = pbmc68k_reduced()
+    genes = ["CD79A", "MS4A1", "CD3D", "CD8A", "LYZ", "NKG7"]
+    min_cells = 20
+    counts = pbmc.obs["bulk_labels"].value_counts()
+    expected = set(counts.index[counts >= min_cells])
+    assert len(expected) > 2  # sanity: a dendrogram needs more than 2 groups
+
+    n_obs_before = pbmc.n_obs
+    uns_before = set(pbmc.uns)
+    dp = sc.pl.dotplot(
+        pbmc,
+        genes,
+        groupby="bulk_labels",
+        min_cells=min_cells,
+        dendrogram=True,
+        return_fig=True,
+    )
+    dp.make_figure()  # exercises drawing the dendrogram over the subset
+
+    # the caller's adata is untouched: no cells dropped, no dendrogram cached
+    assert pbmc.n_obs == n_obs_before
+    assert set(pbmc.uns) == uns_before
+
+    assert set(dp.dot_size_df.index) == expected
+    assert set(dp.categories) == expected
+
+    # the dendrogram is actually computed/reordered over the surviving groups:
+    # it must match a dendrogram computed independently on the same subset
+    sub = pbmc[pbmc.obs["bulk_labels"].isin(expected)].copy()
+    sub.obs["bulk_labels"] = sub.obs["bulk_labels"].cat.remove_unused_categories()
+    sc.tl.dendrogram(sub, "bulk_labels")
+    expected_order = list(sub.uns["dendrogram_bulk_labels"]["categories_ordered"])
+    assert list(dp.categories_order) == expected_order
+
+
+def test_dotplot_min_cells_dendrogram_keeps_unused_categories(monkeypatch) -> None:
+    # the dendrogram + min_cells path must recompute over the surviving groups
+    # even when anndata does not implicitly drop unused categories on subsetting
+    if not hasattr(anndata.settings, "remove_unused_categories"):
+        pytest.skip("anndata.settings.remove_unused_categories is unavailable")
+    monkeypatch.setattr(anndata.settings, "remove_unused_categories", False)
+    pbmc = pbmc68k_reduced()
+    genes = ["CD79A", "MS4A1", "CD3D", "CD8A", "LYZ", "NKG7"]
+    min_cells = 20
+    counts = pbmc.obs["bulk_labels"].value_counts()
+    expected = set(counts.index[counts >= min_cells])
+    dp = sc.pl.dotplot(
+        pbmc,
+        genes,
+        groupby="bulk_labels",
+        min_cells=min_cells,
+        dendrogram=True,
+        return_fig=True,
+    )
+    dp.make_figure()
+    assert set(dp.dot_size_df.index) == expected
 
 
 def test_matrixplot_obj(image_comparer):
