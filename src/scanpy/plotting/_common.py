@@ -67,7 +67,7 @@ def dot_area[V: NDArray[np.floating] | hv.dim](
     dot_min: float = 0,
     dot_max: float = 1,
     smallest_dot: float = 0,
-    largest_dot: float = 20,
+    largest_dot: float = 200,
     size_exponent: float = 1.5,
 ) -> V:
     """Dot area transform, e.g. for :func:`~scanpy.pl.dotplot`.

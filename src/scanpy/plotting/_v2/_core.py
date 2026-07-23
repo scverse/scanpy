@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
     from anndata.acc import LayerAcc, MultiAcc
+    from holoviews.plotting.plot import GenericElementPlot
     from pandas.api.extensions import ExtensionArray
 
     # TODO: export in scanpy: https://github.com/scverse/scanpy/issues/3826
@@ -634,7 +635,7 @@ def dotplot(
         opts.update(_supported_opts(hv.Points, s=area, size=area**0.5).options)
 
     return hv.Points(stats_long, ["group", "marker"], list(funcs.values())).opts(
-        xrotation=30, **opts
+        xrotation=30, hooks=[_anchor_rotated_xticks], **opts
     )
 
 
@@ -692,7 +693,7 @@ def matrixplot(
         agg,
         [A.obs.index, A.var.index],
         [A.layers[func][:, :]],
-    ).opts(xrotation=30)
+    ).opts(xrotation=30, hooks=[_anchor_rotated_xticks])
     if not add_totals:
         return _add_hover(heatmap)
     bars = hv.Bars(agg, A.var.index, A.var["totals"]).opts(
@@ -729,6 +730,20 @@ def _facet[D: hv.core.dimension.Dimensioned](
 ) -> hv.Layout:
     """Facet a plot over multiple ``color`` dimensions into a `hv.Layout`."""
     return hv.Layout([plot(c).opts(title=c.label) for c in dims]).opts(axiswise=True)
+
+
+def _anchor_rotated_xticks(
+    plot: GenericElementPlot, element: hv.core.dimension.Dimensioned
+) -> None:
+    """Workaround for <https://github.com/holoviz/holoviews/issues/6967>."""
+    from matplotlib.axes import Axes
+
+    ax = plot.handles.get("axis")
+    if not isinstance(ax, Axes):
+        return
+    for label in ax.get_xticklabels():
+        if label.get_rotation():
+            label.set(ha="right", rotation_mode="anchor")
 
 
 def _get_categories(
