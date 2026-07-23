@@ -7,7 +7,7 @@
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.subsample
    tl.louvain

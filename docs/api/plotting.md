@@ -26,7 +26,7 @@ Functions with both backends:
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
    :template: function-dual
 
    pl.scatter
@@ -45,7 +45,7 @@ Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    pl.dot_area
 
@@ -56,7 +56,7 @@ Legacy (matplotlib) only:
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    pl.clustermap
    pl.dendrogram
