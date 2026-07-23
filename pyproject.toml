@@ -89,6 +89,7 @@ dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
+networkit = [ "networkit @ git+https://github.com/networkit/networkit@master" ]
 louvain = [ "igraph", "louvain>=0.8.2", "setuptools" ]
 magic = [ "magic-impute>=2.0.4" ]
 paga = [ "igraph" ]
@@ -153,6 +154,7 @@ test-min = [
 [tool.hatch]
 version.source = "vcs"
 version.raw-options.version_scheme = "release-branch-semver"
+metadata.allow-direct-references = true  # need it for networkit
 build.targets.wheel.packages = [ "src/scanpy", "src/testing" ]
 
 [tool.ruff]
