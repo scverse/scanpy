@@ -173,39 +173,38 @@ class Settings(
 
     @computed_field
     @property
-    def backend(cls) -> str:
+    def backend(self) -> str:
         """Active computational backend (default ``'cpu'``)."""
         from .._backends import settings as backend_settings
 
         return backend_settings.backend
 
     @backend.setter
-    @_type_check_arg2(str)
-    def backend(cls, backend: str) -> None:
+    def backend(self, backend: str) -> None:
         from .._backends import settings as backend_settings
 
         backend_settings.backend = backend
 
-    def use_backend(cls, backend: str):
+    def use_backend(self, backend: str):
         """Temporarily set the active computational backend."""
         from .._backends import settings as backend_settings
 
         return backend_settings.use_backend(backend)
 
-    def available_backends(cls) -> list[str]:
+    def available_backends(self) -> list[str]:
         """Return canonical names of installed computational backends."""
         from .._backends import settings as backend_settings
 
         return backend_settings.available_backends()
 
-    def get_backend(cls, name: str):
+    def get_backend(self, name: str):
         """Look up an installed computational backend by name or alias."""
         from .._backends import settings as backend_settings
 
         return backend_settings.get_backend(name)
 
     @property
-    def logpath(cls) -> Path | None:
+    def logpath(self) -> Path | None:
         """The file path `logfile` was set to."""
         if self.logfile is _default_logfile():
             return None

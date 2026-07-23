@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import copy
 from inspect import Parameter, signature
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -11,6 +12,9 @@ import scanpy as sc
 from scanpy._backends import dispatcher
 from scanpy._backends import settings as backend_settings
 from scanpy.testing import validate_backend
+
+if TYPE_CHECKING:
+    from typing import ClassVar
 
 
 class FakeRapidsBackend:
@@ -43,6 +47,21 @@ class FakeRapidsBackend:
         }
 
 
+class FakeDistribution:
+    metadata: ClassVar = {"Name": "rapids-singlecell"}
+
+
+class FakeEntryPoint:
+    name = "rapids_singlecell"
+    value = "rapids_singlecell.backends.scanpy:ScanpyBackend"
+    dist = FakeDistribution()
+
+    @staticmethod
+    def load():
+        """Load the fake backend entry point."""
+        return FakeRapidsBackend
+
+
 DISPATCHED_FUNCTIONS = [
     sc.pp.calculate_qc_metrics,
     sc.pp.filter_cells,
@@ -72,7 +91,7 @@ DISPATCHED_FUNCTIONS = [
 
 
 @pytest.fixture
-def fake_rapids_backend():
+def fake_rapids_backend(monkeypatch):
     registry = dispatcher._registry
     dispatch_impl = dispatcher._dispatch_impl
     old_backend = backend_settings.backend
@@ -92,15 +111,12 @@ def fake_rapids_backend():
     registry._load_errors.clear()
     registry._registration_errors.clear()
     registry._warned_untrusted.clear()
-    registry._discovered = True
-    registry._register_backend(
-        FakeRapidsBackend(),
-        entrypoint_name="rapids_singlecell",
-        distribution_name="rapids-singlecell",
-        object_ref="rapids_singlecell.backends.scanpy:ScanpyBackend",
+    registry._discovered = False
+    monkeypatch.setattr(
+        "scverse_backends._registry.importlib.metadata.entry_points",
+        lambda *, group: [FakeEntryPoint()] if group == "scanpy.backends" else [],
     )
-    dispatch_impl._sig_cache.clear()
-    dispatch_impl._update_signatures()
+    dispatcher.discover()
 
     yield
 

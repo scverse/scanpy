@@ -68,7 +68,7 @@ dependencies = [
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.13",
-    "scverse-backends>=0.0.2,<0.1",
+    "scverse-backends>=0.0.3,<0.1",
     "scverse-misc[settings]>=0.0.5",
     "seaborn>=0.13.2",
     "session-info2",
