@@ -1472,6 +1472,41 @@ def test_dpt_plots(
     save_and_compare_images(func.__name__)
 
 
+def test_scatter_colorbar_uses_user_ax():
+    """Regression test for #3963.
+
+    When ``sc.pl.scatter`` receives a user-supplied ``ax``, the colorbar must
+    be attached to that ax. Previously the colorbar was placed via
+    ``fig.add_axes(rectangle)`` with rectangle in figure coords for scanpy's
+    own panel layout, landing the colorbar over an unrelated user axes.
+    """
+    rng = np.random.default_rng(0)
+    adata = AnnData(
+        rng.random((50, 3), dtype=np.float32),
+        obs=dict(score=rng.random(50, dtype=np.float32)),
+    )
+    adata.obsm["X_umap"] = rng.random((50, 2), dtype=np.float32)
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+    sc.pl.scatter(adata, color="score", basis="umap", ax=axs[0], show=False)
+
+    extra = [a for a in fig.axes if a not in axs]
+    assert extra, "sc.pl.scatter should add a colorbar for a continuous color"
+    cb = extra[0]
+    user_ax_pos = axs[0].get_position()
+    cb_pos = cb.get_position()
+    # The colorbar should sit just to the right of the user's ax, not float
+    # away from it across the figure.
+    assert cb_pos.x0 >= user_ax_pos.x0, (
+        f"Colorbar x0={cb_pos.x0:.3f} is left of user ax x0={user_ax_pos.x0:.3f}"
+    )
+    assert cb_pos.x0 < user_ax_pos.x1 + 0.05, (
+        f"Colorbar x0={cb_pos.x0:.3f} is far past user ax x1={user_ax_pos.x1:.3f}; "
+        "this would overlap a sibling axes."
+    )
+    plt.close(fig)
+
+
 def test_scatter_raw(tmp_path):
     pbmc = pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
