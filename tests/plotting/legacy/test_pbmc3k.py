@@ -20,28 +20,31 @@ import threadpoolctl
 
 import scanpy as sc
 from scanpy._compat import pkg_version
-from testing.scanpy._helpers import image_root
 from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
 
-HERE: Path = Path(__file__).parent
-ROOT = image_root(HERE / "_images_pbmc3k")
+HERE = Path(__file__).parent
+
+
+@pytest.fixture(scope="session")
+def image_dir() -> Path:
+    return HERE / "_images" / "pbmc3k"
 
 
 @needs.leidenalg
 # https://github.com/pandas-dev/pandas/issues/61928
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR0915
+def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     # ensure violin plots and other non-determinstic plots have deterministic behavior
     # TODO: rework this test for scanpy 2.0 so this is no longer necessary
     np.random.seed(0)  # noqa: NPY002
-    save_and_compare_images = partial(image_comparer, ROOT, tol=20)
+    plot_cmp = partial(plot_cmp, tol=20)
     adata = sc.datasets.pbmc3k()
 
     # Preprocessing
 
     sc.pl.highest_expr_genes(adata, n_top=20, show=False)
-    save_and_compare_images("highest_expr_genes")
+    plot_cmp("highest_expr_genes")
 
     sc.pp.filter_cells(adata, min_genes=200)
     sc.pp.filter_genes(adata, min_cells=3)
@@ -63,14 +66,14 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
             multi_panel=True,
             show=False,
         )
-        save_and_compare_images("violin")
+        plot_cmp("violin")
 
     with subtests.test("scatter_1"):
         sc.pl.scatter(adata, x="n_counts", y="percent_mito", show=False)
-        save_and_compare_images("scatter_1")
+        plot_cmp("scatter_1")
     with subtests.test("scatter_2"):
         sc.pl.scatter(adata, x="n_counts", y="n_genes", show=False)
-        save_and_compare_images("scatter_2")
+        plot_cmp("scatter_2")
 
     adata = adata[adata.obs["n_genes"] < 2500, :]
     adata = adata[adata.obs["percent_mito"] < 0.05, :]
@@ -86,7 +89,7 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     with subtests.test("highly_variable_genes"):
         sc.pl.highly_variable_genes(filter_result, show=False)
-        save_and_compare_images("highly_variable_genes")
+        plot_cmp("highly_variable_genes")
 
     adata = adata[:, filter_result["highly_variable"]].copy()
     sc.pp.regress_out(adata, ["n_counts", "percent_mito"])
@@ -99,11 +102,11 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
         sc.pp.pca(adata, svd_solver="arpack")
     with subtests.test("pca"):
         sc.pl.pca(adata, color="CST3", show=False)
-        save_and_compare_images("pca")
+        plot_cmp("pca")
 
     with subtests.test("pca_variance_ratio"):
         sc.pl.pca_variance_ratio(adata, log=True, show=False)
-        save_and_compare_images("pca_variance_ratio")
+        plot_cmp("pca_variance_ratio")
 
     # Neighbors
 
@@ -122,7 +125,7 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
 
     with subtests.test("scatter_3"):
         sc.pl.scatter(adata, "CST3", "NKG7", color="leiden", show=False)
-        save_and_compare_images("scatter_3")
+        plot_cmp("scatter_3")
 
     # Finding marker genes
     # Due to incosistency with our test runner vs local, these clusters need to
@@ -153,22 +156,22 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
     sc.tl.rank_genes_groups(adata, "leiden")
     with subtests.test("rank_genes_groups_1"):
         sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-        save_and_compare_images("rank_genes_groups_1")
+        plot_cmp("rank_genes_groups_1")
 
     sc.tl.rank_genes_groups(adata, "leiden", method="wilcoxon")
     with subtests.test("rank_genes_groups_2"):
         sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
-        save_and_compare_images("rank_genes_groups_2")
+        plot_cmp("rank_genes_groups_2")
 
     sc.tl.rank_genes_groups(adata, "leiden", groups=["0"], reference="1")
     with subtests.test("rank_genes_groups_3"):
         sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
-        save_and_compare_images("rank_genes_groups_3")
+        plot_cmp("rank_genes_groups_3")
 
     with subtests.test("rank_genes_groups_4"):
         sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
         try:
-            save_and_compare_images("rank_genes_groups_4")
+            plot_cmp("rank_genes_groups_4")
         except AssertionError:
             pytest.xfail("rank_genes_groups_violin not reproducible (jitter?)")
 
@@ -188,4 +191,4 @@ def test_pbmc3k(subtests: pytest.Subtests, image_comparer) -> None:  # noqa: PLR
             reason="seaborn violin plot is incompatible with pandas 3",
             raises=AssertionError,
         ):
-            save_and_compare_images("violin_2")
+            plot_cmp("violin_2")
