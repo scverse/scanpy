@@ -5,7 +5,6 @@ import string
 import warnings
 from contextlib import nullcontext
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -20,13 +19,11 @@ from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from typing import Literal
 
     from scanpy._compat import CSBase, CSRBase
 
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
 
 _create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
 """Create a bunch of random gene names (just CAPS letters)."""
@@ -55,7 +52,7 @@ def _create_adata(n_obs: int, n_var: int, p_zero: float, p_nan: float) -> AnnDat
     return adata
 
 
-def test_score_with_reference():
+def test_score_with_reference(data_dir: Path) -> None:
     """Checks if score_genes output agrees with pre-computed reference values.
 
     The reference values had been generated using the same code
@@ -67,7 +64,7 @@ def test_score_with_reference():
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
-    with (DATA_PATH / "score_genes_reference_paul2015.pkl").open("rb") as file:
+    with (data_dir / "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
     # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
     np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())

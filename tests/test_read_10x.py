@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -13,12 +12,18 @@ import pytest
 import scanpy as sc
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from typing import Literal
 
 
-ROOT = Path(__file__).parent
-ROOT = ROOT / "_data" / "10x_data"
-VISIUM_ROOT = Path(__file__).parent / "_data" / "visium_data"
+@pytest.fixture(scope="session")
+def data_10x(data_dir: Path) -> Path:
+    return data_dir / "10x_data"
+
+
+@pytest.fixture(scope="session")
+def data_visium(data_dir: Path) -> Path:
+    return data_dir / "visium_data"
 
 
 def assert_anndata_equal(a1, a2):
@@ -29,24 +34,29 @@ def assert_anndata_equal(a1, a2):
 
 
 @pytest.mark.parametrize(
-    ("mtx_path", "h5_path"),
+    ("mtx_relpath", "h5_relpath"),
     [
         pytest.param(
-            ROOT / "1.2.0" / "filtered_gene_bc_matrices" / "hg19_chr21",
-            ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
+            "1.2.0/filtered_gene_bc_matrices/hg19_chr21",
+            "1.2.0/filtered_gene_bc_matrices_h5.h5",
             id="1.2.0",
         ),
         pytest.param(
-            ROOT / "3.0.0" / "filtered_feature_bc_matrix",
-            ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5",
+            "3.0.0/filtered_feature_bc_matrix",
+            "3.0.0/filtered_feature_bc_matrix.h5",
             id="3.0.0",
         ),
     ],
 )
 @pytest.mark.parametrize("prefix", [None, "prefix_"], ids=["no_prefix", "prefix"])
 def test_read_10x(
-    tmp_path: Path, mtx_path: Path, h5_path: Path, prefix: str | None
+    tmp_path: Path,
+    data_10x: Path,
+    mtx_relpath: str,
+    h5_relpath: str,
+    prefix: str | None,
 ) -> None:
+    mtx_path = data_10x / mtx_relpath
     if prefix is not None:
         # Build files named "prefix_XXX.xxx" in a temporary directory.
         mtx_path_orig = mtx_path
@@ -57,10 +67,10 @@ def test_read_10x(
                 shutil.copyfile(item, mtx_path / f"{prefix}{item.name}")
 
     mtx = sc.read_10x_mtx(mtx_path, var_names="gene_symbols", prefix=prefix)
-    h5 = sc.read_10x_h5(h5_path)
+    h5 = sc.read_10x_h5(data_10x / h5_relpath)
 
     # Drop genome column for comparing v3
-    if "3.0.0" in str(h5_path):
+    if "3.0.0" in h5_relpath:
         h5.var.drop(columns="genome", inplace=True)
 
     # Check equivalence
@@ -84,37 +94,37 @@ def test_read_10x(
     ],
 )
 def test_read_10x_mtx_int(
-    genes: Literal["symbols", "ids"], col_dtypes: dict[str, str]
+    data_10x: Path, genes: Literal["symbols", "ids"], col_dtypes: dict[str, str]
 ) -> None:
     str_dt = "str" if pd.options.future.infer_string else "object"
     col_dtypes = {k: str_dt if v == "str" else v for k, v in col_dtypes.items()}
 
     adata = sc.read_10x_mtx(
-        ROOT / "int-ids", var_names=f"gene_{genes}", compressed=False
+        data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False
     )
 
     assert adata.var.index.dtype == str_dt
     assert dict(adata.var.dtypes) == dict(feature_types=str_dt, **col_dtypes)
 
 
-def test_read_10x_h5_v1():
+def test_read_10x_h5_v1(data_10x: Path) -> None:
     spec_genome_v1 = sc.read_10x_h5(
-        ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
+        data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
         genome="hg19_chr21",
     )
     nospec_genome_v1 = sc.read_10x_h5(
-        ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
+        data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
     )
     assert_anndata_equal(spec_genome_v1, nospec_genome_v1)
 
 
-def test_read_10x_h5_v2_multiple_genomes():
+def test_read_10x_h5_v2_multiple_genomes(data_10x: Path) -> None:
     genome1_v1 = sc.read_10x_h5(
-        ROOT / "1.2.0" / "multiple_genomes.h5",
+        data_10x / "1.2.0" / "multiple_genomes.h5",
         genome="hg19_chr21",
     )
     genome2_v1 = sc.read_10x_h5(
-        ROOT / "1.2.0" / "multiple_genomes.h5",
+        data_10x / "1.2.0" / "multiple_genomes.h5",
         genome="another_genome",
     )
     # the test data are such that X is the same shape for both "genomes",
@@ -125,17 +135,19 @@ def test_read_10x_h5_v2_multiple_genomes():
     )
 
 
-def test_read_10x_h5():
+def test_read_10x_h5(data_10x: Path) -> None:
     spec_genome_v3 = sc.read_10x_h5(
-        ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5",
+        data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5",
         genome="GRCh38_chr21",
     )
-    nospec_genome_v3 = sc.read_10x_h5(ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5")
+    nospec_genome_v3 = sc.read_10x_h5(
+        data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
+    )
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
 
 
-def test_error_10x_h5_legacy(tmp_path):
-    onepth = ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
+def test_error_10x_h5_legacy(tmp_path: Path, data_10x: Path) -> None:
+    onepth = data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
     twopth = tmp_path / "two_genomes.h5"
     with h5py.File(onepth, "r") as one, h5py.File(twopth, "w") as two:
         one.copy("hg19_chr21", two)
@@ -145,9 +157,9 @@ def test_error_10x_h5_legacy(tmp_path):
     sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
 
 
-def test_error_missing_genome():
-    legacy_pth = ROOT / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
-    v3_pth = ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5"
+def test_error_missing_genome(data_10x: Path) -> None:
+    legacy_pth = data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
+    v3_pth = data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
     with pytest.raises(ValueError, match=r".*hg19_chr21.*"):
         sc.read_10x_h5(legacy_pth, genome="not a genome")
     with pytest.raises(ValueError, match=r".*GRCh38_chr21.*"):
@@ -155,8 +167,10 @@ def test_error_missing_genome():
 
 
 @pytest.fixture(params=[1, 2])
-def visium_pth(request, tmp_path) -> Path:
-    visium1_pth = VISIUM_ROOT / "1.0.0"
+def visium_pth(
+    tmp_path: Path, data_visium: Path, request: pytest.FixtureRequest
+) -> Path:
+    visium1_pth = data_visium / "1.0.0"
     if request.param == 1:
         return visium1_pth
     elif request.param == 2:
@@ -182,17 +196,17 @@ def test_read_visium_counts(visium_pth):
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
 
 
-def test_10x_h5_gex():
+def test_10x_h5_gex(data_10x: Path):
     # Tests that gex option doesn't, say, make the function return None
-    h5_pth = ROOT / "3.0.0" / "filtered_feature_bc_matrix.h5"
+    h5_pth = data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
     assert_anndata_equal(
         sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
     )
 
 
-def test_10x_probe_barcode_read():
+def test_10x_probe_barcode_read(data_visium: Path) -> None:
     # Tests the 10x probe barcode matrix is read correctly
-    h5_pth = VISIUM_ROOT / "2.1.0" / "raw_probe_bc_matrix.h5"
+    h5_pth = data_visium / "2.1.0" / "raw_probe_bc_matrix.h5"
     probe_anndata = sc.read_10x_h5(h5_pth)
     assert set(probe_anndata.var.columns) == {
         "feature_types",
@@ -208,10 +222,10 @@ def test_10x_probe_barcode_read():
     assert probe_anndata.X.nnz == 858
 
 
-def test_read_10x_compressed_parameter(tmp_path):
+def test_read_10x_compressed_parameter(tmp_path: Path, data_10x: Path) -> None:
     """Test that the compressed parameter works correctly."""
     # Copy test data to temp directory
-    mtx_path_v3 = ROOT / "3.0.0" / "filtered_feature_bc_matrix"
+    mtx_path_v3 = data_10x / "3.0.0" / "filtered_feature_bc_matrix"
     test_path = tmp_path / "test_compressed"
     test_path.mkdir()
 

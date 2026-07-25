@@ -7,7 +7,7 @@ We have some tooling to help with this.
 
 ### Viewing plots from failed tests on Azure pipelines
 
-The fixtures `check_same_image` and `image_comparer` upload plots from failing tests so you can view them from the azure pipelines test viewer.
+The fixtures `check_same_image` and `plot_cmp` upload plots from failing tests so you can view them from the azure pipelines test viewer.
 To find these, navigate to the tests tab for your build
 
 ```{image} ../_static/img/ci_plot-view_tests-tab.png

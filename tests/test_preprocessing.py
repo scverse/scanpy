@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from contextlib import nullcontext
 from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
@@ -27,6 +26,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from typing import Any, Literal
 
     from numpy.typing import DTypeLike, NDArray
@@ -38,10 +38,6 @@ class _MatrixFormat(NamedTuple):
 
     def __call__(self, x: NDArray) -> CSBase | NDArray:
         return self.callback(x)
-
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
 
 
 @pytest.fixture(params=[np.asarray, sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
@@ -410,7 +406,7 @@ def test_regress_out_ordinal():
 
 
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
-def test_regress_out_int(dtype):
+def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata = pbmc3k()[:200, :200].copy()
     adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
     dtype = adata.X.dtype
@@ -424,7 +420,7 @@ def test_regress_out_int(dtype):
     sc.pp.regress_out(adata_other, keys=["labels"])
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
-    ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
+    ground_truth = np.load(data_dir / "cat_regressor_for_int_input.npy")
     np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
 
 
@@ -501,13 +497,15 @@ def test_regress_out_constants():
         (["bulk_labels"], "regress_test_small_cat.npy", 1e-6),
     ],
 )
-def test_regress_out_reproducible(keys, test_file, atol):
+def test_regress_out_reproducible(
+    data_dir: Path, keys: list[str], test_file: str, atol: float
+) -> None:
     adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
     sc.pp.regress_out(adata, keys=keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
-    tester = np.load(DATA_PATH / test_file)
+    tester = np.load(data_dir / test_file)
     np.testing.assert_allclose(adata.X, tester, atol=atol)
 
 

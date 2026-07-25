@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy.testing as npt
@@ -20,17 +19,21 @@ from scanpy.preprocessing._distributed import materialize_as_ndarray
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from anndata import AnnData
+    from pathlib import Path
 
-HERE = Path(__file__).parent / Path("_data/")
-input_file = Path(HERE, "10x-10k-subset.zarr")
+    from anndata import AnnData
 
 
 pytestmark = [needs.zarr, needs.dask]
 
 
+@pytest.fixture(scope="session")
+def input_file(data_dir) -> Path:
+    return data_dir / "10x-10k-subset.zarr"
+
+
 @pytest.fixture
-def adata() -> AnnData:
+def adata(input_file: Path) -> AnnData:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Variable names are not unique", UserWarning)
@@ -41,7 +44,7 @@ def adata() -> AnnData:
 
 
 @pytest.fixture
-def adata_dist() -> AnnData:
+def adata_dist(input_file: Path) -> AnnData:
     import dask.array as da
 
     # regular anndata except for X, which we replace farther down
