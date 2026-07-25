@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import uuid
 from functools import partial, wraps
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
@@ -13,17 +12,12 @@ from matplotlib.colors import Normalize
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
-from testing.scanpy._helpers import image_root
 from testing.scanpy._helpers.data import pbmc3k_processed
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from scanpy.plotting.legacy._utils import _LegendLoc
-
-
-HERE: Path = Path(__file__).parent
-ROOT = image_root(HERE.parent / "_images")
-
-MISSING_VALUES_ROOT = ROOT / "embedding-missing-values"
 
 
 def check_images(pth1: Path, pth2: Path, *, tol: int) -> None:
@@ -103,8 +97,9 @@ def vbounds(request):
 
 def test_missing_values_categorical(
     *,
+    image_dir: Path,
     request: pytest.FixtureRequest,
-    image_comparer,
+    plot_cmp,
     adata,
     plotfunc,
     na_color,
@@ -112,7 +107,7 @@ def test_missing_values_categorical(
     legend_loc,
     groupsfunc,
 ):
-    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
+    plot_cmp = partial(plot_cmp, root=image_dir / "embedding-missing-values")
 
     base_name = request.node.name
 
@@ -126,19 +121,20 @@ def test_missing_values_categorical(
 
     plotfunc(adata, color=["label", "label_missing"], **kwargs)
 
-    save_and_compare_images(base_name)
+    plot_cmp(base_name)
 
 
 def test_missing_values_continuous(
     *,
+    image_dir: Path,
     request: pytest.FixtureRequest,
-    image_comparer,
+    plot_cmp,
     adata,
     plotfunc,
     na_color,
     vbounds,
 ):
-    save_and_compare_images = partial(image_comparer, MISSING_VALUES_ROOT, tol=15)
+    plot_cmp = partial(plot_cmp, root=image_dir / "embedding-missing-values")
 
     base_name = request.node.name
 
@@ -150,7 +146,7 @@ def test_missing_values_continuous(
 
     plotfunc(adata, color=["1", "1_missing"], **kwargs)
 
-    save_and_compare_images(base_name)
+    plot_cmp(base_name)
 
 
 def test_enumerated_palettes(request, adata, tmp_path, plotfunc):
@@ -245,14 +241,12 @@ def test_dimensions_same_as_components(adata, tmp_path, check_same_image):
     check_same_image(dims_pth, comp_pth, tol=5, root=tmp_path)
 
 
-def test_embedding_colorbar_location(image_comparer):
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
-
+def test_embedding_colorbar_location(plot_cmp) -> None:
     adata = pbmc3k_processed().raw.to_adata()
 
     sc.pl.pca(adata, color="LDHB", colorbar_loc=None, show=False)
 
-    save_and_compare_images("no_colorbar")
+    plot_cmp("no_colorbar")
 
 
 def test_raise_save_future_warning(tmp_path: Path) -> None:

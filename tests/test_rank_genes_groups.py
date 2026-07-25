@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
 
 import numba
@@ -26,14 +25,11 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from pathlib import Path
     from typing import Any, Literal
 
     from numpy.lib.npyio import NpzFile
     from numpy.typing import NDArray
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
-
 
 # We test results for a simple generic example
 # Tests are conducted for sparse and non-sparse AnnData objects.
@@ -70,8 +66,8 @@ class Expected(TypedDict):
     scores: NDArray[np.floating]
 
 
-def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
-    path = DATA_PATH / f"objs-{method}.npz"
+def get_true_scores(data_dir: Path, method: Literal["t-test", "wilcoxon"]) -> Expected:
+    path = data_dir / f"objs-{method}.npz"
     with (
         path.open("rb") as f,
         cast("NpzFile", np.load(f, allow_pickle=False)) as z,

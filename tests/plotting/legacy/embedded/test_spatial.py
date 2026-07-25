@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,11 +9,9 @@ import pytest
 from matplotlib.testing.compare import compare_images
 
 import scanpy as sc
-from testing.scanpy._helpers import image_root
 
-HERE: Path = Path(__file__).parent
-ROOT = image_root(HERE.parent / "_images")
-DATA_DIR = HERE.parent.parent.parent / "_data"
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 pytestmark = [
@@ -26,10 +24,9 @@ def check_images(pth1: Path, pth2: Path, *, tol: int) -> None:
     assert result is None, result
 
 
-def test_visium_circles(image_comparer):  # standard visium data
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
+def test_visium_circles(data_dir: Path, plot_cmp):  # standard visium data
 
-    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+    adata = sc.read_visium(data_dir / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(
@@ -42,39 +39,34 @@ def test_visium_circles(image_comparer):  # standard visium data
         show=False,
     )
 
-    save_and_compare_images("spatial_visium")
+    plot_cmp("spatial_visium")
 
 
-def test_visium_default(image_comparer):  # default values
-    save_and_compare_images = partial(image_comparer, ROOT, tol=5)
-
-    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+def test_visium_default(data_dir: Path, plot_cmp):  # default values
+    adata = sc.read_visium(data_dir / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     # Points default to transparent if an image is included
     sc.pl.spatial(adata, show=False)
 
-    save_and_compare_images("spatial_visium_default")
+    plot_cmp("spatial_visium_default", tol=5)
 
 
-def test_visium_empty_img_key(image_comparer):  # visium coordinates but image empty
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
-
-    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+def test_visium_empty_img_key(data_dir: Path, plot_cmp):
+    """Visium coordinates but image empty."""
+    adata = sc.read_visium(data_dir / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     sc.pl.spatial(adata, img_key=None, color="array_row", show=False)
 
-    save_and_compare_images("spatial_visium_empty_image")
+    plot_cmp("spatial_visium_empty_image")
 
     sc.pl.embedding(adata, basis="spatial", color="array_row", show=False)
-    save_and_compare_images("spatial_visium_embedding")
+    plot_cmp("spatial_visium_embedding")
 
 
-def test_spatial_general(image_comparer):  # general coordinates
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
-
-    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+def test_spatial_general(data_dir: Path, plot_cmp):  # general coordinates
+    adata = sc.read_visium(data_dir / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
     spatial_metadata = adata.uns.pop(
         "spatial"
@@ -85,21 +77,19 @@ def test_spatial_general(image_comparer):  # general coordinates
     ]
 
     sc.pl.spatial(adata, show=False, spot_size=spot_size)
-    save_and_compare_images("spatial_general_nocol")
+    plot_cmp("spatial_general_nocol")
 
     # category
     sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_row")
-    save_and_compare_images("spatial_general_cat")
+    plot_cmp("spatial_general_cat")
 
     # continuous
     sc.pl.spatial(adata, show=False, spot_size=spot_size, color="array_col")
-    save_and_compare_images("spatial_general_cont")
+    plot_cmp("spatial_general_cont")
 
 
-def test_spatial_external_img(image_comparer):  # external image
-    save_and_compare_images = partial(image_comparer, ROOT, tol=15)
-
-    adata = sc.read_visium(DATA_DIR / "visium_data" / "1.0.0")
+def test_spatial_external_img(data_dir: Path, plot_cmp):  # external image
+    adata = sc.read_visium(data_dir / "visium_data" / "1.0.0")
     adata.obs = adata.obs.astype({"array_row": "str"})
 
     img = adata.uns["spatial"]["custom"]["images"]["hires"]
@@ -112,7 +102,7 @@ def test_spatial_external_img(image_comparer):  # external image
         basis="spatial",
         show=False,
     )
-    save_and_compare_images("spatial_external_img")
+    plot_cmp("spatial_external_img")
 
 
 @pytest.fixture(scope="module")
