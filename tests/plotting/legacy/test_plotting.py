@@ -112,7 +112,6 @@ def test_heatmap(plot_cmp, params: dict[str, Any], key: str) -> None:
 
 @needs.leidenalg
 def test_heatmap_var_as_dict(plot_cmp) -> None:
-
     pbmc = pbmc68k_reduced()
     sc.tl.leiden(
         pbmc,
@@ -171,7 +170,6 @@ def test_heatmap_alignment(*, plot_cmp, swap_axes: bool) -> None:
     [(None, "clustermap"), ("cell_type", "clustermap_withcolor")],
 )
 def test_clustermap(plot_cmp, obs_keys, name):
-
     adata = krumsiek11()
     sc.pl.clustermap(adata, obs_keys, show=False)
     plot_cmp(name)
@@ -418,7 +416,6 @@ def test_dotplot_add_totals(plot_cmp):
 
 
 def test_matrixplot_obj(plot_cmp):
-
     adata = pbmc68k_reduced()
     marker_genes_dict = {
         "3": ["GNLY", "NKG7"],
@@ -446,7 +443,6 @@ def test_matrixplot_obj(plot_cmp):
 
 
 def test_stacked_violin_obj(plot_cmp, plt):
-
     pbmc = pbmc68k_reduced()
     markers = {
         "T-cell": ["CD3D", "CD3E", "IL32"],
@@ -495,7 +491,6 @@ def test_stacked_violin_swap_axes_match(
 
 
 def test_tracksplot(plot_cmp):
-
     adata = krumsiek11()
     sc.pl.tracksplot(
         adata, adata.var_names, "cell_type", dendrogram=True, use_raw=False, show=False
@@ -673,7 +668,6 @@ def test_dendrogram(plot_cmp):
 
 
 def test_correlation(plot_cmp):
-
     pbmc = pbmc68k_reduced()
     sc.pl.correlation_matrix(pbmc, "bulk_labels", show=False)
     plot_cmp("correlation")
@@ -901,7 +895,6 @@ _RANK_GENES_GROUPS_PARAMS = [
     [param_with(p, lambda fn, p=p: (p.id, fn)) for p in _RANK_GENES_GROUPS_PARAMS],
 )
 def test_rank_genes_groups(plot_cmp, name: str, fn: Callable[[AnnData], None]) -> None:
-
     pbmc = pbmc68k_reduced()
     sc.tl.rank_genes_groups(pbmc, "louvain", n_genes=pbmc.raw.shape[1])
 
@@ -1080,7 +1073,6 @@ def test_rank_genes_groups_plots_n_genes_vs_var_names(tmp_path, func, check_same
     ],
 )
 def test_genes_symbols(plot_cmp, id, fn):
-
     adata = krumsiek11()
 
     # add a 'symbols' column
@@ -1255,7 +1247,6 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
     ],
 )
 def test_scatterplots(plot_cmp, pbmc_scatterplots, id, fn):
-
     fn(pbmc_scatterplots, show=False)
     plot_cmp(id)
 
@@ -1279,7 +1270,6 @@ def test_scatter_embedding_groups_and_size(plot_cmp):
 
 
 def test_scatter_embedding_add_outline_vmin_vmax_norm(plot_cmp):
-
     pbmc = pbmc68k_reduced()
 
     sc.pl.embedding(
@@ -1304,9 +1294,6 @@ def test_scatter_embedding_add_outline_vmin_vmax_norm(plot_cmp):
 
 def test_scatter_embedding_add_outline_vmin_vmax_norm_ref(tmp_path, check_same_image):
     pbmc = pbmc68k_reduced()
-
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
 
     norm = mpl.colors.LogNorm()
     with pytest.raises(
@@ -1421,7 +1408,6 @@ def pbmc_68k_dpt_session() -> AnnData:
     [sc.pl.dpt_groups_pseudotime, sc.pl.dpt_timeseries],
 )
 def test_dpt_plots(plot_cmp, pbmc_68k_dpt_session: AnnData, func: Callable) -> None:
-
     adata = pbmc_68k_dpt_session.copy()
     func(
         adata,
@@ -1449,7 +1435,6 @@ def test_scatter_raw(tmp_path):
 
 
 def test_binary_scatter(plot_cmp):
-
     data = AnnData(
         np.asarray([[-1, 2, 0], [3, 4, 0], [1, 2, 0]]).T,
         obs=dict(binary=np.asarray([False, True, True])),
@@ -1549,7 +1534,6 @@ def test_scatter_no_basis_value_error(pbmc_filtered, x, y, color, use_raw):
 
 
 def test_rankings(plot_cmp):
-
     pbmc = pbmc68k_reduced()
     sc.pp.pca(pbmc)
     sc.pl.pca_loadings(pbmc, show=False)
@@ -1659,7 +1643,6 @@ def test_no_copy():
 
 
 def test_groupby_index(plot_cmp):
-
     pbmc = pbmc68k_reduced()
 
     genes = [
@@ -1682,7 +1665,7 @@ def test_groupby_index(plot_cmp):
     plot_cmp("dotplot_groupby_index")
 
 
-def test_groupby_list(plot_cmp) -> None:
+def test_groupby_list() -> None:
     """Test category order when groupby is a list.
 
     See <https://github.com/scverse/scanpy/issues/1735>
@@ -1695,16 +1678,25 @@ def test_groupby_list(plot_cmp) -> None:
     rng.shuffle(cats)
     adata.obs["rand_cat"] = pd.Categorical(cat_val, categories=cats)
 
-    with mpl.rc_context({"figure.subplot.bottom": 0.5}):
-        sc.pl.dotplot(
-            adata,
-            ["Gata1", "Gata2"],
-            groupby=["rand_cat", "cell_type"],
-            swap_axes=True,
-            show=False,
-        )
+    plot = sc.pl.dotplot(
+        adata,
+        ["Gata1", "Gata2"],
+        ["rand_cat", "cell_type"],
+        swap_axes=True,
+        show=False,
+        return_fig=True,
+    )
+    plot.make_figure()
+    ticks = [t.get_text() for t in plot.get_axes()["mainplot_ax"].get_xticklabels()]
 
-    plot_cmp("dotplot_groupby_list_catorder")
+    # each group’s categories determine the tick order, unobserved pairs are dropped
+    observed = set(zip(adata.obs.rand_cat, adata.obs.cell_type, strict=True))
+    assert ticks == [
+        f"{rand}_{cell}"
+        for rand in cats
+        for cell in adata.obs.cell_type.cat.categories
+        if (rand, cell) in observed
+    ]
 
 
 def test_color_cycler(caplog):

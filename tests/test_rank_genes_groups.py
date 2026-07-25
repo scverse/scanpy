@@ -432,7 +432,6 @@ def test_illico(
     mean_in_log_space: bool,
     tie_correct: bool,
 ):
-
     pbmc = pbmc68k_reduced()
     pbmc.raw.X.sum_duplicates()
     pbmc.raw.X.sort_indices()
