@@ -554,6 +554,7 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
     pbmc.layers["negative"] = pbmc.X * -1
 
     with subtests.test("default"):
+        np.random.seed(0)  # noqa: NPY002
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -565,6 +566,7 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
         plot_cmp("violin_multi_panel")
 
     with subtests.test(groupby="bulk_labels"):
+        np.random.seed(0)  # noqa: NPY002
         sc.pl.violin(
             pbmc,
             ["n_genes", "percent_mito", "n_counts"],
@@ -584,6 +586,7 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
             plot_cmp("violin_multi_panel_with_groupby")
 
     with subtests.test(layer="negative"):
+        np.random.seed(0)  # noqa: NPY002
         sc.pl.violin(
             pbmc,
             "CST3",
@@ -926,7 +929,7 @@ def test_rank_genes_group_axes(plot_cmp):
         axes: list[Axes] = fn(pbmc, ax=ax, show=False)
 
     assert len(axes) == 11
-    plot_cmp("ranked_genes", tol=23)
+    plot_cmp("ranked_genes_ax")
     plt.close()
 
 
