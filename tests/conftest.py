@@ -67,7 +67,7 @@ def imported_modules():
     return IMPORTED
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def data_dir() -> Path:
     return HERE / "_data"
 
