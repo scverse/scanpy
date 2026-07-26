@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,18 +9,19 @@ import pytest
 
 import scanpy as sc
 
-PROJECT_DIR: Path = Path(sc.__file__).parent.parent.parent
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture(scope="module")
-def adata():
+def adata(project_dir: Path) -> sc.AnnData:
     # A bit cute.
     from matplotlib.image import imread
     from sklearn.cluster import DBSCAN
     from sklearn.datasets import make_blobs
 
     empty_pixel = np.array([1.0, 1.0, 1.0, 0]).reshape(1, 1, -1)
-    image = imread(PROJECT_DIR / "docs/_static/img/Scanpy_Logo_RGB.png")
+    image = imread(project_dir / "docs/_static/img/Scanpy_Logo_RGB.png")
     x, y = np.where(np.logical_and.reduce(~np.equal(image, empty_pixel), axis=2))
 
     # Just using to calculate the hex coords

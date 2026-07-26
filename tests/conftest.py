@@ -68,6 +68,11 @@ def imported_modules():
 
 
 @pytest.fixture(scope="session")
+def project_dir() -> Path:
+    return HERE.parent
+
+
+@pytest.fixture(scope="session")
 def data_dir() -> Path:
     return HERE / "_data"
 
