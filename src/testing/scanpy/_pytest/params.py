@@ -7,12 +7,17 @@ from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 import pytest
-from anndata.tests.helpers import as_dense_jax_array, asarray
+from anndata.tests.helpers import asarray
 from packaging.version import Version
 from scipy import sparse
 
 from .._helpers import as_dense_dask_array, as_sparse_dask_matrix
 from .._pytest.marks import needs
+
+try:
+    from anndata.tests.helpers import as_dense_jax_array
+except ImportError:
+    as_dense_jax_array = None
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -77,7 +82,11 @@ MAP_ARRAY_TYPES: dict[
 ] = {
     ("mem", "dense"): (
         pytest.param(asarray, id="numpy_ndarray"),
-        pytest.param(as_dense_jax_array, marks=[needs.jax], id="jax_array"),
+        *(
+            [pytest.param(as_dense_jax_array, marks=[needs.jax], id="jax_array")]
+            if as_dense_jax_array is not None
+            else []
+        ),
     ),
     ("mem", "sparse"): (
         pytest.param(sparse.csr_matrix, id="scipy_csr_mat"),  # noqa: TID251
