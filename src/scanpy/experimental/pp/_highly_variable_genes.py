@@ -23,7 +23,7 @@ from ...experimental._docs import (
     doc_inplace,
     doc_layer,
 )
-from ...get import _get_obs_rep
+from ...get import _get_arr
 from ...preprocessing._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -140,7 +140,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
@@ -165,13 +165,13 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     residual_gene_vars = []
     for batch in np.unique(batch_info):
         adata_subset_prefilter = adata[batch_info == batch]
-        x_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
+        x_batch_prefilter = _get_arr(adata_subset_prefilter, layer=layer)
 
         # Filter out zero genes
         with settings.override(verbosity=Verbosity.error):
             nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        x_batch = _get_obs_rep(adata_subset, layer=layer)
+        x_batch = _get_arr(adata_subset, layer=layer)
 
         # Prepare clipping
         if clip is None:
