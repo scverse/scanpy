@@ -22,7 +22,7 @@ from ...experimental._docs import (
     doc_layer,
     doc_pca_chunk,
 )
-from ...get import _check_mask, _get_obs_rep, _set_obs_rep
+from ...get import _check_mask, _get_arr, _set_obs_rep
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import pca
 
@@ -133,7 +133,7 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"

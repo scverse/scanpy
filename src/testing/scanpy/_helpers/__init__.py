@@ -49,20 +49,18 @@ def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs) -> None:
 
     # Modified fields
     for field in fields:
-        result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field], **{field: field})
-        )
+        result_array = asarray(sc.get._get_arr(adatas_proc[field], **{field: field}))
         np.testing.assert_array_equal(asarray(adata_out.X), result_array)
 
     # Unmodified fields
     for field in fields:
         np.testing.assert_array_equal(x_array, asarray(adatas_proc[field].X))
         np.testing.assert_array_equal(
-            x_array, asarray(sc.get._get_obs_rep(adata_out, **{field: field}))
+            x_array, asarray(sc.get._get_arr(adata_out, **{field: field}))
         )
     for field_a, field_b in permutations(fields, 2):
         result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field_a], **{field_b: field_b})
+            sc.get._get_arr(adatas_proc[field_a], **{field_b: field_b})
         )
         np.testing.assert_array_equal(x_array, result_array)
 

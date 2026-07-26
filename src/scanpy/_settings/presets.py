@@ -5,8 +5,8 @@ import inspect
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import cached_property, partial, wraps
-from importlib.metadata import distributions, requires
+from functools import cache, cached_property, partial, wraps
+from importlib.metadata import distributions, requires, version
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from packaging.requirements import Requirement
@@ -17,7 +17,10 @@ from .._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
+    from collections.abc import Set as AbstractSet
     from typing import Self
+
+    from packaging.utils import NormalizedName
 
 
 __all__ = [
@@ -313,14 +316,27 @@ class Preset(enum.StrEnum):
 
 
 def _missing_scanpy2_deps() -> list[Requirement]:
-    dist_names = {canonicalize_name(d.name) for d in distributions()}
     return [
         r
         for r in map(Requirement, requires("scanpy") or ())
-        if r.marker
-        and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
-        and canonicalize_name(r.name) not in dist_names
+        if (
+            r.marker
+            and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+            and not _req_satisfied(r)
+        )
     ]
+
+
+def _req_satisfied(req: Requirement) -> bool:
+    return (
+        canonicalize_name(req.name) in dist_names()
+        and version(req.name) in req.specifier
+    )
+
+
+@cache
+def dist_names() -> AbstractSet[NormalizedName]:
+    return dict.fromkeys(canonicalize_name(d.name) for d in distributions()).keys()
 
 
 for postprocess in preset_postprocessors:
