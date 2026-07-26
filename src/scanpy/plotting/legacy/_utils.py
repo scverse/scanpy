@@ -392,8 +392,19 @@ def default_palette(
         return palette
 
 
+def _get_palette_mapping_key(palette: Mapping, category, *, categorical_is_bool: bool):
+    if category in palette:
+        return category
+    if categorical_is_bool:
+        if category == "False" and False in palette:
+            return False
+        if category == "True" and True in palette:
+            return True
+    return category
+
+
 def validate_palette(adata: AnnData, key: str) -> None:
-    """Validate and update the list of colors in `adata.uns[f'{key}_colors']`.
+    """Validate and update the colors in `adata.uns[f'{key}_colors']`.
 
     Not only valid matplotlib colors are checked but also if the color name
     is a valid R color name, in which case it will be translated to a valid name
@@ -403,10 +414,16 @@ def validate_palette(adata: AnnData, key: str) -> None:
     try:
         # check if the color is a valid R color and translate it
         # to a valid hex color value
-        palette = [
-            color if is_color_like(color) else _ADDITIONAL_COLORS[color]
-            for color in raw_palette
-        ]
+        if isinstance(raw_palette, Mapping):
+            palette = {
+                category: color if is_color_like(color) else _ADDITIONAL_COLORS[color]
+                for category, color in raw_palette.items()
+            }
+        else:
+            palette = [
+                color if is_color_like(color) else _ADDITIONAL_COLORS[color]
+                for color in raw_palette
+            ]
     except KeyError as e:
         logg.warning(
             f"The following color value found in adata.uns['{key}_colors'] "
@@ -415,13 +432,19 @@ def validate_palette(adata: AnnData, key: str) -> None:
         set_default_colors_for_categorical_obs(adata, key)
         palette = None
     # Don’t modify if nothing changed
-    if palette is None or np.array_equal(palette, adata.uns[color_key]):
+    if palette is None or (
+        palette == raw_palette
+        if isinstance(raw_palette, Mapping)
+        else np.array_equal(palette, raw_palette)
+    ):
         return
     adata.uns[color_key] = palette
 
 
 def set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: str | Sequence[str] | Cycler
+    adata,
+    value_to_plot,
+    palette: str | Mapping[object, ColorLike] | Sequence[ColorLike] | Cycler,
 ):
     """Set `adata.uns[f'{value_to_plot}_colors']` according to the given palette.
 
@@ -434,7 +457,8 @@ def set_colors_for_categorical_obs(
     palette
         Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
         a sequence of colors (in a format that can be understood by matplotlib,
-        eg. RGB, RGBS, hex, or a cycler object with key='color'
+        eg. RGB, RGBS, hex), a mapping from categories to colors, or a cycler
+        object with key='color'
 
     Returns
     -------
@@ -443,7 +467,8 @@ def set_colors_for_categorical_obs(
     """
     from matplotlib.colors import to_hex
 
-    if adata.obs[value_to_plot].dtype == bool:
+    categorical_is_bool = adata.obs[value_to_plot].dtype == bool
+    if categorical_is_bool:
         categories = (
             adata.obs[value_to_plot].astype(str).astype("category").cat.categories
         )
@@ -455,7 +480,17 @@ def set_colors_for_categorical_obs(
         cmap = colormaps.get_cmap(palette)
         colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
     elif isinstance(palette, Mapping):
-        colors_list = [to_hex(palette[k], keep_alpha=True) for k in categories]
+        colors_list = [
+            to_hex(
+                palette[
+                    _get_palette_mapping_key(
+                        palette, category, categorical_is_bool=categorical_is_bool
+                    )
+                ],
+                keep_alpha=True,
+            )
+            for category in categories
+        ]
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:

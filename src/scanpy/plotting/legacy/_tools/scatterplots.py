@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import re
 import textwrap
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import cache, partial
 from itertools import combinations, product
 from numbers import Integral
@@ -34,7 +34,7 @@ from .._docs import (
 from .._utils import _obs_vector_compat, check_colornorm, check_projection, circles
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Mapping
+    from collections.abc import Callable, Collection
     from types import FunctionType
     from typing import Any, Literal
 
@@ -1238,7 +1238,8 @@ def _get_color_source_vector(
 
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
-    if adata.obs[values_key].dtype == bool:
+    categorical_is_bool = adata.obs[values_key].dtype == bool
+    if categorical_is_bool:
         values = pd.Categorical(adata.obs[values_key].astype(str))
     else:
         values = pd.Categorical(adata.obs[values_key])
@@ -1251,10 +1252,24 @@ def _get_palette(adata, values_key: str, palette=None):
         _utils.set_default_colors_for_categorical_obs(adata, values_key)
     else:
         _utils.validate_palette(adata, values_key)
+
+    colors_list = adata.uns[color_key]
+    if isinstance(colors_list, Mapping):
+        return {
+            category: colors_list[
+                _utils._get_palette_mapping_key(
+                    colors_list,
+                    category,
+                    categorical_is_bool=categorical_is_bool,
+                )
+            ]
+            for category in values.categories
+        }
+
     return dict(
         zip(
             values.categories,
-            adata.uns[color_key][: len(values.categories)],
+            colors_list[: len(values.categories)],
             strict=True,
         )
     )
