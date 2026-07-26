@@ -4,7 +4,7 @@ import warnings
 from functools import cache
 from importlib.util import find_spec
 from pathlib import Path
-from types import FunctionType, ModuleType
+from types import FunctionType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
@@ -13,6 +13,7 @@ from scipy import sparse
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
+    from types import ModuleType
 
 
 __all__ = [
