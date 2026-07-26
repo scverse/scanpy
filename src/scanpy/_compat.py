@@ -4,7 +4,7 @@ import warnings
 from functools import cache
 from importlib.util import find_spec
 from pathlib import Path
-from types import FunctionType
+from types import FunctionType, ModuleType
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
@@ -67,7 +67,7 @@ def pkg_metadata(package: str) -> PackageMetadata:
     return metadata(package)
 
 
-def get_namespace(x):
+def get_namespace(x) -> ModuleType:
     # get array-api namespace for x
     from array_api_compat import get_namespace
 

@@ -356,15 +356,6 @@ def log1p(
     return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(HasArrayNamespace)
-def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
-    xp = get_namespace(x)
-    result = xp.log1p(x)
-    if base is not None:
-        result = result / float(np.log(base))
-    return result
-
-
 @log1p.register(CSBase)
 def log1p_sparse(x: CSBase, *, base: Number | None = None, copy: bool = False):
     x = check_array(
@@ -386,6 +377,15 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
     if base is not None:
         np.divide(x, np.log(base), out=x)
     return x
+
+
+@log1p.register(HasArrayNamespace)
+def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
+    xp = get_namespace(x)
+    result = xp.log1p(x)
+    if base is not None:
+        result = result / float(np.log(base))
+    return result
 
 
 @log1p.register(AnnData)

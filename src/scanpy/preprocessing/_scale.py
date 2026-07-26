@@ -41,12 +41,6 @@ def _(x: np.ndarray, *, max_value: float, zero_center: bool = True) -> np.ndarra
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
-@clip.register(HasArrayNamespace)
-def _(x, *, max_value: float, zero_center: bool = True):
-    xp = get_namespace(x)
-    return xp.clip(x, min=-max_value if zero_center else None, max=max_value)
-
-
 @clip.register(CSBase)
 def _(x: CSBase, *, max_value: float, zero_center: bool = True) -> CSBase:
     x.data = clip(x.data, max_value=max_value, zero_center=zero_center)
@@ -58,6 +52,12 @@ def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
     return x.map_blocks(
         clip, max_value=max_value, zero_center=zero_center, dtype=x.dtype, meta=x._meta
     )
+
+
+@clip.register(HasArrayNamespace)
+def _(x, *, max_value: float, zero_center: bool = True):
+    xp = get_namespace(x)
+    return xp.clip(x, min=-max_value if zero_center else None, max=max_value)
 
 
 @njit
@@ -190,20 +190,18 @@ def scale_array[A: _Array](  # noqa: PLR0912
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
+    int_msg = (
+        "... as scaling leads to float results, integer "
+        "input is cast to float, returning copy."
+    )
     if isinstance(x, np.ndarray | CSBase | DaskArray):
         if np.issubdtype(x.dtype, np.integer):
-            logg.info(
-                "... as scaling leads to float results, integer "
-                "input is cast to float, returning copy."
-            )
+            logg.info(int_msg)
             x = x.astype(np.float64)
     else:
         xp = get_namespace(x)
         if xp.isdtype(x.dtype, "integral"):
-            logg.info(
-                "... as scaling leads to float results, integer "
-                "input is cast to float, returning copy."
-            )
+            logg.info(int_msg)
             x = xp.astype(x, xp.float64)
 
     mask_obs = (
