@@ -134,6 +134,7 @@ def test_results(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(
+    request: pytest.FixtureRequest,
     subtests: pytest.Subtests,
     data_dir: Path,
     array_type,
