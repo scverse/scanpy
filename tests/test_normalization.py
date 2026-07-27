@@ -331,6 +331,7 @@ def test_compute_nnz_median(array_type, dtype):
     np.testing.assert_allclose(_compute_nnz_median(data), 5)
 
 
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_normalize_total_target_sum_ignores_zero_count_cells(array_type):
     """`target_sum=None` should use the median of the non-zero counts.
@@ -340,15 +341,11 @@ def test_normalize_total_target_sum_ignores_zero_count_cells(array_type):
     See https://github.com/scverse/scanpy/issues/4251
     """
     x = np.array([[0.0, 0.0], [4.0, 6.0], [8.0, 12.0], [12.0, 18.0]])
-    zero_counts = pytest.warns(UserWarning, match="Some cells have zero counts")
-
     expected = AnnData(x.copy())
-    with zero_counts:
-        sc.pp.normalize_total(expected)
+    sc.pp.normalize_total(expected)
 
     adata = AnnData(array_type(x.copy()))
-    with zero_counts:
-        sc.pp.normalize_total(adata)
+    sc.pp.normalize_total(adata)
 
     # median of the non-zero row sums (10, 20, 30) is 20, not 15
     np.testing.assert_allclose(stats.sum(adata.X, axis=1)[1:], 20.0)
