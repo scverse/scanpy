@@ -660,7 +660,7 @@ def _read_10x_mtx(
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].array
+    adata.obs_names = barcodes[0].array.astype("str")
     return adata
 
 
