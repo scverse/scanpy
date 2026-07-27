@@ -337,3 +337,24 @@ def test_compute_nnz_median(array_type, dtype):
     data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
     data = array_type(data)
     np.testing.assert_allclose(_compute_nnz_median(data), 5)
+
+
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_normalize_total_target_sum_ignores_zero_count_cells(array_type):
+    """`target_sum=None` should use the median of the non-zero counts.
+
+    The numba path used to take a plain median instead, so a matrix with
+    empty cells normalised differently depending on whether it was sparse.
+    See https://github.com/scverse/scanpy/issues/4251
+    """
+    x = np.array([[0.0, 0.0], [4.0, 6.0], [8.0, 12.0], [12.0, 18.0]])
+    expected = AnnData(x.copy())
+    sc.pp.normalize_total(expected)
+
+    adata = AnnData(array_type(x.copy()))
+    sc.pp.normalize_total(adata)
+
+    # median of the non-zero row sums (10, 20, 30) is 20, not 15
+    np.testing.assert_allclose(stats.sum(adata.X, axis=1)[1:], 20.0)
+    assert_equal(conv.to_dense(adata.X), conv.to_dense(expected.X))
