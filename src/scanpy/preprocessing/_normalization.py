@@ -102,7 +102,7 @@ def _normalize_total_helper(
             n_threads=n_threads,
         )
         if target_sum is None:
-            target_sum = np.median(counts_per_cell)
+            target_sum = _compute_nnz_median(counts_per_cell)
         if exclude_highly_expressed:
             gene_subset = ~np.where(counts_per_cols)[0]
     else:
