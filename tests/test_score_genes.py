@@ -5,7 +5,6 @@ import string
 import warnings
 from contextlib import nullcontext
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -15,31 +14,34 @@ from fast_array_utils import conv
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase
 from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from typing import Literal
 
-    from scanpy._compat import CSRBase
+    from scanpy._compat import CSBase, CSRBase
 
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
 
 _create_random_gene_names = partial(random_str, alphabet=string.ascii_uppercase)
 """Create a bunch of random gene names (just CAPS letters)."""
 
 
-def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan) -> CSRBase:
+def _create_sparse_nan_matrix(
+    rows: int,
+    cols: int,
+    percent_zero: float,
+    percent_nan: float,
+    *,
+    rng: np.random.Generator | None = None,
+) -> CSRBase:
     """Create a sparse matrix with certain amounts of NaN and Zeros."""
-    arr = (
-        np.random.randint(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
-    )
-    maskzero = np.random.rand(rows, cols) < percent_zero
-    masknan = np.random.rand(rows, cols) < percent_nan
+    rng = np.random.default_rng(rng)
+    arr = rng.integers(0, 1000, rows * cols).reshape((rows, cols)).astype("float32")
+    maskzero = rng.random((rows, cols)) < percent_zero
+    masknan = rng.random((rows, cols)) < percent_nan
     if np.any(maskzero):
         arr[maskzero] = 0
     if np.any(masknan):
@@ -47,16 +49,23 @@ def _create_sparse_nan_matrix(rows, cols, percent_zero, percent_nan) -> CSRBase:
     return sparse.csr_matrix(arr)  # noqa: TID251
 
 
-def _create_adata(n_obs: int, n_var: int, p_zero: float, p_nan: float) -> AnnData:
+def _create_adata(
+    n_obs: int,
+    n_var: int,
+    p_zero: float,
+    p_nan: float,
+    *,
+    rng: np.random.Generator | None = None,
+) -> AnnData:
     """Create an AnnData with random data, sparseness and some NaN values."""
-    x = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan)
+    x = _create_sparse_nan_matrix(n_obs, n_var, p_zero, p_nan, rng=rng)
     adata = AnnData(x)
-    gene_names = _create_random_gene_names(n_var, length=6)
+    gene_names = _create_random_gene_names(n_var, length=6, rng=rng)
     adata.var_names = gene_names.reshape(n_var)  # can be unsized
     return adata
 
 
-def test_score_with_reference():
+def test_score_with_reference(data_dir: Path) -> None:
     """Checks if score_genes output agrees with pre-computed reference values.
 
     The reference values had been generated using the same code
@@ -67,7 +76,7 @@ def test_score_with_reference():
     sc.pp.scale(adata)
 
     sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
-    with (DATA_PATH / "score_genes_reference_paul2015.pkl").open("rb") as file:
+    with (data_dir / "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
     # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
     np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
@@ -76,21 +85,23 @@ def test_score_with_reference():
 def test_add_score():
     """Check the dtype of the scores and that non-existing genes get ignored."""
     # TODO: write a test that costs less resources and is more meaningful
-    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+    rng = np.random.default_rng()
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0, rng=rng)
 
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
 
     # the actual genes names are all 6 letters
     # create some non-exstisting names with 7 letters:
-    non_existing_genes = _create_random_gene_names(3, length=7)
+    non_existing_genes = _create_random_gene_names(3, length=7, rng=rng)
     some_genes = np.r_[
-        np.unique(np.random.choice(adata.var_names, 10)), np.unique(non_existing_genes)
+        np.unique(rng.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
     sc.tl.score_genes(adata, some_genes, score_name="Test")
     assert adata.obs["Test"].dtype == "float64"
 
 
+@pytest.mark.parametrize("fmt", ["csr", "csc"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "mk_arr",
@@ -116,14 +127,14 @@ def test_add_score():
     ],
 )
 def test_sparse_nanmean(
-    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1]
+    mk_arr: Callable[[], CSBase | np.ndarray], axis: Literal[0, 1], fmt: str
 ) -> None:
-    """Check that _sparse_nanmean() is equivalent to np.nanmean()."""
+    """Check that _sparse_nanmean() is equivalent to np.nanmean() for CSR and CSC."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
-    arr_or_mat = mk_arr()
-    arr = conv.to_dense(arr_or_mat)
-    mat = sparse.csr_matrix(arr) if not isinstance(arr, CSBase) else arr  # noqa: TID251
+    arr = conv.to_dense(mk_arr())
+    make = sparse.csr_matrix if fmt == "csr" else sparse.csc_matrix  # noqa: TID251
+    mat = make(arr)
     np.testing.assert_allclose(
         np.nanmean(arr, axis), np.array(_sparse_nanmean(mat, axis)).flatten()
     )
@@ -133,8 +144,10 @@ def test_sparse_nanmean_on_dense_matrix():
     """TypeError must be thrown when calling _sparse_nanmean with a dense matrix."""
     from scanpy.tools._score_genes import _sparse_nanmean
 
+    data = np.random.default_rng().random((4, 5))
+
     with pytest.raises(TypeError):
-        _sparse_nanmean(np.random.rand(4, 5), 0)
+        _sparse_nanmean(data, 0)
 
 
 def test_score_genes_sparse_vs_dense():
@@ -163,12 +176,13 @@ def test_score_genes_deplete(*, dense: bool) -> None:
 
     Check that for both sparse and dense matrices.
     """
-    adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3)
+    rng = np.random.default_rng()
+    adata = _create_adata(100, 1000, p_zero=0.3, p_nan=0.3, rng=rng)
     if dense:
         adata.X = adata.X.toarray()
 
     # deplete these genes in 50 cells,
-    ix_obs = np.random.choice(adata.shape[0], 50)
+    ix_obs = rng.choice(adata.shape[0], 50)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=sparse.SparseEfficiencyWarning)
         adata.X[ix_obs, :10] = 0
@@ -205,9 +219,10 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
 
 
 def test_missing_genes():
-    adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
+    rng = np.random.default_rng()
+    adata = _create_adata(100, 1000, p_zero=0, p_nan=0, rng=rng)
     # These genes have a different length of name
-    non_extant_genes = _create_random_gene_names(3, length=7)
+    non_extant_genes = _create_random_gene_names(3, length=7, rng=rng)
 
     with pytest.raises(ValueError, match=r"No valid genes were passed for scoring"):
         sc.tl.score_genes(adata, non_extant_genes)
@@ -255,7 +270,6 @@ def test_invalid_gene_pool(gene_pool):
 
 
 def test_no_control_gene():
-    np.random.seed(0)
     adata = _create_adata(100, 1, p_zero=0, p_nan=0)
 
     with pytest.raises(RuntimeError, match="No control genes found"):
@@ -266,7 +280,6 @@ def test_no_control_gene():
     "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
 )
 def test_gene_list_is_control(*, ctrl_as_ref: bool):
-    np.random.seed(0)
     adata = sc.datasets.blobs(n_variables=10, n_observations=100, n_centers=20)
     adata.var_names = "g" + adata.var_names
     with (

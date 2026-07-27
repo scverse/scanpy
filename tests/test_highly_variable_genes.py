@@ -510,7 +510,7 @@ def test_seurat_v3_degenerate() -> None:
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3")
 
 
-def test_batches():
+def test_batches() -> None:
     adata = pbmc68k_reduced()
     adata.X[:100, :100] = np.zeros((100, 100))
 
@@ -537,20 +537,22 @@ def test_batches():
     assert hvg2 is not None
 
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[100],
-        0.5 * hvg1["dispersions_norm"].iat[0] + 0.5 * hvg2["dispersions_norm"].iat[100],
+        adata.var["dispersions_norm"].iloc[100],
+        0.5 * hvg1["dispersions_norm"].iloc[0]
+        + 0.5 * hvg2["dispersions_norm"].iloc[100],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[101],
-        0.5 * hvg1["dispersions_norm"].iat[1] + 0.5 * hvg2["dispersions_norm"].iat[101],
+        adata.var["dispersions_norm"].iloc[101],
+        0.5 * hvg1["dispersions_norm"].iloc[1]
+        + 0.5 * hvg2["dispersions_norm"].iloc[101],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
     np.testing.assert_allclose(
-        adata.var["dispersions_norm"].iat[0],
-        0.5 * hvg2["dispersions_norm"].iat[0],
+        adata.var["dispersions_norm"].iloc[0],
+        0.5 * hvg2["dispersions_norm"].iloc[0],
         rtol=1.0e-7,
         atol=1.0e-7,
     )
@@ -567,8 +569,9 @@ def test_batches():
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 def test_degenerate_batches():
+    rng = np.random.default_rng()
     adata = AnnData(
-        X=np.random.randn(10, 100),
+        X=rng.standard_normal((10, 100)),
         obs=dict(batch=pd.Categorical([*([1] * 4), *([2] * 5), 3])),
     )
     sc.pp.highly_variable_genes(adata, batch_key="batch")
@@ -593,7 +596,8 @@ def test_seurat_v3_mean_var_output_with_batchkey():
 
 
 def test_cellranger_n_top_genes_warning():
-    x = np.random.poisson(2, (100, 30))
+    rng = np.random.default_rng()
+    x = rng.poisson(2, (100, 30))
     adata = AnnData(x)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)

@@ -10,7 +10,7 @@ from fast_array_utils import stats
 from fast_array_utils.numba import njit
 from scipy import sparse
 
-from scanpy.get import _get_obs_rep
+from scanpy.get import _get_arr
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -86,7 +86,7 @@ def describe_obs(  # noqa: PLR0913
         warn(msg, FutureWarning)
     # Handle whether X is passed
     if x is None:
-        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -111,7 +111,7 @@ def describe_obs(  # noqa: PLR0913
             )
     for qc_var in qc_vars:
         obs_metrics[f"total_{expr_type}_{qc_var}"] = stats.sum(
-            x[:, adata.var[qc_var].values], axis=1
+            x[:, adata.var[qc_var].to_numpy()], axis=1
         )
         if log1p:
             obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
@@ -171,7 +171,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if x is None:
-        x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
@@ -252,8 +252,7 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         import seaborn as sns
@@ -268,8 +267,7 @@ def calculate_qc_metrics(
             kind="hex",
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sns.histplot(pbmc.obs["pct_counts_mito"])
 
@@ -278,7 +276,7 @@ def calculate_qc_metrics(
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)
     # Pass X so I only have to do it once
-    x = _get_obs_rep(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):
         x.eliminate_zeros()
 

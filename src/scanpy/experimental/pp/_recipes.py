@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ... import experimental
+from ... import experimental, settings
+from ..._keys import _embedding_keys
 from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
@@ -103,18 +104,20 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
 
-    `.obsm['X_pca']`
+    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.varm['PCs']`
+    `.varm[kwargs_pca.get('key_added', 'PCs')]`
          The principal components containing the loadings. When `inplace=True` this
          will contain empty rows for the genes not selected during HVG selection.
-    `.uns['pca']['variance_ratio']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
          Ratio of explained variance.
-    `.uns['pca']['variance']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
+    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
+    keys = _embedding_keys("pca", key_added)
     hvg_args = dict(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,
@@ -145,11 +148,11 @@ def recipe_pearson_residuals(  # noqa: PLR0913
             **normalization_param, pearson_residuals_df=adata_pca.to_df()
         )
 
-        adata.uns["pca"] = adata_pca.uns["pca"]
-        adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-        adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
+        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
+        adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm[keys.varm][adata.var["highly_variable"]] = adata_pca.varm[keys.varm]
         adata.uns["pearson_residuals_normalization"] = normalization_dict
-        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
+        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca, hvg

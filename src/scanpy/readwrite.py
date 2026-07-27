@@ -15,10 +15,12 @@ import pandas as pd
 from anndata import AnnData
 from matplotlib.image import imread
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from . import logging as logg
-from ._compat import deprecated, pkg_version, warn
+from ._compat import pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
+from ._utils.random import _LegacyRng
 
 if pkg_version("anndata") >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -86,7 +88,7 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     **kwargs,
@@ -223,7 +225,7 @@ def read_10x_h5(
                 )
             adata = _read_10x_h5(path, _read_v3_10x_h5)
         if genome:
-            if genome not in adata.var["genome"].values:
+            if genome not in adata.var["genome"].array:
                 msg = (
                     f"Could not find data corresponding to genome {genome!r} in {path}. "
                     f"Available genomes are: {list(adata.var['genome'].unique())}."
@@ -358,7 +360,7 @@ def _read_legacy_10x_h5(f: h5py.File, genome: str | None) -> AnnData:
     return adata
 
 
-@deprecated("Use `squidpy.read.visium` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.read.visium` instead."))
 def read_visium(
     path: PathLike[str] | str,
     genome: str | None = None,
@@ -369,9 +371,6 @@ def read_visium(
     source_image_path: PathLike[str] | str | None = None,
 ) -> AnnData:
     r"""Read 10x-Genomics-formatted visum dataset.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.read.visium` instead.
 
     In addition to reading regular 10x output,
     this looks for the `spatial` folder and loads images,
@@ -506,10 +505,8 @@ def read_visium(
         adata.obsm["spatial"] = adata.obs[
             ["pxl_row_in_fullres", "pxl_col_in_fullres"]
         ].to_numpy()
-        adata.obs.drop(
-            columns=["pxl_row_in_fullres", "pxl_col_in_fullres"],
-            inplace=True,
-        )
+        del adata.obs["pxl_row_in_fullres"]
+        del adata.obs["pxl_col_in_fullres"]
 
         # put image path in uns
         if source_image_path is not None:
@@ -528,7 +525,7 @@ def read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     gex_only: bool = True,
@@ -607,7 +604,11 @@ def _read_mtx(
     from scipy.io import mmread
     from scipy.sparse import csc_matrix, csr_matrix  # noqa: TID251
 
-    x = mmread(filename)
+    # TODO: Replace with xxx_array when we make the switch
+    x = mmread(
+        filename,
+        **({"spmatrix": True} if pkg_version("scipy") >= Version("1.18.0rc1") else {}),
+    )
     if x.dtype != np.dtype(dtype):
         x = x.astype(dtype)
     if sparse_format == "csr":
@@ -623,7 +624,7 @@ def _read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"],
     make_unique: bool,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     prefix: str,
     is_legacy: bool,
     compressed: bool,
@@ -659,7 +660,7 @@ def _read_10x_mtx(
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].array
+    adata.obs_names = barcodes[0].array.astype("str")
     return adata
 
 
@@ -817,7 +818,11 @@ def write_params(path: PathLike[str] | str, *args, **maps):
             if header is not None:
                 f.write(f"[{header}]\n")
             for key, val in map.items():
-                f.write(f"{key} = {val}\n")
+                if key == "rng":
+                    if isinstance(val, _LegacyRng) and val.arg is not None:
+                        f.write(f"seed = {val.arg}\n")
+                else:
+                    f.write(f"{key} = {val}\n")
 
 
 # -------------------------------------------------------------------------------
@@ -835,7 +840,7 @@ def _read(  # noqa: PLR0912, PLR0915
     first_column_names: bool,
     backup_url: str | None,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):
@@ -1079,6 +1084,7 @@ def _get_filename_from_key(key, ext=None) -> Path:
 
 def _download(url: str, path: Path):
     from ssl import create_default_context
+    from tempfile import NamedTemporaryFile
     from urllib.request import Request, urlopen
 
     from certifi import contents
@@ -1087,6 +1093,8 @@ def _download(url: str, path: Path):
     blocksize = 1024 * 8
     blocknum = 0
 
+    # Write to a temp file and rename so readers never see a partial file (#4097).
+    tmp_path: Path | None = None
     try:
         req = Request(url, headers={"User-agent": "scanpy-user"})
 
@@ -1100,8 +1108,14 @@ def _download(url: str, path: Path):
                     unit_divisor=1024,
                     total=total if total is None else int(total),
                 ) as t,
-                path.open("wb") as f,
+                NamedTemporaryFile(
+                    dir=path.parent,
+                    prefix=f"{path.name}.",
+                    suffix=".part",
+                    delete=False,
+                ) as f,
             ):
+                tmp_path = Path(f.name)
                 block = resp.read(blocksize)
                 while block:
                     f.write(block)
@@ -1109,10 +1123,13 @@ def _download(url: str, path: Path):
                     t.update(len(block))
                     block = resp.read(blocksize)
 
+        tmp_path.replace(path)
+        tmp_path = None
+
     except (KeyboardInterrupt, Exception):
-        # Make sure file doesn’t exist half-downloaded
-        if path.is_file():
-            path.unlink()
+        # Only remove our own temp file; leave path, which may be another process's.
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
         raise
 
 

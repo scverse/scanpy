@@ -16,12 +16,13 @@ from anndata.tests.helpers import asarray, assert_equal
 from packaging.version import Version
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from numpy.typing import NDArray
+
+    from scanpy._compat import DaskArray
 
 
 # TODO: Report more context on the fields being compared on error
@@ -48,20 +49,18 @@ def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs) -> None:
 
     # Modified fields
     for field in fields:
-        result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field], **{field: field})
-        )
+        result_array = asarray(sc.get._get_arr(adatas_proc[field], **{field: field}))
         np.testing.assert_array_equal(asarray(adata_out.X), result_array)
 
     # Unmodified fields
     for field in fields:
         np.testing.assert_array_equal(x_array, asarray(adatas_proc[field].X))
         np.testing.assert_array_equal(
-            x_array, asarray(sc.get._get_obs_rep(adata_out, **{field: field}))
+            x_array, asarray(sc.get._get_arr(adata_out, **{field: field}))
         )
     for field_a, field_b in permutations(fields, 2):
         result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field_a], **{field_b: field_b})
+            sc.get._get_arr(adatas_proc[field_a], **{field_b: field_b})
         )
         np.testing.assert_array_equal(x_array, result_array)
 
@@ -128,14 +127,6 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
-    # Newer versions of as_dense_dask_array chunk all axes by halve when the input is not a dask array.
-    if (
-        pkg_version("anndata") < Version("0.11")
-        and not isinstance(args[0], DaskArray)  # keep chunksize intact
-    ):
-        from anndata.tests.helpers import _half_chunk_size
-
-        a = a.rechunk(_half_chunk_size(a.shape))
     return a
 
 

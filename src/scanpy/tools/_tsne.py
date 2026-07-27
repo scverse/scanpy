@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from .. import logging as logg
 from .._compat import warn
 from .._docs import doc_rng
-from .._settings import settings
+from .._keys import _embedding_keys
+from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
@@ -32,7 +33,7 @@ def tsne(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | None = None,
+    key_added: str | Default | None = Default(preset=("tsne", "key_added")),
     copy: bool = False,
 ) -> AnnData | None:
     r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
@@ -102,6 +103,7 @@ def tsne(  # noqa: PLR0913
 
     """
     start = logg.info("computing tSNE")
+    keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
     x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
@@ -118,15 +120,6 @@ def tsne(  # noqa: PLR0913
         n_components=n_components,
     )
 
-    # Backwards compat handling: Remove in scanpy 1.9.0
-    if n_jobs != 1 and not use_fast_tsne:
-        msg = (
-            "In previous versions of scanpy, calling tsne with `n_jobs` > 1 would use MulticoreTSNE. "
-            "Now this uses the scikit-learn version of TSNE by default. "
-            "If you’d like the old behaviour (which is deprecated), pass `use_fast_tsne=True`. "
-            "Note, MulticoreTSNE is not actually faster anymore."
-        )
-        warn(msg, UserWarning)
     if use_fast_tsne:
         msg = (
             "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
@@ -166,17 +159,18 @@ def tsne(  # noqa: PLR0913
         use_rep=use_rep,
         n_components=n_components,
     )
-    key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
-    adata.obsm[key_obsm] = x_tsne  # annotate samples with tSNE coordinates
-    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
+    adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates
+    adata.uns[keys.uns] = dict(
+        params={k: v for k, v in params.items() if v is not None}
+    )
 
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"added\n"
-            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
-            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+            f"    {keys.obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}, tSNE parameters (adata.uns)"
         ),
     )
 

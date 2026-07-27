@@ -14,6 +14,7 @@ from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase, DaskArray, pkg_version
+from scanpy._keys import _PcaKeys
 from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
@@ -283,11 +284,13 @@ def test_pca_shapes():
 
     See <https://github.com/scverse/scanpy/issues/1051>
     """
-    adata = AnnData(np.random.randn(30, 20))
+    rng = np.random.default_rng()
+
+    adata = AnnData(rng.standard_normal((30, 20)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (30, 19)
 
-    adata = AnnData(np.random.randn(20, 30))
+    adata = AnnData(rng.standard_normal((20, 30)))
     sc.pp.pca(adata)
     assert adata.obsm["X_pca"].shape == (20, 19)
 
@@ -299,13 +302,13 @@ def test_pca_shapes():
 
 
 @pytest.mark.parametrize(
-    ("key_added", "keys_expected"),
+    ("key_added", "keys"),
     [
-        pytest.param(None, ("X_pca", "PCs", "pca"), id="None"),
-        pytest.param("custom_key", ("custom_key",) * 3, id="custom_key"),
+        pytest.param(None, _PcaKeys("pca", "X_pca", "PCs"), id="None"),
+        pytest.param("custom_key", _PcaKeys(*(["custom_key"] * 3)), id="custom_key"),
     ],
 )
-def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
+def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     """Tests implicitly centered pca on sparse arrays.
 
     Checks if it returns equivalent results to explicit centering on dense arrays.
@@ -318,16 +321,14 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
 
-    key_obsm, key_varm, key_uns = keys_expected
-
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance"], explicit.uns[key_uns]["variance"]
+        implicit.uns["pca"]["variance"], explicit.uns[keys.uns]["variance"]
     )
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns[key_uns]["variance_ratio"]
+        implicit.uns["pca"]["variance_ratio"], explicit.uns[keys.uns]["variance_ratio"]
     )
-    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[key_obsm])
-    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
+    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[keys.obsm])
+    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[keys.varm])
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
@@ -438,8 +439,9 @@ def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None
 
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
-    adata_base = AnnData(array_type(np.random.random((100, 10))).astype(float_dtype))
-    mask_var = _helpers.random_mask(adata_base.shape[1])
+    rng = np.random.default_rng()
+    adata_base = AnnData(array_type(rng.random((100, 10))).astype(float_dtype))
+    mask_var = _helpers.random_mask(adata_base.shape[1], rng=rng)
 
     adata = adata_base.copy()
     sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)

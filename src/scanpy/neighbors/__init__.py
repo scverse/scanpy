@@ -17,6 +17,7 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
+from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._settings import settings
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import (
@@ -102,12 +103,12 @@ def neighbors(  # noqa: PLR0913
 ) -> AnnData | None:
     """Compute the nearest neighbors distance matrix and a neighborhood graph of observations :cite:p:`McInnes2018`.
 
-    The neighbor search efficiency of this heavily relies on UMAP :cite:p:`McInnes2018`,
-    which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`).
-    If `method=='gauss'`, connectivities are computed according to :cite:t:`Coifman2005`,
-    in the adaption of :cite:t:`Haghverdi2016`.
-    If `method=='jaccard'`, connectivities are computed as in PhenoGraph :cite:p:`Levine2015`.
+    The computation proceeds in two independent stages.
+    First, a k-nearest neighbor (kNN) search produces the distance matrix via the estimator passed as ``transformer``.
+    Second, connectivities are derived from the kNN search output by the kernel selected via ``method``.
+    The two stages are controlled by independent parameters:
+    ``transformer`` selects the kNN search backend,
+    ``method`` selects the connectivity kernel.
 
     .. array-support:: pp.neighbors
 
@@ -133,12 +134,14 @@ def neighbors(  # noqa: PLR0913
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
     method
+        Kernel that derives connectivities from the kNN search output.
+        The choice is independent of the kNN search backend,
+        which is controlled by ``transformer``.
         Use 'umap' :cite:p:`McInnes2018`,
         'gauss' (Gauss kernel following :cite:t:`Coifman2005` with adaptive width :cite:t:`Haghverdi2016`),
-        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`)
-        for computing connectivities.
+        or 'jaccard' (Jaccard kernel as in PhenoGraph, :cite:t:`Levine2015`).
     transformer
-        Approximate kNN search implementation following the API of
+        kNN search backend following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
         See :doc:`/how-to/knn-transformers` for more details.
         Also accepts the following known options:
@@ -320,20 +323,6 @@ class FlatTree(NamedTuple):  # noqa: D101
     indices: None
 
 
-def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
-    if "X_diffmap0" in adata.obs:
-        return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
-    else:
-        return adata.obsm["X_diffmap"]
-
-
-def _backwards_compat_get_full_eval(adata: AnnData):
-    if "X_diffmap0" in adata.obs:
-        return np.r_[1, adata.uns["diffmap_evals"]]
-    else:
-        return adata.uns["diffmap_evals"]
-
-
 def _make_forest_dict(forest):
     d = {}
     props = ("hyperplanes", "offsets", "children", "indices")
@@ -430,6 +419,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
+        diffmap_key: str | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -482,9 +472,14 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm:
-            self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
+
+        if keys := (
+            _EmbeddingKeys(diffmap_key, diffmap_key)
+            if diffmap_key
+            else _existing_preset_keys(adata, "diffmap")
+        ):
+            self._eigen_values = adata.uns[keys.uns]
+            self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (
@@ -576,7 +571,7 @@ class Neighbors:
 
     def to_igraph(self) -> Graph:
         """Generate igraph from connectiviies."""
-        return _utils.get_igraph_from_adjacency(self.connectivities)
+        return _utils.get_igraph_from_adjacency(self.connectivities, directed=False)
 
     @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     @_accepts_legacy_random_state(0)
