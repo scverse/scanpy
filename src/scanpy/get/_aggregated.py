@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import singledispatch
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict, cast, overload
 
 import numba
 import numpy as np
@@ -89,7 +89,13 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
     mask: NDArray[np.bool] | None
     data: ArrayT
 
-    def count_nonzero(self, *, keep_sparse: bool = True) -> NDArray[np.integer]:
+    @overload
+    def count_nonzero(self, *, keep_sparse: Literal[True] = True) -> ArrayT: ...
+    @overload
+    def count_nonzero(self, *, keep_sparse: Literal[False]) -> NDArray[np.integer]: ...
+    def count_nonzero(
+        self, *, keep_sparse: bool = True
+    ) -> ArrayT | NDArray[np.integer]:
         """Count the number of observations in each group.
 
         Parameters
@@ -114,22 +120,27 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
             data = (data != 0).astype("uint8")
         return self._sum(data=data, keep_sparse=keep_sparse)
 
-    def _sum(self, data: ArrayT, *, keep_sparse: bool):
+    def _sum(self, data: ArrayT, *, keep_sparse: bool) -> ArrayT | np.ndarray:
         if isinstance(data, np.ndarray):
             res = self.indicator_matrix @ data
             if isinstance(res, CSBase):
                 return res.toarray()
-            return res
+            # sparse @ dense is dense, but the scipy stubs don’t say so
+            return cast("np.ndarray", res)
         dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
         out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
         (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, data, out
         )
-        if keep_sparse and isinstance(data, CSBase):
-            return type(data)(out)  # convert to sparse type of input
+        if keep_sparse:  # convert to sparse type of input
+            return cast("ArrayT", type(data)(out))
         return out
 
-    def sum(self, *, keep_sparse: bool = True) -> np.ndarray:
+    @overload
+    def sum(self, *, keep_sparse: Literal[True] = True) -> ArrayT: ...
+    @overload
+    def sum(self, *, keep_sparse: Literal[False]) -> np.ndarray: ...
+    def sum(self, *, keep_sparse: bool = True) -> ArrayT | np.ndarray:
         """Compute the sum per feature per group of observations.
 
         Parameters
@@ -146,7 +157,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         """
         return self._sum(self.data, keep_sparse=keep_sparse)
 
-    def mean(self) -> Array:
+    def mean(self) -> np.ndarray:
         """Compute the mean per feature per group of observations.
 
         Returns
@@ -194,7 +205,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
             var_ *= (group_counts / denom)[:, np.newaxis]
         return mean_, var_
 
-    def median(self) -> Array:
+    def median(self) -> np.ndarray:
         """Compute the median per feature per group of observations.
 
         Returns
@@ -447,7 +458,7 @@ def _aggregate(
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
     keep_sparse: bool = True,
-) -> dict[AggType, np.ndarray | DaskArray]:
+) -> dict[AggType, Array]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
 
@@ -716,7 +727,7 @@ def aggregate_dask(
 @_aggregate.register(pd.DataFrame)
 def aggregate_df(
     data, by, func, *, mask=None, dof=1, keep_sparse=False
-) -> dict[AggType, np.ndarray]:
+) -> dict[AggType, Array]:
     return _aggregate(
         data.values, by, func, mask=mask, dof=dof, keep_sparse=keep_sparse
     )
@@ -732,9 +743,9 @@ def aggregate_array(
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
     keep_sparse: bool = True,
-) -> dict[AggType, np.ndarray]:
+) -> dict[AggType, np.ndarray | CSBase]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
-    result = {}
+    result: dict[AggType, np.ndarray | CSBase] = {}
 
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - get_literal_vals(AggType):
