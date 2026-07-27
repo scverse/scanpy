@@ -193,6 +193,10 @@ def scrublet(  # noqa: PLR0913
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
+    # `adata.obs_names` may contain duplicates, and cells may get filtered out below,
+    # so use unique positional labels to map results back onto `adata` unambiguously.
+    positions = pd.RangeIndex(adata.n_obs).astype(str)
+    adata_obs.obs_names = positions
 
     def _run_scrublet(ad_obs: AnnData, ad_sim: AnnData | None = None):
         # With no adata_sim we assume the regular use case, starting with raw
@@ -278,7 +282,7 @@ def scrublet(  # noqa: PLR0913
         )
 
         # Now reset the obs to get the scrublet scores
-        adata.obs = scrubbed_obs.loc[adata.obs_names.values]
+        adata.obs = scrubbed_obs.reindex(positions).set_axis(adata.obs_names)
 
         # Save the .uns from each batch separately
         adata.uns["scrublet"] = {}
@@ -292,10 +296,11 @@ def scrublet(  # noqa: PLR0913
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim)
+        scrubbed_obs = scrubbed["obs"].reindex(positions)
 
         # Copy outcomes to input object from our processed version
-        adata.obs["doublet_score"] = scrubbed["obs"]["doublet_score"]
-        adata.obs["predicted_doublet"] = scrubbed["obs"]["predicted_doublet"]
+        adata.obs["doublet_score"] = scrubbed_obs["doublet_score"].to_numpy()
+        adata.obs["predicted_doublet"] = scrubbed_obs["predicted_doublet"].to_numpy()
         adata.uns["scrublet"] = scrubbed["uns"]
 
     logg.info("    Scrublet finished", time=start)
