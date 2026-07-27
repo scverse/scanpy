@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     import pandas as pd
+    from numpy.typing import NDArray
 
     from ..._utils.random import RNGLike, SeedLike
 
@@ -59,8 +60,8 @@ class Harmony:
     alpha: float = 0.2
     batch_prune_threshold: float | None = 1e-5
 
-    batch_codes: np.ndarray = field(init=False)
-    n_levels: np.ndarray = field(init=False)
+    batch_codes: NDArray[np.int32] = field(init=False)
+    n_levels: NDArray[np.int32] = field(init=False)
     n_batches: int = field(init=False)
     n_covariates: int = field(init=False)
     _rng: np.random.Generator = field(init=False)
@@ -203,7 +204,6 @@ class Harmony:
         return _clustering(
             z_norm,
             self.batch_codes,
-            self.n_batches,
             pr_b,
             r=r,
             e=e,
@@ -228,20 +228,13 @@ class Harmony:
         """Perform correction step."""
         if self.n_covariates > 1:
             return _correction_multi(
-                x,
-                self.batch_codes,
-                self.n_batches,
-                r,
+                *(x, self.batch_codes, self.n_batches, r),
                 lambda_kb=lambda_kb,
             )
 
         batch_codes = self.batch_codes[:, 0]
         return _correction_fast(
-            x,
-            batch_codes,
-            self.n_batches,
-            r,
-            o,
+            *(x, batch_codes, self.n_batches, r, o),
             lambda_kb=lambda_kb,
         )
 
@@ -249,7 +242,7 @@ class Harmony:
 def _get_batch_codes(
     batch_df: pd.DataFrame,
     batch_key: str | Sequence[str],
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
     """Encode each batch variable into a disjoint range of marginal codes."""
     keys = [batch_key] if isinstance(batch_key, str) else list(batch_key)
     if not keys:
@@ -275,11 +268,11 @@ def _get_batch_codes(
     return codes, n_levels
 
 
-def _get_theta_array(
+def _get_theta_array[S: np.generic](
     theta: float | Sequence[float],
-    n_levels: np.ndarray,
-    dtype: np.dtype,
-) -> np.ndarray:
+    n_levels: NDArray[np.integer],
+    dtype: np.dtype[S],
+) -> NDArray[S]:
     """Normalize scalar, per-variable, or per-category theta values."""
     levels = np.atleast_1d(n_levels).astype(np.int64, copy=False)
     n_covariates = levels.size
@@ -387,9 +380,8 @@ def _compute_r(
 
 
 def _clustering(  # noqa: PLR0913
-    z_norm: np.ndarray,
+    z_norm: NDArray[np.floating],
     batch_codes: np.ndarray,
-    n_batches: int,
     pr_b: np.ndarray,
     *,
     r: np.ndarray,
@@ -404,8 +396,8 @@ def _clustering(  # noqa: PLR0913
     stabilized_penalty: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | None]:
     """Run clustering iterations (modifies r, e, o in-place)."""
-    n_cells = z_norm.shape[0]
-    k = r.shape[1]
+    n_cells: int = z_norm.shape[0]
+    k: int = r.shape[1]
     n_blocks = min(n_cells, 1 // block_proportion)
     term = -2.0 / sigma
 
