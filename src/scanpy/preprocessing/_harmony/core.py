@@ -97,7 +97,7 @@ class Harmony:
         # Process batch keys
         self.batch_codes, self.n_levels = _get_batch_codes(batch_df, batch_key)
         self.n_batches = int(self.n_levels.sum())
-        self.n_covariates = int(self.n_levels.size)
+        self.n_covariates = len(self.n_levels)
 
     def fit(self, x: np.ndarray) -> np.ndarray:
         """Run Harmony.
@@ -274,7 +274,7 @@ def _get_theta_array[S: np.generic](
     dtype: np.dtype[S],
 ) -> NDArray[S]:
     """Normalize scalar, per-variable, or per-category theta values."""
-    levels = np.atleast_1d(n_levels).astype(np.int64, copy=False)
+    levels = n_levels.astype(np.int64, copy=False)
     n_covariates = levels.size
     n_categories = int(levels.sum())
 

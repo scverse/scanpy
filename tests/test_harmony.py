@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -44,6 +45,21 @@ DATA = dict(
         "md5:a7c4ce4b98c390997c66d63d48e09221",
     ),
     meta=("pbmc_3500_meta.tsv.gz", "md5:8c7ca20e926513da7cf0def1211baecb"),
+)
+
+# These settings were used to generate the stored harmonypy 2.0.0 reference outputs.
+# Keep them fixed here so tests only vary the parameters relevant to each fixture.
+_integrate_harmony2_reference = partial(
+    harmony_integrate,
+    flavor="harmony2",
+    sigma=0.1,
+    max_iter_clustering=4,
+    tol_clustering=1e-3,
+    tol_harmony=1e-2,
+    block_proportion=0.05,
+    rng=734,
+    alpha=0.2,
+    batch_prune_threshold=1e-5,
 )
 
 
@@ -230,6 +246,13 @@ def test_harmony_batch_keys_are_nonempty_and_complete() -> None:
 def test_harmony_multikey_correction_matches_dense_design(
     dtype: type[np.floating],
 ) -> None:
+    """Compare the optimized correction with a direct dense ridge-regression solve.
+
+    Production avoids materializing the one-hot design and exploits its marginal
+    structure. This independent oracle explicitly builds that design and solves
+    the weighted, regularized least-squares problem, catching errors in category
+    indexing, cross-covariate terms, and suppressed penalties.
+    """
     rng = np.random.default_rng(734)
     levels = np.array([2, 3], dtype=np.int32)
     offsets = np.array([0, 2], dtype=np.int32)
@@ -257,16 +280,25 @@ def test_harmony_multikey_correction_matches_dense_design(
     for cluster, r_k in enumerate(r.T):
         active = lambda_kb[:, cluster] < dtype(_SUPPRESS_PENALTY)
         retained = np.concatenate(([True], active))
-        weighted_design = r_k[:, None] * design
-        gram = design.T @ weighted_design
-        active_indices = np.flatnonzero(active) + 1
-        gram[active_indices, active_indices] += lambda_kb[active, cluster]
-        rhs = weighted_design.T @ x
+        sqrt_r_k = np.sqrt(r_k)
+        weighted_design = sqrt_r_k[:, None] * design[:, retained]
+        weighted_x = sqrt_r_k[:, None] * x
+
+        penalty_design = np.zeros(
+            (active.sum(), retained.sum()),
+            dtype=dtype,
+        )
+        penalty_design[:, 1:] = np.diag(np.sqrt(lambda_kb[active, cluster]))
+        augmented_design = np.vstack((weighted_design, penalty_design))
+        augmented_x = np.vstack((
+            weighted_x,
+            np.zeros((active.sum(), n_pcs), dtype=dtype),
+        ))
+
         w = np.zeros((n_batches + 1, n_pcs), dtype=dtype)
-        retained_indices = np.flatnonzero(retained)
         w[retained] = np.linalg.lstsq(
-            gram[np.ix_(retained_indices, retained_indices)],
-            rhs[retained],
+            augmented_design,
+            augmented_x,
             rcond=None,
         )[0]
         w[0] = 0
@@ -274,6 +306,27 @@ def test_harmony_multikey_correction_matches_dense_design(
 
     atol = 2e-5 if dtype == np.float32 else 1e-11
     np.testing.assert_allclose(result, expected, atol=atol, rtol=atol)
+
+
+def test_harmony_multikey_correction_singular_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A system diagnosed as singular falls back to least squares."""
+    rng = np.random.default_rng(734)
+    x = rng.normal(size=(12, 3))
+    codes = np.column_stack((
+        np.resize([0, 1], len(x)),
+        np.resize([2, 3, 4], len(x)),
+    )).astype(np.int32)
+    r = rng.random(size=(len(x), 2))
+    r /= r.sum(axis=1, keepdims=True)
+    lambda_kb = np.ones((5, 2))
+
+    expected = _correction_multi(x, codes, 5, r, lambda_kb=lambda_kb)
+    monkeypatch.setattr(np.linalg, "matrix_rank", lambda _: 0)
+    result = _correction_multi(x, codes, 5, r, lambda_kb=lambda_kb)
+
+    np.testing.assert_allclose(result, expected, atol=1e-12, rtol=1e-12)
 
 
 @pytest.mark.parametrize("ridge_lambda", [0.0, -0.1, float("inf"), float("nan")])
@@ -326,22 +379,13 @@ def test_harmony2_multikey_reference(
     adata = adata_harmonypy2_multikey.copy()
     reference = adata.obsm[f"harmony2_ref_{case}"].copy()
 
-    harmony_integrate(
+    _integrate_harmony2_reference(
         adata,
         ["batch", "sex"],
         theta=theta,
-        flavor="harmony2",
         dtype=np.float64,
-        sigma=0.1,
         n_clusters=n_clusters,
         max_iter_harmony=max_iter_harmony,
-        max_iter_clustering=4,
-        tol_clustering=1e-3,
-        tol_harmony=1e-2,
-        block_proportion=0.05,
-        rng=734,
-        alpha=0.2,
-        batch_prune_threshold=1e-5,
     )
 
     result = adata.obsm["X_pca_harmony"]
@@ -524,22 +568,13 @@ def test_harmony2_ircolitis_reference(
 ) -> None:
     """Harmony2 on a real 11-batch subset matches harmonypy 2.0.0."""
     adata = adata_ircolitis_harmonypy2.copy()
-    harmony_integrate(
+    _integrate_harmony2_reference(
         adata,
         "batch",
         theta=2.0,
-        flavor="harmony2",
         dtype=dtype,
-        sigma=0.1,
         n_clusters=2,
         max_iter_harmony=10,
-        max_iter_clustering=4,
-        tol_clustering=1e-3,
-        tol_harmony=1e-2,
-        block_proportion=0.05,
-        rng=734,
-        alpha=0.2,
-        batch_prune_threshold=1e-5,
     )
 
     reference = adata.obsm["harmony2_ref"]
