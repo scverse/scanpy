@@ -45,7 +45,7 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    key_added: str | None | Default = Default(preset=("umap", "key_added")),
+    key_added: str | Default | None = Default(preset=("umap", "key_added")),
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
