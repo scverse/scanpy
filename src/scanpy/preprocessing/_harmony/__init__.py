@@ -41,11 +41,10 @@ def harmony_integrate(  # noqa: PLR0913
 ) -> None:
     """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
-    This CPU implementation was originally based on the harmony-pytorch and
-    rapids-singlecell implementations, using NumPy for efficient computation.
-    Multiple batch variables follow the per-covariate formulation in the Harmony
-    papers: each key is modeled separately instead of combining keys into one
-    joint category.
+    This CPU implementation was originally based on the harmony-pytorch
+    and rapids-singlecell implementations, using NumPy for efficient computation.
+    Multiple batch variables follow the per-covariate formulation in the Harmony papers:
+    each key is modeled separately instead of combining keys into one joint category.
     As Harmony works by adjusting the principal components,
     this function should be run after performing PCA but before computing the neighbor graph.
 
@@ -65,10 +64,10 @@ def harmony_integrate(  # noqa: PLR0913
         The annotated data matrix.
     key
         The key(s) of the column(s) in ``adata.obs`` that differentiate(s) among experiments/batches.
-        Multiple keys are modeled as separate batch variables, with one active
-        categorical level per variable and cell. To retain the joint-combination
-        behavior of earlier releases, combine the desired columns into one
-        categorical column and pass that single key.
+        Multiple keys are modeled as separate batch variables,
+        with one active categorical level per variable and cell.
+        To retain the joint-combination behavior of earlier releases,
+        combine the desired columns into one categorical column and pass that single key.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is stored.
     adjusted_basis
@@ -109,9 +108,9 @@ def harmony_integrate(  # noqa: PLR0913
         Higher values (e.g. ``4``) produce more aggressive mixing;
         lower values (e.g. ``0.5``) allow more batch-specific clusters.
         Set to ``0`` to disable the diversity penalty for a batch variable.
-        A scalar is applied to every key. A sequence may contain one value per
-        key, expanded over that key's categorical levels, or one value per
-        categorical level across all keys.
+        A scalar is applied to every key. A sequence may contain one value per key,
+        expanded over that key's categorical levels,
+        or one value per categorical level across all keys.
     tau
         Discounting factor on ``theta``.
         When ``tau > 0``,
@@ -139,9 +138,9 @@ def harmony_integrate(  # noqa: PLR0913
     correction_method
         Method for the correction step.
         ``"fast"`` uses a precomputed factorization that avoids the full inversion,
-        which is efficient for datasets with one batch variable. Multiple keys
-        automatically use the exact general-design solve because this optimization
-        only applies to a single batch variable.
+        which is efficient for datasets with one batch variable.
+        Multiple keys automatically use the exact general-design solve,
+        because this optimization only applies to a single batch variable.
     block_proportion
         Proportion of cells updated per clustering sub-iteration.
         Smaller values produce more stochastic updates.

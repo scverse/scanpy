@@ -441,9 +441,9 @@ def _clustering(  # noqa: PLR0913
             dots = z_norm[cell_idx, :] @ y_norm.T
             r_new = np.empty_like(dots)
 
-            # Apply the product of the marginal penalties in log space. This
-            # both follows the Harmony formulation and avoids overflow when
-            # several variables have large finite penalty factors.
+            # Apply the product of the marginal penalties in log space.
+            # This both follows the Harmony formulation and avoids overflow
+            # when several variables have large finite penalty factors.
             if stabilized_penalty:
                 # Harmony2: denominator is (O + E + 1)
                 log_penalty = theta.T * (np.log(e + 1.0) - np.log(o + e + 1.0))
@@ -594,9 +594,9 @@ def _correction_fast(
     dtype = x.dtype
     p = np.eye(n_batches + 1, dtype=dtype)
 
-    # Compute all cluster/category right-hand sides together. This avoids
-    # rebuilding the same batch masks once per cluster and lets BLAS process
-    # the full responsibility matrix for each category.
+    # Compute all cluster/category right-hand sides together.
+    # This avoids rebuilding the same batch masks once per cluster and
+    # lets BLAS process the full responsibility matrix for each category.
     phi_t_x = np.empty((r.shape[1], n_batches + 1, d), dtype=dtype)
     phi_t_x[:, 0] = r.T @ x
     for batch in range(n_batches):
