@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy.testing as npt
@@ -9,28 +8,26 @@ import pytest
 from anndata import OldFormatWarning, read_zarr
 
 from scanpy._compat import DaskArray
-from scanpy.preprocessing import (
-    filter_cells,
-    filter_genes,
-    log1p,
-    normalize_per_cell,
-    normalize_total,
-)
+from scanpy.preprocessing import filter_cells, filter_genes, log1p, normalize_total
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from anndata import AnnData
+    from pathlib import Path
 
-HERE = Path(__file__).parent / Path("_data/")
-input_file = Path(HERE, "10x-10k-subset.zarr")
+    from anndata import AnnData
 
 
 pytestmark = [needs.zarr, needs.dask]
 
 
+@pytest.fixture(scope="session")
+def input_file(data_dir) -> Path:
+    return data_dir / "10x-10k-subset.zarr"
+
+
 @pytest.fixture
-def adata() -> AnnData:
+def adata(input_file: Path) -> AnnData:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Variable names are not unique", UserWarning)
@@ -41,7 +38,7 @@ def adata() -> AnnData:
 
 
 @pytest.fixture
-def adata_dist() -> AnnData:
+def adata_dist(input_file: Path) -> AnnData:
     import dask.array as da
 
     # regular anndata except for X, which we replace farther down
@@ -61,21 +58,6 @@ def test_log1p(adata: AnnData, adata_dist: AnnData):
     assert isinstance(adata_dist.X, DaskArray)
     result = materialize_as_ndarray(adata_dist.X)
     log1p(adata)
-    assert result.shape == adata.shape
-    npt.assert_allclose(result, adata.X)
-
-
-@pytest.mark.filterwarnings("ignore:.*sc.pp.normalize_total:FutureWarning")
-def test_normalize_per_cell(
-    request: pytest.FixtureRequest, adata: AnnData, adata_dist: AnnData
-):
-    if isinstance(adata_dist.X, DaskArray):
-        reason = "normalize_per_cell deprecated and broken for Dask"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-    normalize_per_cell(adata_dist)
-    assert isinstance(adata_dist.X, DaskArray)
-    result = materialize_as_ndarray(adata_dist.X)
-    normalize_per_cell(adata)
     assert result.shape == adata.shape
     npt.assert_allclose(result, adata.X)
 

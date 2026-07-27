@@ -13,14 +13,20 @@ def doctest_needs[F: Callable](mod: str) -> Callable[[F], F]:
     return decorator
 
 
-def doctest_skip[F: Callable](reason: str) -> Callable[[F], F]:
-    """Mark function so doctest is skipped."""
+def doctest_skipif[F: Callable](
+    condition: bool = True,  # noqa: FBT001, FBT002
+    /,
+    *,
+    reason: str,
+) -> Callable[[F], F]:
+    """Mark function so doctest is skipped (if `condition` is met)."""
     if not reason:
         msg = "reason must not be empty"
         raise ValueError(msg)
 
     def decorator(func: F) -> F:
-        func._doctest_skip_reason = reason
+        if condition:
+            func._doctest_skip_reason = reason
         return func
 
     return decorator

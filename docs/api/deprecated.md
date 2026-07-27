@@ -7,12 +7,9 @@
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
-   pp.filter_genes_dispersion
-   pp.normalize_per_cell
    pp.subsample
-   pl.filter_genes_dispersion
    tl.louvain
    logging.print_versions
 ```

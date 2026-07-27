@@ -7,18 +7,18 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scverse_misc import Deprecation, deprecated
 
-from .._compat import deprecated
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
-from ..plotting import _scrublet, _utils, embedding
-from ..plotting._docs import (
+from ..plotting.legacy import _utils, embedding
+from ..plotting.legacy._docs import (
     doc_adata_color_etc,
     doc_edges_arrows,
     doc_scatter_embedding,
     doc_show_save_ax,
 )
-from ..plotting._tools.scatterplots import _wraps_plot_scatter
+from ..plotting.legacy._tools.scatterplots import _wraps_plot_scatter
 from .tl._wishbone import _anndata_to_wishbone
 
 if TYPE_CHECKING:
@@ -345,6 +345,8 @@ def wishbone_marker_trajectory(  # noqa: PLR0913
     return ax
 
 
-scrublet_score_distribution = deprecated("Import from sc.pl instead")(
-    _scrublet.scrublet_score_distribution
-)
+@deprecated(Deprecation("1.10.0", "Import from sc.pl instead."))
+def scrublet_score_distribution(*args, **kwargs):  # pragma: no cover
+    from ..plotting.legacy._scrublet import scrublet_score_distribution
+
+    return scrublet_score_distribution(*args, **kwargs)

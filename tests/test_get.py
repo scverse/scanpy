@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from functools import partial
+from importlib.resources import as_file, files
 from itertools import chain, repeat
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -11,6 +13,9 @@ from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+
+if TYPE_CHECKING:
+    from contextlib import ExitStack
 
 
 # Override so warning gets caught
@@ -173,13 +178,10 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-def test_backed_vs_memory():
+def test_backed_vs_memory(exit_stack: ExitStack) -> None:
     """Compares backed vs. memory."""
-    from pathlib import Path
-
-    # get location test h5ad file in datasets
-    pkg_dir = Path(sc.__file__).parent
-    adata_file = pkg_dir / "datasets/10x_pbmc68k_reduced.h5ad"
+    adata_res = files("scanpy") / "datasets/10x_pbmc68k_reduced.h5ad"
+    adata_file = exit_stack.enter_context(as_file(adata_res))
     adata_backed = sc.read(adata_file, backed="r")
     adata = sc.read_h5ad(adata_file)
 
@@ -478,7 +480,8 @@ def test_shared_key_errors(shared_key_adata):
 ##############################
 
 
-def test_rank_genes_groups_df():
+@pytest.fixture(scope="module")
+def adata_rgg_module() -> AnnData:
     a = np.zeros((20, 3))
     a[:10, 0] = 5
     adata = AnnData(
@@ -490,37 +493,56 @@ def test_rank_genes_groups_df():
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
     sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
-    dedf = sc.get.rank_genes_groups_df(adata, "a")
+    return adata
+
+
+@pytest.fixture
+def adata_rgg(adata_rgg_module: AnnData) -> AnnData:
+    return adata_rgg_module.copy()
+
+
+def test_rank_genes_groups_df(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
     assert dedf["pvals"].value_counts()[1.0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1).shape[0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_min=0.1).shape[0] == 1
-    assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
-    del adata.uns["rank_genes_groups"]
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_max=0.1).shape[0] == 2
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_min=0.1).shape[0] == 1
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", pval_cutoff=0.9).shape[0] == 1
+
+
+def test_rank_genes_groups_df_error(adata_rgg: AnnData):
+    with pytest.raises(KeyError):
+        sc.get.rank_genes_groups_df(adata_rgg, "missing")
+
+
+def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
+    del adata_rgg.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata,
+        adata_rgg,
         groupby="celltype",
         method="wilcoxon",
         key_added="different_key",
         pts=True,
     )
-    with pytest.raises(KeyError):
-        sc.get.rank_genes_groups_df(adata, "a")
-    dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
+    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different_key")
+
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert "pct_nz_group" in dedf2.columns
     assert "pct_nz_reference" in dedf2.columns
 
-    # get all groups
-    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
-    assert "a" in dedf3["group"].unique()
-    assert "b" in dedf3["group"].unique()
-    adata.var_names.name = "pr1388"
-    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+
+@pytest.mark.parametrize("index_name", [None, "pr1388"])
+def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | None):
+    if index_name is not None:
+        adata_rgg.var_names.name = index_name
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, group=None)
+    assert "a" in dedf["group"].unique()
+    assert "b" in dedf["group"].unique()
 
 
-######################
-# _get_obs_rep tests #
-######################
+##################
+# _get_arr tests #
+##################
 
 
 @pytest.mark.parametrize(
@@ -535,11 +557,11 @@ def test_rank_genes_groups_df():
         pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
     ],
 )
-def test_get_obs_rep_errors(kw: sc.get._ObsRep, cls: type[Exception], msg: str) -> None:
+def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None:
     adata = AnnData(
         np.zeros((10, 10)),
         layers={"a": np.zeros((10, 10))},
         obsm={"b": np.zeros((10, 5))},
     )
     with pytest.raises(cls, match=msg):
-        sc.get._get_obs_rep(adata, **kw)
+        sc.get._get_arr(adata, **kw)

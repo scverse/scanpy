@@ -7,11 +7,6 @@ adata
     The annotated data matrix.\
 """
 
-doc_random_state = """\
-random_state
-    Change the initialization of the optimization.\
-"""
-
 doc_restrict_to = """\
 restrict_to
     Restrict the clustering to the categories within the key for sample

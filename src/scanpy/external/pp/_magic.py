@@ -124,7 +124,7 @@ def magic(  # noqa: PLR0913
     >>> import scanpy as sc
     >>> import scanpy.external as sce
     >>> adata = sc.datasets.paul15()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
     >>> adata_magic = sce.pp.magic(adata, name_list=["Mpo", "Klf1", "Ifitm1"], knn=5)
     >>> adata_magic.shape

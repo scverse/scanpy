@@ -110,7 +110,7 @@ def palantir(
 
     >>> sc.pp.filter_cells(adata, min_counts=1000)
     >>> sc.pp.filter_genes(adata, min_counts=10)
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
     >>> sc.pp.log1p(adata)
 
     **Data preprocessing**

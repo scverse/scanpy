@@ -150,7 +150,7 @@ def phenograph(  # noqa: PLR0913
     With annotated data as input:
 
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
 
     Then do PCA:
 
@@ -188,13 +188,13 @@ def phenograph(  # noqa: PLR0913
 
     Cluster and cluster centroids for input Numpy ndarray
 
-    >>> df = np.random.rand(1000, 40)
-    >>> dframe = pd.DataFrame(df)
-    >>> dframe.index, dframe.columns = (
-    ...     map(str, dframe.index),
-    ...     map(str, dframe.columns),
+    >>> data = np.random.default_rng().random((1000, 40))
+    >>> df = pd.DataFrame(data)
+    >>> df.index, df.columns = (
+    ...     map(str, df.index),
+    ...     map(str, df.columns),
     ... )
-    >>> adata = AnnData(dframe)
+    >>> adata = AnnData(df)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)

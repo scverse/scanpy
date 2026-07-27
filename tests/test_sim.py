@@ -6,9 +6,8 @@ import pytest
 import scanpy as sc
 
 
+@pytest.mark.filterwarnings("ignore:.*Observation names are not unique:UserWarning")
 def test_sim_toggleswitch() -> None:
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
-        adata_sim = sc.tl.sim("toggleswitch")
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
-        adata_ds = sc.datasets.toggleswitch()
+    adata_sim = sc.tl.sim("toggleswitch")
+    adata_ds = sc.datasets.toggleswitch()
     np.allclose(adata_sim.X, adata_ds.X, np.finfo(np.float32).eps)

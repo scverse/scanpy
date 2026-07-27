@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from packaging.version import Version
 
 # start with settings as several tools are using it
-from ._settings import Verbosity, settings
+from ._settings import Preset, Verbosity, settings
 
 if Version(version("anndata")) >= Version("0.11.0rc2"):
     from anndata.io import (
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 __all__ = [
     "AnnData",
     "Neighbors",
+    "Preset",
     "Verbosity",
     "concat",
     "datasets",
@@ -80,7 +81,7 @@ __all__ = [
 ]
 
 
-set_figure_params = settings._set_figure_params
+from .plotting.legacy.mpl_settings import set_figure_params
 
 annotate_doc_types(sys.modules[__name__], "scanpy")
 

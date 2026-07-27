@@ -25,7 +25,8 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 @pytest.fixture
 def adata() -> AnnData:
-    a = np.random.binomial(100, 0.005, (1000, 1000))
+    rng = np.random.default_rng()
+    a = rng.binomial(100, 0.005, (1000, 1000))
     adata = AnnData(
         sparse.csr_matrix(a),  # noqa: TID251
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
@@ -245,8 +246,9 @@ def test_dask_against_in_memory(adata, log1p):
 
 @pytest.fixture
 def adata_mito() -> AnnData:
+    rng = np.random.default_rng()
     return AnnData(
-        X=np.random.binomial(100, 0.005, (1000, 1000)),
+        X=rng.binomial(100, 0.005, (1000, 1000)),
         var=dict(
             mito=np.concatenate((np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
         ),

@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from contextlib import nullcontext
 from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
@@ -27,6 +26,7 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from typing import Any, Literal
 
     from numpy.typing import DTypeLike, NDArray
@@ -38,10 +38,6 @@ class _MatrixFormat(NamedTuple):
 
     def __call__(self, x: NDArray) -> CSBase | NDArray:
         return self.callback(x)
-
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
 
 
 @pytest.fixture(params=[np.asarray, sparse.csr_matrix, sparse.csc_matrix])  # noqa: TID251
@@ -60,8 +56,9 @@ def zero_center(request: pytest.FixtureRequest) -> bool:
     return request.param
 
 
-def test_log1p(tmp_path):
-    a = np.random.rand(200, 10).astype(np.float32)
+def test_log1p(tmp_path: Path) -> None:
+    rng = np.random.default_rng()
+    a = rng.random((200, 10)).astype(np.float32)
     a_log = np.log1p(a)
     ad = AnnData(a.copy())
     ad2 = AnnData(a.copy())
@@ -93,34 +90,10 @@ def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -
     check_rep_results(sc.pp.log1p, x, base=base)
 
 
-def test_normalize_per_cell() -> None:
-    x = np.array([[1, 0], [3, 0], [5, 6]], dtype=np.float32)
-    adata = AnnData(x.copy())
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(
-            adata, counts_per_cell_after=1, key_n_counts="n_counts2"
-        )
-    assert adata.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
-    # now with copy option
-    adata = AnnData(x.copy())
-    # note that sc.pp.normalize_per_cell is also used in
-    # pl.highest_expr_genes with parameter counts_per_cell_after=100
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        adata_copy = sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, copy=True)
-    assert adata_copy.X.sum(axis=1).tolist() == [1.0, 1.0, 1.0]
-    # now sparse
-    adata = AnnData(x.copy())
-    adata_sparse = AnnData(sparse.csr_matrix(x.copy()))  # noqa: TID251
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata)
-    with pytest.warns(FutureWarning, match=r"sc\.pp\.normalize_total"):
-        sc.pp.normalize_per_cell(adata_sparse)
-    assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(axis=1).A1.tolist()
-
-
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
     """Generate a random probability distribution of `n` values between 0 and 1."""
-    probs = np.random.randint(0, 10000, n).astype(np.float64)
+    rng = np.random.default_rng()
+    probs = rng.integers(0, 10000, n).astype(np.float64)
     probs[probs < np.quantile(probs, frac_zero)] = 0
     probs /= probs.sum()
     np.testing.assert_almost_equal(probs.sum(), 1)
@@ -255,7 +228,8 @@ def test_sample_backwards_compat():
 
 
 def test_sample_copy_backed(tmp_path):
-    adata_m = AnnData(np.random.rand(200, 10).astype(np.float32))
+    rng = np.random.default_rng()
+    adata_m = AnnData(rng.random((200, 10)).astype(np.float32))
     adata_d = adata_m.copy()
     adata_d.filename = tmp_path / "test.h5ad"
 
@@ -266,8 +240,9 @@ def test_sample_copy_backed(tmp_path):
     )
 
 
-def test_sample_copy_backed_error(tmp_path):
-    adata_d = AnnData(np.random.rand(200, 10).astype(np.float32))
+def test_sample_copy_backed_error(tmp_path: Path) -> None:
+    rng = np.random.default_rng()
+    adata_d = AnnData(rng.random((200, 10)).astype(np.float32))
     adata_d.filename = tmp_path / "test.h5ad"
     with pytest.raises(NotImplementedError):
         sc.pp.sample(adata_d, n=40, copy=False)
@@ -373,38 +348,38 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
 # https://github.com/pandas-dev/pandas/issues/61928
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 def test_recipe_plotting() -> None:
+    rng = np.random.default_rng()
     sc.settings.autoshow = False
-    adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
+    adata = AnnData(rng.integers(0, 1000, (1000, 1000)))
+
     # These shouldn't throw an error
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
-        sc.pp.recipe_seurat(adata.copy(), plot=True)
-    with pytest.warns(FutureWarning, match=r"sc\.p[pl]\.highly_variable_genes"):
-        sc.pp.recipe_zheng17(adata.copy(), plot=True)
+    sc.pp.recipe_seurat(adata.copy(), plot=True)
+    sc.pp.recipe_zheng17(adata.copy(), plot=True)
 
 
 def test_regress_out_ordinal():
-    from scipy.sparse import random
-
-    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
-    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    rng = np.random.default_rng()
+    adata = AnnData(
+        sparse.random(1000, 100, density=0.6, format="csr", random_state=rng)
+    )
+    adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
 
     # results using only one processor
     single = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
-    assert adata.X.shape == single.X.shape
-
     # results using 8 processors
     multi = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=8, copy=True
     )
 
+    assert adata.X.shape == single.X.shape
     np.testing.assert_array_equal(single.X, multi.X)
 
 
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
-def test_regress_out_int(dtype):
+def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     adata = pbmc3k()[:200, :200].copy()
     adata.X = adata.X.astype(np.float64 if dtype != np.uint32 else np.float32)
     dtype = adata.X.dtype
@@ -418,18 +393,19 @@ def test_regress_out_int(dtype):
     sc.pp.regress_out(adata_other, keys=["labels"])
     assert_equal(adata_other, adata)
     # This file was generated under scanpy 1.10.3
-    ground_truth = np.load(DATA_PATH / "cat_regressor_for_int_input.npy")
+    ground_truth = np.load(data_dir / "cat_regressor_for_int_input.npy")
     np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
 
 
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
 def test_regress_out_layer(dtype):
-    from scipy.sparse import random
-
+    rng = np.random.default_rng()
     adata = AnnData(
-        random(1000, 100, density=0.6, format="csr", dtype=np.uint16).astype(dtype)
+        sparse.random(
+            1000, 100, density=0.6, format="csr", dtype=np.uint16, random_state=rng
+        ).astype(dtype)
     )
-    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     if dtype == np.float64:
         dtype_cast = dtype
@@ -442,49 +418,54 @@ def test_regress_out_layer(dtype):
     single = sc.pp.regress_out(
         adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
-    assert adata.X.shape == single.X.shape
-
     layer = sc.pp.regress_out(
         adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
     )
 
+    assert adata.X.shape == single.X.shape
     np.testing.assert_allclose(single.X, layer.layers["counts"])
 
 
 def test_regress_out_view():
-    from scipy.sparse import random
-
-    adata = AnnData(random(500, 1100, density=0.2, format="csr"))
-    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    rng = np.random.default_rng()
+    adata = AnnData(
+        sparse.random(500, 1100, density=0.2, format="csr", random_state=rng)
+    )
+    adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     subset_adata = adata[:, :1050]
     subset_adata_copy = subset_adata.copy()
+
     with pytest.warns(UserWarning, match=r"Received a view"):
         sc.pp.regress_out(subset_adata, keys=["n_counts", "percent_mito"])
     sc.pp.regress_out(subset_adata_copy, keys=["n_counts", "percent_mito"])
+
     assert_equal(subset_adata, subset_adata_copy)
     assert not subset_adata.is_view
 
 
 def test_regress_out_categorical():
-    import pandas as pd
-    from scipy.sparse import random
-
-    adata = AnnData(random(1000, 100, density=0.6, format="csr"))
+    rng = np.random.default_rng()
+    adata = AnnData(
+        sparse.random(1000, 100, density=0.6, format="csr", random_state=rng)
+    )
     # create a categorical column
-    adata.obs["batch"] = pd.Categorical(np.random.randint(1, 4, size=adata.X.shape[0]))
+    adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
     multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, copy=True)
+
     assert adata.X.shape == multi.X.shape
 
 
 def test_regress_out_constants():
+    rng = np.random.default_rng()
     adata = AnnData(np.hstack((np.full((10, 1), 0.0), np.full((10, 1), 1.0))))
-    adata.obs["percent_mito"] = np.random.rand(adata.X.shape[0])
+    adata.obs["percent_mito"] = rng.random(adata.X.shape[0])
     adata.obs["n_counts"] = adata.X.sum(axis=1)
     adata_copy = adata.copy()
 
     sc.pp.regress_out(adata, keys=["n_counts", "percent_mito"])
+
     assert_equal(adata, adata_copy)
 
 
@@ -495,13 +476,15 @@ def test_regress_out_constants():
         (["bulk_labels"], "regress_test_small_cat.npy", 1e-6),
     ],
 )
-def test_regress_out_reproducible(keys, test_file, atol):
+def test_regress_out_reproducible(
+    data_dir: Path, keys: list[str], test_file: str, atol: float
+) -> None:
     adata = sc.datasets.pbmc68k_reduced()
     adata = adata.raw.to_adata()[:200, :200].copy()
     sc.pp.regress_out(adata, keys=keys)
     # This file was generated from the original implementation in version 1.10.3
     # Now we compare new implementation with the old one
-    tester = np.load(DATA_PATH / test_file)
+    tester = np.load(data_dir / test_file)
     np.testing.assert_allclose(adata.X, tester, atol=atol)
 
 
@@ -524,8 +507,9 @@ def test_regress_out_constants_equivalent():
 def test_downsample_counts_per_cell(
     *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
 ) -> None:
+    rng = np.random.default_rng()
     target = 1000
-    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    x = rng.integers(0, 100, (1000, 100)) * rng.binomial(1, 0.3, (1000, 100))
     x = x.astype(dtype)
     adata = AnnData(X=count_matrix_format(x).astype(dtype))
     with pytest.raises(ValueError, match=r"Must specify exactly one"):
@@ -557,8 +541,9 @@ def test_downsample_counts_per_cell(
 def test_downsample_counts_per_cell_multiple_targets(
     *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
 ) -> None:
-    targets = np.random.randint(500, 1500, 1000)
-    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    rng = np.random.default_rng()
+    targets = rng.integers(500, 1500, (1000,))
+    x = rng.integers(0, 100, (1000, 100)) * rng.binomial(1, 0.3, (1000, 100))
     x = x.astype(dtype)
     adata = AnnData(X=count_matrix_format(x).astype(dtype))
     initial_totals = np.ravel(adata.X.sum(axis=1))
@@ -587,7 +572,8 @@ def test_downsample_counts_per_cell_multiple_targets(
 def test_downsample_total_counts(
     *, count_matrix_format: _MatrixFormat, replace: bool, dtype: DTypeLike
 ) -> None:
-    x = np.random.randint(0, 100, (1000, 100)) * np.random.binomial(1, 0.3, (1000, 100))
+    rng = np.random.default_rng()
+    x = rng.integers(0, 100, (1000, 100)) * rng.binomial(1, 0.3, (1000, 100))
     x = x.astype(dtype)
     adata_orig = AnnData(X=count_matrix_format(x))
     total = x.sum()

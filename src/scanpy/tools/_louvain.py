@@ -7,17 +7,17 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import deprecated, pkg_version, warn
-from .._utils import _choose_graph, _doc_params, dematrix
+from .._compat import pkg_version
+from .._utils import _choose_graph, _doc_params
 from ._docs import (
     doc_adata,
     doc_adjacency,
     doc_neighbors_key,
     doc_obsp,
-    doc_random_state,
     doc_restrict_to,
 )
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -35,14 +35,14 @@ if TYPE_CHECKING:
         from louvain.VertexPartition import MutableVertexPartition
     except ImportError:
         if not TYPE_CHECKING:
-            MutableVertexPartition = type("MutableVertexPartition", (), {})
-            MutableVertexPartition.__module__ = "louvain.VertexPartition"
+            MutableVertexPartition = type(
+                "MutableVertexPartition", (), dict(__module__="louvain.VertexPartition")
+            )
 
 
-@deprecated("Use `scanpy.tl.leiden` instead")
+@deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
 @_doc_params(
     doc_adata=doc_adata,
-    random_state=doc_random_state,
     restrict_to=doc_restrict_to,
     adjacency=doc_adjacency,
     neighbors_key=doc_neighbors_key.format(method="louvain"),
@@ -56,7 +56,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
     adjacency: CSBase | None = None,
-    flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
+    flavor: Literal["vtraag", "igraph"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
     partition_type: type[MutableVertexPartition] | None = None,
@@ -66,9 +66,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     copy: bool = False,
 ) -> AnnData | None:
     """Cluster cells into subgroups :cite:p:`Blondel2008,Levine2015,Traag2017`.
-
-    .. deprecated:: 1.12.0
-       Use :func:`scanpy.tl.leiden` instead.
 
     Cluster cells using the Louvain algorithm :cite:p:`Blondel2008` in the implementation
     of :cite:t:`Traag2017`. The Louvain algorithm was proposed for single-cell
@@ -88,7 +85,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         resolution (higher resolution means finding more and smaller clusters),
         which defaults to 1.0.
         See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
-    {random_state}
+    random_state
+        Change the initialization of the optimization.
     {restrict_to}
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
@@ -100,11 +98,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
             Much more powerful than ``'igraph'``, and the default.
         ``'igraph'``
             Built in ``igraph`` method.
-        ``'rapids'``
-            GPU accelerated implementation.
-
-            .. deprecated:: 1.10.0
-                Use :func:`rapids_singlecell.tl.louvain` instead.
     directed
         Interpret the ``adjacency`` matrix as directed graph?
     use_weights
@@ -181,44 +174,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
-    elif flavor == "rapids":
-        msg = (
-            "`flavor='rapids'` is deprecated. "
-            "Use `rapids_singlecell.tl.louvain` instead."
-        )
-        warn(msg, FutureWarning)
-        # nvLouvain only works with undirected graphs,
-        # and `adjacency` must have a directed edge in both directions
-        import cudf
-        import cugraph
-
-        offsets = cudf.Series(adjacency.indptr)
-        indices = cudf.Series(adjacency.indices)
-        if use_weights:
-            sources, targets = adjacency.nonzero()
-            weights = dematrix(adjacency[sources, targets]).ravel()
-            weights = cudf.Series(weights)
-        else:
-            weights = None
-        g = cugraph.Graph()
-
-        if hasattr(g, "add_adj_list"):
-            g.add_adj_list(offsets, indices, weights)
-        else:
-            g.from_cudf_adjlist(offsets, indices, weights)
-
-        logg.info('    using the "louvain" package of rapids')
-        if resolution is not None:
-            louvain_parts, _ = cugraph.louvain(g, resolution=resolution)
-        else:
-            louvain_parts, _ = cugraph.louvain(g)
-        groups = (
-            louvain_parts
-            .to_pandas()
-            .sort_values("vertex")[["partition"]]
-            .to_numpy()
-            .ravel()
-        )
     elif flavor == "taynaud":
         # this is deprecated
         import community

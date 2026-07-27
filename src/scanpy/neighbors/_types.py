@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 type _Method = Literal["umap", "gauss", "jaccard"]
-type _KnownTransformer = Literal["pynndescent", "sklearn", "rapids"]
+type _KnownTransformer = Literal["pynndescent", "sklearn"]
 
 type _MetricFn = Callable[[np.ndarray, np.ndarray], float]
 # from sklearn.metrics.pairwise_distances.__doc__:
