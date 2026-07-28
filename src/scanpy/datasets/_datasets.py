@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData, OldFormatWarning
 from packaging.version import Version
+from scipy import sparse as sps
 from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
@@ -401,7 +402,7 @@ def pbmc68k_reduced() -> AnnData:
     from scanpy._settings import Preset, settings
 
     adata = read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
-    adata.layers["counts"] = np.load(HERE / "10x_pbmc68k_reduced_counts.npy")
+    adata.layers["counts"] = sps.load_npz(HERE / "10x_pbmc68k_reduced_counts.npz")
     if settings.preset is Preset.ScanpyV2Preview:
         adata.layers["log_counts"] = adata.raw.X
         del adata.raw
