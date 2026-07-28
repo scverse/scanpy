@@ -33,19 +33,11 @@ else:
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
     from typing import Self, TextIO
 
     from pydantic import ValidationInfo
 
     from .verbosity import _VerbosityName
-
-    # Collected from the print_* functions in matplotlib.backends
-    type _Format = (
-        Literal["png", "jpg", "tif", "tiff"]  # noqa: PYI030
-        | Literal["pdf", "ps", "eps", "svg", "svgz", "pgf"]
-        | Literal["raw", "rgba"]
-    )
 
 
 __all__ = ["AnnDataFileFormat", "Default", "Preset", "Verbosity"]
@@ -156,12 +148,6 @@ class Settings(scverse_misc.Settings):
     })
     """Categories that are omitted in plotting etc."""
 
-    _frameon: Annotated[bool, PrivateAttr(default=True)]
-    """See set_figure_params."""
-    _vector_friendly: Annotated[bool, PrivateAttr(default=False)]
-    """Set to true if you want to include pngs in svgs and pdfs."""
-    _low_resolution_warning: Annotated[bool, PrivateAttr(default=True)]
-    """Print warning when saving a figure with low resolution."""
     _start: Annotated[float, PrivateAttr(default_factory=time)]
     """Time when the settings module is first imported."""
     _previous_time: Annotated[float, PrivateAttr(default_factory=time)]
@@ -218,89 +204,9 @@ class Settings(scverse_misc.Settings):
 
     @deprecated(Deprecation("1.11.3", "Use :func:`scanpy.set_figure_params` instead"))
     def set_figure_params(self, *args, **kwargs) -> None:
-        self._set_figure_params(*args, **kwargs)
+        from ..plotting.legacy.mpl_settings import set_figure_params
 
-    def _set_figure_params(  # noqa: PLR0913
-        self,
-        *,
-        scanpy: bool = True,
-        dpi: int = 80,
-        dpi_save: int = 150,
-        frameon: bool = True,
-        vector_friendly: bool = True,
-        fontsize: int = 14,
-        figsize: int | None = None,
-        color_map: str | None = None,
-        format: _Format = "pdf",
-        facecolor: str | None = None,
-        transparent: bool = False,
-        ipython_format: str | Iterable[str] = "retina",
-    ) -> None:
-        """Set resolution/size, styling and format of figures.
-
-        Parameters
-        ----------
-        scanpy
-            Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
-        dpi
-            Resolution of rendered figures – this influences the size of figures in notebooks.
-        dpi_save
-            Resolution of saved figures.
-            This should typically be higher to achieve publication quality.
-        frameon
-            Add frames and axes labels to scatter plots.
-        vector_friendly
-            Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
-        fontsize
-            Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
-        figsize
-            Set `rcParams['figure.figsize']`.
-        color_map
-            Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format
-            This sets the default format for saving figures: `file_format_figs`.
-        facecolor
-            Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
-            `rcParams['axes.facecolor'] = facecolor`.
-        transparent
-            Save figures with transparent background.
-            Sets `rcParams['savefig.transparent']`.
-        ipython_format
-            Only concerns the notebook/IPython environment; see
-            `matplotlib_inline.backend_inline.set_matplotlib_formats
-            <https://github.com/ipython/matplotlib-inline/blob/b93777db35267acefe6e37d14214360362d2e8b2/matplotlib_inline/backend_inline.py#L280-L281>`_
-            for details.
-
-        """
-        if _is_run_from_ipython():
-            # No docs yet: https://github.com/ipython/matplotlib-inline/issues/12
-            from matplotlib_inline.backend_inline import set_matplotlib_formats
-
-            if isinstance(ipython_format, str):
-                ipython_format = [ipython_format]
-
-            set_matplotlib_formats(*ipython_format)
-
-        from matplotlib import rcParams
-
-        self._vector_friendly = vector_friendly
-        self.file_format_figs = format
-        if dpi is not None:
-            rcParams["figure.dpi"] = dpi
-        if dpi_save is not None:
-            rcParams["savefig.dpi"] = dpi_save
-        if transparent is not None:
-            rcParams["savefig.transparent"] = transparent
-        if facecolor is not None:
-            rcParams["figure.facecolor"] = facecolor
-            rcParams["axes.facecolor"] = facecolor
-        if scanpy:
-            from ..plotting._rcmod import set_rcParams_scanpy
-
-            set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
-        if figsize is not None:
-            rcParams["figure.figsize"] = figsize
-        self._frameon = frameon
+        set_figure_params(*args, **kwargs)
 
     def __str__(self) -> str:
         return "\n".join(

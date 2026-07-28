@@ -3,15 +3,11 @@ ci:
 
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.0
     hooks:
     -   id: ruff-check
         args: ["--fix"]
     -   id: ruff-format
-    # The following can be removed once PLR0917 is out of preview
-    -   name: ruff preview rules
-        id: ruff-check
-        args: ["--preview", "--select=PLR0917"]
 -   repo: https://github.com/flying-sheep/bibfmt
     rev: v4.3.0
     hooks:
@@ -20,11 +16,11 @@ repos:
         - --sort-by-bibkey
         - --drop=abstract
 -   repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.2
+    rev: v2.5.5
     hooks:
     -   id: biome-format
 -   repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.25.1
+    rev: v2.26.0
     hooks:
     -   id: pyproject-fmt
 -   repo: https://github.com/pre-commit/pre-commit-hooks

@@ -744,7 +744,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool] | str | None | Default = Default(
+    mask_var: NDArray[np.bool] | str | Default | None = Default(
         preset=("rank_genes_groups", "mask_var")
     ),
     use_raw: bool | None = None,

@@ -140,7 +140,7 @@ def dendrogram(  # noqa: PLR0913
         categories: pd.Index = rep_df.index.categories
     else:
         gene_names = adata.raw.var_names if use_raw else adata.var_names
-        from ..plotting._anndata import _prepare_dataframe
+        from ..plotting.legacy._anndata import _prepare_dataframe
 
         categories, rep_df = _prepare_dataframe(
             adata, gene_names, groupby, use_raw=use_raw

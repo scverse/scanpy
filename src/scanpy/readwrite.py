@@ -88,7 +88,7 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     **kwargs,
@@ -525,7 +525,7 @@ def read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     gex_only: bool = True,
@@ -624,7 +624,7 @@ def _read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"],
     make_unique: bool,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     prefix: str,
     is_legacy: bool,
     compressed: bool,
@@ -660,7 +660,7 @@ def _read_10x_mtx(
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].array
+    adata.obs_names = barcodes[0].array.astype("str")
     return adata
 
 
@@ -840,7 +840,7 @@ def _read(  # noqa: PLR0912, PLR0915
     first_column_names: bool,
     backup_url: str | None,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):
