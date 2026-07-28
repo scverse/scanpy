@@ -349,14 +349,35 @@ def pbmc68k_reduced() -> AnnData:
 
     `PBMC 68k dataset`_ from 10x Genomics.
 
-    The original PBMC 68k dataset was preprocessed with steps including
-    :func:`~scanpy.pp.normalize_total`\ [#norm]_ and :func:`~scanpy.pp.scale`.
-    It was saved keeping only 724 cells and 221 highly variable genes.
+    The original PBMC 68k dataset was preprocessed with steps very similar to the following:
 
-    The saved file contains the annotation of cell types (key: `'bulk_labels'`),
-    UMAP coordinates, louvain clustering and gene rankings based on the `bulk_labels`.
+    ..  code-block:: python
 
-    .. [#norm] Back when the dataset was created, ``sc.pp.normalize_per_cell`` was used instead.
+        import scanpy as sc
+
+        adata = sc.read_10x_mtx(
+            "./data/filtered/filtered_matrices_mex/hg19/",
+            var_names="gene_symbols",
+        )
+        adata.var_names_make_unique()
+
+        sc.pp.filter_cells(adata, min_genes=200)
+        sc.pp.filter_genes(adata, min_counts=125)
+
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        if sc.settings.preset == sc.Preset.ScanpyV2Preview:
+            adata.layers["log_counts"] = adata.X.copy()
+        else:
+            adata.raw = adata.copy()
+
+        sc.pp.highly_variable_genes(adata)
+        sc.pp.subsample(adata, n_obs=700)
+        sc.pp.scale(adata)
+
+    The `.obs["bulk_labels"]` were obtained as described in :cite:t:`Zheng2017`.
+    UMAP coordinates, louvain clustering and gene rankings were calculated based on the `bulk_labels`.
+
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
@@ -374,14 +395,15 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
-        layers: None (.X)
+        layers: None (.X), 'counts'
 
     """
     from scanpy._settings import Preset, settings
 
     adata = read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
+    adata.layers["counts"] = np.load(HERE / "10x_pbmc68k_reduced_counts.npy")
     if settings.preset is Preset.ScanpyV2Preview:
-        adata.layers["counts"] = adata.raw.X
+        adata.layers["log_counts"] = adata.raw.X
         del adata.raw
         adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
     return adata
