@@ -211,6 +211,9 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
                     )
                 if real >= nrRealizations:
                     break
+            _check_nr_realizations(
+                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+            )
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
             f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.0}"
@@ -273,6 +276,9 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
                     )
                 if real >= nrRealizations:
                     break
+            _check_nr_realizations(
+                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+            )
     # load the last simulation file
     filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
@@ -894,6 +900,26 @@ class GRNsim:
             boolRules=self.boolRules,
             invTimeStep=self.invTimeStep,
         )
+
+
+def _check_nr_realizations(
+    model_key: str, *, real: int, nrRealizations: int, restart: int
+) -> None:
+    """Guard against writing fewer realizations than requested.
+
+    Realizations that don’t reach an attractor within `tmax` steps can make
+    :func:`_check_branching` reject every subsequent realization,
+    which used to silently yield a truncated data matrix.
+    """
+    if real >= nrRealizations:
+        return
+    msg = (
+        f"Simulating model {model_key!r} yielded only {real} of the requested "
+        f"{nrRealizations} branching realizations in {restart + 1} restarts. "
+        "Try increasing `tmax` so realizations reach an attractor, "
+        "or use a different `rng`."
+    )
+    raise RuntimeError(msg)
 
 
 def _check_branching(
