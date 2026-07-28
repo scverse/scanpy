@@ -37,34 +37,28 @@ def test_validate_palette_no_mod(palette, typ):
     assert palette is adata.uns["test_colors"], "Palette should not be modified"
 
 
-def test_validate_palette_mapping_no_mod():
-    palette = {"a": "red", "b": "blue"}
-    adata = AnnData(uns=dict(test_colors=palette))
-    validate_palette(adata, "test")
-    assert palette is adata.uns["test_colors"], "Palette should not be modified"
-
-
-def test_get_palette_bool_mapping_from_uns_after_subset():
+def test_get_palette_bool_colors_from_uns_after_subset():
     adata = AnnData(
         X=np.ones((4, 1)),
         obs={"flag": [False, True, False, True]},
-        uns={"flag_colors": {False: "red", True: "blue"}},
+        uns={"flag_colors": ["red", "blue"]},
     )
 
     true_subset = adata[adata.obs["flag"]].copy()
     false_subset = adata[~adata.obs["flag"]].copy()
 
-    assert _get_palette(true_subset, "flag") == {"True": "blue"}
-    assert _get_palette(false_subset, "flag") == {"False": "red"}
+    assert _get_palette(true_subset, "flag") == {"False": "red", "True": "blue"}
+    assert _get_palette(false_subset, "flag") == {"False": "red", "True": "blue"}
 
 
-def test_get_palette_bool_mapping_from_palette_argument():
+def test_get_palette_bool_colors_from_palette_argument_after_subset():
     adata = AnnData(
         X=np.ones((4, 1)),
         obs={"flag": [False, True, False, True]},
     )
+    true_subset = adata[adata.obs["flag"]].copy()
 
-    assert _get_palette(adata, "flag", palette={False: "red", True: "blue"}) == {
+    assert _get_palette(true_subset, "flag", palette=["red", "blue"]) == {
         "False": "#ff0000",
         "True": "#0000ff",
     }
