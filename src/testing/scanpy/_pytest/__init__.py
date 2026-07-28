@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from importlib.util import find_spec
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,7 @@ from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+    from pathlib import Path
 
 
 MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
@@ -111,6 +113,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Run tests that retrieve stuff from the internet. This increases test time."
         ),
     )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
+    return "_v2" in collection_path.parts and not bool(find_spec("holoviews"))
 
 
 def pytest_collection_modifyitems(
