@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
+import zarr.storage
 from anndata import AnnData, OldFormatWarning
 from packaging.version import Version
-from scipy import sparse as sps
 from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
@@ -18,12 +18,13 @@ from .._settings import Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..readwrite import read, read_h5ad
+from ..readwrite import read, read_zarr
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
+    from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
 
     type VisiumSampleID = Literal[
@@ -371,6 +372,7 @@ def pbmc68k_reduced() -> AnnData:
             adata.layers["log_counts"] = adata.X.copy()
         else:
             adata.raw = adata.copy()
+            adata.raw.X.data = adata.raw.X.data.round(3)
 
         sc.pp.highly_variable_genes(adata)
         sc.pp.subsample(adata, n_obs=700)
@@ -396,17 +398,30 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
-        layers: None (.X), 'counts'
+        layers: 'counts', None (.X)
 
     """
     from scanpy._settings import Preset, settings
 
-    adata = read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
-    adata.layers["counts"] = sps.load_npz(HERE / "10x_pbmc68k_reduced_counts.npz")
+    store = zarr.storage.ZipStore(HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r")
+    adata = read_zarr(zarr.open_group(store=store, mode="r"))
+
+    # normalizae using `n_counts`,
+    # i.e. the size factors computed over all genes passing the initial filtering.
+    size_factors = adata.obs["n_counts"].to_numpy() / 1e4
+    counts = cast("CSRBase", adata.layers["counts"])
+
+    log_counts = counts.astype(np.float32)
+    log_counts.data /= np.repeat(size_factors, np.diff(log_counts.indptr))
+    log_counts.data = np.log1p(log_counts.data)
+
     if settings.preset is Preset.ScanpyV2Preview:
-        adata.layers["log_counts"] = adata.raw.X
-        del adata.raw
+        adata.layers["log_counts"] = log_counts
         adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
+    else:
+        # matches the precision of the original, pre-2.0 shipped `.raw`
+        log_counts.data = np.round(log_counts.data, 3)
+        adata.raw = AnnData(X=log_counts, var=adata.var[[]])
     return adata
 
 

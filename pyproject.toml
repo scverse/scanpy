@@ -74,6 +74,7 @@ dependencies = [
     "tqdm",
     "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
+    "zarr>=2.18.7",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
@@ -113,7 +114,6 @@ test = [
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
-    "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
 docs = [
