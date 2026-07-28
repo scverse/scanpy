@@ -41,12 +41,11 @@ def harmony_integrate(  # noqa: PLR0913
 ) -> None:
     """Integrate different experiments using the Harmony algorithm :cite:p:`Korsunsky2019,Patikas2026`.
 
-    Integration adjusts a PCA embedding to reduce experiment-specific technical
-    variation, allowing cells from different experiments to be compared.
-    This CPU implementation is based on the rapids-singlecell and harmony-pytorch
-    packages. Multiple batch variables follow the
-    per-covariate formulation described in the Harmony papers: each key is
-    modeled separately instead of combining all keys into one joint category.
+    Integration adjusts a PCA embedding to reduce experiment-specific technical variation,
+    allowing cells from different experiments to be compared.
+    This CPU implementation is based on the rapids-singlecell and harmony-pytorch packages.
+    Multiple batch variables follow the per-covariate formulation described in the Harmony papers:
+    each key is modeled separately instead of combining all keys into one joint category.
     As Harmony works by adjusting the principal components,
     this function should be run after performing PCA but before computing the neighbor graph.
 
@@ -66,8 +65,8 @@ def harmony_integrate(  # noqa: PLR0913
         The annotated data matrix.
     key
         The key(s) of the column(s) in ``adata.obs`` that differentiate(s) among experiments/batches.
-        Multiple keys are modeled as separate batch variables, with one active
-        categorical level per variable and cell.
+        Multiple keys are modeled as separate batch variables,
+        with one active categorical level per variable and cell.
     basis
         The name of the field in ``adata.obsm`` where the PCA table is stored.
     adjusted_basis
@@ -108,9 +107,9 @@ def harmony_integrate(  # noqa: PLR0913
         Higher values (e.g. ``4``) produce more aggressive mixing;
         lower values (e.g. ``0.5``) allow more batch-specific clusters.
         Set to ``0`` to disable the diversity penalty for a batch variable.
-        A scalar is applied to every key. A sequence may contain one value per
-        key, expanded over that key's categorical levels, or one value per
-        categorical level across all keys.
+        A scalar is applied to every key. A sequence may contain one value per key,
+        expanded over that key’s categorical levels,
+        or one value per categorical level across all keys.
     tau
         Discounting factor on ``theta``.
         When ``tau > 0``,
