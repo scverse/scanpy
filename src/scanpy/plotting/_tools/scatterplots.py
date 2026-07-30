@@ -1251,7 +1251,10 @@ def _get_color_source_vector(
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
     if adata.obs[values_key].dtype == bool:
-        values = pd.Categorical(adata.obs[values_key].astype(str))
+        values = pd.Categorical(
+            adata.obs[values_key].astype(str),
+            categories=("False", "True"),
+        )
     else:
         values = pd.Categorical(adata.obs[values_key])
     if palette:
