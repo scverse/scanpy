@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from scipy import sparse
 
 from .. import _utils
@@ -878,6 +879,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    from scanpy import settings
+
+    # rank_genes_groups uses numba kernels internally, so need convert at entry.
+    if isinstance(adata.X, HasArrayNamespace) and not isinstance(adata.X, np.ndarray):
+        adata.X = np.asarray(adata.X)
     if isinstance(mask_var, Default):
         mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):

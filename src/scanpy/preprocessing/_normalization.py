@@ -9,20 +9,25 @@ from fast_array_utils import stats
 from fast_array_utils.numba import njit
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, get_namespace, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
     from anndata import AnnData
+    from fast_array_utils.types import HasArrayNamespace
 
 
-def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
+def _compute_nnz_median(
+    counts: np.ndarray | DaskArray | HasArrayNamespace,
+) -> np.floating:
     """Given a 1D array of counts, compute the median of the non-zero counts."""
     if isinstance(counts, DaskArray):
         counts = counts.compute()
+
+    xp = get_namespace(counts)
     counts_greater_than_zero = counts[counts > 0]
-    median = np.median(counts_greater_than_zero)
+    median = xp.median(counts_greater_than_zero)
     return median
 
 
