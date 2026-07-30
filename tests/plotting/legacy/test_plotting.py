@@ -1441,10 +1441,7 @@ def test_binary_scatter(plot_cmp):
     )
     sc.pp.pca(data)
     sc.pl.pca(data, color="binary", show=False)
-    if pkg_version("scikit-learn") >= Version("1.5.0rc1"):
-        plot_cmp("binary_pca")
-    else:
-        plot_cmp("binary_pca_old")
+    plot_cmp("binary_pca")
 
 
 def test_scatter_specify_layer_and_raw():

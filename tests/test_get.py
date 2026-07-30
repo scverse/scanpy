@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import partial
-from importlib.resources import as_file, files
 from itertools import chain, repeat
 from typing import TYPE_CHECKING
 
@@ -15,7 +14,7 @@ import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 if TYPE_CHECKING:
-    from contextlib import ExitStack
+    from pathlib import Path
 
 
 # Override so warning gets caught
@@ -178,12 +177,12 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-def test_backed_vs_memory(exit_stack: ExitStack) -> None:
+def test_backed_vs_memory(tmp_path: Path) -> None:
     """Compares backed vs. memory."""
-    adata_res = files("scanpy") / "datasets/10x_pbmc68k_reduced.h5ad"
-    adata_file = exit_stack.enter_context(as_file(adata_res))
+    adata = pbmc68k_reduced()
+    adata_file = tmp_path / "adata.h5ad"
+    adata.write_h5ad(adata_file)
     adata_backed = sc.read(adata_file, backed="r")
-    adata = sc.read_h5ad(adata_file)
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
