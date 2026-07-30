@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.11.2",
+    "anndata>=0.12.5",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
@@ -59,8 +59,8 @@ dependencies = [
     "matplotlib>=3.10",
     "natsort",
     "networkx>=3.4",
-    "numba>=0.61",
-    "numpy>=2.1",
+    "numba>=0.61.2",
+    "numpy>=2.2.5",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
@@ -74,7 +74,7 @@ dependencies = [
     "tqdm",
     "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
-    "zarr>=2.18.7",
+    "zarr>=3.2",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
