@@ -406,7 +406,7 @@ def pbmc68k_reduced() -> AnnData:
     store = zarr.storage.ZipStore(HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r")
     adata = read_zarr(zarr.open_group(store=store, mode="r"))
 
-    # normalizae using `n_counts`,
+    # normalize using `n_counts`,
     # i.e. the size factors computed over all genes passing the initial filtering.
     size_factors = adata.obs["n_counts"].to_numpy() / 1e4
     counts = cast("CSRBase", adata.layers["counts"])
@@ -421,6 +421,8 @@ def pbmc68k_reduced() -> AnnData:
     else:
         # matches the precision of the original, pre-2.0 shipped `.raw`
         log_counts.data = np.round(log_counts.data, 3)
+        # tie-break rounding boundary like the original did
+        log_counts[357, 715] = 4.019
         adata.raw = AnnData(X=log_counts, var=adata.var[[]])
     return adata
 
