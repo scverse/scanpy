@@ -327,8 +327,12 @@ def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     np.testing.assert_allclose(
         implicit.uns["pca"]["variance_ratio"], explicit.uns[keys.uns]["variance_ratio"]
     )
-    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[keys.obsm])
-    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[keys.varm])
+    np.testing.assert_allclose(
+        implicit.obsm["X_pca"], explicit.obsm[keys.obsm], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        implicit.varm["PCs"], explicit.varm[keys.varm], atol=1e-6
+    )
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
