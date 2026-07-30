@@ -8,10 +8,8 @@ import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
-from packaging.version import Version
 
 import scanpy as sc
-from scanpy._compat import pkg_version
 from scanpy.readwrite import _slugify
 from testing.scanpy._pytest.marks import needs
 
@@ -98,10 +96,6 @@ def test_write(
         assert_equal(adata_read, adata)
 
 
-@pytest.mark.skipif(
-    pkg_version("anndata") < Version("0.11.0rc2"),
-    reason="Older AnnData has no convert_strings_to_categoricals",
-)
 @pytest.mark.parametrize("fmt", ["h5ad", pytest.param("zarr", marks=needs.zarr)])
 @pytest.mark.parametrize("s2c", [True, False], ids=["s2c", "no_s2c"])
 def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> None:

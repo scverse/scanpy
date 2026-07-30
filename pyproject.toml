@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.12.5",
+    "anndata>=0.12.14",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
@@ -86,7 +86,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
-dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]

@@ -13,6 +13,17 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from anndata.io import (
+    read_csv,
+    read_excel,
+    read_h5ad,
+    read_hdf,
+    read_loom,
+    read_text,
+    read_zarr,
+    write_h5ad,
+    write_zarr,
+)
 from matplotlib.image import imread
 from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
@@ -21,27 +32,6 @@ from . import logging as logg
 from ._compat import pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
 from ._utils.random import _LegacyRng
-
-if pkg_version("anndata") >= Version("0.11.0rc2"):
-    from anndata.io import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_text,
-        read_zarr,
-    )
-else:
-    from anndata import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_text,
-        read_zarr,
-    )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -727,32 +717,17 @@ def write(
         msg = f"Unknown file format: {ext} (not in {valid_exts})"
         raise ValueError(msg)
 
-    if pkg_version("anndata") >= Version("0.11.0rc2"):
-        from anndata.io import write_h5ad, write_zarr
-
-        extra_kw = dict(convert_strings_to_categoricals=convert_strings_to_categoricals)
-    else:
-        if not convert_strings_to_categoricals:
-            msg = (
-                "convert_strings_to_categoricals=False is not supported in anndata<0.11"
-            )
-            raise RuntimeError(msg)
-
-        def write_h5ad(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
-            adata.write_h5ad(filename, **kw)
-
-        def write_zarr(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
-            adata.write_zarr(filename, **kw)
-
-        extra_kw = {}
-
     if ext == "zarr":
-        write_zarr(filename, adata, **extra_kw)
+        write_zarr(
+            filename,
+            adata,
+            convert_strings_to_categoricals=convert_strings_to_categoricals,
+        )
     else:
         write_h5ad(
             filename,
             adata,
-            **extra_kw,
+            convert_strings_to_categoricals=convert_strings_to_categoricals,
             compression=compression,
             compression_opts=compression_opts,
         )
