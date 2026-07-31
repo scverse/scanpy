@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from scverse_backends import BackendDispatcher
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 dispatcher = BackendDispatcher(
     entrypoint_group="scanpy.backends",
@@ -26,7 +31,16 @@ dispatcher = BackendDispatcher(
     },
 )
 
-backend_dispatch = dispatcher.backend_dispatch
+dispatched_functions: list[Callable[..., object]] = []
+
+
+def backend_dispatch[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    """Decorate a public Scanpy function for backend dispatch."""
+    dispatched = dispatcher.backend_dispatch(func)
+    dispatched_functions.append(dispatched)
+    return dispatched
+
+
 settings = dispatcher.settings
 get_backend = dispatcher.get_backend
 available_backend_names = dispatcher.available_backend_names
@@ -36,6 +50,7 @@ __all__ = [
     "available_backend_names",
     "backend_dispatch",
     "discover",
+    "dispatched_functions",
     "dispatcher",
     "get_backend",
     "settings",

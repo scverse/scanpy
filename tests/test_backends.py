@@ -9,7 +9,7 @@ import pytest
 from anndata import AnnData
 
 import scanpy as sc
-from scanpy._backends import dispatcher
+from scanpy._backends import dispatched_functions, dispatcher
 from scanpy._backends import settings as backend_settings
 from scanpy.testing import validate_backend
 
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 
 class FakeRapidsBackend:
-    name = "rapids_singlecell"
-    aliases = ("cuda", "rapids", "rapids-singlecell")
+    name = "rapids-singlecell"
+    aliases = ("cuda", "rapids", "rapids_singlecell")
 
     def normalize_total(
         self,
@@ -52,7 +52,7 @@ class FakeDistribution:
 
 
 class FakeEntryPoint:
-    name = "rapids_singlecell"
+    name = "rapids-singlecell"
     value = "rapids_singlecell.backends.scanpy:ScanpyBackend"
     dist = FakeDistribution()
 
@@ -60,34 +60,6 @@ class FakeEntryPoint:
     def load():
         """Load the fake backend entry point."""
         return FakeRapidsBackend
-
-
-DISPATCHED_FUNCTIONS = [
-    sc.pp.calculate_qc_metrics,
-    sc.pp.filter_cells,
-    sc.pp.filter_genes,
-    sc.pp.log1p,
-    sc.pp.highly_variable_genes,
-    sc.pp.normalize_total,
-    sc.pp.regress_out,
-    sc.pp.scale,
-    sc.pp.pca,
-    sc.pp.harmony_integrate,
-    sc.pp.scrublet,
-    sc.pp.scrublet_simulate_doublets,
-    sc.pp.neighbors,
-    sc.tl.umap,
-    sc.tl.tsne,
-    sc.tl.diffmap,
-    sc.tl.draw_graph,
-    sc.tl.embedding_density,
-    sc.tl.louvain,
-    sc.tl.leiden,
-    sc.tl.score_genes,
-    sc.tl.score_genes_cell_cycle,
-    sc.tl.rank_genes_groups,
-    sc.get.aggregate,
-]
 
 
 @pytest.fixture
@@ -137,27 +109,33 @@ def fake_rapids_backend(monkeypatch):
     dispatch_impl._update_signatures()
 
 
-@pytest.mark.parametrize("func", DISPATCHED_FUNCTIONS)
-def test_dispatched_functions_have_backend_keyword(func):
-    backend = signature(func).parameters["backend"]
+def test_dispatched_functions_have_backend_keyword():
+    assert dispatched_functions
+    for func in dispatched_functions:
+        backend = signature(func).parameters["backend"]
 
-    assert backend.kind is Parameter.KEYWORD_ONLY
-    assert backend.default is None
+        assert backend.kind is Parameter.KEYWORD_ONLY
+        assert backend.default is None
 
 
 def test_settings_resolve_rapids_alias(fake_rapids_backend):
     sc.settings.backend = "cuda"
 
-    assert sc.settings.backend == "rapids_singlecell"
-    assert sc.settings.get_backend("rapids") is not None
-    assert sc.settings.available_backends() == ["rapids_singlecell"]
+    assert sc.settings.backend == "rapids-singlecell"
+    assert dispatcher.get_backend("rapids") is not None
+    assert sc.settings.available_backends() == ["rapids-singlecell"]
 
 
-def test_use_backend_dispatches_and_restores(fake_rapids_backend):
+def test_settings_does_not_expose_backend_objects():
+    assert not hasattr(sc.settings, "get_backend")
+    assert not hasattr(sc.settings, "use_backend")
+
+
+def test_settings_override_dispatches_and_restores(fake_rapids_backend):
     adata = AnnData(np.ones((2, 2), dtype=np.float32))
 
-    with sc.settings.use_backend("rapids"):
-        assert sc.settings.backend == "rapids_singlecell"
+    with sc.settings.override(backend="rapids"):
+        assert sc.settings.backend == "rapids-singlecell"
         sc.pp.normalize_total(adata, target_sum=4, fake_param="from-backend")
 
     assert sc.settings.backend == "cpu"
@@ -171,7 +149,7 @@ def test_use_backend_dispatches_and_restores(fake_rapids_backend):
 def test_call_backend_overrides_settings(fake_rapids_backend):
     adata = AnnData(np.array([[1, 1], [2, 2]], dtype=np.float32))
 
-    with sc.settings.use_backend("cuda"):
+    with sc.settings.override(backend="cuda"):
         sc.pp.normalize_total(adata, target_sum=1, backend="cpu")
 
     assert "fake_backend_called" not in adata.uns
