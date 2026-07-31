@@ -8,8 +8,8 @@ dispatcher = BackendDispatcher(
     entrypoint_group="scanpy.backends",
     host_name="scanpy",
     trusted_backends={
-        "rapids_singlecell": {
-            "aliases": ["cuda", "rapids", "rapids-singlecell"],
+        "rapids-singlecell": {
+            "aliases": ["cuda", "rapids", "rapids_singlecell"],
             "distributions": [
                 "rapids-singlecell",
                 "rapids-singlecell-cu12",
