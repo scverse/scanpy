@@ -16,7 +16,7 @@ Previously found here, but now part of scanpy’s main API:
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.bbknn
    pp.mnn_correct
@@ -27,7 +27,7 @@ Previously found here, but now part of scanpy’s main API:
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.hashsolo
 ```
@@ -38,7 +38,7 @@ Note that the fundamental limitations of imputation are still under [debate](htt
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.magic
 ```

@@ -416,6 +416,54 @@ def var_df(
     return df
 
 
+def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
+    """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
+
+    The principal components (not the genes) become the variables,
+    so per-component quantities like the variance ratio become `.var` columns.
+    Useful for feeding into functions that expect an axis to rank over,
+    e.g. :func:`~scanpy.pl.ranking`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
+    key_added
+        `.obsm`, `.varm`, and `.uns` key used when running PCA.
+
+    Returns
+    -------
+    An :class:`~anndata.AnnData` with:
+
+    `.X`
+        the PCA embedding (`adata.obsm[key_added]`), observations × components.
+    `.obs`
+        `adata.obs`, unchanged.
+    `.var`
+        one row per principal component (named `PC1`, `PC2`, …),
+        with `variance` and `variance_ratio` columns
+        taken from `adata.uns[key_added]`.
+
+    Examples
+    --------
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.get.pca(adata)
+
+    """
+    info = adata.uns[key_added]
+    n_comps = adata.obsm[key_added].shape[1]
+    var = pd.DataFrame(
+        {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
+        index=[f"PC{i + 1}" for i in range(n_comps)],
+    )
+    return AnnData(X=adata.obsm[key_added], obs=adata.obs, var=var)
+
+
 def _collection_of[T](
     thing: object, typ: type[T] | tuple[type[T], ...]
 ) -> TypeIs[Collection[T]]:

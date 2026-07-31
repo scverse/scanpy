@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
@@ -162,10 +161,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if pkg_version("louvain") < Version("0.7.0"):
-                louvain.set_rng_seed(random_state)
-            else:
-                partition_kwargs["seed"] = random_state
+            partition_kwargs["seed"] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
             part = louvain.find_partition(
                 g,

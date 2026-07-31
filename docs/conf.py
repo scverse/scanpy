@@ -109,6 +109,7 @@ matplotlib.use("module://matplotlib_inline.backend_inline")
 import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
 del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
 """
+holoviews_backends = ["bokeh", "matplotlib", "plotly"]
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
@@ -122,7 +123,6 @@ myst_heading_anchors = 3
 myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
-nb_output_stderr = "remove"
 nb_execution_mode = "cache"
 nb_execution_excludepatterns = [
     f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
@@ -151,6 +151,8 @@ intersphinx_mapping = dict(
     decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
     fast_array_utils=("https://fast-array-utils.scverse.org/en/stable/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    holoviews=("https://holoviews.org/", None),
+    hv_anndata=("https://hv-anndata.readthedocs.io/en/latest/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
@@ -264,9 +266,6 @@ texinfo_documents = [
 qualname_overrides = {
     "pathlib._local.Path": "pathlib.Path",
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
-    "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
-    "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
-    "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
     # https://github.com/pandas-dev/pandas/issues/63810
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
@@ -282,15 +281,14 @@ nitpick_ignore = [
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
     # Will probably be documented
-    ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
-    ("py:class", "scanpy.plotting._baseplot_class.BasePlot"),
+    ("py:class", "scanpy.pl.BasePlot"),
     # Currently undocumented
     # https://github.com/mwaskom/seaborn/issues/1810
     ("py:class", "seaborn.matrix.ClusterGrid"),
     ("py:class", "samalg.SAM"),
     # Won’t be documented
-    ("py:class", "scanpy.plotting._utils._AxesSubplot"),
+    ("py:class", "scanpy.pl._AxesSubplot"),
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),

@@ -120,14 +120,14 @@ def test_diffmap(
         pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
         pytest.param(
             *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
-            marks=[needs.scanpy2],
+            marks=needs.scanpy2,
             id="v2",
         ),
     ],
 )
 def test_diffmap_key_added(
     *,
-    key_added: str | None | Default | sc.Preset,
+    key_added: str | Default | sc.Preset | None,
     key_obsm: str,
     key_uns: str,
     is_dict: bool,
@@ -157,7 +157,7 @@ def test_diffmap_key_added(
     ],
 )
 def test_draw_graph_key_added(
-    key_added: str | None | Default | sc.Preset, key_obsm: str, key_uns: str
+    key_added: str | Default | sc.Preset | None, key_obsm: str, key_uns: str
 ) -> None:
     pbmc = pbmc68k_reduced()[:100, :100].copy()
     if isinstance(key_added, sc.Preset):
