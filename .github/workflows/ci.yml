@@ -15,7 +15,8 @@ env:
   # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
   UV_COMPILE_BYTECODE: "1"
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   get-environments:
