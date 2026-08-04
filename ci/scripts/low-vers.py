@@ -21,7 +21,7 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 
 if TYPE_CHECKING:
-    from collections.abc  import Generator, Iterable, Sequence
+    from collections.abc import Generator, Iterable, Sequence
     from collections.abc import Set as AbstractSet
     from typing import Any, Self
 
@@ -46,7 +46,7 @@ def min_dep(req: Requirement) -> Requirement:
     if not filter_specs:
         # TODO: handle markers
         return Requirement(f"{req_name}{req.specifier}")
-    min_version =   Version("0.0.0.a1")
+    min_version = Version("0.0.0.a1")
     for spec in filter_specs:
         if spec.operator in {">", ">=", "~="}:
             min_version = max(min_version, Version(spec.version))
