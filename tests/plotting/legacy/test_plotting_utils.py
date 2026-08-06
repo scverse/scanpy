@@ -9,8 +9,8 @@ from anndata import AnnData
 from matplotlib import colormaps
 
 from scanpy.plotting._anndata import _check_if_annotations
+from scanpy.plotting._tools.scatterplots import _get_palette
 from scanpy.plotting._utils import validate_palette
-from scanpy.plotting.legacy._tools.scatterplots import _get_palette
 
 if TYPE_CHECKING:
     from typing import Any, Literal
