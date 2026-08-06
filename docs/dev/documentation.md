@@ -22,15 +22,7 @@ When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
 
-For tutorials and more in depth examples, consider adding a notebook to the [scanpy-tutorials][] repository.
-
-The tutorials are tied to this repository via a submodule.
-To update the submodule, run `git submodule update --remote` from the root of the repository.
-Subsequently, commit and push the changes in a PR.
-This should be done before each release to ensure the tutorials are up to date.
-
 [towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
-[scanpy-tutorials]: https://github.com/scverse/scanpy-tutorials/
 
 ## docstrings format
 
