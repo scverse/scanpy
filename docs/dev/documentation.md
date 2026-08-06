@@ -23,7 +23,6 @@ Once you've added a new function to the documentation, you'll need to make sure 
 This should be added to `docs/api.md` under a relevant heading.
 
 [towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
-[scanpy-tutorials]: https://github.com/scverse/scanpy-tutorials/
 
 ## docstrings format
 
