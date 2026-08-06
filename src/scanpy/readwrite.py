@@ -99,7 +99,7 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | Empty | None = _empty,
     **kwargs,
 ) -> AnnData:
     """Read file and return :class:`~anndata.AnnData` object.
@@ -538,7 +538,7 @@ def read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | Empty | None = _empty,
     gex_only: bool = True,
     prefix: str | None = None,
     compressed: bool = True,
@@ -607,7 +607,7 @@ def _read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Empty = _empty,
+    cache_compression: Literal["gzip", "lzf"] | Empty | None = _empty,
     prefix: str = "",
     is_legacy: bool,
     compressed: bool = True,

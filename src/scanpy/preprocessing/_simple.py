@@ -896,7 +896,7 @@ def sample(  # noqa: PLR0912
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
     p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
-) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
+) -> AnnData | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]] | None:
     r"""Sample observations or variables with or without replacement.
 
     .. array-support:: pp.sample

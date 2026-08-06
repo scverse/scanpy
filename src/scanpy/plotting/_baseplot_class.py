@@ -410,7 +410,7 @@ class BasePlot:
         return self
 
     @old_positionals("cmap")
-    def style(self, *, cmap: Colormap | str | None | Empty = _empty) -> Self:
+    def style(self, *, cmap: Colormap | str | Empty | None = _empty) -> Self:
         r"""Set visual style parameters.
 
         Parameters

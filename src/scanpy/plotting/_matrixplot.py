@@ -198,9 +198,9 @@ class MatrixPlot(BasePlot):
 
     def style(
         self,
-        cmap: Colormap | str | None | Empty = _empty,
-        edge_color: ColorLike | None | Empty = _empty,
-        edge_lw: float | None | Empty = _empty,
+        cmap: Colormap | str | Empty | None = _empty,
+        edge_color: ColorLike | Empty | None = _empty,
+        edge_lw: float | Empty | None = _empty,
     ) -> Self:
         r"""Modify plot visual parameters.
 
