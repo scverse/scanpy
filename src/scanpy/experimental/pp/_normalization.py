@@ -168,7 +168,7 @@ def normalize_pearson_residuals_pca(
     n_comps: int | None = 50,
     random_state: float = 0,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Empty = _empty,
+    mask_var: np.ndarray | str | Empty | None = _empty,
     use_highly_variable: bool | None = None,
     check_values: bool = True,
     inplace: bool = True,

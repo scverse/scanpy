@@ -978,8 +978,8 @@ def spatial(  # noqa: PLR0913
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
-    img_key: str | None | Empty = _empty,
-    library_id: str | None | Empty = _empty,
+    img_key: str | Empty | None = _empty,
+    library_id: str | Empty | None = _empty,
     crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
@@ -1366,7 +1366,7 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: str | None | Empty
+    uns: Mapping, library_id: str | Empty | None
 ) -> tuple[str | None, Mapping | None]:
     """Given a mapping, try and extract a library id/ mapping with spatial data.
 
@@ -1391,7 +1391,7 @@ def _check_spatial_data(
 def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
-    img_key: None | str | Empty,
+    img_key: str | Empty | None,
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:

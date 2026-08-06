@@ -78,7 +78,6 @@ __all__ = [
     "get_literal_vals",
     "indent",
     "is_backed_type",
-    "is_backed_type",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -268,7 +267,7 @@ def check_array_function_arguments(**kwargs):
 
 def check_use_raw(
     adata: AnnData,
-    use_raw: None | bool,  # noqa: FBT001
+    use_raw: bool | None,  # noqa: FBT001
     *,
     layer: str | None = None,
 ) -> bool:

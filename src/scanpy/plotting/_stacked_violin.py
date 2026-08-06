@@ -273,15 +273,15 @@ class StackedViolin(BasePlot):
     def style(  # noqa: PLR0913
         self,
         *,
-        cmap: Colormap | str | None | Empty = _empty,
+        cmap: Colormap | str | Empty | None = _empty,
         stripplot: bool | Empty = _empty,
         jitter: float | bool | Empty = _empty,
         jitter_size: float | Empty = _empty,
-        linewidth: float | None | Empty = _empty,
-        row_palette: str | None | Empty = _empty,
+        linewidth: float | Empty | None = _empty,
+        row_palette: str | Empty | None = _empty,
         density_norm: DensityNorm | Empty = _empty,
         yticklabels: bool | Empty = _empty,
-        ylim: tuple[float, float] | None | Empty = _empty,
+        ylim: tuple[float, float] | Empty | None = _empty,
         x_padding: float | Empty = _empty,
         y_padding: float | Empty = _empty,
         # deprecated
@@ -700,7 +700,7 @@ def stacked_violin(  # noqa: PLR0913
     density_norm: DensityNorm | Empty = _empty,
     yticklabels: bool = StackedViolin.DEFAULT_PLOT_YTICKLABELS,
     # deprecated
-    order: Sequence[str] | None | Empty = _empty,
+    order: Sequence[str] | Empty | None = _empty,
     scale: DensityNorm | Empty = _empty,
     save: bool | str | None = None,
     **kwds,

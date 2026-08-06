@@ -66,7 +66,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size: int | None = None,
     random_state: _LegacyRandom = 0,
     return_info: bool = False,
-    mask_var: NDArray[np.bool] | str | None | Empty = _empty,
+    mask_var: NDArray[np.bool] | str | Empty | None = _empty,
     use_highly_variable: bool | None = None,
     dtype: DTypeLike = "float32",
     key_added: str | None = None,
