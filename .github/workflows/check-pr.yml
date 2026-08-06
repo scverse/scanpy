@@ -20,19 +20,23 @@ on:
       # code change (e.g. this workflow)
       - synchronize
 
+permissions: {}
+
 jobs:
   # This job verifies that the milestone is present or not necessary
   # and determines if “check-relnotes” needs to be run.
   check-milestone:
     name: Check title, milestone, and labels
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read # for amannn/action-semantic-pull-request
     steps:
       - name: Check if milestone or “no milestone” label is present
-        uses: flying-sheep/check@v1
+        uses: flying-sheep/check@e10bb11109d1434ab16729bd988d78d65d47e163 # v1.0.5
         with:
           success: ${{ github.event.pull_request.user.login == 'pre-commit-ci[bot]' || github.event.pull_request.milestone != null || contains(github.event.pull_request.labels.*.name, 'no milestone') }}
       - name: Check if the “Release notes” checkbox is checked and filled
-        uses: kaisugi/action-regex-match@v1.0.2
+        uses: kaisugi/action-regex-match@d67cd689755dc47c5362609e0a6e2e1c93fa721b # v1.0.2
         id: checked-relnotes
         with:
           text: ${{ github.event.pull_request.body }}
@@ -40,7 +44,7 @@ jobs:
           flags: m
       - name: Check PR title
         id: check-title
-        uses: amannn/action-semantic-pull-request@v6
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
         env: # Needs repo options: “Squash and merge” with commit message set to “PR title”
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
@@ -53,15 +57,15 @@ jobs:
     needs: check-milestone
     if: github.event.pull_request.user.login != 'pre-commit-ci[bot]' && needs.check-milestone.outputs.no-relnotes-reason == '' && !contains(fromJSON('["style","refactor","test","build","docs","ci"]'), needs.check-milestone.outputs.type)
     steps:
-      - uses: actions/checkout@v7
-        with: { filter: 'blob:none', fetch-depth: 0 }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { filter: 'blob:none', fetch-depth: 0, persist-credentials: false }
       - name: Find out if a relevant release fragment is added
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: changes
         with:
           filters: | # this is intentionally a string
             relnotes: 'docs/release-notes/${{ github.event.pull_request.number }}.${{ (contains(github.event.pull_request.title, '!') && 'breaking') || needs.check-milestone.outputs.type }}.md'
       - name: Check if a relevant release fragment is added
-        uses: flying-sheep/check@v1
+        uses: flying-sheep/check@e10bb11109d1434ab16729bd988d78d65d47e163 # v1.0.5
         with:
           success: ${{ steps.changes.outputs.relnotes }}
