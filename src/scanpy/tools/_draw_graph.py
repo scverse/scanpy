@@ -44,7 +44,7 @@ def draw_graph(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     n_jobs: int | None = None,
     adjacency: CSBase | None = None,
-    key_added: str | None | Default = Default(preset=("draw_graph", "key_added")),
+    key_added: str | Default | None = Default(preset=("draw_graph", "key_added")),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from functools import partial, wraps
-from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 import pytest
 from anndata.tests.helpers import asarray
-from packaging.version import Version
 from scipy import sparse
 
 from .._helpers import as_dense_dask_array, as_sparse_dask_matrix
@@ -29,20 +27,15 @@ if TYPE_CHECKING:
     from ....scanpy._compat import DaskArray
 
 
-anndata_test_utils_supports_typ_kwarg = Version(version("anndata")) >= Version("0.12.6")
-
-
 def gen_csr_csc_params_wrapper(
     func: Callable,
     format: Literal["csr", "csc"],
     matrix_or_array: Literal["matrix", "array"],
 ):
     def wrapper(arr):
-        if anndata_test_utils_supports_typ_kwarg:
-            return _chunked_1d(
-                partial(func, typ=getattr(sparse, f"{format}_{matrix_or_array}"))
-            )(arr)
-        return _chunked_1d(func)(arr)
+        return _chunked_1d(
+            partial(func, typ=getattr(sparse, f"{format}_{matrix_or_array}"))
+        )(arr)
 
     wrapper.__name__ = f"{func.__name__}-1d_chunked-{format}_{matrix_or_array}"
     return wrapper
@@ -104,13 +97,11 @@ MAP_ARRAY_TYPES: dict[
     ("dask", "sparse"): tuple(
         pytest.param(
             wrapper(as_sparse_dask_matrix),
-            marks=[needs.dask, skip_csc_mark]
-            if skip_csc_mark is not None
-            else [needs.dask],
+            marks=[needs.dask],
             id=f"dask_array_sparse{suffix}",
         )
-        for wrapper, suffix, skip_csc_mark in [
-            (lambda x: x, "", None),
+        for wrapper, suffix in [
+            (lambda x: x, ""),
             *(
                 (
                     partial(
@@ -119,10 +110,6 @@ MAP_ARRAY_TYPES: dict[
                         matrix_or_array=matrix_or_array,
                     ),
                     f"-1d_chunked-{format}_{matrix_or_array}",
-                    pytest.mark.skipif(
-                        not anndata_test_utils_supports_typ_kwarg and format == "csc",
-                        reason="anndata < 0.12.6 lacked the required kwargs to enable csc matrix test utils.",
-                    ),
                 )
                 for format in ["csr", "csc"]
                 # TODO: use `array` as well once anndata 0.13 drops

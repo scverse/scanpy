@@ -10,13 +10,13 @@ from typing import TYPE_CHECKING
 
 import pooch
 import pytest
-from packaging.version import Version
 
 from .fixtures import *  # noqa: F403
 from .marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
+    from pathlib import Path
 
 if find_spec("jax"):
     import jax
@@ -52,7 +52,6 @@ def original_settings(
     from matplotlib.testing import setup
 
     import scanpy as sc
-    from scanpy._compat import pkg_version
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
@@ -66,8 +65,7 @@ def original_settings(
 
     setup()
     sc.settings.preset = sc.Preset.ScanpyV1
-    if pkg_version("anndata") >= Version("0.12"):
-        ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
+    ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = sc.Verbosity.hint
     sc.settings.autoshow = True
@@ -118,6 +116,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Run tests that retrieve stuff from the internet. This increases test time."
         ),
     )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
+    return "_v2" in collection_path.parts and not bool(find_spec("holoviews"))
 
 
 def pytest_collection_modifyitems(

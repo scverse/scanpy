@@ -31,7 +31,7 @@ class _Ignore(MimeRenderPlugin):
     @staticmethod
     def handle_mime(
         renderer: NbElementRenderer, data: MimeData, inline: bool
-    ) -> None | list[nodes.Element]:
+    ) -> list[nodes.Element] | None:
         if data.mime_type in ignore:
             return []  # returning a list instead of `None` means “we handled it”
         return None
