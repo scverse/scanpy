@@ -54,11 +54,22 @@ class ArraySupport(SphinxDirective):
             ))
 
         title = nodes.title("", "", *self.parse_inline(":ref:`array-support`")[0])
-        rows = self._render_support_data(data)
+        rows = [
+            *self._render_support_data(data),
+            self._render_row(
+                self._render_array_type(_docs.ArrayApi()),
+                support=_docs.ArrayApi() in array_types,
+                in_dask=False,
+            ),
+        ]
         return self._render_table(headers, rows, title=title)
 
     def _render_overview(self) -> list[nodes.Node]:
-        headers = ["Function", *(at.rst(short=True) for at in ALL_INNER)]
+        headers = [
+            "Function",
+            *(at.rst(short=True) for at in ALL_INNER),
+            _docs.ArrayApi().rst(short=True),
+        ]
         rows: list[nodes.row] = []
         for fn, (include, exclude) in self._array_support.items():
             row_header, _ = self.parse_inline(f":func:`scanpy.{fn}`")
@@ -71,6 +82,7 @@ class ArraySupport(SphinxDirective):
                         ALL_INNER, map(_docs.DaskArray, ALL_INNER), strict=True
                     )
                 ),
+                self._render_support(_docs.ArrayApi() in ats),
             ]
             rows.append(
                 nodes.row(

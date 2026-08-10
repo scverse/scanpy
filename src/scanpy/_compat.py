@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from importlib.metadata import PackageMetadata
     from types import ModuleType
 
+    from fast_array_utils.types import HasArrayNamespace
+
 
 __all__ = [
     "CSBase",
@@ -68,11 +70,11 @@ def pkg_metadata(package: str) -> PackageMetadata:
     return metadata(package)
 
 
-def get_namespace(x) -> ModuleType:
+def get_namespace(x: HasArrayNamespace) -> ModuleType:
     # get array-api namespace for x
-    from array_api_compat import get_namespace
+    from array_api_compat import array_namespace
 
-    return get_namespace(x)
+    return array_namespace(x)
 
 
 @cache
