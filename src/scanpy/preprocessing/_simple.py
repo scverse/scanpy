@@ -5,11 +5,9 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 from __future__ import annotations
 
-import warnings
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from functools import singledispatch
-from itertools import repeat
 from typing import TYPE_CHECKING, overload
 
 import numba
@@ -28,6 +26,7 @@ from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (
     _doc_params,
+    _numba_thread_limit,
     _resolve_axis,
     check_array_function_arguments,
     is_backed_type,
@@ -37,6 +36,7 @@ from .._utils import (
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
 from ..get import _check_mask, _get_arr, _set_obs_rep
+from ..get._aggregated import Aggregate, _group_counts, _kept_observations
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -470,8 +470,7 @@ def _create_regressor_categorical(
     x: np.ndarray, /, number_categories: int, cat_array: np.ndarray
 ) -> np.ndarray:
     # create regressor matrix for categorical variables
-    # would be best to use X dtype but this matches old behavior
-    regressors = np.zeros(x.shape, dtype=np.float32)
+    regressors = np.zeros(x.shape, dtype=np.float64)
     # iterate over categories
     for category in range(number_categories):
         # iterate over genes and calculate mean expression
@@ -497,14 +496,145 @@ def numpy_regress_out(
     data: np.ndarray,
     regressor: np.ndarray,
 ) -> np.ndarray:
-    """Numba kernel for regress out unwanted sorces of variantion.
+    """Regress out unwanted sources of variation, in place.
 
-    Finding coefficient using Linear regression (Linear Least Squares).
+    Solves via the pseudo-inverse rather than ``inv(RᵀR)``: forming the Gram matrix
+    squares the condition number of ``regressor``, which for a barely-varying covariate
+    (nearly collinear with the intercept column) destroys the residuals. The
+    pseudo-inverse also makes a rank-deficient design well defined, so full-rank,
+    ill-conditioned and singular designs all take this one path.
+
+    The covariates are centered first. That leaves the residual unchanged — the column
+    space of ``[1, r]`` and of ``[1, r - mean(r)]`` is the same — but it removes the
+    offset that otherwise makes a barely-varying covariate ill-conditioned. It does not
+    remove :func:`~numpy.linalg.pinv`’s ``rcond`` cutoff: a covariate whose *spread*
+    still dwarfs the intercept column by ~1/``rcond`` gets dropped either way.
     """
-    inv_gram_matrix = np.linalg.inv(regressor.T @ regressor)
-    coeff = inv_gram_matrix @ (regressor.T @ data)
-    data = get_resid(data, regressor, coeff)
-    return data
+    regressor = regressor.copy()
+    regressor[:, 1:] -= regressor[:, 1:].mean(axis=0)
+    coeff = np.linalg.pinv(regressor) @ data
+    return get_resid(data, regressor, coeff)
+
+
+@njit
+def _regress_out_per_gene_design(
+    x: NDArray[np.floating],
+    regressors: NDArray[np.floating],
+    is_const: NDArray[np.bool],
+) -> NDArray[np.floating]:
+    """Residuals of a per-gene ``[1, regressors[:, gene]]`` least-squares fit.
+
+    Only needed when an observation is unassigned: it then gets an all-zero regressor
+    and still takes part in the fit, so the reduction in :func:`_regress_out_categorical`
+    does not hold and every gene needs its own solve.
+
+    Returns the ``(n_genes, n_obs)`` layout that the caller transposes, so each parallel
+    iteration writes one contiguous row.
+    """
+    n_obs, n_genes = x.shape
+    out = np.empty((n_genes, n_obs), dtype=x.dtype)
+    for gene in numba.prange(n_genes):
+        y = x[:, gene]
+        # A gene with no variance needs no regression, and the GLM this replaces
+        # refused to fit one – pass it through untouched.
+        if is_const[gene]:
+            for i in range(n_obs):
+                out[gene, i] = y[i]
+            continue
+        r = regressors[:, gene]
+        y_mean = 0.0
+        r_mean = 0.0
+        for i in range(n_obs):
+            y_mean += y[i]
+            r_mean += r[i]
+        y_mean /= n_obs
+        r_mean /= n_obs
+        # Centered normal equations: numerically equivalent to the pseudo-inverse
+        # solution, without needing LAPACK inside a `prange`.
+        s_rr = 0.0
+        s_ry = 0.0
+        for i in range(n_obs):
+            dr = r[i] - r_mean
+            s_rr += dr * dr
+            s_ry += dr * (y[i] - y_mean)
+        if s_rr > 0.0:
+            slope = s_ry / s_rr
+            intercept = y_mean - slope * r_mean
+            for i in range(n_obs):
+                out[gene, i] = y[i] - (intercept + slope * r[i])
+        else:
+            # Constant regressor ⇒ rank-deficient design. The pseudo-inverse
+            # solution is the intercept-only fit.
+            for i in range(n_obs):
+                out[gene, i] = y[i] - y_mean
+    return out
+
+
+def _as_float(x: NDArray | CSBase, *, order: Literal["C", "F"]) -> NDArray | CSBase:
+    """Cast integer input to float, as the residuals are written back into `x`’s slot."""
+    if np.issubdtype(x.dtype, np.integer):
+        target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
+        kwargs = {"order": order} if isinstance(x, np.ndarray) else {}
+        x = x.astype(target_dtype, **kwargs)
+    elif isinstance(x, np.ndarray) and not x.flags.writeable:
+        # the residuals are written into `x`, which Numba cannot do to a read-only array
+        x = x.copy(order=order)
+    return x
+
+
+def _zero_variance_genes(x: NDArray[np.floating] | CSBase) -> NDArray[np.bool]:
+    """Genes with nothing to regress out, which are passed through untouched.
+
+    A single observation makes every gene vacuously constant, which would turn
+    `regress_out` into a no-op; two observations already give a residual of zero.
+    """
+    if x.shape[0] < 2:
+        return np.zeros(x.shape[1], dtype=np.bool)
+    return stats.is_constant(x, axis=0)
+
+
+def _regress_out_categorical(
+    x: NDArray[np.floating] | CSBase, cats: pd.Categorical
+) -> NDArray[np.floating]:
+    """Regress each gene on its own per-category mean expression.
+
+    Fitting a gene against its own group means leaves exactly the gene minus that mean:
+    the centered normal equations give Σ(rᵢ-r̄)(yᵢ-ȳ) == Σ(rᵢ-r̄)², and r̄ == ȳ. (When r
+    is constant the design is rank 1 and the fitted coefficients are not (0, 1), but
+    then r ≡ ȳ, so the residual is y - ȳ either way.) So no fit is needed, and the
+    means are an (n_categories × n_genes) table rather than one value per cell.
+    """
+    # a gene with no variance needs no regression; the GLM this replaces refused to
+    # fit one, so it is passed through untouched
+    is_const = _zero_variance_genes(x)
+
+    if not _kept_observations(cats, None).all():
+        # An unassigned observation gets an all-zero regressor yet still takes part in
+        # the fit, so the reduction above does not hold – solve each gene separately.
+        x = _as_float(x, order="F")
+        x = to_dense(x, order="F") if isinstance(x, CSBase) else np.asfortranarray(x)
+        codes = cats.codes
+        regressors = _create_regressor_categorical(
+            x, codes.dtype.type(len(cats.categories)), codes
+        )
+        return _regress_out_per_gene_design(x, regressors, is_const).T
+
+    # `Aggregate` reads CSR and CSC natively and accumulates in float64. Divide by the
+    # counts here rather than via `Aggregate.mean()`: a category with no observations
+    # would divide 0/0 and warn, and warnings are errors in this test suite.
+    counts = _group_counts(cats, None)
+    means = Aggregate(groupby=cats, data=x).sum() / np.maximum(counts, 1)[:, None]
+    # nothing writes into `x` on this path, so materialize the output directly
+    res = to_dense(x, order="C") if isinstance(x, CSBase) else np.array(x, order="C")
+    res = _as_float(res, order="C")
+    const_genes = res[:, is_const].copy()
+    # subtract per category rather than via `means[codes]`, which would materialize a
+    # second float64 copy of the whole matrix
+    for cat in range(len(cats.categories)):
+        in_cat = cats.codes == cat
+        res[in_cat] -= means[cat]
+    res[:, is_const] = const_genes
+    return res
 
 
 def regress_out(
@@ -532,8 +662,9 @@ def regress_out(
     layer
         If provided, which element of layers to regress on.
     n_jobs
-        Number of jobs for parallel computation.
+        Number of Numba threads to use for parallel computation.
         `None` means using :attr:`scanpy.settings.n_jobs`.
+        `-1` means using all threads reported by :attr:`numba.config.NUMBA_NUM_THREADS`.
     copy
         Determines whether a copy of `adata` is returned.
 
@@ -545,8 +676,6 @@ def regress_out(
         Corrected count data matrix.
 
     """
-    from joblib import Parallel, delayed
-
     start = logg.info(f"regressing out {keys}")
     adata = adata.copy() if copy else adata
 
@@ -559,14 +688,38 @@ def regress_out(
 
     x = _get_arr(adata, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
+    if isinstance(x, DaskArray):
+        # The fit needs every observation at once, so there is nothing to stream.
+        # Previously only the rank-deficient path accepted a dask array, and only by
+        # materializing it too – now every path does, and says so.
+        logg.info("    dask input is computed into memory")
+        x = x.compute()
 
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
+        if not x.has_canonical_format:
+            # An entry stored more than once counts as the sum of its copies, as in
+            # `.toarray()`. Canonicalize once so densifying and aggregating agree.
+            x = x.copy()
+            x.sum_duplicates()
 
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
+    # every path below is Numba-parallel, so `n_jobs` is simply a thread count
+    with _numba_thread_limit(n_jobs) as n_threads:
+        logg.debug(f"... using {n_threads} Numba thread(s)")
+        res = _regress_out_arr(adata, x, keys)
+
+    _set_obs_rep(adata, res, layer=layer)
+    logg.info("    finished", time=start)
+    return adata if copy else None
+
+
+def _regress_out_arr(
+    adata: AnnData, x: NDArray[np.floating] | CSBase, keys: Sequence[str]
+) -> NDArray[np.floating]:
+    """Build the design matrix and return the residuals. Caller sets the thread count."""
     # regress on a single categorical variable
-    variable_is_categorical = False
     if keys[0] in adata.obs and isinstance(adata.obs[keys[0]].dtype, CategoricalDtype):
         if len(keys) > 1:
             msg = (
@@ -576,109 +729,29 @@ def regress_out(
             )
             raise ValueError(msg)
         logg.debug("... regressing on per-gene means within categories")
-        # set number of categories to the same dtype as the categories
-        cat_array = adata.obs[keys[0]].cat.codes.to_numpy()
-        number_categories = cat_array.dtype.type(len(adata.obs[keys[0]].cat.categories))
+        return _regress_out_categorical(x, adata.obs[keys[0]].values)
 
-        x = to_dense(x, order="F") if isinstance(x, CSBase) else x
-        if np.issubdtype(x.dtype, np.integer):
-            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
-            x = x.astype(target_dtype)
-        regressors = _create_regressor_categorical(x, number_categories, cat_array)
-        variable_is_categorical = True
-    # regress on one or several ordinal variables
-    else:
-        # create data frame with selected keys (if given)
-        regressors = adata.obs[keys] if keys else adata.obs.copy()
+    # regress on one or several ordinal variables:
+    # one design shared by every gene, so solve it once for the whole matrix.
+    # `numpy_regress_out` goes through the pseudo-inverse, which handles a
+    # rank-deficient design too – no need to branch on rank.
+    regressors = adata.obs[keys] if keys else adata.obs.copy()
+    # add column of ones at index 0 (first column)
+    regressors.insert(0, "ones", 1.0)
+    # `bool` and nullable `Int64` columns would otherwise come out as `object`
+    regressors = regressors.to_numpy(dtype=np.float64)
+    if not np.isfinite(regressors).all():
+        msg = f"Cannot regress on `{keys}`: it contains NaN or infinite values."
+        raise ValueError(msg)
 
-        # add column of ones at index 0 (first column)
-        regressors.insert(0, "ones", 1.0)
-        regressors = regressors.to_numpy()
-
-    # if the regressors are not categorical and the matrix is not singular
-    # use the shortcut numpy_regress_out
-    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
-        # Because we update `X` in `numpy_regress_out`, it needs to be floating point to match
-        # the incoming values.
-        if np.issubdtype(x.dtype, np.integer):
-            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
-            kwargs = {}
-            if isinstance(x, np.ndarray):
-                kwargs["order"] = "C"
-            x = x.astype(target_dtype, **kwargs)
-        x = to_dense(x, order="C") if isinstance(x, CSBase) else x
-        res = numpy_regress_out(x, regressors)
-
-    # for a categorical variable or if the above checks failed,
-    # we fall back to the GLM implemetation of regression.
-    else:
-        # split the adata.X matrix by columns in chunks of size n_chunk
-        # (the last chunk could be of smaller size than the others)
-        len_chunk = int(np.ceil(min(1000, x.shape[1]) / n_jobs))
-        n_chunks = int(np.ceil(x.shape[1] / len_chunk))
-        x = to_dense(x, order="F") if isinstance(x, CSBase) else x
-        chunk_list = np.array_split(x, n_chunks, axis=1)
-        regressors_chunk = (
-            np.array_split(regressors, n_chunks, axis=1)
-            if variable_is_categorical
-            else repeat(regressors)
-        )
-
-        # each task is passed a data chunk (e.g. `adata.X[:, 0:100]``) and the regressors.
-        # This data will be passed to each of the jobs.
-        # TODO: figure out how to test that this doesn't oversubscribe resources
-        res = Parallel(n_jobs=n_jobs)(
-            delayed(_regress_out_chunk)(
-                data_chunk, regres, variable_is_categorical=variable_is_categorical
-            )
-            for data_chunk, regres in zip(chunk_list, regressors_chunk, strict=False)
-        )
-
-        # res is a list of vectors (each corresponding to a regressed gene column).
-        # The transpose is needed to get the matrix in the shape needed
-        res = np.vstack(res).T
-
-    _set_obs_rep(adata, res, layer=layer)
-    logg.info("    finished", time=start)
-    return adata if copy else None
-
-
-def _regress_out_chunk(
-    data_chunk: NDArray[np.floating],
-    regressors: pd.DataFrame | NDArray[np.floating],
-    *,
-    variable_is_categorical: bool,
-) -> NDArray[np.floating]:
-    import statsmodels.api as sm
-    import statsmodels.tools.sm_exceptions as sme
-
-    responses_chunk_list = []
-    for col_index in range(data_chunk.shape[1]):
-        # if all values are identical, the statsmodel.api.GLM throws an error;
-        # but then no regression is necessary anyways...
-        if not (data_chunk[:, col_index] != data_chunk[0, col_index]).any():
-            responses_chunk_list.append(data_chunk[:, col_index])
-            continue
-
-        if variable_is_categorical:
-            regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
-        else:
-            regres = regressors
-
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("error", sme.PerfectSeparationWarning)
-                result = sm.GLM(
-                    data_chunk[:, col_index], regres, family=sm.families.Gaussian()
-                ).fit()
-                new_column = result.resid_response
-        except (sme.PerfectSeparationError, sme.PerfectSeparationWarning):
-            logg.warning("Encountered perfect separation, setting to 0 as in R.")
-            new_column = np.zeros(data_chunk.shape[0])
-
-        responses_chunk_list.append(new_column)
-
-    return np.vstack(responses_chunk_list)
+    x = _as_float(x, order="C")
+    x = to_dense(x, order="C") if isinstance(x, CSBase) else x
+    # a gene with no variance is left alone, as on the categorical path
+    is_const = _zero_variance_genes(x)
+    const_genes = x[:, is_const].copy()
+    res = numpy_regress_out(x, regressors)
+    res[:, is_const] = const_genes
+    return res
 
 
 @overload

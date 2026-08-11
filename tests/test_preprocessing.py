@@ -22,6 +22,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
@@ -457,6 +458,329 @@ def test_regress_out_categorical():
     assert adata.X.shape == multi.X.shape
 
 
+@pytest.mark.parametrize("keys", [["batch"], ["const", "pct"]], ids=["cat", "singular"])
+@pytest.mark.parametrize("n_jobs", [1, 2, 8, -1, None])
+def test_regress_out_n_jobs_invariant(keys: list[str], n_jobs: int | None) -> None:
+    """`n_jobs` only picks a thread count; results must not depend on it.
+
+    `-1` used to raise, since it was fed into a chunk-size division.
+    """
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((200, 50), dtype=np.float32))
+    adata.obs["batch"] = pd.Categorical(rng.integers(0, 3, size=adata.n_obs))
+    # a constant key makes the design singular, routing to the per-gene solver
+    adata.obs["const"] = np.ones(adata.n_obs)
+    adata.obs["pct"] = rng.random(adata.n_obs)
+
+    serial = sc.pp.regress_out(adata, keys=keys, n_jobs=1, copy=True)
+    result = sc.pp.regress_out(adata, keys=keys, n_jobs=n_jobs, copy=True)
+
+    np.testing.assert_array_equal(serial.X, result.X)
+
+
+@pytest.mark.parametrize(
+    "array_type",
+    [np.asarray, sparse.csr_matrix, sparse.csc_matrix],  # noqa: TID251
+    ids=["dense", "csr", "csc"],
+)
+def test_regress_out_categorical_is_group_centering(
+    array_type: Callable[[np.ndarray], CSBase | np.ndarray],
+) -> None:
+    """Regressing on a category reduces to subtracting that category's mean.
+
+    Checked against the closed form so the sparse kernels can't drift from the
+    dense one, and vice versa.
+    """
+    rng = np.random.default_rng(0)
+    dense = np.abs(sparse.random(200, 60, density=0.5, random_state=rng).toarray())
+    dense[:, 0] = 0.0  # all-zero gene: centering and passthrough agree
+    dense[:, 1] = 2.5  # nonzero constant gene: only passthrough leaves it alone
+    codes = rng.integers(0, 3, size=dense.shape[0])
+    adata = AnnData(array_type(dense), obs={"batch": pd.Categorical(codes)})
+
+    sc.pp.regress_out(adata, keys="batch")
+
+    expected = np.empty(dense.shape, dtype=np.float64)
+    for cat in np.unique(codes):
+        mask = codes == cat
+        expected[mask] = dense[mask] - dense[mask].mean(axis=0, dtype=np.float64)
+    # genes without variance are passed through untouched
+    const = (dense == dense[0]).all(axis=0)
+    assert const.sum() == 2
+    expected[:, const] = dense[:, const]
+
+    np.testing.assert_allclose(conv.to_dense(adata.X), expected)
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64], ids=["f32", "f64"])
+@pytest.mark.parametrize(
+    "keys",
+    [["pct", "cnt"], ["const", "pct"], "batch", "missing"],
+    ids=["full-rank", "singular", "categorical", "categorical-missing"],
+)
+def test_regress_out_preserves_dtype(keys: list[str] | str, dtype: DTypeLike) -> None:
+    """Every design returns the dtype it was given, like the rest of `pp`."""
+    rng = np.random.default_rng(0)
+    n = 50
+    adata = AnnData(
+        rng.random((n, 8)).astype(dtype),
+        obs=dict(
+            pct=rng.random(n),
+            cnt=rng.random(n),
+            const=np.ones(n),
+            batch=pd.Categorical(rng.integers(0, 3, n)),
+            missing=pd.Categorical(["a"] * (n - 5) + [None] * 5),
+        ),
+    )
+
+    sc.pp.regress_out(adata, keys=keys)
+
+    assert adata.X.dtype == dtype
+
+
+@pytest.mark.parametrize("n_obs", [1, 2])
+@pytest.mark.parametrize("keys", [["k"], "batch"], ids=["ordinal", "categorical"])
+def test_regress_out_tiny_n_obs(n_obs: int, keys: list[str] | str) -> None:
+    """The design has two coefficients, so up to two observations are fit exactly.
+
+    A single observation also makes every gene vacuously zero-variance, and the
+    passthrough for zero-variance genes must not turn that into a no-op.
+    """
+    rng = np.random.default_rng(0)
+    adata = AnnData(
+        rng.random((n_obs, 4)),
+        obs=dict(
+            k=rng.random(n_obs),
+            batch=pd.Categorical(list("ab" * n_obs)[:n_obs]),
+        ),
+    )
+
+    sc.pp.regress_out(adata, keys=keys)
+
+    np.testing.assert_allclose(adata.X, 0.0, atol=1e-12)
+
+
+def test_regress_out_categorical_unused_levels() -> None:
+    """A category with no observations must not divide 0/0 when taking group means."""
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(20, 5))
+    codes = rng.choice(list("ab"), 20)
+    adata = AnnData(
+        x.copy(), obs={"batch": pd.Categorical(codes, categories=list("abcdef"))}
+    )
+
+    sc.pp.regress_out(
+        adata, keys="batch"
+    )  # `-W error` turns the 0/0 warning into a failure
+
+    expected = x.copy()
+    for cat in "ab":
+        mask = codes == cat
+        expected[mask] = x[mask] - x[mask].mean(axis=0)
+    np.testing.assert_allclose(adata.X, expected)
+
+
+def test_regress_out_categorical_unassigned() -> None:
+    """Observations outside every category get a zero regressor, as they always have.
+
+    That makes the fit differ from plain group centering, so it must not take the
+    group-centering shortcut.
+    """
+    rng = np.random.default_rng(0)
+    adata = AnnData(
+        rng.random((60, 20)),
+        obs={"batch": pd.Categorical(["a"] * 25 + ["b"] * 25 + [None] * 10)},
+    )
+    codes = adata.obs["batch"].cat.codes.to_numpy()
+    assert -1 in codes
+
+    x = adata.X.copy()
+    sc.pp.regress_out(adata, keys="batch")
+
+    # each gene is fit against [1, r] where r is its category mean, or 0 when the cell
+    # has no category — solved here per gene, independently of the implementation
+    regressors = np.zeros_like(x)
+    for cat in np.unique(codes[codes >= 0]):
+        mask = codes == cat
+        regressors[mask] = x[mask].mean(axis=0)
+    expected = np.empty_like(x)
+    for gene in range(x.shape[1]):
+        design = np.c_[np.ones(len(codes)), regressors[:, gene]]
+        expected[:, gene] = x[:, gene] - design @ (np.linalg.pinv(design) @ x[:, gene])
+    np.testing.assert_allclose(adata.X, expected, atol=1e-12)
+
+    # and it is NOT plain group centering, which would make the unassigned cells a group
+    grouped = np.empty_like(x)
+    for cat in np.unique(codes):
+        mask = codes == cat
+        grouped[mask] = x[mask] - x[mask].mean(axis=0)
+    assert not np.allclose(adata.X, grouped)
+
+
+def test_regress_out_nan_gene_is_not_zeroed() -> None:
+    """A NaN gene stays NaN. It used to come back as zeros, via `statsmodels`."""
+    rng = np.random.default_rng(0)
+    x = np.abs(rng.normal(5, 2, (30, 4)))
+    x[:, 1] = np.nan
+    adata = AnnData(x, obs={"batch": pd.Categorical(["a"] * 15 + ["b"] * 15)})
+
+    sc.pp.regress_out(adata, keys="batch")
+
+    assert np.isnan(adata.X[:, 1]).all()
+
+
+def test_regress_out_nonfinite_keys_error() -> None:
+    """A NaN covariate used to yield an all-NaN matrix; say so instead."""
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((10, 3)), obs={"k": [1.0, np.nan] + [2.0] * 8})
+
+    with pytest.raises(ValueError, match=r"NaN or infinite"):
+        sc.pp.regress_out(adata, keys=["k"])
+
+
+def test_regress_out_read_only_x() -> None:
+    """Residuals are written into `X`, which must not fail on a read-only array."""
+    rng = np.random.default_rng(0)
+    x = rng.random((20, 4))
+    x.flags.writeable = False
+    adata = AnnData(x, obs={"k": np.ones(20)})  # constant key => rank-deficient
+
+    sc.pp.regress_out(adata, keys=["k"])
+
+    assert np.isfinite(adata.X).all()
+
+
+@pytest.mark.parametrize("scale", [1.0, 1e4, 1e6], ids=["1e0", "1e4", "1e6"])
+def test_regress_out_sparse_matches_dense_float32(scale: float) -> None:
+    """The sparse kernel must round like the dense one, not half an ulp away.
+
+    Only visible in float32 at a large data magnitude, where the category mean and
+    the values it is subtracted from differ by about one ulp.
+    """
+    step = np.nextafter(np.float32(scale), np.float32(np.inf))
+    x = np.array([[scale], [step], [scale], [step]], dtype=np.float32)
+    obs = {"batch": pd.Categorical([0, 0, 1, 1])}
+
+    dense = AnnData(x.copy(), obs=obs)
+    sparse_ = AnnData(sparse.csc_matrix(x), obs=obs)  # noqa: TID251
+    sc.pp.regress_out(dense, keys="batch")
+    sc.pp.regress_out(sparse_, keys="batch")
+
+    np.testing.assert_array_equal(conv.to_dense(sparse_.X), dense.X)
+
+
+@needs.dask
+@pytest.mark.parametrize(
+    "keys",
+    [["pct", "cnt"], ["const", "pct"], "batch"],
+    ids=["full-rank", "singular", "categorical"],
+)
+def test_regress_out_dask_matches_in_memory(keys: list[str] | str) -> None:
+    """A dask array is computed into memory and must give the in-memory answer."""
+    import dask.array as da
+
+    rng = np.random.default_rng(0)
+    x = rng.random((60, 20))
+    obs = dict(
+        pct=rng.random(60),
+        cnt=rng.random(60),
+        const=np.ones(60),
+        batch=pd.Categorical(rng.integers(0, 3, 60)),
+    )
+
+    in_memory = AnnData(x.copy(), obs=obs)
+    chunked = AnnData(da.from_array(x.copy(), chunks=(30, 20)), obs=obs)
+    sc.pp.regress_out(in_memory, keys=keys)
+    sc.pp.regress_out(chunked, keys=keys)
+
+    np.testing.assert_array_equal(conv.to_dense(chunked.X), in_memory.X)
+
+
+def test_regress_out_sparse_duplicate_entries() -> None:
+    """A non-canonical matrix stores some entries twice; those are summed."""
+    # column of [3+3, 3, 3+3+3] stored as six separate entries
+    x = sparse.csr_matrix(  # noqa: TID251
+        (np.full(6, 3.0), np.zeros(6, dtype=int), np.array([0, 2, 3, 6])), shape=(3, 1)
+    )
+    assert not np.array_equal(x.data, x.toarray().ravel())  # really non-canonical
+    adata = AnnData(x, obs={"batch": pd.Categorical(["a", "a", "b"])})
+
+    sc.pp.regress_out(adata, keys="batch")
+
+    dense = np.array([[6.0], [3.0], [9.0]])
+    expected = np.vstack([dense[:2] - dense[:2].mean(axis=0), dense[2:] - dense[2:]])
+    np.testing.assert_allclose(conv.to_dense(adata.X), expected)
+
+
+@pytest.mark.parametrize(
+    "col",
+    [
+        pytest.param(pd.array([True, False] * 10), id="bool"),
+        pytest.param(pd.array(range(20), dtype="Int64"), id="Int64"),
+    ],
+)
+def test_regress_out_non_float_keys(col: pd.api.extensions.ExtensionArray) -> None:
+    """`bool`/nullable columns are numeric; they must not be rejected as non-finite."""
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((20, 3)), obs={"k": col})
+
+    sc.pp.regress_out(adata, keys=["k"])
+
+    assert np.isfinite(adata.X).all()
+
+
+def test_regress_out_ill_conditioned_covariate() -> None:
+    """A barely-varying covariate is near-collinear with the intercept column.
+
+    Solving through `inv(RᵀR)` squares the condition number and loses the residuals.
+    The expectation is the two-pass simple-regression formula, which shares no code
+    with the implementation.
+    """
+    rng = np.random.default_rng(0)
+    n = 500
+    x = rng.random((n, 10))
+    pct_mito = 2.0 + 1e-7 * rng.random(n)  # cond(design) ~1e8
+    adata = AnnData(x.copy(), obs={"pct_mito": pct_mito})
+
+    sc.pp.regress_out(adata, keys=["pct_mito"])
+
+    r = pct_mito - pct_mito.mean()
+    slope = (r @ (x - x.mean(axis=0))) / (r @ r)
+    expected = x - x.mean(axis=0) - np.outer(r, slope)
+    np.testing.assert_allclose(adata.X, expected, atol=1e-11)
+
+
+def test_regress_out_applies_n_jobs() -> None:
+    """`n_jobs` must actually reach Numba, not just leave the result unchanged."""
+    import numba
+
+    seen = []
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((40, 6)), obs={"batch": pd.Categorical([0, 1] * 20)})
+
+    orig = numba.set_num_threads
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(numba, "set_num_threads", lambda n: (seen.append(n), orig(n))[1])
+        sc.pp.regress_out(adata, keys="batch", n_jobs=2)
+
+    assert seen[0] == 2  # requested count is applied before the kernels run
+    assert seen[-1] == numba.get_num_threads()  # and restored afterwards
+
+
+def test_regress_out_restores_numba_threads() -> None:
+    """`n_jobs` must not leak into Numba's global thread count."""
+    import numba
+
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.random((50, 10)))
+    adata.obs["batch"] = pd.Categorical(rng.integers(0, 2, size=adata.n_obs))
+
+    before = numba.get_num_threads()
+    sc.pp.regress_out(adata, keys="batch", n_jobs=1)
+
+    assert numba.get_num_threads() == before
+
+
 def test_regress_out_constants():
     rng = np.random.default_rng()
     adata = AnnData(np.hstack((np.full((10, 1), 0.0), np.full((10, 1), 1.0))))
@@ -472,7 +796,10 @@ def test_regress_out_constants():
 @pytest.mark.parametrize(
     ("keys", "test_file", "atol"),
     [
-        (["n_counts", "percent_mito"], "regress_test_small.npy", 0.0),
+        # The golden files are float64 but `X` here is float32, and `assert_allclose`
+        # applies `rtol` with no absolute floor, so a residual that is legitimately ~0
+        # would have to match a float64 reference to a fraction of a float32 ulp.
+        (["n_counts", "percent_mito"], "regress_test_small.npy", 1e-6),
         (["bulk_labels"], "regress_test_small_cat.npy", 1e-6),
     ],
 )
