@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import sys
 import warnings
 from collections.abc import Collection, Mapping, Sequence
 from contextlib import nullcontext
 from pathlib import Path
-from types import MappingProxyType
 from typing import TYPE_CHECKING, TypedDict
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import pandas as pd
@@ -210,7 +213,7 @@ def _compute_pos(  # noqa: PLR0912
     init_pos: np.ndarray | None,
     adj_tree,
     root: int,
-    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
+    layout_kwds: Mapping[str, Any] = frozendict({}),
 ) -> NDArray[np.float64]:
     import random
 
@@ -354,7 +357,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     threshold: float | None = None,
     color: str | Mapping[str | int, Mapping[Any, float]] | None = None,
     layout: _Layout | None = None,
-    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
+    layout_kwds: Mapping[str, Any] = frozendict({}),
     init_pos: np.ndarray | None = None,
     root: int | str | Sequence[int] | None = 0,
     labels: str | Sequence[str] | Mapping[str, str] | None = None,
@@ -365,7 +368,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     fontsize: int | None = None,
     fontweight: str = "bold",
     fontoutline: int | None = None,
-    text_kwds: Mapping[str, Any] = MappingProxyType({}),
+    text_kwds: Mapping[str, Any] = frozendict({}),
     node_size_scale: float = 1.0,
     node_size_power: float = 0.5,
     edge_width_scale: float = 1.0,
@@ -380,7 +383,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     cmap: str | Colormap | None = None,
     cax: Axes | None = None,
     colorbar=None,  # TODO: this seems to be unused
-    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
+    cb_kwds: Mapping[str, Any] = frozendict({}),
     frameon: bool | None = None,
     add_pos: bool = True,
     export_to_gexf: bool = False,
@@ -721,7 +724,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     fontsize=None,
     fontweight=None,
     fontoutline=None,
-    text_kwds: Mapping[str, Any] = MappingProxyType({}),
+    text_kwds: Mapping[str, Any] = frozendict({}),
     node_size_scale=1.0,
     node_size_power=0.5,
     edge_width_scale=1.0,
@@ -735,7 +738,7 @@ def _paga_graph(  # noqa: PLR0912, PLR0913, PLR0915
     export_to_gexf=False,
     colorbar=None,
     use_raw=True,
-    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
+    cb_kwds: Mapping[str, Any] = frozendict({}),
     single_component=False,
     arrowsize=30,
 ):
@@ -1070,7 +1073,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     use_raw: bool = True,
     annotations: Sequence[str] = ("dpt_pseudotime",),
     color_map: str | Colormap | None = None,
-    color_maps_annotations: Mapping[str, str | Colormap] = MappingProxyType(
+    color_maps_annotations: Mapping[str, str | Colormap] = frozendict(
         dict(dpt_pseudotime="Greys")
     ),
     palette_groups: Sequence[str] | None = None,

@@ -13,9 +13,12 @@ Beta Version. The code will be reorganized soon.
 from __future__ import annotations
 
 import itertools
+import sys
 from pathlib import Path
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict
 
 import numpy as np
 import scipy as sp
@@ -294,10 +297,10 @@ def write_data(  # noqa: PLR0912, PLR0913
     *,
     append=False,
     header="",
-    varNames: Mapping[str, int] = MappingProxyType({}),
+    varNames: Mapping[str, int] = frozendict({}),
     Adj: np.ndarray | None = None,
     Coupl: np.ndarray | None = None,
-    boolRules: Mapping[str, str] = MappingProxyType({}),
+    boolRules: Mapping[str, str] = frozendict({}),
     model="",
     modelType="",
     invTimeStep=1,
@@ -404,7 +407,7 @@ class GRNsim:
         show=False,
         verbosity=0,
         Coupl=None,
-        params=MappingProxyType({}),
+        params=frozendict({}),
     ):
         """Initialize.
 

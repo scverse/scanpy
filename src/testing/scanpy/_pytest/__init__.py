@@ -5,8 +5,10 @@ from __future__ import annotations
 import os
 import sys
 from importlib.util import find_spec
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import pooch
 import pytest
@@ -50,7 +52,7 @@ def original_settings(
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
         # can’t use `model_dump` here because of https://github.com/pydantic/pydantic/issues/8907
-        _original_settings = MappingProxyType({
+        _original_settings = frozendict({
             s: getattr(sc.settings, s)
             for s in (
                 type(sc.settings).model_fields | type(sc.settings).model_computed_fields

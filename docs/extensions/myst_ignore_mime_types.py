@@ -5,8 +5,10 @@ from __future__ import annotations
 import sys
 from importlib.abc import MetaPathFinder
 from importlib.metadata import Distribution, EntryPoint, EntryPoints
-from types import MappingProxyType
 from typing import TYPE_CHECKING, override
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 from myst_nb.core.render import MimeRenderPlugin
 from sphinx.util.typing import ExtensionMetadata
@@ -38,7 +40,7 @@ class _Ignore(MimeRenderPlugin):
 
 
 class _IgnoreMimeDist(Distribution):
-    metadata = MappingProxyType(dict(Name=__name__, Version="0.0.0"))
+    metadata = frozendict(dict(Name=__name__, Version="0.0.0"))
 
     @override
     def read_text(self, filename: str) -> str | None:

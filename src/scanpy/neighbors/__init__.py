@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import contextlib
+import sys
 from inspect import signature
 from textwrap import indent
-from types import MappingProxyType
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import scipy
@@ -96,7 +99,7 @@ def neighbors(  # noqa: PLR0913
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn | None = None,
-    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
     key_added: str | None = None,
     copy: bool = False,
@@ -585,7 +588,7 @@ class Neighbors:
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
-        metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+        metric_kwds: Mapping[str, Any] = frozendict({}),
         rng: SeedLike | RNGLike | None = None,
     ) -> None:
         """Compute distances and connectivities of neighbors.

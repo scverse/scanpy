@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 from anndata import AnnData
@@ -172,7 +175,7 @@ def normalize_pearson_residuals_pca(
     clip: float | None = None,
     n_comps: int | None = 50,
     rng: SeedLike | RNGLike | None = None,
-    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
+    kwargs_pca: Mapping[str, Any] = frozendict({}),
     mask_var: np.ndarray | str | Default | None = Default(
         "adata.var.get('highly_variable')"
     ),

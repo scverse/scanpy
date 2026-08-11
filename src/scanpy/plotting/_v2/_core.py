@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from collections.abc import Collection
 from functools import partial, reduce, update_wrapper
-from types import MappingProxyType
 from typing import TYPE_CHECKING, assert_never, overload
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import holoviews as hv
 import numpy as np
@@ -583,9 +586,7 @@ def dotplot(
     /,
     group_by: AdDim,
     *,
-    funcs: Mapping[str, AggType] = MappingProxyType(
-        dict(color="mean", size="count_nonzero")
-    ),
+    funcs: Mapping[str, AggType] = frozendict(dict(color="mean", size="count_nonzero")),
 ) -> hv.Points:
     """Dot plot of marker expression per group.
 
