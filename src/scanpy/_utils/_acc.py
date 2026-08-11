@@ -33,7 +33,7 @@ def _resolve(spec: str | AdDim | VecAcc, /, *, vec: bool = True) -> AdDim | VecA
     from hv_anndata import A, AdDim
 
     if isinstance(spec, str):
-        return A.resolve(spec, vec=True) if vec else A.resolve(spec, vec=False)
+        return A.resolve(spec, vec=vec)
     if not isinstance(spec, AdDim if vec else LayerAcc | MultiAcc | GraphAcc):
         what = "an AdDim" if vec else "a container accessor"
         msg = f"Expected a string or {what}, got {spec!r}."

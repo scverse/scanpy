@@ -16,9 +16,9 @@ from fast_array_utils import stats
 from hv_anndata import A, AdDim
 
 import scanpy as sc
-from scanpy.plotting._common import dot_area
 
 from ..._utils._acc import _resolve, _resolve_all, _resolve_some
+from .._common import dot_area
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -116,12 +116,10 @@ def scatter(
     vdims = _resolve_all(vdims)
     if color is not None:
         color = _resolve_some(color)
-
-    if color is not None and not isinstance(color, AdDim):
-        return _facet(color, lambda c: scatter(adata, [i, j], vdims, color=c))
-
-    if color is not None:
+        if not isinstance(color, AdDim):
+            return _facet(color, lambda c: scatter(adata, [i, j], vdims, color=c))
         vdims = [*vdims, color]
+
     sc = hv.Scatter(adata, i, [j, *vdims])
     if color is not None:
         sc = sc.opts(color=color)
