@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from ..._backends import backend_dispatch
 from ..._compat import warn
 
 if TYPE_CHECKING:
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
+@backend_dispatch
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
     key: str | Sequence[str],

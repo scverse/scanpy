@@ -155,6 +155,25 @@ class Settings(scverse_misc.Settings):
     _previous_memory_usage: Annotated[int, PrivateAttr(default=-1)]
     """Stores the previous memory usage."""
 
+    @property
+    def backend(self) -> str:
+        """Active computational backend (default ``'cpu'``)."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.backend
+
+    @backend.setter
+    def backend(self, backend: str) -> None:
+        from .._backends import settings as backend_settings
+
+        backend_settings.backend = backend
+
+    def available_backends(self) -> list[str]:
+        """Return canonical names of installed computational backends."""
+        from .._backends import settings as backend_settings
+
+        return backend_settings.available_backends()
+
     @computed_field
     @property
     def logpath(self) -> Path | None:

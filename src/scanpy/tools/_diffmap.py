@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging
+from .._backends import backend_dispatch
 from .._docs import doc_rng
 from .._keys import _embedding_keys
 from .._settings import Default, settings
@@ -22,6 +23,7 @@ __all__ = ["diffmap"]
 
 @_doc_params(rng=doc_rng)
 @_accepts_legacy_random_state(0)
+@backend_dispatch
 def diffmap(
     adata: AnnData,
     n_comps: int = 15,
