@@ -87,7 +87,7 @@ class needs(QuietMarkDecorator, Enum):  # noqa: N801
     phate = auto()
     phenograph = auto()
     pypairs = auto()
-    samalg = "sam-algorithm"
+    samalg = "sc-sam"
     scanorama = auto()
     trimap = auto()
     wishbone = "wishbone-dev"
