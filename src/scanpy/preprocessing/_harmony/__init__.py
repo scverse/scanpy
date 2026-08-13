@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import enum
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -15,11 +16,19 @@ if TYPE_CHECKING:
 
     from ..._utils.random import RNGLike, SeedLike
 
-# Each flavor inherits the stopping rules of the implementation it reproduces:
-# harmony2 follows harmonypy 2.0.0 / harmony 2.0.5 (R), harmony1 follows
-# harmony-pytorch. Values are (max_iter_clustering, tol_clustering, tol_harmony).
-_STOPPING_HARMONY2 = (4, 1e-3, 1e-2)
-_STOPPING_HARMONY1 = (200, 1e-5, 1e-4)
+
+class _Stopping(NamedTuple):
+    max_iter_clustering: int
+    tol_clustering: float
+    tol_harmony: float
+
+
+class Stopping(_Stopping, enum.Enum):
+    HARMONY2 = (4, 1e-3, 1e-2)
+    """Follows harmonypy 2.0.0 / harmony 2.0.5 (R) defaults."""
+
+    HARMONY1 = (200, 1e-5, 1e-4)
+    """Follows harmony-pytorch defaults."""
 
 
 def harmony_integrate(  # noqa: PLR0913
@@ -176,13 +185,13 @@ def harmony_integrate(  # noqa: PLR0913
     dynamic_lambda = flavor == "harmony2"
 
     # Unset stopping rules follow the flavor's reference implementation
-    stopping = _STOPPING_HARMONY2 if flavor == "harmony2" else _STOPPING_HARMONY1
+    defaults = Stopping[flavor.upper()]
     if max_iter_clustering is None:
-        max_iter_clustering = stopping[0]
+        max_iter_clustering = defaults.max_iter_clustering
     if tol_clustering is None:
-        tol_clustering = stopping[1]
+        tol_clustering = defaults.tol_clustering
     if tol_harmony is None:
-        tol_harmony = stopping[2]
+        tol_harmony = defaults.tol_harmony
 
     # Warn when flavor-incompatible parameters are explicitly set
     if flavor == "harmony2" and ridge_lambda != 1.0:
