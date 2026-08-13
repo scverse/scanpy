@@ -123,7 +123,6 @@ docs = [
     "nbsphinx>=0.9",
     "numpy>=2.4",                                            # type aliases
     "plotly",
-    "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
     "scanpydoc>=0.16.1",

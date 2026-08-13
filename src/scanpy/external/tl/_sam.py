@@ -11,7 +11,11 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from samalg import SAM
+
+    try:
+        from samalg import SAM
+    except ImportError:
+        SAM = type("SAM", (), dict(__module__="samalg"))
 
 
 @doctest_needs("samalg")
