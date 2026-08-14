@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import pandas as pd
@@ -58,7 +61,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     directed: bool = True,
     use_weights: bool = False,
     partition_type: type[MutableVertexPartition] | None = None,
-    partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    partition_kwargs: Mapping[str, Any] = frozendict({}),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
