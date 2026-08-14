@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import itertools
 import string
+from contextlib import suppress
 from operator import mul, truediv
 from types import ModuleType
 from typing import TYPE_CHECKING
 
+import numba
 import numpy as np
 import pytest
 from anndata.tests.helpers import asarray
@@ -13,16 +15,12 @@ from scipy import sparse
 
 from scanpy._compat import CSBase, DaskArray
 from scanpy._utils import (
+    _numba_thread_limit,
     axis_mul_or_truediv,
     check_nonnegative_integers,
     descend_classes_and_funcs,
 )
-from scanpy._utils.random import (
-    ith_k_tuple,
-    legacy_numpy_gen,
-    random_k_tuples,
-    random_str,
-)
+from scanpy._utils.random import _LegacyRng, ith_k_tuple, random_k_tuples, random_str
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
@@ -30,6 +28,7 @@ from testing.scanpy._pytest.params import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
 
@@ -39,10 +38,8 @@ def test_descend_classes_and_funcs():
     a.b = ModuleType("a.b")
 
     # populate with classes
-    a.A = type("A", (), {})
-    a.A.__module__ = a.__name__
-    a.b.B = type("B", (), {})
-    a.b.B.__module__ = a.b.__name__
+    a.A = type("A", (), dict(__module__=a.__name__))
+    a.b.B = type("B", (), dict(__module__=a.b.__name__))
 
     # create a loop to check if that gets caught
     a.b.a = a
@@ -53,7 +50,7 @@ def test_descend_classes_and_funcs():
 def test_axis_mul_or_truediv_badop():
     dividend = np.array([[0, 1.0, 1.0], [1.0, 0, 1.0]])
     divisor = np.array([0.1, 0.2])
-    with pytest.raises(ValueError, match=".*not one of truediv or mul"):
+    with pytest.raises(ValueError, match=r"not one of truediv or mul"):
         axis_mul_or_truediv(dividend, divisor, op=np.add, axis=0)
 
 
@@ -90,6 +87,7 @@ def test_scale_column(array_type, op):
     np.testing.assert_array_equal(res, expd)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero encountered:RuntimeWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_divide_by_zero(array_type):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
@@ -111,13 +109,13 @@ def test_divide_by_zero(array_type):
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_SPARSE)
-def test_scale_out_with_dask_or_sparse_raises(array_type):
+def test_scale_out_with_dask_or_sparse_raises(array_type: Callable):
     dividend = array_type(asarray([[0, 1.0, 2.0], [3.0, 0, 4.0]]))
     divisor = np.array([0.1, 0.2, 0.5])
     if isinstance(dividend, DaskArray):
         with pytest.raises(
             TypeError if "dask" in array_type.__name__ else ValueError,
-            match="`out`*",
+            match="`out`",
         ):
             axis_mul_or_truediv(dividend, divisor, op=truediv, axis=1, out=dividend)
 
@@ -146,32 +144,37 @@ def test_scale_rechunk(array_type, axis, op):
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
-    ("array_value", "expected"),
+    ("mk_array", "expected"),
     [
         pytest.param(
-            np.random.poisson(size=(100, 100)).astype(np.float64),
+            lambda rng: rng.poisson(size=(100, 100)).astype(np.float64),
             True,
             id="poisson-float64",
         ),
         pytest.param(
-            np.random.poisson(size=(100, 100)).astype(np.uint32),
+            lambda rng: rng.poisson(size=(100, 100)).astype(np.uint32),
             True,
             id="poisson-uint32",
         ),
-        pytest.param(np.random.normal(size=(100, 100)), False, id="normal"),
-        pytest.param(np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"),
+        pytest.param(lambda rng: rng.normal(size=(100, 100)), False, id="normal"),
+        pytest.param(
+            lambda _: np.array([[0, 0, 0], [0, -1, 0], [0, 0, 0]]), False, id="middle"
+        ),
     ],
 )
-def test_check_nonnegative_integers(array_type, array_value, expected):
-    X = array_type(array_value)
+def test_check_nonnegative_integers(
+    array_type, mk_array: Callable[[np.random.Generator], np.ndarray], expected
+):
+    rng = np.random.default_rng()
+    x = array_type(mk_array(rng))
 
-    received = check_nonnegative_integers(X)
-    if isinstance(X, DaskArray):
+    received = check_nonnegative_integers(x)
+    if isinstance(x, DaskArray):
         assert isinstance(received, DaskArray)
         # compute
         received = received.compute()
         assert not isinstance(received, DaskArray)
-    if isinstance(received, np.bool_):
+    if isinstance(received, np.bool):
         # convert to python bool
         received = received.item()
     assert received is expected
@@ -181,16 +184,18 @@ def test_check_nonnegative_integers(array_type, array_value, expected):
 @pytest.mark.parametrize("pass_seed", [True, False], ids=["pass_seed", "set_seed"])
 @pytest.mark.parametrize("func", ["choice"])
 def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
-    np.random.seed(seed)
-    state_before = np.random.get_state(legacy=False)
+    np.random.seed(seed)  # noqa: NPY002
+    state_before = np.random.get_state(legacy=False)  # noqa: NPY002
 
     arrs: dict[bool, np.ndarray] = {}
     states_after: dict[bool, dict[str, Any]] = {}
     for direct in [True, False]:
         if not pass_seed:
-            np.random.seed(seed)
-        arrs[direct] = _mk_random(func, direct=direct, seed=seed if pass_seed else None)
-        states_after[direct] = np.random.get_state(legacy=False)
+            np.random.seed(seed)  # noqa: NPY002
+        arrs[direct] = _mk_legacy_random(
+            func, direct=direct, seed=seed if pass_seed else None
+        )
+        states_after[direct] = np.random.get_state(legacy=False)  # noqa: NPY002
 
     np.testing.assert_array_equal(arrs[True], arrs[False])
     np.testing.assert_equal(
@@ -201,10 +206,10 @@ def test_legacy_numpy_gen(*, seed: int, pass_seed: bool, func: str):
         np.testing.assert_equal(states_after[True], state_before)
 
 
-def _mk_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
+def _mk_legacy_random(func: str, *, direct: bool, seed: int | None) -> np.ndarray:
     if direct and seed is not None:
-        np.random.seed(seed)
-    gen = np.random if direct else legacy_numpy_gen(seed)
+        np.random.seed(seed)  # noqa: NPY002
+    gen = np.random if direct else _LegacyRng.wrap_global(seed)
     match func:
         case "choice":
             arr = np.arange(1000)
@@ -243,3 +248,41 @@ def test_random_str() -> None:
     assert strings.dtype == np.dtype("U2")
     unique = np.unique(strings, axis=0)
     assert len(unique) == len(strings)
+
+
+NUMBA_MAX = numba.config.NUMBA_NUM_THREADS
+
+
+@pytest.mark.parametrize(
+    ("n_threads", "expected"),
+    [(-1, NUMBA_MAX), (1, 1), (NUMBA_MAX + 5, NUMBA_MAX), (0, 1)],
+)
+def test_numba_thread_limit_resolves(n_threads: int, expected: int) -> None:
+    with _numba_thread_limit(n_threads) as resolved:
+        assert resolved == expected
+        assert numba.get_num_threads() == expected
+
+
+def test_numba_thread_limit_warns_below_minus_one() -> None:
+    with (
+        pytest.warns(UserWarning, match="n_threads < -1 is not supported"),
+        _numba_thread_limit(-2) as resolved,
+    ):
+        assert resolved == NUMBA_MAX
+
+
+@pytest.mark.parametrize("fail", [False, True], ids=["success", "exception"])
+def test_numba_thread_limit_restores(*, fail: bool) -> None:
+    outer = numba.get_num_threads()
+    with suppress(RuntimeError), _numba_thread_limit(1):
+        assert numba.get_num_threads() == 1
+        if fail:
+            raise RuntimeError
+    assert numba.get_num_threads() == outer
+
+
+def test_numba_thread_limit_none_is_noop() -> None:
+    outer = numba.get_num_threads()
+    with _numba_thread_limit(None) as resolved:
+        assert resolved is None
+        assert numba.get_num_threads() == outer

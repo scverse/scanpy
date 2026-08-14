@@ -23,28 +23,28 @@ def test_norm():
     model = pd.DataFrame({"batch": batch})
 
     # standardize the data
-    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, "batch")
+    s_data, _design, _var_pooled, _stand_mean = _standardize_data(model, data, "batch")
 
     assert np.allclose(s_data.mean(axis=1), np.zeros(s_data.shape[0]))
 
 
 def test_covariates():
+    rng = np.random.default_rng()
     adata = sc.datasets.blobs()
     key = "blobs"
 
-    X1 = sc.pp.combat(adata, key=key, inplace=False)
+    x1 = sc.pp.combat(adata, key=key, inplace=False)
 
-    np.random.seed(0)
-    adata.obs["cat1"] = np.random.binomial(3, 0.5, size=(adata.n_obs))
-    adata.obs["cat2"] = np.random.binomial(2, 0.1, size=(adata.n_obs))
-    adata.obs["num1"] = np.random.normal(size=(adata.n_obs))
+    adata.obs["cat1"] = rng.binomial(3, 0.5, size=adata.n_obs)
+    adata.obs["cat2"] = rng.binomial(2, 0.1, size=adata.n_obs)
+    adata.obs["num1"] = rng.standard_normal(adata.n_obs)
 
-    X2 = sc.pp.combat(
+    x2 = sc.pp.combat(
         adata, key=key, covariates=["cat1", "cat2", "num1"], inplace=False
     )
     sc.pp.combat(adata, key=key, covariates=["cat1", "cat2", "num1"], inplace=True)
 
-    assert X1.shape == X2.shape
+    assert x1.shape == x2.shape
 
     df = adata.obs[["cat1", "cat2", "num1", key]]
     batch_cats = adata.obs[key].cat.categories
@@ -54,14 +54,16 @@ def test_covariates():
 
 
 def test_combat_obs_names():
-    # Test for fix to #1170
-    X = np.random.random((200, 100))
+    """Regression test for <https://github.com/scverse/scanpy/issues/1170>."""
+    rng = np.random.default_rng()
+    x = rng.random((200, 100))
     obs = pd.DataFrame(
-        {"batch": pd.Categorical(np.random.randint(0, 2, 200))},
+        {"batch": pd.Categorical(rng.integers(0, 2, (200,)))},
         index=np.repeat(np.arange(100), 2).astype(str),  # Non-unique index
     )
     with pytest.warns(UserWarning, match="Observation names are not unique"):
-        a = sc.AnnData(X, obs)
+        a = sc.AnnData(x, obs)
+    with pytest.warns(UserWarning, match="Observation names are not unique"):
         b = a.copy()
     b.obs_names_make_unique()
 
@@ -72,6 +74,20 @@ def test_combat_obs_names():
 
     a.obs_names_make_unique()
     assert_equal(a, b)
+
+
+def test_combat_single_cell_batch():
+    """Test that combat raises an error when a batch has fewer than 2 cells.
+
+    Regression test for https://github.com/scverse/scanpy/issues/1175
+    """
+    adata = sc.datasets.blobs()
+    # Create a batch where one category has only 1 cell
+    batch = pd.Categorical(["single"] + ["other"] * (adata.n_obs - 1))
+    adata.obs["batch"] = batch
+
+    with pytest.raises(ValueError, match="fewer than 2 cells"):
+        sc.pp.combat(adata, key="batch")
 
 
 def test_silhouette():
@@ -86,9 +102,9 @@ def test_silhouette():
 
     # compute pca
     sc.pp.pca(adata)
-    X_pca = adata.obsm["X_pca"]
+    x_pca = adata.obsm["X_pca"]
 
     # compute silhouette coefficient in pca
-    sh = silhouette_score(X_pca[:, :2], adata.obs["blobs"].values)
+    sh = silhouette_score(x_pca[:, :2], adata.obs["blobs"].values)
 
     assert sh < 0.1

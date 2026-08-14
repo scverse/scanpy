@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_raises
 
 import scanpy as sc
+from scanpy._settings import Default
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 @pytest.mark.parametrize(
@@ -20,10 +26,9 @@ def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
     pbmc = pbmc68k_reduced()[:200].copy()
 
     euclidean1 = sc.tl.tsne(pbmc, metric="euclidean", copy=True)
-    with pytest.warns(UserWarning, match="In previous versions of scanpy"):
-        euclidean2 = sc.tl.tsne(
-            pbmc, metric="euclidean", n_jobs=2, key_added=key_added, copy=True
-        )
+    euclidean2 = sc.tl.tsne(
+        pbmc, metric="euclidean", n_jobs=2, key_added=key_added, copy=True
+    )
     cosine = sc.tl.tsne(pbmc, metric="cosine", copy=True)
 
     # Reproducibility
@@ -32,9 +37,9 @@ def test_tsne(key_added: str | None, key_obsm: str, key_uns: str):
     assert not np.array_equal(euclidean1.obsm["X_tsne"], cosine.obsm["X_tsne"])
 
     # Params are recorded
-    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == 1
+    assert euclidean1.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
     assert euclidean2.uns[key_uns]["params"]["n_jobs"] == 2
-    assert cosine.uns["tsne"]["params"]["n_jobs"] == 1
+    assert cosine.uns["tsne"]["params"]["n_jobs"] == sc.settings.n_jobs
     assert euclidean1.uns["tsne"]["params"]["metric"] == "euclidean"
     assert euclidean2.uns[key_uns]["params"]["metric"] == "euclidean"
     assert cosine.uns["tsne"]["params"]["metric"] == "cosine"
@@ -75,16 +80,89 @@ def test_umap_init_paga(layout):
     sc.tl.umap(pbmc, init_pos="paga")
 
 
-def test_diffmap():
+def test_umap_preserves_connectivities():
+    # https://github.com/scverse/scanpy/issues/4028
+    pbmc = pbmc68k_reduced()[:100, :].copy()
+    conn = pbmc.obsp["connectivities"]
+    data_before = conn.data.copy()
+    nnz_before = conn.nnz
+
+    sc.tl.umap(pbmc)
+
+    assert_array_equal(data_before, conn.data)
+    assert conn.nnz == nnz_before
+    assert (conn.data == 0).sum() == 0, "CSR should have no explicit zeros"
+    assert "X_umap" in pbmc.obsm
+
+
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_diffmap(
+    subtests: pytest.Subtests, rng_arg: Literal["rng", "random_state"]
+) -> None:
     pbmc = pbmc68k_reduced()
 
-    sc.tl.diffmap(pbmc)
-    d1 = pbmc.obsm["X_diffmap"].copy()
-    sc.tl.diffmap(pbmc)
-    d2 = pbmc.obsm["X_diffmap"].copy()
-    assert_array_equal(d1, d2)
+    d1, d2, d3 = (
+        sc.tl.diffmap(pbmc, copy=True, **{rng_arg: seed}).obsm["X_diffmap"].copy()
+        for seed in (0, 0, 1234)
+    )
 
-    # Checking if specifying random_state  works, arrays shouldn't be equal
-    sc.tl.diffmap(pbmc, random_state=1234)
-    d3 = pbmc.obsm["X_diffmap"].copy()
-    assert_raises(AssertionError, assert_array_equal, d1, d3)
+    with subtests.test("reproducible"):
+        assert_array_equal(d1, d2)
+    with subtests.test("different embedding"):
+        assert_raises(AssertionError, assert_array_equal, d1, d3)
+
+
+@pytest.mark.parametrize(
+    ("key_added", "key_obsm", "key_uns", "is_dict"),
+    [
+        pytest.param(None, "X_diffmap", "diffmap_evals", False, id="None"),
+        pytest.param("custom_key", "custom_key", "custom_key", True, id="custom_key"),
+        pytest.param(sc.Preset.ScanpyV1, "X_diffmap", "diffmap_evals", False, id="v1"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "diffmap", "diffmap", True),
+            marks=needs.scanpy2,
+            id="v2",
+        ),
+    ],
+)
+def test_diffmap_key_added(
+    *,
+    key_added: str | Default | sc.Preset | None,
+    key_obsm: str,
+    key_uns: str,
+    is_dict: bool,
+) -> None:
+    pbmc = pbmc68k_reduced()[:300, :100].copy()
+    if isinstance(key_added, sc.Preset):
+        sc.settings.preset = key_added
+        key_added = Default()
+    adata = sc.tl.diffmap(pbmc, key_added=key_added, copy=True)
+    assert key_obsm in adata.obsm
+    assert key_uns in adata.uns
+    assert isinstance(adata.uns[key_uns], dict if is_dict else np.ndarray)
+
+
+@needs.igraph
+@pytest.mark.parametrize(
+    ("key_added", "key_obsm", "key_uns"),
+    [
+        pytest.param(None, "X_draw_graph_fr", "draw_graph", id="None"),
+        pytest.param("custom_{layout}", "custom_fr", "custom_fr", id="custom_template"),
+        pytest.param(sc.Preset.ScanpyV1, "X_draw_graph_fr", "draw_graph", id="v1"),
+        pytest.param(
+            *(sc.Preset.ScanpyV2Preview, "graph_fr", "graph_fr"),
+            marks=needs.scanpy2,
+            id="v2",
+        ),
+    ],
+)
+def test_draw_graph_key_added(
+    key_added: str | Default | sc.Preset | None, key_obsm: str, key_uns: str
+) -> None:
+    pbmc = pbmc68k_reduced()[:100, :100].copy()
+    if isinstance(key_added, sc.Preset):
+        sc.settings.preset = key_added
+        key_added = Default()
+    adata = sc.tl.draw_graph(pbmc, layout="fr", key_added=key_added, copy=True)
+    assert key_obsm in adata.obsm
+    assert key_uns in adata.uns

@@ -8,7 +8,6 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
-from .._compat import old_positionals
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
@@ -20,17 +19,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "n_pcs",
-    "use_rep",
-    "var_names",
-    "use_raw",
-    "cor_method",
-    "linkage_method",
-    "optimal_ordering",
-    "key_added",
-    "inplace",
-)
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,
@@ -66,6 +54,8 @@ def dendrogram(  # noqa: PLR0913
         The computation of the hierarchical clustering is based on predefined
         groups and not per cell. The correlation matrix is computed using by
         default pearson but other methods are available.
+
+    .. array-support:: tl.dendrogram
 
     Parameters
     ----------
@@ -120,10 +110,10 @@ def dendrogram(  # noqa: PLR0913
         # if not a list, turn into a list
         groupby = [groupby]
     for group in groupby:
-        if group not in adata.obs_keys():
+        if group not in adata.obs:
             msg = (
                 "groupby has to be a valid observation. "
-                f"Given value: {group}, valid observations: {adata.obs_keys()}"
+                f"Given value: {group}, valid observations: {adata.obs.columns.tolist()}"
             )
             raise ValueError(msg)
         if not isinstance(adata.obs[group].dtype, CategoricalDtype):
@@ -146,11 +136,11 @@ def dendrogram(  # noqa: PLR0913
                 ).astype("category")
         categorical.name = "_".join(groupby)
 
-        rep_df.set_index(categorical, inplace=True)
+        rep_df.index = categorical
         categories: pd.Index = rep_df.index.categories
     else:
         gene_names = adata.raw.var_names if use_raw else adata.var_names
-        from ..plotting._anndata import _prepare_dataframe
+        from ..plotting.legacy._anndata import _prepare_dataframe
 
         categories, rep_df = _prepare_dataframe(
             adata, gene_names, groupby, use_raw=use_raw
@@ -158,7 +148,8 @@ def dendrogram(  # noqa: PLR0913
 
     # aggregate values within categories using 'mean'
     mean_df = (
-        rep_df.groupby(level=0, observed=True)
+        rep_df
+        .groupby(level=0, observed=True)
         .mean()
         .loc[categories]  # Fixed ordering for pandas < 2
     )

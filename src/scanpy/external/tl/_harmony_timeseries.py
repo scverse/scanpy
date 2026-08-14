@@ -8,14 +8,12 @@ import numpy as np
 import pandas as pd
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("n_neighbors", "n_components", "n_jobs", "copy")
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
@@ -85,7 +83,7 @@ def harmony_timeseries(
 
     >>> from itertools import product
     >>> import pandas as pd
-    >>> from anndata import AnnData
+    >>> from anndata import AnnData, concat
     >>> import scanpy as sc
     >>> import scanpy.external as sce
 
@@ -99,11 +97,12 @@ def harmony_timeseries(
 
     >>> adata_ref = sc.datasets.pbmc3k()
     >>> start = [596, 615, 1682, 1663, 1409, 1432]
-    >>> adata = AnnData.concatenate(
-    ...     *(adata_ref[i : i + 1000] for i in start),
+    >>> adata = concat(
+    ...     [adata_ref[i : i + 1000] for i in start],
     ...     join="outer",
-    ...     batch_key="sample",
-    ...     batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ...     label="sample",
+    ...     keys=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ...     index_unique="-",
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
@@ -135,8 +134,8 @@ def harmony_timeseries(
     try:
         import harmony
     except ImportError as e:
-        msg = "\nplease install harmony:\n\n\tpip install harmonyTS"
-        raise ImportError(msg) from e
+        e.add_note("Please install `harmonyTS` and try again.")
+        raise
 
     adata = adata.copy() if copy else adata
     logg.info("Harmony augmented affinity matrix")

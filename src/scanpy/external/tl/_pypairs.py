@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from packaging.version import Version
 
+from ..._compat import pkg_version
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from anndata import AnnData
 
-    Genes = Collection[str | int | bool]
+    type Genes = Collection[str | int | bool]
 
 
 @doctest_needs("pypairs")
@@ -65,7 +67,7 @@ def sandbag(
     >>> marker_pairs = sandbag(adata, fraction=0.5)
 
     """
-    _check_import()
+    _check_available()
     from pypairs import settings as pp_settings
     from pypairs.pairs import sandbag
 
@@ -128,7 +130,7 @@ def cyclone(
     Where category S is assigned to samples where G1 and G2M score are < 0.5.
 
     """
-    _check_import()
+    _check_available()
     from pypairs import settings as pp_settings
     from pypairs.pairs import cyclone
 
@@ -147,14 +149,12 @@ def cyclone(
     )
 
 
-def _check_import():
-    try:
-        import pypairs
-    except ImportError as e:
+def _check_available() -> None:
+    if not find_spec("pypairs"):
         msg = "You need to install the package `pypairs`."
-        raise ImportError(msg) from e
+        raise ImportError(msg)
 
     min_version = Version("3.0.9")
-    if Version(pypairs.__version__) < min_version:
+    if pkg_version("pypairs") < min_version:
         msg = f"Please only use `pypairs` >= {min_version}"
         raise ImportError(msg)

@@ -3,67 +3,39 @@
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 
-from packaging.version import Version
+# start with settings as several tools are using it
+from ._settings import Preset, Verbosity, settings  # isort: skip
 
-from ._utils import check_versions
-from ._version import __version__
-
-check_versions()
-del check_versions
-
-# the actual API
-# (start with settings as several tools are using it)
-
-from ._settings import Verbosity, settings
-
-set_figure_params = settings.set_figure_params
-
-import anndata
-
-if Version(anndata.__version__) >= Version("0.11.0rc2"):
-    from anndata.io import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_mtx,
-        read_text,
-        read_umi_tools,
-    )
-else:
-    from anndata import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_mtx,
-        read_text,
-        read_umi_tools,
-    )
 from anndata import AnnData, concat
+from anndata.io import (
+    read_csv,
+    read_excel,
+    read_h5ad,
+    read_hdf,
+    read_loom,
+    read_mtx,
+    read_text,
+    read_umi_tools,
+)
 
 from . import datasets, experimental, get, logging, metrics, queries
 from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
+from ._utils import annotate_doc_types
 from .neighbors import Neighbors
 from .readwrite import read, read_10x_h5, read_10x_mtx, read_visium, write
 
-# has to be done at the end, after everything has been imported
-sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
-from ._utils import annotate_doc_types
-
-annotate_doc_types(sys.modules[__name__], "scanpy")
-del sys, annotate_doc_types
+if TYPE_CHECKING:
+    from typing import Any
 
 __all__ = [
     "AnnData",
     "Neighbors",
+    "Preset",
     "Verbosity",
-    "__version__",
     "concat",
     "datasets",
     "experimental",
@@ -92,10 +64,28 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str) -> object:
-    if name == "external":
-        from . import external
+from .plotting.legacy.mpl_settings import set_figure_params
 
-        return external
+annotate_doc_types(sys.modules[__name__], "scanpy")
 
-    raise AttributeError(name)
+# has to be done at the end, after everything has been imported
+sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
+
+
+def __getattr__(name: str) -> Any:
+    if name == "__version__":
+        from importlib.metadata import version
+
+        from ._compat import warn
+
+        msg = "`__version__` is deprecated, use `importlib.metadata.version('scanpy')` instead"
+        warn(msg, FutureWarning)
+        return version("scanpy")
+
+    if name == "external":  # deprecated, warns on import
+        from importlib import import_module
+
+        # not `from . import external`: that re-enters this function
+        return import_module(f".{name}", __name__)
+
+    raise AttributeError

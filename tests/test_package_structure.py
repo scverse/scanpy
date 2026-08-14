@@ -11,10 +11,9 @@ from anndata import AnnData
 
 # CLI is locally not imported by default but on travis it is?
 import scanpy.cli
-from scanpy._utils import _import_name, descend_classes_and_funcs
+from scanpy._utils import _docs, descend_classes_and_funcs, import_name
 
 if TYPE_CHECKING:
-    from types import FunctionType
     from typing import Any
 
 mod_dir = Path(scanpy.__file__).parent
@@ -35,7 +34,7 @@ api_module_names = [
     "sc.metrics",
 ]
 api_modules = {
-    mod_name: _import_name(f"scanpy{mod_name.removeprefix('sc')}")
+    mod_name: import_name(f"scanpy{mod_name.removeprefix('sc')}")
     for mod_name in api_module_names
 }
 
@@ -46,6 +45,7 @@ api_functions = [
     for mod_name, mod in api_modules.items()
     for name in sorted(mod.__all__)
     if callable(func := getattr(mod, name)) and func.__module__.startswith("scanpy.")
+    if not (isinstance(func, type) and issubclass(func, dict))  # TypedDict
 ]
 
 
@@ -60,6 +60,7 @@ def test_external_is_deprecated() -> None:
     with pytest.warns(DeprecationWarning, match=r"scanpy.external"):
         import scanpy.external
 
+    with pytest.warns(DeprecationWarning, match=r"scanpy.external"):
         importlib.reload(scanpy.external)
 
 
@@ -77,15 +78,6 @@ def param_is_pos(p: Parameter) -> bool:
     }
 
 
-def is_deprecated(f: FunctionType) -> bool:
-    # TODO: use deprecated decorator instead
-    # https://github.com/scverse/scanpy/issues/2505
-    return f.__name__ in {
-        "normalize_per_cell",
-        "filter_genes_dispersion",
-    }
-
-
 class ExpectedSig(TypedDict):
     first_name: str
     copy_default: Any
@@ -97,14 +89,12 @@ copy_sigs: defaultdict[str, ExpectedSig | None] = defaultdict(
 )
 # full exceptions
 copy_sigs["sc.external.tl.phenograph"] = None  # external
-copy_sigs["sc.pp.filter_genes_dispersion"] = None  # deprecated
 copy_sigs["sc.pp.filter_cells"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.filter_genes"] = None  # unclear `inplace` situation
 copy_sigs["sc.pp.subsample"] = None  # returns indices along matrix
 copy_sigs["sc.pp.sample"] = None  # returns indices along matrix
 # partial exceptions: “data” instead of “adata”
 copy_sigs["sc.pp.log1p"]["first_name"] = "data"
-copy_sigs["sc.pp.normalize_per_cell"]["first_name"] = "data"
 copy_sigs["sc.pp.pca"]["first_name"] = "data"
 copy_sigs["sc.pp.scale"]["first_name"] = "data"
 copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
@@ -120,9 +110,8 @@ def test_sig_conventions(f, qualname):
     sig = signature(f)
 
     # TODO: replace the following check with lint rule for all funtions eventually
-    if not is_deprecated(f):
-        n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
-        assert n_pos <= 3, "Public functions should have <= 3 positional parameters"
+    n_pos = sum(1 for p in sig.parameters.values() if param_is_pos(p))
+    assert n_pos <= 3, "Public functions should have <= 3 positional parameters"
 
     first_param = next(iter(sig.parameters.values()), None)
     if first_param is None:
@@ -148,8 +137,7 @@ def test_sig_conventions(f, qualname):
         if expected_sig["return_ann"] is None:
             expected_sig["return_ann"] = f"{first_param.annotation} | None"
         assert s == expected_sig
-        if not is_deprecated(f):
-            assert not param_is_pos(copy_param)
+        assert not param_is_pos(copy_param)
 
 
 def getsourcefile(obj):
@@ -170,3 +158,46 @@ def getsourcelines(obj):
         return getsourcelines(wrapped)
 
     return getsourcelines(obj)
+
+
+ALL_SPS = [_docs.ScipySparse(fmt) for fmt in ("csr", "csc")]
+
+
+@pytest.mark.parametrize(
+    ("include", "exclude", "expected"),
+    [
+        pytest.param("np", "", [_docs.Numpy()], id="np"),
+        pytest.param("np", "np", [], id="remove_identical"),
+        pytest.param(
+            "np da",
+            "",
+            [_docs.Numpy(), _docs.DaskArray(_docs.Numpy())],
+            id="dask_inherits",
+        ),
+        pytest.param(
+            "sp da[sp[csr]]",
+            [],
+            [*ALL_SPS, _docs.DaskArray(_docs.ScipySparse("csr"))],
+            id="include_fewer_nested",
+        ),
+        pytest.param(
+            "da[sp[csc]]",
+            [],
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
+            id="include_only_nested",
+        ),
+        pytest.param("da[sp[csc]]", "sp da", [], id="remove_more"),
+        pytest.param(
+            "sp da",
+            "sp da[sp[csr]]",
+            [_docs.DaskArray(_docs.ScipySparse("csc"))],
+            id="only_dask_subset",
+        ),
+    ],
+)
+def test_array_type_selector(
+    include: str, exclude: str, expected: list[_docs.ArrayType]
+) -> None:
+    inc, exc = (i.split(" ") if i else [] for i in (include, exclude))
+    received = list(_docs.parse(inc, exc))
+    assert received == expected

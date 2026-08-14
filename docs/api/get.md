@@ -1,4 +1,4 @@
-## Get object from `AnnData`: `get`
+# Get object from `AnnData`: `get`
 
 ```{eval-rst}
 .. module:: scanpy.get
@@ -14,10 +14,11 @@ useful formats.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    get.obs_df
    get.var_df
+   get.pca
    get.rank_genes_groups_df
    get.aggregate
 

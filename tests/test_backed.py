@@ -8,7 +8,6 @@ from anndata import read_h5ad
 import scanpy as sc
 
 
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 @pytest.mark.parametrize(
     ("name", "func", "msg"),
     [
@@ -70,7 +69,7 @@ def test_backed_error(backed_adata, name, func, msg):
 def test_log1p_backed_errors(backed_adata):
     with pytest.raises(
         NotImplementedError,
-        match="log1p is not implemented for backed AnnData with backed mode not r+",
+        match=r"log1p is not implemented for backed AnnData with backed mode not r\+",
     ):
         sc.pp.log1p(backed_adata, chunked=True)
     backed_adata.file.close()

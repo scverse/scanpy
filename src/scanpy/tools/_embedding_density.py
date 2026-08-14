@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import logging as logg
-from .._compat import old_positionals
-from .._utils import sanitize_anndata
+from .._utils import _get_basis_key, sanitize_anndata
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -33,7 +32,6 @@ def _calc_density(x: np.ndarray, y: np.ndarray):
     return scaled_z
 
 
-@old_positionals("groupby", "key_added", "components")
 def embedding_density(  # noqa: PLR0912
     adata: AnnData,
     basis: str = "umap",
@@ -58,6 +56,8 @@ def embedding_density(  # noqa: PLR0912
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
+
+    .. array-support:: tl.embedding_density
 
     Parameters
     ----------
@@ -88,8 +88,7 @@ def embedding_density(  # noqa: PLR0912
     Examples
     --------
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         import scanpy as sc
         adata = sc.datasets.pbmc68k_reduced()
@@ -99,8 +98,7 @@ def embedding_density(  # noqa: PLR0912
             adata, basis='umap', key='umap_density_phase', group='G1'
         )
 
-    .. plot::
-        :context: close-figs
+    ..  exec-jupyter::
 
         sc.pl.embedding_density(
             adata, basis='umap', key='umap_density_phase', group='S'
@@ -125,10 +123,10 @@ def embedding_density(  # noqa: PLR0912
     if basis == "fa":
         basis = "draw_graph_fa"
 
-    if f"X_{basis}" not in adata.obsm_keys():
+    if (basis_key := _get_basis_key(adata, basis)) is None:
         msg = (
             "Cannot find the embedded representation "
-            f"`adata.obsm['X_{basis}']`. Compute the embedding first."
+            f"`adata.obsm[{basis!r} | 'X_{basis}']`. Compute the embedding first."
         )
         raise ValueError(msg)
 
@@ -170,8 +168,8 @@ def embedding_density(  # noqa: PLR0912
 
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
-            embed_x = adata.obsm[f"X_{basis}"][cat_mask, components[0]]
-            embed_y = adata.obsm[f"X_{basis}"][cat_mask, components[1]]
+            embed_x = adata.obsm[basis_key][cat_mask, components[0]]
+            embed_y = adata.obsm[basis_key][cat_mask, components[1]]
 
             dens_embed = _calc_density(embed_x, embed_y)
             density_values[cat_mask] = dens_embed
@@ -179,8 +177,8 @@ def embedding_density(  # noqa: PLR0912
         adata.obs[density_covariate] = density_values
     else:  # if groupby is None
         # Calculate the density over the whole embedding without subsetting
-        embed_x = adata.obsm[f"X_{basis}"][:, components[0]]
-        embed_y = adata.obsm[f"X_{basis}"][:, components[1]]
+        embed_x = adata.obsm[basis_key][:, components[0]]
+        embed_y = adata.obsm[basis_key][:, components[1]]
 
         adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
 

@@ -2,17 +2,19 @@ from __future__ import annotations
 
 from functools import partial
 from itertools import chain, repeat
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import pytest
-from anndata import AnnData
+from anndata import AnnData, ImplicitModificationWarning
 from scipy import sparse
 
 import scanpy as sc
-from scanpy.datasets._utils import filter_oldformatwarning
-from testing.scanpy._helpers import anndata_v0_8_constructor_compat
 from testing.scanpy._helpers.data import pbmc68k_reduced
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 # Override so warning gets caught
@@ -40,7 +42,7 @@ def adata() -> AnnData:
     `adata.X` is `np.ones((2, 2))`.
     `adata.layers['double']` is sparse `np.ones((2,2)) * 2` to also test sparse matrices.
     """
-    return anndata_v0_8_constructor_compat(
+    return AnnData(
         X=np.ones((2, 2), dtype=int),
         obs=pd.DataFrame(
             {"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]
@@ -62,7 +64,7 @@ def test_obs_df(adata: AnnData):
     adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2), dtype="float64")  # noqa: TID251
 
     # make raw with different genes than adata
-    adata.raw = anndata_v0_8_constructor_compat(
+    adata.raw = AnnData(
         X=np.array([[1, 2, 3], [2, 4, 6]], dtype=np.float64),
         var=pd.DataFrame(
             {"gene_symbols": ["raw1", "raw2", "raw3"]},
@@ -175,16 +177,12 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-@filter_oldformatwarning
-def test_backed_vs_memory():
+def test_backed_vs_memory(tmp_path: Path) -> None:
     """Compares backed vs. memory."""
-    from pathlib import Path
-
-    # get location test h5ad file in datasets
-    HERE = Path(sc.__file__).parent
-    adata_file = HERE / "datasets/10x_pbmc68k_reduced.h5ad"
+    adata = pbmc68k_reduced()
+    adata_file = tmp_path / "adata.h5ad"
+    adata.write_h5ad(adata_file)
     adata_backed = sc.read(adata_file, backed="r")
-    adata = sc.read_h5ad(adata_file)
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
@@ -207,12 +205,15 @@ def test_column_content():
     adata = pbmc68k_reduced()
 
     # test that columns content is correct for obs_df
-    query = ["CST3", "NKG7", "GNLY", "louvain", "n_counts", "n_genes"]
+    cols = ["louvain", "n_counts", "n_genes"]
+    query = [*cols, "CST3", "NKG7", "GNLY"]
     df = sc.get.obs_df(adata, query)
     for col in query:
         assert col in df
         np.testing.assert_array_equal(query, df.columns)
-        np.testing.assert_array_equal(df[col].values, adata.obs_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values, adata.obs[col] if col in cols else adata[:, col].X.ravel()
+        )
 
     # test that columns content is correct for var_df
     cell_ids = list(adata.obs.sample(5).index)
@@ -220,7 +221,10 @@ def test_column_content():
     df = sc.get.var_df(adata, query)
     np.testing.assert_array_equal(query, df.columns)
     for col in query:
-        np.testing.assert_array_equal(df[col].values, adata.var_vector(col))
+        np.testing.assert_array_equal(
+            df[col].values,
+            adata[col, :].X.ravel() if col in cell_ids else adata.var[col],
+        )
 
 
 def test_var_df(adata: AnnData):
@@ -314,22 +318,23 @@ def test_just_mapping_keys(dim, transform, func):
 
 
 def test_non_unique_cols_value_error():
-    M, N = 5, 3
+    n_cells, n_genes = 5, 3
     adata = sc.AnnData(
-        X=np.zeros((M, N)),
+        X=np.zeros((n_cells, n_genes)),
         obs=pd.DataFrame(
-            np.arange(M * 2).reshape((M, 2)),
+            np.arange(n_cells * 2).reshape((n_cells, 2)),
             columns=["repeated_col", "repeated_col"],
-            index=[f"cell_{i}" for i in range(M)],
+            index=[f"cell_{i}" for i in range(n_cells)],
         ),
         var=pd.DataFrame(
-            index=[f"gene_{i}" for i in range(N)],
+            index=[f"gene_{i}" for i in range(n_genes)],
         ),
     )
     with pytest.raises(ValueError, match=r"adata\.obs contains duplicated columns"):
         sc.get.obs_df(adata, ["repeated_col"])
 
 
+@pytest.mark.filterwarnings("ignore:Variable names are not unique:UserWarning")
 def test_non_unique_var_index_value_error():
     adata = sc.AnnData(
         X=np.ones((2, 3)),
@@ -341,16 +346,16 @@ def test_non_unique_var_index_value_error():
 
 
 def test_keys_in_both_obs_and_var_index_value_error():
-    M, N = 5, 3
+    n_cells, n_genes = 5, 3
     adata = sc.AnnData(
-        X=np.zeros((M, N)),
+        X=np.zeros((n_cells, n_genes)),
         obs=pd.DataFrame(
-            np.arange(M),
+            np.arange(n_cells),
             columns=["var_id"],
-            index=[f"cell_{i}" for i in range(M)],
+            index=[f"cell_{i}" for i in range(n_cells)],
         ),
         var=pd.DataFrame(
-            index=["var_id"] + [f"gene_{i}" for i in range(N - 1)],
+            index=["var_id"] + [f"gene_{i}" for i in range(n_genes - 1)],
         ),
     )
     with pytest.raises(KeyError, match="var_id"):
@@ -358,16 +363,16 @@ def test_keys_in_both_obs_and_var_index_value_error():
 
 
 @TRANSPOSE_PARAMS
-def test_repeated_cols(dim, transform, func):
-    adata = transform(
-        sc.AnnData(
+def test_repeated_cols(dim, transform, func) -> None:
+    with pytest.warns(ImplicitModificationWarning):
+        adata = AnnData(
             np.ones((5, 10)),
             obs=pd.DataFrame(
                 np.ones((5, 2)), columns=["a_column_name", "a_column_name"]
             ),
             var=pd.DataFrame(index=[f"gene-{i}" for i in range(10)]),
         )
-    )
+    adata = transform(adata)
     # (?s) is inline re.DOTALL
     with pytest.raises(ValueError, match=rf"(?s)^adata\.{dim}.*a_column_name.*$"):
         func(adata, ["gene_5"])
@@ -379,15 +384,15 @@ def test_repeated_index_vals(dim, transform, func):
     # https://github.com/scverse/scanpy/pull/1583#issuecomment-770641710
     alt_dim = ["obs", "var"][dim == "obs"]
 
-    adata = transform(
-        sc.AnnData(
+    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
+        adata = AnnData(
             np.ones((5, 10)),
             var=pd.DataFrame(
                 index=["repeated_id"] * 2 + [f"gene-{i}" for i in range(8)]
             ),
-        ),
-        expect_duplicates=True,
-    )
+        )
+
+    adata = transform(adata, expect_duplicates=True)
 
     with pytest.raises(
         ValueError,
@@ -409,7 +414,7 @@ def shared_key_adata(request):
     kind = request.param
     adata = sc.AnnData(
         np.arange(50).reshape((5, 10)),
-        obs=pd.DataFrame(np.zeros((5, 1)), columns=["var_id"]),
+        obs=dict(var_id=np.zeros(5)),
         var=pd.DataFrame(index=["var_id"] + [f"gene_{i}" for i in range(1, 10)]),
     )
     if kind == "obs_df":
@@ -474,7 +479,8 @@ def test_shared_key_errors(shared_key_adata):
 ##############################
 
 
-def test_rank_genes_groups_df():
+@pytest.fixture(scope="module")
+def adata_rgg_module() -> AnnData:
     a = np.zeros((20, 3))
     a[:10, 0] = 5
     adata = AnnData(
@@ -486,29 +492,75 @@ def test_rank_genes_groups_df():
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
     sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon", pts=True)
-    dedf = sc.get.rank_genes_groups_df(adata, "a")
+    return adata
+
+
+@pytest.fixture
+def adata_rgg(adata_rgg_module: AnnData) -> AnnData:
+    return adata_rgg_module.copy()
+
+
+def test_rank_genes_groups_df(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
     assert dedf["pvals"].value_counts()[1.0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_max=0.1).shape[0] == 2
-    assert sc.get.rank_genes_groups_df(adata, "a", log2fc_min=0.1).shape[0] == 1
-    assert sc.get.rank_genes_groups_df(adata, "a", pval_cutoff=0.9).shape[0] == 1
-    del adata.uns["rank_genes_groups"]
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_max=0.1).shape[0] == 2
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", log2fc_min=0.1).shape[0] == 1
+    assert sc.get.rank_genes_groups_df(adata_rgg, "a", pval_cutoff=0.9).shape[0] == 1
+
+
+def test_rank_genes_groups_df_error(adata_rgg: AnnData):
+    with pytest.raises(KeyError):
+        sc.get.rank_genes_groups_df(adata_rgg, "missing")
+
+
+def test_rank_genes_groups_df_explicit_key(adata_rgg: AnnData):
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, "a")
+    del adata_rgg.uns["rank_genes_groups"]
     sc.tl.rank_genes_groups(
-        adata,
+        adata_rgg,
         groupby="celltype",
         method="wilcoxon",
         key_added="different_key",
         pts=True,
     )
-    with pytest.raises(KeyError):
-        sc.get.rank_genes_groups_df(adata, "a")
-    dedf2 = sc.get.rank_genes_groups_df(adata, "a", key="different_key")
+    dedf2 = sc.get.rank_genes_groups_df(adata_rgg, "a", key="different_key")
+
     pd.testing.assert_frame_equal(dedf, dedf2)
     assert "pct_nz_group" in dedf2.columns
     assert "pct_nz_reference" in dedf2.columns
 
-    # get all groups
-    dedf3 = sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
-    assert "a" in dedf3["group"].unique()
-    assert "b" in dedf3["group"].unique()
-    adata.var_names.name = "pr1388"
-    sc.get.rank_genes_groups_df(adata, group=None, key="different_key")
+
+@pytest.mark.parametrize("index_name", [None, "pr1388"])
+def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | None):
+    if index_name is not None:
+        adata_rgg.var_names.name = index_name
+    dedf = sc.get.rank_genes_groups_df(adata_rgg, group=None)
+    assert "a" in dedf["group"].unique()
+    assert "b" in dedf["group"].unique()
+
+
+##################
+# _get_arr tests #
+##################
+
+
+@pytest.mark.parametrize(
+    ("kw", "cls", "msg"),
+    [
+        pytest.param(
+            dict(layer="a", obsm="b"),
+            ValueError,
+            r"Only one of `layer`, or `obsm` can be specified.",
+            id="layer_and_obsm",
+        ),
+        pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
+    ],
+)
+def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None:
+    adata = AnnData(
+        np.zeros((10, 10)),
+        layers={"a": np.zeros((10, 10))},
+        obsm={"b": np.zeros((10, 5))},
+    )
+    with pytest.raises(cls, match=msg):
+        sc.get._get_arr(adata, **kw)

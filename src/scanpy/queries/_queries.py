@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from functools import singledispatch
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 from anndata import AnnData
 
@@ -67,8 +70,8 @@ def simple_query(
     try:
         from pybiomart import Server
     except ImportError as e:
-        msg = "This method requires the `pybiomart` module to be installed."
-        raise ImportError(msg) from e
+        e.add_note("Please install `pybiomart` and try again.")
+        raise
     server = Server(host, use_cache=use_cache)
     dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[f"{org}_gene_ensembl"]
     res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
@@ -215,7 +218,7 @@ def enrich(
     container: Iterable[str] | Mapping[str, Iterable[str]],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     """Get enrichment for DE results.
 
@@ -278,8 +281,8 @@ def enrich(
     try:
         from gprofiler import GProfiler
     except ImportError as e:
-        msg = "This method requires the `gprofiler-official` module to be installed."
-        raise ImportError(msg) from e
+        e.add_note("Please install `gprofiler-official` and try again.")
+        raise
     gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
     gprofiler_kwargs = dict(gprofiler_kwargs)
     for k in ["organism"]:
@@ -303,7 +306,7 @@ def _enrich_anndata(
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,

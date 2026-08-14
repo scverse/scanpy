@@ -2,25 +2,40 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from collections.abc import Collection
+from importlib.util import find_spec
+from typing import TYPE_CHECKING, TypedDict, overload
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from numpy.typing import NDArray
-from packaging.version import Version
 
 from .._compat import CSBase
+from .._settings import Preset
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
-    from typing import Any, Literal
+    import sys
+    from collections.abc import Iterable
+    from typing import Any, Literal, Unpack
 
-    from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-    from anndata._core.views import ArrayView
+    from anndata.acc import Idx2D
 
     from .._compat import DaskArray
 
+    if sys.version_info >= (3, 13):
+        from typing import TypeIs
+    else:
+        from typing_extensions import TypeIs
+
+
+if TYPE_CHECKING or find_spec("anndata.acc"):
+    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
+else:
+    AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
+    LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
+    MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -28,7 +43,7 @@ if TYPE_CHECKING:
 
 
 # TODO: implement diffxpy method, make singledispatch
-def rank_genes_groups_df(  # noqa: PLR0912
+def rank_genes_groups_df(
     adata: AnnData,
     group: str | Iterable[str] | None,
     *,
@@ -80,10 +95,7 @@ def rank_genes_groups_df(  # noqa: PLR0912
 
     d = [pd.DataFrame(adata.uns[key][c])[group] for c in colnames]
     d = pd.concat(d, axis=1, names=[None, "group"], keys=colnames)
-    if Version(pd.__version__) >= Version("2.1"):
-        d = d.stack(level=1, future_stack=True).reset_index()
-    else:
-        d = d.stack(level=1).reset_index()
+    d = d.stack(level=1, future_stack=True).reset_index()  # noqa: PD013
     d["group"] = pd.Categorical(d["group"], categories=group)
     d = d.sort_values(["group", "level_0"]).drop(columns="level_0")
 
@@ -100,7 +112,8 @@ def rank_genes_groups_df(  # noqa: PLR0912
     for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
         if pts in adata.uns[key]:
             pts_df = (
-                adata.uns[key][pts][group]
+                adata
+                .uns[key][pts][group]
                 .rename_axis(index="names")
                 .reset_index()
                 .melt(id_vars="names", var_name="group", value_name=name)
@@ -109,7 +122,7 @@ def rank_genes_groups_df(  # noqa: PLR0912
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop(columns="group", inplace=True)
+        del d["group"]
 
     return d.reset_index(drop=True)
 
@@ -193,7 +206,8 @@ def _check_indices(
 
 
 def _get_array_values(
-    X,
+    x,
+    /,
     dim_names: pd.Index,
     keys: Iterable[str],
     *,
@@ -210,10 +224,10 @@ def _get_array_values(
         rev_idxer = mutable_idxer.copy()
         mutable_idxer[axis] = idx[idx_order]
         rev_idxer[axis] = np.argsort(idx_order)
-        matrix = X[tuple(mutable_idxer)][tuple(rev_idxer)]
+        matrix = x[tuple(mutable_idxer)][tuple(rev_idxer)]
     else:
         mutable_idxer[axis] = idx
-        matrix = X[tuple(mutable_idxer)]
+        matrix = x[tuple(mutable_idxer)]
 
     if isinstance(matrix, CSBase):
         matrix = matrix.toarray()
@@ -261,8 +275,8 @@ def obs_df(
     >>> plotdf = sc.get.obs_df(
     ...     pbmc, keys=["CD8B", "n_genes"], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     ... )
-    >>> plotdf.columns
-    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='object')
+    >>> plotdf.columns.astype("string")
+    Index(['CD8B', 'n_genes', 'X_umap-0', 'X_umap-1'], dtype='string')
     >>> plotdf.plot.scatter("X_umap-0", "X_umap-1", c="CD8B")  # doctest: +SKIP
     <Axes: xlabel='X_umap-0', ylabel='X_umap-1'>
 
@@ -301,7 +315,7 @@ def obs_df(
     # add var values
     if len(var_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_obs_rep(adata, layer=layer, use_raw=use_raw),
+            _get_arr(adata, layer=layer, use_raw=use_raw),
             var.index,
             var_idx_keys,
             axis=1,
@@ -371,7 +385,7 @@ def var_df(
 
     if len(obs_idx_keys) > 0:
         matrix = _get_array_values(
-            _get_obs_rep(adata, layer=layer),
+            _get_arr(adata, layer=layer),
             adata.obs_names,
             obs_idx_keys,
             axis=0,
@@ -402,43 +416,158 @@ def var_df(
     return df
 
 
-def _get_obs_rep(
+def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
+    """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
+
+    The principal components (not the genes) become the variables,
+    so per-component quantities like the variance ratio become `.var` columns.
+    Useful for feeding into functions that expect an axis to rank over,
+    e.g. :func:`~scanpy.pl.ranking`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
+    key_added
+        `.obsm`, `.varm`, and `.uns` key used when running PCA.
+
+    Returns
+    -------
+    An :class:`~anndata.AnnData` with:
+
+    `.X`
+        the PCA embedding (`adata.obsm[key_added]`), observations × components.
+    `.obs`
+        `adata.obs`, unchanged.
+    `.var`
+        one row per principal component (named `PC1`, `PC2`, …),
+        with `variance` and `variance_ratio` columns
+        taken from `adata.uns[key_added]`.
+
+    Examples
+    --------
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.get.pca(adata)
+
+    """
+    info = adata.uns[key_added]
+    n_comps = adata.obsm[key_added].shape[1]
+    var = pd.DataFrame(
+        {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
+        index=[f"PC{i + 1}" for i in range(n_comps)],
+    )
+    return AnnData(X=adata.obsm[key_added], obs=adata.obs, var=var)
+
+
+def _collection_of[T](
+    thing: object, typ: type[T] | tuple[type[T], ...]
+) -> TypeIs[Collection[T]]:
+    return (
+        isinstance(thing, Collection)
+        and not isinstance(thing, typ)
+        and len(thing) > 0
+        and all(isinstance(e, typ) for e in thing)
+    )
+
+
+class _Rep(TypedDict, total=False):
+    use_raw: bool
+    layer: str | None
+    obsm: str | None
+    obsp: str | None
+    varm: str | None
+    varp: str | None
+
+
+type ArrAcc = GraphAcc | LayerAcc | MultiAcc
+
+
+@overload
+def _get_arr(
     adata: AnnData,
+    acc: Collection[ArrAcc | str],
     *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
-) -> (
-    np.ndarray | CSBase | pd.DataFrame | ArrayView | BaseCompressedSparseDataset | None
-):
-    """Choose array aligned with obs annotation."""
+    dim: Literal["obs", "var"] | None = None,
+) -> list[Any]: ...
+@overload
+def _get_arr(
+    adata: AnnData,
+    acc: ArrAcc | str | None = None,
+    *,
+    dim: Literal["obs", "var"] | None = None,
+    **choices: Unpack[_Rep],
+) -> Any: ...
+def _get_arr(  # noqa: PLR0911, PLR0912
+    adata: AnnData,
+    acc: ArrAcc | str | Collection[ArrAcc | str] | None = None,
+    *,
+    dim: Literal["obs", "var"] | None = None,
+    **choices: Unpack[_Rep],
+) -> Any:
+    """Get a 2D array aligned with `dim`, via an `anndata.acc` accessor or old-style choices."""
+    if _collection_of(acc, (GraphAcc, LayerAcc, MultiAcc, str)):
+        return [_get_arr(adata, a, dim=dim, **choices) for a in acc]
+
+    if acc is not None:
+        if isinstance(acc, str):
+            from anndata.acc import A
+
+            acc = A.resolve(acc, vec=False)
+
+        if any(v not in (None, False) for v in choices.values()):
+            msg = "`acc` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
+            raise TypeError(msg)
+        if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc):
+            msg = (
+                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`), "
+                "`GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`), or "
+                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
+            )
+            raise TypeError(msg)
+        if isinstance(acc, MultiAcc | GraphAcc) and dim is not None and dim != acc.dim:
+            msg = f"`dim` ({dim!r}) does not match `acc`'s ({acc.dim!r})"
+            raise ValueError(msg)
+        data = adata[acc]
+        if isinstance(acc, LayerAcc) and dim == "var":
+            data = data.T
+        return data
+
     # https://github.com/scverse/scanpy/issues/1546
-    if not isinstance(use_raw, bool):
+    if not isinstance(use_raw := choices.get("use_raw", False), bool):
         msg = f"use_raw expected to be bool, was {type(use_raw)}."
         raise TypeError(msg)
+    assert choices.keys() <= {"layer", "use_raw", "obsm", "obsp", "varm", "varp"}
+    if dim is None:
+        dim = "var" if (choices.get("varm") or choices.get("varp")) else "obs"
 
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made in {0, 1}
-    if choices_made == 0:
-        return adata.X
-    if is_layer:
-        return adata.layers[layer]
-    if use_raw:
-        return adata.raw.X
-    if is_obsm:
-        return adata.obsm[obsm]
-    if is_obsp:
-        return adata.obsp[obsp]
-    msg = (
-        "That was unexpected. Please report this bug at:\n\n\t"
-        "https://github.com/scverse/scanpy/issues"
-    )
-    raise AssertionError(msg)
+    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+        case []:
+            return adata.X.T if dim == "var" else adata.X
+        # can’t use {"key": v} as match expression, since they allow additional entries
+        case [("layer", layer)]:
+            return adata.layers[layer].T if dim == "var" else adata.layers[layer]
+        case [("use_raw", True)]:
+            return adata.raw.X
+        case [(("obsm" | "obsp") as k, v)]:
+            if dim == "var":
+                msg = f"`{k}` cannot be used when `dim` is `var`"
+                raise ValueError(msg)
+            return adata.obsm[v] if k == "obsm" else adata.obsp[v]
+        case [(("varm" | "varp") as k, v)]:
+            if dim == "obs":
+                msg = f"`{k}` cannot be used when `dim` is `obs`"
+                raise ValueError(msg)
+            return adata.varm[v] if k == "varm" else adata.varp[v]
+        case picked:
+            valid = [f"`{k}`" for k, _ in picked]
+            valid[-1] = f"or {valid[-1]}"
+            msg = f"Only one of {', '.join(valid)} can be specified."
+            raise ValueError(msg)
 
 
 def _set_obs_rep(
@@ -475,12 +604,9 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
-M = TypeVar("M", bound=NDArray[np.bool_] | NDArray[np.floating] | pd.Series | None)
-
-
-def _check_mask(
+def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
-    mask: str | M,
+    mask: str | AdRef[Idx2D | int, AnnData] | M,
     dim: Literal["obs", "var"],
     *,
     allow_probabilities: bool = False,
@@ -503,20 +629,23 @@ def _check_mask(
         return mask
     desc = "mask/probabilities" if allow_probabilities else "mask"
 
-    if isinstance(mask, str):
+    if isinstance(mask, str | AdRef):
+        mask = _resolve_ref(mask)
         if not isinstance(data, AnnData):
-            msg = f"Cannot refer to {desc} with string without providing anndata object as argument"
+            msg = f"Cannot use refererence for {desc} without providing anndata object as argument"
             raise ValueError(msg)
-
-        annot: pd.DataFrame = getattr(data, dim)
-        if mask not in annot.columns:
-            msg = (
-                f"Did not find `adata.{dim}[{mask!r}]`. "
-                f"Either add the {desc} first to `adata.{dim}`"
-                f"or consider using the {desc} argument with an array."
-            )
-            raise ValueError(msg)
-        mask_array = annot[mask].to_numpy()
+        try:
+            mask_array = np.asarray(_get_vec(data, mask, dim=dim))
+        except KeyError:
+            if isinstance(mask, AdRef):
+                msg = (
+                    f"Did not find `{mask}` in `adata`. "
+                    f"Either add the {desc} first to `adata.{dim}`"
+                    f"or consider using the {desc} argument with an array."
+                )
+            else:
+                msg = f"Did not find `adata.{dim}[{mask!r}]`. "
+            raise ValueError(msg) from None
     else:
         if len(mask) != data.shape[0 if dim == "obs" else 1]:
             msg = f"The shape of the {desc} do not match the data."
@@ -534,3 +663,88 @@ def _check_mask(
         raise ValueError(msg)
 
     return mask_array
+
+
+@overload
+def _resolve_ref[R: AdRef](ref: R | str) -> R | str: ...
+@overload
+def _resolve_ref[R: AdRef](ref: Collection[R | str]) -> list[R] | list[str]: ...
+def _resolve_ref(
+    ref: AdRef | str | Collection[AdRef | str],
+) -> AdRef | str | list[AdRef] | list[str]:
+    """Resolve a plain string `ref` into an `AdRef` under the `v2` preset, else leave it as-is."""
+    if not isinstance(ref, AdRef | str):
+        refs = [_resolve_ref(r) for r in ref]
+        if sum(isinstance(r, str) for r in refs) not in {0, len(refs)}:
+            msg = "All elements of `refs` must be either `AdRef` or strings, not a mix, if `preset` is not `ScanpyV2Preview`."
+            raise TypeError(msg)
+        return refs
+
+    from scanpy import settings
+
+    if isinstance(ref, AdRef) or settings.preset is not Preset.ScanpyV2Preview:
+        return ref
+    from anndata.acc import A
+
+    return A.resolve(ref, vec=True)
+
+
+def _ref_dim(
+    ref: AdRef | str, *, dim: Literal["obs", "var"] | None
+) -> Literal["obs", "var"]:
+    """Derive the dim a single `ref` refers to, validating it against `dim` if given."""
+    ref = _resolve_ref(ref)
+    if isinstance(ref, str):
+        return dim or "obs"
+    ref_dim = next(iter(ref.dims))
+    if dim is not None and dim != ref_dim:
+        msg = f"Dimension of `{ref}` ({ref_dim}) does not match `{dim}`."
+        raise ValueError(msg)
+    return ref_dim
+
+
+def _refs_dim(
+    refs: Collection[AdRef | str], *, dim: Literal["obs", "var"] | None = None
+) -> Literal["obs", "var"]:
+    """Derive the single dim a collection of `refs` all refer to."""
+    dims = {_ref_dim(r, dim=dim) for r in refs}
+    if len(dims) != 1:
+        msg = (
+            f"All refs must refer to the same single axis (`obs` or `var`), got {dims}"
+        )
+        raise ValueError(msg)
+    return next(iter(dims))
+
+
+def _fetch_vec(adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"]) -> Any:
+    """Retrieve the 1D array a single, already dim-resolved `ref` points to."""
+    ref = _resolve_ref(ref)
+    if isinstance(ref, str):
+        return getattr(adata, dim)[ref]
+    return adata[ref]
+
+
+@overload
+def _get_vec(
+    adata: AnnData,
+    ref: Collection[AdRef] | Collection[str],
+    *,
+    dim: Literal["obs", "var"] | None = None,
+) -> list[Any]: ...
+@overload
+def _get_vec(
+    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
+) -> Any: ...
+def _get_vec(
+    adata: AnnData,
+    ref: AdRef | str | Collection[AdRef] | Collection[str],
+    *,
+    dim: Literal["obs", "var"] | None = None,
+) -> Any:
+    """Get the 1D array a `ref`erence points to, resolving plain strings first."""
+    if _collection_of(ref, (AdRef, str)):
+        dim = _refs_dim(ref, dim=dim)
+        return [_fetch_vec(adata, r, dim=dim) for r in ref]
+
+    dim = _ref_dim(ref, dim=dim)
+    return _fetch_vec(adata, ref, dim=dim)

@@ -7,6 +7,7 @@ import pytest
 import scanpy as sc
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered in log2:RuntimeWarning")
 @pytest.mark.parametrize("method", ["t-test", "logreg"])
 def test_rank_genes_groups_with_renamed_categories(method):
     adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)

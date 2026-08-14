@@ -6,19 +6,19 @@ import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from functools import partial, update_wrapper
+from importlib.metadata import version
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from typing import TYPE_CHECKING, overload
 
 import anndata.logging
-
-from ._compat import deprecated
+from scverse_misc import Deprecation, deprecated
 
 if TYPE_CHECKING:
     from typing import IO
 
     from session_info2 import SessionInfo
 
-    from ._settings import ScanpyConfig
+    from ._settings import Settings
 
 
 # This is currently the only documented API
@@ -73,24 +73,28 @@ class _RootLogger(logging.RootLogger):
     def debug(self, msg, *, time=None, deep=None, extra=None) -> datetime:
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
+    def __reduce__(self) -> tuple[object, ...]:
+        return _RootLogger, (self.level,)
 
-def _set_log_file(settings: ScanpyConfig):
+
+def _set_log_file(settings: Settings) -> None:
     file = settings.logfile
     name = settings.logpath
     root = settings._root_logger
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+        handler.close()
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
     h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
     root.addHandler(h)
 
 
-def _set_log_level(settings: ScanpyConfig, level: int):
+def _set_log_level(settings: Settings) -> None:
     root = settings._root_logger
-    root.setLevel(level)
+    root.setLevel(settings.verbosity.level)
     for h in list(root.handlers):
-        h.setLevel(level)
+        h.setLevel(settings.verbosity.level)
 
 
 class _LogFormatter(logging.Formatter):
@@ -156,14 +160,9 @@ def print_header(*, file: IO[str] | None = None):
     return sinfo
 
 
-@deprecated("Use `print_header` instead")
+@deprecated(Deprecation("1.11.0", "Use :func:`print_header` instead."))
 def print_versions() -> SessionInfo:
-    """Alias for `print_header`.
-
-    .. deprecated:: 1.11.0
-
-       Use :func:`print_header` instead.
-    """
+    """Alias for `print_header`."""
     return print_header()
 
 
@@ -178,12 +177,10 @@ def print_version_and_date(*, file=None):
         Optional path for output.
 
     """
-    from . import __version__
-
     if file is None:
         file = sys.stdout
     print(
-        f"Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running Scanpy {version('scanpy')}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=file,
     )
 

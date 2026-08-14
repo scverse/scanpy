@@ -14,6 +14,7 @@ from .. import logging as logg
 from .._settings import settings
 from .._utils._doctests import doctest_internet
 from ..readwrite import _download
+from ._datasets import _doctest_skipif_old_anndata
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -47,20 +48,14 @@ def download_experiment(accession: str):
     sniff_url(accession)
 
     base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
-    design_url = f"{base_url}/download?accessKey=&fileType="
-    mtx_url = f"{base_url}/download/zip?accessKey=&fileType="
+    design_url = f"{base_url}/download?accessKey=&fileType=experiment-design"
+    mtx_url = f"{base_url}/download/zip?accessKey=&fileType=quantification-raw"
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    _download(
-        design_url + "experiment-design",
-        experiment_dir / "experimental_design.tsv",
-    )
-    _download(
-        mtx_url + "quantification-raw",
-        experiment_dir / "expression_archive.zip",
-    )
+    _download(design_url, experiment_dir / "experimental_design.tsv")
+    _download(mtx_url, experiment_dir / "expression_archive.zip")
 
 
 def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> CSRBase:
@@ -113,6 +108,7 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
@@ -121,7 +117,7 @@ def ebi_expression_atlas(
 
     The atlas_ can be browsed online to find the ``accession`` you want.
     Downloaded datasets are saved in the directory specified by
-    :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
+    :attr:`~scanpy.settings.datasetdir`.
 
     .. _atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 
@@ -146,6 +142,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
+        layers: None (.X)
 
     """
     experiment_dir = settings.datasetdir / accession

@@ -1,10 +1,10 @@
 # Scanpy outfiles
 /data/
 /write/
+/figures/
 
 # Docs
 /docs/_build/
-/docs/generated/
 /docs/data/
 /docs/api/generated
 /docs/external/generated
@@ -19,7 +19,7 @@
 
 # Environment management
 /Pipfile
-/Pipfile.lock
+/*.lock
 /requirements*.lock
 
 # always-ignore extensions
@@ -27,7 +27,7 @@
 
 # Python build files
 __pycache__/
-/ci/scanpy-min-deps.txt
+/ci/scanpy-low-vers.txt
 /dist/
 /*-env/
 /env-*/

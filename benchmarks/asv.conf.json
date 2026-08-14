@@ -43,7 +43,7 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
-    "environment_type": "conda",
+    "environment_type": "rattler",
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
@@ -58,7 +58,7 @@
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
-    "conda_channels": ["conda-forge", "defaults"],
+    "conda_channels": ["conda-forge"],
 
     // The matrix of dependencies to test.  Each key is the name of a
     // package (in PyPI) and the values are version numbers.  An empty
@@ -71,21 +71,23 @@
     // followed by the pip installed packages).
     //
     "matrix": {
+        // https://github.com/airspeed-velocity/asv_runner/issues/52
+        "pip+asv_runner": ["0.2.1"],
         "numpy": [""],
-        // "scipy": ["1.2", ""],
         "scipy": [""],
         "h5py": [""],
         "natsort": [""],
         "pandas": [""],
         "memory_profiler": [""],
-        "zarr": ["2.18.4"],
+        "zarr": [""],
         "pytest": [""],
-        "scanpy": [""],
-        "python-igraph": [""],
+        "pip+igraph": [""], // https://github.com/airspeed-velocity/asv/issues/1554
         // "psutil": [""]
         "pooch": [""],
-        "scikit-image": [""],
-        // "scikit-misc": [""],
+        "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
+        "scikit-misc": [""],
+        "dask": [""],
+        "pip+illico": [""],
     },
 
     // Combinations of libraries/python versions can be excluded/included

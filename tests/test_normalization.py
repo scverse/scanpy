@@ -11,7 +11,6 @@ from fast_array_utils import conv, stats
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase
 from scanpy.preprocessing._normalization import _compute_nnz_median
 from testing.scanpy._helpers import (
     _check_check_values_warnings,
@@ -53,14 +52,9 @@ def test_normalize_matrix_types(
         target_sum=target_sum,
         exclude_highly_expressed=exclude_highly_expressed,
     )
-    X = adata_casted.X
-    if "dask" in array_type.__name__:
-        X = X.compute()
-    if isinstance(X, CSBase):
-        X = X.todense()
-    if isinstance(adata.X, CSBase):
-        adata.X = adata.X.todense()
-    np.testing.assert_allclose(X, adata.X, rtol=1e-5, atol=1e-5)
+    adata.X = conv.to_dense(adata.X)
+    adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
+    np.testing.assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -77,13 +71,14 @@ def test_normalize_total(array_type, dtype):
     assert np.allclose(to_ndarray(stats.sum(adata.X[:, 1:3], axis=1)), [1.0, 1.0, 1.0])
 
 
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize("dtype", ["float32", "int64"])
 def test_normalize_total_rep(array_type, dtype):
-    # Test that layer kwarg works
-    X = array_type(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
-    check_rep_mutation(sc.pp.normalize_total, X, fields=["layer"])
-    check_rep_results(sc.pp.normalize_total, X, fields=["layer"])
+    """Test that layer/obsm kwargs work."""
+    x = array_type(sparse.random(100, 50, format="csr", density=0.2, dtype=dtype))
+    check_rep_mutation(sc.pp.normalize_total, x)
+    check_rep_results(sc.pp.normalize_total, x)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
@@ -92,7 +87,8 @@ def test_normalize_total_view(array_type, dtype):
     adata = AnnData(array_type(X_total).astype(dtype))
     v = adata[:, :]
 
-    sc.pp.normalize_total(v)
+    with pytest.warns(UserWarning, match=r"Received a view"):
+        sc.pp.normalize_total(v)
     sc.pp.normalize_total(adata)
 
     assert not v.is_view
@@ -120,12 +116,16 @@ def test_normalize_pearson_residuals_warnings(pbmc3k_parametrized):
 @pytest.mark.parametrize(
     ("params", "match"),
     [
-        pytest.param(dict(theta=0), r"Pearson residuals require theta > 0", id="theta"),
         pytest.param(
-            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta"
+            dict(theta=0), r"Pearson residuals require theta > 0", id="theta=0"
         ),
         pytest.param(
-            dict(clip=-1), r"Pearson residuals require `clip>=0` or `clip=None`."
+            dict(theta=-1), r"Pearson residuals require theta > 0", id="theta=-1"
+        ),
+        pytest.param(
+            dict(clip=-1),
+            r"Pearson residuals require `clip>=0` or `clip=None`.",
+            id="clip=-1",
         ),
     ],
 )
@@ -146,25 +146,25 @@ def test_normalize_pearson_residuals_errors(pbmc3k_parametrized, params, match):
 @pytest.mark.parametrize("clip", [None, 1, np.inf])
 def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
     # toy data
-    X = np.array([[3, 6], [2, 4], [1, 0]])
-    ns = np.sum(X, axis=1)
-    ps = np.sum(X, axis=0) / np.sum(X)
+    x = np.array([[3, 6], [2, 4], [1, 0]])
+    ns = np.sum(x, axis=1)
+    ps = np.sum(x, axis=0) / np.sum(x)
     mu = np.outer(ns, ps)
 
     # compute reference residuals
     if np.isinf(theta):
         # Poisson case
-        residuals_reference = (X - mu) / np.sqrt(mu)
+        residuals_reference = (x - mu) / np.sqrt(mu)
     else:
         # NB case
-        residuals_reference = (X - mu) / np.sqrt(mu + mu**2 / theta)
+        residuals_reference = (x - mu) / np.sqrt(mu + mu**2 / theta)
 
     # compute output to test
-    adata = AnnData(sparsity_func(X).astype(dtype))
+    adata = AnnData(sparsity_func(x).astype(dtype))
     output = sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=False
     )
-    output_X = output["X"]
+    output_x = output["X"]
     sc.experimental.pp.normalize_pearson_residuals(
         adata, theta=theta, clip=clip, inplace=True
     )
@@ -175,20 +175,20 @@ def test_normalize_pearson_residuals_values(sparsity_func, dtype, theta, clip):
         "pearson_residuals_normalization"
     ].keys()
     # test against inplace
-    np.testing.assert_array_equal(adata.X, output_X)
+    np.testing.assert_array_equal(adata.X, output_x)
 
     if clip is None:
         # default clipping: compare to sqrt(n) threshold
         clipping_threshold = np.sqrt(adata.shape[0]).astype(np.float32)
-        assert np.max(output_X) <= clipping_threshold
-        assert np.min(output_X) >= -clipping_threshold
+        assert np.max(output_x) <= clipping_threshold
+        assert np.min(output_x) >= -clipping_threshold
     elif np.isinf(clip):
         # no clipping: compare to raw residuals
-        assert np.allclose(output_X, residuals_reference)
+        assert np.allclose(output_x, residuals_reference)
     else:
         # custom clipping: compare to custom threshold
-        assert np.max(output_X) <= clip
-        assert np.min(output_X) >= -clip
+        assert np.max(output_x) <= clip
+        assert np.min(output_x) >= -clip
 
 
 def _check_pearson_pca_fields(ad, n_cells, n_comps):
@@ -215,9 +215,7 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     [
         pytest.param(False, dict(), "n_genes", id="no_hvg"),
         pytest.param(True, dict(), "n_hvgs", id="hvg_default"),
-        pytest.param(
-            True, dict(use_highly_variable=False), "n_genes", id="hvg_opt_out"
-        ),
+        pytest.param(True, dict(mask_var=None), "n_genes", id="hvg_opt_out"),
         pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
     ],
 )
@@ -277,7 +275,9 @@ def test_normalize_pearson_residuals_pca(
 
 @pytest.mark.parametrize("n_hvgs", [100, 200])
 @pytest.mark.parametrize("n_comps", [30, 50])
-def test_normalize_pearson_residuals_recipe(pbmc3k_parametrized_small, n_hvgs, n_comps):
+def test_normalize_pearson_residuals_recipe(
+    pbmc3k_parametrized_small: Callable[[], AnnData], n_hvgs: int, n_comps: int
+) -> None:
     adata = pbmc3k_parametrized_small()
     n_cells, n_genes = adata.shape
 
@@ -329,3 +329,24 @@ def test_compute_nnz_median(array_type, dtype):
     data = np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=dtype)
     data = array_type(data)
     np.testing.assert_allclose(_compute_nnz_median(data), 5)
+
+
+@pytest.mark.filterwarnings("ignore:Some cells have zero counts:UserWarning")
+@pytest.mark.parametrize("array_type", ARRAY_TYPES)
+def test_normalize_total_target_sum_ignores_zero_count_cells(array_type):
+    """`target_sum=None` should use the median of the non-zero counts.
+
+    The numba path used to take a plain median instead, so a matrix with
+    empty cells normalised differently depending on whether it was sparse.
+    See https://github.com/scverse/scanpy/issues/4251
+    """
+    x = np.array([[0.0, 0.0], [4.0, 6.0], [8.0, 12.0], [12.0, 18.0]])
+    expected = AnnData(x.copy())
+    sc.pp.normalize_total(expected)
+
+    adata = AnnData(array_type(x.copy()))
+    sc.pp.normalize_total(adata)
+
+    # median of the non-zero row sums (10, 20, 30) is 20, not 15
+    np.testing.assert_allclose(stats.sum(adata.X, axis=1)[1:], 20.0)
+    assert_equal(conv.to_dense(adata.X), conv.to_dense(expected.X))

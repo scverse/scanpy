@@ -6,6 +6,7 @@ This is kept seperate from the helpers file because it relies on pytest.
 from __future__ import annotations
 
 import warnings
+from collections import defaultdict
 from contextlib import chdir
 from typing import TYPE_CHECKING
 
@@ -53,10 +54,13 @@ def _doctest_env(cache: pytest.Cache, tmp_path: Path) -> Generator[None, None, N
         else:
             showwarning_orig(message, category, filename, lineno, file, line)
 
+    # ignore plt.show() warning only in doctests.
+    warnings.filterwarnings("ignore", r".*[aA]gg.*cannot.*show", UserWarning)
     # make errors visible and the rest ignored
+    action_map = defaultdict(lambda: "ignore", error="default")
     warnings.filters = [
-        ("default", *rest) for action, *rest in warnings.filters if action == "error"
-    ] + [("ignore", None, Warning, None, 0)]
+        (action_map[action], *rest) for action, *rest in warnings.filters
+    ]
 
     warnings.showwarning = showwarning
     with chdir(tmp_path):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,9 @@ from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any
+    from typing import Any, Literal
+
+    from scanpy._compat import CSBase
 
 pytestmark = [needs.skimage]
 
@@ -41,6 +43,7 @@ def paul500() -> AnnData:
 )
 @pytest.mark.parametrize("use_approx_neighbors", [True, False, None])
 def test_scrublet(
+    *,
     mk_data: Callable[[], AnnData],
     expected_idx: list[int],
     expected_scores: list[float],
@@ -87,6 +90,59 @@ def test_scrublet_batched():
     pd.testing.assert_frame_equal(adata.obs[merged.obs.columns], merged.obs)
 
 
+def _n_genes(adata: AnnData) -> np.ndarray:
+    """`n_genes` as Scrublet’s internal preprocessing computes it."""
+    adata = adata.copy()
+    sc.pp.filter_genes(adata, min_cells=3)
+    sc.pp.filter_cells(adata, min_genes=3)
+    return adata.obs["n_genes"].to_numpy()
+
+
+@pytest.mark.filterwarnings("ignore:Observation names are not unique:UserWarning")
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
+def test_scrublet_duplicate_obs_names(batch_key: str | None):
+    """Duplicate `obs_names` must not break mapping results back (see #4098)."""
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    # the batches now consist of different cells sharing the same names
+    obs_names = [*adata.obs_names[:100]] * 2
+    adata.obs_names = obs_names
+    assert not adata.obs_names.is_unique
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key)
+
+    assert_array_equal(adata.obs_names, obs_names)  # left untouched
+    assert adata.obs["doublet_score"].notna().all()
+    assert adata.obs["predicted_doublet"].dtype == bool
+    if batch_key is not None:
+        # The batched path rebuilds all of `.obs`, so check that the rows line up.
+        # Use `n_genes`: unlike the scores, it’s reproducible across runs.
+        expected = np.concatenate([
+            _n_genes(adata[adata.obs["batch"] == batch]) for batch in "ab"
+        ])
+        assert_array_equal(adata.obs["n_genes"], expected)
+
+
+@pytest.mark.parametrize("batch_key", [None, "batch"], ids=["unbatched", "batched"])
+def test_scrublet_filtered_cells(batch_key: str | None):
+    """Cells dropped by Scrublet’s internal filtering get missing scores, not an error."""
+    adata = pbmc200()
+    adata.obs["batch"] = 100 * ["a"] + 100 * ["b"]
+    # make these too sparse to survive `pp.filter_cells(min_genes=3)`, one per batch
+    dropped = [5, 105]
+    x = cast("CSBase", adata.X).tolil()
+    x[dropped, :] = 0
+    adata.X = x.tocsr()
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key=batch_key)
+
+    assert_array_equal(
+        np.flatnonzero(adata.obs["doublet_score"].isna()),
+        dropped,
+    )
+    assert adata.obs["predicted_doublet"].isna().sum() == len(dropped)
+
+
 def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
     adata_pp = adata.copy()
     sc.pp.filter_genes(adata_pp, min_cells=3)
@@ -101,7 +157,7 @@ def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
 def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
     """Simulate doublets based on the randomly selected parents used previously."""
     n_sim = parents.shape[0]
-    I = sparse.coo_matrix(
+    entries = sparse.coo_matrix(
         (
             np.ones(2 * n_sim),
             (np.repeat(np.arange(n_sim), 2), parents.flat),
@@ -109,28 +165,29 @@ def _create_sim_from_parents(adata: AnnData, parents: np.ndarray) -> AnnData:
         (n_sim, adata.n_obs),
     )
     # maintain data type, just like the real scrublet function.
-    X = (I @ adata.layers["raw"]).astype(adata.X.dtype)
+    x = (entries @ adata.layers["raw"]).astype(adata.X.dtype)
     return AnnData(
-        X,
+        x,
         var=pd.DataFrame(index=adata.var_names),
-        obs={"total_counts": np.ravel(X.sum(axis=1))},
+        obs={"total_counts": np.ravel(x.sum(axis=1))},
         obsm={"doublet_parents": parents.copy()},
     )
 
 
-def test_scrublet_data(cache: pytest.Cache):
+@pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
+def test_scrublet_data(rng_arg: Literal["rng", "random_state"]) -> None:
     """Test that Scrublet processing is arranged correctly.
 
     Check that simulations run on raw data.
     """
-    random_state = 1234
+    seed = 1234
 
     # Run Scrublet and let the main function run simulations
     adata_scrublet_auto_sim = sc.pp.scrublet(
         pbmc200(),
         use_approx_neighbors=False,
         copy=True,
-        random_state=random_state,
+        **{rng_arg: seed},
     )
 
     # Now make our own simulated data so we can check the result from function
@@ -153,7 +210,7 @@ def test_scrublet_data(cache: pytest.Cache):
         adata_sim=adata_sim,
         use_approx_neighbors=False,
         copy=True,
-        random_state=random_state,
+        **{rng_arg: seed},
     )
 
     # Require that the doublet scores are the same whether simulation is via
@@ -227,3 +284,13 @@ def test_scrublet_simulate_doublets():
         adata_sim.obsm["doublet_parents"],
         np.array([[13, 132], [106, 43], [152, 3], [160, 103]]),
     )
+
+
+def test_scrublet_dtypes() -> None:
+    """Test that Scrublet does not change dtypes of existing data.obs cols."""
+    adata = pbmc200()
+    adata.obs["batch"] = pd.Categorical(100 * ["a"] + 100 * ["b"])
+
+    sc.pp.scrublet(adata, use_approx_neighbors=False, batch_key="batch")
+
+    assert adata.obs["batch"].dtype == "category"

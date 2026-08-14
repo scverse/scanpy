@@ -7,24 +7,12 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "n_components",
-    "knn",
-    "alpha",
-    "use_adjacency_matrix",
-    "distances_key",
-    "n_eigs",
-    "impute_data",
-    "n_steps",
-    "copy",
-)
 @doctest_needs("palantir")
 def palantir(
     adata: AnnData,
@@ -122,7 +110,7 @@ def palantir(
 
     >>> sc.pp.filter_cells(adata, min_counts=1000)
     >>> sc.pp.filter_genes(adata, min_counts=10)
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
     >>> sc.pp.log1p(adata)
 
     **Data preprocessing**
@@ -254,16 +242,6 @@ def palantir(
     return adata if copy else None
 
 
-@old_positionals(
-    "ms_data",
-    "terminal_states",
-    "knn",
-    "num_waypoints",
-    "n_jobs",
-    "scale_components",
-    "use_early_cell_as_start",
-    "max_iterations",
-)
 def palantir_results(
     adata: AnnData,
     early_cell: str,
@@ -333,9 +311,9 @@ def palantir_results(
     return pr_res
 
 
-def _check_import():
+def _check_import() -> None:
     try:
         import palantir  # noqa: F401
     except ImportError as e:
-        msg = "\nplease install palantir:\n\tpip install palantir"
-        raise ImportError(msg) from e
+        e.add_note("Please install `palantir` and try again.")
+        raise

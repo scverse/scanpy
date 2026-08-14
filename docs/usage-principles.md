@@ -2,16 +2,15 @@
 
 Import Scanpy as:
 
-```
+```python
 import scanpy as sc
 ```
 
 ## Workflow
 
-The typical workflow consists of subsequent calls of data analysis tools
-in `sc.tl`, e.g.:
+The typical workflow consists of subsequent calls of data analysis tools in `sc.tl`, e.g.:
 
-```
+```python
 sc.tl.umap(adata, **tool_params)  # embed a neighborhood graph of the data using UMAP
 ```
 
@@ -20,7 +19,7 @@ Each of these calls adds annotation to an expression matrix *X*,
 which stores *n_obs* observations (cells) of *n_vars* variables (genes).
 For each tool, there typically is an associated plotting function in `sc.pl`:
 
-```
+```python
 sc.pl.umap(adata, **plotting_params)
 ```
 
@@ -41,24 +40,21 @@ Scanpy is based on {mod}`anndata`, which provides the {class}`~anndata.AnnData` 
 :width: 300px
 ```
 
-At the most basic level, an {class}`~anndata.AnnData` object `adata` stores
-a data matrix `adata.X`, annotation of observations
-`adata.obs` and variables `adata.var` as `pd.DataFrame` and unstructured
-annotation `adata.uns` as `dict`. Names of observations and
-variables can be accessed via `adata.obs_names` and `adata.var_names`,
-respectively. {class}`~anndata.AnnData` objects can be sliced like
-dataframes, for example, `adata_subset = adata[:, list_of_gene_names]`.
+At the most basic level, an {class}`~anndata.AnnData` object `adata` stores a data matrix `adata.X`, annotation of observations
+`adata.obs` and variables `adata.var` as `pd.DataFrame` and unstructured annotation `adata.uns` as `dict`.
+Names of observations and variables can be accessed via `adata.obs_names` and `adata.var_names`, respectively.
+{class}`~anndata.AnnData` objects can be sliced like dataframes, for example, `adata_subset = adata[:, list_of_gene_names]`.
 For more, see this [blog post].
 
 To read a data file to an {class}`~anndata.AnnData` object, call:
 
-```
-adata = sc.read(filename)
+```python
+adata = sc.read_h5ad(filename).  # or sc.read_zarr(filename)
 ```
 
 to initialize an {class}`~anndata.AnnData` object. Possibly add further annotation using, e.g., `pd.read_csv`:
 
-```
+```python
 import pandas as pd
 anno = pd.read_csv(filename_sample_annotation)
 adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type pandas.Categorical
@@ -69,7 +65,7 @@ adata.obs['time'] = anno['time']                # numerical annotation of type f
 
 To write, use:
 
-```
+```python
 adata.write_h5ad(filename)
 adata.write_zarr(filename)
 adata.write_csvs(filename)

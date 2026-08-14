@@ -12,13 +12,16 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata.tests.helpers import assert_adata_equal
+from packaging.version import Version
 
 import scanpy as sc
+from scanpy._compat import pkg_version
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Self
 
     from anndata import AnnData
 
@@ -42,16 +45,9 @@ def test_burczynski06():
 
 @pytest.mark.internet
 @needs.openpyxl
+@pytest.mark.filterwarnings("ignore:Unknown extension is not supported:UserWarning")
 def test_moignard15():
-    with warnings.catch_warnings():
-        # https://foss.heptapod.net/openpyxl/openpyxl/-/issues/2051
-        warnings.filterwarnings(
-            "ignore",
-            r"datetime\.datetime\.utcnow\(\) is deprecated",
-            category=DeprecationWarning,
-            module="openpyxl",
-        )
-        adata = sc.datasets.moignard15()
+    adata = sc.datasets.moignard15()
     assert adata.shape == (3934, 42)
 
 
@@ -100,8 +96,9 @@ def test_krumsiek11():
 
 
 def test_blobs():
-    n_obs = np.random.randint(15, 30)
-    n_var = np.random.randint(500, 600)
+    rng = np.random.default_rng()
+    n_obs = rng.integers(15, 30)
+    n_var = rng.integers(500, 600)
     adata = sc.datasets.blobs(n_variables=n_var, n_observations=n_obs)
     assert adata.shape == (n_obs, n_var)
 
@@ -117,7 +114,7 @@ def test_pbmc68k_reduced():
         sc.datasets.pbmc68k_reduced()
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets():
     """Tests that reading/ downloading works and is does not have global effects."""
@@ -128,7 +125,7 @@ def test_visium_datasets():
     assert_adata_equal(hheart, hheart_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_dir_change(tmp_path: Path):
     """Test that changing the dataset dir doesn't break reading."""
@@ -140,7 +137,7 @@ def test_visium_datasets_dir_change(tmp_path: Path):
     assert_adata_equal(mbrain, mbrain_again)
 
 
-@pytest.mark.filterwarnings("ignore:Use `squidpy.*` instead:FutureWarning")
+@pytest.mark.filterwarnings("ignore:.*Use .*`squidpy.*` instead:FutureWarning")
 @pytest.mark.internet
 def test_visium_datasets_images():
     """Test that image download works and is does not have global effects."""
@@ -164,11 +161,88 @@ def test_visium_datasets_images():
     assert output == f"{image_path}: image/tiff"
 
 
-def test_download_failure():
+def test_download_failure() -> None:
     from urllib.error import HTTPError
 
-    with pytest.raises(HTTPError):
+    with pytest.raises(HTTPError) as excinfo:
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
+    excinfo.value.close()
+
+
+def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The destination must not appear until the download finished (#4097)."""
+    import io
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    content = b"0123456789" * 5_000
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest_present_during_download: list[bool] = []
+
+    class FakeResponse:
+        def __init__(self) -> None:
+            self._buf = io.BytesIO(content)
+
+        def info(self) -> dict[str, str]:
+            return {"content-length": str(len(content))}
+
+        def read(self, size: int) -> bytes:
+            chunk = self._buf.read(size)
+            if chunk:
+                dest_present_during_download.append(dest.exists())
+            return chunk
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FakeResponse())
+
+    _download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == content
+    assert len(dest_present_during_download) > 1
+    assert not any(dest_present_during_download)
+    assert list(dest.parent.iterdir()) == [dest]
+
+
+def test_download_failure_keeps_existing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed download must not delete an already-present destination (#4097)."""
+    import urllib.request
+
+    from scanpy.readwrite import _download
+
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest.write_bytes(b"complete")
+
+    class FailingResponse:
+        def info(self) -> dict[str, str]:
+            return {"content-length": "100"}
+
+        def read(self, size: int) -> bytes:
+            msg = "connection reset"
+            raise OSError(msg)
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FailingResponse())
+
+    with pytest.raises(OSError, match="connection reset"):
+        _download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == b"complete"
+    assert list(dest.parent.iterdir()) == [dest]
 
 
 # These are tested via doctest
@@ -179,6 +253,7 @@ DS_DYNAMIC = frozenset({"ebi_expression_atlas"})
 DS_MARKS = defaultdict(list, moignard15=[needs.openpyxl])
 
 
+@pytest.mark.skipif(pkg_version("anndata") < Version("0.13.dev0"), reason="old anndata")
 @pytest.mark.parametrize(
     "ds_name",
     [
@@ -201,9 +276,13 @@ def test_doc_shape(ds_name):
     cached_fn = getattr(data, ds_name, dataset_fn)
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore",
-            r"(Observation|Variable) names are not unique",
-            category=UserWarning,
+            "ignore", r"(Observation|Variable) names are not unique", UserWarning
         )
+        warnings.filterwarnings(  # openpyxl complaining about MS Excel stuff
+            "ignore", r"Unknown extension is not supported", UserWarning
+        )
+        warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
         dataset = cached_fn()
-    assert repr(dataset) in docstring
+
+    repr_ = repr(dataset)
+    assert repr_ in docstring

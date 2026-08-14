@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
-
-F = TypeVar("F", bound=Callable)
 
 
-def doctest_needs(mod: str) -> Callable[[F], F]:
+def doctest_needs[F: Callable](mod: str) -> Callable[[F], F]:
     """Mark function with doctest dependency."""
 
     def decorator(func: F) -> F:
@@ -16,20 +13,26 @@ def doctest_needs(mod: str) -> Callable[[F], F]:
     return decorator
 
 
-def doctest_skip(reason: str) -> Callable[[F], F]:
-    """Mark function so doctest is skipped."""
+def doctest_skipif[F: Callable](
+    condition: bool = True,  # noqa: FBT001, FBT002
+    /,
+    *,
+    reason: str,
+) -> Callable[[F], F]:
+    """Mark function so doctest is skipped (if `condition` is met)."""
     if not reason:
         msg = "reason must not be empty"
         raise ValueError(msg)
 
     def decorator(func: F) -> F:
-        func._doctest_skip_reason = reason
+        if condition:
+            func._doctest_skip_reason = reason
         return func
 
     return decorator
 
 
-def doctest_internet(func: F) -> F:
+def doctest_internet[F: Callable](func: F) -> F:
     """Mark function so doctest gets the internet mark."""
     func._doctest_internet = True
     return func

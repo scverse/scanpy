@@ -1,4 +1,4 @@
-## Queries
+# Queries
 
 ```{eval-rst}
 .. module:: scanpy.queries
@@ -13,7 +13,7 @@ This module provides useful queries for annotation and enrichment.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    queries.biomart_annotations
    queries.gene_coordinates

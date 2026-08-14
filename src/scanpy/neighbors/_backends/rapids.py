@@ -80,17 +80,17 @@ class RapidsKNNTransformer(TransformerChecksMixin, TransformerMixin, BaseEstimat
         else:
             return True
 
-    def fit(self, X: ArrayLike, y: Any = None) -> RapidsKNNTransformer:
+    def fit(self, x: ArrayLike, /, y: Any = None) -> RapidsKNNTransformer:
         """Index data for knn search."""
-        X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
-        self.nn.fit(X_contiguous)
+        x_contiguous = np.ascontiguousarray(x, dtype=np.float32)
+        self.nn.fit(x_contiguous)
         return self
 
-    def transform(self, X: ArrayLike) -> CSRBase:
+    def transform(self, x: ArrayLike, /) -> CSRBase:
         """Perform knn search on the index."""
-        self._transform_checks(X)
-        X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
-        return self.nn.kneighbors_graph(X_contiguous, mode="distance")
+        self._transform_checks(x)
+        x_contiguous = np.ascontiguousarray(x, dtype=np.float32)
+        return self.nn.kneighbors_graph(x_contiguous, mode="distance")
 
     def _more_tags(self) -> dict[str, Any]:
         """See :label:`sklearn:estimator_tags`."""

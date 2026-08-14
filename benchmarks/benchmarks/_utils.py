@@ -16,19 +16,17 @@ from scanpy._compat import CSRBase
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from collections.abc import Set as AbstractSet
-    from typing import Literal, Protocol, TypeVar
+    from typing import Literal, Protocol
 
     from anndata import AnnData
 
     from scanpy._compat import CSCBase
 
-    C = TypeVar("C", bound=Callable)
-
     class ParamSkipper(Protocol):
-        def __call__(self, **skipped: AbstractSet) -> Callable[[C], C]: ...
+        def __call__[C: Callable](self, **skipped: AbstractSet) -> Callable[[C], C]: ...
 
     Dataset = Literal["pbmc68k_reduced", "pbmc3k", "bmmc", "lung93k"]
-    KeyX = Literal[None, "off-axis"]
+    KeyX = Literal["off-axis"] | None
     KeyCount = Literal["counts", "counts-off-axis"]
 
 
@@ -105,10 +103,12 @@ def bmmc(n_obs: int = 400) -> AnnData:
 
 @cache
 def _lung93k() -> AnnData:
-    path = pooch.retrieve(
-        url="https://figshare.com/ndownloader/files/45788454",
-        known_hash="md5:4f28af5ff226052443e7e0b39f3f9212",
+    registry = pooch.create(
+        path=pooch.os_cache("pooch"),
+        base_url="doi:10.6084/m9.figshare.25664775.v1/",
     )
+    registry.load_registry_from_doi()
+    path = registry.fetch("adata.raw_compressed.h5ad")
     adata = sc.read_h5ad(path)
     assert isinstance(adata.X, CSRBase)
     adata.layers["counts"] = adata.X.astype(np.int32, copy=True)
@@ -198,7 +198,7 @@ def param_skipper(
 
     """
 
-    def skip(**skipped: AbstractSet) -> Callable[[C], C]:
+    def skip[C: Callable](**skipped: AbstractSet) -> Callable[[C], C]:
         skipped_combs = [
             tuple(record.values())
             for record in (

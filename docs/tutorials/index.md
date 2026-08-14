@@ -23,7 +23,7 @@ plotting/index
 ## Trajectory inference
 
 ```{seealso}
-For more powerful tools for analysing single cell dynamics, check out the Scverse ecosystem packages:
+For more powerful tools for analysing single cell dynamics, check out the scverse ecosystem packages:
 
 * [CellRank](https://cellrank.readthedocs.io)
 * [Dynamo](https://dynamo-release.readthedocs.io/en/latest/)
@@ -34,9 +34,6 @@ For more powerful tools for analysing single cell dynamics, check out the Scvers
 
 trajectories/index
 ```
-
-## Spatial data
-
 
 ## Experimental
 
@@ -53,7 +50,7 @@ A number of older tutorials can be found at:
 * The [`scanpy_usage`](https://github.com/scverse/scanpy_usage) repository
 
 ```{seealso}
-Scanpy used to have tutorials for its (now deprecated) spatial data functionality.x
+Scanpy used to have tutorials for its (now deprecated) spatial data functionality.
 For up-to-date tutorials on working with spatial data, see:
 
 * SquidPy {doc}`squidpy:notebooks/tutorials/index`

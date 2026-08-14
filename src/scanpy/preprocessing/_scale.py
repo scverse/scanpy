@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import singledispatch
 from operator import truediv
 from typing import TYPE_CHECKING
@@ -8,36 +7,31 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, njit, old_positionals
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
+from .._settings import Default, settings
 from .._utils import (
-    _check_array_function_arguments,
     axis_mul_or_truediv,
+    check_array_function_arguments,
     dematrix,
     raise_not_implemented_error_if_backed_type,
-    renamed_arg,
     view_to_actual,
 )
-from ..get import _check_mask, _get_obs_rep, _set_obs_rep
-
-# install dask if available
-try:
-    import dask.array as da
-except ImportError:
-    da = None
+from ..get import _check_mask, _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
-    from typing import TypeVar
-
     from numpy.typing import ArrayLike, NDArray
 
-    _A = TypeVar("_A", bound=CSBase | np.ndarray | DaskArray)
+type _Array = CSBase | np.ndarray | DaskArray
 
 
 @singledispatch
-def clip(x: ArrayLike | _A, *, max_value: float, zero_center: bool = True) -> _A:
+def clip[A: _Array](
+    x: ArrayLike | A, *, max_value: float, zero_center: bool = True
+) -> A:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -56,43 +50,51 @@ def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
 
 @njit
 def clip_array(
-    X: NDArray[np.floating], *, max_value: float, zero_center: bool
+    x: NDArray[np.floating], /, *, max_value: float, zero_center: bool
 ) -> NDArray[np.floating]:
     a_min, a_max = -max_value, max_value
-    if X.ndim > 1:
-        for r, c in numba.pndindex(X.shape):
-            if X[r, c] > a_max:
-                X[r, c] = a_max
-            elif X[r, c] < a_min and zero_center:
-                X[r, c] = a_min
+    if x.ndim > 1:
+        for r, c in numba.pndindex(x.shape):
+            if x[r, c] > a_max:
+                x[r, c] = a_max
+            elif x[r, c] < a_min and zero_center:
+                x[r, c] = a_min
     else:
-        for i in numba.prange(X.size):
-            if X[i] > a_max:
-                X[i] = a_max
-            elif X[i] < a_min and zero_center:
-                X[i] = a_min
-    return X
+        for i in numba.prange(x.size):
+            if x[i] > a_max:
+                x[i] = a_max
+            elif x[i] < a_min and zero_center:
+                x[i] = a_min
+    return x
 
 
-@renamed_arg("X", "data", pos_0=True)
-@old_positionals("zero_center", "max_value", "copy", "layer", "obsm")
 @singledispatch
-def scale(
-    data: AnnData | _A,
+def scale[A: _Array](
+    data: AnnData | A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
-) -> AnnData | _A | None:
+    mask_obs: NDArray[np.bool] | str | None = None,
+) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
+
+    .. note::
+        Variance and standard deviation are computed with Bessel's correction,
+        i.e. dividing by ``n_obs - 1`` (``ddof=1``), matching :func:`numpy.std`
+        with ``ddof=1`` rather than the numpy default of ``ddof=0`` (population
+        variance). The difference is negligible for large `n_obs` but can matter for
+        small datasets, where it also slightly shifts where `max_value`
+        clipping takes effect.
 
     .. note::
         Variables (genes) that do not display any variation (are constant across
         all observations) are retained and (for zero_center==True) set to 0
         during this operation. In the future, they might be set to NaNs.
+
+    .. array-support:: pp.scale
 
     Parameters
     ----------
@@ -102,6 +104,7 @@ def scale(
     zero_center
         If `False`, omit zero-centering variables, which allows to handle sparse
         input efficiently.
+        The default will be removed in scanpy 2.0.
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy
@@ -131,7 +134,7 @@ def scale(
         Variances per gene before scaling.
 
     """
-    _check_array_function_arguments(layer=layer, obsm=obsm)
+    check_array_function_arguments(layer=layer, obsm=obsm)
     if layer is not None:
         msg = f"`layer` argument inappropriate for value of type {type(data)}"
         raise ValueError(msg)
@@ -146,18 +149,18 @@ def scale(
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-def scale_array(
-    x: _A,
+def scale_array[A: _Array](
+    x: A,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
-    mask_obs: NDArray[np.bool_] | None = None,
+    mask_obs: NDArray[np.bool] | None = None,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
@@ -165,6 +168,11 @@ def scale_array(
     if copy:
         x = x.copy()
 
+    if isinstance(zero_center, Default):
+        if settings.preset.scale.zero_center is None:
+            msg = "scale() missing 1 required keyword argument: 'zero_center'"
+            raise TypeError(msg)
+        zero_center = settings.preset.scale.zero_center
     if not zero_center and max_value is not None:
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
@@ -180,7 +188,7 @@ def scale_array(
     mask_obs = (
         # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
         # This is faster than the maskless `axis_mul_or_truediv` path.
-        np.ones(x.shape[0], dtype=np.bool_)
+        np.ones(x.shape[0], dtype=np.bool)
         if isinstance(x, CSRBase) and mask_obs is None and not zero_center
         else _check_mask(x, mask_obs, "obs")
     )
@@ -201,7 +209,7 @@ def scale_array(
             isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
         ):
             msg = "zero-centering a sparse array/matrix densifies it."
-            warnings.warn(msg, UserWarning, stacklevel=2)
+            warn(msg, UserWarning)
         x -= mean
         x = dematrix(x)
 
@@ -222,17 +230,17 @@ def scale_array(
         return x
 
 
-def scale_array_masked(
-    x: _A,
-    mask_obs: NDArray[np.bool_],
+def scale_array_masked[A: _Array](
+    x: A,
+    mask_obs: NDArray[np.bool],
     *,
     zero_center: bool = True,
     max_value: float | None = None,
     return_mean_std: bool = False,
 ) -> (
-    _A
+    A
     | tuple[
-        _A,
+        A,
         NDArray[np.float64] | DaskArray,
         NDArray[np.float64],
     ]
@@ -273,7 +281,7 @@ def scale_and_clip_csr(
     data: NDArray[np.floating],
     *,
     std: NDArray[np.floating],
-    mask_obs: NDArray[np.bool_],
+    mask_obs: NDArray[np.bool],
     max_value: float | None,
 ) -> None:
     for i in numba.prange(len(indptr) - 1):
@@ -289,12 +297,12 @@ def scale_and_clip_csr(
 def scale_anndata(
     adata: AnnData,
     *,
-    zero_center: bool = True,
+    zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool_] | str | None = None,
+    mask_obs: NDArray[np.bool] | str | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
     str_mean_std = ("mean", "std")
@@ -305,15 +313,15 @@ def scale_anndata(
             str_mean_std = ("mean with mask", "std with mask")
         mask_obs = _check_mask(adata, mask_obs, "obs")
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer, obsm=obsm)
-    raise_not_implemented_error_if_backed_type(X, "scale")
-    X, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
-        X,
+    x = _get_arr(adata, layer=layer, obsm=obsm)
+    raise_not_implemented_error_if_backed_type(x, "scale")
+    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
+        x,
         zero_center=zero_center,
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
         mask_obs=mask_obs,
     )
-    _set_obs_rep(adata, X, layer=layer, obsm=obsm)
+    _set_obs_rep(adata, x, layer=layer, obsm=obsm)
     return adata if copy else None

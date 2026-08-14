@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from ... import logging
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -16,7 +15,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals("branch", "k", "components", "num_waypoints")
 @doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
@@ -73,7 +71,7 @@ def wishbone(
     **Loading Data and Pre-processing**
 
     >>> adata = sc.datasets.pbmc3k()
-    >>> sc.pp.normalize_per_cell(adata)
+    >>> sc.pp.normalize_total(adata)
     >>> sc.pp.pca(adata)
     >>> sc.tl.tsne(adata=adata, n_pcs=5, perplexity=30)
     >>> sc.pp.neighbors(adata, n_pcs=15, n_neighbors=10)
@@ -103,8 +101,8 @@ def wishbone(
     try:
         from wishbone.core import wishbone as c_wishbone
     except ImportError as e:
-        msg = "\nplease install wishbone:\n\n\thttps://github.com/dpeerlab/wishbone"
-        raise ImportError(msg) from e
+        e.add_note("Please install `wishbone` and try again.")
+        raise
 
     # Start cell index
     s = np.where(adata.obs_names == start_cell)[0]

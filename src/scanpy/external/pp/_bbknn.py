@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -12,7 +11,6 @@ if TYPE_CHECKING:
     from sklearn.metrics import DistanceMetric
 
 
-@old_positionals("batch_key", "use_rep", "approx", "use_annoy", "metric", "copy")
 @doctest_needs("bbknn")
 def bbknn(  # noqa: PLR0913
     adata: AnnData,
@@ -133,8 +131,8 @@ def bbknn(  # noqa: PLR0913
     try:
         from bbknn import bbknn
     except ImportError as e:
-        msg = "Please install bbknn: `pip install bbknn`."
-        raise ImportError(msg) from e
+        e.add_note("Please install `bbknn` and try again.")
+        raise
     return bbknn(
         adata=adata,
         batch_key=batch_key,

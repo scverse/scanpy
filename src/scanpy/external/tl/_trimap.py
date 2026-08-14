@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import CSBase, old_positionals
+from ..._compat import CSBase
+from ..._keys import _existing_preset_keys
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -15,17 +16,6 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@old_positionals(
-    "n_inliers",
-    "n_outliers",
-    "n_random",
-    "metric",
-    "weight_adj",
-    "lr",
-    "n_iters",
-    "verbose",
-    "copy",
-)
 @doctest_needs("trimap")
 def trimap(  # noqa: PLR0913
     adata: AnnData,
@@ -103,27 +93,27 @@ def trimap(  # noqa: PLR0913
     try:
         from trimap import TRIMAP
     except ImportError as e:
-        msg = "\nplease install trimap: \n\n\tsudo pip install trimap"
-        raise ImportError(msg) from e
+        e.add_note("Please install `trimap` and try again.")
+        raise
     adata = adata.copy() if copy else adata
     start = logg.info("computing TriMap")
     adata = adata.copy() if copy else adata
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity > 0
 
-    if "X_pca" in adata.obsm:
-        n_dim_pca = adata.obsm["X_pca"].shape[1]
-        X = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
+    if keys := _existing_preset_keys(adata, "pca"):
+        n_dim_pca = adata.obsm[keys.obsm].shape[1]
+        x = adata.obsm[keys.obsm][:, : min(n_dim_pca, 100)]
     else:
-        X = adata.X
-        if isinstance(X, CSBase):
+        x = adata.X
+        if isinstance(x, CSBase):
             msg = (
                 "trimap currently does not support sparse matrices. Please"
                 "use a dense matrix or apply pca first."
             )
             raise ValueError(msg)
-        logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
-    X_trimap = TRIMAP(
+        logg.warning("`pca`/`X_pca` not found. Run `sc.pp.pca` first for speedup.")
+    x_trimap = TRIMAP(
         n_dims=n_components,
         n_inliers=n_inliers,
         n_outliers=n_outliers,
@@ -133,8 +123,8 @@ def trimap(  # noqa: PLR0913
         weight_adj=weight_adj,
         n_iters=n_iters,
         verbose=verbose,
-    ).fit_transform(X)
-    adata.obsm["X_trimap"] = X_trimap
+    ).fit_transform(x)
+    adata.obsm["X_trimap"] = x_trimap
     logg.info(
         "    finished",
         time=start,

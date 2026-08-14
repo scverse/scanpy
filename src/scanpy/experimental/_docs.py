@@ -60,8 +60,8 @@ chunksize
 doc_pca_chunk = """\
 n_comps
     Number of principal components to compute in the PCA step.
-random_state
-    Random seed for setting the initial states for the optimization in the PCA step.
+rng
+    Random number generator for setting the initial states for the optimization in the PCA step.
 kwargs_pca
     Dictionary of further keyword arguments passed on to `scanpy.pp.pca()`.
 """

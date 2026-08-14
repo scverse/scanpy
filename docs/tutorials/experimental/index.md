@@ -1,4 +1,4 @@
-## Experimental
+# Experimental
 
 ```{toctree}
 :maxdepth: 1

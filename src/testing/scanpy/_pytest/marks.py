@@ -1,31 +1,42 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from importlib.util import find_spec
+from functools import cache
+from importlib.metadata import distributions, requires, version
 from typing import TYPE_CHECKING
 
 import pytest
-from packaging.version import Version
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Set as AbstractSet
+
+    from packaging.utils import NormalizedName
 
 
-SKIP_EXTRA: dict[str, Callable[[], str | None]] = {}
+def _missing_scanpy2_deps() -> list[Requirement]:
+    return [
+        r
+        for r in map(Requirement, requires("scanpy") or ())
+        if (
+            r.marker
+            and r.marker.evaluate({"extra": "scanpy2"}, "requirement")
+            and not _req_satisfied(r)
+        )
+    ]
 
 
-def _skip_if_skmisc_too_old() -> str | None:
-    import numpy as np
-    import skmisc
-
-    if Version(skmisc.__version__) <= Version("0.3.1") and Version(
-        np.__version__
-    ) >= Version("2"):
-        return "scikit-misc≤0.3.1 requires numpy<2"
-    return None
+def _req_satisfied(req: Requirement) -> bool:
+    return (
+        canonicalize_name(req.name) in dist_names()
+        and version(req.name) in req.specifier
+    )
 
 
-SKIP_EXTRA["skmisc"] = _skip_if_skmisc_too_old
+@cache
+def dist_names() -> AbstractSet[NormalizedName]:
+    return dict.fromkeys(canonicalize_name(d.name) for d in distributions()).keys()
 
 
 class QuietMarkDecorator(pytest.MarkDecorator):
@@ -33,7 +44,7 @@ class QuietMarkDecorator(pytest.MarkDecorator):
         super().__init__(mark, _ispytest=True)
 
 
-class needs(QuietMarkDecorator, Enum):
+class needs(QuietMarkDecorator, Enum):  # noqa: N801
     """Pytest skip marker evaluated at module import.
 
     This allows us to see the amount of skipped tests at the start of a test run.
@@ -48,8 +59,12 @@ class needs(QuietMarkDecorator, Enum):
         """Distribution name for matching modules."""
         return name.replace("_", "-")
 
-    mod: str
+    req: Requirement
 
+    scanpy2 = "scanpy[scanpy2]"
+    anndata_acc = "anndata>=0.13.0rc3"
+
+    colour = "colour-science"
     dask = auto()
     dask_ml = auto()
     fa2 = auto()
@@ -62,7 +77,7 @@ class needs(QuietMarkDecorator, Enum):
     skimage = "scikit-image"
     skmisc = "scikit-misc"
     zarr = auto()
-    zappy = auto()
+    illico = auto()
     # external
     bbknn = auto()
     harmony = "harmonyTS"
@@ -72,24 +87,27 @@ class needs(QuietMarkDecorator, Enum):
     phate = auto()
     phenograph = auto()
     pypairs = auto()
-    samalg = "sam-algorithm"
+    samalg = "sc-sam"
     scanorama = auto()
     trimap = auto()
     wishbone = "wishbone-dev"
 
-    def __init__(self, mod: str) -> None:
-        self.mod = mod
+    def __init__(self, req: str) -> None:
+        self.req = Requirement(req)
         reason = self.skip_reason
         dec = pytest.mark.skipif(bool(reason), reason=reason or "")
         super().__init__(dec.mark)
 
     @property
     def skip_reason(self) -> str | None:
-        if find_spec(self._name_):
-            if skip_extra := SKIP_EXTRA.get(self._name_):
-                return skip_extra()
+        if self._name_ == "scanpy2":
+            if not (missing := _missing_scanpy2_deps()):
+                return None
+            return f"scanpy 2 deps missing: {', '.join(map(str, missing))}"
+
+        if (
+            canonicalize_name(self.req.name) in dist_names()
+            and version(self.req.name) in self.req.specifier
+        ):
             return None
-        reason = f"needs module `{self._name_}`"
-        if self._name_.casefold() != self.mod.casefold().replace("-", "_"):
-            reason = f"{reason} (`pip install {self.mod}`)"
-        return reason
+        return f"needs `{self.req}`"

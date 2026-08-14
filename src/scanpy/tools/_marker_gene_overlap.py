@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from anndata import AnnData
 
-    _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
+type _Method = Literal["overlap_count", "overlap_coef", "jaccard"]
 
 
 def _calc_overlap_count(markers1: dict, markers2: dict):
@@ -81,7 +81,7 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     adj_pval_threshold: float | None = None,
     key_added: str = "marker_gene_overlap",
     inplace: bool = False,
-):
+) -> pd.DataFrame:
     """Calculate an overlap score between data-derived marker genes and provided markers.
 
     Marker gene overlap scores can be quoted as overlap counts, overlap
@@ -139,7 +139,7 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pp.pca(adata, svd_solver="arpack")
     >>> sc.pp.neighbors(adata)
-    >>> sc.tl.leiden(adata)
+    >>> sc.tl.leiden(adata, flavor="igraph")
     >>> sc.tl.rank_genes_groups(adata, groupby="leiden")
     >>> marker_genes = {
     ...     "CD4 T cells": {"IL7R"},
@@ -255,16 +255,16 @@ def marker_gene_overlap(  # noqa: PLR0912, PLR0915
         marker_match = _calc_overlap_count(reference_markers, data_markers)
         if normalize == "reference":
             # Ensure rows sum to 1
-            ref_lengths = np.array(
-                [len(reference_markers[m_group]) for m_group in reference_markers]
-            )
+            ref_lengths = np.array([
+                len(reference_markers[m_group]) for m_group in reference_markers
+            ])
             marker_match = marker_match / ref_lengths[:, np.newaxis]
             marker_match = np.nan_to_num(marker_match)
         elif normalize == "data":
             # Ensure columns sum to 1
-            data_lengths = np.array(
-                [len(data_markers[dat_group]) for dat_group in data_markers]
-            )
+            data_lengths = np.array([
+                len(data_markers[dat_group]) for dat_group in data_markers
+            ])
             marker_match = marker_match / data_lengths
             marker_match = np.nan_to_num(marker_match)
     elif method == "overlap_coef":

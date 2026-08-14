@@ -1,4 +1,4 @@
-## Tools: `tl`
+# Tools: `tl`
 
 ```{eval-rst}
 .. module:: scanpy.tl
@@ -10,12 +10,12 @@
 
 Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
-### Embeddings
+## Embeddings
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    pp.pca
    tl.tsne
@@ -29,20 +29,19 @@ Compute densities on embeddings.
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.embedding_density
 ```
 
-### Clustering and trajectory inference
+## Clustering and trajectory inference
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.leiden
-   tl.louvain
    tl.dendrogram
    tl.dpt
    tl.paga
@@ -50,45 +49,45 @@ Compute densities on embeddings.
 
 (data-integration)=
 
-### Data integration
+## Data integration
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.ingest
 ```
 
-### Marker genes
+## Marker genes
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
    tl.marker_gene_overlap
 ```
 
-### Gene scores, Cell cycle
+## Gene scores, Cell cycle
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.score_genes
    tl.score_genes_cell_cycle
 ```
 
-### Simulations
+## Simulations
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
 
    tl.sim
 

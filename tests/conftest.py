@@ -2,20 +2,24 @@ from __future__ import annotations
 
 import shutil
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import anndata as ad
 import pytest
 
 # just import for the IMPORTED check
-import scanpy as _sc  # noqa: F401
+from scanpy._compat import pkg_version  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     import os
     from collections.abc import Generator
 
     from testing.scanpy._pytest.fixtures import *  # noqa: F403
+
+HERE = Path(__file__).parent
 
 # define this after importing scanpy but before running tests
 IMPORTED = frozenset(sys.modules.keys())
@@ -57,9 +61,19 @@ def _caplog_adapter(caplog: pytest.LogCaptureFixture) -> Generator[None, None, N
     sc.settings._root_logger.removeHandler(caplog.handler)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def imported_modules():
     return IMPORTED
+
+
+@pytest.fixture(scope="session")
+def project_dir() -> Path:
+    return HERE.parent
+
+
+@pytest.fixture(scope="session")
+def data_dir() -> Path:
+    return HERE / "_data"
 
 
 class CompareResult(TypedDict):
@@ -121,30 +135,19 @@ def check_same_image(cache: pytest.Cache):
 
 
 @pytest.fixture
-def image_comparer(check_same_image):
-    from matplotlib import pyplot as plt
-
-    def save_and_compare(root: Path, path_str: Path | os.PathLike, *, tol: int):
-        __tracebackhide__ = True
-
-        base_pth = root / path_str
-
-        if not base_pth.is_dir():
-            base_pth.mkdir()
-        expected_pth = base_pth / "expected.png"
-        actual_pth = base_pth / "actual.png"
-        plt.savefig(actual_pth, dpi=40)
-        plt.close()
-        if not expected_pth.is_file():
-            msg = f"No expected output found at {expected_pth}."
-            raise OSError(msg)
-        check_same_image(expected_pth, actual_pth, tol=tol, root=root)
-
-    return save_and_compare
-
-
-@pytest.fixture
 def plt():
     from matplotlib import pyplot as plt
 
     return plt
+
+
+@pytest.fixture
+def exit_stack() -> Generator[ExitStack]:
+    with ExitStack() as stack:
+        yield stack
+
+
+@pytest.fixture(autouse=True)
+def anndata_settings():
+    ad.settings.auto_shard_zarr_v3 = True
+    ad.settings.zarr_write_format = 3

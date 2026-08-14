@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 
-from scanpy import experimental
-from scanpy._utils import _doc_params
-from scanpy.experimental._docs import (
+from ... import experimental, settings
+from ..._keys import _embedding_keys
+from ..._utils import _doc_params
+from ..._utils.random import _accepts_legacy_random_state
+from ...experimental._docs import (
     doc_adata,
     doc_check_values,
     doc_dist_params,
@@ -15,7 +20,7 @@ from scanpy.experimental._docs import (
     doc_inplace,
     doc_pca_chunk,
 )
-from scanpy.preprocessing import pca
+from ...preprocessing import pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -23,6 +28,8 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from anndata import AnnData
+
+    from ..._utils.random import RNGLike, SeedLike
 
 
 @_doc_params(
@@ -33,6 +40,7 @@ if TYPE_CHECKING:
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
+@_accepts_legacy_random_state(0)
 def recipe_pearson_residuals(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -42,8 +50,8 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     batch_key: str | None = None,
     chunksize: int = 1000,
     n_comps: int | None = 50,
-    random_state: float | None = 0,
-    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
+    rng: SeedLike | RNGLike | None = None,
+    kwargs_pca: Mapping[str, Any] = frozendict({}),
     check_values: bool = True,
     inplace: bool = True,
 ) -> tuple[AnnData, pd.DataFrame] | None:
@@ -99,18 +107,20 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     `.uns['pearson_residuals_normalization']['clip']`
          The used value of the clipping parameter.
 
-    `.obsm['X_pca']`
+    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
         PCA representation of data after gene selection and Pearson residual
         normalization.
-    `.varm['PCs']`
+    `.varm[kwargs_pca.get('key_added', 'PCs')]`
          The principal components containing the loadings. When `inplace=True` this
          will contain empty rows for the genes not selected during HVG selection.
-    `.uns['pca']['variance_ratio']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
          Ratio of explained variance.
-    `.uns['pca']['variance']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
+    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
+    keys = _embedding_keys("pca", key_added)
     hvg_args = dict(
         flavor="pearson_residuals",
         n_top_genes=n_top_genes,
@@ -133,7 +143,7 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     experimental.pp.normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
+    pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
 
     if inplace:
         normalization_param = adata_pca.uns["pearson_residuals_normalization"]
@@ -141,11 +151,11 @@ def recipe_pearson_residuals(  # noqa: PLR0913
             **normalization_param, pearson_residuals_df=adata_pca.to_df()
         )
 
-        adata.uns["pca"] = adata_pca.uns["pca"]
-        adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-        adata.varm["PCs"][adata.var["highly_variable"]] = adata_pca.varm["PCs"]
+        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
+        adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm[keys.varm][adata.var["highly_variable"]] = adata_pca.varm[keys.varm]
         adata.uns["pearson_residuals_normalization"] = normalization_dict
-        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
+        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca, hvg

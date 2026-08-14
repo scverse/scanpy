@@ -1,34 +1,25 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
-from packaging.version import Version
-
 from .. import logging as logg
-from .._compat import old_positionals
-from .._settings import settings
+from .._compat import warn
+from .._docs import doc_rng
+from .._keys import _embedding_keys
+from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
-    from .._utils.random import _LegacyRandom
+    from .._utils.random import RNGLike, SeedLike
 
 
-@old_positionals(
-    "use_rep",
-    "perplexity",
-    "early_exaggeration",
-    "learning_rate",
-    "random_state",
-    "use_fast_tsne",
-    "n_jobs",
-    "copy",
-)
-@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_accepts_legacy_random_state(0)
+@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
@@ -39,10 +30,10 @@ def tsne(  # noqa: PLR0913
     metric: str = "euclidean",
     early_exaggeration: float = 12,
     learning_rate: float = 1000,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | None = None,
+    key_added: str | Default | None = Default(preset=("tsne", "key_added")),
     copy: bool = False,
 ) -> AnnData | None:
     r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
@@ -54,6 +45,8 @@ def tsne(  # noqa: PLR0913
     by :cite:t:`Ulyanov2016`, which will be automatically detected by Scanpy.
 
     .. _multicore-tsne: https://github.com/DmitryUlyanov/Multicore-TSNE
+
+    .. array-support:: tl.tsne
 
     Parameters
     ----------
@@ -85,12 +78,10 @@ def tsne(  # noqa: PLR0913
         optimization, the early exaggeration factor or the learning rate
         might be too high. If the cost function gets stuck in a bad local
         minimum increasing the learning rate helps sometimes.
-    random_state
-        Change this to use different intial states for the optimization.
-        If `None`, the initial state is not reproducible.
+    {rng}
     n_jobs
         Number of jobs for parallel computation.
-        `None` means using :attr:`scanpy._settings.ScanpyConfig.n_jobs`.
+        `None` means using :attr:`scanpy.settings.n_jobs`.
     key_added
         If not specified, the embedding is stored as
         :attr:`~anndata.AnnData.obsm`\ `['X_tsne']` and the the parameters in
@@ -111,17 +102,16 @@ def tsne(  # noqa: PLR0913
         tSNE parameters.
 
     """
-    import sklearn
-
     start = logg.info("computing tSNE")
+    keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
-    X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
-    raise_not_implemented_error_if_backed_type(X, "tsne")
+    x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     params_sklearn = dict(
         perplexity=perplexity,
-        random_state=random_state,
+        random_state=_legacy_random_state(rng),
         verbose=settings.verbosity > 3,
         early_exaggeration=early_exaggeration,
         learning_rate=learning_rate,
@@ -129,43 +119,27 @@ def tsne(  # noqa: PLR0913
         metric=metric,
         n_components=n_components,
     )
-    if metric != "euclidean" and (Version(sklearn.__version__) < Version("1.3.0rc1")):
-        params_sklearn["square_distances"] = True
 
-    # Backwards compat handling: Remove in scanpy 1.9.0
-    if n_jobs != 1 and not use_fast_tsne:
-        warnings.warn(
-            "In previous versions of scanpy, calling tsne with n_jobs > 1 would use "
-            "MulticoreTSNE. Now this uses the scikit-learn version of TSNE by default. "
-            "If you'd like the old behaviour (which is deprecated), pass "
-            "'use_fast_tsne=True'. Note, MulticoreTSNE is not actually faster anymore.",
-            UserWarning,
-            stacklevel=2,
-        )
     if use_fast_tsne:
-        warnings.warn(
+        msg = (
             "Argument `use_fast_tsne` is deprecated, and support for MulticoreTSNE "
-            "will be dropped in a future version of scanpy.",
-            FutureWarning,
-            stacklevel=2,
+            "will be dropped in a future version of scanpy."
         )
+        warn(msg, FutureWarning)
 
     # deal with different tSNE implementations
     if use_fast_tsne:
         try:
-            from MulticoreTSNE import MulticoreTSNE as TSNE
-
+            from MulticoreTSNE import MulticoreTSNE as TSNE  # noqa: N814
+        except ImportError:
+            use_fast_tsne = False
+            msg = "Could not import 'MulticoreTSNE'. Falling back to scikit-learn."
+            warn(msg, ImportWarning)
+        else:
             tsne = TSNE(**params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
-            X_tsne = tsne.fit_transform(X.astype("float64"))
-        except ImportError:
-            use_fast_tsne = False
-            warnings.warn(
-                "Could not import 'MulticoreTSNE'. Falling back to scikit-learn.",
-                UserWarning,
-                stacklevel=2,
-            )
+            x_tsne = tsne.fit_transform(x.astype("float64"))
     if use_fast_tsne is False:  # In case MultiCore failed to import
         from sklearn.manifold import TSNE
 
@@ -173,7 +147,7 @@ def tsne(  # noqa: PLR0913
         # of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
         logg.info("    using sklearn.manifold.TSNE")
-        X_tsne = tsne.fit_transform(X)
+        x_tsne = tsne.fit_transform(x)
 
     # update AnnData instance
     params = dict(
@@ -185,17 +159,18 @@ def tsne(  # noqa: PLR0913
         use_rep=use_rep,
         n_components=n_components,
     )
-    key_uns, key_obsm = ("tsne", "X_tsne") if key_added is None else [key_added] * 2
-    adata.obsm[key_obsm] = X_tsne  # annotate samples with tSNE coordinates
-    adata.uns[key_uns] = dict(params={k: v for k, v in params.items() if v is not None})
+    adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates
+    adata.uns[keys.uns] = dict(
+        params={k: v for k, v in params.items() if v is not None}
+    )
 
     logg.info(
         "    finished",
         time=start,
         deep=(
             f"added\n"
-            f"    {key_obsm!r}, tSNE coordinates (adata.obsm)\n"
-            f"    {key_uns!r}, tSNE parameters (adata.uns)"
+            f"    {keys.obsm!r}, tSNE coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}, tSNE parameters (adata.uns)"
         ),
     )
 

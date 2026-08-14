@@ -71,7 +71,7 @@ Some approaches to this include:
 
 While computational functions will return arrays and values, it can be harder to work with the output of plotting functions.
 
-To make this easier, we use the `image_comparer` fixture for comparing plotting results (search the test suite for example usage).
+To make this easier, we use the `plot_cmp` fixture for comparing plotting results (search the test suite for example usage).
 This is used to check that generated plots look the same as they did previously.
 Reference images (the expected output) are stored as `expected.png` to relevant tests directory under `scanpy/tests/_images`.
 When run, the test suite will generate `actual.png` files for each check.

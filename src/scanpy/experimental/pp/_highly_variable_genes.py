@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from functools import partial
 from math import sqrt
 from typing import TYPE_CHECKING
@@ -9,10 +8,11 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 
 from ... import logging as logg
-from ..._compat import CSBase, njit
+from ..._compat import CSBase, warn
 from ..._settings import Verbosity, settings
 from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ...experimental._docs import (
@@ -23,7 +23,7 @@ from ...experimental._docs import (
     doc_inplace,
     doc_layer,
 )
-from ...get import _get_obs_rep
+from ...get import _get_arr
 from ...preprocessing._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -140,16 +140,13 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     computed_on = layer if layer else "adata.X"
 
     # Check for raw counts
-    if check_values and not check_nonnegative_integers(X):
-        warnings.warn(
-            "`flavor='pearson_residuals'` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+    if check_values and not check_nonnegative_integers(x):
+        msg = "`flavor='pearson_residuals'` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
     # check theta
     if theta <= 0:
         # TODO: would "underdispersion" with negative theta make sense?
@@ -161,39 +158,39 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     if batch_key is None:
         batch_info = np.zeros(adata.shape[0], dtype=int)
     else:
-        batch_info = adata.obs[batch_key].values
+        batch_info = adata.obs[batch_key].to_numpy()
     n_batches = len(np.unique(batch_info))
 
     # Get pearson residuals for each batch separately
     residual_gene_vars = []
     for batch in np.unique(batch_info):
         adata_subset_prefilter = adata[batch_info == batch]
-        X_batch_prefilter = _get_obs_rep(adata_subset_prefilter, layer=layer)
+        x_batch_prefilter = _get_arr(adata_subset_prefilter, layer=layer)
 
         # Filter out zero genes
-        with settings.verbosity.override(Verbosity.error):
-            nonzero_genes = np.ravel(X_batch_prefilter.sum(axis=0)) != 0
+        with settings.override(verbosity=Verbosity.error):
+            nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        X_batch = _get_obs_rep(adata_subset, layer=layer)
+        x_batch = _get_arr(adata_subset, layer=layer)
 
         # Prepare clipping
         if clip is None:
-            n = X_batch.shape[0]
+            n = x_batch.shape[0]
             clip = np.sqrt(n)
         if clip < 0:
             msg = "Pearson residuals require `clip>=0` or `clip=None`."
             raise ValueError(msg)
 
-        if isinstance(X_batch, CSBase):
-            X_batch = X_batch.tocsc()
-            X_batch.eliminate_zeros()
-            calculate_res = partial(_calculate_res_sparse, X_batch.astype(np.float64))
+        if isinstance(x_batch, CSBase):
+            x_batch = x_batch.tocsc()
+            x_batch.eliminate_zeros()
+            calculate_res = partial(_calculate_res_sparse, x_batch.astype(np.float64))
         else:
-            X_batch = np.array(X_batch, dtype=np.float64, order="F")
-            calculate_res = partial(_calculate_res_dense, X_batch)
+            x_batch = np.array(x_batch, dtype=np.float64, order="F")
+            calculate_res = partial(_calculate_res_dense, x_batch)
 
-        sums_genes = np.array(X_batch.sum(axis=0)).ravel()
-        sums_cells = np.array(X_batch.sum(axis=1)).ravel()
+        sums_genes = np.array(x_batch.sum(axis=0)).ravel()
+        sums_cells = np.array(x_batch.sum(axis=1)).ravel()
         sum_total = np.sum(sums_genes)
 
         residual_gene_var = calculate_res(
@@ -202,8 +199,8 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             sum_total=np.float64(sum_total),
             clip=np.float64(clip),
             theta=np.float64(theta),
-            n_genes=X_batch.shape[1],
-            n_cells=X_batch.shape[0],
+            n_genes=x_batch.shape[1],
+            n_cells=x_batch.shape[0],
         )
 
         # Add 0 values for genes that were filtered out
@@ -227,7 +224,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     # Median rank across batches, ignoring batches in which gene was not selected
     medianrank_residual_var = np.ma.median(ranks_masked_array, axis=0).filled(np.nan)
 
-    means, variances = materialize_as_ndarray(mean_var(X, axis=0, correction=1))
+    means, variances = materialize_as_ndarray(mean_var(x, axis=0, correction=1))
     df = pd.DataFrame.from_dict(
         dict(
             means=means,
@@ -242,11 +239,10 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
 
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
-    df.sort_values(
+    df = df.sort_values(
         ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
         na_position="last",
-        inplace=True,
     )
 
     high_var = np.zeros(df.shape[0], dtype=bool)
@@ -266,21 +262,19 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
             "    'variances', float vector (adata.var)\n"
             "    'residual_variances', float vector (adata.var)"
         )
-        adata.var["means"] = df["means"].values
-        adata.var["variances"] = df["variances"].values
-        adata.var["residual_variances"] = df["residual_variances"]
-        adata.var["highly_variable_rank"] = df["highly_variable_rank"].values
+        adata.var["means"] = df["means"].array
+        adata.var["variances"] = df["variances"].array
+        adata.var["residual_variances"] = df["residual_variances"].array
+        adata.var["highly_variable_rank"] = df["highly_variable_rank"].array
         if batch_key is not None:
-            adata.var["highly_variable_nbatches"] = df[
-                "highly_variable_nbatches"
-            ].values
+            adata.var["highly_variable_nbatches"] = df["highly_variable_nbatches"].array
             adata.var["highly_variable_intersection"] = df[
                 "highly_variable_intersection"
-            ].values
-        adata.var["highly_variable"] = df["highly_variable"].values
+            ].array
+        adata.var["highly_variable"] = df["highly_variable"].array
 
         if subset:
-            adata._inplace_subset_var(df["highly_variable"].values)
+            adata._inplace_subset_var(df["highly_variable"].to_numpy())
 
     else:
         if batch_key is None:
@@ -288,7 +282,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
                 ["highly_variable_nbatches", "highly_variable_intersection"], axis=1
             )
         if subset:
-            df = df.iloc[df.highly_variable.values, :]
+            df = df.iloc[df["highly_variable"].to_numpy(), :]
 
         return df
 
@@ -323,6 +317,8 @@ def highly_variable_genes(  # noqa: PLR0913
     are ranked by residual variance.
 
     Expects raw count input.
+
+    .. array-support:: experimental.pp.highly_variable_genes
 
     Parameters
     ----------

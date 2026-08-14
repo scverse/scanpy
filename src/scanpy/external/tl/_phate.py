@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -17,21 +16,6 @@ if TYPE_CHECKING:
     from ..._utils.random import _LegacyRandom
 
 
-@old_positionals(
-    "k",
-    "a",
-    "n_landmark",
-    "t",
-    "gamma",
-    "n_pca",
-    "knn_dist",
-    "mds_dist",
-    "mds",
-    "n_jobs",
-    "random_state",
-    "verbose",
-    "copy",
-)
 @doctest_needs("phate")
 def phate(  # noqa: PLR0913
     adata: AnnData,
@@ -111,8 +95,8 @@ def phate(  # noqa: PLR0913
     random_state
         Random seed. Defaults to the global `numpy` random number generator
     verbose
-        If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
-        If `None`, `sc.settings.verbosity` is used.
+        If `True` or an :class:`int`/:class:`~scanpy.Verbosity` ≥ 2/:attr:`~scanpy.Verbosity.hint`, print status messages.
+        If `None`, :attr:`scanpy.settings.verbosity` is used.
     copy
         Return a copy instead of writing to `adata`.
     kwargs
@@ -152,12 +136,9 @@ def phate(  # noqa: PLR0913
     try:
         import phate
     except ImportError as e:
-        msg = (
-            "You need to install the package `phate`: please run `pip install "
-            "--user phate` in a terminal."
-        )
-        raise ImportError(msg) from e
-    X_phate = phate.PHATE(
+        e.add_note("Please install `phate` and try again.")
+        raise
+    x_phate = phate.PHATE(
         n_components=n_components,
         k=k,
         a=a,
@@ -174,7 +155,7 @@ def phate(  # noqa: PLR0913
         **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
-    adata.obsm["X_phate"] = X_phate  # annotate samples with PHATE coordinates
+    adata.obsm["X_phate"] = x_phate  # annotate samples with PHATE coordinates
     logg.info(
         "    finished",
         time=start,

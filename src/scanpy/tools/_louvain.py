@@ -1,18 +1,26 @@
 from __future__ import annotations
 
-import warnings
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import old_positionals
-from .._utils import _choose_graph, dematrix
+from .._utils import _choose_graph, _doc_params
+from ._docs import (
+    doc_adata,
+    doc_adjacency,
+    doc_neighbors_key,
+    doc_obsp,
+    doc_restrict_to,
+)
 from ._utils_clustering import rename_groups, restrict_adjacency
 
 if TYPE_CHECKING:
@@ -24,29 +32,22 @@ if TYPE_CHECKING:
     from .._compat import CSBase
     from .._utils.random import _LegacyRandom
 
-try:
-    from louvain.VertexPartition import MutableVertexPartition
-except ImportError:
+    try:  # sphinx-autodoc-typehints + optional dependency
+        from louvain.VertexPartition import MutableVertexPartition
+    except ImportError:
+        if not TYPE_CHECKING:
+            MutableVertexPartition = type(
+                "MutableVertexPartition", (), dict(__module__="louvain.VertexPartition")
+            )
 
-    class MutableVertexPartition:
-        pass
 
-    MutableVertexPartition.__module__ = "louvain.VertexPartition"
-
-
-@old_positionals(
-    "random_state",
-    "restrict_to",
-    "key_added",
-    "adjacency",
-    "flavor",
-    "directed",
-    "use_weights",
-    "partition_type",
-    "partition_kwargs",
-    "neighbors_key",
-    "obsp",
-    "copy",
+@deprecated(Deprecation("1.12.0", "Use :func:`scanpy.tl.leiden` instead."))
+@_doc_params(
+    doc_adata=doc_adata,
+    restrict_to=doc_restrict_to,
+    adjacency=doc_adjacency,
+    neighbors_key=doc_neighbors_key.format(method="louvain"),
+    obsp=doc_obsp,
 )
 def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
@@ -56,11 +57,11 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     restrict_to: tuple[str, Sequence[str]] | None = None,
     key_added: str = "louvain",
     adjacency: CSBase | None = None,
-    flavor: Literal["vtraag", "igraph", "rapids"] = "vtraag",
+    flavor: Literal["vtraag", "igraph"] = "vtraag",
     directed: bool = True,
     use_weights: bool = False,
     partition_type: type[MutableVertexPartition] | None = None,
-    partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    partition_kwargs: Mapping[str, Any] = frozendict({}),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
@@ -75,10 +76,11 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
+    .. array-support:: tl.louvain
+
     Parameters
     ----------
-    adata
-        The annotated data matrix.
+    {doc_adata}
     resolution
         For the default flavor (``'vtraag'``) or for ```RAPIDS```, you can provide a
         resolution (higher resolution means finding more and smaller clusters),
@@ -86,13 +88,10 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         See “Time as a resolution parameter” in :cite:t:`Lambiotte2014`.
     random_state
         Change the initialization of the optimization.
-    restrict_to
-        Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
+    {restrict_to}
     key_added
         Key under which to add the cluster labels. (default: ``'louvain'``)
-    adjacency
-        Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
+    {adjacency}
     flavor
         Choose between to packages for computing the clustering.
 
@@ -100,11 +99,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
             Much more powerful than ``'igraph'``, and the default.
         ``'igraph'``
             Built in ``igraph`` method.
-        ``'rapids'``
-            GPU accelerated implementation.
-
-            .. deprecated:: 1.10.0
-                Use :func:`rapids_singlecell.tl.louvain` instead.
     directed
         Interpret the ``adjacency`` matrix as directed graph?
     use_weights
@@ -115,15 +109,8 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     partition_kwargs
         Key word arguments to pass to partitioning,
         if ``vtraag`` method is being used.
-    neighbors_key
-        Use neighbors connectivities as adjacency.
-        If not specified, louvain looks .obsp['connectivities'] for connectivities
-        (default storage place for pp.neighbors).
-        If specified, louvain looks
-        .obsp[.uns[neighbors_key]['connectivities_key']] for connectivities.
-    obsp
-        Use .obsp[obsp] as adjacency. You can't specify both
-        `obsp` and `neighbors_key` at the same time.
+    {neighbors_key}
+    {obsp}
     copy
         Copy adata or modify it inplace.
 
@@ -174,10 +161,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if Version(louvain.__version__) < Version("0.7.0"):
-                louvain.set_rng_seed(random_state)
-            else:
-                partition_kwargs["seed"] = random_state
+            partition_kwargs["seed"] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
             part = louvain.find_partition(
                 g,
@@ -188,43 +172,6 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
-    elif flavor == "rapids":
-        msg = (
-            "`flavor='rapids'` is deprecated. "
-            "Use `rapids_singlecell.tl.louvain` instead."
-        )
-        warnings.warn(msg, FutureWarning, stacklevel=2)
-        # nvLouvain only works with undirected graphs,
-        # and `adjacency` must have a directed edge in both directions
-        import cudf
-        import cugraph
-
-        offsets = cudf.Series(adjacency.indptr)
-        indices = cudf.Series(adjacency.indices)
-        if use_weights:
-            sources, targets = adjacency.nonzero()
-            weights = dematrix(adjacency[sources, targets]).ravel()
-            weights = cudf.Series(weights)
-        else:
-            weights = None
-        g = cugraph.Graph()
-
-        if hasattr(g, "add_adj_list"):
-            g.add_adj_list(offsets, indices, weights)
-        else:
-            g.from_cudf_adjlist(offsets, indices, weights)
-
-        logg.info('    using the "louvain" package of rapids')
-        if resolution is not None:
-            louvain_parts, _ = cugraph.louvain(g, resolution=resolution)
-        else:
-            louvain_parts, _ = cugraph.louvain(g)
-        groups = (
-            louvain_parts.to_pandas()
-            .sort_values("vertex")[["partition"]]
-            .to_numpy()
-            .ravel()
-        )
     elif flavor == "taynaud":
         # this is deprecated
         import community

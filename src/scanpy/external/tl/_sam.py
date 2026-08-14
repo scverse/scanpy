@@ -5,30 +5,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ... import logging as logg
-from ..._compat import old_positionals
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from samalg import SAM
+
+    try:
+        from samalg import SAM
+    except ImportError:
+        SAM = type("SAM", (), dict(__module__="samalg"))
 
 
-@old_positionals(
-    "max_iter",
-    "num_norm_avg",
-    "k",
-    "distance",
-    "standardization",
-    "weight_pcs",
-    "sparse_pca",
-    "n_pcs",
-    "n_genes",
-    "projection",
-    "inplace",
-    "verbose",
-)
 @doctest_needs("samalg")
 def sam(  # noqa: PLR0913
     adata: AnnData,
@@ -206,13 +195,8 @@ def sam(  # noqa: PLR0913
     try:
         from samalg import SAM
     except ImportError as e:
-        msg = (
-            "\nplease install sam-algorithm: \n\n"
-            "\tgit clone git://github.com/atarashansky/self-assembling-manifold.git\n"
-            "\tcd self-assembling-manifold\n"
-            "\tpip install ."
-        )
-        raise ImportError(msg) from e
+        e.add_note("Please install `sc-sam` and try again.")
+        raise
 
     logg.info("Self-assembling manifold")
 

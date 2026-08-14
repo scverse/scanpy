@@ -38,23 +38,23 @@ Need help? Reach out on our forum to get your questions answered!
 
 Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest developments.
 :::
+
+:::{grid-item-card} GPU acceleration {octicon}`rocket;1em;`
+:link: https://rapids-singlecell.readthedocs.io
+
+Working with millions of cells and have a GPU available?
+[rapids-singlecell][rsc] mirrors the scanpy API with order-of-magnitude speedups on core preprocessing, neighbors, embedding, and clustering steps.
+:::
 ::::
+
+[rsc]: https://rapids-singlecell.readthedocs.io
 
 **Other resources**
 
 * Follow changes in the {ref}`release notes <release-notes>`.
-* Find tools that harmonize well with anndata & Scanpy at [scverse.org/packages/](https://scverse.org/packages/)
+* Discover tools that build on or complement scanpy in the [scverse ecosystem](https://scverse.org/packages/#ecosystem), and follow scverse-wide news at [scverse.org/blog](https://scverse.org/blog/).
 * Check out our {ref}`contribution guide <contribution-guide>` for development practices.
 * Consider citing [Genome Biology (2018)] along with original {doc}`references <references>`.
-
-## News
-
-```{include} news.md
-:start-after: '<!-- marker: after prelude -->'
-:end-before: '<!-- marker: before old news -->'
-```
-
-{ref}`(past news) <News>`
 
 % put references first so all references are resolved
 
@@ -70,10 +70,8 @@ usage-principles
 how-to/index
 api/index
 external/index
-ecosystem
 release-notes/index
 community
-news
 dev/index
 contributors
 references

@@ -2,25 +2,32 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+import zarr.storage
+from anndata import AnnData, OldFormatWarning
+from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
-from .._compat import deprecated, old_positionals
-from .._settings import settings
-from .._utils._doctests import doctest_internet, doctest_needs
-from ..readwrite import read, read_visium
-from ._utils import check_datasetdir_exists, filter_oldformatwarning
+from .._compat import pkg_version
+from .._docs import doc_rng
+from .._settings import Verbosity, settings
+from .._utils import _doc_params
+from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
+from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
+from ..readwrite import read, read_zarr
+from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
-    from .._utils.random import _LegacyRandom
+    from .._compat import CSRBase
+    from .._utils.random import RNGLike, SeedLike
 
-    VisiumSampleID = Literal[
+    type VisiumSampleID = Literal[
         "V1_Breast_Cancer_Block_A_Section_1",
         "V1_Breast_Cancer_Block_A_Section_2",
         "V1_Human_Heart",
@@ -54,16 +61,21 @@ if TYPE_CHECKING:
 HERE = Path(__file__).parent
 
 
-@old_positionals(
-    "n_variables", "n_centers", "cluster_std", "n_observations", "random_state"
+_doctest_skipif_old_anndata = doctest_skipif(
+    pkg_version("anndata") < Version("0.13.dev0"), reason="old anndata"
 )
+
+
+@_doctest_skipif_old_anndata
+@_doc_params(rng=doc_rng)
+@_accepts_legacy_random_state(0)
 def blobs(
     *,
     n_variables: int = 11,
     n_centers: int = 5,
     cluster_std: float = 1.0,
     n_observations: int = 640,
-    random_state: _LegacyRandom = 0,
+    rng: SeedLike | RNGLike | None = None,
 ) -> AnnData:
     """Gaussian Blobs.
 
@@ -78,8 +90,7 @@ def blobs(
     n_observations
         Number of observations. By default, this is the same observation number
         as in :func:`scanpy.datasets.krumsiek11`.
-    random_state
-        Determines random number generation for dataset creation.
+    {rng}
 
     Returns
     -------
@@ -92,20 +103,22 @@ def blobs(
     >>> sc.datasets.blobs()
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'blobs'
+        layers: None (.X)
 
     """
     import sklearn.datasets
 
-    X, y = sklearn.datasets.make_blobs(
+    x, y = sklearn.datasets.make_blobs(
         n_samples=n_observations,
         n_features=n_variables,
         centers=n_centers,
         cluster_std=cluster_std,
-        random_state=random_state,
+        random_state=_legacy_random_state(rng),
     )
-    return AnnData(X, obs=dict(blobs=y.astype(str)))
+    return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def burczynski06() -> AnnData:
@@ -123,15 +136,19 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        ...
     AnnData object with n_obs × n_vars = 127 × 22283
         obs: 'groups'
+        layers: None (.X)
 
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
-    url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
+    url = "https://exampledata.scverse.org/scanpy/GDS1615_full.soft.gz"
     return read(filename, backup_url=url)
 
 
+@_doctest_skipif_old_anndata
 def krumsiek11() -> AnnData:
     r"""Simulated myeloid progenitors :cite:p:`Krumsiek2011`.
 
@@ -151,15 +168,16 @@ def krumsiek11() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.krumsiek11()
+    >>> sc.datasets.krumsiek11()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 640 × 11
         obs: 'cell_type'
         uns: 'iroot', 'highlights'
+        layers: None (.X)
 
     """  # noqa: D401
-    with settings.verbosity.override("error"):  # suppress output...
+    with settings.override(verbosity=Verbosity.error):  # suppress output...
         adata = read(HERE / "krumsiek11.txt", first_column_names=True)
     adata.uns["iroot"] = 0
     fate_labels = {0: "Stem", 159: "Mo", 319: "Ery", 459: "Mk", 619: "Neu"}
@@ -174,6 +192,7 @@ def krumsiek11() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @doctest_needs("openpyxl")
 @check_datasetdir_exists
@@ -196,16 +215,21 @@ def moignard15() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.moignard15()
+    UserWarning: Unknown extension is not supported and will be removed
+        warn(msg)
     AnnData object with n_obs × n_vars = 3934 × 42
         obs: 'exp_groups'
         uns: 'iroot', 'exp_groups_colors'
+        layers: None (.X)
 
     """
     filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
-    backup_url = "https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
+    backup_url = (
+        "https://exampledata.scverse.org/scanpy/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
+    )
     adata = read(filename, sheet="dCt_values.txt", backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
-    gene_subset = ~np.in1d(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
+    gene_subset = ~np.isin(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
     adata = adata[:, gene_subset].copy()  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
     adata.uns["iroot"] = 532  # note that in Matlab/R, counting starts at 1
@@ -230,6 +254,7 @@ def moignard15() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def paul15() -> AnnData:
@@ -237,9 +262,8 @@ def paul15() -> AnnData:
 
     Non-logarithmized raw data.
 
-    The data has been sent out by Email from the Amit Lab. An R version for
-    loading the data can be found `here
-    <https://github.com/theislab/scAnalysisTutorial>`_.
+    The data has been sent out by Email from the Amit Lab.
+    An R version for loading the data can be found `here <https://github.com/theislab/scAnalysisTutorial>`_.
 
     Returns
     -------
@@ -252,23 +276,24 @@ def paul15() -> AnnData:
     AnnData object with n_obs × n_vars = 2730 × 3451
         obs: 'paul15_clusters'
         uns: 'iroot'
+        layers: None (.X)
 
     """
     import h5py
 
     filename = settings.datasetdir / "paul15/paul15.h5"
     filename.parent.mkdir(exist_ok=True)
-    backup_url = "https://falexwolf.de/data/paul15.h5"
+    backup_url = "https://exampledata.scverse.org/scanpy/paul15.h5"
     _utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, "r") as f:
         # Coercing to float32 for backwards compatibility
-        X = f["data.debatched"][()].astype(np.float32)
+        x = f["data.debatched"][()].astype(np.float32)
         gene_names = f["data.debatched_rownames"][()].astype(str)
         cell_names = f["data.debatched_colnames"][()].astype(str)
         clusters = f["cluster.id"][()].flatten().astype(int)
         infogenes_names = f["info.genes_strings"][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = AnnData(X.transpose())
+    adata = AnnData(x.transpose())
     adata.var_names = gene_names
     adata.obs_names = cell_names
     # names reflecting the cell type identifications from the paper
@@ -291,6 +316,7 @@ def paul15() -> AnnData:
     return adata
 
 
+@_doctest_skipif_old_anndata
 def toggleswitch() -> AnnData:
     """Simulated toggleswitch.
 
@@ -305,11 +331,12 @@ def toggleswitch() -> AnnData:
     Examples
     --------
     >>> import scanpy as sc
-    >>> sc.datasets.toggleswitch()
+    >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
-        utils.warn_names_duplicates("obs")
+        ...
     AnnData object with n_obs × n_vars = 200 × 2
         uns: 'iroot'
+        layers: None (.X)
 
     """  # noqa: D401
     filename = HERE / "toggleswitch.txt"
@@ -318,21 +345,42 @@ def toggleswitch() -> AnnData:
     return adata
 
 
-@filter_oldformatwarning
+@_doctest_skipif_old_anndata
 def pbmc68k_reduced() -> AnnData:
     r"""Subsampled and processed 68k PBMCs.
 
     `PBMC 68k dataset`_ from 10x Genomics.
 
-    The original PBMC 68k dataset was preprocessed with steps including
-    :func:`~scanpy.pp.normalize_total`\ [#norm]_ and :func:`~scanpy.pp.scale`.
-    It was saved keeping only 724 cells and 221 highly variable genes.
+    The original PBMC 68k dataset was preprocessed with steps very similar to the following:
 
-    The saved file contains the annotation of cell types (key: `'bulk_labels'`),
-    UMAP coordinates, louvain clustering and gene rankings based on the
-    `bulk_labels`.
+    ..  code-block:: python
 
-    .. [#norm] Back when the dataset was created, :func:`~scanpy.pp.normalize_per_cell` was used instead.
+        import scanpy as sc
+
+        adata = sc.read_10x_mtx(
+            "./data/filtered/filtered_matrices_mex/hg19/",
+            var_names="gene_symbols",
+        )
+        adata.var_names_make_unique()
+
+        sc.pp.filter_cells(adata, min_genes=200)
+        sc.pp.filter_genes(adata, min_counts=125)
+
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        if sc.settings.preset == sc.Preset.ScanpyV2Preview:
+            adata.layers["log_counts"] = adata.X.copy()
+        else:
+            adata.raw = adata.copy()
+            adata.raw.X.data = adata.raw.X.data.round(3)
+
+        sc.pp.highly_variable_genes(adata)
+        sc.pp.subsample(adata, n_obs=700)
+        sc.pp.scale(adata)
+
+    The `.obs["bulk_labels"]` were obtained as described in :cite:t:`Zheng2017`.
+    UMAP coordinates, louvain clustering and gene rankings were calculated based on the `bulk_labels`.
+
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
@@ -349,17 +397,38 @@ def pbmc68k_reduced() -> AnnData:
         uns: 'bulk_labels_colors', 'louvain', 'louvain_colors', 'neighbors', 'pca', 'rank_genes_groups'
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
-        obsp: 'distances', 'connectivities'
+        obsp: 'connectivities', 'distances'
+        layers: 'counts', None (.X)
 
     """
-    filename = HERE / "10x_pbmc68k_reduced.h5ad"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        return read(filename)
+    from scanpy._settings import Preset, settings
+
+    store = zarr.storage.ZipStore(HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r")
+    adata = read_zarr(zarr.open_group(store=store, mode="r"))
+
+    # normalize using `n_counts`,
+    # i.e. the size factors computed over all genes passing the initial filtering.
+    size_factors = adata.obs["n_counts"].to_numpy() / 1e4
+    counts = cast("CSRBase", adata.layers["counts"])
+
+    log_counts = counts.astype(np.float32)
+    log_counts.data /= np.repeat(size_factors, np.diff(log_counts.indptr))
+    log_counts.data = np.log1p(log_counts.data)
+
+    if settings.preset is Preset.ScanpyV2Preview:
+        adata.layers["log_counts"] = log_counts
+        adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
+    else:
+        # matches the precision of the original, pre-2.0 shipped `.raw`
+        log_counts.data = np.round(log_counts.data, 3)
+        # tie-break rounding boundary like the original did
+        log_counts[357, 715] = 4.019
+        adata.raw = AnnData(X=log_counts, var=adata.var[[]])
+    return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k() -> AnnData:
     r"""3k PBMCs from 10x Genomics.
@@ -375,7 +444,7 @@ def pbmc3k() -> AnnData:
 
     .. note::
        This downloads 5.9 MB of data upon the first call of the function and stores it in
-       :attr:`~scanpy._settings.ScanpyConfig.datasetdir`\ `/pbmc3k_raw.h5ad`.
+       :attr:`~scanpy.settings.datasetdir`\ `/pbmc3k_raw.h5ad`.
 
     The following code was run to produce the file.
 
@@ -403,15 +472,18 @@ def pbmc3k() -> AnnData:
     >>> sc.datasets.pbmc3k()
     AnnData object with n_obs × n_vars = 2700 × 32738
         var: 'gene_ids'
+        layers: None (.X)
 
     """
-    url = "https://falexwolf.de/data/pbmc3k_raw.h5ad"
-    adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
+    url = "https://exampledata.scverse.org/scanpy/pbmc3k_raw.h5ad"
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
     return adata
 
 
+@_doctest_skipif_old_anndata
 @doctest_internet
-@filter_oldformatwarning
 @check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
@@ -442,12 +514,14 @@ def pbmc3k_processed() -> AnnData:
         obsm: 'X_pca', 'X_tsne', 'X_umap', 'X_draw_graph_fr'
         varm: 'PCs'
         obsp: 'distances', 'connectivities'
+        layers: None (.X)
 
     """  # noqa: D401
-    url = "https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad"
+    url = "https://exampledata.scverse.org/scanpy/pbmc3k.h5ad"
 
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+        warnings.filterwarnings("ignore", category=OldFormatWarning)
+        warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
         return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
 
 
@@ -474,7 +548,7 @@ def _download_visium_dataset(
     if base_dir is None:
         base_dir = settings.datasetdir
 
-    url_prefix = f"https://cf.10xgenomics.com/samples/spatial-exp/{spaceranger_version}/{sample_id}"
+    url_prefix = f"https://exampledata.scverse.org/scanpy/visium/{spaceranger_version}/{sample_id}"
 
     sample_dir = base_dir / sample_id
     sample_dir.mkdir(exist_ok=True)
@@ -507,7 +581,8 @@ def _download_visium_dataset(
     return sample_dir
 
 
-@deprecated("Use `squidpy.datasets.visium` instead.")
+@deprecated(Deprecation("1.11.0", "Use :func:`squidpy.datasets.visium` instead."))
+@_doctest_skipif_old_anndata
 @doctest_internet
 @check_datasetdir_exists
 def visium_sge(
@@ -516,9 +591,6 @@ def visium_sge(
     include_hires_tiff: bool = False,
 ) -> AnnData:
     """Processed Visium Spatial Gene Expression data from 10x Genomics’ database.
-
-    .. deprecated:: 1.11.0
-       Use :func:`squidpy.datasets.visium` instead.
 
     The database_ can be browsed online to find the ``sample_id`` you want.
 
@@ -540,16 +612,25 @@ def visium_sge(
     --------
     >>> import scanpy as sc
     >>> sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    FutureWarning: The function visium_sge is deprecated and will be removed in the future. Use :func:`squidpy.datasets.visium` instead.
+        sc.datasets.visium_sge(sample_id="V1_Breast_Cancer_Block_A_Section_1")
+    UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+        ...
     AnnData object with n_obs × n_vars = 3798 × 36601
         obs: 'in_tissue', 'array_row', 'array_col'
         var: 'gene_ids', 'feature_types', 'genome'
         uns: 'spatial'
         obsm: 'spatial'
+        layers: None (.X)
 
     """  # noqa: D401
+    from ..readwrite import read_visium
+
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
     sample_dir = _download_visium_dataset(
         sample_id, spaceranger_version, download_image=include_hires_tiff
     )
     source_image_path = sample_dir / "image.tif" if include_hires_tiff else None
-    return read_visium(sample_dir, source_image_path=source_image_path)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*squidpy\.read", FutureWarning)
+        return read_visium(sample_dir, source_image_path=source_image_path)

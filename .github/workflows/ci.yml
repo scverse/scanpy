@@ -1,4 +1,4 @@
-name: CI
+name: autofix.ci
 
 on:
   push:
@@ -11,118 +11,140 @@ env:
   PYTEST_ADDOPTS: "-v --color=yes -n auto --internet-tests --junitxml=test-data/test-results.xml"
   FORCE_COLOR: "1"
   MPLBACKEND: agg
+  # It’s impossible to ignore SyntaxWarnings for a single module,
+  # so because leidenalg 0.10.0 has them, we pre-compile things: https://github.com/vtraag/leidenalg/issues/173
+  UV_COMPILE_BYTECODE: "1"
 
-defaults:
-  run:
-    shell: bash -e {0} # -e to fail on error
+permissions:
+  contents: read
 
 jobs:
-  pytest:
+  get-environments:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        include:
-          - python-version: '3.11'
-          - python-version: '3.13'
-          - python-version: '3.13'
-            dependencies-version: min-optional
-          - python-version: '3.13'
-            dependencies-version: pre-release
-            test-type: coverage
-          - python-version: '3.11'
-            dependencies-version: minimum
-            test-type: coverage
-
-    env:  # for use codecov’s env_vars tagging
-      PYTHON: ${{ matrix.python-version }}
-      DEPS: ${{ matrix.dependencies-version || 'default' }}
-      TESTS: ${{ matrix.test-type || 'default' }}
-
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
+      - &clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v5
+          persist-credentials: false
+      - &setup-uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
-          cache-dependency-glob: pyproject.toml
+      - id: get-envs
+        run: |
+          ENVS_JSON=$(NO_COLOR=1 uvx hatch env show --json | jq -c 'to_entries
+            | map(
+              select(.key | startswith("hatch-test"))
+              | {
+                name: .key,
+                "test-type": (if (.key | test("pre|low-vers")) then "coverage" else null end),
+                python: .value.python
+              }
+            )')
+          echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
 
+  test:
+    needs: get-environments
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+    permissions:
+      id-token: write  # for codecov OIDC
+    env:
+      UV_PYTHON: ${{ matrix.env.python }}
+    steps:
+      - *clone
+      - *setup-uv
       - name: Cache downloaded data
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .pytest_cache/d/scanpy-data
           key: pytest
 
       - name: Install dependencies
-        if: matrix.dependencies-version == null
-        run: uv pip install --system --compile "scanpy[dev,test-full] @ ."
-      - name: Install dependencies (no optional features)
-        if: matrix.dependencies-version == 'min-optional'
-        run: uv pip install --system --compile "scanpy[dev,test-min] @ ."
-      - name: Install dependencies (minimum versions)
-        if: matrix.dependencies-version == 'minimum'
         run: |
-          uv pip install --system --compile tomli packaging
-          deps=$(python3 ci/scripts/min-deps.py pyproject.toml --extra dev test)
-          uv pip install --system --compile $deps "scanpy @ ."
-      - name: Install dependencies (pre-release versions)
-        if: matrix.dependencies-version == 'pre-release'
-        run: uv pip install -v --system --compile --pre "scanpy[dev,test-full] @ ." "anndata[dev,test] @ git+https://github.com/scverse/anndata.git"
+          echo "::group::Install hatch"
+          uv tool install hatch
+          echo "::endgroup::"
+          echo "::group::Create environment"
+          hatch -v env create ${{ matrix.env.name }}
+          echo "::endgroup::"
+          hatch run ${{ matrix.env.name }}:session-info scanpy anndata
 
-      - name: Run pytest
-        if: matrix.test-type == null
-        run: pytest
-      - name: Run pytest (coverage)
-        if: matrix.test-type == 'coverage'
-        run: coverage run -m pytest --cov --cov-report=xml
+      - name: Run tests
+        if: matrix.env.test-type == null
+        run: hatch run ${{ matrix.env.name }}:run
+      - name: Run tests (coverage)
+        if: matrix.env.test-type == 'coverage'
+        run: |
+          hatch run ${{ matrix.env.name }}:run-cov
+          hatch run ${{ matrix.env.name }}:cov-combine
+          hatch run ${{ matrix.env.name }}:coverage xml
+          hatch run ${{ matrix.env.name }}:cov-report
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@v4
-        if: matrix.test-type == 'coverage'
+        if: ${{ !cancelled() && matrix.env.test-type == 'coverage' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: "PYTHON,DEPS,TESTS"
+          flags: ${{ matrix.env.name }}
+          files: test-data/coverage.xml
+          use_oidc: true
           fail_ci_if_error: true
-          file: test-data/coverage.xml
 
       - name: Upload test results
-        # yaml strings can’t start with “!”, so using explicit substitution
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: "PYTHON,DEPS,TESTS"
+          report_type: test_results
+          flags: ${{ matrix.env.name }}
+          files: test-data/test-results.xml
+          use_oidc: true
           fail_ci_if_error: true
-          file: test-data/test-results.xml
 
       - name: Publish debug artifacts
-        if: matrix.test-type == 'coverage'
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: debug-data-${{ matrix.python-version }}-${{ matrix.dependencies-version || 'default' }}-${{ matrix.test-type || 'default' }}
+          name: debug-data-${{ matrix.env.name }}
           path: .pytest_cache/d/debug
 
-  check-build:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          filter: blob:none
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: false
+      - *clone
+      - *setup-uv
       - run: uvx --from build pyproject-build --sdist --wheel .
       - run: uvx twine check dist/*
+
+  lint:
+    name: Pre-commit checks
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - *clone
+      - *setup-uv
+      - run: uv tool install hatch
+      - name: Run pre-commit hooks
+        run: uvx prek run --all-files --show-diff-on-failure --color=always
+        env:
+          SKIP: no-commit-to-branch
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
+        if: ${{ !cancelled() }}
+
+  check:
+    if: always()
+    needs:
+      - get-environments
+      - test
+      - build
+      - lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}

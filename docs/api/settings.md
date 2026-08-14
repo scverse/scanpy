@@ -1,6 +1,6 @@
 (settings)=
 
-## Settings
+# Settings
 
 
 ```{eval-rst}
@@ -12,35 +12,54 @@ high-resolution jupyter display backend useful for use in notebooks.
 
 ```{eval-rst}
 .. autosummary::
-   :nosignatures:
-   :toctree: ../generated/
+   :signatures: none
+   :toctree: generated/
 
    set_figure_params
 ```
 
-An instance of the {class}`~scanpy._settings.ScanpyConfig` is available as `scanpy.settings` and allows configuring Scanpy.
+An object that allows configuring Scanpy.
 
 ```{eval-rst}
 .. autosummary::
-   :nosignatures:
-   :toctree: ../generated/
+   :signatures: none
+   :toctree: generated/
 
-   _settings.ScanpyConfig
+   settings
+   settings.override
 ```
 
 Some selected settings are discussed in the following.
 
-Influence the global behavior of plotting functions. In non-interactive scripts,
-you'd usually want to set `settings.autoshow` to `False`.
-
-% no :toctree: here because they are linked under the class
+Presets allow to set the behavior of many scanpy functions at once:
 
 ```{eval-rst}
 .. autosummary::
-   :nosignatures:
+   :signatures: none
+   :toctree: generated/
+   :template: enum
 
-   ~_settings.ScanpyConfig.autoshow
-   ~_settings.ScanpyConfig.autosave
+   Preset
+```
+
+Verbosity controls the amount of logging output:
+
+```{eval-rst}
+.. autosummary::
+   :signatures: none
+   :toctree: generated/
+
+   Verbosity
+```
+
+Influence the global behavior of plotting functions. In non-interactive scripts,
+you'd usually want to set {attr}`settings.autoshow` to `False`.
+
+```{eval-rst}
+.. autosummary::
+
+   settings.autoshow
+   settings.autosave
 ```
 
 IO related settings for saving figures, caching files and storing datasets.
@@ -48,34 +67,20 @@ IO related settings for saving figures, caching files and storing datasets.
 
 ```{eval-rst}
 .. autosummary::
-   :nosignatures:
 
-   ~_settings.ScanpyConfig.figdir
-   ~_settings.ScanpyConfig.cachedir
-   ~_settings.ScanpyConfig.datasetdir
-   ~_settings.ScanpyConfig.file_format_figs
-   ~_settings.ScanpyConfig.file_format_data
-```
-
-The verbosity of logging output, where verbosity levels have the following
-meaning: 0='error', 1='warning', 2='info', 3='hint', 4=more details, 5=even more
-details, etc.
-
-```{eval-rst}
-.. autosummary::
-   :nosignatures:
-
-   ~_settings.ScanpyConfig.verbosity
+   settings.figdir
+   settings.cachedir
+   settings.datasetdir
+   settings.file_format_figs
+   settings.file_format_data
 ```
 
 Print versions of packages that might influence numerical results.
 
 ```{eval-rst}
 .. autosummary::
-   :nosignatures:
-   :toctree: ../generated/
+   :signatures: none
+   :toctree: generated/
 
    logging.print_header
-   logging.print_versions
-
 ```

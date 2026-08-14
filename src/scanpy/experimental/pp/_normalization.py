@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
-from warnings import warn
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 from anndata import AnnData
 
-from scanpy._compat import CSBase
-
 from ... import logging as logg
-from ..._utils import (
-    _doc_params,
-    _empty,
-    check_nonnegative_integers,
-    view_to_actual,
-)
+from ... import settings
+from ..._compat import CSBase, warn
+from ..._keys import _embedding_keys
+from ..._settings import Default
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
+from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
     doc_check_values,
@@ -25,21 +25,21 @@ from ...experimental._docs import (
     doc_layer,
     doc_pca_chunk,
 )
-from ...get import _get_obs_rep, _set_obs_rep
-from ...preprocessing._docs import doc_mask_var_hvg
-from ...preprocessing._pca import _handle_mask_var, pca
+from ...get import _check_mask, _get_arr, _set_obs_rep
+from ...preprocessing._docs import doc_mask_var
+from ...preprocessing._pca import pca
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from ..._utils import Empty
+    from ..._utils.random import RNGLike, SeedLike
 
 
 def _pearson_residuals(
-    X: CSBase | np.ndarray, theta, clip, check_values, *, copy: bool = False
+    x: CSBase | np.ndarray, /, theta, clip, check_values, *, copy: bool = False
 ):
-    X = X.copy() if copy else X
+    x = x.copy() if copy else x
 
     # check theta
     if theta <= 0:
@@ -49,30 +49,27 @@ def _pearson_residuals(
         raise ValueError(msg)
     # prepare clipping
     if clip is None:
-        n = X.shape[0]
+        n = x.shape[0]
         clip = np.sqrt(n)
     if clip < 0:
         msg = "Pearson residuals require `clip>=0` or `clip=None`."
         raise ValueError(msg)
 
-    if check_values and not check_nonnegative_integers(X):
-        warn(
-            "`normalize_pearson_residuals()` expects raw count data, but non-integers were found.",
-            UserWarning,
-            stacklevel=3,
-        )
+    if check_values and not check_nonnegative_integers(x):
+        msg = "`normalize_pearson_residuals()` expects raw count data, but non-integers were found."
+        warn(msg, UserWarning)
 
-    if isinstance(X, CSBase):
-        sums_genes = np.sum(X, axis=0)
-        sums_cells = np.sum(X, axis=1)
+    if isinstance(x, CSBase):
+        sums_genes = np.sum(x, axis=0)
+        sums_cells = np.sum(x, axis=1)
         sum_total = np.sum(sums_genes).squeeze()
     else:
-        sums_genes = np.sum(X, axis=0, keepdims=True)
-        sums_cells = np.sum(X, axis=1, keepdims=True)
+        sums_genes = np.sum(x, axis=0, keepdims=True)
+        sums_cells = np.sum(x, axis=1, keepdims=True)
         sum_total = np.sum(sums_genes)
 
     mu = np.array(sums_cells @ sums_genes / sum_total)
-    diff = np.array(X - mu)
+    diff = np.array(x - mu)
     residuals = diff / np.sqrt(mu + mu**2 / theta)
 
     # clip
@@ -96,6 +93,7 @@ def normalize_pearson_residuals(
     clip: float | None = None,
     check_values: bool = True,
     layer: str | None = None,
+    obsm: str | None = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> AnnData | dict[str, np.ndarray] | None:
@@ -138,17 +136,17 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    X = _get_obs_rep(adata, layer=layer)
-    computed_on = layer if layer else "adata.X"
+    x = _get_arr(adata, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
 
-    residuals = _pearson_residuals(X, theta, clip, check_values, copy=not inplace)
+    residuals = _pearson_residuals(x, theta, clip, check_values, copy=not inplace)
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
-        _set_obs_rep(adata, residuals, layer=layer)
+        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
         adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)
@@ -165,20 +163,22 @@ def normalize_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     pca_chunk=doc_pca_chunk,
-    mask_var_hvg=doc_mask_var_hvg,
+    mask_var=doc_mask_var,
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
+@_accepts_legacy_random_state(0)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
     theta: float = 100,
     clip: float | None = None,
     n_comps: int | None = 50,
-    random_state: float = 0,
-    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Empty = _empty,
-    use_highly_variable: bool | None = None,
+    rng: SeedLike | RNGLike | None = None,
+    kwargs_pca: Mapping[str, Any] = frozendict({}),
+    mask_var: np.ndarray | str | Default | None = Default(
+        "adata.var.get('highly_variable')"
+    ),
     check_values: bool = True,
     inplace: bool = True,
 ) -> AnnData | None:
@@ -196,7 +196,7 @@ def normalize_pearson_residuals_pca(
     {adata}
     {dist_params}
     {pca_chunk}
-    {mask_var_hvg}
+    {mask_var}
     {check_values}
     {inplace}
 
@@ -212,22 +212,24 @@ def normalize_pearson_residuals_pca(
     `.uns['pearson_residuals_normalization']['clip']`
         The used value of the clipping parameter.
 
-    `.obsm['X_pca']`
+    `.obsm[kwargs_pca.get('key_added', 'X_pca')]`
         PCA representation of data after gene selection (if applicable) and Pearson
         residual normalization.
-    `.varm['PCs']`
+    `.varm[kwargs_pca.get('key_added', 'PCs')]`
         The principal components containing the loadings. When `inplace=True` and
-        `use_highly_variable=True`, this will contain empty rows for the genes not
+        `mask_var is not None`, this will contain empty rows for the genes not
         selected.
-    `.uns['pca']['variance_ratio']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance_ratio']`
         Ratio of explained variance.
-    `.uns['pca']['variance']`
+    `.uns[kwargs_pca.get('key_added', 'pca')]['variance']`
         Explained variance, equivalent to the eigenvalues of the covariance matrix.
 
     """
-    # Unify new mask argument and deprecated use_highly_varible argument
-    _, mask_var = _handle_mask_var(adata, mask_var, use_highly_variable)
-    del use_highly_variable
+    key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
+    keys = _embedding_keys("pca", key_added)
+    if isinstance(mask_var, Default):
+        mask_var = "highly_variable" if "highly_variable" in adata.var else None
+    mask_var = _check_mask(adata, mask_var, "var")
 
     if mask_var is not None:
         adata_sub = adata[:, mask_var].copy()
@@ -240,20 +242,20 @@ def normalize_pearson_residuals_pca(
     normalize_pearson_residuals(
         adata_pca, theta=theta, clip=clip, check_values=check_values
     )
-    pca(adata_pca, n_comps=n_comps, random_state=random_state, **kwargs_pca)
-    n_comps = adata_pca.obsm["X_pca"].shape[1]  # might be None
+    pca(adata_pca, n_comps=n_comps, rng=rng, **kwargs_pca)
+    n_comps = adata_pca.obsm[keys.obsm].shape[1]  # might be None
 
     if inplace:
         norm_settings = adata_pca.uns["pearson_residuals_normalization"]
         norm_dict = dict(**norm_settings, pearson_residuals_df=adata_pca.to_df())
         if mask_var is not None:
-            adata.varm["PCs"] = np.zeros(shape=(adata.n_vars, n_comps))
-            adata.varm["PCs"][mask_var] = adata_pca.varm["PCs"]
+            adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
+            adata.varm[keys.varm][mask_var] = adata_pca.varm[keys.varm]
         else:
-            adata.varm["PCs"] = adata_pca.varm["PCs"]
-        adata.uns["pca"] = adata_pca.uns["pca"]
+            adata.varm[keys.varm] = adata_pca.varm[keys.varm]
+        adata.uns[keys.uns] = adata_pca.uns[keys.uns]
         adata.uns["pearson_residuals_normalization"] = norm_dict
-        adata.obsm["X_pca"] = adata_pca.obsm["X_pca"]
+        adata.obsm[keys.obsm] = adata_pca.obsm[keys.obsm]
         return None
     else:
         return adata_pca

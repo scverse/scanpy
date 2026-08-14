@@ -1,0 +1,43 @@
+{
+    "template": "https://github.com/scverse/cookiecutter-scverse",
+    "commit": "d383d94fadff9e4e6fdb59d77c68cb900d7cedec",
+    "checkout": "v0.6.0",
+    "context": {
+        "cookiecutter": {
+            "project_name": "scanpy",
+            "package_name": "scanpy",
+            "project_description": "Single-Cell Analysis in Python.",
+            "author_full_name": "Philipp Angerer",
+            "author_email": "philipp.angerer@helmholtz-munich.de",
+            "github_user": "scverse",
+            "github_repo": "scanpy",
+            "license": "BSD 3-Clause License",
+            "ide_integration": true,
+            "_copy_without_render": [
+                ".github/workflows/build.yaml",
+                ".github/workflows/test.yaml",
+                "docs/_templates/autosummary/**.rst"
+            ],
+            "_exclude_on_template_update": [
+                "CHANGELOG.md",
+                "LICENSE",
+                "README.md",
+                "docs/api.md",
+                "docs/index.md",
+                "docs/notebooks/example.ipynb",
+                "docs/references.bib",
+                "docs/references.md",
+                "src/**",
+                "tests/**"
+            ],
+            "_render_devdocs": false,
+            "_jinja2_env_vars": {
+                "lstrip_blocks": true,
+                "trim_blocks": true
+            },
+            "_template": "https://github.com/scverse/cookiecutter-scverse",
+            "_commit": "d383d94fadff9e4e6fdb59d77c68cb900d7cedec"
+        }
+    },
+    "directory": null
+}

@@ -7,6 +7,8 @@ import subprocess
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
+from sphinx.util.typing import ExtensionMetadata
+
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
     from sphinx.config import Config
@@ -45,6 +47,7 @@ def set_ref(app: Sphinx, config: Config):
     app.config["html_theme_options"]["repository_branch"] = get() or "main"
 
 
-def setup(app: Sphinx) -> None:
+def setup(app: Sphinx) -> ExtensionMetadata:
     """App setup hook."""
     app.connect("config-inited", set_ref)
+    return ExtensionMetadata(parallel_read_safe=True)

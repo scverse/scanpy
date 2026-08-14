@@ -31,7 +31,10 @@ def test_builtin_settings(capsys: CaptureFixture):
 
 
 @pytest.mark.parametrize("args", [[], ["-h"]])
-def test_help_displayed(args: list[str], capsys: CaptureFixture):
+def test_help_displayed(
+    args: list[str], capsys: CaptureFixture, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NO_COLOR", "1")
     # -h raises it, no args doesn’t. Maybe not ideal but meh.
     ctx = pytest.raises(SystemExit) if args else nullcontext()
     with ctx as se:
@@ -43,8 +46,9 @@ def test_help_displayed(args: list[str], capsys: CaptureFixture):
 
 
 @pytest.mark.usefixtures("_set_path")
-def test_help_output(capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match="^0$"):
+def test_help_output(capsys: CaptureFixture, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("NO_COLOR", "1")
+    with pytest.raises(SystemExit, match=r"^0$"):
         main(["-h"])
     captured = capsys.readouterr()
     assert re.search(
@@ -63,7 +67,7 @@ def test_external():
 
 
 def test_error_wrong_command(capsys: CaptureFixture):
-    with pytest.raises(SystemExit, match="^2$"):
+    with pytest.raises(SystemExit, match=r"^2$"):
         main(["idonotexist--"])
     captured = capsys.readouterr()
     assert "invalid choice: 'idonotexist--' (choose from" in captured.err

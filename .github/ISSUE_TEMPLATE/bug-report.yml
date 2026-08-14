@@ -33,8 +33,26 @@ body:
   id: code
   attributes:
     label: Minimal code sample
-    description: (that we can copy&paste without having any data)
+    description: |
+      Reproducible code sample. Must list dependencies in [inline script metadata][]. When put in a file named `issue.py` using [uv run][] i.e., `uv run issue.py`, should show the issue.
+
+      [uv run]: https://docs.astral.sh/uv/guides/scripts/#running-a-script-with-dependencies
+      [inline script metadata]: https://packaging.python.org/en/latest/specifications/inline-script-metadata/#example
     render: python
+    value: |
+      ```python
+      # /// script
+      # requires-python = ">=3.12"
+      # dependencies = [
+      #   "scanpy@git+https://github.com/scverse/scanpy.git@main",
+      # ]
+      # ///
+      #
+      # This script automatically imports the development branch of scanpy to check for issues
+
+      import scanpy as sc
+      # your reproducer code
+        ```
   validations:
     required: true
 - type: textarea

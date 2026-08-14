@@ -3,12 +3,12 @@ from __future__ import annotations
 import anndata
 import numpy as np
 import pytest
+from scipy import sparse
 from sklearn.neighbors import KDTree
 from umap import UMAP
 
 import scanpy as sc
 from scanpy import settings
-from scanpy._compat import pkg_version
 from testing.scanpy._helpers.data import pbmc68k_reduced
 
 X = np.array(
@@ -70,6 +70,52 @@ def test_representation(adatas):
     assert ing._obsm["rep"] is adata_new.X
 
 
+@pytest.mark.parametrize("as_sparse", [False, True])
+def test_pca_transform_uses_reference_mean(
+    as_sparse, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mask = np.tile([True, False, True, True, True], 12)
+    ref_values = np.tile(X, (1, 12))
+    query_values = np.tile(T, (1, 12))
+    ref_values[:, ~mask] = np.nan
+    query_values[:, ~mask] = np.inf
+    if as_sparse:
+        ref_x = sparse.csr_matrix(ref_values)  # noqa: TID251
+        query_x = sparse.csr_matrix(query_values)  # noqa: TID251
+    else:
+        ref_x = ref_values
+        query_x = query_values
+    adata_ref = sc.AnnData(ref_x)
+    adata_new = sc.AnnData(query_x)
+    adata_ref.var["selected"] = mask
+    sc.pp.pca(adata_ref, n_comps=3, mask_var="selected")
+    sc.pp.neighbors(adata_ref, n_neighbors=3, n_pcs=2)
+    ing = sc.tl.Ingest(adata_ref)
+
+    if as_sparse:
+
+        def fail_toarray(*args, **kwargs) -> None:
+            pytest.fail("PCA ingest must not densify the query matrix")
+
+        monkeypatch.setattr(type(adata_new.X), "toarray", fail_toarray)
+
+    expected = (query_values[:, mask] - ref_values[:, mask].mean(axis=0)) @ (
+        adata_ref.varm["PCs"][mask]
+    )
+    ing.fit(adata_new)
+    np.testing.assert_allclose(ing._obsm["rep"], expected[:, :2], rtol=1e-5, atol=1e-5)
+    ing.map_embedding("pca")
+    np.testing.assert_allclose(ing._obsm["X_pca"], expected, rtol=1e-5, atol=1e-5)
+
+    individual = []
+    for i in range(adata_new.n_obs):
+        ing.fit(adata_new[[i]].copy())
+        ing.map_embedding("pca")
+        individual.append(ing._obsm["X_pca"])
+    individual = np.vstack(individual)
+    np.testing.assert_allclose(individual, expected, rtol=1e-5, atol=1e-5)
+
+
 def test_neighbors(adatas):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -84,7 +130,7 @@ def test_neighbors(adatas):
 
     num_correct = 0.0
     for i in range(adata_new.n_obs):
-        num_correct += np.sum(np.in1d(true_indices[i], indices[i]))
+        num_correct += np.sum(np.isin(true_indices[i], indices[i]))
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
@@ -103,13 +149,10 @@ def test_neighbors_defaults(adatas, n):
     assert ing._indices.shape[1] == n
 
 
-@pytest.mark.skipif(
-    pkg_version("anndata") < sc.tl._ingest.ANNDATA_MIN_VERSION,
-    reason="`AnnData.concatenate` does not concatenate `.obsm` in old anndata versions",
-)
-def test_ingest_function(adatas):
-    adata_ref = adatas[0].copy()
-    adata_new = adatas[1].copy()
+# https://github.com/lmcinnes/umap/issues/1174
+@pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+def test_ingest_function(adatas: tuple[sc.AnnData, sc.AnnData]) -> None:
+    adata_ref, adata_new = (ad.copy() for ad in adatas)
 
     sc.tl.ingest(
         adata_new,
@@ -136,7 +179,9 @@ def test_ingest_function(adatas):
     assert "X_pca" in ad.obsm
 
 
-def test_ingest_map_embedding_umap():
+# https://github.com/lmcinnes/umap/issues/1174
+@pytest.mark.filterwarnings("ignore:.*renamed to.*ensure_all_finite:FutureWarning")
+def test_ingest_map_embedding_umap() -> None:
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
@@ -149,7 +194,7 @@ def test_ingest_map_embedding_umap():
     ing.fit(adata_new)
     ing.map_embedding(method="umap")
 
-    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
+    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4, n_jobs=1)
     reducer.fit(X)
     umap_transformed_t = reducer.transform(T)
 

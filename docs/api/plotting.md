@@ -1,4 +1,4 @@
-## Plotting: `pl`
+# Plotting: `pl`
 
 ```{eval-rst}
 .. module:: scanpy.pl
@@ -19,12 +19,15 @@ See the {ref}`settings` section for all important plotting configurations.
 
 (pl-generic)=
 
-### Generic
+## Generic
+
+Functions with both backends:
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
-   :toctree: ../generated/
+   :toctree: generated/
+   :template: function-dual
 
    pl.scatter
    pl.heatmap
@@ -33,13 +36,34 @@ See the {ref}`settings` section for all important plotting configurations.
    pl.violin
    pl.stacked_violin
    pl.matrixplot
-   pl.clustermap
    pl.ranking
+
+```
+
+Helper for computing dot areas, e.g. for {func}`~scanpy.pl.dotplot`:
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.dot_area
+
+```
+
+Legacy (matplotlib) only:
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.clustermap
    pl.dendrogram
 
 ```
 
-### Classes
+## Classes
 
 These classes allow fine tuning of visual parameters.
 
@@ -48,13 +72,13 @@ These classes allow fine tuning of visual parameters.
    :nosignatures:
    :toctree: generated/classes
 
-    pl.DotPlot
-    pl.MatrixPlot
-    pl.StackedViolin
+   pl.DotPlot
+   pl.MatrixPlot
+   pl.StackedViolin
 
 ```
 
-### Preprocessing
+## Preprocessing
 
 Methods for visualizing quality control and results of preprocessing functions.
 
@@ -62,28 +86,39 @@ Methods for visualizing quality control and results of preprocessing functions.
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
    pl.highest_expr_genes
-   pl.filter_genes_dispersion
    pl.highly_variable_genes
    pl.scrublet_score_distribution
 
 ```
 
-### Tools
+## Tools
 
 Methods that extract and visualize tool-specific annotation in an
 {class}`~anndata.AnnData` object.  For any method in module `tl`, there is
 a method with the same name in `pl`.
 
-#### PCA
+### PCA
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+   :template: function-dual
+
+   pl.pca
+   pl.ranking
+```
+
+{func}`~scanpy.pl.ranking` replaces {func}`~scanpy.pl.pca_loadings` and {func}`~scanpy.pl.pca_variance_ratio` in the new (HoloViews) backend.
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: generated/
 
-   pl.pca
    pl.pca_loadings
    pl.pca_variance_ratio
    pl.pca_overview
@@ -91,19 +126,20 @@ a method with the same name in `pl`.
 
 (pl-embeddings)=
 
-#### Embeddings
+### Embeddings
+
+Functions with both backends:
 
 ```{eval-rst}
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
-   pl.tsne
    pl.umap
+   pl.tsne
    pl.diffmap
    pl.draw_graph
-   pl.spatial
-   pl.embedding
 ```
 
 Compute densities on embeddings.
@@ -112,13 +148,25 @@ Compute densities on embeddings.
 .. autosummary::
    :nosignatures:
    :toctree: generated/
+   :template: function-dual
 
    pl.embedding_density
 ```
 
-#### Branching trajectories and pseudotime, clustering
+Legacy (matplotlib) only:
 
-Visualize clusters using one of the embedding methods passing `color='louvain'`.
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.spatial
+   pl.embedding
+```
+
+### Branching trajectories and pseudotime, clustering
+
+Visualize clusters using one of the embedding methods passing e.g. `color='leiden'`.
 
 ```{eval-rst}
 .. autosummary::
@@ -132,7 +180,17 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
    pl.paga_compare
 ```
 
-#### Marker genes
+Visualize hierarchical clustering results as a heatmap.
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pl.correlation_matrix
+```
+
+### Marker genes
 
 ```{eval-rst}
 .. autosummary::
@@ -148,7 +206,7 @@ Visualize clusters using one of the embedding methods passing `color='louvain'`.
    pl.rank_genes_groups_tracksplot
 ```
 
-#### Simulations
+### Simulations
 
 ```{eval-rst}
 .. autosummary::

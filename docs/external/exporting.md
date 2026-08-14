@@ -1,4 +1,4 @@
-## Exporting
+# Exporting
 
 ```{eval-rst}
 .. module:: scanpy.external.exporting
@@ -7,7 +7,7 @@
 
 ```{eval-rst}
 .. autosummary::
-   :toctree: ../generated/
+   :toctree: generated/
 
    exporting.spring_project
    exporting.cellbrowser
