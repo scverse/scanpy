@@ -13,6 +13,7 @@ import numpy as np
 import scipy.sparse
 from fast_array_utils.stats import mean_var
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated
 
 from .._keys import _existing_preset_keys
 from .._utils import NeighborsView
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
 __all__ = ["cellbrowser", "spring_project"]
 
 
+# TODO: move (.export is probably not a good new submodule name) and leave a wrapper in place here
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.export.spring_project` instead."))
 def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
@@ -470,6 +473,7 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     Path(outpath).write_text(json.dumps(paga_data, indent=4))
 
 
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.export.cellbrowser` instead."))
 def cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,

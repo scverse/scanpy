@@ -3,17 +3,11 @@
 from __future__ import annotations
 
 import sys
-import warnings
 
 from .. import _utils
-from .._compat import warn
 from . import exporting, pl, pp, tl
 
-__all__: list[str] = ["exporting", "pl", "pp", "tl"]
-
 _utils.annotate_doc_types(sys.modules[__name__], "scanpy")
+del sys, _utils
 
-msg = "The `scanpy.external` module is deprecated and will be removed in a future version."
-warn(msg, DeprecationWarning)
-
-del msg, sys, _utils, warnings
+__all__ = ["exporting", "pl", "pp", "tl"]

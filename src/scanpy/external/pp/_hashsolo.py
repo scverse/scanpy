@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+from scverse_misc import Deprecation, deprecated
 
 from ..._utils import check_nonnegative_integers
 from ..._utils._doctests import doctest_skipif
@@ -291,6 +292,7 @@ def _calculate_bayes_rule(
     }
 
 
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.pp.hashsolo` instead."))
 @doctest_skipif(reason="Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,

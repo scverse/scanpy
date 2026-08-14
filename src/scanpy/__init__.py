@@ -82,10 +82,9 @@ def __getattr__(name: str) -> Any:
         warn(msg, FutureWarning)
         return version("scanpy")
 
-    if name == "external":  # deprecated, warns on import
-        from importlib import import_module
+    if name == "external":
+        import scanpy.external
 
-        # not `from . import external`: that re-enters this function
-        return import_module(f".{name}", __name__)
+        return scanpy.external
 
     raise AttributeError

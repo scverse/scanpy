@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from anndata import AnnData
 from packaging.version import Version
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._compat import pkg_version
@@ -21,6 +22,14 @@ if TYPE_CHECKING:
     from ...tools._leiden import MutableVertexPartition
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`scanpy.pp.neighbors` with ``method='jaccard'``, followed by "
+        ":func:`scanpy.tl.leiden` for clustering and "
+        "`cellmapper <https://github.com/quadbio/cellmapper>`_ for label transfer.",
+    )
+)
 @doctest_needs("phenograph")
 def phenograph(  # noqa: PLR0913
     data: AnnData | np.ndarray | SpBase,
@@ -161,14 +170,20 @@ def phenograph(  # noqa: PLR0913
     **Louvain** community detection
 
     >>> sce.tl.phenograph(adata, clustering_algo="louvain", k=30)
+    FutureWarning: The function phenograph is deprecated and will be removed in the future. Use :func:`scanpy.pp.neighbors` with ``method='jaccard'``, followed by :func:`scanpy.tl.leiden` for clustering and `cellmapper <https://github.com/quadbio/cellmapper>`_ for label transfer.
+        sce.tl.phenograph(adata, clustering_algo="louvain", k=30)
 
     **Leiden** community detection
 
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=30)
+    FutureWarning: The function phenograph is deprecated and will be removed in the future. Use :func:`scanpy.pp.neighbors` with ``method='jaccard'``, followed by :func:`scanpy.tl.leiden` for clustering and `cellmapper <https://github.com/quadbio/cellmapper>`_ for label transfer.
+        sce.tl.phenograph(adata, clustering_algo="leiden", k=30)
 
     Return only `Graph` object
 
     >>> sce.tl.phenograph(adata, clustering_algo=None, k=30)
+    FutureWarning: The function phenograph is deprecated and will be removed in the future. Use :func:`scanpy.pp.neighbors` with ``method='jaccard'``, followed by :func:`scanpy.tl.leiden` for clustering and `cellmapper <https://github.com/quadbio/cellmapper>`_ for label transfer.
+        sce.tl.phenograph(adata, clustering_algo=None, k=30)
 
     Now to show phenograph on tSNE (for example):
 
@@ -197,6 +212,8 @@ def phenograph(  # noqa: PLR0913
     >>> adata = AnnData(df)
     >>> sc.pp.pca(adata, n_comps=20)
     >>> sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
+    FutureWarning: The function phenograph is deprecated and will be removed in the future. Use :func:`scanpy.pp.neighbors` with ``method='jaccard'``, followed by :func:`scanpy.tl.leiden` for clustering and `cellmapper <https://github.com/quadbio/cellmapper>`_ for label transfer.
+        sce.tl.phenograph(adata, clustering_algo="leiden", k=50)
     >>> sc.tl.tsne(adata, random_state=1)
     >>> sc.pl.tsne(
     ...     adata,
