@@ -255,6 +255,8 @@ addopts = [
 ]
 filterwarnings = [
     "error",
+    # we still collect doctests from the deprecated module
+    "ignore:The `scanpy.external` module is deprecated:DeprecationWarning",
     # Umap warns when tensorflow isn’t installed.
     "ignore::ImportWarning:umap",
     # matplotlib<3.10.7 uses old pyparsing APIs
