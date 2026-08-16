@@ -378,6 +378,15 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
     return x
 
 
+def _log1p_rep_key(*, layer: str | None, obsm: str | None) -> str:
+    """Identify the representation `log1p` is about to transform."""
+    if layer is not None:
+        return f"layers['{layer}']"
+    if obsm is not None:
+        return f"obsm['{obsm}']"
+    return "X"
+
+
 @log1p.register(AnnData)
 def log1p_anndata(
     adata: AnnData,
@@ -389,8 +398,13 @@ def log1p_anndata(
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | None:
-    if "log1p" in adata.uns:
-        logg.warning("adata.X seems to be already log-transformed.")
+    rep = _log1p_rep_key(layer=layer, obsm=obsm)
+    prev = adata.uns.get("log1p")
+    # State written before per-representation tracking existed (e.g. an `.h5ad`
+    # from an older scanpy) has no "reps" key; back then only `X` could be meant.
+    reps = list(prev.get("reps", ["X"])) if isinstance(prev, dict) else []
+    if rep in reps:
+        logg.warning(f"adata.{rep} seems to be already log-transformed.")
 
     adata = adata.copy() if copy else adata
     view_to_actual(adata)
@@ -418,7 +432,10 @@ def log1p_anndata(
         x = log1p(x, copy=False, base=base)
         _set_obs_rep(adata, x, layer=layer, obsm=obsm)
 
-    adata.uns["log1p"] = {"base": base}
+    adata.uns["log1p"] = {
+        "base": base,
+        "reps": [*reps, rep] if rep not in reps else reps,
+    }
     if copy:
         return adata
 

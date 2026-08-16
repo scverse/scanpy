@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 # TODO: Report more context on the fields being compared on error
 # TODO: Allow specifying paths to ignore on comparison
+# (partly done: `check_rep_results(..., ignore_uns=...)`)
 
 ###########################
 # Representation choice
@@ -66,8 +67,20 @@ def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs) -> None:
         np.testing.assert_array_equal(x_array, result_array)
 
 
-def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **kwargs):
-    """Check that the results of a computation add values/ mutate the anndata object in a consistent way."""
+def check_rep_results(
+    func,
+    x,
+    *,
+    fields: Iterable[str] = ("layer", "obsm"),
+    ignore_uns: Iterable[str] = (),
+    **kwargs,
+):
+    """Check that the results of a computation add values/ mutate the anndata object in a consistent way.
+
+    `ignore_uns` names `uns` paths (`"key"` or `"key/subkey"`) that are expected
+    to differ between representations, e.g. state recording *which*
+    representation was processed. Everything else still has to match.
+    """
     # Gen data
     empty_x = np.zeros(shape=x.shape, dtype=x.dtype)
     adata_empty = sc.AnnData(
@@ -93,6 +106,15 @@ def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **k
     adata.X = empty_x.copy()
     for field in fields:
         sc.get._set_obs_rep(adatas_proc[field], empty_x.copy(), **{field: field})
+
+    for path in ignore_uns:
+        key, _, subkey = path.partition("/")
+        for cur in (adata, *adatas_proc.values()):
+            if subkey:
+                if isinstance(entry := cur.uns.get(key), dict):
+                    entry.pop(subkey, None)
+            else:
+                cur.uns.pop(key, None)
 
     for field_a, field_b in permutations(fields, 2):
         assert_equal(adatas_proc[field_a], adatas_proc[field_b])
