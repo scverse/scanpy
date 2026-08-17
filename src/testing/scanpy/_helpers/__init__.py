@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
 from contextlib import contextmanager
 from importlib.util import find_spec
 from itertools import permutations
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 from anndata import AnnData
@@ -98,7 +101,7 @@ def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **k
 
 
 def _check_check_values_warnings(
-    function, adata: AnnData, expected_warning: str, kwargs=MappingProxyType({})
+    function, adata: AnnData, expected_warning: str, kwargs=frozendict({})
 ):
     """Run `function` on `adata` with provided arguments `kwargs` twice.
 

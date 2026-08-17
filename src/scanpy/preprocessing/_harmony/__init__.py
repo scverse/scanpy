@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import enum
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -16,6 +17,20 @@ if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
 
 
+class _Stopping(NamedTuple):
+    max_iter_clustering: int
+    tol_clustering: float
+    tol_harmony: float
+
+
+class Stopping(_Stopping, enum.Enum):
+    HARMONY2 = (4, 1e-3, 1e-2)
+    """Follows harmonypy 2.0.0 / harmony 2.0.5 (R) defaults."""
+
+    HARMONY1 = (200, 1e-5, 1e-4)
+    """Follows harmony-pytorch defaults."""
+
+
 def harmony_integrate(  # noqa: PLR0913
     adata: AnnData,
     key: str | Sequence[str],
@@ -26,9 +41,9 @@ def harmony_integrate(  # noqa: PLR0913
     flavor: Literal["harmony2", "harmony1"] = "harmony2",
     n_clusters: int | None = None,
     max_iter_harmony: int = 10,
-    max_iter_clustering: int = 200,
-    tol_harmony: float = 1e-4,
-    tol_clustering: float = 1e-5,
+    max_iter_clustering: int | None = None,
+    tol_harmony: float | None = None,
+    tol_clustering: float | None = None,
     sigma: float = 0.1,
     theta: float | Sequence[float] = 2.0,
     tau: int = 0,
@@ -89,12 +104,16 @@ def harmony_integrate(  # noqa: PLR0913
         (each consisting of a clustering step followed by a correction step).
     max_iter_clustering
         Maximum iterations for the clustering step within each Harmony iteration.
+        If :data:`None`, uses the value of the reference implementation for the
+        chosen ``flavor``: ``4`` for ``"harmony2"``, ``200`` for ``"harmony1"``.
     tol_harmony
         Convergence tolerance for the Harmony objective function.
         The algorithm stops when the relative change in objective falls below this value.
+        If :data:`None`, ``1e-2`` for ``"harmony2"`` and ``1e-4`` for ``"harmony1"``.
     tol_clustering
         Convergence tolerance for the clustering step within each
         Harmony iteration.
+        If :data:`None`, ``1e-3`` for ``"harmony2"`` and ``1e-5`` for ``"harmony1"``.
     sigma
         Width of the soft-clustering kernel.
         Controls the entropy of cluster assignments:
@@ -164,6 +183,15 @@ def harmony_integrate(  # noqa: PLR0913
         raise ValueError(msg)
     stabilized_penalty = flavor == "harmony2"
     dynamic_lambda = flavor == "harmony2"
+
+    # Unset stopping rules follow the flavor's reference implementation
+    defaults = Stopping[flavor.upper()]
+    if max_iter_clustering is None:
+        max_iter_clustering = defaults.max_iter_clustering
+    if tol_clustering is None:
+        tol_clustering = defaults.tol_clustering
+    if tol_harmony is None:
+        tol_harmony = defaults.tol_harmony
 
     # Warn when flavor-incompatible parameters are explicitly set
     if flavor == "harmony2" and ridge_lambda != 1.0:
