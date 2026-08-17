@@ -59,3 +59,4 @@ Read other formats using functions borrowed from {mod}`anndata`
    io.read_mtx
    io.read_text
    io.read_umi_tools
+```
