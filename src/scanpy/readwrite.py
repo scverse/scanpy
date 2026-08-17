@@ -13,6 +13,17 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from anndata.io import (
+    read_csv,
+    read_excel,
+    read_h5ad,
+    read_hdf,
+    read_loom,
+    read_text,
+    read_zarr,
+    write_h5ad,
+    write_zarr,
+)
 from matplotlib.image import imread
 from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
@@ -21,27 +32,6 @@ from . import logging as logg
 from ._compat import pkg_version, warn
 from ._settings import AnnDataFileFormat, Default, settings
 from ._utils.random import _LegacyRng
-
-if pkg_version("anndata") >= Version("0.11.0rc2"):
-    from anndata.io import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_text,
-        read_zarr,
-    )
-else:
-    from anndata import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_text,
-        read_zarr,
-    )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -88,7 +78,7 @@ def read(
     first_column_names: bool = False,
     backup_url: str | None = None,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     **kwargs,
@@ -525,7 +515,7 @@ def read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"] = "gene_symbols",
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Literal["gzip", "lzf"] | None | Default = Default(
+    cache_compression: Literal["gzip", "lzf"] | Default | None = Default(
         "sc.settings.cache_compression"
     ),
     gex_only: bool = True,
@@ -624,7 +614,7 @@ def _read_10x_mtx(
     var_names: Literal["gene_symbols", "gene_ids"],
     make_unique: bool,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     prefix: str,
     is_legacy: bool,
     compressed: bool,
@@ -660,7 +650,7 @@ def _read_10x_mtx(
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
     barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].array
+    adata.obs_names = barcodes[0].array.astype("str")
     return adata
 
 
@@ -727,32 +717,17 @@ def write(
         msg = f"Unknown file format: {ext} (not in {valid_exts})"
         raise ValueError(msg)
 
-    if pkg_version("anndata") >= Version("0.11.0rc2"):
-        from anndata.io import write_h5ad, write_zarr
-
-        extra_kw = dict(convert_strings_to_categoricals=convert_strings_to_categoricals)
-    else:
-        if not convert_strings_to_categoricals:
-            msg = (
-                "convert_strings_to_categoricals=False is not supported in anndata<0.11"
-            )
-            raise RuntimeError(msg)
-
-        def write_h5ad(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
-            adata.write_h5ad(filename, **kw)
-
-        def write_zarr(filename: PathLike[str] | str, adata: AnnData, **kw) -> None:
-            adata.write_zarr(filename, **kw)
-
-        extra_kw = {}
-
     if ext == "zarr":
-        write_zarr(filename, adata, **extra_kw)
+        write_zarr(
+            filename,
+            adata,
+            convert_strings_to_categoricals=convert_strings_to_categoricals,
+        )
     else:
         write_h5ad(
             filename,
             adata,
-            **extra_kw,
+            convert_strings_to_categoricals=convert_strings_to_categoricals,
             compression=compression,
             compression_opts=compression_opts,
         )
@@ -840,7 +815,7 @@ def _read(  # noqa: PLR0912, PLR0915
     first_column_names: bool,
     backup_url: str | None,
     cache: bool,
-    cache_compression: Literal["gzip", "lzf"] | None | Default,
+    cache_compression: Literal["gzip", "lzf"] | Default | None,
     suppress_cache_warning: bool = False,  # not part of the official API
     **kwargs,
 ):

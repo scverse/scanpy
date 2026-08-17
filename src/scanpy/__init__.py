@@ -3,38 +3,22 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import version
 from typing import TYPE_CHECKING
 
-from packaging.version import Version
-
 # start with settings as several tools are using it
-from ._settings import Preset, Verbosity, settings
-
-if Version(version("anndata")) >= Version("0.11.0rc2"):
-    from anndata.io import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_mtx,
-        read_text,
-        read_umi_tools,
-    )
-else:
-    from anndata import (
-        read_csv,
-        read_excel,
-        read_h5ad,
-        read_hdf,
-        read_loom,
-        read_mtx,
-        read_text,
-        read_umi_tools,
-    )
+from ._settings import Preset, Verbosity, settings  # isort: skip
 
 from anndata import AnnData, concat
+from anndata.io import (
+    read_csv,
+    read_excel,
+    read_h5ad,
+    read_hdf,
+    read_loom,
+    read_mtx,
+    read_text,
+    read_umi_tools,
+)
 
 from . import datasets, experimental, external, get, logging, metrics, queries
 from . import plotting as pl

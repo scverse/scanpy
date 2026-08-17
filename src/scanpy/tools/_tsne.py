@@ -33,7 +33,7 @@ def tsne(  # noqa: PLR0913
     rng: SeedLike | RNGLike | None = None,
     use_fast_tsne: bool = False,
     n_jobs: int | None = None,
-    key_added: str | None | Default = Default(preset=("tsne", "key_added")),
+    key_added: str | Default | None = Default(preset=("tsne", "key_added")),
     copy: bool = False,
 ) -> AnnData | None:
     r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.

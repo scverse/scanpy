@@ -57,7 +57,9 @@ def scatter(
 
     Basically just
 
-    >>> hv.Scatter(adata, kdims[0], [kdims[1], *vdims]).opts(aspect="square", ...)
+    ..  code-block:: python
+
+        hv.Scatter(adata, kdims[0], [kdims[1], *vdims]).opts(aspect="square", ...)
 
     If ``color`` is set, it’s both added to ``vdims`` and in ``.opts(color=...)``.
 
@@ -180,7 +182,9 @@ def heatmap(
 
     Basically just
 
-    >>> hv.HeatMap(adata, [A.obs.index, A.var.index], [base[:, :], *vdims]).opts(...)
+    ..  code-block:: python
+
+        hv.HeatMap(adata, [A.obs.index, A.var.index], [base[:, :], *vdims]).opts(...)
 
     Set ``base`` to e.g. ``A`` or ``A.layers[key]``,
     and ``transpose=True`` to switch the order of the dims.
@@ -188,7 +192,9 @@ def heatmap(
     If ``add_dendrogram`` is True, the dendrogram is added.
     Call it directly to customize the dendrogram:
 
-    >>> hv.operation.dendrogram(heatmap, adjoint_dims=..., main_dim=base[:, :])
+    ..  code-block:: python
+
+        hv.operation.dendrogram(heatmap, adjoint_dims=..., main_dim=base[:, :])
 
     Parameters
     ----------
@@ -411,11 +417,15 @@ def violin(
 
     If ``vdims`` is an ``AdDim``, a single violin is returned:
 
-    >>> hv.Violin(adata, kdims, [vdims, color]).opts(violin_fill_color=color, ...)
+    ..  code-block:: python
+
+        hv.Violin(adata, kdims, [vdims, color]).opts(violin_fill_color=color, ...)
 
     If either ``vdims`` or ``color`` is a collection (not both), a layout is returned:
 
-    >>> hv.Layout([violin(adata, kdims, vdim, ...) for vdim in vdims]).opts(...)
+    ..  code-block:: python
+
+        hv.Layout([violin(adata, kdims, vdim, ...) for vdim in vdims]).opts(...)
 
     If both are collections, a 2D :class:`~holoviews.NdLayout` grid is returned,
     one violin per ``(vdim, color)`` combination.

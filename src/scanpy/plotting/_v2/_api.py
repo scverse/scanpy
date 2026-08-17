@@ -34,6 +34,7 @@ def hv_init(*backends: _Backend | None) -> AdAcc:
     Examples
     --------
     >>> import scanpy as sc
+    >>> sc.settings.preset = sc.Preset.ScanpyV2Preview
     >>> A = sc.pl.hv_init()
     """
     register()

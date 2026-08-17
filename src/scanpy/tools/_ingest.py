@@ -364,7 +364,7 @@ class Ingest:
         adata: AnnData,
         neighbors_key: str | None = None,
         *,
-        rng: np.random.Generator | None | Default = Default(
+        rng: np.random.Generator | Default | None = Default(
             "adata.uns['umap']['params'].get('random_state', 0)"
         ),
     ) -> None:

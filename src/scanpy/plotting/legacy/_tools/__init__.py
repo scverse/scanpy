@@ -1284,7 +1284,7 @@ def sim(
     shuffle: bool = False,
     show: bool | None = None,
     marker: str | Sequence[str] = ".",
-    rng: SeedLike | RNGLike | None | Default = Default("0 (legacy)"),
+    rng: SeedLike | RNGLike | Default | None = Default("0 (legacy)"),
     # deprecated
     save: bool | str | None = None,
 ) -> None:

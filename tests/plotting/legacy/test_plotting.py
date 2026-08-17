@@ -1231,7 +1231,11 @@ def pbmc_scatterplots(pbmc_scatterplots_session) -> AnnData:
             "umap_with_edges",
             partial(sc.pl.umap, color="louvain", edges=True, edges_width=0.1, s=50),
         ),
-        # ('diffmap', partial(sc.pl.diffmap, components='all', color=['CD3D'])),
+        ("diffmap", partial(sc.pl.diffmap, color="bulk_labels")),
+        (
+            "diffmap_gene",
+            partial(sc.pl.diffmap, color="CD3D", components="1,2"),
+        ),
         (
             "umap_symbols",
             partial(sc.pl.umap, color=["1", "2", "3"], gene_symbols="numbers"),
@@ -1441,10 +1445,7 @@ def test_binary_scatter(plot_cmp):
     )
     sc.pp.pca(data)
     sc.pl.pca(data, color="binary", show=False)
-    if pkg_version("scikit-learn") >= Version("1.5.0rc1"):
-        plot_cmp("binary_pca")
-    else:
-        plot_cmp("binary_pca_old")
+    plot_cmp("binary_pca")
 
 
 def test_scatter_specify_layer_and_raw():

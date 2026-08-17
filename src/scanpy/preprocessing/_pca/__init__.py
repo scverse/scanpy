@@ -62,11 +62,11 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     chunk_size: int | None = None,
     rng: SeedLike | RNGLike | None = None,
     return_info: bool = False,
-    mask_var: NDArray[np.bool] | str | None | Default = Default(
+    mask_var: NDArray[np.bool] | str | Default | None = Default(
         "adata.var.get('highly_variable')"
     ),
     dtype: DTypeLike = "float32",
-    key_added: str | None | Default = Default(preset=("pca", "key_added")),
+    key_added: str | Default | None = Default(preset=("pca", "key_added")),
     copy: bool = False,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.

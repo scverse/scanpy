@@ -173,7 +173,7 @@ def normalize_pearson_residuals_pca(
     n_comps: int | None = 50,
     rng: SeedLike | RNGLike | None = None,
     kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Default = Default(
+    mask_var: np.ndarray | str | Default | None = Default(
         "adata.var.get('highly_variable')"
     ),
     check_values: bool = True,

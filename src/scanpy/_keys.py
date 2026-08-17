@@ -38,24 +38,24 @@ class _PcaKeys(_EmbeddingKeys):
 @overload
 def _embedding_keys(
     embedding: Literal["pca"],
-    key_added: str | None | Default | Preset = ...,
+    key_added: str | Default | Preset | None = ...,
 ) -> _PcaKeys: ...
 @overload
 def _embedding_keys(
     embedding: Literal["tsne", "umap", "diffmap"],
-    key_added: str | None | Default | Preset = ...,
+    key_added: str | Default | Preset | None = ...,
 ) -> _EmbeddingKeys: ...
 @overload
 def _embedding_keys(
     embedding: Literal["draw_graph"],
-    key_added: str | None | Default | Preset = ...,
+    key_added: str | Default | Preset | None = ...,
     *,
     layout: str,
     key_added_ext: str | None = ...,
 ) -> _EmbeddingKeys: ...
 def _embedding_keys(
     embedding: _Embedding,
-    key_added: str | None | Default | Preset = Default(),
+    key_added: str | Default | Preset | None = Default(),
     *,
     layout: str = "",
     key_added_ext: str | None = None,

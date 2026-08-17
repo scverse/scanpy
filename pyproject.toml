@@ -51,7 +51,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.11.2",
+    "anndata>=0.12.14",
     "array-api-compat",
     "certifi",
     "fast-array-utils[accel,sparse]>=1.5",
@@ -60,8 +60,8 @@ dependencies = [
     "matplotlib>=3.10",
     "natsort",
     "networkx>=3.4",
-    "numba>=0.61",
-    "numpy>=2.1",
+    "numba>=0.61.2",
+    "numpy>=2.2.5",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
@@ -75,6 +75,7 @@ dependencies = [
     "tqdm",
     "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
+    "zarr>=3.2",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
@@ -86,7 +87,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
-dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 jax = [ "jax" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
@@ -117,15 +118,14 @@ test = [
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
-    "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
 docs = [
-    "ipython>=8.27",  # for nbsphinx code highlighting
+    "ipython>=8.27",                                         # for nbsphinx code highlighting
     "myst-nb>=1.4",
     "myst-parser>=2",
     "nbsphinx>=0.9",
-    "numpy>=2.4",     # type aliases
+    "numpy>=2.4",                                            # type aliases
     "plotly",
     "sam-algorithm",
     # TODO: remove necessity for being able to import doc-linked classes
@@ -215,9 +215,8 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # PLR0913: Test may use many fixtures
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
-lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
-lint.flake8-type-checking.exempt-modules = [  ]
+lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
 lint.flake8-type-checking.strict = true
 lint.isort.known-first-party = [ "scanpy", "testing.scanpy" ]
@@ -297,7 +296,7 @@ markers = [
     "gpu: tests that use a GPU (unused, required by anndata.tests.helpers)",
     "array_api: tests that use array_api (unused, required by anndata.tests.helpers)",
 ]
-norecursedirs = [ "tests/_images", "src/scanpy/plotting/_v2" ]
+norecursedirs = [ "tests/_images" ]
 strict = true
 testpaths = [ "./tests", "./ci", "scanpy" ]
 
@@ -326,7 +325,7 @@ filename = "docs/release-notes/{version}.md"
 title_format = "(v{version})=\n### {version} {{small}}`{project_date}`"
 issue_format = "{{pr}}`{issue}`"
 single_file = false
-fragment.breaking.name = "Breaking changes"                             # add `!` to commit type (e.g. “feature!:”)
+fragment.breaking.name = "Breaking changes"  # add `!` to commit type (e.g. “feature!:”)
 fragment.chore.name = "Miscellaneous changes"
 fragment.docs.name = "Documentation"
 # Valid fragments should be a subset of conventional commit types (except for `breaking`):

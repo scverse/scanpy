@@ -389,7 +389,7 @@ class BasePlot:
         return self
 
     def style(
-        self, *, cmap: Colormap | str | None | Default = Default("no change")
+        self, *, cmap: Colormap | str | Default | None = Default("no change")
     ) -> Self:
         r"""Set visual style parameters.
 

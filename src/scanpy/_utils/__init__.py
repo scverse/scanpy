@@ -82,7 +82,6 @@ __all__ = [
     "get_literal_vals",
     "indent",
     "is_backed_type",
-    "is_backed_type",
     "obs_acc",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
@@ -263,7 +262,7 @@ def check_array_function_arguments(**kwargs):
 
 def check_use_raw(
     adata: AnnData,
-    use_raw: None | bool,  # noqa: FBT001
+    use_raw: bool | None,  # noqa: FBT001
     *,
     layer: str | None = None,
 ) -> bool:
@@ -901,7 +900,7 @@ def select_groups(
     if len(groups_ids) == 0:
         msg = (
             f"{np.array(groups_order_subset)} invalid! specify valid "
-            f"groups_order (or indices) from {adata.obs[key].cat.categories}",
+            f"groups_order (or indices) from {adata.obs[key].cat.categories}"
         )
         raise RuntimeError(msg)
     groups_masks_obs = groups_masks_obs[groups_ids]

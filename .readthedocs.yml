@@ -1,7 +1,5 @@
 # https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
-submodules:
-  include: all
 build:
   os: ubuntu-24.04
   tools:

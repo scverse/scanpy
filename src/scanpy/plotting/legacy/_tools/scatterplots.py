@@ -969,8 +969,8 @@ def spatial(  # noqa: PLR0913
     *,
     basis: str = "spatial",
     img: np.ndarray | None = None,
-    img_key: str | None | Default = Default("'hires' | 'lowres'"),
-    library_id: str | None | Default = Default("uns['spatial'][key] if only one key"),
+    img_key: str | Default | None = Default("'hires' | 'lowres'"),
+    library_id: str | Default | None = Default("uns['spatial'][key] if only one key"),
     crop_coord: tuple[int, int, int, int] | None = None,
     alpha_img: float = 1.0,
     bw: bool | None = False,
@@ -1239,7 +1239,10 @@ def _get_color_source_vector(
 def _get_palette(adata, values_key: str, palette=None):
     color_key = f"{values_key}_colors"
     if adata.obs[values_key].dtype == bool:
-        values = pd.Categorical(adata.obs[values_key].astype(str))
+        values = pd.Categorical(
+            adata.obs[values_key].astype(str),
+            categories=("False", "True"),
+        )
     else:
         values = pd.Categorical(adata.obs[values_key])
     if palette:
@@ -1351,7 +1354,7 @@ def _check_scale_factor(
 
 
 def _check_spatial_data(
-    uns: Mapping, library_id: str | None | Default
+    uns: Mapping, library_id: str | Default | None
 ) -> tuple[str | None, Mapping | None]:
     """Given a mapping, try and extract a library id/ mapping with spatial data.
 
@@ -1376,7 +1379,7 @@ def _check_spatial_data(
 def _check_img(
     spatial_data: Mapping | None,
     img: np.ndarray | None,
-    img_key: None | str | Default,
+    img_key: str | Default | None,
     *,
     bw: bool = False,
 ) -> tuple[np.ndarray | None, str | None]:

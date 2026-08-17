@@ -9,10 +9,9 @@ from typing import TYPE_CHECKING, TypedDict, cast
 
 import anndata as ad
 import pytest
-from packaging.version import Version
 
 # just import for the IMPORTED check
-from scanpy._compat import pkg_version
+from scanpy._compat import pkg_version  # noqa: F401
 
 if TYPE_CHECKING:  # So editors understand that we’re using those fixtures
     import os
@@ -150,6 +149,5 @@ def exit_stack() -> Generator[ExitStack]:
 
 @pytest.fixture(autouse=True)
 def anndata_settings():
-    if pkg_version("anndata") >= Version("0.12"):
-        ad.settings.auto_shard_zarr_v3 = True
-        ad.settings.zarr_write_format = 3
+    ad.settings.auto_shard_zarr_v3 = True
+    ad.settings.zarr_write_format = 3

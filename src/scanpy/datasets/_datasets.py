@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
+import zarr.storage
 from anndata import AnnData, OldFormatWarning
 from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
@@ -17,12 +18,13 @@ from .._settings import Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..readwrite import read, read_h5ad
+from ..readwrite import read, read_zarr
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
     from typing import Literal
 
+    from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
 
     type VisiumSampleID = Literal[
@@ -349,14 +351,36 @@ def pbmc68k_reduced() -> AnnData:
 
     `PBMC 68k dataset`_ from 10x Genomics.
 
-    The original PBMC 68k dataset was preprocessed with steps including
-    :func:`~scanpy.pp.normalize_total`\ [#norm]_ and :func:`~scanpy.pp.scale`.
-    It was saved keeping only 724 cells and 221 highly variable genes.
+    The original PBMC 68k dataset was preprocessed with steps very similar to the following:
 
-    The saved file contains the annotation of cell types (key: `'bulk_labels'`),
-    UMAP coordinates, louvain clustering and gene rankings based on the `bulk_labels`.
+    ..  code-block:: python
 
-    .. [#norm] Back when the dataset was created, ``sc.pp.normalize_per_cell`` was used instead.
+        import scanpy as sc
+
+        adata = sc.read_10x_mtx(
+            "./data/filtered/filtered_matrices_mex/hg19/",
+            var_names="gene_symbols",
+        )
+        adata.var_names_make_unique()
+
+        sc.pp.filter_cells(adata, min_genes=200)
+        sc.pp.filter_genes(adata, min_counts=125)
+
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        if sc.settings.preset == sc.Preset.ScanpyV2Preview:
+            adata.layers["log_counts"] = adata.X.copy()
+        else:
+            adata.raw = adata.copy()
+            adata.raw.X.data = adata.raw.X.data.round(3)
+
+        sc.pp.highly_variable_genes(adata)
+        sc.pp.subsample(adata, n_obs=700)
+        sc.pp.scale(adata)
+
+    The `.obs["bulk_labels"]` were obtained as described in :cite:t:`Zheng2017`.
+    UMAP coordinates, louvain clustering and gene rankings were calculated based on the `bulk_labels`.
+
     .. _PBMC 68k dataset: https://www.10xgenomics.com/datasets/fresh-68-k-pbm-cs-donor-a-1-standard-1-1-0
 
     Returns
@@ -374,16 +398,32 @@ def pbmc68k_reduced() -> AnnData:
         obsm: 'X_pca', 'X_umap'
         varm: 'PCs'
         obsp: 'connectivities', 'distances'
-        layers: None (.X)
+        layers: 'counts', None (.X)
 
     """
     from scanpy._settings import Preset, settings
 
-    adata = read_h5ad(HERE / "10x_pbmc68k_reduced.h5ad")
+    store = zarr.storage.ZipStore(HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r")
+    adata = read_zarr(zarr.open_group(store=store, mode="r"))
+
+    # normalize using `n_counts`,
+    # i.e. the size factors computed over all genes passing the initial filtering.
+    size_factors = adata.obs["n_counts"].to_numpy() / 1e4
+    counts = cast("CSRBase", adata.layers["counts"])
+
+    log_counts = counts.astype(np.float32)
+    log_counts.data /= np.repeat(size_factors, np.diff(log_counts.indptr))
+    log_counts.data = np.log1p(log_counts.data)
+
     if settings.preset is Preset.ScanpyV2Preview:
-        adata.layers["counts"] = adata.raw.X
-        del adata.raw
+        adata.layers["log_counts"] = log_counts
         adata.obsm = {k.removeprefix("X_"): v for k, v in adata.obsm.items()}
+    else:
+        # matches the precision of the original, pre-2.0 shipped `.raw`
+        log_counts.data = np.round(log_counts.data, 3)
+        # tie-break rounding boundary like the original did
+        log_counts[357, 715] = 4.019
+        adata.raw = AnnData(X=log_counts, var=adata.var[[]])
     return adata
 
 
