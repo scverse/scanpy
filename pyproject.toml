@@ -106,8 +106,8 @@ scanpy2 = [ "anndata>=0.13.2", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[
 [dependency-groups]
 dev = [
     "scipy-stubs",     # static typing and IDE support
-    "types-array-api",
     "towncrier",       # release note management
+    "types-array-api",
 ]
 test = [
     "scanpy[dask-ml]",
