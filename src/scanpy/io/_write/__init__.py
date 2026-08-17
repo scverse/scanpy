@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, cast, get_args
 
 from anndata.io import write_h5ad, write_zarr
 
-from .._compat import warn
-from .._settings import AnnDataFileFormat, settings
+from ..._compat import warn
+from ..._settings import AnnDataFileFormat, settings
 from .exporting import write_cellbrowser, write_spring_project
 
 if TYPE_CHECKING:

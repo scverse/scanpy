@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import warnings
 from functools import partial
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import TYPE_CHECKING, get_args, overload
 
 import anndata.utils
@@ -29,7 +29,7 @@ from scverse_misc import Deprecation, deprecated
 from .. import logging as logg
 from .._compat import pkg_version
 from .._settings import AnnDataFileFormat, Default, settings
-from .._utils.random import _LegacyRng
+from ._download import check_datafile_present_and_download, slugify
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -62,6 +62,7 @@ avail_exts = {
 """Available file formats for reading data. """
 
 assert set(get_args(AnnDataFileFormat)) <= avail_exts
+
 
 # --------------------------------------------------------------------------------
 # Reading and Writing data files and AnnData objects
@@ -201,7 +202,7 @@ def read_10x_h5(
     """
     path = Path(filename)
     start = logg.info(f"reading {path}")
-    is_present = _check_datafile_present_and_download(path, backup_url=backup_url)
+    is_present = check_datafile_present_and_download(path, backup_url=backup_url)
     if not is_present:
         logg.debug(f"... did not find original file {path}")
     with h5py.File(str(path), "r") as f:
@@ -655,73 +656,6 @@ def _read_10x_mtx(
 
 
 # -------------------------------------------------------------------------------
-# Reading and writing parameter files
-# -------------------------------------------------------------------------------
-
-
-def read_params(
-    filename: PathLike[str] | str, *, as_header: bool = False
-) -> dict[str, int | float | bool | str | None]:
-    """Read parameter dictionary from text file.
-
-    Assumes that parameters are specified in the format::
-
-        par1 = value1
-        par2 = value2
-
-    Comments that start with '#' are allowed.
-
-    Parameters
-    ----------
-    filename
-        Filename of data file.
-    asheader
-        Read the dictionary from the header (comment section) of a file.
-
-    Returns
-    -------
-    Dictionary that stores parameters.
-
-    """
-    filename = Path(filename)  # allow passing str objects
-    from collections import OrderedDict
-
-    params = OrderedDict([])
-    with filename.open() as f:
-        for line_raw in f:
-            if "=" not in line_raw or (as_header and not line_raw.startswith("#")):
-                continue
-            line = line_raw[1:] if line_raw.startswith("#") else line_raw
-            key, val = line.split("=")
-            key = key.strip()
-            val = val.strip()
-            params[key] = convert_string(val)
-    return params
-
-
-def write_params(path: PathLike[str] | str, *args, **maps):
-    """Write parameters to file, so that it's readable by read_params.
-
-    Uses INI file format.
-    """
-    path = Path(path)
-    if not path.parent.is_dir():
-        path.parent.mkdir(parents=True)
-    if len(args) == 1:
-        maps[None] = args[0]
-    with path.open("w") as f:
-        for header, map in maps.items():
-            if header is not None:
-                f.write(f"[{header}]\n")
-            for key, val in map.items():
-                if key == "rng":
-                    if isinstance(val, _LegacyRng) and val.arg is not None:
-                        f.write(f"seed = {val.arg}\n")
-                else:
-                    f.write(f"{key} = {val}\n")
-
-
-# -------------------------------------------------------------------------------
 # Reading and Writing data files
 # -------------------------------------------------------------------------------
 
@@ -745,7 +679,7 @@ def _read(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
     else:
         ext = is_valid_filename(filename, return_ext=True, ext=ext)
-    is_present = _check_datafile_present_and_download(filename, backup_url=backup_url)
+    is_present = check_datafile_present_and_download(filename, backup_url=backup_url)
     if not is_present:
         logg.debug(f"... did not find original file {filename}")
     # read hdf5 files
@@ -761,9 +695,7 @@ def _read(  # noqa: PLR0912, PLR0915
             raise TypeError(msg)
         return read_zarr(filename)
     # read other file types
-    path_cache: Path = settings.cachedir / _slugify(filename).replace(
-        f".{ext}", ".h5ad"
-    )
+    path_cache: Path = settings.cachedir / slugify(filename).replace(f".{ext}", ".h5ad")
     if path_cache.suffix in {".gz", ".bz2"}:
         path_cache = path_cache.with_suffix("")
     if cache and path_cache.is_file():
@@ -824,21 +756,6 @@ def _read(  # noqa: PLR0912, PLR0915
     return adata
 
 
-def _slugify(path: str | PurePath) -> str:
-    """Make a path into a filename."""
-    if not isinstance(path, PurePath):
-        path = PurePath(path)
-    parts = list(path.parts)
-    if parts[0] == "/":
-        parts.pop(0)
-    elif len(parts[0]) == 3 and parts[0][1:] == ":\\":
-        parts[0] = parts[0][0]  # C:\ → C
-    filename = "-".join(parts)
-    assert "/" not in filename, filename
-    assert not filename[1:].startswith(":"), filename
-    return filename
-
-
 def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:
     """Read a SOFT format data file.
 
@@ -894,134 +811,6 @@ def _read_softgz(filename: str | bytes | Path | IO[bytes]) -> AnnData:
     obs = pd.DataFrame({"groups": groups}, index=sample_names)
     var = pd.DataFrame(index=gene_names)
     return AnnData(X=x, obs=obs, var=var)
-
-
-# -------------------------------------------------------------------------------
-# Type conversion
-# -------------------------------------------------------------------------------
-
-
-def is_float(string: str) -> float:
-    """Check whether string is float.
-
-    See Also
-    --------
-    https://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
-
-    """
-    try:
-        float(string)
-        return True
-    except ValueError:
-        return False
-
-
-def is_int(string: str) -> bool:
-    """Check whether string is integer."""
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
-
-
-def convert_bool(string: str) -> tuple[bool, bool]:
-    """Check whether string is boolean."""
-    if string == "True":
-        return True, True
-    elif string == "False":
-        return True, False
-    else:
-        return False, False
-
-
-def convert_string(string: str) -> int | float | bool | str | None:
-    """Convert string to int, float or bool."""
-    if is_int(string):
-        return int(string)
-    elif is_float(string):
-        return float(string)
-    elif convert_bool(string)[0]:
-        return convert_bool(string)[1]
-    elif string == "None":
-        return None
-    else:
-        return string
-
-
-# -------------------------------------------------------------------------------
-# Helper functions for reading and writing
-# -------------------------------------------------------------------------------
-
-
-def _download(url: str, path: Path):
-    from ssl import create_default_context
-    from tempfile import NamedTemporaryFile
-    from urllib.request import Request, urlopen
-
-    from certifi import contents
-    from tqdm.auto import tqdm
-
-    blocksize = 1024 * 8
-    blocknum = 0
-
-    # Write to a temp file and rename so readers never see a partial file (#4097).
-    tmp_path: Path | None = None
-    try:
-        req = Request(url, headers={"User-agent": "scanpy-user"})
-
-        with urlopen(req, context=create_default_context(cadata=contents())) as resp:
-            total = resp.info().get("content-length", None)
-            with (
-                tqdm(
-                    unit="B",
-                    unit_scale=True,
-                    miniters=1,
-                    unit_divisor=1024,
-                    total=total if total is None else int(total),
-                ) as t,
-                NamedTemporaryFile(
-                    dir=path.parent,
-                    prefix=f"{path.name}.",
-                    suffix=".part",
-                    delete=False,
-                ) as f,
-            ):
-                tmp_path = Path(f.name)
-                block = resp.read(blocksize)
-                while block:
-                    f.write(block)
-                    blocknum += 1
-                    t.update(len(block))
-                    block = resp.read(blocksize)
-
-        tmp_path.replace(path)
-        tmp_path = None
-
-    except (KeyboardInterrupt, Exception):
-        # Only remove our own temp file; leave path, which may be another process's.
-        if tmp_path is not None:
-            tmp_path.unlink(missing_ok=True)
-        raise
-
-
-def _check_datafile_present_and_download(path: Path, backup_url=None):
-    """Check whether the file is present, otherwise download."""
-    path = Path(path)
-    if path.is_file():
-        return True
-    if backup_url is None:
-        return False
-    logg.info(
-        f"try downloading from url\n{backup_url}\n"
-        "... this may take a while but only happens once"
-    )
-    if not path.parent.is_dir():
-        logg.info(f"creating directory {path.parent}/ for saving data")
-        path.parent.mkdir(parents=True)
-
-    _download(backup_url, path)
-    return True
 
 
 @overload

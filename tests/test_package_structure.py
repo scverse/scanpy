@@ -29,7 +29,7 @@ api_module_names = [
     "sc.external.pp",
     "sc.external.tl",
     "sc.external.pl",
-    "sc.external.exporting",
+    "sc.io",
     "sc.get",
     "sc.logging",
     # "sc.neighbors",  # Not documented

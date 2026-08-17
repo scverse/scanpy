@@ -174,7 +174,7 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     import io
     import urllib.request
 
-    from scanpy.readwrite import _download
+    from scanpy.io._download import download
 
     content = b"0123456789" * 5_000
     dest = tmp_path / "cache" / "data.bin"
@@ -202,7 +202,7 @@ def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FakeResponse())
 
-    _download("http://example.invalid/data.bin", dest)
+    download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == content
     assert len(dest_present_during_download) > 1
@@ -216,7 +216,7 @@ def test_download_failure_keeps_existing_file(
     """A failed download must not delete an already-present destination (#4097)."""
     import urllib.request
 
-    from scanpy.readwrite import _download
+    from scanpy.io._download import download
 
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
@@ -239,7 +239,7 @@ def test_download_failure_keeps_existing_file(
     monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: FailingResponse())
 
     with pytest.raises(OSError, match="connection reset"):
-        _download("http://example.invalid/data.bin", dest)
+        download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == b"complete"
     assert list(dest.parent.iterdir()) == [dest]

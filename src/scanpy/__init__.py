@@ -68,6 +68,10 @@ def __getattr__(name: str) -> Any:
         msg = "Import from `scanpy.io` instead"
         warn(msg, FutureWarning)
         return getattr(io, name)
+    if name == "read_loom":  # deprecated in anndata, hence missing from its `__all__`
+        msg = "`read_loom` is deprecated and will be removed, use `read_h5ad` instead"
+        warn(msg, FutureWarning)
+        return anndata.io.read_loom
     if name == "read_visium":
         from .io._read import read_visium
 

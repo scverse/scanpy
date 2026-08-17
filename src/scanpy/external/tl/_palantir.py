@@ -104,7 +104,9 @@ def palantir(
 
     **Load sample data**
 
-    >>> adata = sc.read_csv(filename="Palantir/data/marrow_sample_scseq_counts.csv.gz")
+    >>> adata = sc.io.read_csv(
+    ...     filename="Palantir/data/marrow_sample_scseq_counts.csv.gz"
+    ... )
 
     *Cleanup and normalize*
 

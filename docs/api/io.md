@@ -55,7 +55,6 @@ Read other formats using functions borrowed from {mod}`anndata`
    io.read_csv
    io.read_excel
    io.read_hdf
-   io.read_loom
    io.read_mtx
    io.read_text
    io.read_umi_tools
