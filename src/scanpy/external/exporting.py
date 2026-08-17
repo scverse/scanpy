@@ -27,7 +27,9 @@ __all__ = ["cellbrowser", "spring_project"]
 
 
 @deprecated(
-    Deprecation("1.13.0", "Import `write_spring_project` from `scanpy.io` instead")
+    Deprecation(
+        "1.13.0", "Use a different viewer like e.g. `vitessce <https://vitessce.io/>`_."
+    )
 )
 def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,

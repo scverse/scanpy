@@ -47,9 +47,9 @@ def write(
         If anndata supports it, setting this to `False` will avoid
         converting string columns to categorical arrays when writing.
     compression
-        See https://docs.h5py.org/en/latest/high/dataset.html.
+        See {ref}`h5py:dataset_compression`.
     compression_opts
-        See https://docs.h5py.org/en/latest/high/dataset.html.
+        See {ref}`h5py:dataset_compression`.
 
     """
     filename = Path(filename)  # allow passing strings
