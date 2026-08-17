@@ -13,7 +13,7 @@ from anndata.io import (
 )
 
 from ._read import read, read_10x_h5, read_10x_mtx
-from ._write import write, write_cellbrowser, write_spring_project
+from ._write import write
 
 __all__ = [
     "read",
@@ -27,6 +27,4 @@ __all__ = [
     "read_text",
     "read_umi_tools",
     "write",
-    "write_cellbrowser",
-    "write_spring_project",
 ]

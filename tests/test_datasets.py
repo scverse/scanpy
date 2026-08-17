@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import io
 import subprocess
+import urllib.request
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -16,6 +18,7 @@ from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from scanpy.io._download import download
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
@@ -171,11 +174,6 @@ def test_download_failure() -> None:
 
 def test_download_atomic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The destination must not appear until the download finished (#4097)."""
-    import io
-    import urllib.request
-
-    from scanpy.io._download import download
-
     content = b"0123456789" * 5_000
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
@@ -214,10 +212,6 @@ def test_download_failure_keeps_existing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A failed download must not delete an already-present destination (#4097)."""
-    import urllib.request
-
-    from scanpy.io._download import download
-
     dest = tmp_path / "cache" / "data.bin"
     dest.parent.mkdir()
     dest.write_bytes(b"complete")

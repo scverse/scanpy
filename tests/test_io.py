@@ -15,27 +15,22 @@ from scanpy.io._download import slugify
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+    from pathlib import Path, PurePath
     from typing import Literal
 
 
 @pytest.mark.parametrize(
     "path",
     [
-        PureWindowsPath(r"C:\foo\bar"),
-        PureWindowsPath(r".\C\foo\bar"),
-        PureWindowsPath(r"C\foo\bar"),
-        PurePosixPath("/C/foo/bar"),
-        PurePosixPath("./C/foo/bar"),
-        PurePosixPath("C/foo/bar"),
+        *map(PureWindowsPath, [r"C:\foo\bar", r".\C\foo\bar", r"C\foo\bar"]),
+        *map(PurePosixPath, ["/C/foo/bar", "./C/foo/bar", "C/foo/bar"]),
     ],
 )
-def test_slugify(path):
+def test_slugify(path: PurePath) -> None:
     assert slugify(path) == "C-foo-bar"
 
 
-def test_read_ext_match(tmp_path):
+def test_read_ext_match(tmp_path: Path) -> None:
     adata_path = tmp_path / "foo.bar.anndata.h5ad"
     AnnData(np.array([[1, 2], [3, 4]])).write_h5ad(adata_path)
     with pytest.raises(ValueError, match="does not end in expected extension"):
@@ -115,29 +110,17 @@ def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> No
 @pytest.mark.parametrize(
     "access",
     [
-        pytest.param(lambda: sc.read, id="read"),
-        pytest.param(lambda: sc.read_10x_h5, id="read_10x_h5"),
-        pytest.param(lambda: sc.read_10x_mtx, id="read_10x_mtx"),
-        pytest.param(lambda: sc.read_csv, id="read_csv"),
-        pytest.param(lambda: sc.read_excel, id="read_excel"),
-        pytest.param(lambda: sc.read_h5ad, id="read_h5ad"),
-        pytest.param(lambda: sc.read_hdf, id="read_hdf"),
-        pytest.param(lambda: sc.read_mtx, id="read_mtx"),
-        pytest.param(lambda: sc.read_text, id="read_text"),
-        pytest.param(lambda: sc.read_umi_tools, id="read_umi_tools"),
-        pytest.param(lambda: sc.write, id="write"),
-        pytest.param(sc.external.exporting.cellbrowser, id="exporting.cellbrowser"),
-        pytest.param(
-            sc.external.exporting.spring_project, id="exporting.spring_project"
-        ),
+        *("read", "read_10x_h5", "read_h5ad", "read_hdf", "read_excel"),
+        *("read_10x_mtx", "read_csv", "read_mtx", "read_text", "read_umi_tools"),
+        "write",
     ],
 )
-def test_moved_to_io(access: Callable[[], object]) -> None:
+def test_moved_to_io(name: str) -> None:
     with (
         pytest.warns(FutureWarning, match=r"from `scanpy\.io`"),
         suppress(TypeError),  # the `sc.external.exporting` shims get no arguments
     ):
-        access()
+        getattr(sc, name)
 
 
 def test_read_loom_deprecated() -> None:

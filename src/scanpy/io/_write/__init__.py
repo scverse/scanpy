@@ -9,7 +9,6 @@ from anndata.io import write_h5ad, write_zarr
 
 from ..._compat import warn
 from ..._settings import AnnDataFileFormat, settings
-from .exporting import write_cellbrowser, write_spring_project
 
 if TYPE_CHECKING:
     from os import PathLike
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-__all__ = ["write", "write_cellbrowser", "write_spring_project"]
+__all__ = ["write"]
 
 
 def write(
