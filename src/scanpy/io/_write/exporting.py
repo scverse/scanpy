@@ -14,18 +14,18 @@ import scipy.sparse
 from fast_array_utils.stats import mean_var
 from pandas.api.types import CategoricalDtype
 
-from .._keys import _existing_preset_keys
-from .._utils import NeighborsView
+from ..._keys import _existing_preset_keys
+from ..._utils import NeighborsView
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from anndata import AnnData
 
-__all__ = ["cellbrowser", "spring_project"]
+__all__ = ["write_cellbrowser", "write_spring_project"]
 
 
-def spring_project(  # noqa: PLR0912, PLR0915
+def write_spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
     embedding_method: str,
@@ -470,7 +470,7 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     Path(outpath).write_text(json.dumps(paga_data, indent=4))
 
 
-def cellbrowser(  # noqa: PLR0913
+def write_cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,
     data_name: str,

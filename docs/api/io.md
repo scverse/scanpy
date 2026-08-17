@@ -14,7 +14,7 @@ Write {class}`~anndata.AnnData` objects using its {doc}`writing <anndata:api>` m
    :nosignatures:
    :toctree: generated/
 
-   write
+   io.write
 ```
 
 ```{note}
@@ -30,7 +30,7 @@ Read common file formats using
    :nosignatures:
    :toctree: generated/
 
-   read
+   io.read
 ```
 
 Read 10x formatted hdf5 files and directories containing `.mtx` files using
@@ -40,9 +40,8 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
    :nosignatures:
    :toctree: generated/
 
-   read_10x_h5
-   read_10x_mtx
-   read_visium
+   io.read_10x_h5
+   io.read_10x_mtx
 ```
 
 Read other formats using functions borrowed from {mod}`anndata`
@@ -52,13 +51,13 @@ Read other formats using functions borrowed from {mod}`anndata`
    :nosignatures:
    :toctree: generated/
 
-   read_h5ad
-   read_csv
-   read_excel
-   read_hdf
-   read_loom
-   read_mtx
-   read_text
-   read_umi_tools
+   io.read_h5ad
+   io.read_csv
+   io.read_excel
+   io.read_hdf
+   io.read_loom
+   io.read_mtx
+   io.read_text
+   io.read_umi_tools
 
 ```

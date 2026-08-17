@@ -1,4 +1,4 @@
-"""Reading and Writing."""
+"""Reading."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 import warnings
 from functools import partial
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, cast, get_args, overload
+from typing import TYPE_CHECKING, get_args, overload
 
 import anndata.utils
 import h5py
@@ -21,17 +21,15 @@ from anndata.io import (
     read_loom,
     read_text,
     read_zarr,
-    write_h5ad,
-    write_zarr,
 )
 from matplotlib.image import imread
 from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
 
-from . import logging as logg
-from ._compat import pkg_version, warn
-from ._settings import AnnDataFileFormat, Default, settings
-from ._utils.random import _LegacyRng
+from .. import logging as logg
+from .._compat import pkg_version
+from .._settings import AnnDataFileFormat, Default, settings
+from .._utils.random import _LegacyRng
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,6 +37,8 @@ if TYPE_CHECKING:
     from typing import IO, Literal
 
     from numpy.typing import DTypeLike
+
+__all__ = ["read", "read_10x_h5", "read_10x_mtx"]
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {
@@ -654,85 +654,6 @@ def _read_10x_mtx(
     return adata
 
 
-def write(
-    filename: PathLike[str] | str,
-    adata: AnnData,
-    *,
-    ext: AnnDataFileFormat | Literal["csv"] | None = None,
-    convert_strings_to_categoricals: bool = True,
-    compression: Literal["gzip", "lzf"] | None = "gzip",
-    compression_opts: int | None = None,
-) -> None:
-    """Write :class:`~anndata.AnnData` objects to file.
-
-    Parameters
-    ----------
-    filename
-        If the filename has no file extension, it is interpreted as a key for
-        generating a filename via `sc.settings.writedir / (filename +
-        sc.settings.file_format_data)`. This is the same behavior as in
-        :func:`~scanpy.read`.
-    adata
-        Annotated data matrix.
-    ext
-        File extension from which to infer file format.
-        If `None`, defaults to `sc.settings.file_format_data`.
-    convert_strings_to_categoricals
-        If anndata supports it, setting this to `False` will avoid
-        converting string columns to categorical arrays when writing.
-    compression
-        See https://docs.h5py.org/en/latest/high/dataset.html.
-    compression_opts
-        See https://docs.h5py.org/en/latest/high/dataset.html.
-
-    """
-    filename = Path(filename)  # allow passing strings
-    valid_exts = cast(
-        "set[Literal['csv'] | AnnDataFileFormat]", {"csv", *get_args(AnnDataFileFormat)}
-    )
-    if filename.suffix and (ext_from_name := filename.suffix[1:]) in valid_exts:
-        if ext is None:
-            ext = ext_from_name
-        elif ext != ext_from_name:
-            msg = (
-                "It suffices to provide the file type by "
-                "providing a proper extension to the filename."
-                f"One of {valid_exts}."
-            )
-            raise ValueError(msg)
-    else:
-        key = filename
-        ext = settings.file_format_data if ext is None else ext
-        filename = _get_filename_from_key(key, ext)
-
-    if ext == "csv":
-        msg = (
-            "'csv' is not a good choice for anything, especially storing AnnData, "
-            "and will be removed from this function. Use 'h5ad' or 'zarr' instead."
-        )
-        warn(msg, FutureWarning)
-        adata.write_csvs(filename)
-        return
-    elif ext not in {"h5ad", "h5", "zarr"}:
-        msg = f"Unknown file format: {ext} (not in {valid_exts})"
-        raise ValueError(msg)
-
-    if ext == "zarr":
-        write_zarr(
-            filename,
-            adata,
-            convert_strings_to_categoricals=convert_strings_to_categoricals,
-        )
-    else:
-        write_h5ad(
-            filename,
-            adata,
-            convert_strings_to_categoricals=convert_strings_to_categoricals,
-            compression=compression,
-            compression_opts=compression_opts,
-        )
-
-
 # -------------------------------------------------------------------------------
 # Reading and writing parameter files
 # -------------------------------------------------------------------------------
@@ -1031,30 +952,6 @@ def convert_string(string: str) -> int | float | bool | str | None:
 # -------------------------------------------------------------------------------
 # Helper functions for reading and writing
 # -------------------------------------------------------------------------------
-
-
-def get_used_files():
-    """Get files used by processes with name scanpy."""
-    import psutil
-
-    loop_over_scanpy_processes = (
-        proc for proc in psutil.process_iter() if proc.name() == "scanpy"
-    )
-    filenames = []
-    for proc in loop_over_scanpy_processes:
-        try:
-            flist = proc.open_files()
-            filenames.extend(nt.path for nt in flist)
-        # This catches a race condition where a process ends
-        # before we can examine its files
-        except psutil.NoSuchProcess:
-            pass
-    return set(filenames)
-
-
-def _get_filename_from_key(key, ext=None) -> Path:
-    ext = settings.file_format_data if ext is None else ext
-    return settings.writedir / f"{key}.{ext}"
 
 
 def _download(url: str, path: Path):

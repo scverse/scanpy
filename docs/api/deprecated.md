@@ -12,4 +12,7 @@
    pp.subsample
    tl.louvain
    logging.print_versions
+   read_visium
+   external.exporting.cellbrowser
+   external.exporting.spring_project
 ```

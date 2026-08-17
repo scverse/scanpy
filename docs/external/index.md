@@ -23,5 +23,4 @@ import scanpy.external as sce
 preprocessing
 tools
 plotting
-exporting
 ```
