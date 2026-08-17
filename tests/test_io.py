@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import nullcontext, suppress
+from contextlib import nullcontext
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
@@ -108,7 +108,7 @@ def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> No
 
 
 @pytest.mark.parametrize(
-    "access",
+    "name",
     [
         *("read", "read_10x_h5", "read_h5ad", "read_hdf", "read_excel"),
         *("read_10x_mtx", "read_csv", "read_mtx", "read_text", "read_umi_tools"),
@@ -116,10 +116,7 @@ def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> No
     ],
 )
 def test_moved_to_io(name: str) -> None:
-    with (
-        pytest.warns(FutureWarning, match=r"from `scanpy\.io`"),
-        suppress(TypeError),  # the `sc.external.exporting` shims get no arguments
-    ):
+    with pytest.warns(FutureWarning, match=r"from `scanpy\.io`"):
         getattr(sc, name)
 
 
