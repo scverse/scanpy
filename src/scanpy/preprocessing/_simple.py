@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, overload
 import numba
 import numpy as np
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
@@ -24,7 +25,7 @@ from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, get_namespace
+from .._compat import CSBase, CSRBase, DaskArray
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import (
@@ -381,7 +382,7 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
 
 @log1p.register(HasArrayNamespace)
 def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
-    xp = get_namespace(x)
+    xp = array_namespace(x)
     result = xp.log1p(x)
     if base is not None:
         result = result / float(np.log(base))

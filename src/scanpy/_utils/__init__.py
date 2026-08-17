@@ -30,6 +30,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+from array_api_compat import array_namespace
 from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
@@ -37,7 +38,6 @@ from .._compat import (
     CSBase,
     DaskArray,
     SpBase,
-    get_namespace,
     warn,
 )
 from ._numba import _numba_thread_limit
@@ -768,7 +768,7 @@ def _(
 
     _check_op(op)
     scaling_array = _broadcast_axis(scaling_array, axis)
-    xp = get_namespace(x)
+    xp = array_namespace(x)
     scaling_array = xp.asarray(scaling_array)
     if op is mul:
         return x * scaling_array
@@ -806,7 +806,7 @@ def _(x: DaskArray, /, axis: Literal[0, 1]) -> DaskArray:
 
 @axis_nnz.register(HasArrayNamespace)
 def _(x: HasArrayNamespace, /, axis: Literal[0, 1]) -> Any:
-    xp = get_namespace(x)
+    xp = array_namespace(x)
     return xp.count_nonzero(x, axis=axis)
 
 
@@ -833,7 +833,7 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
 
 @check_nonnegative_integers.register(HasArrayNamespace)
 def _check_nonnegative_integers_array_api(x: HasArrayNamespace, /) -> bool:
-    xp = get_namespace(x)
+    xp = array_namespace(x)
     if bool(xp.any(x < 0)):
         return False
     if xp.isdtype(x.dtype, "integral"):

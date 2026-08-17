@@ -13,9 +13,6 @@ from scipy import sparse
 if TYPE_CHECKING:
     from collections.abc import Callable
     from importlib.metadata import PackageMetadata
-    from types import ModuleType
-
-    from fast_array_utils.types import HasArrayNamespace
 
 
 __all__ = [
@@ -25,7 +22,6 @@ __all__ = [
     "DaskArray",
     "SpBase",
     "fullname",
-    "get_namespace",
     "pkg_metadata",
     "pkg_version",
     "set_module",
@@ -68,13 +64,6 @@ def pkg_metadata(package: str) -> PackageMetadata:
     from importlib.metadata import metadata
 
     return metadata(package)
-
-
-def get_namespace(x: HasArrayNamespace) -> ModuleType:
-    # get array-api namespace for x
-    from array_api_compat import array_namespace
-
-    return array_namespace(x)
 
 
 @cache

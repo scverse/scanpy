@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, get_namespace, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._settings import Default, settings
 from .._utils import (
     axis_mul_or_truediv,
@@ -56,7 +57,7 @@ def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
 
 @clip.register(HasArrayNamespace)
 def _(x, *, max_value: float, zero_center: bool = True):
-    xp = get_namespace(x)
+    xp = array_namespace(x)
     return xp.clip(x, min=-max_value if zero_center else None, max=max_value)
 
 
@@ -199,7 +200,7 @@ def scale_array[A: _Array](  # noqa: PLR0912
             logg.info(int_msg)
             x = x.astype(np.float64)
     else:
-        xp = get_namespace(x)
+        xp = array_namespace(x)
         if xp.isdtype(x.dtype, "integral"):
             logg.info(int_msg)
             x = xp.astype(x, xp.float64)
@@ -234,7 +235,7 @@ def scale_array[A: _Array](  # noqa: PLR0912
             x -= mean
             x = dematrix(x)
     else:
-        xp = get_namespace(x)
+        xp = array_namespace(x)
         std = xp.sqrt(var)
         std = xp.where(std == 0, xp.ones_like(std), std)
 

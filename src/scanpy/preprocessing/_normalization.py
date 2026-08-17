@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 
 import numba
 import numpy as np
+from array_api_compat import array_namespace
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
 
 from .. import logging as logg
-from .._compat import CSBase, CSCBase, CSRBase, DaskArray, get_namespace, warn
+from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_arr, _set_obs_rep
 
@@ -25,7 +26,7 @@ def _compute_nnz_median(
     if isinstance(counts, DaskArray):
         counts = counts.compute()
 
-    xp = get_namespace(counts)
+    xp = array_namespace(counts)
     counts_greater_than_zero = counts[counts > 0]
     median = xp.median(counts_greater_than_zero)
     return median

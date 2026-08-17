@@ -10,11 +10,12 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils import stats
 from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
-from .._compat import CSBase, CSRBase, DaskArray, get_namespace, warn
+from .._compat import CSBase, CSRBase, DaskArray, warn
 from .._settings import Default, Verbosity, settings
 from .._utils import (
     check_nonnegative_integers,
@@ -408,7 +409,7 @@ def _highly_variable_genes_single_batch(
         if isinstance(x, np.ndarray):
             np.expm1(x, out=x)
         elif isinstance(x, HasArrayNamespace):
-            xp = get_namespace(x)
+            xp = array_namespace(x)
             x = xp.expm1(x)
         else:
             x = np.expm1(x)

@@ -20,6 +20,7 @@ from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
 from testing.scanpy import _helpers
 from testing.scanpy._helpers.data import pbmc3k_normalized
+from testing.scanpy._pytest import params
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
 from testing.scanpy._pytest.params import param_with
@@ -159,9 +160,9 @@ def possible_solvers(
             svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
         case (type() as dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
-        case (helpers.asarray | helpers.as_dense_jax_array, True):
+        case (helpers.asarray | params.as_dense_jax_array, True):
             svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
-        case (helpers.asarray | helpers.as_dense_jax_array, False):
+        case (helpers.asarray | params.as_dense_jax_array, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
             pytest.fail(f"Unknown {array_type=} ({zero_center=}) ({id=})")
