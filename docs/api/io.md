@@ -4,6 +4,7 @@
 # Reading and Writing
 
 ```{eval-rst}
+.. module:: scanpy.io
 .. currentmodule:: scanpy
 ```
 
@@ -59,4 +60,15 @@ Read other formats using functions borrowed from {mod}`anndata`
    io.read_text
    io.read_umi_tools
 
+```
+
+Export to formats read by *manifold viewers* using
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   io.write_cellbrowser
+   io.write_spring_project
 ```
