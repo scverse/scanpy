@@ -82,9 +82,8 @@ def hashsolo(
     Examples
     --------
     >>> import scanpy as sc
-    >>> import scanpy.external as sce
     >>> adata = sc.io.read_h5ad("data.h5ad")
-    >>> sce.pp.hashsolo(adata, ["Hash1", "Hash2", "Hash3"])
+    >>> sc.external.pp.hashsolo(adata, ["Hash1", "Hash2", "Hash3"])
     >>> adata.obs.head()
 
     """

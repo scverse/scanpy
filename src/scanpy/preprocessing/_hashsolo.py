@@ -31,7 +31,7 @@ A negative two highest barcodes
 from __future__ import annotations
 
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -49,8 +49,17 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
-def _calculate_log_likelihoods(  # noqa: PLR0915
-    data: np.ndarray, number_of_noise_barcodes: int
+class GaussianParams(NamedTuple):
+    """Parameters of a gaussian, named after :func:`scipy.stats.norm.pdf`’s parameters."""
+
+    loc: float
+    """Mean of the gaussian."""
+    scale: float
+    """Standard deviation of the gaussian."""
+
+
+def _calculate_log_likelihoods(
+    data: np.ndarray, number_of_noise_barcodes: int | None
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], dict[int, str]]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.
 
@@ -70,9 +79,7 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
 
     """
 
-    def gaussian_updates(
-        data: np.ndarray, mu_o: float, std_o: float
-    ) -> tuple[float, float]:
+    def gaussian_updates(data: np.ndarray, mu_o: float, std_o: float) -> GaussianParams:
         """Update parameters of your gaussian.
 
         See <https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf>.
@@ -88,10 +95,7 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
 
         Returns
         -------
-        mean
-            of gaussian
-        std
-            of gaussian
+        The updated parameters of the gaussian.
 
         """
         lam_o = 1 / (std_o**2)
@@ -101,7 +105,7 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
         mu_n = (
             (np.mean(data) * n * lam + mu_o * lam_o) / lam_n if len(data) > 0 else mu_o
         )
-        return mu_n, (1 / (lam_n / (n + 1))) ** (1 / 2)
+        return GaussianParams(mu_n, (1 / (lam_n / (n + 1))) ** (1 / 2))
 
     eps = 1e-15
     # probabilites for negative, singlet, doublets
@@ -136,8 +140,8 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
         np.std(global_noise_counts),
     )
 
-    noise_params_dict = {}
-    signal_params_dict = {}
+    noise_params_dict: dict[int, GaussianParams] = {}
+    signal_params_dict: dict[int, GaussianParams] = {}
 
     # for each barcode get  empirical noise and signal distribution parameterization
     for x in np.arange(num_of_barcodes):
@@ -152,14 +156,12 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
         signal_counts = sample_barcodes[sample_barcodes_signal_idx]
 
         # get parameters of distribution, assuming lognormal do update from global values
-        noise_param = gaussian_updates(
+        noise_params_dict[x] = gaussian_updates(
             noise_counts, global_mu_noise_o, global_sigma_noise_o
         )
-        signal_param = gaussian_updates(
+        signal_params_dict[x] = gaussian_updates(
             signal_counts, global_mu_signal_o, global_sigma_signal_o
         )
-        noise_params_dict[x] = noise_param
-        signal_params_dict[x] = signal_param
 
     counter_to_barcode_combo: dict[int, str] = {}
     counter = 0
@@ -184,54 +186,24 @@ def _calculate_log_likelihoods(  # noqa: PLR0915
 
         # calculate probabilties for each hypothesis for each cell
         data_subset = data[subset]
-        log_signal_signal_probs = np.log(
-            norm.pdf(
-                data_subset[:, signal_sample_idx],
-                loc=signal_params[-2],
-                scale=signal_params[-1],
-            )
-            + eps
-        )
-        signal_noise_params = signal_params_dict[noise_sample_idx]
-        log_noise_signal_probs = np.log(
-            norm.pdf(
-                data_subset[:, noise_sample_idx],
-                loc=signal_noise_params[-2],
-                scale=signal_noise_params[-1],
-            )
-            + eps
-        )
-
-        log_noise_noise_probs = np.log(
-            norm.pdf(
-                data_subset[:, noise_sample_idx],
-                loc=noise_params[-2],
-                scale=noise_params[-1],
-            )
-            + eps
-        )
-        log_signal_noise_probs = np.log(
-            norm.pdf(
-                data_subset[:, signal_sample_idx],
-                loc=noise_params[-2],
-                scale=noise_params[-1],
-            )
-            + eps
-        )
-
-        probs_of_negative = np.sum(
-            [log_noise_noise_probs, log_signal_noise_probs], axis=0
-        )
-        probs_of_singlet = np.sum(
-            [log_noise_noise_probs, log_signal_signal_probs], axis=0
-        )
-        probs_of_doublet = np.sum(
-            [log_noise_signal_probs, log_signal_signal_probs], axis=0
-        )
-        log_probs_list = [probs_of_negative, probs_of_singlet, probs_of_doublet]
+        data_noise = data_subset[:, noise_sample_idx]
+        data_signal = data_subset[:, signal_sample_idx]
+        # the distributions the 2nd-highest and highest barcode’s counts
+        # are assumed to come from under each hypothesis
+        hypotheses = [
+            (noise_params, noise_params),  # negative: neither barcode is signal
+            (noise_params, signal_params),  # singlet: only the highest barcode is
+            (signal_params_dict[noise_sample_idx], signal_params),  # doublet: both are
+        ]
 
         # each cell and each hypothesis probability
-        for prob_idx, log_prob in enumerate(log_probs_list):
+        for prob_idx, log_prob in enumerate(
+            (
+                np.log(norm.pdf(data_noise, loc=d_noise.loc, scale=d_noise.scale) + eps)
+                + np.log(norm.pdf(data_signal, loc=d_sig.loc, scale=d_sig.scale) + eps)
+                for d_noise, d_sig in hypotheses
+            )
+        ):
             log_likelihoods_for_each_hypothesis[indices, prob_idx] = log_prob
     return (
         log_likelihoods_for_each_hypothesis,
@@ -307,7 +279,7 @@ def _ref_name(ref: AdRef | str) -> str:
 @doctest_skipif(reason="Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,
-    cell_hashing_columns: Collection[AdRef | str],
+    hashes: Collection[AdRef | str],
     *,
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
@@ -324,7 +296,7 @@ def hashsolo(
     adata
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
-    cell_hashing_columns
+    hashes
         References to the vectors holding the cell hashing counts\ [#ref]_,
         e.g. `A.obs[["Hash1", "Hash2"]]` for columns in :attr:`~anndata.AnnData.obs`
         or `A.X[:, ["Hash1", "Hash2"]]` for hashing barcodes among the
@@ -341,7 +313,7 @@ def hashsolo(
         If provided, demultiplexing is performed separately for each cluster.
     number_of_noise_barcodes
         The number of barcodes used to create the noise distribution.
-        Defaults to `len(cell_hashing_columns) - 2`.
+        Defaults to `len(hashes) - 2`.
     key_added
         Key under which to add the demultiplexing results.
     copy
@@ -353,7 +325,7 @@ def hashsolo(
     Sets the following fields:
 
     `adata.obs[key_added]` : :class:`~pandas.Categorical` (shape `(n_obs,)`)
-        Classification of each cell: the name of one of the `cell_hashing_columns`,
+        Classification of each cell: the name of one of the `hashes`,
         `"Negative"`, or `"Doublet"`.
     `adata.obsm[key_added]` : :class:`~pandas.DataFrame` (shape `(n_obs, 3)`)
         Probability of the `negative`, `singlet`, and `doublet` hypothesis.
@@ -379,7 +351,7 @@ def hashsolo(
 
     """
     adata = adata.copy() if copy else adata
-    refs = list(cell_hashing_columns)
+    refs = list(hashes)
     data = np.column_stack(_get_vec(adata, refs, dim="obs"))
     clusters = (
         None
