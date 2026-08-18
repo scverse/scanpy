@@ -76,6 +76,16 @@ Also see {ref}`data integration tools <data-integration>` and external {ref}`ext
    pp.scrublet_simulate_doublets
 ```
 
+## Sample demultiplexing
+
+```{eval-rst}
+.. autosummary::
+   :nosignatures:
+   :toctree: generated/
+
+   pp.hashsolo
+```
+
 ## Neighbors
 
 ```{eval-rst}
