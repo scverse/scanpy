@@ -86,7 +86,7 @@
         "pooch": [""],
         "scikit-image": [""], // https://github.com/conda-forge/scikit-misc-feedstock/pull/29
         "scikit-misc": [""],
-        "dask": [""],
+        "dask-core": [""],
         "pip+illico": [""],
     },
 
