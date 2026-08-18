@@ -844,9 +844,9 @@ def select_groups(
 def check_presence_download(filename: Path, backup_url: str):
     """Check if file is present otherwise download."""
     if not filename.is_file():
-        from ..readwrite import _download
+        from ..io._download import download
 
-        _download(backup_url, filename)
+        download(backup_url, filename)
 
 
 # --------------------------------------------------------------------------------

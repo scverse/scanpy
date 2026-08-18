@@ -18,7 +18,7 @@ from .._settings import Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..readwrite import read, read_zarr
+from ..io._read import read, read_zarr
 from ._utils import check_datasetdir_exists
 
 if TYPE_CHECKING:
@@ -357,7 +357,7 @@ def pbmc68k_reduced() -> AnnData:
 
         import scanpy as sc
 
-        adata = sc.read_10x_mtx(
+        adata = sc.io.read_10x_mtx(
             "./data/filtered/filtered_matrices_mex/hg19/",
             var_names="gene_symbols",
         )
@@ -450,7 +450,7 @@ def pbmc3k() -> AnnData:
 
     .. code:: python
 
-        adata = sc.read_10x_mtx(
+        adata = sc.io.read_10x_mtx(
             # the directory with the `.mtx` file
             './data/filtered_gene_bc_matrices/hg19/',
             # use gene symbols for the variable names (variables-axis index)
@@ -624,7 +624,7 @@ def visium_sge(
         layers: None (.X)
 
     """  # noqa: D401
-    from ..readwrite import read_visium
+    from ..io._read import read_visium
 
     spaceranger_version = "1.1.0" if "V1_" in sample_id else "1.2.0"
     sample_dir = _download_visium_dataset(

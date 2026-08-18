@@ -12,4 +12,6 @@
    pp.subsample
    tl.louvain
    logging.print_versions
+   read_loom
+   read_visium
 ```

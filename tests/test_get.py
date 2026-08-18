@@ -182,7 +182,7 @@ def test_backed_vs_memory(tmp_path: Path) -> None:
     adata = pbmc68k_reduced()
     adata_file = tmp_path / "adata.h5ad"
     adata.write_h5ad(adata_file)
-    adata_backed = sc.read(adata_file, backed="r")
+    adata_backed = sc.io.read(adata_file, backed="r")
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
