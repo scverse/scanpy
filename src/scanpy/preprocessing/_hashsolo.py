@@ -35,14 +35,16 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
+from fast_array_utils.conv import to_dense
 from scipy.stats import norm
 
+from .._compat import CSBase
 from .._utils import check_nonnegative_integers
 from .._utils._doctests import doctest_skipif
-from ..get.get import _get_vec
+from ..get.get import MultiAcc, _get_arr, _get_vec
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Sequence
+    from collections.abc import Collection
 
     from anndata import AnnData
     from anndata.acc import AdRef
@@ -144,7 +146,7 @@ def _calculate_log_likelihoods(
     signal_params_dict: dict[int, GaussianParams] = {}
 
     # for each barcode get  empirical noise and signal distribution parameterization
-    for x in np.arange(num_of_barcodes):
+    for x in range(num_of_barcodes):
         sample_barcodes = data[:, x]
         sample_barcodes_noise_idx = np.where(data_arg[:, :num_of_noise_barcodes] == x)[
             0
@@ -168,7 +170,7 @@ def _calculate_log_likelihoods(
 
     # for each combination of noise and signal barcode calculate probiltiy of in silico and real cell hypotheses
     for noise_sample_idx, signal_sample_idx in product(
-        np.arange(num_of_barcodes), np.arange(num_of_barcodes)
+        range(num_of_barcodes), repeat=2
     ):
         signal_subset = data_arg[:, -1] == signal_sample_idx
         noise_subset = data_arg[:, -2] == noise_sample_idx
@@ -276,10 +278,27 @@ def _ref_name(ref: AdRef | str) -> str:
     return str(idx)
 
 
+def _get_hashes(
+    adata: AnnData, hashes: MultiAcc | Collection[AdRef] | Collection[str]
+) -> tuple[NDArray, NDArray[np.str_]]:
+    """Get the hashing count matrix and each hashing barcode’s name."""
+    if not isinstance(hashes, MultiAcc):
+        refs = list(hashes)
+        data = np.column_stack(_get_vec(adata, refs, dim="obs"))
+        return data, np.array([_ref_name(ref) for ref in refs])
+    # a `MultiAcc` such as `A.obsm["hto"]` refers to all of its columns
+    data = _get_arr(adata, hashes, dim="obs")
+    if isinstance(data, pd.DataFrame):
+        return data.to_numpy(), data.columns.to_numpy(dtype=str)
+    if isinstance(data, CSBase):
+        data = to_dense(data)
+    return data, np.arange(data.shape[1]).astype(str)
+
+
 @doctest_skipif(reason="Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,
-    hashes: Collection[AdRef | str],
+    hashes: MultiAcc | Collection[AdRef] | Collection[str],
     *,
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
@@ -301,6 +320,10 @@ def hashsolo(
         e.g. `A.obs[["Hash1", "Hash2"]]` for columns in :attr:`~anndata.AnnData.obs`
         or `A.X[:, ["Hash1", "Hash2"]]` for hashing barcodes among the
         :attr:`~anndata.AnnData.var_names`.
+        A :class:`~anndata.acc.MultiAcc` such as `A.obsm["hto"]` refers to
+        *all* columns of what it points to,
+        named after the :class:`~pandas.DataFrame`’s columns or,
+        for a plain array, its column positions.
     priors
         Prior probabilities of each hypothesis, in
         the order `[negative, singlet, doublet]`. The default is set to
@@ -345,14 +368,17 @@ def hashsolo(
 
     >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]])
 
+    All hashing counts stored together in :attr:`~anndata.AnnData.obsm`:
+
+    >>> sc.pp.hashsolo(adata, A.obsm["hto"])
+
     .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
        otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
 
     """
     adata = adata.copy() if copy else adata
-    refs = list(hashes)
-    data = np.column_stack(_get_vec(adata, refs, dim="obs"))
+    data, names = _get_hashes(adata, hashes)
     clusters = (
         None
         if pre_existing_clusters is None
@@ -365,7 +391,6 @@ def hashsolo(
         number_of_noise_barcodes=number_of_noise_barcodes,
     )
 
-    names = np.array([_ref_name(ref) for ref in refs])
     most_likely_hypothesis = np.argmax(probs, axis=1)
     classification = pd.Series(
         names[np.argmax(data, axis=1)], index=adata.obs_names, dtype="string"
@@ -378,44 +403,3 @@ def hashsolo(
         probs, columns=["negative", "singlet", "doublet"], index=adata.obs_names
     )
     return adata if copy else None
-
-
-def _legacy_hashsolo(
-    adata: AnnData,
-    cell_hashing_columns: Sequence[str],
-    *,
-    priors: tuple[float, float, float],
-    pre_existing_clusters: str | None,
-    number_of_noise_barcodes: int | None,
-    inplace: bool,
-) -> AnnData | None:
-    """Implement the pre-1.13 `scanpy.external.pp.hashsolo` API."""
-    adata = adata if inplace else adata.copy()
-    cell_hashing_columns = list(cell_hashing_columns)
-    data = adata.obs[cell_hashing_columns].to_numpy()
-    clusters = (
-        None
-        if pre_existing_clusters is None
-        else adata.obs[pre_existing_clusters].to_numpy()
-    )
-    probs = _hashsolo(
-        data,
-        priors=priors,
-        clusters=clusters,
-        number_of_noise_barcodes=number_of_noise_barcodes,
-    )
-    most_likely_hypothesis = np.argmax(probs, axis=1)
-
-    adata.obs["most_likely_hypothesis"] = most_likely_hypothesis.astype(float)
-    adata.obs["cluster_feature"] = 0.0 if clusters is None else clusters
-    for i, hypothesis in enumerate(["negative", "singlet", "doublet"]):
-        adata.obs[f"{hypothesis}_hypothesis_probability"] = probs[:, i]
-
-    classification = np.asarray(
-        np.array(cell_hashing_columns)[np.argmax(data, axis=1)], dtype=object
-    )
-    classification[most_likely_hypothesis == 0] = "Negative"
-    classification[most_likely_hypothesis == 2] = "Doublet"
-    adata.obs["Classification"] = classification
-
-    return adata if not inplace else None

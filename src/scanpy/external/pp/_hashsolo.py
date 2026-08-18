@@ -7,10 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from scverse_misc import Deprecation, deprecated
 
 from ..._utils._doctests import doctest_skipif
-from ...preprocessing._hashsolo import _legacy_hashsolo
+from ...preprocessing._hashsolo import _hashsolo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -90,11 +91,32 @@ def hashsolo(
     print(
         "Please cite HashSolo paper:\nhttps://www.cell.com/cell-systems/fulltext/S2405-4712(20)30195-2"
     )
-    return _legacy_hashsolo(
-        adata,
-        cell_hashing_columns,
-        priors=priors,
-        pre_existing_clusters=pre_existing_clusters,
-        number_of_noise_barcodes=number_of_noise_barcodes,
-        inplace=inplace,
+    adata = adata if inplace else adata.copy()
+    cell_hashing_columns = list(cell_hashing_columns)
+    data = adata.obs[cell_hashing_columns].to_numpy()
+    clusters = (
+        None
+        if pre_existing_clusters is None
+        else adata.obs[pre_existing_clusters].to_numpy()
     )
+    probs = _hashsolo(
+        data,
+        priors=priors,
+        clusters=clusters,
+        number_of_noise_barcodes=number_of_noise_barcodes,
+    )
+    most_likely_hypothesis = np.argmax(probs, axis=1)
+
+    adata.obs["most_likely_hypothesis"] = most_likely_hypothesis.astype(float)
+    adata.obs["cluster_feature"] = 0.0 if clusters is None else clusters
+    for i, hypothesis in enumerate(["negative", "singlet", "doublet"]):
+        adata.obs[f"{hypothesis}_hypothesis_probability"] = probs[:, i]
+
+    classification = np.asarray(
+        np.array(cell_hashing_columns)[np.argmax(data, axis=1)], dtype=object
+    )
+    classification[most_likely_hypothesis == 0] = "Negative"
+    classification[most_likely_hypothesis == 2] = "Doublet"
+    adata.obs["Classification"] = classification
+
+    return adata if not inplace else None

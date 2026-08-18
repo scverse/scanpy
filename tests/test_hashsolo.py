@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -15,9 +15,17 @@ from testing.scanpy._pytest.marks import needs
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from anndata.acc import AdRef
+    from anndata.acc import AdRef, MultiAcc
 
 HASHES = [f"Hash{i}" for i in range(10)]
+
+
+class Hashed(NamedTuple):
+    """An `AnnData` with hashing counts, how to reference them, and their names."""
+
+    adata: AnnData
+    refs: MultiAcc | Sequence[AdRef | str]
+    names: Sequence[str]
 
 
 @pytest.fixture
@@ -50,37 +58,48 @@ def adata(counts: pd.DataFrame) -> AnnData:
         pytest.param("obs", marks=needs.anndata_acc),
         pytest.param("X", marks=needs.anndata_acc),
         pytest.param("X-sparse", marks=needs.anndata_acc),
+        pytest.param("obsm-df", marks=needs.anndata_acc),
+        pytest.param("obsm-array", marks=needs.anndata_acc),
     ]
 )
 def hashed(
     request: pytest.FixtureRequest, adata: AnnData, counts: pd.DataFrame
-) -> tuple[AnnData, Sequence[AdRef | str]]:
+) -> Hashed:
     """Build an `AnnData` holding the hashing counts, plus references to them."""
     match request.param:
         case "obs-str":  # plain `.obs` column names work without `anndata.acc`
-            return adata, HASHES
+            return Hashed(adata, HASHES, HASHES)
         case "obs":
             from anndata.acc import A
 
-            return adata, A.obs[HASHES]
+            return Hashed(adata, A.obs[HASHES], HASHES)
         case "X" | "X-sparse":
             from anndata.acc import A
 
             x = counts.to_numpy()
             if request.param == "X-sparse":
                 x = sparse.csr_matrix(x)  # noqa: TID251
-            return AnnData(x, var=pd.DataFrame(index=HASHES)), A.X[:, HASHES]
+            adata = AnnData(x, var=pd.DataFrame(index=HASHES))
+            return Hashed(adata, A.X[:, HASHES], HASHES)
+        case "obsm-df" | "obsm-array":  # a `MultiAcc` means “all of its columns”
+            from anndata.acc import A
+
+            df = request.param == "obsm-df"
+            adata.obsm["hto"] = counts.copy() if df else counts.to_numpy()
+            # a plain array has no column names, so they fall back to positions
+            names = HASHES if df else [str(i) for i in range(len(HASHES))]
+            return Hashed(adata, A.obsm["hto"], names)
         case _:
             pytest.fail(f"Unknown param {request.param!r}")
 
 
-def test_cell_demultiplexing(hashed: tuple[AnnData, Sequence[AdRef | str]]) -> None:
-    adata, refs = hashed
+def test_cell_demultiplexing(hashed: Hashed) -> None:
+    adata, refs, names = hashed
     sc.pp.hashsolo(adata, refs)
 
     expected = pd.array(
         ["Doublet"] * 10
-        + np.repeat(HASHES, 98).reshape(98, 10, order="F").ravel().tolist()
+        + np.repeat(names, 98).reshape(98, 10, order="F").ravel().tolist()
         + ["Negative"] * 10,
         dtype="string",
     )
