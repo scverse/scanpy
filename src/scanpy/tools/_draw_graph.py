@@ -92,8 +92,6 @@ def draw_graph(  # noqa: PLR0913
         Sparse adjacency matrix of the graph, defaults to neighbors connectivities.
     key_added
         Template for the key. If `None`, uses `f'X_draw_graph_{{layout}}'` for `obsm`.
-    proceed
-        Continue computation, starting off with `f'X_draw_graph_{{layout}}'`.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
