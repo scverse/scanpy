@@ -4,42 +4,39 @@ from contextlib import nullcontext
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
+import anndata.io
 import numpy as np
 import pytest
 from anndata import AnnData
 from anndata.tests.helpers import assert_equal
 
 import scanpy as sc
-from scanpy.readwrite import _slugify
+from scanpy.io._download import slugify
 from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from pathlib import Path, PurePath
     from typing import Literal
 
 
 @pytest.mark.parametrize(
     "path",
     [
-        PureWindowsPath(r"C:\foo\bar"),
-        PureWindowsPath(r".\C\foo\bar"),
-        PureWindowsPath(r"C\foo\bar"),
-        PurePosixPath("/C/foo/bar"),
-        PurePosixPath("./C/foo/bar"),
-        PurePosixPath("C/foo/bar"),
+        *map(PureWindowsPath, [r"C:\foo\bar", r".\C\foo\bar", r"C\foo\bar"]),
+        *map(PurePosixPath, ["/C/foo/bar", "./C/foo/bar", "C/foo/bar"]),
     ],
 )
-def test_slugify(path):
-    assert _slugify(path) == "C-foo-bar"
+def test_slugify(path: PurePath) -> None:
+    assert slugify(path) == "C-foo-bar"
 
 
-def test_read_ext_match(tmp_path):
+def test_read_ext_match(tmp_path: Path) -> None:
     adata_path = tmp_path / "foo.bar.anndata.h5ad"
     AnnData(np.array([[1, 2], [3, 4]])).write_h5ad(adata_path)
     with pytest.raises(ValueError, match="does not end in expected extension"):
-        sc.read(adata_path, ext="zarr")
+        sc.io.read(adata_path, ext="zarr")
     # should not warn: https://github.com/scverse/scanpy/issues/2288
-    sc.read(adata_path, ext="h5ad")
+    sc.io.read(adata_path, ext="h5ad")
 
 
 @pytest.mark.parametrize("ext", ["h5ad", pytest.param("zarr", marks=needs.zarr), "csv"])
@@ -62,11 +59,11 @@ def test_write(
     match style, ext:
         case "path", _:
             with ctx:
-                sc.write(f"test.{ext}", adata)
+                sc.io.write(f"test.{ext}", adata)
             d = tmp_path
         case "ext", _:
             with ctx:
-                sc.write("test", adata, ext=ext)
+                sc.io.write("test", adata, ext=ext)
             d = sc.settings.writedir
         case "default", "csv":
             # check that it throws an error instead
@@ -79,7 +76,7 @@ def test_write(
             sc.settings.file_format_data, old = ext, sc.settings.file_format_data
             try:
                 with ctx:
-                    sc.write("test", adata)
+                    sc.io.write("test", adata)
             finally:
                 sc.settings.file_format_data = old
             d = sc.settings.writedir
@@ -92,7 +89,7 @@ def test_write(
 
     # test that roundtripping works
     if ext != "csv":  # no reader for this
-        adata_read = sc.read(path)
+        adata_read = sc.io.read(path)
         assert_equal(adata_read, adata)
 
 
@@ -101,10 +98,28 @@ def test_write(
 def test_write_strings_to_cats(fmt: Literal["h5ad", "zarr"], *, s2c: bool) -> None:
     adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]), obs=dict(a=["a", "b", "a"]))
 
-    sc.write("test", adata, convert_strings_to_categoricals=s2c, ext=fmt)
+    sc.io.write("test", adata, convert_strings_to_categoricals=s2c, ext=fmt)
     p = sc.settings.writedir / f"test.{fmt}"
-    adata_read = sc.read(p)
+    adata_read = sc.io.read(p)
 
     assert_equal(adata_read, adata)
     assert adata_read.obs["a"].dtype == adata.obs["a"].dtype
     assert adata_read.obs["a"].dtype in (("category",) if s2c else ("object", "string"))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        *("read", "read_10x_h5", "read_h5ad", "read_hdf", "read_excel"),
+        *("read_10x_mtx", "read_csv", "read_mtx", "read_text", "read_umi_tools"),
+        "write",
+    ],
+)
+def test_moved_to_io(name: str) -> None:
+    with pytest.warns(FutureWarning, match=r"from `scanpy\.io`"):
+        getattr(sc, name)
+
+
+def test_read_loom_deprecated() -> None:
+    with pytest.warns(FutureWarning, match=r"`read_loom` is deprecated"):
+        assert sc.read_loom is anndata.io.read_loom

@@ -9,24 +9,13 @@ from typing import TYPE_CHECKING
 from ._settings import Preset, Verbosity, settings  # isort: skip
 
 from anndata import AnnData, concat
-from anndata.io import (
-    read_csv,
-    read_excel,
-    read_h5ad,
-    read_hdf,
-    read_loom,
-    read_mtx,
-    read_text,
-    read_umi_tools,
-)
 
-from . import datasets, experimental, get, logging, metrics, queries
+from . import datasets, experimental, get, io, logging, metrics, queries
 from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
 from ._utils import annotate_doc_types
 from .neighbors import Neighbors
-from .readwrite import read, read_10x_h5, read_10x_mtx, read_visium, write
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,27 +29,15 @@ __all__ = [
     "datasets",
     "experimental",
     "get",
+    "io",
     "logging",
     "metrics",
     "pl",
     "pp",
     "queries",
-    "read",
-    "read_10x_h5",
-    "read_10x_mtx",
-    "read_csv",
-    "read_excel",
-    "read_h5ad",
-    "read_hdf",
-    "read_loom",
-    "read_mtx",
-    "read_text",
-    "read_umi_tools",
-    "read_visium",
     "set_figure_params",
     "settings",
     "tl",
-    "write",
 ]
 
 
@@ -73,10 +50,12 @@ sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]}
 
 
 def __getattr__(name: str) -> Any:
+    import anndata
+
+    from ._compat import warn
+
     if name == "__version__":
         from importlib.metadata import version
-
-        from ._compat import warn
 
         msg = "`__version__` is deprecated, use `importlib.metadata.version('scanpy')` instead"
         warn(msg, FutureWarning)
@@ -86,5 +65,20 @@ def __getattr__(name: str) -> Any:
         import scanpy.external
 
         return scanpy.external
+
+    if name in {"read", "read_10x_h5", "read_10x_mtx", "write"} or (
+        name in io.__all__ and name in anndata.io.__all__
+    ):
+        msg = "Import from `scanpy.io` instead"
+        warn(msg, FutureWarning)
+        return getattr(io, name)
+    if name == "read_loom":  # deprecated in anndata, hence missing from its `__all__`
+        msg = "`read_loom` is deprecated and will be removed, use `read_h5ad` instead"
+        warn(msg, FutureWarning)
+        return anndata.io.read_loom
+    if name == "read_visium":
+        from .io._read import read_visium
+
+        return read_visium  # warns on call already
 
     raise AttributeError

@@ -26,8 +26,11 @@ if TYPE_CHECKING:
 __all__ = ["cellbrowser", "spring_project"]
 
 
-# TODO: move (.export is probably not a good new submodule name) and leave a wrapper in place here
-@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.export.spring_project` instead."))
+@deprecated(
+    Deprecation(
+        "1.13.0", "Use a different viewer like e.g. `vitessce <https://vitessce.io/>`_."
+    )
+)
 def spring_project(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     project_dir: Path | str,
@@ -473,7 +476,12 @@ def _export_paga_to_spring(adata, paga_coords, outpath) -> None:
     Path(outpath).write_text(json.dumps(paga_data, indent=4))
 
 
-@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.export.cellbrowser` instead."))
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use `cb.scanpyToCellbrowser <https://cellbrowser.readthedocs.io/en/master/scanpy.html#convert-a-scanpy-object>`_ directly.",
+    )
+)
 def cellbrowser(  # noqa: PLR0913
     adata: AnnData,
     data_dir: Path | str,

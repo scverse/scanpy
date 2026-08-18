@@ -67,8 +67,8 @@ def test_read_10x(
             if item.is_file():
                 shutil.copyfile(item, mtx_path / f"{prefix}{item.name}")
 
-    mtx = sc.read_10x_mtx(mtx_path, var_names="gene_symbols", prefix=prefix)
-    h5 = sc.read_10x_h5(data_10x / h5_relpath)
+    mtx = sc.io.read_10x_mtx(mtx_path, var_names="gene_symbols", prefix=prefix)
+    h5 = sc.io.read_10x_h5(data_10x / h5_relpath)
 
     # Drop genome column for comparing v3
     if "3.0.0" in h5_relpath:
@@ -87,7 +87,7 @@ def test_read_10x(
     mtx.write(from_mtx_pth)
     h5.write(from_h5_pth)
 
-    assert_anndata_equal(sc.read_h5ad(from_mtx_pth), sc.read_h5ad(from_h5_pth))
+    assert_anndata_equal(sc.io.read_h5ad(from_mtx_pth), sc.io.read_h5ad(from_h5_pth))
 
 
 @pytest.mark.parametrize(
@@ -103,7 +103,7 @@ def test_read_10x_mtx_int(
     str_dt = "str" if pd.options.future.infer_string else "object"
     col_dtypes = {k: str_dt if v == "str" else v for k, v in col_dtypes.items()}
 
-    adata = sc.read_10x_mtx(
+    adata = sc.io.read_10x_mtx(
         data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False
     )
 
@@ -112,22 +112,22 @@ def test_read_10x_mtx_int(
 
 
 def test_read_10x_h5_v1(data_10x: Path) -> None:
-    spec_genome_v1 = sc.read_10x_h5(
+    spec_genome_v1 = sc.io.read_10x_h5(
         data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5",
         genome="hg19_chr21",
     )
-    nospec_genome_v1 = sc.read_10x_h5(
+    nospec_genome_v1 = sc.io.read_10x_h5(
         data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
     )
     assert_anndata_equal(spec_genome_v1, nospec_genome_v1)
 
 
 def test_read_10x_h5_v2_multiple_genomes(data_10x: Path) -> None:
-    genome1_v1 = sc.read_10x_h5(
+    genome1_v1 = sc.io.read_10x_h5(
         data_10x / "1.2.0" / "multiple_genomes.h5",
         genome="hg19_chr21",
     )
-    genome2_v1 = sc.read_10x_h5(
+    genome2_v1 = sc.io.read_10x_h5(
         data_10x / "1.2.0" / "multiple_genomes.h5",
         genome="another_genome",
     )
@@ -140,11 +140,11 @@ def test_read_10x_h5_v2_multiple_genomes(data_10x: Path) -> None:
 
 
 def test_read_10x_h5(data_10x: Path) -> None:
-    spec_genome_v3 = sc.read_10x_h5(
+    spec_genome_v3 = sc.io.read_10x_h5(
         data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5",
         genome="GRCh38_chr21",
     )
-    nospec_genome_v3 = sc.read_10x_h5(
+    nospec_genome_v3 = sc.io.read_10x_h5(
         data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
     )
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
@@ -157,17 +157,17 @@ def test_error_10x_h5_legacy(tmp_path: Path, data_10x: Path) -> None:
         one.copy("hg19_chr21", two)
         one.copy("hg19_chr21", two, name="hg19_chr21_copy")
     with pytest.raises(ValueError, match=r"contains more than one genome"):
-        sc.read_10x_h5(twopth)
-    sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
+        sc.io.read_10x_h5(twopth)
+    sc.io.read_10x_h5(twopth, genome="hg19_chr21_copy")
 
 
 def test_error_missing_genome(data_10x: Path) -> None:
     legacy_pth = data_10x / "1.2.0" / "filtered_gene_bc_matrices_h5.h5"
     v3_pth = data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
     with pytest.raises(ValueError, match=r".*hg19_chr21.*"):
-        sc.read_10x_h5(legacy_pth, genome="not a genome")
+        sc.io.read_10x_h5(legacy_pth, genome="not a genome")
     with pytest.raises(ValueError, match=r".*GRCh38_chr21.*"):
-        sc.read_10x_h5(v3_pth, genome="not a genome")
+        sc.io.read_10x_h5(v3_pth, genome="not a genome")
 
 
 @pytest.fixture(params=[1, 2])
@@ -204,14 +204,15 @@ def test_10x_h5_gex(data_10x: Path):
     # Tests that gex option doesn't, say, make the function return None
     h5_pth = data_10x / "3.0.0" / "filtered_feature_bc_matrix.h5"
     assert_anndata_equal(
-        sc.read_10x_h5(h5_pth, gex_only=True), sc.read_10x_h5(h5_pth, gex_only=False)
+        sc.io.read_10x_h5(h5_pth, gex_only=True),
+        sc.io.read_10x_h5(h5_pth, gex_only=False),
     )
 
 
 def test_10x_probe_barcode_read(data_visium: Path) -> None:
     # Tests the 10x probe barcode matrix is read correctly
     h5_pth = data_visium / "2.1.0" / "raw_probe_bc_matrix.h5"
-    probe_anndata = sc.read_10x_h5(h5_pth)
+    probe_anndata = sc.io.read_10x_h5(h5_pth)
     assert set(probe_anndata.var.columns) == {
         "feature_types",
         "filtered_probes",
@@ -244,8 +245,8 @@ def test_read_10x_compressed_parameter(tmp_path: Path, data_10x: Path) -> None:
                 f_out.write(content)
 
     # Read the uncompressed data
-    adata_uncompressed = sc.read_10x_mtx(test_path, compressed=False)
+    adata_uncompressed = sc.io.read_10x_mtx(test_path, compressed=False)
     # Read the compressed data
-    adata_compressed = sc.read_10x_mtx(mtx_path_v3, compressed=True)
+    adata_compressed = sc.io.read_10x_mtx(mtx_path_v3, compressed=True)
     # Check that the two AnnData objects are equal
     assert_anndata_equal(adata_uncompressed, adata_compressed)
