@@ -165,15 +165,25 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
 
     sc.tl.rank_genes_groups(adata, "leiden", groups=["0"], reference="1")
     with subtests.test("rank_genes_groups_3"):
-        sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
-        plot_cmp("rank_genes_groups_3")
+        # 0 and 1 are separated too little and flip based on platform differences,
+        # so we don’t do image comparison, only labels
+        axs = sc.pl.rank_genes_groups(adata, groups="0", n_genes=20, show=False)
+        assert axs is not None
+        assert len(axs) == 1
+        assert axs[0].get_title() == "0 vs. 1"
+        assert [t.get_text() for t in axs[0].texts] == list(
+            adata.uns["rank_genes_groups"]["names"]["0"][:20]
+        )
 
     with subtests.test("rank_genes_groups_4"):
-        sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
-        try:
-            plot_cmp("rank_genes_groups_4")
-        except AssertionError:
-            pytest.xfail("rank_genes_groups_violin not reproducible (jitter?)")
+        # Same as above, plus the strip plot’s jitter is random.
+        axs = sc.pl.rank_genes_groups_violin(adata, groups="0", n_genes=8, show=False)
+        assert axs is not None
+        assert len(axs) == 1
+        assert axs[0].get_title() == "0 vs. 1"
+        assert [t.get_text() for t in axs[0].get_xticklabels()] == list(
+            adata.uns["rank_genes_groups"]["names"]["0"][:8]
+        )
 
     new_cluster_names = [
         *["CD4 T cells", "CD8 T cells", "B cells", "NK cells"],
