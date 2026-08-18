@@ -23,12 +23,14 @@ if sys.version_info < (3, 15):
 import numpy as np
 import scipy as sp
 
-from .. import _utils, readwrite
+from .. import _utils
 from .. import logging as logg
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import _doc_params
 from .._utils.random import _if_legacy_apply_global, _LegacyRng
+from ..io import read
+from ..io._params import read_params, write_params
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -101,7 +103,7 @@ def sim(  # noqa: PLR0913
         from .. import sim_models
 
         pfile_sim = Path(sim_models.__file__).parent / f"{model_key}_params.txt"
-        default_params = readwrite.read_params(pfile_sim)
+        default_params = read_params(pfile_sim)
         params = _utils.update_params(default_params, params)
     params["rng"] = np.random.default_rng(rng) if rng is not None else _LegacyRng(seed)
     del params["seed"]
@@ -137,7 +139,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     else:
         writedir = Path(writedir)
     writedir.mkdir(parents=True, exist_ok=True)
-    readwrite.write_params(writedir / "params.txt", params)
+    write_params(writedir / "params.txt", params)
     # init variables
     tmax = params["tmax"]
     branching = params["branching"]
@@ -284,9 +286,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     # load the last simulation file
     filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
-    adata = readwrite.read(
-        filename, first_column_names=True, suppress_cache_warning=True
-    )
+    adata = read(filename, first_column_names=True, suppress_cache_warning=True)
     adata.uns["tmax_write"] = tmax / step
     return adata
 
