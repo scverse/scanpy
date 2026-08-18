@@ -10,9 +10,12 @@ from scipy import sparse, stats
 
 import scanpy as sc
 import scanpy.external as sce
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Sequence
+
+    from anndata.acc import AdRef
 
 HASHES = [f"Hash{i}" for i in range(10)]
 
@@ -34,32 +37,45 @@ def counts() -> pd.DataFrame:
     return pd.DataFrame(x, columns=HASHES, index=[f"cell{i}" for i in range(len(x))])
 
 
-def _in_obs(counts: pd.DataFrame) -> tuple[AnnData, list]:
-    from anndata.acc import A
-
+@pytest.fixture
+def adata(counts: pd.DataFrame) -> AnnData:
+    """Hashing counts in `.obs`, with unrelated expression data in `X`."""
     rng = np.random.default_rng(0)
-    adata = AnnData(rng.integers(0, 100, size=counts.shape), obs=counts.copy())
-    return adata, A.obs[HASHES]
+    return AnnData(rng.integers(0, 100, size=counts.shape), obs=counts.copy())
 
 
-def _in_x(counts: pd.DataFrame) -> tuple[AnnData, list]:
-    from anndata.acc import A
-
-    adata = AnnData(counts.to_numpy(), var=pd.DataFrame(index=HASHES))
-    return adata, A.X[:, HASHES]
-
-
-def _in_x_sparse(counts: pd.DataFrame) -> tuple[AnnData, list]:
-    adata, refs = _in_x(counts)
-    adata.X = sparse.csr_matrix(adata.X)  # noqa: TID251
-    return adata, refs
-
-
-@pytest.mark.parametrize(
-    "make", [_in_obs, _in_x, _in_x_sparse], ids=["obs", "X", "X-sparse"]
+@pytest.fixture(
+    params=[
+        "obs-str",
+        pytest.param("obs", marks=needs.anndata_acc),
+        pytest.param("X", marks=needs.anndata_acc),
+        pytest.param("X-sparse", marks=needs.anndata_acc),
+    ]
 )
-def test_cell_demultiplexing(counts: pd.DataFrame, make: Callable) -> None:
-    adata, refs = make(counts)
+def hashed(
+    request: pytest.FixtureRequest, adata: AnnData, counts: pd.DataFrame
+) -> tuple[AnnData, Sequence[AdRef | str]]:
+    """Build an `AnnData` holding the hashing counts, plus references to them."""
+    match request.param:
+        case "obs-str":  # plain `.obs` column names work without `anndata.acc`
+            return adata, HASHES
+        case "obs":
+            from anndata.acc import A
+
+            return adata, A.obs[HASHES]
+        case "X" | "X-sparse":
+            from anndata.acc import A
+
+            x = counts.to_numpy()
+            if request.param == "X-sparse":
+                x = sparse.csr_matrix(x)  # noqa: TID251
+            return AnnData(x, var=pd.DataFrame(index=HASHES)), A.X[:, HASHES]
+        case _:
+            pytest.fail(f"Unknown param {request.param!r}")
+
+
+def test_cell_demultiplexing(hashed: tuple[AnnData, Sequence[AdRef | str]]) -> None:
+    adata, refs = hashed
     sc.pp.hashsolo(adata, refs)
 
     expected = pd.array(
@@ -76,19 +92,19 @@ def test_cell_demultiplexing(counts: pd.DataFrame, make: Callable) -> None:
         assert classification.tolist() == expected.tolist()
 
     probs = adata.obsm["hashsolo"]
+    assert isinstance(probs, pd.DataFrame)
     assert list(probs.columns) == ["negative", "singlet", "doublet"]
     np.testing.assert_allclose(probs.to_numpy().sum(axis=1), 1)
 
 
-def test_copy(counts: pd.DataFrame) -> None:
-    adata, refs = _in_obs(counts)
-    copied = sc.pp.hashsolo(adata, refs, copy=True)
+def test_copy(adata: AnnData) -> None:
+    copied = sc.pp.hashsolo(adata, HASHES, copy=True)
     assert "hashsolo" not in adata.obs
     assert "hashsolo" in copied.obs
 
 
-def test_legacy_api(counts: pd.DataFrame) -> None:
-    adata, _ = _in_obs(counts)
+def test_legacy_api(adata: AnnData) -> None:
+    """The deprecated `sce.pp.hashsolo` matches `sc.pp.hashsolo` and needs no `anndata.acc`."""
     with pytest.warns(FutureWarning, match=r"scanpy\.pp\.hashsolo"):
         sce.pp.hashsolo(adata, HASHES)
 
