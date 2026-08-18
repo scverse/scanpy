@@ -40,7 +40,7 @@ from scipy.stats import norm
 
 from .._compat import CSBase
 from .._utils import check_nonnegative_integers
-from .._utils._doctests import doctest_skipif
+from .._utils._doctests import doctest_needs
 from ..get.get import MultiAcc, _get_arr, _get_vec
 
 if TYPE_CHECKING:
@@ -295,7 +295,7 @@ def _get_hashes(
     return data, np.arange(data.shape[1]).astype(str)
 
 
-@doctest_skipif(reason="Illustrative but not runnable doctest code")
+@doctest_needs("anndata_acc")
 def hashsolo(
     adata: AnnData,
     hashes: MultiAcc | Collection[AdRef] | Collection[str],
@@ -355,22 +355,35 @@ def hashsolo(
 
     Examples
     --------
-    Hashing counts stored as :attr:`~anndata.AnnData.var_names`
-    (e.g. the “Multiplexing Capture” features of a Cell Ranger run):
+    Simulate 300 cells, each carrying one of 3 hashtag oligos:
 
+    >>> import numpy as np
     >>> import scanpy as sc
+    >>> from anndata import AnnData
     >>> from anndata.acc import A
-    >>> adata = sc.io.read_h5ad("data.h5ad")
-    >>> sc.pp.hashsolo(adata, A.X[:, ["Hash1", "Hash2", "Hash3"]])
-    >>> adata.obs["hashsolo"].value_counts()
+    >>>
+    >>> rng = np.random.default_rng(0)
+    >>> hto = rng.poisson(20, size=(300, 3))  # ambient background
+    >>> hto[np.arange(300), np.arange(300) % 3] = rng.poisson(1000, 300)  # signal
+    >>> adata = AnnData(rng.poisson(1, (300, 5)).astype("f4"), obsm=dict(hto=hto))
 
-    Hashing counts stored as :attr:`~anndata.AnnData.obs` columns:
-
-    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]])
-
-    All hashing counts stored together in :attr:`~anndata.AnnData.obsm`:
+    A :class:`~anndata.acc.MultiAcc` demultiplexes using every column it points to.
+    A plain array has no column names, so the barcodes are named after their positions:
 
     >>> sc.pp.hashsolo(adata, A.obsm["hto"])
+    >>> adata.obs["hashsolo"].cat.categories.astype("string")
+    Index(['0', '1', '2'], dtype='string')
+    >>> adata.obs["hashsolo"].value_counts().tolist()
+    [100, 100, 100]
+
+    The same counts as :attr:`~anndata.AnnData.obs` columns
+    (as in a Cell Ranger run’s “Multiplexing Capture” features),
+    referenced one by one:
+
+    >>> adata.obs[["Hash1", "Hash2", "Hash3"]] = hto
+    >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], key_added="hs2")
+    >>> adata.obs["hs2"].cat.categories.astype("string")
+    Index(['Hash1', 'Hash2', 'Hash3'], dtype='string')
 
     .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
        :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
