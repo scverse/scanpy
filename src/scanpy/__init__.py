@@ -16,6 +16,7 @@ from . import preprocessing as pp
 from . import tools as tl
 from ._utils import annotate_doc_types
 from .neighbors import Neighbors
+from .plotting.legacy.mpl_settings import set_figure_params
 
 if TYPE_CHECKING:
     from typing import Any
@@ -41,11 +42,8 @@ __all__ = [
 ]
 
 
-from .plotting.legacy.mpl_settings import set_figure_params
-
 annotate_doc_types(sys.modules[__name__], "scanpy")
 
-# has to be done at the end, after everything has been imported
 sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
 
 
