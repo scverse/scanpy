@@ -47,7 +47,8 @@ if TYPE_CHECKING:
     from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
-    from ..neighbors import NeighborsParams, RPForestDict
+    from ..neighbors import RPForestDict
+    from ..neighbors._types import NeighborsParams
 
     type _MemoryArray = NDArray | CSBase
     type _SupportedArray = _MemoryArray | DaskArray

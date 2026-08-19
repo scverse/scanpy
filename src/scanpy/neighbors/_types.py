@@ -100,3 +100,7 @@ class NeighborsParams(TypedDict):
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
+    # only set by `pp.bbknn`
+    batch_key: NotRequired[str]
+    neighbors_within_batch: NotRequired[int]
+    trim: NotRequired[int]

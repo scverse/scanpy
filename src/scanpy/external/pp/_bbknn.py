@@ -45,6 +45,7 @@ def bbknn(  # noqa: PLR0913
 
         This is just a wrapper of :func:`bbknn.bbknn`: up to date docstring,
         more information and bug reports there.
+        :func:`scanpy.pp.bbknn` implements the same algorithm without the extra dependency.
 
     Params
     ------

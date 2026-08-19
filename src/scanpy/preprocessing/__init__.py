@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..neighbors import neighbors
+from ..neighbors._bbknn import bbknn
 from ._combat import combat
 from ._deprecated.sampling import subsample
 from ._harmony import harmony_integrate
@@ -25,6 +26,7 @@ from ._simple import (
 )
 
 __all__ = [
+    "bbknn",
     "calculate_qc_metrics",
     "combat",
     "downsample_counts",

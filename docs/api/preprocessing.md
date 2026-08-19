@@ -63,6 +63,7 @@ Note that a simple batch correction method is available via {func}`pp.regress_ou
    pp.harmony_integrate
 ```
 
+Batches can also be integrated at the level of the neighbor graph using {func}`pp.bbknn`.
 Also see {ref}`data integration tools <data-integration>` and external {ref}`external data integration <external-data-integration>`.
 
 ## Doublet detection
@@ -93,6 +94,7 @@ Also see {ref}`data integration tools <data-integration>` and external {ref}`ext
    :nosignatures:
    :toctree: generated/
 
+   pp.bbknn
    pp.neighbors
 
 ```
