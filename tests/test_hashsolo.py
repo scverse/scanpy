@@ -52,23 +52,12 @@ def adata(counts: pd.DataFrame) -> AnnData:
     return AnnData(rng.integers(0, 100, size=counts.shape), obs=counts.copy())
 
 
-@pytest.fixture(
-    params=[
-        "obs-str",
-        pytest.param("obs", marks=needs.anndata_acc),
-        pytest.param("X", marks=needs.anndata_acc),
-        pytest.param("X-sparse", marks=needs.anndata_acc),
-        pytest.param("obsm-df", marks=needs.anndata_acc),
-        pytest.param("obsm-array", marks=needs.anndata_acc),
-    ]
-)
+@pytest.fixture(params=["obs", "X", "X-sparse", "obsm-df", "obsm-array"])
 def hashed(
     request: pytest.FixtureRequest, adata: AnnData, counts: pd.DataFrame
 ) -> Hashed:
     """Build an `AnnData` holding the hashing counts, plus references to them."""
     match request.param:
-        case "obs-str":  # plain `.obs` column names work without `anndata.acc`
-            return Hashed(adata, HASHES, HASHES)
         case "obs":
             from anndata.acc import A
 
@@ -93,6 +82,7 @@ def hashed(
             pytest.fail(f"Unknown param {request.param!r}")
 
 
+@needs.anndata_acc
 def test_cell_demultiplexing(hashed: Hashed) -> None:
     adata, refs, names = hashed
     sc.pp.hashsolo(adata, refs)
@@ -116,19 +106,29 @@ def test_cell_demultiplexing(hashed: Hashed) -> None:
     np.testing.assert_allclose(probs.to_numpy().sum(axis=1), 1)
 
 
+@needs.anndata_acc
 def test_copy(adata: AnnData) -> None:
-    copied = sc.pp.hashsolo(adata, HASHES, copy=True)
+    from anndata.acc import A
+
+    copied = sc.pp.hashsolo(adata, A.obs[HASHES], copy=True)
     assert "hashsolo" not in adata.obs
     assert "hashsolo" in copied.obs
 
 
-def test_legacy_api(adata: AnnData) -> None:
-    """The deprecated `sce.pp.hashsolo` matches `sc.pp.hashsolo` and needs no `anndata.acc`."""
+def test_legacy_api_needs_no_acc(subtests: pytest.Subtests, adata: AnnData) -> None:
+    with pytest.warns(FutureWarning, match=r"scanpy\.pp\.hashsolo"):
+        sce.pp.hashsolo(adata, HASHES)
+
+
+@needs.anndata_acc
+def test_legacy_api_matches(subtests: pytest.Subtests, adata: AnnData) -> None:
+    from anndata.acc import A
+
     with pytest.warns(FutureWarning, match=r"scanpy\.pp\.hashsolo"):
         sce.pp.hashsolo(adata, HASHES)
 
     expected_new = adata.copy()
-    sc.pp.hashsolo(expected_new, HASHES)
+    sc.pp.hashsolo(expected_new, A.obs[HASHES])
     pd.testing.assert_series_equal(
         adata.obs["Classification"].astype("string"),
         expected_new.obs["hashsolo"].astype("string"),

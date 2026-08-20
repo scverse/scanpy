@@ -78,7 +78,7 @@ class Gaussian(NamedTuple):
 
 
 def _calculate_log_likelihoods(
-    data: NDArray[np.floating], number_of_noise_barcodes: int | None
+    data: NDArray[np.integer], number_of_noise_barcodes: int | None
 ) -> NDArray[np.float64]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.
 
@@ -149,7 +149,7 @@ def _calculate_log_likelihoods(
 
 
 def _calculate_bayes_rule(
-    data: np.ndarray, priors: ArrayLike, number_of_noise_barcodes: int | None
+    data: NDArray[np.integer], priors: ArrayLike, number_of_noise_barcodes: int | None
 ) -> NDArray[np.float64]:
     """Calculate the posterior probability of each hypothesis from log likelihoods.
 
@@ -173,7 +173,7 @@ def _calculate_bayes_rule(
 
 
 def _hashsolo(
-    data: NDArray,
+    data: NDArray[np.integer],
     *,
     priors: ArrayLike,
     clusters: NDArray | None,
@@ -217,9 +217,8 @@ def _get_hashes(
 ) -> tuple[NDArray, NDArray[np.str_]]:
     """Get the hashing count matrix and each hashing barcode’s name."""
     if not isinstance(hashes, MultiAcc):
-        refs = list(hashes)
-        data = np.column_stack(_get_vec(adata, refs, dim="obs"))
-        return data, np.array([_ref_name(ref) for ref in refs])
+        data = np.column_stack(_get_vec(adata, hashes, dim="obs"))
+        return data, np.array([_ref_name(ref) for ref in hashes])
     # a `MultiAcc` such as `A.obsm["hto"]` refers to all of its columns
     data = _get_arr(adata, hashes, dim="obs")
     if isinstance(data, pd.DataFrame):
@@ -250,7 +249,7 @@ def hashsolo(
         The (annotated) data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
     hashes
-        References to the vectors holding the cell hashing counts\ [#ref]_,
+        References to the vectors holding the cell hashing counts,
         e.g. `A.obs[["Hash1", "Hash2"]]` for columns in :attr:`~anndata.AnnData.obs`
         or `A.X[:, ["Hash1", "Hash2"]]` for hashing barcodes among the
         :attr:`~anndata.AnnData.var_names`.
@@ -318,10 +317,6 @@ def hashsolo(
     >>> sc.pp.hashsolo(adata, A.obs[["Hash1", "Hash2", "Hash3"]], key_added="hs2")
     >>> adata.obs["hs2"].cat.categories.astype("string")
     Index(['Hash1', 'Hash2', 'Hash3'], dtype='string')
-
-    .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
-       :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
-       otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
 
     """
     adata = adata.copy() if copy else adata
