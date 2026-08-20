@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
+import anndata
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,6 +17,10 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from anndata.acc import AdRef, MultiAcc
+
+if TYPE_CHECKING or hasattr(anndata, "acc"):
+    from anndata.acc import A
+
 
 HASHES = [f"Hash{i}" for i in range(10)]
 
@@ -59,20 +64,14 @@ def hashed(
     """Build an `AnnData` holding the hashing counts, plus references to them."""
     match request.param:
         case "obs":
-            from anndata.acc import A
-
             return Hashed(adata, A.obs[HASHES], HASHES)
         case "X" | "X-sparse":
-            from anndata.acc import A
-
             x = counts.to_numpy()
             if request.param == "X-sparse":
                 x = sparse.csr_matrix(x)  # noqa: TID251
             adata = AnnData(x, var=pd.DataFrame(index=HASHES))
             return Hashed(adata, A.X[:, HASHES], HASHES)
         case "obsm-df" | "obsm-array":  # a `MultiAcc` means “all of its columns”
-            from anndata.acc import A
-
             df = request.param == "obsm-df"
             adata.obsm["hto"] = counts.copy() if df else counts.to_numpy()
             # a plain array has no column names, so they fall back to positions
@@ -95,8 +94,6 @@ def test_too_few_noise_barcodes(
     adata: AnnData, n_hashes: int, n_noise: int | None
 ) -> None:
     """Without a noise barcode, the noise distribution is undefined."""
-    from anndata.acc import A
-
     with pytest.raises(ValueError, match=r"noise barcodes?"):
         sc.pp.hashsolo(adata, A.obs[HASHES[:n_hashes]], n_noise_barcodes=n_noise)
 
@@ -127,11 +124,41 @@ def test_cell_demultiplexing(hashed: Hashed) -> None:
 
 @needs.anndata_acc
 def test_copy(adata: AnnData) -> None:
-    from anndata.acc import A
-
     copied = sc.pp.hashsolo(adata, A.obs[HASHES], copy=True)
     assert "hashsolo" not in adata.obs
     assert "hashsolo" in copied.obs
+
+
+@needs.anndata_acc
+def test_pre_existing_clusters(adata: AnnData) -> None:
+    """Clustered demultiplexing equals demultiplexing each cluster on its own."""
+    adata.obs["cl"] = np.where(np.arange(adata.n_obs) % 2, "a", "b")
+    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+
+    np.testing.assert_allclose(adata.obsm["hashsolo"].to_numpy().sum(axis=1), 1)
+    for cluster in ("a", "b"):
+        sub = adata[adata.obs["cl"] == cluster].copy()
+        sc.pp.hashsolo(sub, A.obs[HASHES])
+        np.testing.assert_allclose(
+            sub.obsm["hashsolo"].to_numpy(),
+            adata.obsm["hashsolo"].loc[sub.obs_names].to_numpy(),
+        )
+
+
+@needs.anndata_acc
+def test_pre_existing_clusters_missing_label(adata: AnnData) -> None:
+    """Unlabeled cells must not silently turn into confident negatives."""
+    adata.obs["cl"] = pd.Categorical(["a"] * (adata.n_obs - 10) + [None] * 10)
+    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+    np.testing.assert_allclose(adata.obsm["hashsolo"].to_numpy().sum(axis=1), 1)
+
+
+@needs.anndata_acc
+def test_pre_existing_clusters_singleton(adata: AnnData) -> None:
+    """A one-cell cluster has zero variance; it must not yield NaN probabilities."""
+    adata.obs["cl"] = ["a"] * (adata.n_obs - 1) + ["b"]
+    sc.pp.hashsolo(adata, A.obs[HASHES], pre_existing_clusters=A.obs["cl"])
+    assert np.isfinite(adata.obsm["hashsolo"].to_numpy()).all()
 
 
 def test_legacy_api_needs_no_acc(subtests: pytest.Subtests, adata: AnnData) -> None:
@@ -141,8 +168,6 @@ def test_legacy_api_needs_no_acc(subtests: pytest.Subtests, adata: AnnData) -> N
 
 @needs.anndata_acc
 def test_legacy_api_matches(subtests: pytest.Subtests, adata: AnnData) -> None:
-    from anndata.acc import A
-
     with pytest.warns(FutureWarning, match=r"scanpy\.pp\.hashsolo"):
         sce.pp.hashsolo(adata, HASHES)
 

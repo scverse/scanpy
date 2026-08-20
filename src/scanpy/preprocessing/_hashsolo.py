@@ -51,6 +51,12 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
+# smaller than what log-counts can resolve
+# large enough that its inverse doesn’t get close to overflowing
+_VAR_EPS = 1e-8
+"""Variance floor, so degenerate spreads (e.g. a one-cell cluster) stay finite."""
+
+
 class Gaussian(NamedTuple):
     """A gaussian, its fields named after :func:`scipy.stats.norm.pdf`’s parameters."""
 
@@ -70,8 +76,8 @@ class Gaussian(NamedTuple):
         See <https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf>.
         """
         n = len(data)
-        lam_o = 1 / (self.scale**2)
-        lam = 1 / np.var(data) if n > 1 else lam_o
+        lam_o = 1 / max(self.scale**2, _VAR_EPS)
+        lam = 1 / max(np.var(data), _VAR_EPS) if n > 1 else lam_o
         lam_n = lam_o + n * lam
         mu_n = (np.mean(data) * n * lam + self.loc * lam_o) / lam_n if n else self.loc
         return Gaussian(mu_n, np.sqrt((n + 1) / lam_n))
@@ -176,7 +182,7 @@ def _hashsolo(
 ) -> NDArray[np.float64]:
     """Validate counts and run the bayes rule, optionally per cluster."""
     if not check_nonnegative_integers(data):
-        msg = "Cell hashing counts must be non-negative"
+        msg = "Cell hashing counts must be non-negative integers"
         raise ValueError(msg)
     n_barcodes = data.shape[1]
     if n_barcodes_noise is None:
@@ -193,8 +199,10 @@ def _hashsolo(
         return _calculate_bayes_rule(data, priors, n_barcodes_noise)
 
     probs = np.zeros((data.shape[0], 3))
-    for cluster in pd.unique(clusters):
-        mask = clusters == cluster
+    # `factorize` then `np.unique` gives cells with no cluster the code -1
+    codes = pd.factorize(clusters)[0]
+    for code in np.unique(codes):
+        mask = codes == code
         probs[mask] = _calculate_bayes_rule(data[mask], priors, n_barcodes_noise)
     return probs
 
