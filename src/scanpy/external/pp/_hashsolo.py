@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
-@deprecated(Deprecation("1.13.0", "Use `scanpy.pp.hashsolo` instead."))
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.pp.hashsolo` instead."))
 @doctest_skipif(reason="Illustrative but not runnable doctest code")
 def hashsolo(
     adata: AnnData,

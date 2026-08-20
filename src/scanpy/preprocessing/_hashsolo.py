@@ -51,18 +51,35 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 
-class GaussianParams(NamedTuple):
-    """Parameters of a gaussian, named after :func:`scipy.stats.norm.pdf`’s parameters."""
+class Gaussian(NamedTuple):
+    """A gaussian, its fields named after :func:`scipy.stats.norm.pdf`’s parameters."""
 
-    loc: float
+    loc: float | np.floating
     """Mean of the gaussian."""
-    scale: float
+    scale: float | np.floating
     """Standard deviation of the gaussian."""
+
+    def log_pdf(self, counts: NDArray[np.floating]) -> NDArray[np.float64]:
+        """Log of the probability density at each of `counts`."""
+        eps = 1e-15  # avoid log(0)
+        return np.log(norm.pdf(counts, loc=self.loc, scale=self.scale) + eps)
+
+    def posterior(self, data: NDArray[np.floating]) -> Gaussian:
+        """Update this gaussian, used as a prior, with the observed 1-d `data`.
+
+        See <https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf>.
+        """
+        n = len(data)
+        lam_o = 1 / (self.scale**2)
+        lam = 1 / np.var(data) if n > 1 else lam_o
+        lam_n = lam_o + n * lam
+        mu_n = (np.mean(data) * n * lam + self.loc * lam_o) / lam_n if n else self.loc
+        return Gaussian(mu_n, np.sqrt((n + 1) / lam_n))
 
 
 def _calculate_log_likelihoods(
-    data: np.ndarray, number_of_noise_barcodes: int | None
-) -> tuple[NDArray[np.float64], NDArray[np.float64], dict[int, str]]:
+    data: NDArray[np.floating], number_of_noise_barcodes: int | None
+) -> NDArray[np.float64]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.
 
     Parameters
@@ -74,144 +91,61 @@ def _calculate_log_likelihoods(
 
     Returns
     -------
-    log_likelihoods_for_each_hypothesis
-        a 2d np.array log likelihood of each hypothesis
-    all_indices
-    counter_to_barcode_combo
+    A 2d array of shape `(n_cells, 3)` with the log likelihood of each hypothesis.
 
     """
-
-    def gaussian_updates(data: np.ndarray, mu_o: float, std_o: float) -> GaussianParams:
-        """Update parameters of your gaussian.
-
-        See <https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf>.
-
-        Parameters
-        ----------
-        data
-            1-d array of counts
-        mu_o
-            global mean for hashing count distribution
-        std_o
-            global std for hashing count distribution
-
-        Returns
-        -------
-        The updated parameters of the gaussian.
-
-        """
-        lam_o = 1 / (std_o**2)
-        n = len(data)
-        lam = 1 / np.var(data) if len(data) > 1 else lam_o
-        lam_n = lam_o + n * lam
-        mu_n = (
-            (np.mean(data) * n * lam + mu_o * lam_o) / lam_n if len(data) > 0 else mu_o
-        )
-        return GaussianParams(mu_n, (1 / (lam_n / (n + 1))) ** (1 / 2))
-
-    eps = 1e-15
     # probabilites for negative, singlet, doublets
-    log_likelihoods_for_each_hypothesis = np.zeros((data.shape[0], 3))
+    log_likelihoods = np.zeros((data.shape[0], 3))
 
-    all_indices = np.empty(data.shape[0])
-    num_of_barcodes = data.shape[1]
-    number_of_non_noise_barcodes = (
-        num_of_barcodes - number_of_noise_barcodes
+    n_barcodes = data.shape[1]
+    n_barcodes_noise = (
+        number_of_noise_barcodes
         if number_of_noise_barcodes is not None
-        else 2
+        else n_barcodes - 2
     )
 
-    num_of_noise_barcodes = num_of_barcodes - number_of_non_noise_barcodes
-
     # assume log normal
-    data = np.log(data + 1)
+    data: NDArray[np.floating] = np.log(data + 1)
+    # per cell, the barcode indices ordered by ascending count
     data_arg = np.argsort(data, axis=1)
     data_sort = np.sort(data, axis=1)
 
     # global signal and noise counts useful for when we have few cells
     # barcodes with the highest number of counts are assumed to be a true signal
     # barcodes with rank < k are considered to be noise
-    global_signal_counts = np.ravel(data_sort[:, -1])
-    global_noise_counts = np.ravel(data_sort[:, :-number_of_non_noise_barcodes])
-    global_mu_signal_o, global_sigma_signal_o = (
-        np.mean(global_signal_counts),
-        np.std(global_signal_counts),
-    )
-    global_mu_noise_o, global_sigma_noise_o = (
-        np.mean(global_noise_counts),
-        np.std(global_noise_counts),
-    )
+    global_signal = data_sort[:, -1]
+    global_noise = data_sort[:, :n_barcodes_noise]
+    prior_sig = Gaussian(np.mean(global_signal), np.std(global_signal))
+    prior_noise = Gaussian(np.mean(global_noise), np.std(global_noise))
 
-    noise_params_dict: dict[int, GaussianParams] = {}
-    signal_params_dict: dict[int, GaussianParams] = {}
-
-    # for each barcode get  empirical noise and signal distribution parameterization
-    for x in range(num_of_barcodes):
-        sample_barcodes = data[:, x]
-        sample_barcodes_noise_idx = np.where(data_arg[:, :num_of_noise_barcodes] == x)[
-            0
-        ]
-        sample_barcodes_signal_idx = np.where(data_arg[:, -1] == x)
-
-        # get noise and signal counts
-        noise_counts = sample_barcodes[sample_barcodes_noise_idx]
-        signal_counts = sample_barcodes[sample_barcodes_signal_idx]
-
-        # get parameters of distribution, assuming lognormal do update from global values
-        noise_params_dict[x] = gaussian_updates(
-            noise_counts, global_mu_noise_o, global_sigma_noise_o
-        )
-        signal_params_dict[x] = gaussian_updates(
-            signal_counts, global_mu_signal_o, global_sigma_signal_o
-        )
-
-    counter_to_barcode_combo: dict[int, str] = {}
-    counter = 0
+    # for each barcode get empirical noise and signal distribution parameterization,
+    # assuming lognormal, as an update from the global values
+    p_noise: list[Gaussian] = []
+    p_sig: list[Gaussian] = []
+    for x in range(n_barcodes):
+        is_noise = (data_arg[:, :n_barcodes_noise] == x).any(axis=1)
+        is_sig = data_arg[:, -1] == x
+        p_noise.append(prior_noise.posterior(data[is_noise, x]))
+        p_sig.append(prior_sig.posterior(data[is_sig, x]))
 
     # for each combination of noise and signal barcode calculate probiltiy of in silico and real cell hypotheses
-    for noise_sample_idx, signal_sample_idx in product(
-        range(num_of_barcodes), repeat=2
-    ):
-        signal_subset = data_arg[:, -1] == signal_sample_idx
-        noise_subset = data_arg[:, -2] == noise_sample_idx
-        subset = signal_subset & noise_subset
-        if sum(subset) == 0:
+    for i_noise, i_sig in product(range(n_barcodes), repeat=2):
+        mask = (data_arg[:, -1] == i_sig) & (data_arg[:, -2] == i_noise)
+        if not mask.any():
             continue
 
-        indices = np.where(subset)[0]
-        barcode_combo = "_".join([str(noise_sample_idx), str(signal_sample_idx)])
-        all_indices[np.where(subset)[0]] = counter
-        counter_to_barcode_combo[counter] = barcode_combo
-        counter += 1
-        noise_params = noise_params_dict[noise_sample_idx]
-        signal_params = signal_params_dict[signal_sample_idx]
-
-        # calculate probabilties for each hypothesis for each cell
-        data_subset = data[subset]
-        data_noise = data_subset[:, noise_sample_idx]
-        data_signal = data_subset[:, signal_sample_idx]
         # the distributions the 2nd-highest and highest barcode’s counts
         # are assumed to come from under each hypothesis
         hypotheses = [
-            (noise_params, noise_params),  # negative: neither barcode is signal
-            (noise_params, signal_params),  # singlet: only the highest barcode is
-            (signal_params_dict[noise_sample_idx], signal_params),  # doublet: both are
+            (p_noise[i_noise], p_noise[i_noise]),  # negative: neither barcode is signal
+            (p_noise[i_noise], p_sig[i_sig]),  # singlet: only the highest barcode is
+            (p_sig[i_noise], p_sig[i_sig]),  # doublet: both are
         ]
-
-        # each cell and each hypothesis probability
-        for prob_idx, log_prob in enumerate(
-            (
-                np.log(norm.pdf(data_noise, loc=d_noise.loc, scale=d_noise.scale) + eps)
-                + np.log(norm.pdf(data_signal, loc=d_sig.loc, scale=d_sig.scale) + eps)
-                for d_noise, d_sig in hypotheses
-            )
-        ):
-            log_likelihoods_for_each_hypothesis[indices, prob_idx] = log_prob
-    return (
-        log_likelihoods_for_each_hypothesis,
-        all_indices,
-        counter_to_barcode_combo,
-    )
+        for i_prob, (p_2nd, p_top) in enumerate(hypotheses):
+            log_likelihoods[mask, i_prob] = p_2nd.log_pdf(
+                data[mask, i_noise]
+            ) + p_top.log_pdf(data[mask, i_sig])
+    return log_likelihoods
 
 
 def _calculate_bayes_rule(
@@ -233,7 +167,7 @@ def _calculate_bayes_rule(
     A 2d array of shape `(n_cells, 3)` with the probability of each hypothesis.
 
     """
-    log_likelihoods, _, _ = _calculate_log_likelihoods(data, number_of_noise_barcodes)
+    log_likelihoods = _calculate_log_likelihoods(data, number_of_noise_barcodes)
     likelihoods = np.exp(log_likelihoods) * np.asarray(priors)
     return likelihoods / likelihoods.sum(axis=1)[:, None]
 
