@@ -82,6 +82,25 @@ def hashed(
             pytest.fail(f"Unknown param {request.param!r}")
 
 
+@pytest.mark.parametrize(
+    ("n_hashes", "n_noise"),
+    [
+        pytest.param(1, None, id="1-hash"),
+        pytest.param(2, None, id="2-hashes-default"),
+        pytest.param(len(HASHES), 0, id="explicit-0"),
+    ],
+)
+@needs.anndata_acc
+def test_too_few_noise_barcodes(
+    adata: AnnData, n_hashes: int, n_noise: int | None
+) -> None:
+    """Without a noise barcode, the noise distribution is undefined."""
+    from anndata.acc import A
+
+    with pytest.raises(ValueError, match=r"noise barcodes?"):
+        sc.pp.hashsolo(adata, A.obs[HASHES[:n_hashes]], n_noise_barcodes=n_noise)
+
+
 @needs.anndata_acc
 def test_cell_demultiplexing(hashed: Hashed) -> None:
     adata, refs, names = hashed

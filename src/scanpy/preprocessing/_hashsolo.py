@@ -78,7 +78,7 @@ class Gaussian(NamedTuple):
 
 
 def _calculate_log_likelihoods(
-    data: NDArray[np.integer], number_of_noise_barcodes: int | None
+    data: NDArray[np.integer], n_barcodes_noise: int
 ) -> NDArray[np.float64]:
     """Calculate log likelihoods for each hypothesis, negative, singlet, doublet.
 
@@ -86,7 +86,7 @@ def _calculate_log_likelihoods(
     ----------
     data
         cells by hashing counts matrix
-    number_of_noise_barcodes
+    n_barcodes_noise
         number of barcodes to used to calculated noise distribution
 
     Returns
@@ -98,11 +98,6 @@ def _calculate_log_likelihoods(
     log_likelihoods = np.zeros((data.shape[0], 3))
 
     n_barcodes = data.shape[1]
-    n_barcodes_noise = (
-        number_of_noise_barcodes
-        if number_of_noise_barcodes is not None
-        else n_barcodes - 2
-    )
 
     # assume log normal
     data: NDArray[np.floating] = np.log(data + 1)
@@ -149,7 +144,7 @@ def _calculate_log_likelihoods(
 
 
 def _calculate_bayes_rule(
-    data: NDArray[np.integer], priors: ArrayLike, number_of_noise_barcodes: int | None
+    data: NDArray[np.integer], priors: ArrayLike, n_barcodes_noise: int
 ) -> NDArray[np.float64]:
     """Calculate the posterior probability of each hypothesis from log likelihoods.
 
@@ -159,7 +154,7 @@ def _calculate_bayes_rule(
         cells by hashing counts matrix
     priors
         prior for each hypothesis, in the order `[negative, singlet, doublet]`
-    number_of_noise_barcodes
+    n_barcodes_noise
         number of barcodes to used to calculated noise distribution
 
     Returns
@@ -167,7 +162,7 @@ def _calculate_bayes_rule(
     A 2d array of shape `(n_cells, 3)` with the probability of each hypothesis.
 
     """
-    log_likelihoods = _calculate_log_likelihoods(data, number_of_noise_barcodes)
+    log_likelihoods = _calculate_log_likelihoods(data, n_barcodes_noise)
     likelihoods = np.exp(log_likelihoods) * np.asarray(priors)
     return likelihoods / likelihoods.sum(axis=1)[:, None]
 
@@ -177,30 +172,30 @@ def _hashsolo(
     *,
     priors: ArrayLike,
     clusters: NDArray | None,
-    number_of_noise_barcodes: int | None,
+    n_barcodes_noise: int | None,
 ) -> NDArray[np.float64]:
     """Validate counts and run the bayes rule, optionally per cluster."""
     if not check_nonnegative_integers(data):
         msg = "Cell hashing counts must be non-negative"
         raise ValueError(msg)
-    if number_of_noise_barcodes is not None and number_of_noise_barcodes >= (
-        n_barcodes := data.shape[1]
-    ):
+    n_barcodes = data.shape[1]
+    if n_barcodes_noise is None:
+        n_barcodes_noise = n_barcodes - 2
+    if not 1 <= n_barcodes_noise < n_barcodes:
         msg = (
-            f"`number_of_noise_barcodes` ({number_of_noise_barcodes}) must be smaller "
-            f"than the number of hashing barcodes ({n_barcodes})."
+            f"The number of noise barcodes ({n_barcodes_noise}) must be at least 1 and smaller "
+            f"than the number of hashing barcodes ({n_barcodes}). "
+            f"Pass at least 3 `hashes` or set `n_noise_barcodes` explicitly."
         )
         raise ValueError(msg)
 
     if clusters is None:
-        return _calculate_bayes_rule(data, priors, number_of_noise_barcodes)
+        return _calculate_bayes_rule(data, priors, n_barcodes_noise)
 
     probs = np.zeros((data.shape[0], 3))
     for cluster in pd.unique(clusters):
         mask = clusters == cluster
-        probs[mask] = _calculate_bayes_rule(
-            data[mask], priors, number_of_noise_barcodes
-        )
+        probs[mask] = _calculate_bayes_rule(data[mask], priors, n_barcodes_noise)
     return probs
 
 
@@ -235,7 +230,7 @@ def hashsolo(
     *,
     priors: tuple[float, float, float] = (0.01, 0.8, 0.19),
     pre_existing_clusters: AdRef | str | None = None,
-    number_of_noise_barcodes: int | None = None,
+    n_noise_barcodes: int | None = None,
     key_added: str = "hashsolo",
     copy: bool = False,
 ) -> AnnData | None:
@@ -267,7 +262,7 @@ def hashsolo(
         Reference to a vector of pre-existing cluster assignments\ [#ref]_
         (e.g. Leiden clusters or cell types, but not batch assignments).
         If provided, demultiplexing is performed separately for each cluster.
-    number_of_noise_barcodes
+    n_noise_barcodes
         The number of barcodes used to create the noise distribution.
         Defaults to `len(hashes) - 2`.
     key_added
@@ -327,10 +322,7 @@ def hashsolo(
         else np.asarray(_get_vec(adata, pre_existing_clusters, dim="obs"))
     )
     probs = _hashsolo(
-        data,
-        priors=priors,
-        clusters=clusters,
-        number_of_noise_barcodes=number_of_noise_barcodes,
+        data, priors=priors, clusters=clusters, n_barcodes_noise=n_noise_barcodes
     )
 
     most_likely_hypothesis = np.argmax(probs, axis=1)

@@ -103,7 +103,7 @@ def hashsolo(
         data,
         priors=priors,
         clusters=clusters,
-        number_of_noise_barcodes=number_of_noise_barcodes,
+        n_barcodes_noise=number_of_noise_barcodes,
     )
     most_likely_hypothesis = np.argmax(probs, axis=1)
 
