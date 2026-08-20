@@ -9,7 +9,11 @@ from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
-from scanpy.neighbors._bbknn import _compute_batch_balanced_knn, _trim
+from scanpy.neighbors._bbknn import (
+    _compute_batch_balanced_knn,
+    _handle_transformer,
+    _trim,
+)
 from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
@@ -18,6 +22,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from scanpy._compat import CSRBase
+    from scanpy.neighbors._types import _Metric
 
 
 N_PER_BATCH = [60, 40, 30]
@@ -25,11 +30,17 @@ BATCHES = np.repeat(["a", "b", "c"], N_PER_BATCH)
 N_OBS = len(BATCHES)
 
 
-@pytest.fixture(scope="module")
-def rep() -> NDArray[np.float32]:
-    """Create a representation where each batch is shifted by a constant."""
+@pytest.fixture(
+    scope="module", params=[10, 2 * sc.settings.N_PCS], ids=["narrow", "wide"]
+)
+def rep(request: pytest.FixtureRequest) -> NDArray[np.float32]:
+    """Create a representation where each batch is shifted by a constant.
+
+    Either narrow enough for `pp.bbknn` to use `.X`,
+    or wide enough that it uses the PCA.
+    """
     rng = np.random.default_rng(0)
-    x = rng.normal(size=(N_OBS, 10)).astype(np.float32)
+    x = rng.normal(size=(N_OBS, request.param)).astype(np.float32)
     for i, batch in enumerate(np.unique(BATCHES)):
         x[batch == BATCHES] += 5 * i
     return x
@@ -38,7 +49,8 @@ def rep() -> NDArray[np.float32]:
 @pytest.fixture
 def adata(rep: NDArray[np.float32]) -> AnnData:
     adata = AnnData(rep.copy(), obs=dict(batch=BATCHES.copy()))
-    adata.obsm["X_pca"] = rep.copy()
+    # fewer PCs than `.X` has columns, so the two differ
+    sc.pp.pca(adata, n_comps=5, key_added="pca")
     return adata
 
 
@@ -65,6 +77,20 @@ def test_bbknn(adata: AnnData) -> None:
     assert (n_per_row(dists) == 8).all()
     assert dists.diagonal().sum() == 0
     assert (conns != conns.T).nnz == 0
+
+
+def test_bbknn_representation(adata: AnnData) -> None:
+    dists = sc.pp.bbknn(adata, 3, batch_key="batch", copy=True).obsp["distances"]
+    # like `pp.neighbors`, we use the PCA – except for data narrower than `N_PCS`
+    used, unused = ("X", "pca") if adata.n_vars <= sc.settings.N_PCS else ("pca", "X")
+
+    for rep in (used, unused):
+        sc.pp.bbknn(adata, 3, batch_key="batch", use_rep=rep, key_added=rep)
+
+    np.testing.assert_allclose(
+        dists.toarray(), adata.obsp[f"{used}_distances"].toarray()
+    )
+    assert (dists != adata.obsp[f"{unused}_distances"]).nnz > 0
 
 
 def test_bbknn_is_batch_balanced(adata: AnnData) -> None:
@@ -105,6 +131,36 @@ def test_bbknn_connects_batches(adata: AnnData) -> None:
 def test_bbknn_transformer(adata: AnnData, transformer) -> None:
     sc.pp.bbknn(adata, 3, batch_key="batch", transformer=transformer)
     assert (n_per_row(adata.obsp["distances"]) == 8).all()
+
+
+@pytest.mark.parametrize(
+    ("n_obs", "max_batch_size", "metric", "brute"),
+    [
+        # brute force costs `n_obs` × index size, so both matter
+        pytest.param(20_000, 2_000, "euclidean", True, id="many_small_batches"),
+        pytest.param(100_000, 50_000, "euclidean", False, id="few_big_batches"),
+        pytest.param(300_000, 30_000, "euclidean", False, id="big_data"),
+        pytest.param(1_000, 500, "cosine", True, id="small_batch_other_metric"),
+        pytest.param(300_000, 30_000, "cosine", False, id="big_data_other_metric"),
+    ],
+)
+def test_bbknn_transformer_choice(
+    *, n_obs: int, max_batch_size: int, metric: _Metric, brute: bool
+) -> None:
+    """`transformer=None` picks a backend based on how big the per-batch indices are."""
+    from sklearn.neighbors import KNeighborsTransformer
+
+    transformer, shortcut = _handle_transformer(
+        None,
+        n_obs=n_obs,
+        max_batch_size=max_batch_size,
+        n_neighbors=3,
+        metric=metric,
+        metric_kwds={},
+        rng=np.random.default_rng(0),
+    )
+    assert shortcut is brute
+    assert isinstance(transformer, KNeighborsTransformer) is brute
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
@@ -165,11 +221,12 @@ def test_bbknn_knn_is_normalized(rep: NDArray[np.float32]) -> None:
         rep,
         batches=BATCHES,
         unique_batches=np.unique(BATCHES),
+        batch_sizes=np.asarray(N_PER_BATCH),
         neighbors_within_batch=3,
         transformer=None,
         metric="euclidean",
         metric_kwds={},
-        random_state=0,
+        rng=np.random.default_rng(0),
     )
     np.testing.assert_array_equal(knn_indices[:, 0], np.arange(N_OBS))
     np.testing.assert_array_equal(knn_distances[:, 0], 0.0)
@@ -187,11 +244,12 @@ def test_bbknn_duplicate_cells() -> None:
         x,
         batches=batches,
         unique_batches=np.unique(batches),
+        batch_sizes=np.asarray([10, 10]),
         neighbors_within_batch=2,
         transformer=None,
         metric="euclidean",
         metric_kwds={},
-        random_state=0,
+        rng=np.random.default_rng(0),
     )
     np.testing.assert_array_equal(knn_indices[:, 0], np.arange(20))
     np.testing.assert_array_equal(knn_distances[:, 0], 0.0)
@@ -217,7 +275,7 @@ def test_bbknn_key_added(adata: AnnData) -> None:
 def test_bbknn_copy(adata: AnnData) -> None:
     copied = sc.pp.bbknn(adata, 3, batch_key="batch", copy=True)
     assert not adata.obsp
-    assert not adata.uns
+    assert "neighbors" not in adata.uns  # `.uns['pca']` is from the fixture
     assert set(copied.obsp) == {"distances", "connectivities"}
 
 

@@ -22,7 +22,7 @@ scripts.format-fix = "prek run -a --group=format"
 
 [envs.hatch-check-code]
 dependencies = [ "prek" ]
-lint-check = "echo 'try `hatch check code --fix`'; false"
+scripts.lint-check = "echo 'try `hatch check code --fix`'; false"
 scripts.lint-fix = "prek run -a --no-group=format"
 
 [envs.hatch-test]

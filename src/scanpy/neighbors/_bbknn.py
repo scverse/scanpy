@@ -12,21 +12,16 @@ import numpy as np
 
 from .. import logging as logg
 from .._docs import doc_rng
-from .._settings import settings
-from .._utils import _doc_params, get_literal_vals
-from .._utils.random import (
-    _accepts_legacy_random_state,
-    _legacy_random_state,
-    _LegacyRng,
-)
+from .._utils import _doc_params
+from .._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ._common import (
     _get_indices_distances_from_rect_matrix,
     _get_metadata,
     _get_sparse_matrix_from_indices_distances,
+    _make_transformer,
 )
 from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_use_rep
-from ._types import _KnownTransformer
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -36,8 +31,13 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._compat import CSRBase
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
-    from ._types import KnnTransformerLike, _Metric, _MetricFn
+    from .._utils.random import RNGLike, SeedLike
+    from ._types import (
+        KnnTransformerLike,
+        _KnownTransformer,
+        _Metric,
+        _MetricFn,
+    )
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
@@ -168,6 +168,8 @@ def bbknn(  # noqa: PLR0913
     if batch_key not in adata.obs:
         msg = f"Batch key {batch_key!r} not found in `adata.obs`."
         raise KeyError(msg)
+    rng = np.random.default_rng(rng)
+
     batches = np.asarray(adata.obs[batch_key])
     unique_batches, batch_sizes = np.unique(batches, return_counts=True)
     if len(too_small := unique_batches[batch_sizes < neighbors_within_batch]):
@@ -182,11 +184,12 @@ def bbknn(  # noqa: PLR0913
         x,
         batches=batches,
         unique_batches=unique_batches,
+        batch_sizes=batch_sizes,
         neighbors_within_batch=neighbors_within_batch,
         transformer=transformer,
         metric=metric,
         metric_kwds=metric_kwds,
-        random_state=_legacy_random_state(rng),
+        rng=rng,
     )
     n_obs, n_neighbors = knn_indices.shape
     if trim is None:
@@ -238,11 +241,12 @@ def _compute_batch_balanced_knn(
     *,
     batches: NDArray[Any],
     unique_batches: NDArray[Any],
+    batch_sizes: NDArray[np.int64],
     neighbors_within_batch: int,
     transformer: KnnTransformerLike | _KnownTransformer | None,
     metric: _Metric | _MetricFn,
     metric_kwds: Mapping[str, Any],
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
 ) -> tuple[NDArray[np.int64], NDArray[np.float32 | np.float64]]:
     """Find the `neighbors_within_batch` nearest neighbors of each cell in each batch.
 
@@ -253,10 +257,11 @@ def _compute_batch_balanced_knn(
     proto, is_sklearn_shortcut = _handle_transformer(
         transformer,
         n_obs=x.shape[0],
+        max_batch_size=int(batch_sizes.max()),
         n_neighbors=neighbors_within_batch,
         metric=metric,
         metric_kwds=metric_kwds,
-        random_state=random_state,
+        rng=rng,
     )
 
     n_obs = x.shape[0]
@@ -303,57 +308,39 @@ def _handle_transformer(
     transformer: KnnTransformerLike | _KnownTransformer | None,
     *,
     n_obs: int,
+    max_batch_size: int,
     n_neighbors: int,
     metric: _Metric | _MetricFn,
     metric_kwds: Mapping[str, Any],
-    random_state: _LegacyRandom,
+    rng: np.random.Generator,
 ) -> tuple[KnnTransformerLike, bool]:
     """Coerce `transformer` to an instance to be cloned for each batch.
 
     Also returns whether it is a :class:`~sklearn.neighbors.KNeighborsTransformer`
     we created ourselves, i.e. one we can query without going through ``transform``.
 
-    The heuristic for `transformer=None` matches the one of :func:`~scanpy.pp.neighbors`.
+    Unlike :func:`~scanpy.pp.neighbors`,
+    we build one index per batch and query each with all `n_obs` observations,
+    so brute force costs ``n_obs × max_batch_size``,
+    while an approximate index’s cost is dominated by building it.
+    The cutoff is where the two met in benchmarks on ~50-dimensional data.
     """
-    use_dense_distances = metric == "euclidean" and n_obs < 8192
     shortcut = transformer == "sklearn" or (
-        transformer is None and (use_dense_distances or n_obs < 4096)
+        transformer is None
+        and (
+            max_batch_size < 4096
+            or (metric == "euclidean" and n_obs * max_batch_size < 10**9)
+        )
     )
-    if shortcut:
-        from sklearn.neighbors import KNeighborsTransformer
-
-        return KNeighborsTransformer(
-            algorithm="brute",
-            n_jobs=settings.n_jobs,
-            n_neighbors=n_neighbors,
-            metric=metric,
-            metric_params=dict(metric_kwds),  # needs dict
-            # no random_state
-        ), True
-    if transformer is None or transformer == "pynndescent":
-        from pynndescent import PyNNDescentTransformer
-
-        kwds: dict[str, Any] = dict(
-            n_neighbors=n_neighbors,
-            metric=metric,
-            metric_kwds=dict(metric_kwds),  # needs to be cloneable
-            random_state=random_state,
-        )
-        if transformer is None:
-            # Use defaults from UMAP’s `nearest_neighbors` function
-            kwds.update(
-                n_jobs=settings.n_jobs,
-                n_trees=min(64, 5 + round(n_obs**0.5 / 20.0)),
-                n_iters=max(5, round(np.log2(n_obs))),
-            )
-        return PyNNDescentTransformer(**kwds), False
-    if isinstance(transformer, str):
-        msg = (
-            f"Unknown transformer: {transformer}. "
-            f"Try passing a class or one of {get_literal_vals(_KnownTransformer)}"
-        )
-        raise ValueError(msg)
-    return transformer, False
+    return _make_transformer(
+        transformer,
+        shortcut=shortcut,
+        n_index=max_batch_size,
+        n_neighbors=n_neighbors,
+        metric=metric,
+        metric_params=metric_kwds,
+        rng=rng,
+    ), shortcut
 
 
 def _trim(connectivities: CSRBase, /, trim: int) -> CSRBase:
