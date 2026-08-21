@@ -286,6 +286,7 @@ def test_download_keeps_existing_file(
     download("http://example.invalid/data.bin", dest)
 
     assert dest.read_bytes() == b"complete"
+    assert list(dest.parent.iterdir()) == [dest]
 
 
 # These are tested via doctest
