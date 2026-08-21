@@ -7,48 +7,85 @@ import numpy as np
 from .. import logging as logg
 from .._compat import warn
 from .._keys import _existing_preset_keys
-from .._settings import settings
+from .._settings import Preset, settings
 from .._utils import _choose_graph
+from ..get.get import LayerAcc, MultiAcc, _get_arr, _resolve_rep
 
 if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
     from .._compat import CSBase, CSRBase
+    from ..get.get import RepAcc
 
 
 def _choose_representation(
     adata: AnnData,
     *,
-    use_rep: str | None,
+    use_rep: RepAcc | str | None,
     n_pcs: int | None,
     silent: bool = False,
 ) -> np.ndarray | CSRBase:  # TODO: what else?
+    """Get the representation to compute on, resolving strings using `anndata.acc`."""
+    return _choose_representation_compat(
+        adata,
+        use_rep=None if use_rep is None else _resolve_rep(use_rep),
+        n_pcs=n_pcs,
+        silent=silent,
+    )
+
+
+def _choose_representation_compat(
+    adata: AnnData,
+    *,
+    use_rep: RepAcc | str | None,
+    n_pcs: int | None,
+    silent: bool = False,
+) -> np.ndarray | CSRBase:  # TODO: what else?
+    """Get the representation to compute on.
+
+    Treats strings as `.obsm` keys (or `'X'`) instead of `anndata.acc` specs when the preset is v1.
+    """
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1
+    if use_rep is not None and (
+        not isinstance(use_rep, str) or settings.preset is Preset.ScanpyV2Preview
+    ):
+        use_rep = _resolve_rep(use_rep)
     if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
         use_rep = "X"
-    if use_rep is None:
-        x = _get_pca_or_small_x(adata, n_pcs)
-    elif use_rep in adata.obsm and n_pcs is not None:
-        if n_pcs > adata.obsm[use_rep].shape[1]:
-            msg = (
-                f"{use_rep} does not have enough Dimensions. Provide a "
-                "Representation with equal or more dimensions than"
-                "`n_pcs` or lower `n_pcs` "
-            )
+    match use_rep:
+        case None:
+            x = _get_pca_or_small_x(adata, n_pcs)
+        case LayerAcc():
+            x = _get_arr(adata, use_rep)
+        case MultiAcc():
+            x = _slice_n_pcs(_get_arr(adata, use_rep), n_pcs, use_rep)
+        case str() if use_rep in adata.obsm:
+            x = _slice_n_pcs(adata.obsm[use_rep], n_pcs, use_rep)
+        case "X":
+            x = adata.X
+        case _:
+            msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
             raise ValueError(msg)
-        x = adata.obsm[use_rep][:, :n_pcs]
-    elif use_rep in adata.obsm and n_pcs is None:
-        x = adata.obsm[use_rep]
-    elif use_rep == "X":
-        x = adata.X
-    else:
-        msg = f"Did not find {use_rep} in `.obsm.keys()`. You need to compute it first."
-        raise ValueError(msg)
     settings.verbosity = verbosity  # resetting verbosity
     return x
+
+
+def _slice_n_pcs[A: np.ndarray | CSBase](
+    x: A, n_pcs: int | None, use_rep: RepAcc | str
+) -> A:
+    if n_pcs is None:
+        return x
+    if n_pcs > x.shape[1]:
+        msg = (
+            f"{use_rep} does not have enough Dimensions. Provide a "
+            "Representation with equal or more dimensions than"
+            "`n_pcs` or lower `n_pcs` "
+        )
+        raise ValueError(msg)
+    return x[:, :n_pcs]
 
 
 def _get_pca_or_small_x(adata: AnnData, n_pcs: int | None) -> np.ndarray | CSRBase:

@@ -98,5 +98,5 @@ class NeighborsParams(TypedDict):
     metric: _Metric | _MetricFn | None
     random_state: NotRequired[_LegacyRandom]
     metric_kwds: NotRequired[Mapping[str, Any]]
-    use_rep: NotRequired[str]
+    use_rep: NotRequired[str | list[str]]  # see `scanpy.get.get._rep_to_json`
     n_pcs: NotRequired[int]

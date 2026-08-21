@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import anndata
 import numpy as np
 import pytest
 from anndata import AnnData
@@ -11,12 +12,21 @@ from sklearn.neighbors import KNeighborsTransformer
 import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
+from scanpy.get.get import _rep_from_json
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
     from typing import Literal
 
     from pytest_mock import MockerFixture
+
+    from scanpy.get.get import RepAcc
+
+if TYPE_CHECKING or hasattr(anndata, "acc"):
+    from anndata.acc import A
 
 
 # the input data
@@ -248,16 +258,66 @@ def test_metrics_argument():
     assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
 
 
-def test_use_rep_argument():
-    rng = np.random.default_rng()
-    adata = AnnData(rng.standard_normal((30, 300)))
+@pytest.fixture
+def adata_pca() -> AnnData:
+    rng = np.random.default_rng(0)
+    adata = AnnData(rng.standard_normal((30, 300)).astype(np.float32))
     sc.pp.pca(adata)
-    neigh_pca = Neighbors(adata)
+    return adata
+
+
+def test_use_rep_argument(adata_pca: AnnData):
+    neigh_pca = Neighbors(adata_pca)
     neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
-    neigh_none = Neighbors(adata)
+    neigh_none = Neighbors(adata_pca)
     neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
     np.testing.assert_allclose(
         neigh_pca.distances.toarray(), neigh_none.distances.toarray()
+    )
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("acc", "legacy"),
+    [
+        pytest.param(lambda: A.X, "X", id="X"),
+        pytest.param(lambda: A.obsm["X_pca"], "X_pca", id="obsm"),
+    ],
+)
+def test_use_rep_acc(
+    adata_pca: AnnData, acc: Callable[[], RepAcc], legacy: str
+) -> None:
+    """An accessor `use_rep` is equivalent to the legacy string spelling it."""
+    expected = adata_pca.copy()
+    sc.pp.neighbors(expected, n_pcs=5, use_rep=legacy)
+    sc.pp.neighbors(adata_pca, n_pcs=5, use_rep=acc())
+    np.testing.assert_allclose(
+        adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
+    )
+
+
+@needs.anndata_acc
+def test_use_rep_acc_stored(adata_pca: AnnData, tmp_path: Path) -> None:
+    """A stored accessor `use_rep` survives a round trip and is understood by readers."""
+    sc.pp.neighbors(adata_pca, use_rep=A.obsm["X_pca"])
+    assert adata_pca.uns["neighbors"]["params"]["use_rep"] == ['["obsm", "X_pca", 0]']
+    adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")
+    adata = anndata.read_h5ad(path)
+    assert (
+        _rep_from_json(adata.uns["neighbors"]["params"]["use_rep"]) == A.obsm["X_pca"]
+    )
+    sc.tl.umap(adata)  # reads `use_rep` back out of `.uns`
+
+
+@needs.scanpy2
+def test_use_rep_spec(adata_pca: AnnData) -> None:
+    """Under the v2 preset, a `use_rep` string is an `anndata.acc` spec."""
+    expected = adata_pca.copy()
+    sc.pp.neighbors(expected, use_rep=A.obsm["X_pca"])
+    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+        sc.pp.neighbors(adata_pca, use_rep="obsm.X_pca")
+    np.testing.assert_allclose(
+        adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
     )
 
 
