@@ -267,7 +267,7 @@ def hashsolo(
         have passed QC in the transcriptome space, e.g. UMI counts, pct
         mito reads, etc.
     pre_existing_clusters
-        Reference to a vector of pre-existing cluster assignments\ [#ref]_
+        Reference to a vector of pre-existing cluster assignments
         (e.g. Leiden clusters or cell types, but not batch assignments).
         If provided, demultiplexing is performed separately for each cluster.
     n_noise_barcodes
