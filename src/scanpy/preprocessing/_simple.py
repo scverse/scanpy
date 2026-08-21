@@ -15,9 +15,11 @@ from typing import TYPE_CHECKING, overload
 import numba
 import numpy as np
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
 from sklearn.utils import check_array
@@ -376,6 +378,15 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
     if base is not None:
         np.divide(x, np.log(base), out=x)
     return x
+
+
+@log1p.register(HasArrayNamespace)
+def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
+    xp = array_namespace(x)
+    result = xp.log1p(x)
+    if base is not None:
+        result = result / float(np.log(base))
+    return result
 
 
 @log1p.register(AnnData)
@@ -820,7 +831,9 @@ def sample(  # noqa: PLR0912
         return subset.to_memory() if data.isbacked else subset.copy()
 
     # overload 3: return array and indices
-    assert isinstance(subset, np.ndarray | CSBase | DaskArray), type(subset)
+    assert isinstance(subset, np.ndarray | CSBase | DaskArray | HasArrayNamespace), (
+        type(subset)
+    )
     if copy:
         subset = subset.copy()
     return subset, indices

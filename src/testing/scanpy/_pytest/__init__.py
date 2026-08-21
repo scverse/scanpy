@@ -20,6 +20,12 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
     from pathlib import Path
 
+if find_spec("jax"):
+    import jax
+
+    # JAX defaults to 32-bit dtypes; enable 64-bit so results match the numpy
+    # reference values in the tests.
+    jax.config.update("jax_enable_x64", True)  # noqa: FBT003
 
 MARK_RETRY_DOWNLOAD = pytest.mark.flaky(
     reruns=5,

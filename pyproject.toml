@@ -52,8 +52,9 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
     "anndata>=0.12.14",
+    "array-api-compat",
     "certifi",
-    "fast-array-utils[accel,sparse]>=1.4",
+    "fast-array-utils[accel,sparse]>=1.5",
     "h5py>=3.11",
     "joblib",
     "matplotlib>=3.10",
@@ -87,6 +88,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
 dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
+jax = [ "jax" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
@@ -103,13 +105,15 @@ scanpy2 = [ "anndata>=0.13.2", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[
 
 [dependency-groups]
 dev = [
-    "scipy-stubs", # static typing and IDE support
-    "towncrier",   # release note management
+    "scipy-stubs",     # static typing and IDE support
+    "towncrier",       # release note management
+    "types-array-api",
 ]
 test = [
     "scanpy[dask-ml]",
     "scanpy[dask]",
     "scanpy[illico]",
+    "scanpy[jax]",
     "scanpy[leiden]",
     "scanpy[plotting]",
     "scanpy[scrublet]",

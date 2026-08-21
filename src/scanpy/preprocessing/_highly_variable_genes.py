@@ -10,7 +10,9 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils import stats
+from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -406,12 +408,17 @@ def _highly_variable_genes_single_batch(
         # use out if possible. only possible since we copy the data matrix
         if isinstance(x, np.ndarray):
             np.expm1(x, out=x)
+        elif isinstance(x, HasArrayNamespace):
+            xp = array_namespace(x)
+            x = xp.expm1(x)
         else:
             x = np.expm1(x)
 
     mean, var = materialize_as_ndarray(stats.mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
-    mean[mean == 0] = 1e-12  # set entries equal to zero to small value
+    # JAX arrays are immutable, so in-place assignment (mean[mean == 0] = ...)
+    # fails; np.where allocates a fresh array instead
+    mean = np.where(mean == 0, 1e-12, mean)  # set zero entries to a small value
     dispersion = var / mean
     if flavor == "seurat":  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan
