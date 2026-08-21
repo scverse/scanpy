@@ -13,10 +13,10 @@ import numpy as np
 from .. import logging as logg
 from .._docs import doc_rng
 from .._utils import _doc_params
-from .._utils.random import _accepts_legacy_random_state, _LegacyRng
+from .._utils._doctests import doctest_needs
 from ._common import (
+    _get_bbknn_metadata,
     _get_indices_distances_from_rect_matrix,
-    _get_metadata,
     _get_sparse_matrix_from_indices_distances,
     _make_transformer,
 )
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from numpy.typing import NDArray
 
     from .._compat import CSRBase
@@ -40,14 +41,14 @@ if TYPE_CHECKING:
     )
 
 
+@doctest_needs("anndata_acc")
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
-@_accepts_legacy_random_state(0)
 def bbknn(  # noqa: PLR0913
     adata: AnnData,
     neighbors_within_batch: int = 3,
     n_pcs: int | None = None,
     *,
-    batch_key: str = "batch",
+    batches: AdRef | str = "obs.batch",
     use_rep: str | None = None,
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
@@ -81,7 +82,7 @@ def bbknn(  # noqa: PLR0913
         which then serves as the basis for the construction of a symmetrical
         matrix of connectivities.
     {n_pcs}
-    batch_key
+    batches
         `adata.obs` column name discriminating between the batches.
     {use_rep}
     transformer
@@ -145,7 +146,7 @@ def bbknn(  # noqa: PLR0913
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> adata.obs["batch"] = adata.obs["phase"]
-    >>> sc.pp.bbknn(adata, batch_key="batch")
+    >>> sc.pp.bbknn(adata, batches="obs.batch")
     >>> sc.tl.umap(adata)
 
     See Also
@@ -154,6 +155,8 @@ def bbknn(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    from anndata.acc import A, AdRef
+
     from ..tools._utils import _choose_representation
 
     start = logg.info("computing batch balanced neighbors")
@@ -162,16 +165,19 @@ def bbknn(  # noqa: PLR0913
     if adata.is_view:  # we shouldn’t need this here...
         adata._init_as_actual(adata.copy())
 
+    if not isinstance(batches, AdRef):
+        batches = A.resolve(batches, vec=True)
+
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."
         raise ValueError(msg)
-    if batch_key not in adata.obs:
-        msg = f"Batch key {batch_key!r} not found in `adata.obs`."
+    if batches not in adata:
+        msg = f"Batch key {batches!r} not found in `adata.obs`."
         raise KeyError(msg)
     rng = np.random.default_rng(rng)
 
-    batches = np.asarray(adata.obs[batch_key])
-    unique_batches, batch_sizes = np.unique(batches, return_counts=True)
+    batch_arr = np.asarray(adata[batches])
+    unique_batches, batch_sizes = np.unique(batch_arr, return_counts=True)
     if len(too_small := unique_batches[batch_sizes < neighbors_within_batch]):
         msg = (
             f"Not all batches have at least `neighbors_within_batch = "
@@ -182,7 +188,7 @@ def bbknn(  # noqa: PLR0913
     x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     knn_indices, knn_distances = _compute_batch_balanced_knn(
         x,
-        batches=batches,
+        batches=batch_arr,
         unique_batches=unique_batches,
         batch_sizes=batch_sizes,
         neighbors_within_batch=neighbors_within_batch,
@@ -206,16 +212,15 @@ def bbknn(  # noqa: PLR0913
         connectivities = _trim(connectivities, trim)
     logg.debug("computed connectivities", time=start_connect)
 
-    key_added, neighbors_dict = _get_metadata(
+    key_added, neighbors_dict = _get_bbknn_metadata(
         key_added,
         n_neighbors=n_neighbors,
         method="umap",
         metric=metric,
-        **(dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}),
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
         **({} if use_rep is None else dict(use_rep=use_rep)),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
-        batch_key=batch_key,
+        batches=A.to_json(batches),
         neighbors_within_batch=neighbors_within_batch,
         trim=trim,
     )

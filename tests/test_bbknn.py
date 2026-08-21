@@ -59,15 +59,14 @@ def n_per_row(a: CSRBase) -> NDArray[np.int64]:
 
 
 def test_bbknn(adata: AnnData) -> None:
-    assert sc.pp.bbknn(adata, 3, batch_key="batch") is None
+    assert sc.pp.bbknn(adata, 3, batches="obs.batch") is None
 
     params = adata.uns["neighbors"]["params"]
     assert params == dict(
         n_neighbors=9,  # 3 neighbors × 3 batches
         method="umap",
         metric="euclidean",
-        random_state=0,
-        batch_key="batch",
+        batches=["obs", "batch"],
         neighbors_within_batch=3,
         trim=90,
     )
@@ -80,12 +79,12 @@ def test_bbknn(adata: AnnData) -> None:
 
 
 def test_bbknn_representation(adata: AnnData) -> None:
-    dists = sc.pp.bbknn(adata, 3, batch_key="batch", copy=True).obsp["distances"]
+    dists = sc.pp.bbknn(adata, 3, batches="obs.batch", copy=True).obsp["distances"]
     # like `pp.neighbors`, we use the PCA – except for data narrower than `N_PCS`
     used, unused = ("X", "pca") if adata.n_vars <= sc.settings.N_PCS else ("pca", "X")
 
     for rep in (used, unused):
-        sc.pp.bbknn(adata, 3, batch_key="batch", use_rep=rep, key_added=rep)
+        sc.pp.bbknn(adata, 3, batches="obs.batch", use_rep=rep, key_added=rep)
 
     np.testing.assert_allclose(
         dists.toarray(), adata.obsp[f"{used}_distances"].toarray()
@@ -95,7 +94,7 @@ def test_bbknn_representation(adata: AnnData) -> None:
 
 def test_bbknn_is_batch_balanced(adata: AnnData) -> None:
     """Each cell has `neighbors_within_batch` neighbors in each batch, including itself."""
-    sc.pp.bbknn(adata, 3, batch_key="batch")
+    sc.pp.bbknn(adata, 3, batches="obs.batch")
 
     dists = adata.obsp["distances"].tolil()
     for i, row in enumerate(dists.rows):
@@ -107,7 +106,7 @@ def test_bbknn_is_batch_balanced(adata: AnnData) -> None:
 def test_bbknn_connects_batches(adata: AnnData) -> None:
     """Unlike `pp.neighbors`, `pp.bbknn` connects the (strongly separated) batches."""
     sc.pp.neighbors(adata, n_neighbors=9, key_added="knn")
-    sc.pp.bbknn(adata, 3, batch_key="batch", key_added="bbknn")
+    sc.pp.bbknn(adata, 3, batches="obs.batch", key_added="bbknn")
 
     def n_cross_batch(key: str) -> int:
         i, j = adata.obsp[f"{key}_connectivities"].nonzero()
@@ -129,7 +128,7 @@ def test_bbknn_connects_batches(adata: AnnData) -> None:
     ],
 )
 def test_bbknn_transformer(adata: AnnData, transformer) -> None:
-    sc.pp.bbknn(adata, 3, batch_key="batch", transformer=transformer)
+    sc.pp.bbknn(adata, 3, batches="obs.batch", transformer=transformer)
     assert (n_per_row(adata.obsp["distances"]) == 8).all()
 
 
@@ -166,13 +165,13 @@ def test_bbknn_transformer_choice(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_bbknn_array_types(rep: NDArray[np.float32], array_type: Callable) -> None:
     adata = AnnData(array_type(np.abs(rep)), obs=dict(batch=BATCHES.copy()))
-    sc.pp.bbknn(adata, 3, 0, batch_key="batch")
+    sc.pp.bbknn(adata, 3, 0, batches="obs.batch")
     assert (n_per_row(adata.obsp["distances"]) == 8).all()
 
 
 @pytest.mark.parametrize("trim", [None, 0, 5, 12])
 def test_bbknn_trim(adata: AnnData, trim: int | None) -> None:
-    sc.pp.bbknn(adata, 3, batch_key="batch", trim=trim)
+    sc.pp.bbknn(adata, 3, batches="obs.batch", trim=trim)
     conns = adata.obsp["connectivities"]
 
     assert adata.uns["neighbors"]["params"]["trim"] == (90 if trim is None else trim)
@@ -181,7 +180,7 @@ def test_bbknn_trim(adata: AnnData, trim: int | None) -> None:
         assert n_per_row(conns).max() >= trim
         assert (conns != conns.T).nnz == 0
     # trimming only ever removes edges
-    sc.pp.bbknn(adata, 3, batch_key="batch", trim=0, key_added="untrimmed")
+    sc.pp.bbknn(adata, 3, batches="obs.batch", trim=0, key_added="untrimmed")
     untrimmed = adata.obsp["untrimmed_connectivities"]
     assert conns.nnz <= untrimmed.nnz
     assert (conns != conns.multiply(untrimmed != 0)).nnz == 0
@@ -255,13 +254,13 @@ def test_bbknn_duplicate_cells() -> None:
     np.testing.assert_array_equal(knn_distances[:, 0], 0.0)
 
     adata = AnnData(x, obs=dict(batch=batches))
-    sc.pp.bbknn(adata, 2, 0, batch_key="batch")
+    sc.pp.bbknn(adata, 2, 0, batches="obs.batch")
     assert adata.obsp["distances"].diagonal().sum() == 0
 
 
 def test_bbknn_key_added(adata: AnnData) -> None:
-    sc.pp.bbknn(adata, 3, batch_key="batch")
-    sc.pp.bbknn(adata, 3, batch_key="batch", key_added="test")
+    sc.pp.bbknn(adata, 3, batches="obs.batch")
+    sc.pp.bbknn(adata, 3, batches="obs.batch", key_added="test")
 
     assert adata.uns["neighbors"]["params"] == adata.uns["test"]["params"]
     assert adata.uns["test"]["distances_key"] == "test_distances"
@@ -273,7 +272,7 @@ def test_bbknn_key_added(adata: AnnData) -> None:
 
 
 def test_bbknn_copy(adata: AnnData) -> None:
-    copied = sc.pp.bbknn(adata, 3, batch_key="batch", copy=True)
+    copied = sc.pp.bbknn(adata, 3, batches="obs.batch", copy=True)
     assert not adata.obsp
     assert "neighbors" not in adata.uns  # `.uns['pca']` is from the fixture
     assert set(copied.obsp) == {"distances", "connectivities"}
@@ -283,7 +282,10 @@ def test_bbknn_copy(adata: AnnData) -> None:
     ("kwargs", "error", "pattern"),
     [
         pytest.param(
-            dict(batch_key="nope"), KeyError, r"Batch key 'nope' not found", id="key"
+            dict(batches="obs.nope"),
+            KeyError,
+            r"Batch key A.obs\['nope'\] not found",
+            id="key",
         ),
         pytest.param(
             dict(neighbors_within_batch=0),
@@ -309,4 +311,4 @@ def test_bbknn_errors(
     adata: AnnData, kwargs: dict, error: type[Exception], pattern: str
 ) -> None:
     with pytest.raises(error, match=pattern):
-        sc.pp.bbknn(adata, **{"batch_key": "batch", **kwargs})
+        sc.pp.bbknn(adata, **{"batches": "obs.batch", **kwargs})

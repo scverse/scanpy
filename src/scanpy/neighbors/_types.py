@@ -85,10 +85,10 @@ class KwdsForTransformer(TypedDict):
     rng: NotRequired[np.random.Generator]
 
 
-class NeighborsDict(TypedDict):
+class NeighborsDict[P: NeighborsParams](TypedDict):
     connectivities_key: str
     distances_key: str
-    params: NeighborsParams
+    params: P
     rp_forest: NotRequired[RPForestDict]
 
 
@@ -100,7 +100,9 @@ class NeighborsParams(TypedDict):
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]
-    # only set by `pp.bbknn`
-    batch_key: NotRequired[str]
-    neighbors_within_batch: NotRequired[int]
-    trim: NotRequired[int]
+
+
+class BbknnParams(NeighborsParams):
+    batches: list[str | int | None]
+    neighbors_within_batch: int
+    trim: int

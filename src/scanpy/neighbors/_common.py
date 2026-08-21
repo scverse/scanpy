@@ -18,7 +18,12 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._compat import CSRBase
-    from ._types import KnnTransformerLike, KwdsForTransformer, NeighborsParams
+    from ._types import (
+        BbknnParams,
+        KnnTransformerLike,
+        KwdsForTransformer,
+        NeighborsParams,
+    )
 
 
 def _make_transformer(
@@ -75,7 +80,19 @@ def _make_transformer(
 
 def _get_metadata(
     key_added: str | None, /, **params: Unpack[NeighborsParams]
-) -> tuple[str, NeighborsDict]:
+) -> tuple[str, NeighborsDict[NeighborsParams]]:
+    return _metadata(key_added, params)
+
+
+def _get_bbknn_metadata(
+    key_added: str | None, /, **params: Unpack[BbknnParams]
+) -> tuple[str, NeighborsDict[BbknnParams]]:
+    return _metadata(key_added, params)
+
+
+def _metadata[P: NeighborsParams](
+    key_added: str | None, params: P
+) -> tuple[str, NeighborsDict[P]]:
     if key_added is None:
         return "neighbors", NeighborsDict(
             connectivities_key="connectivities",
