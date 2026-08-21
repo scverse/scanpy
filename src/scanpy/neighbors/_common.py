@@ -7,11 +7,86 @@ from fast_array_utils.stats import is_constant
 from scipy import sparse
 
 from .._compat import warn
+from .._settings import settings
+from .._utils import get_literal_vals
+from .._utils.random import _rng_kwds
+from ._types import NeighborsDict, _KnownTransformer
 
 if TYPE_CHECKING:
+    from typing import Unpack
+
     from numpy.typing import NDArray
 
     from .._compat import CSRBase
+    from ._types import KnnTransformerLike, KwdsForTransformer, NeighborsParams
+
+
+def _make_transformer(
+    transformer: KnnTransformerLike | _KnownTransformer | None,
+    /,
+    *,
+    shortcut: bool,
+    n_index: int,
+    **kwds: Unpack[KwdsForTransformer],
+) -> KnnTransformerLike:
+    """Coerce `transformer` from `None` or a string to an instance.
+
+    `shortcut` requests a brute force :class:`~sklearn.neighbors.KNeighborsTransformer`;
+    the caller decides that, as the trade-off depends on how the index is queried.
+    Otherwise, `transformer=None` is set up like `umap` does, i.e. to a
+    ~`pynndescent.PyNNDescentTransformer` with custom `n_trees` and `n_iters`
+    derived from `n_index`, the number of observations in the index.
+
+    `rng` is passed on as whichever of `rng`/`random_state` the class accepts.
+    """
+    rng = kwds.pop("rng")
+    if shortcut:
+        from sklearn.neighbors import KNeighborsTransformer
+
+        assert transformer in {None, "sklearn"}
+        return KNeighborsTransformer(
+            algorithm="brute",
+            n_jobs=settings.n_jobs,
+            n_neighbors=kwds["n_neighbors"],
+            metric=kwds["metric"],
+            metric_params=dict(kwds["metric_params"]),  # needs dict
+            **_rng_kwds(KNeighborsTransformer, rng),
+        )
+    if transformer is None or transformer == "pynndescent":
+        from pynndescent import PyNNDescentTransformer
+
+        kwds["metric_kwds"] = dict(kwds.pop("metric_params"))  # needs to be cloneable
+        if transformer is None:
+            # Use defaults from UMAP’s `nearest_neighbors` function
+            kwds.update(
+                n_jobs=settings.n_jobs,
+                n_trees=min(64, 5 + round(n_index**0.5 / 20.0)),
+                n_iters=max(5, round(np.log2(n_index))),
+            )
+        return PyNNDescentTransformer(**kwds, **_rng_kwds(PyNNDescentTransformer, rng))
+    if isinstance(transformer, str):
+        msg = (
+            f"Unknown transformer: {transformer}. "
+            f"Try passing a class or one of {get_literal_vals(_KnownTransformer)}"
+        )
+        raise ValueError(msg)
+    return transformer  # `transformer` is probably an instance
+
+
+def _get_metadata(
+    key_added: str | None, /, **params: Unpack[NeighborsParams]
+) -> tuple[str, NeighborsDict]:
+    if key_added is None:
+        return "neighbors", NeighborsDict(
+            connectivities_key="connectivities",
+            distances_key="distances",
+            params=params,
+        )
+    return key_added, NeighborsDict(
+        connectivities_key=f"{key_added}_connectivities",
+        distances_key=f"{key_added}_distances",
+        params=params,
+    )
 
 
 def _has_self_column(
