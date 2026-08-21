@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing import Any, NotRequired, Self, TypeAlias
 
     from .._compat import CSRBase
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
+    from .._utils.random import _LegacyRandom
 
     # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
     RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
@@ -82,7 +82,7 @@ class KwdsForTransformer(TypedDict):
     n_neighbors: int
     metric: _Metric | _MetricFn
     metric_params: Mapping[str, Any]
-    rng: SeedLike | RNGLike | None
+    rng: NotRequired[np.random.Generator]
 
 
 class NeighborsDict(TypedDict):
@@ -95,8 +95,8 @@ class NeighborsDict(TypedDict):
 class NeighborsParams(TypedDict):
     n_neighbors: int
     method: _Method
-    random_state: _LegacyRandom
     metric: _Metric | _MetricFn | None
+    random_state: NotRequired[_LegacyRandom]
     metric_kwds: NotRequired[Mapping[str, Any]]
     use_rep: NotRequired[str]
     n_pcs: NotRequired[int]

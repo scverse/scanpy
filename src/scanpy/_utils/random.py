@@ -182,7 +182,7 @@ def _legacy_random_state(
 
 
 def _rng_kwds(
-    target: Callable | type, /, rng: SeedLike | RNGLike | None
+    target: Callable | type, /, rng: np.random.Generator | None
 ) -> dict[str, np.random.Generator | _LegacyRandom]:
     """Pass `rng` to `target` as whichever of `rng`/`random_state` it accepts.
 
@@ -190,9 +190,11 @@ def _rng_kwds(
     converts to a legacy `random_state` if that’s all it accepts,
     and returns `{}` if it accepts neither.
     """
+    if rng is None:
+        return {}
     params = signature(target).parameters
     if "rng" in params:
-        return dict(rng=np.random.default_rng(rng))
+        return dict(rng=rng)
     if "random_state" in params:
         return dict(random_state=_legacy_random_state(rng))
     return {}

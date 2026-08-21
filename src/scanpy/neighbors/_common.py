@@ -39,7 +39,7 @@ def _make_transformer(
 
     `rng` is passed on as whichever of `rng`/`random_state` the class accepts.
     """
-    rng = kwds.pop("rng")
+    rng = kwds.pop("rng", None)
     if shortcut:
         from sklearn.neighbors import KNeighborsTransformer
 

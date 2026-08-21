@@ -235,13 +235,14 @@ def _mk_legacy_random(func: str, *, direct: bool, seed: int | None) -> np.ndarra
 )
 def test_rng_kwds(target: Callable, expected: set[str]) -> None:
     """Only the RNG parameter(s) a target accepts are passed, preferring `rng`."""
-    kwds = _rng_kwds(target, 0)
+    rng = np.random.default_rng()
+    kwds = _rng_kwds(target, rng)
     assert kwds.keys() == expected
     target(**kwds)  # the target can actually be called with them
     if "rng" in expected:
-        assert isinstance(kwds["rng"], np.random.Generator)
+        assert kwds["rng"] is rng
     if "random_state" in expected:
-        assert isinstance(kwds["random_state"], int | np.random.RandomState)
+        assert isinstance(kwds["random_state"], np.random.RandomState)
 
 
 def test_ith_k_tuple() -> None:
