@@ -1,0 +1,55 @@
+# Datasets scanpy hosts itself, fetched via `scverse_misc.datasets.fetch`.
+#
+# Add a `sha256` for every file: it is what lets a truncated or corrupted
+# download be detected (and retried) instead of surfacing as a parse error.
+#
+# `fallback_urls` are the upstream locations we used before our own S3 bucket
+# (see #4011); they are used if the bucket is down or serves garbage.
+base_url: https://exampledata.scverse.org/scanpy
+
+datasets:
+
+  burczynski06:
+    type: scanpy
+    fallback_urls:
+      GDS1615_full.soft.gz: ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz
+    files:
+      - name: GDS1615_full.soft.gz
+        s3_key: GDS1615_full.soft.gz
+        sha256: 86126c1a3c163ea20abb14c1a9711aaff34e6c492ef6dd86298bbaf18cc3f5f3
+
+  moignard15:
+    type: scanpy
+    fallback_urls:
+      nbt.3154-S3.xlsx: https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx
+    files:
+      - name: nbt.3154-S3.xlsx
+        s3_key: 41587_2015_BFnbt3154_MOESM4_ESM.xlsx
+        sha256: e7b358fef2b6da115b7ee3ab4c7fc55fd80e210bba427902e4afc9118992747c
+
+  paul15:
+    type: scanpy
+    fallback_urls:
+      paul15.h5: https://falexwolf.de/data/paul15.h5
+    files:
+      - name: paul15.h5
+        s3_key: paul15.h5
+        sha256: 6161984f758dd464992edc23f1a8ab89b2081600130c6aa93a1ab12b3ada5bfb
+
+  pbmc3k:
+    type: scanpy
+    fallback_urls:
+      pbmc3k_raw.h5ad: https://falexwolf.de/data/pbmc3k_raw.h5ad
+    files:
+      - name: pbmc3k_raw.h5ad
+        s3_key: pbmc3k_raw.h5ad
+        sha256: 89a96f1beaa2dd83a687666d3f19a4513ac27a2a2d12581fcd77afed7ea653a1
+
+  pbmc3k_processed:
+    type: scanpy
+    fallback_urls:
+      pbmc3k.h5ad: https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
+    files:
+      - name: pbmc3k.h5ad
+        s3_key: pbmc3k.h5ad
+        sha256: 0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38
