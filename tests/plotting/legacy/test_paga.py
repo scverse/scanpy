@@ -134,6 +134,13 @@ def test_paga_ncols() -> None:
     axs = sc.pl.paga(adata, color=colors, pos=pos, show=False)
     assert len(axs) == 4
 
+    # continuous colors (with colorbars) also wrap into a grid
+    gene_colors = adata.var_names[:3].tolist()
+    axs = sc.pl.paga(adata, color=gene_colors, ncols=2, pos=pos, show=False)
+    assert len(axs) == 3
+    gridspec = axs[0].get_subplotspec().get_gridspec()
+    assert gridspec.ncols == 2
+
     # `ncols` cannot be combined with a pre-supplied `ax`
     _, ax = plt.subplots()
     with pytest.raises(ValueError, match="`ncols` cannot be combined"):
