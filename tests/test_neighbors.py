@@ -300,7 +300,7 @@ def test_use_rep_acc(
 def test_use_rep_acc_stored(adata_pca: AnnData, tmp_path: Path) -> None:
     """A stored accessor `use_rep` survives a round trip and is understood by readers."""
     sc.pp.neighbors(adata_pca, use_rep=A.obsm["X_pca"])
-    assert adata_pca.uns["neighbors"]["params"]["use_rep"] == ['["obsm", "X_pca", 0]']
+    assert adata_pca.uns["neighbors"]["params"]["use_rep"] == ['["obsm", "X_pca"]']
     adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")
     adata = anndata.read_h5ad(path)
     assert (

@@ -815,7 +815,7 @@ def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
 
     v1 strings (`'X'` or an `.obsm` key) are stored unchanged,
     accessors (and hence v2 strings) as `anndata.acc` JSON inside a 1-element list,
-    e.g. `A.obsm['pca']` as `['["obsm", "pca", 0]']`.
+    e.g. `A.obsm['pca']` as `['["obsm", "pca"]']`.
 
     TODO: Once AnnData can store a heterogeneous list, store that instead of a 1-element list.
     See https://github.com/scverse/anndata/issues/1979
@@ -828,9 +828,7 @@ def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
         return rep
     from anndata.acc import A
 
-    rep = _resolve_rep(rep)
-    # `A.to_json` only serializes vectors, so we add a dummy index
-    return [json.dumps(A.to_json(rep[:, :] if isinstance(rep, LayerAcc) else rep[0]))]
+    return [json.dumps(A.to_json(_resolve_rep(rep)))]
 
 
 def _rep_from_json(rep: str | Sequence[str] | None) -> RepAcc | str | None:
@@ -843,7 +841,7 @@ def _rep_from_json(rep: str | Sequence[str] | None) -> RepAcc | str | None:
         from anndata.acc import A
 
         [data] = rep  # a 1-element list/array (see `_rep_to_json`)
-        return _resolve_rep(A.from_json(json.loads(data)).acc)
+        return _resolve_rep(A.from_json(json.loads(data), vec=False))
     if settings.preset is Preset.ScanpyV2Preview:
         from anndata.acc import A
 
