@@ -487,7 +487,7 @@ class _Rep(TypedDict, total=False):
 
 type ArrAcc = GraphAcc | LayerAcc | MultiAcc
 type RepAcc = LayerAcc | MultiAcc
-"""Accessor usable as a representation (`use_rep`), i.e. an obs×n or n×var array."""
+"""Accessor usable as a representation (`use_rep`), i.e. a non-graph 2D array."""
 
 
 @overload
@@ -801,11 +801,16 @@ def _resolve_rep(rep: RefAcc | str) -> RepAcc:
         from anndata.acc import A
 
         rep = A.resolve(rep, vec=False)
+    if isinstance(rep, MultiAcc) and rep.dim != "obs":
+        msg = (
+            f"Representation must be aligned to `obs`, but {rep!r} is aligned to `var`"
+        )
+        raise ValueError(msg)
     if isinstance(rep, LayerAcc | MultiAcc):
         return rep
     msg = (
         "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
-        f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {rep!r}"
+        f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
     )
     raise TypeError(msg)
 

@@ -321,6 +321,56 @@ def test_use_rep_spec(adata_pca: AnnData) -> None:
     )
 
 
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("use_rep", "preset", "exc_type", "match"),
+    [
+        pytest.param(
+            lambda: A.varm["PCs"],
+            sc.Preset.ScanpyV1,
+            ValueError,
+            "aligned to `obs`",
+            id="not-obs-aligned",
+        ),
+        pytest.param(
+            lambda: "nonexistent",
+            sc.Preset.ScanpyV1,
+            ValueError,
+            "Did not find nonexistent",
+            id="missing",
+        ),
+        pytest.param(
+            lambda: "nonexistent",
+            sc.Preset.ScanpyV2Preview,
+            ValueError,
+            "Cannot parse accessor",
+            id="unparsable",
+            marks=needs.scanpy2,
+        ),
+        pytest.param(
+            lambda: 1.0,
+            sc.Preset.ScanpyV1,
+            TypeError,
+            "must be a `LayerAcc`",
+            id="wrong-type",
+        ),
+    ],
+)
+def test_use_rep_invalid(
+    adata_pca: AnnData,
+    use_rep: Callable[[], object],
+    preset: sc.Preset,
+    exc_type: type[Exception],
+    match: str,
+) -> None:
+    """Invalid `use_rep` arguments are refused with a message saying why."""
+    with (
+        sc.settings.override(preset=preset),
+        pytest.raises(exc_type, match=match),
+    ):
+        sc.pp.neighbors(adata_pca, use_rep=use_rep())  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize("conv", [sparse.csr_matrix.toarray, sparse.csr_matrix])  # noqa: TID251
 def test_restore_n_neighbors(neigh, conv):
     neigh.compute_neighbors(n_neighbors, method="gauss")
