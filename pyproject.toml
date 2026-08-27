@@ -296,11 +296,11 @@ strict = true
 testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
+run.source_pkgs = [ "scanpy" ]
+run.omit = [ "src/testing/*", "tests/*" ]
 run.concurrency = [ "multiprocessing" ]
 run.data_file = "test-data/raw-coverage"
-run.omit = [ "src/testing/*", "tests/*" ]
 run.patch = [ "subprocess" ]
-run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268
