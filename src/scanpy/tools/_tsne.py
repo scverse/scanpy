@@ -9,13 +9,15 @@ from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
+from ..get.get import _rep_to_json
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
-from ._utils import _choose_representation
+from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
     from anndata import AnnData
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get.get import RepAcc
 
 
 @_accepts_legacy_random_state(0)
@@ -25,7 +27,7 @@ def tsne(  # noqa: PLR0913
     n_pcs: int | None = None,
     *,
     n_components: int = 2,
-    use_rep: str | None = None,
+    use_rep: RepAcc | str | None = None,
     perplexity: float = 30,
     metric: str = "euclidean",
     early_exaggeration: float = 12,
@@ -105,7 +107,7 @@ def tsne(  # noqa: PLR0913
     start = logg.info("computing tSNE")
     keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
-    x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    x = _choose_representation_compat(adata, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
@@ -156,7 +158,7 @@ def tsne(  # noqa: PLR0913
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
-        use_rep=use_rep,
+        use_rep=_rep_to_json(use_rep),
         n_components=n_components,
     )
     adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates
