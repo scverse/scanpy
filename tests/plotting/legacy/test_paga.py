@@ -5,6 +5,7 @@ from importlib.util import find_spec
 
 import pytest
 from matplotlib import colormaps
+from matplotlib import pyplot as plt
 from packaging.version import Version
 
 import scanpy as sc
@@ -74,6 +75,27 @@ def test_paga_pie(plot_cmp, pbmc) -> None:
 
     sc.pl.paga(pbmc, color=colors, colorbar=False, show=False)
     plot_cmp("paga_pie")
+
+
+@SKIP_IF_OLD_IGRAPH
+@pytest.mark.parametrize(("ncols", "expected_shape"), [(1, (3, 1)), (2, (2, 2))])
+def test_paga_ncols(pbmc, ncols, expected_shape) -> None:
+    axs = sc.pl.paga(
+        pbmc,
+        color=["CST3", "GATA2", "cool_feature"],
+        ncols=ncols,
+        show=False,
+    )
+
+    assert len(axs) == 3
+    assert axs[0].get_subplotspec().get_gridspec().get_geometry() == expected_shape
+    plt.close(axs[0].figure)
+
+
+@pytest.mark.parametrize("ncols", [0, -1, True, 1.5])
+def test_paga_ncols_rejects_invalid(ncols) -> None:
+    with pytest.raises(ValueError, match=r"ncols.*positive integer"):
+        sc.pl.paga(None, ncols=ncols)
 
 
 def test_paga_path(plot_cmp, pbmc) -> None:
