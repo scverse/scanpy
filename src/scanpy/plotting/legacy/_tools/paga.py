@@ -725,9 +725,11 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
                 else:
                     ax_cb = cax[icolor]
 
-                colorbar_kwds = {"format": ticker.FuncFormatter(_utils.ticks_formatter)}
-                colorbar_kwds.update(cb_kwds)
-                _ = plt.colorbar(sct, cax=ax_cb, **colorbar_kwds)
+                _ = plt.colorbar(
+                    sct,
+                    format=ticker.FuncFormatter(_utils.ticks_formatter),
+                    cax=ax_cb,
+                )
     if add_pos:
         adata.uns["paga"]["pos"] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
