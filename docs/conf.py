@@ -271,6 +271,7 @@ nitpick_ignore = [
     # Technical issues
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
+    ("py:obj", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
     # Will probably be documented
     ("py:class", "scanpy._settings.Verbosity"),
