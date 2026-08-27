@@ -840,7 +840,11 @@ def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str
     if not isinstance(rep, str):
         from anndata.acc import A
 
-        if isinstance(rep, Sequence) and len(rep) == 1 and isinstance(rep[0], str):
+        if (
+            isinstance(rep, Sequence | np.ndarray)
+            and len(rep) == 1
+            and isinstance(rep[0], str)
+        ):
             # see `_rep_to_json`
             rep: Sequence[str | int | None] = json.loads(rep[0])
         return _resolve_rep(A.from_json(rep, vec=False))
