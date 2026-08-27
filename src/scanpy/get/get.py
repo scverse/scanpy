@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypedDict, overload
 
@@ -17,7 +17,7 @@ from .._settings import Preset
 
 if TYPE_CHECKING:
     import sys
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
     from anndata.acc import Idx2D, RefAcc
@@ -831,7 +831,7 @@ def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
     return [json.dumps(A.to_json(_resolve_rep(rep)))]
 
 
-def _rep_from_json(rep: str | Sequence[str] | None) -> RepAcc | str | None:
+def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
     """Parse a `rep`resentation stored by `_rep_to_json`."""
     from scanpy import settings
 
@@ -840,8 +840,10 @@ def _rep_from_json(rep: str | Sequence[str] | None) -> RepAcc | str | None:
     if not isinstance(rep, str):
         from anndata.acc import A
 
-        [data] = rep  # a 1-element list/array (see `_rep_to_json`)
-        return _resolve_rep(A.from_json(json.loads(data), vec=False))
+        if isinstance(rep, Sequence) and len(rep) == 1 and isinstance(rep[0], str):
+            # see `_rep_to_json`
+            rep: Sequence[str | int | None] = json.loads(rep[0])
+        return _resolve_rep(A.from_json(rep, vec=False))
     if settings.preset is Preset.ScanpyV2Preview:
         from anndata.acc import A
 

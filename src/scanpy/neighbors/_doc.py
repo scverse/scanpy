@@ -16,6 +16,7 @@ doc_use_rep = r"""use_rep
     A :class:`str` is :meth:`~anndata.acc.AdAcc.resolve`\ d to one of those
     if :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
     otherwise interpreted as `'X'` or a key of `.obsm`.
+
     If `None`, the representation is chosen automatically:
     For `.n_vars` < :attr:`~scanpy.settings.N_PCS` (default: 50), `.X` is used, otherwise the PCA
     representation (`.obsm['X_pca']`, or `.obsm['pca']` if it was computed under
