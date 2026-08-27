@@ -98,6 +98,23 @@ def test_paga_ncols_rejects_invalid(ncols) -> None:
         sc.pl.paga(None, ncols=ncols)
 
 
+def test_paga_ncols_rejects_ax() -> None:
+    fig, ax = plt.subplots()
+    with pytest.raises(ValueError, match="Cannot specify `ncols`"):
+        sc.pl.paga(None, ncols=2, ax=ax)
+    plt.close(fig)
+
+
+@SKIP_IF_OLD_IGRAPH
+def test_paga_ncols_custom_colorbar(pbmc) -> None:
+    cax_fig, cax = plt.subplots()
+    ax = sc.pl.paga(pbmc, color="CST3", ncols=1, cax=cax, show=False)
+
+    assert ax.figure is not cax_fig
+    plt.close(ax.figure)
+    plt.close(cax_fig)
+
+
 def test_paga_path(plot_cmp, pbmc) -> None:
     pbmc.uns["iroot"] = 0
     sc.tl.dpt(pbmc)
