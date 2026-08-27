@@ -14,6 +14,7 @@ from .. import logging as logg
 from .._docs import doc_rng
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
+from ..get.get import _rep_to_json, _resolve_rep
 from ._common import (
     _get_bbknn_metadata,
     _get_indices_distances_from_rect_matrix,
@@ -33,12 +34,8 @@ if TYPE_CHECKING:
 
     from .._compat import CSRBase
     from .._utils.random import RNGLike, SeedLike
-    from ._types import (
-        KnnTransformerLike,
-        _KnownTransformer,
-        _Metric,
-        _MetricFn,
-    )
+    from ..get.get import RepAcc
+    from ._types import KnnTransformerLike, _KnownTransformer, _Metric, _MetricFn
 
 
 @doctest_needs("anndata_acc")
@@ -49,7 +46,7 @@ def bbknn(  # noqa: PLR0913
     n_pcs: int | None = None,
     *,
     batches: AdRef | str = "obs.batch",
-    use_rep: str | None = None,
+    use_rep: RepAcc | str | None = None,
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = frozendict({}),
@@ -167,6 +164,8 @@ def bbknn(  # noqa: PLR0913
 
     if not isinstance(batches, AdRef):
         batches = A.resolve(batches, vec=True)
+    if use_rep is not None:
+        use_rep = _resolve_rep(use_rep)
 
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."
@@ -218,7 +217,7 @@ def bbknn(  # noqa: PLR0913
         method="umap",
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=use_rep)),
+        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
         batches=A.to_json(batches),
         neighbors_within_batch=neighbors_within_batch,

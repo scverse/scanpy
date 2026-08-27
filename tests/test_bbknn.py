@@ -5,10 +5,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from anndata.acc import A
 from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
 import scanpy as sc
+from scanpy.get.get import _rep_from_json
 from scanpy.neighbors._bbknn import (
     _compute_batch_balanced_knn,
     _handle_transformer,
@@ -83,8 +85,12 @@ def test_bbknn_representation(adata: AnnData) -> None:
     # like `pp.neighbors`, we use the PCA – except for data narrower than `N_PCS`
     used, unused = ("X", "pca") if adata.n_vars <= sc.settings.N_PCS else ("pca", "X")
 
-    for rep in (used, unused):
-        sc.pp.bbknn(adata, 3, batches="obs.batch", use_rep=rep, key_added=rep)
+    reps = dict(X=A.X, pca=A.obsm["pca"])
+    for name in (used, unused):
+        sc.pp.bbknn(adata, 3, batches="obs.batch", use_rep=reps[name], key_added=name)
+
+    # accessors round trip through `.uns` for readers like `tl.umap`
+    assert _rep_from_json(adata.uns["pca"]["params"]["use_rep"]) == A.obsm["pca"]
 
     np.testing.assert_allclose(
         dists.toarray(), adata.obsp[f"{used}_distances"].toarray()
