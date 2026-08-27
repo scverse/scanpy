@@ -23,6 +23,7 @@ from .._docs import doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
+from ..get.get import _rep_to_json
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get.get import RepAcc
     from ._types import (
         KnnTransformerLike,
         RPForestDict,
@@ -64,7 +66,7 @@ def neighbors(  # noqa: PLR0913
     n_pcs: int | None = None,
     *,
     distances: np.ndarray | SpBase | None = None,
-    use_rep: str | None = None,
+    use_rep: RepAcc | str | None = None,
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
@@ -249,7 +251,7 @@ def neighbors(  # noqa: PLR0913
         metric=metric,
         **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=use_rep)),
+        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
@@ -536,7 +538,7 @@ class Neighbors:
         n_neighbors: int = 30,
         n_pcs: int | None = None,
         *,
-        use_rep: str | None = None,
+        use_rep: RepAcc | str | None = None,
         knn: bool = True,
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
@@ -564,7 +566,7 @@ class Neighbors:
         if `method` is not `None`, `.connectivities`.
 
         """
-        from ..tools._utils import _choose_representation
+        from ..tools._utils import _choose_representation_compat
 
         start_neighbors = logg.debug("computing neighbors")
         if transformer is not None and not isinstance(transformer, str):
@@ -590,7 +592,7 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        x = _choose_representation_compat(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors
