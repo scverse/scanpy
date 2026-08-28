@@ -169,6 +169,7 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3", None),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
+    scverse_misc=("https://scverse-misc.readthedocs.io/stable/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     session_info2=("https://session-info2.readthedocs.io/en/stable/", None),
     squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
