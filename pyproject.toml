@@ -99,7 +99,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "anndata>=0.13.2", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -298,11 +298,11 @@ strict = true
 testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
+run.source_pkgs = [ "scanpy" ]
+run.omit = [ "src/testing/*", "tests/*" ]
 run.concurrency = [ "multiprocessing" ]
 run.data_file = "test-data/raw-coverage"
-run.omit = [ "src/testing/*", "tests/*" ]
 run.patch = [ "subprocess" ]
-run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268

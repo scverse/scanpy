@@ -23,7 +23,7 @@ from ._kernels import (
     mean_var_csr,
     mean_var_dense,
 )
-from .get import _check_mask, _get_arr, _get_vec, _refs_dim, _resolve_ref
+from .get import _check_mask, _get_arr, _get_vec_compat, _refs_dim, _resolve_ref
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -363,7 +363,7 @@ def aggregate(
         acc = A.X
     data = _get_arr(adata, acc, dim=dim, layer=layer, obsm=obsm, varm=varm)
 
-    values = _get_vec(adata, by, dim=dim)
+    values = _get_vec_compat(adata, by, dim=dim)
     dim_df = pd.DataFrame({
         (
             ref

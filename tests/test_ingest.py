@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import anndata
 import numpy as np
 import pytest
@@ -10,6 +12,10 @@ from umap import UMAP
 import scanpy as sc
 from scanpy import settings
 from testing.scanpy._helpers.data import pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
+
+if TYPE_CHECKING or hasattr(anndata, "acc"):
+    from anndata.acc import A
 
 X = np.array(
     [
@@ -68,6 +74,20 @@ def test_representation(adatas):
 
     assert ing._use_rep == "X"
     assert ing._obsm["rep"] is adata_new.X
+
+
+@needs.anndata_acc
+def test_representation_acc(adatas) -> None:
+    """An accessor `use_rep` round-trips through `.uns` and is used for the new data."""
+    adata_ref, adata_new = (a.copy() for a in adatas)
+    adata_new.obsm["X_pca"] = adata_ref.obsm["X_pca"][: adata_new.n_obs]
+    sc.pp.neighbors(adata_ref, use_rep=A.obsm["X_pca"])
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.fit(adata_new)
+
+    assert ing._use_rep == A.obsm["X_pca"]
+    np.testing.assert_array_equal(ing._obsm["rep"], adata_new.obsm["X_pca"])
 
 
 @pytest.mark.parametrize("as_sparse", [False, True])
