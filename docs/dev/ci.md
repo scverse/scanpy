@@ -13,16 +13,20 @@ When a plot comparison fails, the `check_same_image` and `plot_cmp` fixtures cop
 Locally, the assertion message links to the originals directly, so you can just click the paths in the test output.
 
 On CI, that directory is uploaded as an artifact named `debug-data-{environment}` (one per test environment in the matrix).
-To get at it, open the “Checks” tab of your PR and select the *CI* workflow run:
+To get at it, open the {guilabel}`Checks` tab of your PR and select the {guilabel}`CI` workflow run:
 
-```{image} ../_static/img/ci-workflow.png
-:width: 750px
+```{figure} ../_static/img/ci-workflow.png
+:alt: A PR’s Checks tab, listing the CI workflow run.
+
+The {guilabel}`CI` workflow run in the {guilabel}`Checks` tab of a PR.
 ```
 
-Then scroll to the “Artifacts” section at the bottom of the run summary and download the artifact for the environment whose test failed:
+Then scroll to the {guilabel}`Artifacts` section at the bottom of the run summary and download the artifact for the environment whose test failed:
 
-```{image} ../_static/img/ci-artifacts.png
-:width: 750px
+```{figure} ../_static/img/ci-artifacts.png
+:alt: The Artifacts section of a workflow run summary, listing debug-data artifacts.
+
+The {guilabel}`Artifacts` section, with one `debug-data-{environment}` entry per test environment.
 ```
 
 The downloaded archive mirrors the layout of the reference image directory, so a failing test shows up as

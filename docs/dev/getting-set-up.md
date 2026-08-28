@@ -26,7 +26,7 @@ $ gh repo fork scverse/scanpy --clone --remote -- --filter=blob:none
 
 This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `main` development branch to track our repository.
 
-To do this manually, first make a fork of the repository by clicking the "fork" button on our main github package. Then, on your machine, run:
+To do this manually, first make a fork of the repository by clicking the {guilabel}`Fork` button on our main github page. Then, on your machine, run:
 
 ```console
 $ # Clone your fork of the repository (substitute in your username)
@@ -93,7 +93,7 @@ $ # After that, just use
 $ git push
 ```
 
-And open a pull request by going to the main repo and clicking *New pull request*.
+And open a pull request by going to the main repo and clicking {guilabel}`New pull request`.
 GitHub is also pretty good about prompting you to open PRs for recently pushed branches.
 
 We'll try and get back to you soon!
