@@ -18,8 +18,7 @@ if TYPE_CHECKING:
 @deprecated(
     Deprecation(
         "1.13.0",
-        # TODO: better suggestion?
-        "For batch correction, use :func:`scanpy.pp.combat` or :func:`scanpy.pp.harmony_integrate` instead.",
+        "For batch correction, use :func:`scanpy.pp.bbknn` or :func:`scanpy.pp.combat` instead.",
     )
 )
 def mnn_correct(  # noqa: PLR0913
