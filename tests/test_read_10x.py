@@ -11,6 +11,7 @@ import pytest
 
 import scanpy as sc
 from scanpy._compat import CSRBase
+from scanpy.io._read import _PANDAS_STR_NA_VALUES
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -109,6 +110,60 @@ def test_read_10x_mtx_int(
 
     assert adata.var.index.dtype == str_dt
     assert dict(adata.var.dtypes) == dict(feature_types=str_dt, **col_dtypes)
+
+
+def _mtx_dir_with_symbol(tmp_path: Path, data_10x: Path, symbol: str) -> Path:
+    dest = tmp_path / "mtx"
+    shutil.copytree(data_10x / "int-ids", dest)
+    lines = (dest / "features.tsv").read_text().splitlines()
+    cols = lines[0].split("\t")
+    cols[0] = "FBgn0036414"
+    cols[1] = symbol
+    lines[0] = "\t".join(cols)
+    (dest / "features.tsv").write_text("\n".join(lines) + "\n")
+    return dest
+
+
+@pytest.mark.parametrize("var_names", ["gene_symbols", "gene_ids"])
+def test_read_10x_mtx_gene_symbol_nan(
+    tmp_path: Path, data_10x: Path, var_names: Literal["gene_symbols", "gene_ids"]
+) -> None:
+    mtx_path = _mtx_dir_with_symbol(tmp_path, data_10x, "nan")
+    adata = sc.io.read_10x_mtx(mtx_path, var_names=var_names, compressed=False)
+
+    if var_names == "gene_symbols":
+        assert adata.var_names[0] == "nan"
+        assert not pd.isna(adata.var_names[0])
+        adata.var["mt"] = adata.var_names.str.startswith("mt:")
+        assert not adata.var["mt"].isna().any()
+        sc.pp.calculate_qc_metrics(
+            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+        )
+    else:
+        assert adata.var["gene_symbols"].iloc[0] == "nan"
+        assert not adata.var["gene_symbols"].isna().iloc[0]
+
+
+@pytest.mark.parametrize("symbol", ["NaN", "NA"])
+def test_read_10x_mtx_other_na_gene_symbols(
+    tmp_path: Path, data_10x: Path, symbol: str
+) -> None:
+    mtx_path = _mtx_dir_with_symbol(tmp_path, data_10x, symbol)
+    adata = sc.io.read_10x_mtx(mtx_path, var_names="gene_ids", compressed=False)
+    assert adata.var["gene_symbols"].isna().iloc[0]
+
+
+def test_pandas_str_na_values_unchanged() -> None:
+    """Fail if pandas changes its default NA tokens.
+
+    Production copies ``STR_NA_VALUES`` as ``_PANDAS_STR_NA_VALUES`` and derives
+    ``_10X_FEATURE_NA_VALUES`` by dropping ``nan``. Importing pandas._libs only
+    here avoids a private import in ``read_10x_mtx``. On failure, update
+    ``_PANDAS_STR_NA_VALUES`` in ``scanpy.io._read``.
+    """
+    from pandas._libs.parsers import STR_NA_VALUES
+
+    assert frozenset(STR_NA_VALUES) == _PANDAS_STR_NA_VALUES
 
 
 def test_read_10x_h5_v1(data_10x: Path) -> None:
