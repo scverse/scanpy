@@ -5,28 +5,39 @@
 A frequent frustration in testing is the reproducibility of the plots and `matplotlib`'s behaviour in different environments.
 We have some tooling to help with this.
 
-### Viewing plots from failed tests on Azure pipelines
+(viewing-plots-from-failed-tests)=
 
-The fixtures `check_same_image` and `plot_cmp` upload plots from failing tests so you can view them from the azure pipelines test viewer.
-To find these, navigate to the tests tab for your build
+### Viewing plots from failed tests
 
-```{image} ../_static/img/ci_plot-view_tests-tab.png
-:width: 750px
+When a plot comparison fails, the `check_same_image` and `plot_cmp` fixtures copy the expected, actual, and diff images into pytest’s cache directory (`.pytest_cache/d/debug`).
+Locally, the assertion message links to the originals directly, so you can just click the paths in the test output.
+
+On CI, that directory is uploaded as an artifact named `debug-data-{environment}` (one per test environment in the matrix).
+To get at it, open the {guilabel}`Checks` tab of your PR and select the {guilabel}`CI` workflow run:
+
+```{figure} ../_static/img/ci-workflow.png
+:alt: A PR’s Checks tab, listing the CI workflow run.
+
+The {guilabel}`CI` workflow run in the {guilabel}`Checks` tab of a PR.
 ```
 
-Select your failing test
+Then scroll to the {guilabel}`Artifacts` section at the bottom of the run summary and download the artifact for the environment whose test failed:
 
-```{image} ../_static/img/ci_plot-view_select-test.png
-:width: 750px
+```{figure} ../_static/img/ci-artifacts.png
+:alt: The Artifacts section of a workflow run summary, listing debug-data artifacts.
+
+The {guilabel}`Artifacts` section, with one `debug-data-{environment}` entry per test environment.
 ```
 
-And open the attachments tab
+The downloaded archive mirrors the layout of the reference image directory, so a failing test shows up as
 
-```{image} ../_static/img/ci_plot-view_attachment-tab.png
-:width: 750px
+```text
+{matplotlib-version}/{test-name}/expected.png
+{matplotlib-version}/{test-name}/actual.png
+{matplotlib-version}/{test-name}/actual-failed-diff.png
 ```
 
-From here you can view and download the images which were compared, as well as a diff between them.
+If the actual image is the correct one, you can copy it over the reference image (see {ref}`plotting-tests`).
 
 ### Misc
 

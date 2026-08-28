@@ -31,10 +31,10 @@ If you haven't written tests before, Software Carpentry has an [in-depth testing
 We highly recommend using [Test-Driven Development][] when contributing code.
 This not only ensures you have tests written, it often makes implementation easier since you start out with a specification for your function.
 
-Consider parameterizing your tests using the `pytest.mark.parameterize` and `pytest.fixture` decorators.
+Consider parametrizing your tests using the `pytest.mark.parametrize` and `pytest.fixture` decorators.
 You can read more about [fixtures][] in pytest’s documentation, but we’d also recommend searching our test suite for existing usage.
 
-[existing test suite]: https://github.com/scverse/scanpy/tree/main/scanpy/tests
+[existing test suite]: https://github.com/scverse/scanpy/tree/main/tests
 [in-depth testing guide]: https://katyhuff.github.io/2016-07-11-scipy/testing/
 [test-driven development]: https://en.wikipedia.org/wiki/Test-driven_development
 [fixtures]: https://docs.pytest.org/en/stable/fixture.html
@@ -67,17 +67,21 @@ Some approaches to this include:
 
 [scoped test fixture]: https://docs.pytest.org/en/stable/fixture.html#sharing-test-data
 
+(plotting-tests)=
+
 ### Plotting tests
 
 While computational functions will return arrays and values, it can be harder to work with the output of plotting functions.
 
 To make this easier, we use the `plot_cmp` fixture for comparing plotting results (search the test suite for example usage).
 This is used to check that generated plots look the same as they did previously.
-Reference images (the expected output) are stored as `expected.png` to relevant tests directory under `scanpy/tests/_images`.
-When run, the test suite will generate `actual.png` files for each check.
-These files are compared, and if the `actual` plot differs from the reference plot, a `diff` of the images is also generated.
-Paths for all these files will be reported when a test fails, and images for failed plots can be viewed via the :doc:`CI interface <ci>`.
+Reference images (the expected output) are stored as `expected.png` in a per-test directory under `tests/plotting/legacy/_images/{matplotlib-version}`,
+where the version segment is the minor version of `matplotlib` the images were generated with (e.g. `3.10`).
+When run, the test suite will generate an `actual.png` file next to the reference image for each check.
+These files are compared, and if the `actual` plot differs from the reference plot, an `actual-failed-diff.png` is also generated.
+Paths for all these files will be reported when a test fails, and images for failed plots on CI can be retrieved as described in {ref}`viewing-plots-from-failed-tests`.
 
-A common gotcha here is that plots often change slightly on different machines/ OSs.
+A common gotcha here is that plots often change slightly on different machines/ OSs and between `matplotlib` versions.
 `scanpy`'s test suite sets a number of environment variables to ensure as similar of plots as possible.
-When adding new reference plots, the recommended workflow is to write the test as though an expected result already exists, run it once to generate the output, then move that output to the reference directory.
+When adding new reference plots, the recommended workflow is to write the test as though an expected result already exists,
+run it once to generate the `actual.png`, then rename that file to `expected.png` if it looks correct.

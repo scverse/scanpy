@@ -19,6 +19,9 @@ To learn how to ignore checks per line please read about [ignoring errors][].
 Additionally, we use Scanpy’s [EditorConfig][],
 so using an editor/IDE with support for both is helpful.
 
+These checks run via our {ref}`commit hooks <prek>`, and in CI.
+You can also apply them to the whole repo with `hatch check fmt --fix` (formatting) and `hatch check code --fix` (linting).
+
 [Ruff]: https://docs.astral.sh/ruff/
 [ignoring errors]: https://docs.astral.sh/ruff/tutorial/#ignoring-errors
 [EditorConfig]: https://github.com/scverse/scanpy/blob/main/.editorconfig
