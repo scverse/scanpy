@@ -161,6 +161,7 @@ intersphinx_mapping = dict(
     matplotlib=("https://matplotlib.org/stable/", None),
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
+    palantir=("https://palantir.readthedocs.io/en/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),

@@ -59,6 +59,14 @@ def test_descend_classes_and_funcs():
     assert {p.values[0] for p in api_functions} == funcs
 
 
+@pytest.mark.parametrize(
+    ("f", "qualname"),
+    [p for p in api_functions if p.id.startswith("sc.external.")],
+)
+def test_external_funcs_are_deprecated(f, qualname) -> None:
+    assert getattr(f, "__deprecated__", None), f"{qualname} is not deprecated"
+
+
 @pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")
 def test_import_future_anndata_import_warning():
     import scanpy
