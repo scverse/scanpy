@@ -99,11 +99,11 @@ def bbknn(  # noqa: PLR0913
     metric
         A known metric’s name or a callable that returns a distance.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     metric_kwds
         Options for the metric.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     trim
         Trim each cell’s neighbors to these many top connectivities.
         May help with population independence and improve the tidiness of clustering.
@@ -113,7 +113,7 @@ def bbknn(  # noqa: PLR0913
         Set to 0 to skip trimming.
     {rng}
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     key_added
         If not specified, the neighbors data is stored in `.uns['neighbors']`,
         distances and connectivities are stored in `.obsp['distances']` and
