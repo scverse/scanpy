@@ -21,7 +21,7 @@ To get the code, and be able to push changes back to the main project, you'll ne
 This is very straight forward if you're using [GitHub's CLI][]:
 
 ```console
-$ gh repo fork scverse/scanpy --clone --remote
+$ gh repo fork scverse/scanpy --clone --remote -- --filter=blob:none
 ```
 
 This will fork the repo to your github account, create a clone of the repo on your current machine, add our repository as a remote, and set the `main` development branch to track our repository.
@@ -30,7 +30,7 @@ To do this manually, first make a fork of the repository by clicking the "fork" 
 
 ```console
 $ # Clone your fork of the repository (substitute in your username)
-$ git clone https://github.com/{your-username}/scanpy.git
+$ git clone --filter=blob:none https://github.com/{your-username}/scanpy.git
 $ # Enter the cloned repository
 $ cd scanpy
 $ # Add our repository as a remote
@@ -40,28 +40,31 @@ $ # git branch --set-upstream-to "upstream/main"
 
 [GitHub's CLI]: https://cli.github.com
 
-### `pre-commit`
+(prek)=
+(pre-commit)=
 
-We use [pre-commit][] to run some styling checks in an automated way.
+### Commit hooks
+
+We use [prek][] to run some styling checks in an automated way.
 We also test against these checks, so make sure you follow them!
 
-You can install pre-commit with:
+You can install `prek` with:
 
 ```console
-$ pip install pre-commit
+$ uv tool install prek
 ```
 
 You can then install it to run while developing here with:
 
 ```console
-$ pre-commit install
+$ prek install
 ```
 
 From the root of the repo.
 
-If you choose not to run the hooks on each commit, you can run them manually with `pre-commit run --files={your files}`.
+If you choose not to run the hooks on each commit, you can run them manually with `prek run --files={your files}`.
 
-[pre-commit]: https://pre-commit.com
+[prek]: https://prek.j178.dev/
 
 (creating-a-branch)=
 
