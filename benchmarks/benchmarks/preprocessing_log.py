@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import anndata as ad
 import numpy as np
 import zarr
+from anndata.acc import A
 
 import scanpy as sc
 
@@ -97,10 +98,10 @@ class NeighborsSuite:
         sc.pp.neighbors(self.adata)
 
     def time_bbknn(self, *_) -> None:
-        sc.pp.bbknn(self.adata, batch_key=self.adata.uns["batch_key"])
+        sc.pp.bbknn(self.adata, batches=A.obs[self.adata.uns["batch_key"]])
 
     def peakmem_bbknn(self, *_) -> None:
-        sc.pp.bbknn(self.adata, batch_key=self.adata.uns["batch_key"])
+        sc.pp.bbknn(self.adata, batches=A.obs[self.adata.uns["batch_key"]])
 
 
 class HVGSuite:  # noqa: D101
