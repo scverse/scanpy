@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from anndata import AnnData
-from anndata.acc import A
 from scipy import sparse
 from sklearn.neighbors import KNeighborsTransformer
 
@@ -25,6 +25,13 @@ if TYPE_CHECKING:
 
     from scanpy._compat import CSRBase
     from scanpy.neighbors._types import _Metric
+
+if TYPE_CHECKING or find_spec("anndata.acc"):
+    from anndata.acc import A
+
+pytestmark = pytest.mark.skipif(
+    find_spec("anndata.acc") is None, reason="anndata version too low"
+)
 
 
 N_PER_BATCH = [60, 40, 30]
