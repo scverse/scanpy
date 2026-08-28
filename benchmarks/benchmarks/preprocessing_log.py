@@ -67,6 +67,42 @@ class PreprocessingSuite:  # noqa: D101
         sc.pp.scale(self.adata, max_value=10)
 
 
+class NeighborsSuite:
+    """Benchmark neighbor graph construction.
+
+    Both `pp.neighbors` and `pp.bbknn` pick an exact or approximate kNN backend
+    depending on how many observations they have to index,
+    so the small and the big dataset cover the two paths.
+    Both have a batch key, as `pp.bbknn` needs one.
+    """
+
+    params: tuple[list[Dataset]] = (["bmmc", "lung93k"],)
+    param_names = ("dataset",)
+
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        for dataset in self.params[0]:
+            adata, batch_key = get_dataset(dataset)
+            sc.pp.pca(adata)  # so we time the kNN search, not the PCA
+            adata.uns["batch_key"] = batch_key
+            adata.write_zarr(f"{dataset}.zarr")
+
+    def setup(self, dataset: Dataset) -> None:
+        self.adata = ad.read_zarr(f"{dataset}.zarr")
+
+    def time_neighbors(self, *_) -> None:
+        sc.pp.neighbors(self.adata)
+
+    def peakmem_neighbors(self, *_) -> None:
+        sc.pp.neighbors(self.adata)
+
+    def time_bbknn(self, *_) -> None:
+        sc.pp.bbknn(self.adata, batch_key=self.adata.uns["batch_key"])
+
+    def peakmem_bbknn(self, *_) -> None:
+        sc.pp.bbknn(self.adata, batch_key=self.adata.uns["batch_key"])
+
+
 class HVGSuite:  # noqa: D101
     params = (["seurat_v3", "cell_ranger", "seurat"], [True, False])
     param_names = ("flavor", "use_dask")

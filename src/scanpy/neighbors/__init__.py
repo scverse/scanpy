@@ -100,7 +100,7 @@ def neighbors(  # noqa: PLR0913
         is `False`, a Gaussian kernel width is set to the distance of the
         `n_neighbors` neighbor.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     {n_pcs}
     {use_rep}
     knn
@@ -132,14 +132,14 @@ def neighbors(  # noqa: PLR0913
         If `distances` is given, this parameter is simply stored in `.uns` (see below),
         otherwise defaults to `'euclidean'`.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     metric_kwds
         Options for the metric.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     {rng}
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     key_added
         If not specified, the neighbors data is stored in `.uns['neighbors']`,
         distances and connectivities are stored in `.obsp['distances']` and
