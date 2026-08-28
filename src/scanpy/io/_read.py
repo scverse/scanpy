@@ -608,6 +608,35 @@ def _read_mtx(
     return AnnData(x)
 
 
+# Copy of pandas._libs.parsers.STR_NA_VALUES (pandas 2.3 / 3.0). Kept here so
+# production does not import pandas._libs. If
+# test_pandas_str_na_values_unchanged fails, pandas changed this set: update it,
+# then _10X_FEATURE_NA_VALUES follows automatically.
+_PANDAS_STR_NA_VALUES = frozenset({
+    "",
+    "#N/A",
+    "#N/A N/A",
+    "#NA",
+    "-1.#IND",
+    "-1.#QNAN",
+    "-NaN",
+    "-nan",
+    "1.#IND",
+    "1.#QNAN",
+    "<NA>",
+    "N/A",
+    "NA",
+    "NULL",
+    "NaN",
+    "None",
+    "n/a",
+    "nan",
+    "null",
+})
+# FlyBase gene symbol `nan` is a real identifier; treat other pandas NA tokens as missing.
+_10X_FEATURE_NA_VALUES = _PANDAS_STR_NA_VALUES - {"nan"}
+
+
 def _read_10x_mtx(
     path: Path,
     *,
@@ -634,6 +663,8 @@ def _read_10x_mtx(
         path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
         header=None,
         sep="\t",
+        keep_default_na=False,
+        na_values=_10X_FEATURE_NA_VALUES,
     )
     if var_names == "gene_symbols":
         var_names_idx = pd.Index(genes[1].array)
