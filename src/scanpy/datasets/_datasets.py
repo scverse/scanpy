@@ -18,8 +18,9 @@ from .._settings import Verbosity, settings
 from .._utils import _doc_params
 from .._utils._doctests import doctest_internet, doctest_needs, doctest_skipif
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
+from ..io._download import download
 from ..io._read import read, read_zarr
-from ._utils import check_datasetdir_exists
+from ._utils import check_datasetdir_exists, fetch_dataset
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -120,7 +121,6 @@ def blobs(
 
 @_doctest_skipif_old_anndata
 @doctest_internet
-@check_datasetdir_exists
 def burczynski06() -> AnnData:
     """Bulk data with conditions ulcerative colitis (UC) and Crohn’s disease (CD) :cite:p:`Burczynski2006`.
 
@@ -143,9 +143,7 @@ def burczynski06() -> AnnData:
         layers: None (.X)
 
     """
-    filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
-    url = "https://exampledata.scverse.org/scanpy/GDS1615_full.soft.gz"
-    return read(filename, backup_url=url)
+    return read(fetch_dataset("burczynski06"))
 
 
 @_doctest_skipif_old_anndata
@@ -195,7 +193,6 @@ def krumsiek11() -> AnnData:
 @_doctest_skipif_old_anndata
 @doctest_internet
 @doctest_needs("openpyxl")
-@check_datasetdir_exists
 def moignard15() -> AnnData:
     r"""Hematopoiesis in early mouse embryos :cite:p:`Moignard2015`.
 
@@ -223,11 +220,7 @@ def moignard15() -> AnnData:
         layers: None (.X)
 
     """
-    filename = settings.datasetdir / "moignard15/nbt.3154-S3.xlsx"
-    backup_url = (
-        "https://exampledata.scverse.org/scanpy/41587_2015_BFnbt3154_MOESM4_ESM.xlsx"
-    )
-    adata = read(filename, sheet="dCt_values.txt", backup_url=backup_url)
+    adata = read(fetch_dataset("moignard15"), sheet="dCt_values.txt")
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.isin(adata.var_names, ["Eif2b1", "Mrpl19", "Polr2a", "Ubc"])
     adata = adata[:, gene_subset].copy()  # retain non-removed genes
@@ -256,7 +249,6 @@ def moignard15() -> AnnData:
 
 @_doctest_skipif_old_anndata
 @doctest_internet
-@check_datasetdir_exists
 def paul15() -> AnnData:
     """Development of Myeloid Progenitors :cite:p:`Paul2015`.
 
@@ -281,11 +273,7 @@ def paul15() -> AnnData:
     """
     import h5py
 
-    filename = settings.datasetdir / "paul15/paul15.h5"
-    filename.parent.mkdir(exist_ok=True)
-    backup_url = "https://exampledata.scverse.org/scanpy/paul15.h5"
-    _utils.check_presence_download(filename, backup_url)
-    with h5py.File(filename, "r") as f:
+    with h5py.File(fetch_dataset("paul15"), "r") as f:
         # Coercing to float32 for backwards compatibility
         x = f["data.debatched"][()].astype(np.float32)
         gene_names = f["data.debatched_rownames"][()].astype(str)
@@ -429,7 +417,6 @@ def pbmc68k_reduced() -> AnnData:
 
 @_doctest_skipif_old_anndata
 @doctest_internet
-@check_datasetdir_exists
 def pbmc3k() -> AnnData:
     r"""3k PBMCs from 10x Genomics.
 
@@ -475,16 +462,13 @@ def pbmc3k() -> AnnData:
         layers: None (.X)
 
     """
-    url = "https://exampledata.scverse.org/scanpy/pbmc3k_raw.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
-        adata = read(settings.datasetdir / "pbmc3k_raw.h5ad", backup_url=url)
-    return adata
+        return read(fetch_dataset("pbmc3k"))
 
 
 @_doctest_skipif_old_anndata
 @doctest_internet
-@check_datasetdir_exists
 def pbmc3k_processed() -> AnnData:
     """Processed 3k PBMCs from 10x Genomics.
 
@@ -517,12 +501,10 @@ def pbmc3k_processed() -> AnnData:
         layers: None (.X)
 
     """  # noqa: D401
-    url = "https://exampledata.scverse.org/scanpy/pbmc3k.h5ad"
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=OldFormatWarning)
         warnings.filterwarnings("ignore", r"Moving.*from.*uns.*to.*obsp", FutureWarning)
-        return read(settings.datasetdir / "pbmc3k_processed.h5ad", backup_url=url)
+        return read(fetch_dataset("pbmc3k_processed"))
 
 
 def _download_visium_dataset(
@@ -556,9 +538,7 @@ def _download_visium_dataset(
     # Download spatial data
     tar_filename = f"{sample_id}_spatial.tar.gz"
     tar_pth = sample_dir / tar_filename
-    _utils.check_presence_download(
-        filename=tar_pth, backup_url=f"{url_prefix}/{tar_filename}"
-    )
+    download(f"{url_prefix}/{tar_filename}", tar_pth)
     with tarfile.open(tar_pth) as f:
         f.extraction_filter = tarfile.data_filter
         for el in f:
@@ -566,17 +546,14 @@ def _download_visium_dataset(
                 f.extract(el, sample_dir)
 
     # Download counts
-    _utils.check_presence_download(
-        filename=sample_dir / "filtered_feature_bc_matrix.h5",
-        backup_url=f"{url_prefix}/{sample_id}_filtered_feature_bc_matrix.h5",
+    download(
+        f"{url_prefix}/{sample_id}_filtered_feature_bc_matrix.h5",
+        sample_dir / "filtered_feature_bc_matrix.h5",
     )
 
     # Download image
     if download_image:
-        _utils.check_presence_download(
-            filename=sample_dir / "image.tif",
-            backup_url=f"{url_prefix}/{sample_id}_image.tif",
-        )
+        download(f"{url_prefix}/{sample_id}_image.tif", sample_dir / "image.tif")
 
     return sample_dir
 

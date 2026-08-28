@@ -29,7 +29,7 @@ from scverse_misc import Deprecation, deprecated
 from .. import logging as logg
 from .._compat import pkg_version
 from .._settings import AnnDataFileFormat, Default, settings
-from ._download import check_datafile_present_and_download, slugify
+from ._download import download, slugify
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -202,9 +202,8 @@ def read_10x_h5(
     """
     path = Path(filename)
     start = logg.info(f"reading {path}")
-    is_present = check_datafile_present_and_download(path, backup_url=backup_url)
-    if not is_present:
-        logg.debug(f"... did not find original file {path}")
+    if backup_url is not None:
+        download(backup_url, path)
     with h5py.File(str(path), "r") as f:
         v3 = "/matrix" in f
     if v3:
@@ -679,9 +678,8 @@ def _read(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
     else:
         ext = is_valid_filename(filename, return_ext=True, ext=ext)
-    is_present = check_datafile_present_and_download(filename, backup_url=backup_url)
-    if not is_present:
-        logg.debug(f"... did not find original file {filename}")
+    if backup_url is not None:
+        download(backup_url, filename)
     # read hdf5 files
     if ext in {"h5", "h5ad"}:
         if sheet is None:
@@ -702,7 +700,7 @@ def _read(  # noqa: PLR0912, PLR0915
         logg.info(f"... reading from cache file {path_cache}")
         return read_h5ad(path_cache)
 
-    if not is_present:
+    if not filename.is_file():
         msg = f"Did not find file {filename}."
         raise FileNotFoundError(msg)
     logg.debug(f"reading {filename}")
