@@ -9,14 +9,17 @@ from pandas.api.types import CategoricalDtype
 
 from .. import logging as logg
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
+from ..get.get import _rep_to_json
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
-from ._utils import _choose_representation
+from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
 
     from anndata import AnnData
+
+    from ..get.get import RepAcc
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -25,7 +28,7 @@ def dendrogram(  # noqa: PLR0913
     groupby: str | Sequence[str],
     *,
     n_pcs: int | None = None,
-    use_rep: str | None = None,
+    use_rep: RepAcc | str | None = None,
     var_names: Sequence[str] | None = None,
     use_raw: bool | None = None,
     cor_method: str = "pearson",
@@ -125,7 +128,7 @@ def dendrogram(  # noqa: PLR0913
 
     if var_names is None:
         rep_df = pd.DataFrame(
-            _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+            _choose_representation_compat(adata, use_rep=use_rep, n_pcs=n_pcs)
         )
         categorical = adata.obs[groupby[0]]
         if len(groupby) > 1:
@@ -167,7 +170,7 @@ def dendrogram(  # noqa: PLR0913
     dat = dict(
         linkage=z_var,
         groupby=groupby,
-        use_rep=use_rep,
+        use_rep=_rep_to_json(use_rep),
         cor_method=cor_method,
         linkage_method=linkage_method,
         categories_ordered=dendro_info["ivl"],

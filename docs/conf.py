@@ -161,6 +161,7 @@ intersphinx_mapping = dict(
     matplotlib=("https://matplotlib.org/stable/", None),
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
+    palantir=("https://palantir.readthedocs.io/en/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
@@ -178,6 +179,7 @@ intersphinx_mapping = dict(
 array_support: dict[str, tuple[list[str], list[str]]] = {
     "experimental.pp.highly_variable_genes": (["np", "sp"], []),
     "get.aggregate": (["np", "sp", "da"], []),
+    "pp.bbknn": (["np", "sp"], []),
     "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
     "pp.combat": (["np"], []),
     "pp.downsample_counts": (["np", "sp[csr]"], []),

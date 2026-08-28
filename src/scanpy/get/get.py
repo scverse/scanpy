@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
+import json
+from collections.abc import Collection, Sequence
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypedDict, overload
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
-    from anndata.acc import Idx2D
+    from anndata.acc import Idx2D, RefAcc
 
     from .._compat import DaskArray
 
@@ -485,6 +486,8 @@ class _Rep(TypedDict, total=False):
 
 
 type ArrAcc = GraphAcc | LayerAcc | MultiAcc
+type RepAcc = LayerAcc | MultiAcc
+"""Accessor usable as a representation (`use_rep`), i.e. a non-graph 2D array."""
 
 
 @overload
@@ -790,3 +793,70 @@ def _get_vec(
         ref = A.resolve(ref, vec=True)
     _ref_dim(ref, dim=dim)
     return adata[ref]
+
+
+def _resolve_rep(rep: RefAcc | str) -> RepAcc:
+    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
+    if isinstance(rep, str):
+        from anndata.acc import A
+
+        rep = A.resolve(rep, vec=False)
+    if isinstance(rep, MultiAcc) and rep.dim != "obs":
+        msg = (
+            f"Representation must be aligned to `obs`, but {rep!r} is aligned to `var`"
+        )
+        raise ValueError(msg)
+    if isinstance(rep, LayerAcc | MultiAcc):
+        return rep
+    msg = (
+        "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
+        f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
+    )
+    raise TypeError(msg)
+
+
+def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
+    """Serialize a `rep`resentation for storage in `.uns`.
+
+    v1 strings (`'X'` or an `.obsm` key) are stored unchanged,
+    accessors (and hence v2 strings) as `anndata.acc` JSON inside a 1-element list,
+    e.g. `A.obsm['pca']` as `['["obsm", "pca"]']`.
+
+    TODO: Once AnnData can store a heterogeneous list, store that instead of a 1-element list.
+    See https://github.com/scverse/anndata/issues/1979
+    """
+    from scanpy import settings
+
+    if rep is None or (
+        isinstance(rep, str) and settings.preset is not Preset.ScanpyV2Preview
+    ):
+        return rep
+    from anndata.acc import A
+
+    return [json.dumps(A.to_json(_resolve_rep(rep)))]
+
+
+def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
+    """Parse a `rep`resentation stored by `_rep_to_json`."""
+    from scanpy import settings
+
+    if rep is None:
+        return rep
+    if not isinstance(rep, str):
+        from anndata.acc import A
+
+        if (
+            isinstance(rep, Sequence | np.ndarray)
+            and len(rep) == 1
+            and isinstance(rep[0], str)
+        ):
+            # see `_rep_to_json`
+            rep: Sequence[str | int | None] = json.loads(rep[0])
+        return _resolve_rep(A.from_json(rep, vec=False))
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        # a plain string was stored under the v1 preset,
+        # so interpret it as one instead of as an `anndata.acc` spec
+        return A.X if rep == "X" else A.obsm[rep]
+    return rep

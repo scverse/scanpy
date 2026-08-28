@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._utils._doctests import doctest_needs
@@ -13,6 +14,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`palantir.utils.run_diffusion_maps` and "
+        ":func:`palantir.utils.determine_multiscale_space` directly.",
+    )
+)
 @doctest_needs("palantir")
 def palantir(
     adata: AnnData,
@@ -135,6 +143,8 @@ def palantir(
     dimensional phenotypic manifold of the data.
 
     >>> sce.tl.palantir(adata, n_components=5, knn=30)
+    FutureWarning: The function palantir is deprecated and will be removed in the future. Use :func:`palantir.utils.run_diffusion_maps` and :func:`palantir.utils.determine_multiscale_space` directly.
+        sce.tl.palantir(adata, n_components=5, knn=30)
 
     if pre-computed distances are to be used,
 
@@ -145,6 +155,8 @@ def palantir(
     ...     use_adjacency_matrix=True,
     ...     distances_key="distances",
     ... )
+    FutureWarning: The function palantir is deprecated and will be removed in the future. Use :func:`palantir.utils.run_diffusion_maps` and :func:`palantir.utils.determine_multiscale_space` directly.
+        sce.tl.palantir(
 
     **Visualizing Palantir results**
 
@@ -183,6 +195,8 @@ def palantir(
     ...     ms_data="X_palantir_multiscale",
     ...     num_waypoints=500,
     ... )
+    FutureWarning: The function palantir_results is deprecated and will be removed in the future. Use :func:`palantir.core.run_palantir` directly.
+        pr_res = sce.tl.palantir_results(
 
     .. note::
        A `start_cell` must be defined for every data set. The start cell for
@@ -244,6 +258,12 @@ def palantir(
     return adata if copy else None
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`palantir.core.run_palantir` directly.",
+    )
+)
 def palantir_results(
     adata: AnnData,
     early_cell: str,
