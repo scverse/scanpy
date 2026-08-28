@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from functools import cache, wraps
 from importlib.resources import as_file, files
 from pathlib import Path
@@ -8,7 +7,6 @@ from typing import TYPE_CHECKING
 
 from scverse_misc.datasets import fetch, parse_registry, register_loader
 
-from .. import logging as logg
 from .._settings import settings
 
 if TYPE_CHECKING:
@@ -28,21 +26,10 @@ def check_datasetdir_exists[**P, R](f: Callable[P, R]) -> Callable[P, R]:
 
 @register_loader("scanpy")
 def _load_file(entry: DatasetEntry, target: Path, download: DownloadCB, /) -> Path:
-    """Download the single file making up `entry` and return its path.
-
-    Falls back to the entry’s ``fallback_urls`` (the pre-S3 upstream locations)
-    if our bucket is unreachable or serves something that fails the hash check.
-    """
+    """Download the single file making up `entry` and return its path."""
     (file,) = entry.files
     # `target` is `datasetdir/scanpy`; its parent keeps scanpy’s flat layout.
-    dest = target.parent
-    try:
-        return Path(download(file, dest=dest))
-    except (OSError, ValueError) as e:
-        if (url := entry.metadata.get("fallback_urls", {}).get(file.name)) is None:
-            raise
-        logg.warning(f"Downloading {file.name} failed ({e}), falling back to {url}")
-        return Path(download(replace(file, url=url), dest=dest))
+    return Path(download(file, dest=target.parent))
 
 
 @cache

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from anndata import AnnData
-    from pooch.typing import Downloader, Processor
+    from pooch.typing import Downloader
 
 
 @pytest.fixture(autouse=True)
@@ -162,43 +162,6 @@ def test_visium_datasets_images():
     )
     output = process.stdout.strip().decode()  # make process output string
     assert output == f"{image_path}: image/tiff"
-
-
-def test_dataset_fallback_url(tmp_path: Path) -> None:
-    """A dead primary URL falls through to the registry’s `fallback_urls`."""
-    from scverse_misc.datasets import DatasetEntry, FileEntry
-
-    from scanpy.datasets._utils import _load_file
-
-    entry = DatasetEntry(
-        name="fake",
-        type="scanpy",
-        files=(FileEntry(name="fake.bin", url="https://primary.invalid/fake.bin"),),
-        metadata=dict(fallback_urls={"fake.bin": "https://fallback.invalid/fake.bin"}),
-    )
-    tried: list[str] = []
-
-    def download(
-        file: FileEntry,
-        /,
-        *,
-        dest: Path | None = None,
-        processor: Processor | None = None,
-    ) -> str:
-        tried.append(file.resolve_url())
-        if len(tried) == 1:
-            msg = "bucket is down"
-            raise OSError(msg)
-        assert dest is not None
-        return str(dest / file.name)
-
-    path = _load_file(entry, tmp_path / "scanpy", download)
-
-    assert path == tmp_path / "fake.bin"
-    assert tried == [
-        "https://primary.invalid/fake.bin",
-        "https://fallback.invalid/fake.bin",
-    ]
 
 
 def test_download_failure() -> None:

@@ -11,45 +11,45 @@ datasets:
 
   burczynski06:
     type: scanpy
-    fallback_urls:
-      burczynski06.soft.gz: ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz
     files:
       - name: burczynski06.soft.gz
         s3_key: GDS1615_full.soft.gz
         sha256: 86126c1a3c163ea20abb14c1a9711aaff34e6c492ef6dd86298bbaf18cc3f5f3
+        fallback_urls:
+          - ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz
 
   moignard15:
     type: scanpy
-    fallback_urls:
-      moignard15.xlsx: https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx
     files:
       - name: moignard15.xlsx
         s3_key: 41587_2015_BFnbt3154_MOESM4_ESM.xlsx
         sha256: e7b358fef2b6da115b7ee3ab4c7fc55fd80e210bba427902e4afc9118992747c
+        fallback_urls:
+          - https://static-content.springer.com/esm/art%3A10.1038%2Fnbt.3154/MediaObjects/41587_2015_BFnbt3154_MOESM4_ESM.xlsx
 
   paul15:
     type: scanpy
-    fallback_urls:
-      paul15.h5: https://falexwolf.de/data/paul15.h5
     files:
       - name: paul15.h5
         s3_key: paul15.h5
         sha256: 6161984f758dd464992edc23f1a8ab89b2081600130c6aa93a1ab12b3ada5bfb
+        fallback_urls:
+          - https://falexwolf.de/data/paul15.h5
 
   pbmc3k:
     type: scanpy
-    fallback_urls:
-      pbmc3k_raw.h5ad: https://falexwolf.de/data/pbmc3k_raw.h5ad
     files:
       - name: pbmc3k_raw.h5ad
         s3_key: pbmc3k_raw.h5ad
         sha256: 89a96f1beaa2dd83a687666d3f19a4513ac27a2a2d12581fcd77afed7ea653a1
+        fallback_urls:
+          - https://falexwolf.de/data/pbmc3k_raw.h5ad
 
   pbmc3k_processed:
     type: scanpy
-    fallback_urls:
-      pbmc3k_processed.h5ad: https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
     files:
       - name: pbmc3k_processed.h5ad
         s3_key: pbmc3k.h5ad
         sha256: 0db367b991dd95809732b218539ede489bea99113807f62ebd7ccc970025fe38
+        fallback_urls:
+          - https://raw.githubusercontent.com/chanzuckerberg/cellxgene/main/example-dataset/pbmc3k.h5ad
