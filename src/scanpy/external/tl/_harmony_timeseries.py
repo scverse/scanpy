@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging as logg
 from ..._utils._doctests import doctest_needs
@@ -14,6 +15,12 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `harmonyTS <https://github.com/dpeerlab/Harmony>`_ package directly.",
+    )
+)
 @doctest_needs("harmony")
 def harmony_timeseries(
     adata: AnnData,
@@ -83,7 +90,7 @@ def harmony_timeseries(
 
     >>> from itertools import product
     >>> import pandas as pd
-    >>> from anndata import AnnData
+    >>> from anndata import AnnData, concat
     >>> import scanpy as sc
     >>> import scanpy.external as sce
 
@@ -97,11 +104,12 @@ def harmony_timeseries(
 
     >>> adata_ref = sc.datasets.pbmc3k()
     >>> start = [596, 615, 1682, 1663, 1409, 1432]
-    >>> adata = AnnData.concatenate(
-    ...     *(adata_ref[i : i + 1000] for i in start),
+    >>> adata = concat(
+    ...     [adata_ref[i : i + 1000] for i in start],
     ...     join="outer",
-    ...     batch_key="sample",
-    ...     batch_categories=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ...     label="sample",
+    ...     keys=[f"sa{i}_Rep{j}" for i, j in product((1, 2, 3), (1, 2))],
+    ...     index_unique="-",
     ... )
     >>> time_points = adata.obs["sample"].str.split("_", expand=True)[0]
     >>> adata.obs["time_points"] = pd.Categorical(
@@ -117,10 +125,14 @@ def harmony_timeseries(
     Run harmony_timeseries
 
     >>> sce.tl.harmony_timeseries(adata, tp="time_points", n_components=500)
+    FutureWarning: The function harmony_timeseries is deprecated and will be removed in the future. Use the `harmonyTS <https://github.com/dpeerlab/Harmony>`_ package directly.
+        sce.tl.harmony_timeseries(adata, tp="time_points", n_components=500)
 
     Plot time points:
 
     >>> sce.pl.harmony_timeseries(adata)
+    FutureWarning: The function harmony_timeseries is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='harmony'`` instead.
+        sce.pl.harmony_timeseries(adata)
 
     For further demonstration of Harmony visualizations please follow the notebook
     `Harmony_sample_notebook.ipynb

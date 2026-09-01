@@ -68,7 +68,6 @@ def test_consistency(metric) -> None:
     first_gene = metric(
         pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
     )
-
     np.testing.assert_allclose(all_genes[0], first_gene, rtol=1e-9)
 
     # Test that results are similar for sparse and dense reps of same data
@@ -310,7 +309,10 @@ def test_modularity_adj_errors(labels: object, is_directed: object, pat: str) ->
 
 
 @needs.igraph
-@pytest.mark.parametrize("preset", [sc.Preset.ScanpyV1, sc.Preset.ScanpyV2Preview])
+@pytest.mark.parametrize(
+    "preset",
+    [sc.Preset.ScanpyV1, pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2)],
+)
 def test_modularity_adata(
     monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests, preset: sc.Preset
 ) -> None:

@@ -118,7 +118,7 @@ def test_scale(
 
 
 def test_mask_string():
-    with pytest.raises(ValueError, match=r"Cannot refer to mask.* without.*anndata"):
+    with pytest.raises(ValueError, match=r"Cannot.*refer.*mask.*without.*anndata"):
         sc.pp.scale(np.array(X_original), mask_obs="mask")
     adata = AnnData(np.array(X_for_mask, dtype="float32"))
     adata.obs["some cells"] = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)

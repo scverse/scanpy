@@ -14,7 +14,7 @@ from collections import deque
 from contextlib import ExitStack
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 import dependency_groups
 from packaging.requirements import Requirement
@@ -93,6 +93,7 @@ class Args(argparse.Namespace):
     output: Path | None
     _extras: list[str]
     _all_extras: bool
+    _skip_extras: list[str]
     _groups: list[str]
     _all_groups: bool
 
@@ -121,7 +122,7 @@ class Args(argparse.Namespace):
             dest="_extras",
             metavar="EXTRA",
             type=str,
-            nargs="*",
+            nargs="+",
             default=(),
             help="extras to install",
         )
@@ -130,6 +131,15 @@ class Args(argparse.Namespace):
             dest="_all_extras",
             action="store_true",
             help="get all extras",
+        )
+        parser.add_argument(
+            "--skip-extras",
+            dest="_skip_extras",
+            metavar="EXTRA",
+            type=str,
+            nargs="+",
+            default=(),
+            help="extras to skip when `--all-extras` is set",
         )
         parser.add_argument(
             "--groups",
@@ -167,13 +177,20 @@ class Args(argparse.Namespace):
     @cached_property
     def extras(self) -> AbstractSet[str]:
         """Return the extras to install."""
-        if self._extras:
-            if self._all_extras:
+        match self._extras, self._all_extras, self._skip_extras:
+            case [], True, skip:
+                return dict.fromkeys(
+                    self.pyproject["project"]["optional-dependencies"].keys()
+                    - set(skip)
+                ).keys()
+            case extras, False, []:
+                return dict.fromkeys(extras).keys()
+            case _, True, _:
                 sys.exit("Cannot specify both --extras and --all-extras")
-            return dict.fromkeys(self._extras).keys()
-        if not self._all_extras:
-            return set()
-        return self.pyproject["project"]["optional-dependencies"].keys()
+            case _, False, _:
+                sys.exit("Cannot specify --skip-extras without --all-extras")
+            case never:
+                assert_never(never)
 
     @cached_property
     def groups(self) -> AbstractSet[str]:

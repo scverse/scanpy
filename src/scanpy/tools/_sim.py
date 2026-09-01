@@ -13,19 +13,24 @@ Beta Version. The code will be reorganized soon.
 from __future__ import annotations
 
 import itertools
+import sys
 from pathlib import Path
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict
 
 import numpy as np
 import scipy as sp
 
-from .. import _utils, readwrite
+from .. import _utils
 from .. import logging as logg
 from .._docs import doc_rng
 from .._settings import settings
 from .._utils import _doc_params
 from .._utils.random import _if_legacy_apply_global, _LegacyRng
+from ..io import read
+from ..io._params import read_params, write_params
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -98,7 +103,7 @@ def sim(  # noqa: PLR0913
         from .. import sim_models
 
         pfile_sim = Path(sim_models.__file__).parent / f"{model_key}_params.txt"
-        default_params = readwrite.read_params(pfile_sim)
+        default_params = read_params(pfile_sim)
         params = _utils.update_params(default_params, params)
     params["rng"] = np.random.default_rng(rng) if rng is not None else _LegacyRng(seed)
     del params["seed"]
@@ -134,7 +139,7 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
     else:
         writedir = Path(writedir)
     writedir.mkdir(parents=True, exist_ok=True)
-    readwrite.write_params(writedir / "params.txt", params)
+    write_params(writedir / "params.txt", params)
     # init variables
     tmax = params["tmax"]
     branching = params["branching"]
@@ -210,6 +215,9 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
                     )
                 if real >= nrRealizations:
                     break
+            _check_nr_realizations(
+                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+            )
         logg.debug(
             f"mean nr of offdiagonal edges {nrOffEdges_list.mean()} "
             f"compared to total nr {grnsim.dim * (grnsim.dim - 1) / 2.0}"
@@ -272,12 +280,13 @@ def sample_dynamic_data(**params):  # noqa: PLR0912, PLR0915
                     )
                 if real >= nrRealizations:
                     break
+            _check_nr_realizations(
+                model_key, real=real, nrRealizations=nrRealizations, restart=restart
+            )
     # load the last simulation file
     filename = max(writedir.glob("sim*.txt"))
     logg.info(f"reading simulation results {filename}")
-    adata = readwrite.read(
-        filename, first_column_names=True, suppress_cache_warning=True
-    )
+    adata = read(filename, first_column_names=True, suppress_cache_warning=True)
     adata.uns["tmax_write"] = tmax / step
     return adata
 
@@ -288,10 +297,10 @@ def write_data(  # noqa: PLR0912, PLR0913
     *,
     append=False,
     header="",
-    varNames: Mapping[str, int] = MappingProxyType({}),
+    varNames: Mapping[str, int] = frozendict({}),
     Adj: np.ndarray | None = None,
     Coupl: np.ndarray | None = None,
-    boolRules: Mapping[str, str] = MappingProxyType({}),
+    boolRules: Mapping[str, str] = frozendict({}),
     model="",
     modelType="",
     invTimeStep=1,
@@ -398,7 +407,7 @@ class GRNsim:
         show=False,
         verbosity=0,
         Coupl=None,
-        params=MappingProxyType({}),
+        params=frozendict({}),
     ):
         """Initialize.
 
@@ -893,6 +902,26 @@ class GRNsim:
             boolRules=self.boolRules,
             invTimeStep=self.invTimeStep,
         )
+
+
+def _check_nr_realizations(
+    model_key: str, *, real: int, nrRealizations: int, restart: int
+) -> None:
+    """Guard against writing fewer realizations than requested.
+
+    Realizations that don’t reach an attractor within `tmax` steps can make
+    :func:`_check_branching` reject every subsequent realization,
+    which used to silently yield a truncated data matrix.
+    """
+    if real >= nrRealizations:
+        return
+    msg = (
+        f"Simulating model {model_key!r} yielded only {real} of the requested "
+        f"{nrRealizations} branching realizations in {restart + 1} restarts. "
+        "Try increasing `tmax` so realizations reach an attractor, "
+        "or use a different `rng`."
+    )
+    raise RuntimeError(msg)
 
 
 def _check_branching(

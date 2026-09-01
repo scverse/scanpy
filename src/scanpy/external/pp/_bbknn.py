@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ..._utils._doctests import doctest_needs
 
 if TYPE_CHECKING:
@@ -11,6 +13,7 @@ if TYPE_CHECKING:
     from sklearn.metrics import DistanceMetric
 
 
+@deprecated(Deprecation("1.13.0", "Use :func:`scanpy.pp.bbknn` instead."))
 @doctest_needs("bbknn")
 def bbknn(  # noqa: PLR0913
     adata: AnnData,
@@ -45,6 +48,7 @@ def bbknn(  # noqa: PLR0913
 
         This is just a wrapper of :func:`bbknn.bbknn`: up to date docstring,
         more information and bug reports there.
+        :func:`scanpy.pp.bbknn` implements the same algorithm without the extra dependency.
 
     Params
     ------

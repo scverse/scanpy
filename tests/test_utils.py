@@ -20,7 +20,13 @@ from scanpy._utils import (
     check_nonnegative_integers,
     descend_classes_and_funcs,
 )
-from scanpy._utils.random import _LegacyRng, ith_k_tuple, random_k_tuples, random_str
+from scanpy._utils.random import (
+    _LegacyRng,
+    _rng_kwds,
+    ith_k_tuple,
+    random_k_tuples,
+    random_str,
+)
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
@@ -218,6 +224,27 @@ def _mk_legacy_random(func: str, *, direct: bool, seed: int | None) -> np.ndarra
             pytest.fail(f"Unknown {func=}")
 
 
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        pytest.param(lambda *, rng=None: None, {"rng"}, id="rng"),
+        pytest.param(lambda *, random_state=None: None, {"random_state"}, id="legacy"),
+        pytest.param(lambda *, rng=None, random_state=None: None, {"rng"}, id="both"),
+        pytest.param(lambda: None, set(), id="neither"),
+    ],
+)
+def test_rng_kwds(target: Callable, expected: set[str]) -> None:
+    """Only the RNG parameter(s) a target accepts are passed, preferring `rng`."""
+    rng = np.random.default_rng()
+    kwds = _rng_kwds(target, rng)
+    assert kwds.keys() == expected
+    target(**kwds)  # the target can actually be called with them
+    if "rng" in expected:
+        assert kwds["rng"] is rng
+    if "random_state" in expected:
+        assert isinstance(kwds["random_state"], np.random.RandomState)
+
+
 def test_ith_k_tuple() -> None:
     """Test that the k-tuples appear in the expected order."""
     np.testing.assert_equal(
@@ -250,30 +277,39 @@ def test_random_str() -> None:
     assert len(unique) == len(strings)
 
 
-@pytest.mark.parametrize("success", [True, False], ids=["success", "exception"])
-def test_numba_thread_limit_restores_previous_value(
-    *, monkeypatch: pytest.MonkeyPatch, success: bool
-) -> None:
-    was_set_to = []
-    monkeypatch.setattr(numba, "get_num_threads", lambda: 8)
-    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
+NUMBA_MAX = numba.config.NUMBA_NUM_THREADS
 
-    with suppress(RuntimeError), _numba_thread_limit(2):
-        if not success:
+
+@pytest.mark.parametrize(
+    ("n_threads", "expected"),
+    [(-1, NUMBA_MAX), (1, 1), (NUMBA_MAX + 5, NUMBA_MAX), (0, 1)],
+)
+def test_numba_thread_limit_resolves(n_threads: int, expected: int) -> None:
+    with _numba_thread_limit(n_threads) as resolved:
+        assert resolved == expected
+        assert numba.get_num_threads() == expected
+
+
+def test_numba_thread_limit_warns_below_minus_one() -> None:
+    with (
+        pytest.warns(UserWarning, match="n_threads < -1 is not supported"),
+        _numba_thread_limit(-2) as resolved,
+    ):
+        assert resolved == NUMBA_MAX
+
+
+@pytest.mark.parametrize("fail", [False, True], ids=["success", "exception"])
+def test_numba_thread_limit_restores(*, fail: bool) -> None:
+    outer = numba.get_num_threads()
+    with suppress(RuntimeError), _numba_thread_limit(1):
+        assert numba.get_num_threads() == 1
+        if fail:
             raise RuntimeError
+    assert numba.get_num_threads() == outer
 
-    assert was_set_to == [2, 8]
 
-
-def test_numba_thread_limit_clamps_to_configured_maximum(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    was_set_to = []
-    monkeypatch.setattr(numba, "get_num_threads", lambda: 3)
-    monkeypatch.setattr(numba, "set_num_threads", was_set_to.append)
-    monkeypatch.setattr(numba.config, "NUMBA_NUM_THREADS", 4)
-
-    with _numba_thread_limit(99):
-        pass
-
-    assert was_set_to == [4, 3]
+def test_numba_thread_limit_none_is_noop() -> None:
+    outer = numba.get_num_threads()
+    with _numba_thread_limit(None) as resolved:
+        assert resolved is None
+        assert numba.get_num_threads() == outer

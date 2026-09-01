@@ -17,15 +17,11 @@ from docutils import nodes
 from packaging.version import Version
 from sphinxcontrib.katex import NODEJS_BINARY
 
-# Don’t use tkinter agg when importing scanpy → … → matplotlib
-matplotlib.use("agg")
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 HERE = Path(__file__).parent
 sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
-os.environ["SPHINX_RUNNING"] = "1"  # for scanpy._singleton
-
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
 
 
 # -- General configuration ------------------------------------------------
@@ -73,12 +69,13 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_exec_jupyter",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.katex",
-    "matplotlib.sphinxext.plot_directive",
     "sphinx_autodoc_typehints",  # needs to be after napoleon
     "git_ref",  # needs to be before scanpydoc.rtd_github_links
     "scanpydoc",  # needs to be before sphinx.ext.linkcode
+    "scverse_misc.sphinx_ext",
     "sphinx.ext.linkcode",
     "sphinx_design",
     "sphinx_issues",
@@ -104,6 +101,15 @@ napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
+exec_jupyter_code = """
+# setup notebook backend
+import matplotlib
+matplotlib.use("module://matplotlib_inline.backend_inline")
+# import all slow optional imports before running code
+import scanpy, umap, seaborn, sklearn.metrics, pynndescent, networkx
+del scanpy, umap, seaborn, sklearn, pynndescent, networkx, matplotlib
+"""
+holoviews_backends = ["bokeh", "matplotlib", "plotly"]
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
@@ -117,10 +123,12 @@ myst_heading_anchors = 3
 myst_ignore_mime_types = [  # from custom extension patch_myst_nb
     "application/vnd.microsoft.datawrangler.viewer.v0+json",
 ]
-nb_output_stderr = "remove"
-nb_execution_mode = "off"
+nb_execution_mode = "cache"
+nb_execution_excludepatterns = [
+    f"{d}{'/*' * n}" for d in ["tutorials", "how-to"] for n in (1, 2, 3)
+]
+nb_execution_show_tb = bool(os.environ.get("READTHEDOCS"))
 nb_merge_streams = True
-
 
 ogp_site_url = "https://scanpy.scverse.org/en/stable/"
 ogp_image = f"{ogp_site_url}_static/Scanpy_Logo_BrightFG.svg"
@@ -143,6 +151,8 @@ intersphinx_mapping = dict(
     decoupler=("https://decoupler.readthedocs.io/en/stable/", None),
     fast_array_utils=("https://fast-array-utils.scverse.org/en/stable/", None),
     h5py=("https://docs.h5py.org/en/stable/", None),
+    holoviews=("https://holoviews.org/", None),
+    hv_anndata=("https://hv-anndata.readthedocs.io/en/latest/", None),
     zarr=("https://zarr.readthedocs.io/en/stable/", None),
     ipython=("https://ipython.readthedocs.io/en/stable/", None),
     igraph=("https://python.igraph.org/en/stable/api/", None),
@@ -151,6 +161,7 @@ intersphinx_mapping = dict(
     matplotlib=("https://matplotlib.org/stable/", None),
     networkx=("https://networkx.org/documentation/stable/", None),
     numpy=("https://numpy.org/doc/stable/", None),
+    palantir=("https://palantir.readthedocs.io/en/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     pydeseq2=("https://pydeseq2.readthedocs.io/en/stable/", None),
     pynndescent=("https://pynndescent.readthedocs.io/en/latest/", None),
@@ -158,6 +169,7 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3", None),
     rapids_singlecell=("https://rapids-singlecell.readthedocs.io/en/latest/", None),
     scipy=("https://docs.scipy.org/doc/scipy/", None),
+    scverse_misc=("https://scverse-misc.readthedocs.io/stable/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     session_info2=("https://session-info2.readthedocs.io/en/stable/", None),
     squidpy=("https://squidpy.readthedocs.io/en/stable/", None),
@@ -168,12 +180,14 @@ intersphinx_mapping = dict(
 array_support: dict[str, tuple[list[str], list[str]]] = {
     "experimental.pp.highly_variable_genes": (["np", "sp"], []),
     "get.aggregate": (["np", "sp", "da"], []),
+    "pp.bbknn": (["np", "sp"], []),
     "pp.calculate_qc_metrics": (["np", "sp", "da"], []),
     "pp.combat": (["np"], []),
     "pp.downsample_counts": (["np", "sp[csr]"], []),
     "pp.filter_cells": (["np", "sp", "da"], []),
     "pp.filter_genes": (["np", "sp", "da"], []),
     "pp.harmony_integrate": (["np"], []),
+    "pp.hashsolo": (["np", "sp"], []),
     "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
     "pp.log1p": (["np", "sp", "da"], []),
     "pp.neighbors": (["np", "sp"], []),
@@ -256,9 +270,6 @@ texinfo_documents = [
 qualname_overrides = {
     "pathlib._local.Path": "pathlib.Path",
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.metrics.DistanceMetric",
-    "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
-    "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
-    "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
     # https://github.com/pandas-dev/pandas/issues/63810
     "pandas.api.typing.aliases.AnyArrayLike": ("doc", "pandas:reference/aliases"),
@@ -272,17 +283,17 @@ nitpick_ignore = [
     # Technical issues
     ("py:class", "numpy.int64"),  # documented as “attribute”
     ("py:class", "numpy._typing._dtype_like._SupportsDType"),
+    ("py:obj", "numpy._typing._dtype_like._SupportsDType"),
     ("py:class", "numpy._typing._dtype_like._DTypeDict"),
     # Will probably be documented
-    ("py:class", "scanpy._settings.Verbosity"),
     ("py:class", "scanpy.neighbors.OnFlySymMatrix"),
-    ("py:class", "scanpy.plotting._baseplot_class.BasePlot"),
+    ("py:class", "scanpy.pl.BasePlot"),
     # Currently undocumented
     # https://github.com/mwaskom/seaborn/issues/1810
     ("py:class", "seaborn.matrix.ClusterGrid"),
     ("py:class", "samalg.SAM"),
     # Won’t be documented
-    ("py:class", "scanpy.plotting._utils._AxesSubplot"),
+    ("py:class", "scanpy.pl._AxesSubplot"),
     ("py:class", "scanpy._utils.Empty"),
     ("py:class", "numpy.random.mtrand.RandomState"),
     ("py:class", "scanpy.neighbors._types.KnnTransformerLike"),

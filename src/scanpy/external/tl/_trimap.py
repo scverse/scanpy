@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ... import logging as logg
 from ..._compat import CSBase
+from ..._keys import _existing_preset_keys
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
 
@@ -15,6 +18,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `trimap <https://github.com/eamid/trimap>`_ package directly, or its "
+        "`JAX implementation <https://github.com/google-research/google-research/tree/master/trimap>`_.",
+    )
+)
 @doctest_needs("trimap")
 def trimap(  # noqa: PLR0913
     adata: AnnData,
@@ -86,7 +96,11 @@ def trimap(  # noqa: PLR0913
     >>> import scanpy.external as sce
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> pbmc = sce.tl.trimap(pbmc, copy=True)
+    FutureWarning: The function trimap is deprecated and will be removed in the future. Use the `trimap <https://github.com/eamid/trimap>`_ package directly, or its `JAX implementation <https://github.com/google-research/google-research/tree/master/trimap>`_.
+        pbmc = sce.tl.trimap(pbmc, copy=True)
     >>> sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
+    FutureWarning: The function trimap is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='trimap'`` instead.
+        sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
 
     """
     try:
@@ -100,9 +114,9 @@ def trimap(  # noqa: PLR0913
     verbosity = settings.verbosity if verbose is None else verbose
     verbose = verbosity if isinstance(verbosity, bool) else verbosity > 0
 
-    if "X_pca" in adata.obsm:
-        n_dim_pca = adata.obsm["X_pca"].shape[1]
-        x = adata.obsm["X_pca"][:, : min(n_dim_pca, 100)]
+    if keys := _existing_preset_keys(adata, "pca"):
+        n_dim_pca = adata.obsm[keys.obsm].shape[1]
+        x = adata.obsm[keys.obsm][:, : min(n_dim_pca, 100)]
     else:
         x = adata.X
         if isinstance(x, CSBase):
@@ -111,7 +125,7 @@ def trimap(  # noqa: PLR0913
                 "use a dense matrix or apply pca first."
             )
             raise ValueError(msg)
-        logg.warning("`X_pca` not found. Run `sc.pp.pca` first for speedup.")
+        logg.warning("`pca`/`X_pca` not found. Run `sc.pp.pca` first for speedup.")
     x_trimap = TRIMAP(
         n_dims=n_components,
         n_inliers=n_inliers,

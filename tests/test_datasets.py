@@ -10,12 +10,15 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pooch.core
 import pytest
+import requests
 from anndata.tests.helpers import assert_adata_equal
 from packaging.version import Version
 
 import scanpy as sc
 from scanpy._compat import pkg_version
+from scanpy.io._download import download
 from testing.scanpy._helpers import data
 from testing.scanpy._pytest.marks import needs
 
@@ -23,6 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from anndata import AnnData
+    from pooch.typing import Downloader
 
 
 @pytest.fixture(autouse=True)
@@ -166,6 +170,86 @@ def test_download_failure() -> None:
     with pytest.raises(HTTPError) as excinfo:
         sc.datasets.ebi_expression_atlas("not_a_real_accession")
     excinfo.value.close()
+
+
+@pytest.fixture
+def fake_downloader(monkeypatch: pytest.MonkeyPatch) -> Callable[[Downloader], None]:
+    """Let a test stand in for the downloader pooch would pick for a URL."""
+
+    def use(downloader: Downloader) -> None:
+        monkeypatch.setattr(
+            pooch.core, "choose_downloader", lambda url, progressbar=False: downloader
+        )
+
+    return use
+
+
+def test_download_atomic(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
+) -> None:
+    """The destination must not appear until the download finished (#4097)."""
+    content = b"0123456789" * 5_000
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest_present_during_download: list[bool] = []
+
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        with Path(output_file).open("wb") as f:
+            for start in range(0, len(content), 1024):
+                dest_present_during_download.append(dest.exists())
+                f.write(content[start : start + 1024])
+
+    fake_downloader(downloader)
+
+    download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == content
+    assert len(dest_present_during_download) > 1
+    assert not any(dest_present_during_download)
+    assert list(dest.parent.iterdir()) == [dest]
+
+
+def test_download_leaves_nothing_behind_on_failure(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
+) -> None:
+    """A failed download must not leave a partial file behind (#4097)."""
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    attempts = 0
+
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        nonlocal attempts
+        attempts += 1
+        Path(output_file).write_bytes(b"partial")
+        msg = "connection reset"
+        raise requests.ConnectionError(msg)
+
+    fake_downloader(downloader)
+
+    with pytest.raises(requests.ConnectionError, match="connection reset"):
+        download("http://example.invalid/data.bin", dest)
+
+    assert attempts == 4  # the initial try plus `retry_if_failed=3`
+    assert list(dest.parent.iterdir()) == []
+
+
+def test_download_keeps_existing_file(
+    tmp_path: Path, fake_downloader: Callable[[Downloader], None]
+) -> None:
+    """An already-present destination is kept as-is, not re-downloaded (#4097)."""
+    dest = tmp_path / "cache" / "data.bin"
+    dest.parent.mkdir()
+    dest.write_bytes(b"complete")
+
+    def downloader(url: str, output_file: str, pooch_: object) -> None:
+        pytest.fail("should not have been downloaded again")
+
+    fake_downloader(downloader)
+
+    download("http://example.invalid/data.bin", dest)
+
+    assert dest.read_bytes() == b"complete"
+    assert list(dest.parent.iterdir()) == [dest]
 
 
 # These are tested via doctest

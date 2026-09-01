@@ -9,12 +9,17 @@ from itertools import product
 from typing import TYPE_CHECKING
 
 import anndata as ad
+import numpy as np
+import zarr
+from anndata.acc import A
 
 import scanpy as sc
 
 from ._utils import get_dataset, param_skipper
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from ._utils import Dataset, KeyX
 
 
@@ -47,17 +52,6 @@ class PreprocessingSuite:  # noqa: D101
     def peakmem_pca(self, *_) -> None:
         sc.pp.pca(self.adata, svd_solver="arpack")
 
-    def time_highly_variable_genes(self, *_) -> None:
-        # the default flavor runs on log-transformed data
-        sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
-        )
-
-    def peakmem_highly_variable_genes(self, *_) -> None:
-        sc.pp.highly_variable_genes(
-            self.adata, min_mean=0.0125, max_mean=3, min_disp=0.5
-        )
-
     # regress_out is very slow for this dataset
     @skip_when(dataset={"pbmc3k"})
     def time_regress_out(self, *_) -> None:
@@ -72,3 +66,102 @@ class PreprocessingSuite:  # noqa: D101
 
     def peakmem_scale(self, *_) -> None:
         sc.pp.scale(self.adata, max_value=10)
+
+
+class NeighborsSuite:
+    """Benchmark neighbor graph construction.
+
+    Both `pp.neighbors` and `pp.bbknn` pick an exact or approximate kNN backend
+    depending on how many observations they have to index,
+    so the small and the big dataset cover the two paths.
+    Both have a batch key, as `pp.bbknn` needs one.
+    """
+
+    params: tuple[list[Dataset]] = (["bmmc", "lung93k"],)
+    param_names = ("dataset",)
+
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        for dataset in self.params[0]:
+            adata, batch_key = get_dataset(dataset)
+            sc.pp.pca(adata)  # so we time the kNN search, not the PCA
+            adata.uns["batch_key"] = batch_key
+            adata.write_zarr(f"{dataset}.zarr")
+
+    def setup(self, dataset: Dataset) -> None:
+        self.adata = ad.read_zarr(f"{dataset}.zarr")
+
+    def time_neighbors(self, *_) -> None:
+        sc.pp.neighbors(self.adata)
+
+    def peakmem_neighbors(self, *_) -> None:
+        sc.pp.neighbors(self.adata)
+
+    def time_bbknn(self, *_) -> None:
+        sc.pp.bbknn(self.adata, batches=A.obs[self.adata.uns["batch_key"]])
+
+    def peakmem_bbknn(self, *_) -> None:
+        sc.pp.bbknn(self.adata, batches=A.obs[self.adata.uns["batch_key"]])
+
+
+class HVGSuite:  # noqa: D101
+    params = (["seurat_v3", "cell_ranger", "seurat"], [True, False])
+    param_names = ("flavor", "use_dask")
+
+    def setup_cache(self) -> None:
+        """Without this caching, asv was running several processes which meant the data was repeatedly downloaded."""
+        adata, _ = get_dataset("lung93k")
+        adata.write_zarr("lung93k.zarr")
+        obs = np.arange(adata.shape[0])
+        np.random.default_rng().shuffle(obs)
+        adata[obs].write_zarr("lung93k_shuffled.zarr")
+
+    def setup(
+        self,
+        flavor: Literal["seurat_v3", "cell_ranger", "seurat"],
+        use_dask: bool,  # noqa: FBT001
+    ) -> None:
+        if use_dask:
+            if flavor != "seurat_v3":
+                # This benchmark only really makes sense for seurat v3 as that has been optimized.
+                raise NotImplementedError()
+            z = zarr.open("lung93k_shuffled.zarr")
+            self.adata = ad.AnnData(
+                obs=ad.io.read_elem(z["obs"]),
+                var=ad.io.read_elem(z["var"]),
+                layers={
+                    "counts": ad.experimental.read_elem_lazy(z["layers"]["counts"])
+                },
+                X=ad.experimental.read_elem_lazy(z["X"]),
+            )
+            # Times out on the benchmark machine with full dataset
+            self.adata = self.adata[
+                self.adata.obs["PatientNumber"].isin(["1", "2", "3"])
+            ].copy()
+        else:
+            self.adata = ad.read_zarr("lung93k.zarr")
+        sc.pp.filter_genes(self.adata, min_cells=3)
+        self.flavor = flavor
+
+    def time_highly_variable_genes(self, *_) -> None:
+        # the default flavor runs on log-transformed data
+        sc.pp.highly_variable_genes(
+            self.adata,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+            flavor=self.flavor,
+            batch_key="PatientNumber",
+            **({"layer": "counts"} if self.flavor == "seurat_v3" else {}),
+        )
+
+    def peakmem_highly_variable_genes(self, *_) -> None:
+        sc.pp.highly_variable_genes(
+            self.adata,
+            min_mean=0.0125,
+            max_mean=3,
+            min_disp=0.5,
+            flavor=self.flavor,
+            batch_key="PatientNumber",
+            **({"layer": "counts"} if self.flavor == "seurat_v3" else {}),
+        )

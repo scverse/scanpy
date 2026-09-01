@@ -1,5 +1,5 @@
 {
-    "[python][toml][json][jsonc]": {
+    "[python][json][jsonc]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit",
@@ -8,9 +8,6 @@
     },
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
-    },
-    "[toml]": {
-        "editor.defaultFormatter": "tamasfe.even-better-toml",
     },
     "[json][jsonc]": {
         "editor.defaultFormatter": "biomejs.biome",

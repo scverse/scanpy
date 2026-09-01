@@ -1,11 +1,9 @@
 # https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
-submodules:
-  include: all
 build:
-  os: ubuntu-24.04
+  os: ubuntu-26.04
   tools:
-    python: '3.13'
+    python: '3.14'
   jobs:
     post_checkout:
       # unshallow so version can be derived from tag
@@ -19,5 +17,5 @@ build:
       - ( find docs/release-notes -regex '[^.]+[.][^.]+.md' | grep -q . ) && uvx hatch run towncrier build --keep || true
     build:
       html:
-        - uvx hatch run docs:build
+        - uvx --from=hatch!=1.18.0 hatch run docs:build -T
         - mv docs/_build $READTHEDOCS_OUTPUT

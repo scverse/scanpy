@@ -7,14 +7,16 @@ from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._docs import doc_rng
-from .._settings import settings
+from .._keys import _embedding_keys
+from .._settings import Default, settings
 from .._utils import NeighborsView, _doc_params
 from .._utils.random import (
     _accepts_legacy_random_state,
     _legacy_random_state,
     _LegacyRng,
 )
-from ._utils import _choose_representation, get_init_pos_from_paga
+from ..get.get import _rep_from_json
+from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -44,7 +46,7 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    key_added: str | None = None,
+    key_added: str | Default | None = Default(preset=("umap", "key_added")),
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
@@ -144,7 +146,7 @@ def umap(  # noqa: PLR0913
     rng = np.random.default_rng(rng)
     adata = adata.copy() if copy else adata
 
-    key_obsm, key_uns = ("X_umap", "umap") if key_added is None else [key_added] * 2
+    keys = _embedding_keys("umap", key_added)
 
     if neighbors_key is None:  # backwards compat
         neighbors_key = "neighbors"
@@ -168,7 +170,7 @@ def umap(  # noqa: PLR0913
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
-    adata.uns[key_uns] = dict(params=dict(a=a, b=b, **meta_random_state))
+    adata.uns[keys.uns] = dict(params=dict(a=a, b=b, **meta_random_state))
     if isinstance(init_pos, str) and init_pos in adata.obsm:
         init_coords = adata.obsm[init_pos]
     elif isinstance(init_pos, str) and init_pos == "paga":
@@ -181,9 +183,9 @@ def umap(  # noqa: PLR0913
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     neigh_params = neighbors["params"]
-    x = _choose_representation(
+    x = _choose_representation_compat(
         adata,
-        use_rep=neigh_params.get("use_rep", None),
+        use_rep=_rep_from_json(neigh_params.get("use_rep", None)),
         n_pcs=neigh_params.get("n_pcs", None),
         silent=True,
     )
@@ -215,14 +217,14 @@ def umap(  # noqa: PLR0913
     else:
         msg = f"Unknown method {method}"
         raise ValueError(msg)
-    adata.obsm[key_obsm] = x_umap  # annotate samples with UMAP coordinates
+    adata.obsm[keys.obsm] = x_umap  # annotate samples with UMAP coordinates
     logg.info(
         "    finished",
         time=start,
         deep=(
             "added\n"
-            f"    {key_obsm!r}, UMAP coordinates (adata.obsm)\n"
-            f"    {key_uns!r}, UMAP parameters (adata.uns)"
+            f"    {keys.obsm!r}, UMAP coordinates (adata.obsm)\n"
+            f"    {keys.uns!r}, UMAP parameters (adata.uns)"
         ),
     )
     return adata if copy else None

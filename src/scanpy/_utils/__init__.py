@@ -30,24 +30,24 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
-from packaging.version import Version
 
 from .. import logging as logg
-from .._compat import CSBase, DaskArray, SpBase, _CSArray, pkg_version, warn
+from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
-    from pathlib import Path
     from typing import Any
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
     from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
-    from ..neighbors import NeighborsParams, RPForestDict
+    from ..neighbors import RPForestDict
+    from ..neighbors._types import NeighborsParams
 
     type _MemoryArray = NDArray | CSBase
     type _SupportedArray = _MemoryArray | DaskArray
@@ -58,6 +58,7 @@ __all__ = [
     "NeighborsView",
     "_choose_graph",
     "_doc_params",
+    "_get_basis",
     "_numba_thread_limit",
     "_resolve_axis",
     "annotate_doc_types",
@@ -65,7 +66,6 @@ __all__ = [
     "axis_nnz",
     "check_array_function_arguments",
     "check_nonnegative_integers",
-    "check_presence_download",
     "check_use_raw",
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
@@ -74,7 +74,7 @@ __all__ = [
     "get_literal_vals",
     "indent",
     "is_backed_type",
-    "is_backed_type",
+    "obs_acc",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -254,7 +254,7 @@ def check_array_function_arguments(**kwargs):
 
 def check_use_raw(
     adata: AnnData,
-    use_raw: None | bool,  # noqa: FBT001
+    use_raw: bool | None,  # noqa: FBT001
     *,
     layer: str | None = None,
 ) -> bool:
@@ -573,6 +573,14 @@ def get_literal_vals(typ: UnionType | TypeAliasType | Any) -> KeysView[Any]:
     raise TypeError(msg)
 
 
+def _get_basis_key(adata: AnnData, basis: str) -> str | None:
+    if basis in adata.obsm:
+        return basis
+    if f"X_{basis}" in adata.obsm:
+        return f"X_{basis}"
+    return None
+
+
 # --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
@@ -728,21 +736,9 @@ def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(x, axis=axis)
 
 
-if pkg_version("scipy") >= Version("1.15"):
-    # newer scipy versions support the `axis` argument for count_nonzero
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        return x.count_nonzero(axis=axis)
-
-else:
-    # older scipy versions don’t have any way to get the nnz of a sparse array
-    @axis_nnz.register(CSBase)
-    def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
-        if isinstance(x, _CSArray):
-            from scipy.sparse import csc_array, csr_array  # noqa: TID251
-
-            x = (csr_array if x.format == "csr" else csc_array)(x)
-        return x.getnnz(axis=axis)
+@axis_nnz.register(CSBase)
+def _(x: CSBase, /, axis: Literal[0, 1]) -> np.ndarray:
+    return x.count_nonzero(axis=axis)
 
 
 @axis_nnz.register(DaskArray)
@@ -836,20 +832,12 @@ def select_groups(
     if len(groups_ids) == 0:
         msg = (
             f"{np.array(groups_order_subset)} invalid! specify valid "
-            f"groups_order (or indices) from {adata.obs[key].cat.categories}",
+            f"groups_order (or indices) from {adata.obs[key].cat.categories}"
         )
         raise RuntimeError(msg)
     groups_masks_obs = groups_masks_obs[groups_ids]
     groups_order_subset = adata.obs[key].cat.categories[groups_ids].to_numpy()
     return groups_order_subset, groups_masks_obs
-
-
-def check_presence_download(filename: Path, backup_url: str):
-    """Check if file is present otherwise download."""
-    if not filename.is_file():
-        from ..readwrite import _download
-
-        _download(backup_url, filename)
 
 
 # --------------------------------------------------------------------------------
@@ -998,6 +986,16 @@ def _resolve_axis(
         return (1, "var")
     msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
     raise ValueError(msg)
+
+
+def obs_acc(obs_col: str) -> str | AdRef:
+    from .._settings import Preset, settings
+
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        return A.obs[obs_col]
+    return obs_col
 
 
 def is_backed_type(x: object, /) -> bool:

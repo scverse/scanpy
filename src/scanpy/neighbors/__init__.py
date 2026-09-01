@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import contextlib
+import sys
 from inspect import signature
 from textwrap import indent
-from types import MappingProxyType
-from typing import TYPE_CHECKING, NamedTuple, TypedDict
+from typing import TYPE_CHECKING, NamedTuple
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import scipy
@@ -17,69 +20,42 @@ from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, SpBase, pkg_version, warn
 from .._docs import doc_rng
-from .._settings import settings
+from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
-from .._utils.random import (
-    _accepts_legacy_random_state,
-    _legacy_random_state,
-    _LegacyRng,
-)
+from .._utils.random import _accepts_legacy_random_state, _LegacyRng
+from ..get.get import _rep_to_json
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
     _get_indices_distances_from_sparse_matrix,
+    _get_metadata,
     _get_sparse_matrix_from_indices_distances,
+    _make_transformer,
 )
 from ._connectivity import umap
 from ._doc import doc_n_pcs, doc_use_rep
-from ._types import _KnownTransformer, _Method
+from ._types import KwdsForTransformer, _Method
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
-    from typing import Any, Literal, NotRequired, TypeAlias, Unpack
+    from typing import Any, Literal
 
     from anndata import AnnData
     from igraph import Graph
     from numpy.typing import NDArray
 
-    from .._utils.random import RNGLike, SeedLike, _LegacyRandom
-    from ._types import KnnTransformerLike, _Metric, _MetricFn
-
-    # TODO: make `type` when https://github.com/sphinx-doc/sphinx/pull/13508 is released
-    RPForestDict: TypeAlias = Mapping[str, Mapping[str, np.ndarray]]  # noqa: UP040
+    from .._utils.random import RNGLike, SeedLike
+    from ..get.get import RepAcc
+    from ._types import (
+        KnnTransformerLike,
+        RPForestDict,
+        _KnownTransformer,
+        _Metric,
+        _MetricFn,
+    )
 
 
 SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
-
-
-class KwdsForTransformer(TypedDict):
-    """Keyword arguments passed to a _KnownTransformer.
-
-    IMPORTANT: when changing the parameters set here,
-    update the “*ignored*” part in the parameter docs!
-    """
-
-    n_neighbors: int
-    metric: _Metric | _MetricFn
-    metric_params: Mapping[str, Any]
-    random_state: _LegacyRandom
-
-
-class NeighborsDict(TypedDict):  # noqa: D101
-    connectivities_key: str
-    distances_key: str
-    params: NeighborsParams
-    rp_forest: NotRequired[RPForestDict]
-
-
-class NeighborsParams(TypedDict):  # noqa: D101
-    n_neighbors: int
-    method: _Method
-    random_state: _LegacyRandom
-    metric: _Metric | _MetricFn | None
-    metric_kwds: NotRequired[Mapping[str, Any]]
-    use_rep: NotRequired[str]
-    n_pcs: NotRequired[int]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
@@ -90,12 +66,12 @@ def neighbors(  # noqa: PLR0913
     n_pcs: int | None = None,
     *,
     distances: np.ndarray | SpBase | None = None,
-    use_rep: str | None = None,
+    use_rep: RepAcc | str | None = None,
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn | None = None,
-    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+    metric_kwds: Mapping[str, Any] = frozendict({}),
     rng: SeedLike | RNGLike | None = None,
     key_added: str | None = None,
     copy: bool = False,
@@ -124,7 +100,7 @@ def neighbors(  # noqa: PLR0913
         is `False`, a Gaussian kernel width is set to the distance of the
         `n_neighbors` neighbor.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     {n_pcs}
     {use_rep}
     knn
@@ -156,14 +132,14 @@ def neighbors(  # noqa: PLR0913
         If `distances` is given, this parameter is simply stored in `.uns` (see below),
         otherwise defaults to `'euclidean'`.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     metric_kwds
         Options for the metric.
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     {rng}
 
-        *ignored if ``transformer`` is an instance.*
+        *ignored if* ``transformer`` *is an instance.*
     key_added
         If not specified, the neighbors data is stored in `.uns['neighbors']`,
         distances and connectivities are stored in `.obsp['distances']` and
@@ -275,7 +251,7 @@ def neighbors(  # noqa: PLR0913
         metric=metric,
         **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=use_rep)),
+        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
@@ -298,42 +274,11 @@ def neighbors(  # noqa: PLR0913
     return adata if copy else None
 
 
-def _get_metadata(
-    key_added: str | None,
-    **params: Unpack[NeighborsParams],
-) -> tuple[str, NeighborsDict]:
-    if key_added is None:
-        return "neighbors", NeighborsDict(
-            connectivities_key="connectivities",
-            distances_key="distances",
-            params=params,
-        )
-    return key_added, NeighborsDict(
-        connectivities_key=f"{key_added}_connectivities",
-        distances_key=f"{key_added}_distances",
-        params=params,
-    )
-
-
 class FlatTree(NamedTuple):  # noqa: D101
     hyperplanes: None
     offsets: None
     children: None
     indices: None
-
-
-def _backwards_compat_get_full_x_diffmap(adata: AnnData) -> np.ndarray:
-    if "X_diffmap0" in adata.obs:
-        return np.c_[adata.obs["X_diffmap0"].values[:, None], adata.obsm["X_diffmap"]]
-    else:
-        return adata.obsm["X_diffmap"]
-
-
-def _backwards_compat_get_full_eval(adata: AnnData):
-    if "X_diffmap0" in adata.obs:
-        return np.r_[1, adata.uns["diffmap_evals"]]
-    else:
-        return adata.uns["diffmap_evals"]
 
 
 def _make_forest_dict(forest):
@@ -432,6 +377,7 @@ class Neighbors:
         *,
         n_dcs: int | None = None,
         neighbors_key: str | None = None,
+        diffmap_key: str | None = None,
     ) -> None:
         self._adata = adata
         self._init_iroot()
@@ -484,9 +430,14 @@ class Neighbors:
 
                 self._connected_components = connected_components(self._connectivities)
                 self._number_connected_components = self._connected_components[0]
-        if "X_diffmap" in adata.obsm:
-            self._eigen_values = _backwards_compat_get_full_eval(adata)
-            self._eigen_basis = _backwards_compat_get_full_x_diffmap(adata)
+
+        if keys := (
+            _EmbeddingKeys(diffmap_key, diffmap_key)
+            if diffmap_key
+            else _existing_preset_keys(adata, "diffmap")
+        ):
+            self._eigen_values = adata.uns[keys.uns]
+            self._eigen_basis = adata.obsm[keys.obsm]
             if n_dcs is not None:
                 if n_dcs > len(self._eigen_values):
                     msg = (
@@ -587,12 +538,12 @@ class Neighbors:
         n_neighbors: int = 30,
         n_pcs: int | None = None,
         *,
-        use_rep: str | None = None,
+        use_rep: RepAcc | str | None = None,
         knn: bool = True,
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
         metric: _Metric | _MetricFn = "euclidean",
-        metric_kwds: Mapping[str, Any] = MappingProxyType({}),
+        metric_kwds: Mapping[str, Any] = frozendict({}),
         rng: SeedLike | RNGLike | None = None,
     ) -> None:
         """Compute distances and connectivities of neighbors.
@@ -615,7 +566,7 @@ class Neighbors:
         if `method` is not `None`, `.connectivities`.
 
         """
-        from ..tools._utils import _choose_representation
+        from ..tools._utils import _choose_representation_compat
 
         start_neighbors = logg.debug("computing neighbors")
         if transformer is not None and not isinstance(transformer, str):
@@ -629,7 +580,7 @@ class Neighbors:
             n_neighbors=n_neighbors,
             metric=metric,
             metric_params=metric_kwds,  # most use _params, not _kwds
-            random_state=_legacy_random_state(rng),
+            **({} if rng is None else dict(rng=np.random.default_rng(rng))),
         )
         method, transformer, shortcut = self._handle_transformer(
             method, transformer, knn=knn, kwds=transformer_kwds_default
@@ -641,7 +592,7 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        x = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        x = _choose_representation_compat(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors
@@ -729,13 +680,8 @@ class Neighbors:
         `method` will be coerced to `'gauss'`, `'umap'`, or `'jaccard'`.
         `transformer` is coerced from a str or instance to an instance class.
 
-        If `transformer` is `None` and there are few data points,
-        `transformer` will be set to a brute force
-        :class:`~sklearn.neighbors.KNeighborsTransformer`.
-
-        If `transformer` is `None` and there are many data points,
-        `transformer` will be set like `umap` does (i.e. to a
-        ~`pynndescent.PyNNDescentTransformer` with custom `n_trees` and `n_iter`).
+        If `transformer` is `None`, it is chosen based on the number of data points,
+        see :func:`~scanpy.neighbors._common._make_transformer`.
         """
         # legacy logic
         use_dense_distances = (
@@ -759,40 +705,16 @@ class Neighbors:
 
         # Coerce `transformer` to an instance
         if shortcut:
-            from sklearn.neighbors import KNeighborsTransformer
-
-            assert transformer in {None, "sklearn"}
             n_neighbors = self._adata.n_obs - 1
             if knn:  # only obey n_neighbors arg if knn set
                 n_neighbors = min(n_neighbors, kwds["n_neighbors"])
-            transformer = KNeighborsTransformer(
-                algorithm="brute",
-                n_jobs=settings.n_jobs,
-                n_neighbors=n_neighbors,
-                metric=kwds["metric"],
-                metric_params=dict(kwds["metric_params"]),  # needs dict
-                # no random_state
-            )
-        elif transformer is None or transformer == "pynndescent":
-            from pynndescent import PyNNDescentTransformer
-
-            kwds = kwds.copy()
-            kwds["metric_kwds"] = kwds.pop("metric_params")
-            if transformer is None:
-                # Use defaults from UMAP’s `nearest_neighbors` function
-                kwds.update(
-                    n_jobs=settings.n_jobs,
-                    n_trees=min(64, 5 + round((self._adata.n_obs) ** 0.5 / 20.0)),
-                    n_iters=max(5, round(np.log2(self._adata.n_obs))),
-                )
-            transformer = PyNNDescentTransformer(**kwds)
-        elif isinstance(transformer, str):
-            msg = (
-                f"Unknown transformer: {transformer}. "
-                f"Try passing a class or one of {get_literal_vals(_KnownTransformer)}"
-            )
-            raise ValueError(msg)
-        # else `transformer` is probably an instance
+            kwds = {**kwds, "n_neighbors": n_neighbors}
+        transformer = _make_transformer(
+            transformer,
+            shortcut=shortcut,
+            n_index=self._adata.n_obs,
+            **kwds,
+        )
         return conn_method, transformer, shortcut
 
     def compute_transitions(self, *, density_normalize: bool = True) -> None:

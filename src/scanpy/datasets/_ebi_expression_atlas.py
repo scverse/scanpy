@@ -13,7 +13,7 @@ from scipy import sparse
 from .. import logging as logg
 from .._settings import settings
 from .._utils._doctests import doctest_internet
-from ..readwrite import _download
+from ..io._download import download
 from ._datasets import _doctest_skipif_old_anndata
 from ._utils import check_datasetdir_exists
 
@@ -54,8 +54,8 @@ def download_experiment(accession: str):
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    _download(design_url, experiment_dir / "experimental_design.tsv")
-    _download(mtx_url, experiment_dir / "expression_archive.zip")
+    download(design_url, experiment_dir / "experimental_design.tsv")
+    download(mtx_url, experiment_dir / "expression_archive.zip")
 
 
 def read_mtx_from_stream(stream: ReadCsvBuffer[bytes]) -> CSRBase:
@@ -142,7 +142,7 @@ def ebi_expression_atlas(
     >>> sc.datasets.ebi_expression_atlas("E-MTAB-4888")  # doctest: +ELLIPSIS
     AnnData object with n_obs × n_vars = 2261 × 23899
         obs: 'Sample Characteristic[organism]', 'Sample Characteristic Ontology Term[organism]', ..., 'Factor Value[cell type]', 'Factor Value Ontology Term[cell type]'
-        layers: None
+        layers: None (.X)
 
     """
     experiment_dir = settings.datasetdir / accession

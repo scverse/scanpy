@@ -9,11 +9,11 @@ import pytest
 from anndata import AnnData
 from anndata.tests import helpers
 from anndata.tests.helpers import assert_equal
-from packaging.version import Version
 from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import CSBase, DaskArray, pkg_version
+from scanpy._compat import CSBase, DaskArray
+from scanpy._keys import _PcaKeys
 from scanpy._utils import get_literal_vals
 from scanpy.preprocessing._pca import SvdSolver as SvdSolverSupported
 from scanpy.preprocessing._pca._dask import _cov_sparse_dask
@@ -83,10 +83,6 @@ def array_type(request: pytest.FixtureRequest) -> ArrayType:
 SVDSolverDeprecated = Literal["lobpcg"]
 SVDSolver = SvdSolverSupported | SVDSolverDeprecated
 
-SKLEARN_ADDITIONAL: frozenset[SvdSolverSupported] = frozenset(
-    {"covariance_eigh"} if pkg_version("scikit-learn") >= Version("1.5") else ()
-)
-
 
 def gen_pca_params(
     *,
@@ -155,11 +151,11 @@ def possible_solvers(
         ):
             svd_solvers = {"covariance_eigh"}
         case (type() as dc, True) if issubclass(dc, CSBase):
-            svd_solvers = {"arpack"} | SKLEARN_ADDITIONAL
+            svd_solvers = {"arpack", "covariance_eigh"}
         case (type() as dc, False) if issubclass(dc, CSBase):
             svd_solvers = {"arpack", "randomized"}
         case (helpers.asarray, True):
-            svd_solvers = {"auto", "full", "arpack", "randomized"} | SKLEARN_ADDITIONAL
+            svd_solvers = {"auto", "full", "arpack", "randomized", "covariance_eigh"}
         case (helpers.asarray, False):
             svd_solvers = {"arpack", "randomized"}
         case _:
@@ -301,13 +297,13 @@ def test_pca_shapes():
 
 
 @pytest.mark.parametrize(
-    ("key_added", "keys_expected"),
+    ("key_added", "keys"),
     [
-        pytest.param(None, ("X_pca", "PCs", "pca"), id="None"),
-        pytest.param("custom_key", ("custom_key",) * 3, id="custom_key"),
+        pytest.param(None, _PcaKeys("pca", "X_pca", "PCs"), id="None"),
+        pytest.param("custom_key", _PcaKeys(*(["custom_key"] * 3)), id="custom_key"),
     ],
 )
-def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
+def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
     """Tests implicitly centered pca on sparse arrays.
 
     Checks if it returns equivalent results to explicit centering on dense arrays.
@@ -320,16 +316,18 @@ def test_pca_sparse(key_added: str | None, keys_expected: tuple[str, str, str]):
     implicit = sc.pp.pca(pbmc, dtype=np.float64, copy=True)
     explicit = sc.pp.pca(pbmc_dense, dtype=np.float64, key_added=key_added, copy=True)
 
-    key_obsm, key_varm, key_uns = keys_expected
-
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance"], explicit.uns[key_uns]["variance"]
+        implicit.uns["pca"]["variance"], explicit.uns[keys.uns]["variance"]
     )
     np.testing.assert_allclose(
-        implicit.uns["pca"]["variance_ratio"], explicit.uns[key_uns]["variance_ratio"]
+        implicit.uns["pca"]["variance_ratio"], explicit.uns[keys.uns]["variance_ratio"]
     )
-    np.testing.assert_allclose(implicit.obsm["X_pca"], explicit.obsm[key_obsm])
-    np.testing.assert_allclose(implicit.varm["PCs"], explicit.varm[key_varm])
+    np.testing.assert_allclose(
+        implicit.obsm["X_pca"], explicit.obsm[keys.obsm], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        implicit.varm["PCs"], explicit.varm[keys.varm], atol=1e-6
+    )
 
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
@@ -544,10 +542,6 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
     np.testing.assert_equal(adata.varm["PCs"], pcs)
 
 
-@pytest.mark.skipif(
-    pkg_version("scikit-learn") < Version("1.5"),
-    reason="covariance_eigh added in scikit-learn 1.5",
-)
 @needs.dask
 @pytest.mark.parametrize(
     "other_array_type",

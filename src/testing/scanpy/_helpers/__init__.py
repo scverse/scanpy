@@ -2,26 +2,28 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
 from contextlib import contextmanager
-from importlib.metadata import version
 from importlib.util import find_spec
 from itertools import permutations
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 from anndata import AnnData
 from anndata.tests.helpers import asarray, assert_equal
-from packaging.version import Version
 
 import scanpy as sc
-from scanpy._compat import DaskArray, pkg_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from numpy.typing import NDArray
+
+    from scanpy._compat import DaskArray
 
 
 # TODO: Report more context on the fields being compared on error
@@ -48,20 +50,18 @@ def check_rep_mutation(func, x, *, fields=("layer", "obsm"), **kwargs) -> None:
 
     # Modified fields
     for field in fields:
-        result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field], **{field: field})
-        )
+        result_array = asarray(sc.get._get_arr(adatas_proc[field], **{field: field}))
         np.testing.assert_array_equal(asarray(adata_out.X), result_array)
 
     # Unmodified fields
     for field in fields:
         np.testing.assert_array_equal(x_array, asarray(adatas_proc[field].X))
         np.testing.assert_array_equal(
-            x_array, asarray(sc.get._get_obs_rep(adata_out, **{field: field}))
+            x_array, asarray(sc.get._get_arr(adata_out, **{field: field}))
         )
     for field_a, field_b in permutations(fields, 2):
         result_array = asarray(
-            sc.get._get_obs_rep(adatas_proc[field_a], **{field_b: field_b})
+            sc.get._get_arr(adatas_proc[field_a], **{field_b: field_b})
         )
         np.testing.assert_array_equal(x_array, result_array)
 
@@ -101,7 +101,7 @@ def check_rep_results(func, x, *, fields: Iterable[str] = ("layer", "obsm"), **k
 
 
 def _check_check_values_warnings(
-    function, adata: AnnData, expected_warning: str, kwargs=MappingProxyType({})
+    function, adata: AnnData, expected_warning: str, kwargs=frozendict({})
 ):
     """Run `function` on `adata` with provided arguments `kwargs` twice.
 
@@ -128,22 +128,11 @@ def as_dense_dask_array(*args, **kwargs) -> DaskArray:
     from anndata.tests.helpers import as_dense_dask_array
 
     a = as_dense_dask_array(*args, **kwargs)
-    # Newer versions of as_dense_dask_array chunk all axes by halve when the input is not a dask array.
-    if (
-        pkg_version("anndata") < Version("0.11")
-        and not isinstance(args[0], DaskArray)  # keep chunksize intact
-    ):
-        from anndata.tests.helpers import _half_chunk_size
-
-        a = a.rechunk(_half_chunk_size(a.shape))
     return a
 
 
 def as_sparse_dask_matrix(*args, **kwargs) -> DaskArray:
-    if Version(version("anndata")) >= Version("0.12.6"):
-        from anndata.tests.helpers import as_sparse_dask_matrix
-    else:
-        from anndata.tests.helpers import as_sparse_dask_array as as_sparse_dask_matrix
+    from anndata.tests.helpers import as_sparse_dask_matrix
 
     return as_sparse_dask_matrix(*args, **kwargs)
 

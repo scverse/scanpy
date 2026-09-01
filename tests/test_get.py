@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from itertools import chain, repeat
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,9 @@ from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._helpers.data import pbmc68k_reduced
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 # Override so warning gets caught
@@ -173,15 +177,12 @@ def test_repeated_gene_symbols():
     pd.testing.assert_frame_equal(expected, result)
 
 
-def test_backed_vs_memory():
+def test_backed_vs_memory(tmp_path: Path) -> None:
     """Compares backed vs. memory."""
-    from pathlib import Path
-
-    # get location test h5ad file in datasets
-    pkg_dir = Path(sc.__file__).parent
-    adata_file = pkg_dir / "datasets/10x_pbmc68k_reduced.h5ad"
-    adata_backed = sc.read(adata_file, backed="r")
-    adata = sc.read_h5ad(adata_file)
+    adata = pbmc68k_reduced()
+    adata_file = tmp_path / "adata.h5ad"
+    adata.write_h5ad(adata_file)
+    adata_backed = sc.io.read(adata_file, backed="r")
 
     # use non-sequential list of genes
     genes = list(adata.var_names[20::-2])
@@ -538,9 +539,9 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
     assert "b" in dedf["group"].unique()
 
 
-######################
-# _get_obs_rep tests #
-######################
+##################
+# _get_arr tests #
+##################
 
 
 @pytest.mark.parametrize(
@@ -555,11 +556,11 @@ def test_rank_genes_groups_df_all_groups(adata_rgg: AnnData, index_name: str | N
         pytest.param(dict(layer="b"), KeyError, r"'b'", id="missing_layer"),
     ],
 )
-def test_get_obs_rep_errors(kw: sc.get._ObsRep, cls: type[Exception], msg: str) -> None:
+def test_get_arr_errors(kw: sc.get._Rep, cls: type[Exception], msg: str) -> None:
     adata = AnnData(
         np.zeros((10, 10)),
         layers={"a": np.zeros((10, 10))},
         obsm={"b": np.zeros((10, 5))},
     )
     with pytest.raises(cls, match=msg):
-        sc.get._get_obs_rep(adata, **kw)
+        sc.get._get_arr(adata, **kw)

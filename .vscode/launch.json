@@ -5,6 +5,7 @@
             "name": "Python: Build Documentation",
             "type": "debugpy",
             "request": "launch",
+            "python": "${input:docsInterpreter}",
             "module": "sphinx",
             "args": ["-M", "html", ".", "_build"],
             "cwd": "${workspaceFolder}/docs",
@@ -29,6 +30,14 @@
             "justMyCode": false,
             "env": { "PYTEST_ADDOPTS": "--color=yes" },
             "presentation": { "hidden": true },
+        },
+    ],
+    "inputs": [
+        {
+            "id": "docsInterpreter",
+            "type": "command",
+            "command": "hatch.envInterpreter",
+            "args": { "env": "docs" },
         },
     ],
 }

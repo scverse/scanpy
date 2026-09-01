@@ -29,7 +29,7 @@ api_module_names = [
     "sc.external.pp",
     "sc.external.tl",
     "sc.external.pl",
-    "sc.external.exporting",
+    "sc.io",
     "sc.get",
     "sc.logging",
     # "sc.neighbors",  # Not documented
@@ -57,6 +57,14 @@ api_functions = [
 def test_descend_classes_and_funcs():
     funcs = set(descend_classes_and_funcs(scanpy, "scanpy"))
     assert {p.values[0] for p in api_functions} == funcs
+
+
+@pytest.mark.parametrize(
+    ("f", "qualname"),
+    [p for p in api_functions if p.id.startswith("sc.external.")],
+)
+def test_external_funcs_are_deprecated(f, qualname) -> None:
+    assert getattr(f, "__deprecated__", None), f"{qualname} is not deprecated"
 
 
 @pytest.mark.filterwarnings("error::FutureWarning:.*Import anndata.*")

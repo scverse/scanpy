@@ -53,7 +53,7 @@ def confusion_matrix(
     Examples
     --------
 
-    .. plot::
+    ..  exec-jupyter::
 
         import scanpy as sc; import seaborn as sns
         pbmc = sc.datasets.pbmc68k_reduced()
