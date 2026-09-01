@@ -150,7 +150,7 @@ def test_mask_wrong_dim(adata_masked: AnnData) -> None:
             sc.Preset.ScanpyV2Preview,
             "mean of A.obs['some cells']",
             id="v2",
-            marks=needs.anndata_acc,
+            marks=needs.scanpy2,
         ),
     ],
 )
