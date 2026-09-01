@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
-    from anndata.acc import RefAcc
+    from anndata.acc import Idx2D, RefAcc
 
     from .._compat import DaskArray
 
@@ -32,12 +32,10 @@ if TYPE_CHECKING:
 
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import AdRef, GraphAcc, Idx2D, LayerAcc, MultiAcc
+    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
 else:
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
     GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
-    # https://github.com/tox-dev/sphinx-autodoc-typehints/issues/764
-    type Idx2D = object
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
