@@ -69,12 +69,12 @@ __all__ = [
     "check_use_raw",
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
+    "dim_acc",
     "ensure_igraph",
     "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
-    "obs_acc",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -988,14 +988,15 @@ def _resolve_axis(
     raise ValueError(msg)
 
 
-def obs_acc(obs_col: str) -> str | AdRef:
+def dim_acc(col: str, *, dim: Literal["obs", "var"] = "obs") -> str | AdRef:
+    """Get reference to the `col`umn of `adata.{dim}` the way the active preset expects it."""
     from .._settings import Preset, settings
 
     if settings.preset is Preset.ScanpyV2Preview:
         from anndata.acc import A
 
-        return A.obs[obs_col]
-    return obs_col
+        return getattr(A, dim)[col]
+    return col
 
 
 def is_backed_type(x: object, /) -> bool:

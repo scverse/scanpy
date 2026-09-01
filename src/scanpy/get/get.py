@@ -13,14 +13,15 @@ from anndata import AnnData
 from numpy.typing import NDArray
 
 from .._compat import CSBase
-from .._settings import Preset
+from .._settings import Default, Preset
+from .._utils import dim_acc
 
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
-    from anndata.acc import Idx2D, RefAcc
+    from anndata.acc import RefAcc
 
     from .._compat import DaskArray
 
@@ -31,12 +32,17 @@ if TYPE_CHECKING:
 
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
+    from anndata.acc import AdRef, GraphAcc, Idx2D, LayerAcc, MultiAcc
 else:
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
     GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
+    # https://github.com/tox-dev/sphinx-autodoc-typehints/issues/764
+    type Idx2D = object
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
+
+type Mask = NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str
+"""A boolean array, or a reference to one (see `_check_mask`)."""
 
 # --------------------------------------------------------------------------------
 # Plotting data helpers
@@ -607,6 +613,22 @@ def _set_obs_rep(
         raise AssertionError(msg)
 
 
+def _mask_arg[M](
+    mask: M | Default, legacy: M | None, *, dim: Literal["obs", "var"]
+) -> M | Default:
+    """Merge the `mask` argument with its deprecated `mask_{dim}` predecessor."""
+    if legacy is not None:
+        if mask is not None and not isinstance(mask, Default):
+            msg = f"Pass either `mask` or `mask_{dim}`, not both."
+            raise TypeError(msg)
+        return dim_acc(legacy, dim=dim) if isinstance(legacy, str) else legacy
+    if isinstance(mask, str):
+        from anndata.acc import A
+
+        return A.resolve(mask, vec=True)
+    return mask
+
+
 def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
     data: AnnData | np.ndarray | CSBase | DaskArray,
     mask: str | AdRef[Idx2D | int, AnnData] | M,
@@ -622,7 +644,7 @@ def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
         Annotated data matrix or numpy array.
     mask
         Mask (or probabilities if `allow_probabilities=True`).
-        Either an appropriatley sized array, or name of a column.
+        Either an appropriatley sized array, or a reference to one.
     dim
         The dimension being masked.
     allow_probabilities
@@ -813,6 +835,38 @@ def _resolve_rep(rep: RefAcc | str) -> RepAcc:
         f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
     )
     raise TypeError(msg)
+
+
+def _ref_to_json[M: NDArray | None](ref: AdRef | str | M) -> str | list[str] | M:
+    """Serialize a vector reference for storage in `.uns`, see `_rep_to_json`.
+
+    Arrays (and v1 strings) are stored unchanged.
+    """
+    from scanpy import settings
+
+    if not isinstance(ref, AdRef) and not (
+        isinstance(ref, str) and settings.preset is Preset.ScanpyV2Preview
+    ):
+        return ref
+    from anndata.acc import A
+
+    return [json.dumps(A.to_json(_resolve_ref(ref)))]
+
+
+def _ref_from_json[M: NDArray | None](
+    ref: str | Sequence[str | int | None] | M,
+) -> AdRef | str | M:
+    """Parse a vector reference stored by `_ref_to_json`."""
+    if (
+        isinstance(ref, Sequence | np.ndarray)
+        and not isinstance(ref, str)
+        and len(ref) == 1
+        and isinstance(ref[0], str)
+    ):
+        from anndata.acc import A
+
+        return A.from_json(json.loads(ref[0]), vec=True)
+    return ref
 
 
 def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:

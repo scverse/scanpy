@@ -124,7 +124,7 @@ docs = [
     "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
-    "scanpydoc>=0.16.1",
+    "scanpydoc>=0.17.4",
     "scverse-misc[sphinx]",
     "sphinx>=9.1",
     "sphinx-autodoc-typehints>=1.25.2",

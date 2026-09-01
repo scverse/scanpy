@@ -402,15 +402,16 @@ def test_pca_n_pcs():
 
 # We use all possible array types here since this error should be raised before
 # PCA can realize that it got a Dask array
+@needs.anndata_acc
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_ALL)
 def test_mask_var_error(array_type):
-    """Check if mask_var="..." throws an error if the annotation is missing."""
+    """Check if mask="..." throws an error if the annotation is missing."""
     adata = AnnData(array_type(A_list).astype("float32"))
     with pytest.raises(
         ValueError,
-        match=r"Did not find `adata\.var\['highly_variable'\]`\.",
+        match=r"Did not find `A\.var\['highly_variable'\]` in `adata`\.",
     ):
-        sc.pp.pca(adata, mask_var="highly_variable")
+        sc.pp.pca(adata, mask="var.highly_variable")
 
 
 def test_mask_length_error():
@@ -420,22 +421,26 @@ def test_mask_length_error():
     with pytest.raises(
         ValueError, match=r"The shape of the mask do not match the data\."
     ):
-        sc.pp.pca(adata, mask_var=mask_var, copy=True)
+        sc.pp.pca(adata, mask=mask_var, copy=True)
 
 
-@pytest.mark.parametrize("mask_type", ["highly_variable", "array"])
-def test_obsm_mask_error(mask_type: Literal["highly_variable", "array"]) -> None:
-    """Check that trying to use mask_var with obsm raises an error."""
+@pytest.mark.parametrize(
+    "mask_type",
+    [pytest.param("var.highly_variable", marks=needs.anndata_acc), "array"],
+)
+def test_obsm_mask_error(mask_type: Literal["var.highly_variable", "array"]) -> None:
+    """Check that trying to use mask with obsm raises an error."""
     adata = AnnData(A_list)
     mask_var = (
         _helpers.random_mask(adata.shape[1]) if mask_type == "array" else mask_type
     )
     with pytest.raises(
-        ValueError, match=r"Argument `mask_var` is incompatible with `obsm`."
+        ValueError, match=r"Argument `mask` is incompatible with `obsm`."
     ):
-        sc.pp.pca(adata, mask_var=mask_var, obsm="X_pca", copy=True)
+        sc.pp.pca(adata, mask=mask_var, obsm="X_pca", copy=True)
 
 
+@needs.anndata_acc
 def test_mask_var_argument_equivalence(float_dtype, array_type):
     """Test if pca result is equal when given mask as boolarray vs string."""
     rng = np.random.default_rng()
@@ -443,11 +448,11 @@ def test_mask_var_argument_equivalence(float_dtype, array_type):
     mask_var = _helpers.random_mask(adata_base.shape[1], rng=rng)
 
     adata = adata_base.copy()
-    sc.pp.pca(adata, mask_var=mask_var, dtype=float_dtype)
+    sc.pp.pca(adata, mask=mask_var, dtype=float_dtype)
 
     adata_w_mask = adata_base.copy()
     adata_w_mask.var["mask"] = mask_var
-    sc.pp.pca(adata_w_mask, mask_var="mask", dtype=float_dtype)
+    sc.pp.pca(adata_w_mask, mask="var.mask", dtype=float_dtype)
 
     adata, adata_w_mask = map(AnnData.to_memory, [adata, adata_w_mask])
     assert np.allclose(
@@ -468,7 +473,7 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     mask_var = _helpers.random_mask(adata.shape[1])
 
     adata_masked = adata[:, mask_var].copy()
-    sc.pp.pca(adata, mask_var=mask_var)
+    sc.pp.pca(adata, mask=mask_var)
     sc.pp.pca(adata_masked)
 
     masked_var_loadings = adata.varm["PCs"][~mask_var]
@@ -501,7 +506,7 @@ def test_mask_defaults(array_type, float_dtype):
     without_var, with_var = map(AnnData.to_memory, [without_var, with_var])
     assert not np.array_equal(without_var.obsm["X_pca"], with_var.obsm["X_pca"])
 
-    with_no_mask = sc.pp.pca(adata, mask_var=None, copy=True, dtype=float_dtype)
+    with_no_mask = sc.pp.pca(adata, mask=None, copy=True, dtype=float_dtype)
     with_no_mask = with_no_mask.to_memory()
     assert np.array_equal(without_var.obsm["X_pca"], with_no_mask.obsm["X_pca"])
 
@@ -523,8 +528,8 @@ def test_pca_rep(rep: Literal["layer", "obsm"]) -> None:
         pytest.fail(f"Unknown {rep=}")
     del rep_adata.X
 
-    sc.pp.pca(adata, mask_var=None)
-    sc.pp.pca(rep_adata, **{rep: "counts"}, mask_var=None)
+    sc.pp.pca(adata, mask=None)
+    sc.pp.pca(rep_adata, **{rep: "counts"}, mask=None)
 
     assert rep_adata.uns["pca"]["params"][rep] == "counts"
     assert rep not in adata.uns["pca"]["params"]

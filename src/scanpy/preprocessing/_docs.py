@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .._docs import doc_mask
+
 doc_adata_basic = """\
 adata
     Annotated data matrix.\
@@ -15,12 +17,11 @@ use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """
 
-doc_mask_var = """\
-mask_var
-    To run only on a certain set of genes given by a boolean array
-    or a string referring to an array in :attr:`~anndata.AnnData.var`.
-    By default, uses `.var['highly_variable']` if available, else everything.
-"""
+doc_mask_var = doc_mask(
+    "To run only on a certain set of genes.",
+    dim="var",
+    extra="By default, uses `.var['highly_variable']` if available, else everything.",
+)
 
 doc_obs_qc_args = """\
 qc_vars
