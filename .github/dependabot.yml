@@ -1,5 +1,19 @@
 version: 2
 updates:
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - no milestone
+    commit-message:
+      prefix: test
+    cooldown:
+      default-days: 7
+    groups:
+      pre-commit:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -8,7 +22,9 @@ updates:
       - no milestone
     commit-message:
       prefix: ci
-  - package-ecosystem: pip
-    directory: /
-    schedule:
-      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions-deps:
+        patterns:
+          - "*"

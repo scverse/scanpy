@@ -20,7 +20,13 @@ from scanpy._utils import (
     check_nonnegative_integers,
     descend_classes_and_funcs,
 )
-from scanpy._utils.random import _LegacyRng, ith_k_tuple, random_k_tuples, random_str
+from scanpy._utils.random import (
+    _LegacyRng,
+    _rng_kwds,
+    ith_k_tuple,
+    random_k_tuples,
+    random_str,
+)
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_DASK,
@@ -216,6 +222,27 @@ def _mk_legacy_random(func: str, *, direct: bool, seed: int | None) -> np.ndarra
             return gen.choice(arr, size=(100, 100))
         case _:
             pytest.fail(f"Unknown {func=}")
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        pytest.param(lambda *, rng=None: None, {"rng"}, id="rng"),
+        pytest.param(lambda *, random_state=None: None, {"random_state"}, id="legacy"),
+        pytest.param(lambda *, rng=None, random_state=None: None, {"rng"}, id="both"),
+        pytest.param(lambda: None, set(), id="neither"),
+    ],
+)
+def test_rng_kwds(target: Callable, expected: set[str]) -> None:
+    """Only the RNG parameter(s) a target accepts are passed, preferring `rng`."""
+    rng = np.random.default_rng()
+    kwds = _rng_kwds(target, rng)
+    assert kwds.keys() == expected
+    target(**kwds)  # the target can actually be called with them
+    if "rng" in expected:
+        assert kwds["rng"] is rng
+    if "random_state" in expected:
+        assert isinstance(kwds["random_state"], np.random.RandomState)
 
 
 def test_ith_k_tuple() -> None:

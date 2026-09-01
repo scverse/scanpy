@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from functools import singledispatch
-from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 from anndata import AnnData
 
@@ -215,7 +218,7 @@ def enrich(
     container: Iterable[str] | Mapping[str, Iterable[str]],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     """Get enrichment for DE results.
 
@@ -303,7 +306,7 @@ def _enrich_anndata(
     log2fc_min: float | None = None,
     log2fc_max: float | None = None,
     gene_symbols: str | None = None,
-    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    gprofiler_kwargs: Mapping[str, Any] = frozendict({}),
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,

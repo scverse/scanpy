@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 
@@ -48,7 +51,7 @@ def recipe_pearson_residuals(  # noqa: PLR0913
     chunksize: int = 1000,
     n_comps: int | None = 50,
     rng: SeedLike | RNGLike | None = None,
-    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
+    kwargs_pca: Mapping[str, Any] = frozendict({}),
     check_values: bool = True,
     inplace: bool = True,
 ) -> tuple[AnnData, pd.DataFrame] | None:

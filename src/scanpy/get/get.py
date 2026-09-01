@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
+import json
+from collections.abc import Collection, Sequence
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, TypedDict, overload
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
-    from anndata.acc import Idx2D
+    from anndata.acc import Idx2D, RefAcc
 
     from .._compat import DaskArray
 
@@ -416,6 +417,54 @@ def var_df(
     return df
 
 
+def pca(adata: AnnData, *, key_added: str = "pca") -> AnnData:
+    """Return PCA results as an :class:`~anndata.AnnData` indexed by component.
+
+    The principal components (not the genes) become the variables,
+    so per-component quantities like the variance ratio become `.var` columns.
+    Useful for feeding into functions that expect an axis to rank over,
+    e.g. :func:`~scanpy.pl.ranking`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix with PCA computed, e.g. via :func:`~scanpy.pp.pca`.
+    key_added
+        `.obsm`, `.varm`, and `.uns` key used when running PCA.
+
+    Returns
+    -------
+    An :class:`~anndata.AnnData` with:
+
+    `.X`
+        the PCA embedding (`adata.obsm[key_added]`), observations × components.
+    `.obs`
+        `adata.obs`, unchanged.
+    `.var`
+        one row per principal component (named `PC1`, `PC2`, …),
+        with `variance` and `variance_ratio` columns
+        taken from `adata.uns[key_added]`.
+
+    Examples
+    --------
+
+    ..  exec-jupyter::
+
+        import scanpy as sc
+        sc.settings.preset = sc.Preset.ScanpyV2Preview
+        adata = sc.datasets.pbmc68k_reduced()
+        sc.get.pca(adata)
+
+    """
+    info = adata.uns[key_added]
+    n_comps = adata.obsm[key_added].shape[1]
+    var = pd.DataFrame(
+        {"variance": info["variance"], "variance_ratio": info["variance_ratio"]},
+        index=[f"PC{i + 1}" for i in range(n_comps)],
+    )
+    return AnnData(X=adata.obsm[key_added], obs=adata.obs, var=var)
+
+
 def _collection_of[T](
     thing: object, typ: type[T] | tuple[type[T], ...]
 ) -> TypeIs[Collection[T]]:
@@ -437,6 +486,8 @@ class _Rep(TypedDict, total=False):
 
 
 type ArrAcc = GraphAcc | LayerAcc | MultiAcc
+type RepAcc = LayerAcc | MultiAcc
+"""Accessor usable as a representation (`use_rep`), i.e. a non-graph 2D array."""
 
 
 @overload
@@ -587,7 +638,7 @@ def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](
             msg = f"Cannot use refererence for {desc} without providing anndata object as argument"
             raise ValueError(msg)
         try:
-            mask_array = np.asarray(_get_vec(data, mask, dim=dim))
+            mask_array = np.asarray(_get_vec_compat(data, mask, dim=dim))
         except KeyError:
             if isinstance(mask, AdRef):
                 msg = (
@@ -677,6 +728,39 @@ def _fetch_vec(adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"]) 
 
 
 @overload
+def _get_vec_compat(
+    adata: AnnData,
+    ref: Collection[AdRef] | Collection[str],
+    *,
+    dim: Literal["obs", "var"] | None = None,
+) -> list[Any]: ...
+@overload
+def _get_vec_compat(
+    adata: AnnData, ref: AdRef | str, *, dim: Literal["obs", "var"] | None = None
+) -> Any: ...
+def _get_vec_compat(
+    adata: AnnData,
+    ref: AdRef | str | Collection[AdRef] | Collection[str],
+    *,
+    dim: Literal["obs", "var"] | None = None,
+) -> Any:
+    """Get the 1D array(s) one or more `ref`erences point to.
+
+    Treats strings as `obs` columns instead of `anndata.acc` specs when the preset is v1.
+    """
+    if _collection_of(ref, (AdRef, str)):
+        dim = _refs_dim(ref, dim=dim)
+        return [_fetch_vec(adata, r, dim=dim) for r in ref]
+
+    if isinstance(ref, Collection) and not isinstance(ref, str):
+        msg = f"Expected a single ref or collection of refs, got {ref!r}"
+        raise TypeError(msg)
+
+    dim = _ref_dim(ref, dim=dim)
+    return _fetch_vec(adata, ref, dim=dim)
+
+
+@overload
 def _get_vec(
     adata: AnnData,
     ref: Collection[AdRef] | Collection[str],
@@ -693,10 +777,86 @@ def _get_vec(
     *,
     dim: Literal["obs", "var"] | None = None,
 ) -> Any:
-    """Get the 1D array a `ref`erence points to, resolving plain strings first."""
-    if _collection_of(ref, (AdRef, str)):
-        dim = _refs_dim(ref, dim=dim)
-        return [_fetch_vec(adata, r, dim=dim) for r in ref]
+    """Get the 1D array(s) one or more `ref`erences point to, using `anndata.acc`."""
+    from anndata.acc import A, AdRef
 
-    dim = _ref_dim(ref, dim=dim)
-    return _fetch_vec(adata, ref, dim=dim)
+    if _collection_of(ref, (AdRef, str)):
+        refs = [A.resolve(r, vec=True) if isinstance(r, str) else r for r in ref]
+        _refs_dim(refs, dim=dim)
+        return [adata[r] for r in refs]
+
+    if isinstance(ref, Collection) and not isinstance(ref, str):
+        msg = f"Expected a single ref or collection of refs, got {ref!r}"
+        raise TypeError(msg)
+
+    if isinstance(ref, str):
+        ref = A.resolve(ref, vec=True)
+    _ref_dim(ref, dim=dim)
+    return adata[ref]
+
+
+def _resolve_rep(rep: RefAcc | str) -> RepAcc:
+    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
+    if isinstance(rep, str):
+        from anndata.acc import A
+
+        rep = A.resolve(rep, vec=False)
+    if isinstance(rep, MultiAcc) and rep.dim != "obs":
+        msg = (
+            f"Representation must be aligned to `obs`, but {rep!r} is aligned to `var`"
+        )
+        raise ValueError(msg)
+    if isinstance(rep, LayerAcc | MultiAcc):
+        return rep
+    msg = (
+        "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
+        f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
+    )
+    raise TypeError(msg)
+
+
+def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
+    """Serialize a `rep`resentation for storage in `.uns`.
+
+    v1 strings (`'X'` or an `.obsm` key) are stored unchanged,
+    accessors (and hence v2 strings) as `anndata.acc` JSON inside a 1-element list,
+    e.g. `A.obsm['pca']` as `['["obsm", "pca"]']`.
+
+    TODO: Once AnnData can store a heterogeneous list, store that instead of a 1-element list.
+    See https://github.com/scverse/anndata/issues/1979
+    """
+    from scanpy import settings
+
+    if rep is None or (
+        isinstance(rep, str) and settings.preset is not Preset.ScanpyV2Preview
+    ):
+        return rep
+    from anndata.acc import A
+
+    return [json.dumps(A.to_json(_resolve_rep(rep)))]
+
+
+def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
+    """Parse a `rep`resentation stored by `_rep_to_json`."""
+    from scanpy import settings
+
+    if rep is None:
+        return rep
+    if not isinstance(rep, str):
+        from anndata.acc import A
+
+        if (
+            isinstance(rep, Sequence | np.ndarray)
+            and len(rep) == 1
+            and isinstance(rep[0], str)
+        ):
+            # see `_rep_to_json`
+            rep: Sequence[str | int | None] = json.loads(rep[0])
+        return _resolve_rep(A.from_json(rep, vec=False))
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        # a plain string was stored under the v1 preset,
+        # so interpret it as one instead of as an `anndata.acc` spec
+        return A.X if rep == "X" else A.obsm[rep]
+    return rep

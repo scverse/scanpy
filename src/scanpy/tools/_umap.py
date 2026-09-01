@@ -15,7 +15,8 @@ from .._utils.random import (
     _legacy_random_state,
     _LegacyRng,
 )
-from ._utils import _choose_representation, get_init_pos_from_paga
+from ..get.get import _rep_from_json
+from ._utils import _choose_representation_compat, get_init_pos_from_paga
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -45,7 +46,7 @@ def umap(  # noqa: PLR0913
     a: float | None = None,
     b: float | None = None,
     method: Literal["umap"] = "umap",
-    key_added: str | None | Default = Default(preset=("umap", "key_added")),
+    key_added: str | Default | None = Default(preset=("umap", "key_added")),
     neighbors_key: str = "neighbors",
     copy: bool = False,
 ) -> AnnData | None:
@@ -182,9 +183,9 @@ def umap(  # noqa: PLR0913
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     neigh_params = neighbors["params"]
-    x = _choose_representation(
+    x = _choose_representation_compat(
         adata,
-        use_rep=neigh_params.get("use_rep", None),
+        use_rep=_rep_from_json(neigh_params.get("use_rep", None)),
         n_pcs=neigh_params.get("n_pcs", None),
         silent=True,
     )

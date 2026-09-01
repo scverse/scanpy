@@ -4,7 +4,8 @@ dependency-groups = [ "dev" ]
 
 [envs.docs]
 dependency-groups = [ "docs" ]
-extra-dependencies = [ "pandas>=3" ]
+# TODO: remove git again after anndata 0.13.0rc4
+extra-dependencies = [ "pandas>=3", "anndata @ git+https://github.com/scverse/anndata.git" ]
 scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python3 -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -13,6 +14,16 @@ scripts.clean = "git clean -fdX -- {args:docs}"
 scripts.create = "towncrier create {args}"
 scripts.build = "python3 ci/scripts/towncrier_automation.py {args}"
 scripts.clean = "git restore --source=HEAD --staged --worktree -- docs/release-notes"
+
+[envs.hatch-check-fmt]
+dependencies = [ "prek" ]
+scripts.format-check = "echo 'try `hatch check fmt --fix`'; false"
+scripts.format-fix = "prek run -a --group=format"
+
+[envs.hatch-check-code]
+dependencies = [ "prek" ]
+scripts.lint-check = "echo 'try `hatch check code --fix`'; false"
+scripts.lint-fix = "prek run -a --no-group=format"
 
 [envs.hatch-test]
 python = "3.14"

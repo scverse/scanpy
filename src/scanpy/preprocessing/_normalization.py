@@ -42,6 +42,7 @@ def _normalize_csr(
 ):
     """For sparse CSR matrix, compute the normalization factors."""
     counts_per_cell = np.zeros(rows, dtype=mat.data.dtype)
+    counts_per_cols = np.zeros(columns, dtype=np.int32)
     for i in numba.prange(rows):
         count = 0.0
         for j in range(mat.indptr[i], mat.indptr[i + 1]):
@@ -49,7 +50,6 @@ def _normalize_csr(
         counts_per_cell[i] = count
     if exclude_highly_expressed:
         counts_per_cols_t = np.zeros((n_threads, columns), dtype=np.int32)
-        counts_per_cols = np.zeros(columns, dtype=np.int32)
 
         for i in numba.prange(n_threads):
             for r in range(i, rows, n_threads):
@@ -106,7 +106,7 @@ def _normalize_total_helper(
             n_threads=n_threads,
         )
         if target_sum is None:
-            target_sum = np.median(counts_per_cell)
+            target_sum = _compute_nnz_median(counts_per_cell)
         if exclude_highly_expressed:
             gene_subset = ~np.where(counts_per_cols)[0]
     else:
@@ -532,7 +532,7 @@ def normalize_clr(
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:

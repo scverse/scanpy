@@ -123,10 +123,10 @@ def embedding_density(  # noqa: PLR0912
     if basis == "fa":
         basis = "draw_graph_fa"
 
-    if _get_basis_key(adata, basis) is None:
+    if (basis_key := _get_basis_key(adata, basis)) is None:
         msg = (
             "Cannot find the embedded representation "
-            f"`adata.obsm['X_{basis}']`. Compute the embedding first."
+            f"`adata.obsm[{basis!r} | 'X_{basis}']`. Compute the embedding first."
         )
         raise ValueError(msg)
 
@@ -168,8 +168,8 @@ def embedding_density(  # noqa: PLR0912
 
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
-            embed_x = adata.obsm[f"X_{basis}"][cat_mask, components[0]]
-            embed_y = adata.obsm[f"X_{basis}"][cat_mask, components[1]]
+            embed_x = adata.obsm[basis_key][cat_mask, components[0]]
+            embed_y = adata.obsm[basis_key][cat_mask, components[1]]
 
             dens_embed = _calc_density(embed_x, embed_y)
             density_values[cat_mask] = dens_embed
@@ -177,8 +177,8 @@ def embedding_density(  # noqa: PLR0912
         adata.obs[density_covariate] = density_values
     else:  # if groupby is None
         # Calculate the density over the whole embedding without subsetting
-        embed_x = adata.obsm[f"X_{basis}"][:, components[0]]
-        embed_y = adata.obsm[f"X_{basis}"][:, components[1]]
+        embed_x = adata.obsm[basis_key][:, components[0]]
+        embed_y = adata.obsm[basis_key][:, components[1]]
 
         adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
 

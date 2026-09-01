@@ -51,29 +51,29 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.11.2",
-    "certifi",
+    "anndata>=0.12.14",
     "fast-array-utils[accel,sparse]>=1.4",
     "h5py>=3.11",
     "joblib",
     "matplotlib>=3.10",
     "natsort",
     "networkx>=3.4",
-    "numba>=0.61",
-    "numpy>=2.1",
+    "numba>=0.61.2",
+    "numpy>=2.2.5",
     "packaging>=25",
     "pandas>=2.3",
     "patsy",
     "pynndescent>=0.5.13",
     "scikit-learn>=1.6",
     "scipy>=1.15",
-    "scverse-misc[settings]>=0.1.1",
+    "scverse-misc[datasets,settings]>=0.1.4",
     "seaborn>=0.13.2",
     "session-info2",
     "statsmodels>=0.14.5",
     "tqdm",
     "typing-extensions; python_version<'3.13'",
     "umap-learn>=0.5.12",
+    "zarr>=3.2",
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
@@ -85,7 +85,7 @@ scripts.scanpy = "scanpy.cli:console_main"
 
 [project.optional-dependencies]
 bbknn = [ "bbknn" ]
-dask = [ "anndata[dask]", "dask[array]>=2024.5.1" ]
+dask = [ "anndata[dask]", "dask[array]>=2024.10" ]
 # PCA acceleration
 dask-ml = [ "dask-ml", "scanpy[dask]" ]
 leiden = [ "igraph>=0.10.8", "leidenalg>=0.10.1" ]
@@ -98,7 +98,7 @@ scrublet = [ "scikit-image>=0.25" ]
 # highly_variable_genes method 'seurat_v3'
 skmisc = [ "scikit-misc>=0.5.1" ]
 illico = [ "illico>=0.6" ]
-scanpy2 = [ "anndata>=0.13.2", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
+scanpy2 = [ "anndata>=0.13.3", "hv-anndata>=0.0.3a5", "igraph>=0.10.8", "scanpy[illico]", "scikit-misc>=0.5.1" ]
 
 [dependency-groups]
 dev = [
@@ -113,7 +113,6 @@ test = [
     "scanpy[plotting]",
     "scanpy[scrublet]",
     "scanpy[skmisc]",
-    "zarr>=2.18.7",
     { include-group = "test-min" },
 ]
 docs = [
@@ -122,7 +121,7 @@ docs = [
     "myst-parser>=2",
     "nbsphinx>=0.9",
     "numpy>=2.4",                                            # type aliases
-    "sam-algorithm",
+    "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
     "scanpydoc>=0.16.1",
@@ -132,7 +131,7 @@ docs = [
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
-    "sphinx-exec-jupyter>=0.2.1",
+    "sphinx-exec-jupyter[holoviews]>=0.4.2",
     "sphinx-issues>=5.0.1",
     "sphinxcontrib-bibtex",
     "sphinxcontrib-katex",
@@ -210,7 +209,6 @@ lint.per-file-ignores."src/scanpy/tools/_sim.py" = [ "N" ]
 # PLR0913: Test may use many fixtures
 lint.per-file-ignores."tests/**/*.py" = [ "D100", "D101", "D103", "PLR0913" ]
 lint.allowed-confusables = [ "×", "–", "‘", "’", "α" ]
-lint.external = [ "PLR0917" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "scanpy._settings.Default" ]
 lint.flake8-type-checking.exempt-modules = []
 lint.flake8-type-checking.runtime-evaluated-base-classes = [ "scverse_misc.Settings" ]
@@ -297,11 +295,11 @@ strict = true
 testpaths = [ "./tests", "./ci", "scanpy" ]
 
 [tool.coverage]
+run.source_pkgs = [ "scanpy" ]
+run.omit = [ "src/testing/*", "tests/*" ]
 run.concurrency = [ "multiprocessing" ]
 run.data_file = "test-data/raw-coverage"
-run.omit = [ "src/testing/*", "tests/*" ]
 run.patch = [ "subprocess" ]
-run.source_pkgs = [ "scanpy" ]
 paths.source = [ "src", "**/site-packages" ]
 report.exclude_also = [
     # https://github.com/numba/numba/issues/4268
