@@ -554,3 +554,26 @@ def test_mean_in_log_space(
         )
     logfcs = adata.uns["rank_genes_groups"]["logfoldchanges"]["a"]
     np.testing.assert_equal(logfcs, expected_logfc)
+
+
+@pytest.mark.parametrize("method", ["t-test", "t-test_overestim_var"])
+def test_mean_in_log_space_does_not_change_ttest(
+    method: Literal["t-test", "t-test_overestim_var"],
+):
+    """`mean_in_log_space` selects the fold change, not the values the t-test sees."""
+    pbmc = pbmc68k_reduced()
+    scores, pvals = {}, {}
+    for mean_in_log_space in (True, False):
+        rank_genes_groups(
+            pbmc,
+            groupby="bulk_labels",
+            method=method,
+            n_genes=pbmc.raw.n_vars,
+            mean_in_log_space=mean_in_log_space,
+        )
+        res = pbmc.uns["rank_genes_groups"]
+        scores[mean_in_log_space] = res["scores"]
+        pvals[mean_in_log_space] = res["pvals"]
+    for group in scores[True].dtype.names:
+        np.testing.assert_allclose(scores[True][group], scores[False][group], rtol=1e-6)
+        np.testing.assert_allclose(pvals[True][group], pvals[False][group], rtol=1e-6)
