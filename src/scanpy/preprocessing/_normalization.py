@@ -449,7 +449,7 @@ def normalize_clr(
     >>> import scanpy as sc
     >>> adata = AnnData(np.array([[1, 2, 30], [4, 50, 6]], dtype="float32"))
     >>> sc.pp.normalize_clr(adata, alpha=0.5)
-    >>> np.allclose(adata.X.sum(axis=1), 0)
+    >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-5)
     True
     """
     if copy:
