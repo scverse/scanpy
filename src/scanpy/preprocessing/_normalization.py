@@ -8,7 +8,6 @@ import numpy as np
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
-from scipy import sparse
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
@@ -16,8 +15,6 @@ from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
-    from typing import Literal
-
     from anndata import AnnData
 
 
@@ -359,78 +356,27 @@ def _log1p_sparse_block(x: np.ndarray | CSBase) -> np.ndarray | CSBase:
     return np.log1p(x)
 
 
-def _densify_shifted_clr(
-    log_values: np.ndarray | CSBase | DaskArray, row_center: np.ndarray | DaskArray
-) -> np.ndarray | DaskArray:
-    dense_log = log_values.toarray() if isinstance(log_values, CSBase) else log_values
-    return dense_log - row_center[:, None]
-
-
-def _normalize_clr_helper(  # noqa: PLR0912
+def _normalize_clr_helper(
     x: np.ndarray | CSBase | DaskArray,
     *,
-    target: Literal["auto", "mean", "median"] | float,
     alpha: float | None,
-) -> tuple[
-    np.ndarray | CSBase | DaskArray,
-    np.ndarray | DaskArray,
-    np.ndarray | DaskArray,
-    dict[str, object],
-]:
-    """Compute sparse PFlog / shifted-CLR values and row centers."""
+) -> tuple[np.ndarray | DaskArray, np.ndarray | DaskArray]:
+    """Compute the dense PFlog / shifted-CLR matrix and cell depths."""
     # Keep the depths lazy for dask; `.ravel()` would otherwise materialize them.
     cell_depths = stats.sum(x, axis=1)
     if not isinstance(x, DaskArray):
         cell_depths = np.asarray(cell_depths).ravel()
 
-    mean_depth = (
-        float(cell_depths.mean().compute())
-        if isinstance(cell_depths, DaskArray)
-        else float(cell_depths.mean())
-    )
-    if alpha is not None:
-        if not alpha > 0:
-            msg = (
-                f"`alpha` must be positive to compute PFlog, got {alpha}. "
-                "The data may be underdispersed."
-            )
-            raise ValueError(msg)
-        scale: float | np.ndarray | DaskArray = 4.0 * float(alpha)
-        target_sum = 4.0 * float(alpha) * mean_depth
-        resolved_target = "alpha"
-    elif target == "auto":
+    if alpha is None:
         alpha = _estimate_overdispersion(x)
-        scale = 4.0 * alpha
-        target_sum = 4.0 * alpha * mean_depth
-        resolved_target = "auto"
-    else:
-        alpha = None
-        if target == "mean":
-            target_sum = mean_depth
-        elif target == "median":
-            if isinstance(cell_depths, DaskArray):
-                msg = (
-                    "`target='median'` is not supported for dask input; pass "
-                    "`target='auto'`, `target='mean'`, a positive numeric target, "
-                    "or explicit `alpha`."
-                )
-                raise NotImplementedError(msg)
-            target_sum = float(np.median(cell_depths))
-        elif isinstance(target, bool) or not isinstance(target, int | float):
-            msg = "`target` must be 'auto', 'mean', 'median', or a positive number."
-            raise ValueError(msg)
-        else:
-            target_sum = float(target)
-        if not target_sum > 0:
-            msg = f"`target` must resolve to a positive depth, got {target_sum}."
-            raise ValueError(msg)
-        resolved_target = str(target)
-        x = axis_mul_or_truediv(
-            x, cell_depths / target_sum, op=truediv, axis=0, allow_divide_by_zero=False
+    elif not alpha > 0:
+        msg = (
+            f"`alpha` must be positive to compute PFlog, got {alpha}. "
+            "The data may be underdispersed."
         )
+        raise ValueError(msg)
 
-    if alpha is not None:
-        x = x * scale
+    x = x * (4.0 * float(alpha))
 
     if isinstance(x, DaskArray):
         log_values = x.map_blocks(
@@ -442,29 +388,23 @@ def _normalize_clr_helper(  # noqa: PLR0912
     row_center = stats.sum(log_values, axis=1) / x.shape[1]
     if not isinstance(row_center, DaskArray):
         row_center = np.asarray(row_center).ravel()
-    report = dict(
-        target=resolved_target,
-        alpha=None if alpha is None else float(alpha),
-        k=float(target_sum),
-        mean_depth=mean_depth,
-    )
-    return log_values, row_center, cell_depths, report
+    if isinstance(log_values, CSBase):
+        log_values = log_values.toarray()
+    return log_values - row_center[:, None], cell_depths
 
 
 def normalize_clr(
     adata: AnnData,
     *,
-    target: Literal["auto", "mean", "median"] | float = "auto",
     alpha: float | None = None,
-    key_added: str = "pflog",
-    densify: bool = False,
     layer: str | None = None,
     inplace: bool = True,
     copy: bool = False,
-) -> AnnData | dict[str, np.ndarray | CSBase | DaskArray | dict[str, object]] | None:
+) -> AnnData | dict[str, np.ndarray | DaskArray] | None:
     r"""Normalize counts with the shifted centered log-ratio (PFlog) transform.
 
-    With `target="auto"` (or explicit `alpha`), computes PFlog as
+    If `alpha` is not provided, it is estimated from the input matrix. PFlog is
+    then computed as
 
     .. math::
         T(x)_i = \log(1 + 4 α x_i)
@@ -472,34 +412,22 @@ def normalize_clr(
 
     which is equivalent to centering
     :math:`\log(x_i + 1 / (4 α))` because the constant :math:`\log(4 α)`
-    cancels during CLR centering. For memory efficiency, the sparse log values
-    are stored separately from the per-cell centering vector.
+    cancels during CLR centering.
 
     .. note::
-        `target="auto"` is the recommended PFlog default. Fixed targets
-        (``"mean"``, ``"median"``, or a positive number) apply shifted CLR
-        after rescaling each cell to the same total count.
+        CLR centering generally maps zeros to non-zero values, so the resulting
+        matrix is dense even when the input is sparse.
 
     Parameters
     ----------
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`.
         Rows correspond to cells and columns to genes.
-    target
-        ``"auto"`` estimates the negative-binomial overdispersion and applies
-        PFlog. ``"mean"``, ``"median"``, or a positive numeric value set a
-        fixed total count used before applying the shifted CLR transform.
     alpha
         Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``).
-        When given, it overrides `target` and applies PFlog with sparse values
-        ``log1p(4 * alpha * x)``.
-    key_added
-        Layer key used to store the sparse log values. The row-centering vector
-        is stored in ``adata.obs[f"{key_added}_center"]``.
-    densify
-        If `True`, also materialize the dense centered matrix into `X` or the
-        selected `layer`. This is intended for small data or generic downstream
-        tools that cannot consume the sparse-plus-row-center representation.
+        If `None`, it is estimated from the input matrix. A positive numeric
+        value uses that value directly. PFlog applies
+        ``log1p(4 * alpha * x)`` before CLR centering.
     layer
         Layer to normalize instead of `X`.
     inplace
@@ -511,8 +439,8 @@ def normalize_clr(
 
     Returns
     -------
-    Returns a dictionary with normalized values and metadata or updates `adata`,
-    depending on `inplace`.
+    Returns a dictionary with the normalized matrix or updates `adata`, depending
+    on `inplace`.
 
     Example
     -------
@@ -521,7 +449,7 @@ def normalize_clr(
     >>> import scanpy as sc
     >>> adata = AnnData(np.array([[1, 2, 30], [4, 50, 6]], dtype="float32"))
     >>> sc.pp.normalize_clr(adata, alpha=0.5)
-    >>> "pflog" in adata.layers and "pflog_center" in adata.obs
+    >>> np.allclose(adata.X.sum(axis=1), 0)
     True
     """
     if copy:
@@ -542,39 +470,14 @@ def normalize_clr(
 
     start = logg.info("normalizing counts per cell via PFlog")
 
-    log_values, row_center, cell_depths, report = _normalize_clr_helper(
-        x, target=target, alpha=alpha
-    )
+    x, cell_depths = _normalize_clr_helper(x, alpha=alpha)
 
     if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
         warn("Some cells have zero counts", UserWarning)
 
-    row_center_obs = (
-        np.asarray(row_center.compute()).ravel()
-        if isinstance(row_center, DaskArray)
-        else np.asarray(row_center).ravel()
-    )
-    if not isinstance(log_values, DaskArray | CSBase):
-        log_values = sparse.csr_matrix(log_values)  # noqa: TID251
-
-    dense_x = _densify_shifted_clr(log_values, row_center) if densify else None
-    row_center_key = f"{key_added}_center"
-    metadata = dict(
-        encoding_type="shifted_clr",
-        row_center_key=row_center_key,
-        params=report | {"layer": layer, "densify": densify},
-    )
-    dat = dict(
-        X=dense_x if densify else log_values,
-        row_center=row_center_obs,
-        metadata=metadata,
-    )
+    dat = dict(X=x)
     if inplace:
-        adata.layers[key_added] = log_values
-        adata.obs[row_center_key] = row_center_obs
-        adata.uns[key_added] = metadata
-        if densify:
-            _set_obs_rep(adata, dense_x, layer=layer)
+        _set_obs_rep(adata, x, layer=layer)
 
     logg.info(
         "    finished ({time_passed})",
