@@ -3,9 +3,13 @@ from __future__ import annotations
 from functools import partial
 from importlib.util import find_spec
 
+import numpy as np
+import pandas as pd
 import pytest
 from matplotlib import colormaps
+from matplotlib import pyplot as plt
 from packaging.version import Version
+from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -96,3 +100,34 @@ def test_paga_compare(plot_cmp):
     sc.pl.paga_compare(pbmc, basis="umap", show=False)
 
     plot_cmp("paga_compare_pbmc3k")
+
+
+def test_paga_cax() -> None:
+    # Tests that https://github.com/scverse/scanpy/issues/4318 is fixed
+    rng = np.random.default_rng(0)
+    adata = sc.AnnData(rng.random((80, 20)))
+    adata.obs["group"] = pd.Categorical(rng.choice(["a", "b", "c", "d", "e"], 80))
+
+    k = 5
+    rows = np.array([0, 1, 1, 2, 2, 3, 3, 4, 4, 0])
+    cols = np.array([1, 0, 2, 1, 3, 2, 4, 3, 0, 4])
+    connectivities = sparse.csr_matrix(  # noqa: TID251
+        (np.ones(len(rows)), (rows, cols)), shape=(k, k)
+    )
+    adata.uns["paga"] = {
+        "groups": "group",
+        "connectivities": connectivities,
+        "connectivities_tree": connectivities.copy(),
+    }
+    pos = rng.random((k, 2))
+
+    # a single `cax` works for a single colorbar
+    _, cax = plt.subplots()
+    sc.pl.paga(adata, color=adata.var_names[0], cax=cax, pos=pos, show=False)
+
+    # a single `cax` with multiple colorbars raises a clear error
+    _, cax = plt.subplots()
+    with pytest.raises(ValueError, match="sequence of axes"):
+        sc.pl.paga(
+            adata, color=adata.var_names[:2].tolist(), cax=cax, pos=pos, show=False
+        )
