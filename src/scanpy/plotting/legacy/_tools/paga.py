@@ -393,6 +393,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     plot: bool = True,
     show: bool | None = None,
     ax: Axes | None = None,
+    ncols: int | None = None,
     # deprecated
     save: bool | str | None = None,
 ) -> Axes | list[Axes] | None:
@@ -509,6 +510,10 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     ax
         A matplotlib axes object.
+    ncols
+        Number of panels per row. If ``None`` (default), all panels are placed
+        in a single row (the original layout). If set to an integer, panels
+        wrap into a grid with this many columns.
 
     Returns
     -------
@@ -633,9 +638,21 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
     if plot:
-        axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
-            ax, panels=colors, colorbars=colorbars
-        )
+        if ncols is not None and ax is not None:
+            msg = "`ncols` cannot be combined with a pre-supplied `ax`."
+            raise ValueError(msg)
+
+        if ncols is not None:
+            from .scatterplots import _panel_grid
+
+            fig, gs = _panel_grid(
+                hspace=0.25, wspace=0.1, ncols=ncols, num_panels=len(colors)
+            )
+            axs = [fig.add_subplot(gs[i]) for i in range(len(colors))]
+        else:
+            axs, panel_pos, draw_region_width, _figure_width = _utils.setup_axes(
+                ax, panels=colors, colorbars=colorbars
+            )
 
         if len(colors) == 1 and not isinstance(axs, list):
             axs = [axs]
@@ -677,7 +694,21 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
                 pos=pos,
             )
             if colorbars[icolor]:
-                if cax is None:
+                if cax is not None:
+                    ax_cb = cax[icolor]
+                    _ = plt.colorbar(
+                        sct,
+                        format=ticker.FuncFormatter(_utils.ticks_formatter),
+                        cax=ax_cb,
+                    )
+                elif ncols is not None:
+                    fig = plt.gcf()
+                    _ = fig.colorbar(
+                        sct,
+                        format=ticker.FuncFormatter(_utils.ticks_formatter),
+                        ax=axs[icolor],
+                    )
+                else:
                     bottom = panel_pos[0][0]
                     height = panel_pos[1][0] - bottom
                     width = 0.006 * draw_region_width / len(colors)
@@ -685,14 +716,11 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
                     rectangle = [left, bottom, width, height]
                     fig = plt.gcf()
                     ax_cb = fig.add_axes(rectangle)
-                else:
-                    ax_cb = cax[icolor]
-
-                _ = plt.colorbar(
-                    sct,
-                    format=ticker.FuncFormatter(_utils.ticks_formatter),
-                    cax=ax_cb,
-                )
+                    _ = plt.colorbar(
+                        sct,
+                        format=ticker.FuncFormatter(_utils.ticks_formatter),
+                        cax=ax_cb,
+                    )
     if add_pos:
         adata.uns["paga"]["pos"] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")

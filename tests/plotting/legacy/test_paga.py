@@ -3,9 +3,13 @@ from __future__ import annotations
 from functools import partial
 from importlib.util import find_spec
 
+import numpy as np
+import pandas as pd
 import pytest
 from matplotlib import colormaps
+from matplotlib import pyplot as plt
 from packaging.version import Version
+from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import pkg_version
@@ -96,3 +100,48 @@ def test_paga_compare(plot_cmp):
     sc.pl.paga_compare(pbmc, basis="umap", show=False)
 
     plot_cmp("paga_compare_pbmc3k")
+
+
+def test_paga_ncols() -> None:
+    # Tests that https://github.com/scverse/scanpy/issues/1203 is fixed
+    rng = np.random.default_rng(0)
+    adata = sc.AnnData(rng.random((80, 20)))
+    adata.obs["group"] = pd.Categorical(rng.choice(["a", "b", "c", "d", "e"], 80))
+    for i in range(4):
+        adata.obs[f"c{i}"] = pd.Categorical(rng.choice(["x", "y"], 80))
+
+    k = 5
+    rows = np.array([0, 1, 1, 2, 2, 3, 3, 4, 4, 0])
+    cols = np.array([1, 0, 2, 1, 3, 2, 4, 3, 0, 4])
+    connectivities = sparse.csr_matrix(  # noqa: TID251
+        (np.ones(len(rows)), (rows, cols)), shape=(k, k)
+    )
+    adata.uns["paga"] = {
+        "groups": "group",
+        "connectivities": connectivities,
+        "connectivities_tree": connectivities.copy(),
+    }
+    pos = rng.random((k, 2))
+    colors = ["c0", "c1", "c2", "c3"]
+
+    # `ncols` wraps the panels into a grid
+    axs = sc.pl.paga(adata, color=colors, ncols=2, pos=pos, show=False)
+    assert len(axs) == 4
+    gridspec = axs[0].get_subplotspec().get_gridspec()
+    assert (gridspec.nrows, gridspec.ncols) == (2, 2)
+
+    # the default layout keeps all panels in a single row
+    axs = sc.pl.paga(adata, color=colors, pos=pos, show=False)
+    assert len(axs) == 4
+
+    # continuous colors (with colorbars) also wrap into a grid
+    gene_colors = adata.var_names[:3].tolist()
+    axs = sc.pl.paga(adata, color=gene_colors, ncols=2, pos=pos, show=False)
+    assert len(axs) == 3
+    gridspec = axs[0].get_subplotspec().get_gridspec()
+    assert gridspec.ncols == 2
+
+    # `ncols` cannot be combined with a pre-supplied `ax`
+    _, ax = plt.subplots()
+    with pytest.raises(ValueError, match="`ncols` cannot be combined"):
+        sc.pl.paga(adata, color=colors, ncols=2, ax=ax, pos=pos, show=False)
