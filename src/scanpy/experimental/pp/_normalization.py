@@ -15,7 +15,7 @@ from ... import settings
 from ..._compat import CSBase, warn
 from ..._keys import _embedding_keys
 from ..._settings import Default
-from ..._utils import _doc_params, check_nonnegative_integers, dim_acc, view_to_actual
+from ..._utils import _doc_params, check_nonnegative_integers, view_to_actual
 from ..._utils.random import _accepts_legacy_random_state
 from ...experimental._docs import (
     doc_adata,
@@ -27,7 +27,7 @@ from ...experimental._docs import (
     doc_pca_chunk,
 )
 from ...get import _check_mask, _get_arr, _set_obs_rep
-from ...get.get import _mask_arg
+from ...get.get import _mask_arg, _mask_hvg
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import pca
 
@@ -171,7 +171,8 @@ def normalize_pearson_residuals(
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
@@ -231,13 +232,7 @@ def normalize_pearson_residuals_pca(
     """
     key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
     keys = _embedding_keys("pca", key_added)
-    mask = _mask_arg(mask, mask_var, dim="var")
-    if isinstance(mask, Default):
-        mask = (
-            dim_acc("highly_variable", dim="var")
-            if "highly_variable" in adata.var
-            else None
-        )
+    mask = _mask_hvg(adata, _mask_arg(mask, mask_var, dim="var"))
     mask_var = _check_mask(adata, mask, "var")
 
     if mask_var is not None:

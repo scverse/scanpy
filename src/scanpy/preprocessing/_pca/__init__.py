@@ -11,10 +11,10 @@ from ..._compat import CSBase, DaskArray, warn
 from ..._docs import doc_rng
 from ..._keys import _embedding_keys
 from ..._settings import Default, settings
-from ..._utils import _doc_params, dim_acc, get_literal_vals, is_backed_type
+from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_arr
-from ...get.get import _mask_arg, _ref_to_json
+from ...get.get import _mask_arg, _mask_hvg, _ref_to_json
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
@@ -53,7 +53,8 @@ type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 @_doc_params(mask=doc_mask_var, rng=doc_rng)
 @_accepts_legacy_random_state(0)
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
@@ -222,15 +223,10 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         adata = AnnData(data)
 
     mask = _mask_arg(mask, mask_var, dim="var")
-    if isinstance(mask, Default):
-        mask = (
-            dim_acc("highly_variable", dim="var")
-            if "highly_variable" in adata.var
-            else None
-        )
-    elif mask is not None and obsm is not None:
+    if not isinstance(mask, Default) and mask is not None and obsm is not None:
         msg = "Argument `mask` is incompatible with `obsm`."
         raise ValueError(msg)
+    mask = _mask_hvg(adata, mask)
     mask_param, mask_var = mask, _check_mask(adata, mask, "var")
     adata_comp = adata[:, mask_var] if mask_var is not None else adata
 

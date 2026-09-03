@@ -621,10 +621,25 @@ def _mask_arg[M](
             raise TypeError(msg)
         return dim_acc(legacy, dim=dim) if isinstance(legacy, str) else legacy
     if isinstance(mask, str):
+        if not find_spec("anndata.acc"):
+            msg = (
+                f"`mask={mask!r}` requires `anndata>=0.13.3`. "
+                f"Pass a boolean array instead, or a column name via the deprecated `mask_{dim}`."
+            )
+            raise ImportError(msg)
         from anndata.acc import A
 
         return A.resolve(mask, vec=True)
     return mask
+
+
+def _mask_hvg[M](adata: AnnData, mask: M | Default) -> M | None:
+    """Resolve a `Default` `mask` to `.var['highly_variable']` if there is one."""
+    if not isinstance(mask, Default):
+        return mask
+    if "highly_variable" not in adata.var:
+        return None
+    return dim_acc("highly_variable", dim="var")
 
 
 def _check_mask[M: NDArray[np.bool] | NDArray[np.floating] | pd.Series | None](

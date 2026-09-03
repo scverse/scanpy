@@ -83,7 +83,8 @@ def clip_array(
     )
 )
 @singledispatch
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale[A: _Array](
     data: AnnData | A,
     *,
@@ -167,7 +168,8 @@ def scale[A: _Array](
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale_array[A: _Array](
     x: A,
     *,
@@ -315,7 +317,8 @@ def scale_and_clip_csr(
 
 
 @scale.register(AnnData)
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale_anndata(
     adata: AnnData,
     *,

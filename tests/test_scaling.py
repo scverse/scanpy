@@ -167,6 +167,18 @@ def test_mask_obs_deprecated(
     assert col in adata_masked.var.columns
 
 
+def test_mask_obs_deprecated_fallback() -> None:
+    # extra test for the singledispatch’s fallback branch calling `scale_array`
+    # (registered types like `np.ndarray` never run it)
+    mask = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
+    scale_fallback = sc.pp.scale.dispatch(object)
+    with pytest.warns(FutureWarning, match=r"argument mask_obs is deprecated"):
+        scaled = scale_fallback(
+            np.array(X_for_mask, dtype="float32"), copy=True, mask_obs=mask
+        )
+    assert np.array_equal(scaled, X_centered_for_mask)
+
+
 def test_mask_both() -> None:
     mask = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
     with (
