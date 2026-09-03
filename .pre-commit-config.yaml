@@ -8,18 +8,18 @@ repos:
     - --drop=abstract
     groups: [format]
 - repo: https://github.com/biomejs/pre-commit
-  rev: v2.5.9
+  rev: v2.5.10
   hooks:
   - id: biome-format
     groups: [format]
     exclude: ^\.cruft\.json$ # inconsistent indentation with cruft - file never to be modified manually.
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.28.0
+  rev: v2.28.1
   hooks:
   - id: pyproject-fmt
     groups: [format]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.3
+  rev: v0.16.4
   hooks:
   - id: ruff-check
     args: [--fix, --exit-non-zero-on-fix]
