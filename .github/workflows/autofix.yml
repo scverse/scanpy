@@ -1,0 +1,32 @@
+# The workflow name is mandated by autofix.ci.
+# It needs to be a dedicated workflow, as autofix.ci times out on long runs.
+name: autofix.ci
+
+on:
+  pull_request:
+
+env:
+  FORCE_COLOR: "1"
+  UV_COMPILE_BYTECODE: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Pre-commit checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv tool install hatch
+      - name: Run pre-commit hooks
+        run: uvx prek run --all-files --show-diff-on-failure --color=always
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
+        if: ${{ !cancelled() }}
