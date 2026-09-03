@@ -10,12 +10,13 @@ from ._settings import Preset, Verbosity, settings  # isort: skip
 
 from anndata import AnnData, concat
 
-from . import datasets, experimental, external, get, io, logging, metrics, queries
+from . import datasets, experimental, get, io, logging, metrics, queries
 from . import plotting as pl
 from . import preprocessing as pp
 from . import tools as tl
 from ._utils import annotate_doc_types
 from .neighbors import Neighbors
+from .plotting.legacy.mpl_settings import set_figure_params
 
 if TYPE_CHECKING:
     from typing import Any
@@ -28,7 +29,6 @@ __all__ = [
     "concat",
     "datasets",
     "experimental",
-    "external",
     "get",
     "io",
     "logging",
@@ -42,11 +42,8 @@ __all__ = [
 ]
 
 
-from .plotting.legacy.mpl_settings import set_figure_params
-
 annotate_doc_types(sys.modules[__name__], "scanpy")
 
-# has to be done at the end, after everything has been imported
 sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["tl", "pp", "pl"]})
 
 
@@ -61,6 +58,11 @@ def __getattr__(name: str) -> Any:
         msg = "`__version__` is deprecated, use `importlib.metadata.version('scanpy')` instead"
         warn(msg, FutureWarning)
         return version("scanpy")
+
+    if name == "external":
+        import scanpy.external
+
+        return scanpy.external
 
     if name in {"read", "read_10x_h5", "read_10x_mtx", "write"} or (
         name in io.__all__ and name in anndata.io.__all__

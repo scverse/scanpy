@@ -18,7 +18,12 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._compat import CSRBase
-    from ._types import KnnTransformerLike, KwdsForTransformer, NeighborsParams
+    from ._types import (
+        BbknnParams,
+        KnnTransformerLike,
+        KwdsForTransformer,
+        NeighborsParams,
+    )
 
 
 def _make_transformer(
@@ -75,7 +80,19 @@ def _make_transformer(
 
 def _get_metadata(
     key_added: str | None, /, **params: Unpack[NeighborsParams]
-) -> tuple[str, NeighborsDict]:
+) -> tuple[str, NeighborsDict[NeighborsParams]]:
+    return _metadata(key_added, params)
+
+
+def _get_bbknn_metadata(
+    key_added: str | None, /, **params: Unpack[BbknnParams]
+) -> tuple[str, NeighborsDict[BbknnParams]]:
+    return _metadata(key_added, params)
+
+
+def _metadata[P: NeighborsParams](
+    key_added: str | None, params: P
+) -> tuple[str, NeighborsDict[P]]:
     if key_added is None:
         return "neighbors", NeighborsDict(
             connectivities_key="connectivities",
@@ -215,4 +232,39 @@ def _ind_dist_shortcut(
     return (
         d.indices.reshape(n_obs, n_neighbors),
         d.data.reshape(n_obs, n_neighbors),
+    )
+
+
+def _get_indices_distances_from_rect_matrix(
+    d: CSRBase, /, n_neighbors: int
+) -> tuple[NDArray[np.int32 | np.int64], NDArray[np.float32 | np.float64]]:
+    """Get the `n_neighbors` nearest neighbors from a rectangular kNN distance matrix.
+
+    In contrast to `_get_indices_distances_from_sparse_matrix`,
+    the columns of `d` index a subset of the observations the rows index,
+    so there is no self-column to take care of.
+    Rows are sorted by distance and truncated to `n_neighbors` entries.
+    """
+    n_nonzero = np.diff(d.indptr)
+    if (n_too_few := int((n_nonzero < n_neighbors).sum())) > 0:
+        msg = (
+            f"The transformer returned fewer than {n_neighbors} neighbors "
+            f"for {n_too_few} of {d.shape[0]} observations."
+        )
+        raise ValueError(msg)
+    if is_constant(n_nonzero):
+        n_cols = int(n_nonzero[0])
+        indices = d.indices.reshape(d.shape[0], n_cols)
+        distances = d.data.reshape(d.shape[0], n_cols)
+    else:  # pad the rows to a common width, sorting the padding to the end
+        indices = np.zeros((d.shape[0], int(n_nonzero.max())), dtype=d.indices.dtype)
+        distances = np.full(indices.shape, np.inf, dtype=d.data.dtype)
+        rows = np.repeat(np.arange(d.shape[0]), n_nonzero)
+        cols = np.arange(d.nnz) - np.repeat(d.indptr[:-1], n_nonzero)
+        indices[rows, cols] = d.indices
+        distances[rows, cols] = d.data
+    order = np.argsort(distances, axis=1, kind="stable")[:, :n_neighbors]
+    return (
+        np.take_along_axis(indices, order, axis=1),
+        np.take_along_axis(distances, order, axis=1),
     )

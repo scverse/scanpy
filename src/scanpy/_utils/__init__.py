@@ -37,7 +37,6 @@ from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
-    from pathlib import Path
     from typing import Any
 
     from anndata import AnnData
@@ -47,7 +46,8 @@ if TYPE_CHECKING:
     from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
-    from ..neighbors import NeighborsParams, RPForestDict
+    from ..neighbors import RPForestDict
+    from ..neighbors._types import NeighborsParams
 
     type _MemoryArray = NDArray | CSBase
     type _SupportedArray = _MemoryArray | DaskArray
@@ -66,7 +66,6 @@ __all__ = [
     "axis_nnz",
     "check_array_function_arguments",
     "check_nonnegative_integers",
-    "check_presence_download",
     "check_use_raw",
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
@@ -839,14 +838,6 @@ def select_groups(
     groups_masks_obs = groups_masks_obs[groups_ids]
     groups_order_subset = adata.obs[key].cat.categories[groups_ids].to_numpy()
     return groups_order_subset, groups_masks_obs
-
-
-def check_presence_download(filename: Path, backup_url: str):
-    """Check if file is present otherwise download."""
-    if not filename.is_file():
-        from ..io._download import download
-
-        download(backup_url, filename)
 
 
 # --------------------------------------------------------------------------------
