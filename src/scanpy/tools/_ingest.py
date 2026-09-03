@@ -22,7 +22,7 @@ from .._utils import (
 from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..get import _check_mask
-from ..get.get import MultiAcc, _rep_from_json
+from ..get.get import MultiAcc, _ref_from_json, _rep_from_json
 from ..neighbors import FlatTree
 from ._utils import _choose_representation_compat
 
@@ -350,7 +350,7 @@ class Ingest:
     def _init_pca(self, adata: AnnData) -> None:
         self._pca_centered = adata.uns["pca"]["params"]["zero_center"]
         self._pca_mask = _check_mask(
-            adata, adata.uns["pca"]["params"]["mask_var"], "var"
+            adata, _ref_from_json(adata.uns["pca"]["params"]["mask_var"]), "var"
         )
 
         if self._pca_mask is not None:

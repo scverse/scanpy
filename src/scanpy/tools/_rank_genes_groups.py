@@ -10,27 +10,33 @@ import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
+from .._docs import doc_mask
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
+    _doc_params,
     _numba_thread_limit,
     check_nonnegative_integers,
+    dim_acc,
     get_literal_vals,
-    obs_acc,
     raise_not_implemented_error_if_backed_type,
 )
 from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
+from ..get.get import _mask_arg
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
     from typing import Literal
 
     from numpy.typing import NDArray
+
+    from ..get.get import Mask
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -365,7 +371,7 @@ class _RankGenes:
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
-        out = aggregate(agg_adata, by=obs_acc("_g"), func=funcs, dof=1)
+        out = aggregate(agg_adata, by=dim_acc("_g"), func=funcs, dof=1)
         idx = out.obs_names.astype(int).to_numpy()
         mean[idx] = np.asarray(out.layers["mean"])
         if need_var:
@@ -740,13 +746,15 @@ def _build_stats_dataframe(
     return df
 
 
+@_doc_params(
+    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var")
+)
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask_var: NDArray[np.bool] | str | Default | None = Default(
-        preset=("rank_genes_groups", "mask_var")
-    ),
+    mask: Mask | Default | None = Default(preset=("rank_genes_groups", "mask")),
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -762,6 +770,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
     ),
+    mask_var: Mask | None = None,
     **kwds,
 ) -> AnnData | None:
     r"""Rank genes for characterizing groups.
@@ -785,8 +794,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         Annotated data matrix.
     groupby
         The key of the observations grouping to consider.
-    mask_var
-        Select subset of genes to use in statistical tests.
+    {mask}
     use_raw
         Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
     layer
@@ -826,8 +834,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     copy
         Whether to copy `adata` or modify it inplace.
     mean_in_log_space
-        Whether to do :math:`\log(\operatorname{mean}(e^x))` (`False`)
-        or :math:`\log(e^{\operatorname{mean}(x)})` (`True`).
+        Whether to do :math:`\log(\operatorname{{mean}}(e^x))` (`False`)
+        or :math:`\log(e^{{\operatorname{{mean}}(x)}})` (`True`).
         The former is accurate, while the latter is a faster approximation
         that underestimates this accurate result in the presence of many outliers.
     kwds
@@ -878,8 +886,9 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    if isinstance(mask_var, Default):
-        mask_var = settings.preset.rank_genes_groups.mask_var
+    mask = _mask_arg(mask, mask_var, dim="var")
+    if isinstance(mask, Default):
+        mask = settings.preset.rank_genes_groups.mask
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
@@ -895,7 +904,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         )
         warn(msg, DeprecationWarning)
 
-    mask_var = _check_mask(adata, mask_var, "var")
+    mask_var = _check_mask(adata, mask, "var")
 
     if use_raw is None:
         use_raw = adata.raw is not None

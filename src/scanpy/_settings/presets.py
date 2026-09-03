@@ -93,7 +93,7 @@ PcaPreset = UmapPreset = TsnePreset = DiffmapPreset = DrawGraphPreset = (
 
 class RankGenesGroupsPreset(NamedTuple):
     method: DETest
-    mask_var: str | None
+    mask: str | None
     mean_in_log_space: bool
 
 
@@ -245,10 +245,10 @@ class Preset(enum.StrEnum):
         """
         return {
             Preset.ScanpyV1: RankGenesGroupsPreset(
-                method="t-test", mask_var=None, mean_in_log_space=True
+                method="t-test", mask=None, mean_in_log_space=True
             ),
             Preset.ScanpyV2Preview: RankGenesGroupsPreset(
-                method="wilcoxon", mask_var=None, mean_in_log_space=False
+                method="wilcoxon", mask=None, mean_in_log_space=False
             ),
         }
 
