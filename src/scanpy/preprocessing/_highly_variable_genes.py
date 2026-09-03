@@ -757,6 +757,10 @@ def highly_variable_genes(  # noqa: PLR0913
         If `batch_key` is given, this denotes in how many batches genes are detected as HVG
     `adata.var['highly_variable_intersection']` : :class:`pandas.Series` (dtype `bool`)
         If `batch_key` is given, this denotes the genes that are highly variable in all batches
+    `adata.uns['hvg']` : :class:`dict`
+        Dictionary with a `'flavor'` entry recording the `flavor` used.
+        :func:`scanpy.pl.highly_variable_genes` reads it to decide whether to plot
+        dispersions or variances
 
     """
     if isinstance(flavor, Default):
