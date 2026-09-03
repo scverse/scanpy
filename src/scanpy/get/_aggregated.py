@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import singledispatch
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal, TypedDict, get_args
+from typing import TYPE_CHECKING, Literal, TypedDict, cast, overload
 
 import numba
 import numpy as np
@@ -89,40 +89,75 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
     mask: NDArray[np.bool] | None
     data: ArrayT
 
-    def count_nonzero(self) -> NDArray[np.integer]:
+    @overload
+    def count_nonzero(self, *, keep_sparse: Literal[True] = True) -> ArrayT: ...
+    @overload
+    def count_nonzero(self, *, keep_sparse: Literal[False]) -> NDArray[np.integer]: ...
+    def count_nonzero(
+        self, *, keep_sparse: bool = True
+    ) -> ArrayT | NDArray[np.integer]:
         """Count the number of observations in each group.
+
+        Parameters
+        ----------
+        keep_sparse
+            If True and the input data is a sparse matrix, return a sparse matrix
+            of the same type for the aggregated counts. If False, always return
+            a dense :class:`numpy.ndarray`.
 
         Returns
         -------
         Array of counts.
 
         """
-        return self._sum(data=(self.data != 0).astype("uint8"))
+        data = self.data
+        if isinstance(data, CSBase):
+            data = type(data)(
+                (np.ones(data.nnz, dtype="uint8"), data.indices, data.indptr),
+                shape=data.shape,
+            )
+        else:
+            data = (data != 0).astype("uint8")
+        return self._sum(data=data, keep_sparse=keep_sparse)
 
-    def _sum(self, data: ArrayT):
+    def _sum(self, data: ArrayT, *, keep_sparse: bool) -> ArrayT | np.ndarray:
         if isinstance(data, np.ndarray):
             res = self.indicator_matrix @ data
             if isinstance(res, CSBase):
                 return res.toarray()
-            return res
+            # sparse @ dense is dense, but the scipy stubs don’t say so
+            return cast("np.ndarray", res)
         dtype = np.int64 if np.issubdtype(data.dtype, np.integer) else np.float64
         out = np.zeros((self.indicator_matrix.shape[0], data.shape[1]), dtype=dtype)
         (agg_sum_csr if isinstance(data, CSRBase) else agg_sum_csc)(
             self.indicator_matrix, data, out
         )
+        if keep_sparse:  # convert to sparse type of input
+            return cast("ArrayT", type(data)(out))
         return out
 
-    def sum(self) -> np.ndarray:
+    @overload
+    def sum(self, *, keep_sparse: Literal[True] = True) -> ArrayT: ...
+    @overload
+    def sum(self, *, keep_sparse: Literal[False]) -> np.ndarray: ...
+    def sum(self, *, keep_sparse: bool = True) -> ArrayT | np.ndarray:
         """Compute the sum per feature per group of observations.
+
+        Parameters
+        ----------
+        keep_sparse
+            If True and the input data is a sparse matrix, return a sparse matrix
+            of the same type for the aggregated sums. If False, always return
+            a dense :class:`numpy.ndarray`.
 
         Returns
         -------
         Array of sum.
 
         """
-        return self._sum(self.data)
+        return self._sum(self.data, keep_sparse=keep_sparse)
 
-    def mean(self) -> Array:
+    def mean(self) -> np.ndarray:
         """Compute the mean per feature per group of observations.
 
         Returns
@@ -130,7 +165,10 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
         Array of mean.
 
         """
-        return self.sum() / _group_counts(self.groupby, self.mask)[:, None]
+        return (
+            self.sum(keep_sparse=False)
+            / _group_counts(self.groupby, self.mask)[:, None]
+        )
 
     def mean_var(self, dof: int = 1) -> tuple[np.ndarray, np.ndarray]:
         """Compute the count, as well as mean and variance per feature, per group of observations.
@@ -167,7 +205,7 @@ class Aggregate[ArrayT: np.ndarray | CSBase]:
             var_ *= (group_counts / denom)[:, np.newaxis]
         return mean_, var_
 
-    def median(self) -> Array:
+    def median(self) -> np.ndarray:
         """Compute the median per feature per group of observations.
 
         Returns
@@ -239,7 +277,7 @@ def _normalize_by[I: Idx2D | int](
 
 
 @doctest_needs("anndata_acc")
-def aggregate(
+def aggregate(  # noqa: PLR0913
     adata: AnnData,
     by: (
         str
@@ -251,6 +289,7 @@ def aggregate(
     acc: LayerAcc | MultiAcc | GraphAcc | str | None = None,
     mask: NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
     # old API
     axis: Literal["obs", 0, "var", 1] | None = None,
     layer: str | None = None,
@@ -279,6 +318,10 @@ def aggregate(
         Boolean mask (or reference to a mask vector) to apply along the axis\ [#ref]_.
     dof
         Degrees of freedom for variance. Defaults to 1.
+    keep_sparse
+        If True and the input data is a sparse matrix, preserve sparse outputs
+        for metrics that support it (for example, ``sum`` and ``count_nonzero``).
+        If False, force dense :class:`numpy.ndarray` outputs. Defaults to True.
     acc
         If not None, accessor for aggregation data.
         Replaces `layer`, `obsm`, and `varm`.
@@ -383,7 +426,9 @@ def aggregate(
         _group_counts(categorical, mask), index=categorical.categories
     ).reindex(new_label_df.index)
     # Actual computation
-    layers = _aggregate(data, by=categorical, func=func, mask=mask, dof=dof)
+    layers = _aggregate(
+        data, by=categorical, func=func, mask=mask, dof=dof, keep_sparse=keep_sparse
+    )
 
     # Define new var dataframe
     if obsm or varm or isinstance(acc, MultiAcc):
@@ -412,7 +457,8 @@ def _aggregate(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
-) -> dict[AggType, np.ndarray | DaskArray]:
+    keep_sparse: bool = True,
+) -> dict[AggType, Array]:
     msg = f"Data type {type(data)} not supported for aggregation"
     raise NotImplementedError(msg)
 
@@ -578,7 +624,10 @@ def aggregate_dask(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
+    keep_sparse: bool = True,
 ) -> dict[AggType, DaskArray]:
+    import dask
+
     if not isinstance(data._meta, CSBase | np.ndarray):
         msg = f"Got {type(data._meta)} meta in DaskArray but only csr_matrix/csr_array and ndarray are supported."
         raise ValueError(msg)
@@ -586,25 +635,7 @@ def aggregate_dask(
         (0, 1) if isinstance(data._meta, CSRBase | np.ndarray) else (1, 0)
     )
     if data.chunksize[unchunked_axis] != data.shape[unchunked_axis]:
-        msg = "Feature axis must be unchunked"
-        raise ValueError(msg)
-
-    def aggregate_chunk_sum_or_count_nonzero(
-        chunk: Array, *, func: Literal["count_nonzero", "sum"], block_info=None
-    ):
-        # only subset the mask and by if we need to i.e.,
-        # there is chunking along the same axis as by and mask
-        if chunked_axis == 0:
-            # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
-            # for what is contained in `block_info`.
-            subset = slice(*block_info[0]["array-location"][0])
-            by_subsetted = by[subset]
-            mask_subsetted = mask[subset] if mask is not None else mask
-        else:
-            by_subsetted = by
-            mask_subsetted = mask
-        res = _aggregate(chunk, by_subsetted, func, mask=mask_subsetted, dof=dof)[func]
-        return res[None, :] if unchunked_axis == 1 else res
+        data = data.rechunk({unchunked_axis: -1})
 
     funcs = set([func] if isinstance(func, str) else func)
     if "median" in funcs:
@@ -612,34 +643,69 @@ def aggregate_dask(
         raise NotImplementedError(msg)
     has_mean, has_var = (v in funcs for v in ["mean", "var"])
     funcs_no_var_or_mean = funcs - {"var", "mean"}
-    # aggregate each row chunk or column chunk individually,
-    # producing a #chunks × #categories × #features or a #categories × #chunks array,
-    # then aggregate the per-chunk results.
-    chunks = (
-        ((1,) * data.blocks.size, (len(by.categories),), data.shape[1])
-        if unchunked_axis == 1
-        else (len(by.categories), data.chunks[1])
-    )
+
+    @dask.delayed
+    def aggregate_chunk(block, block_idx):
+        subset = slice(block_idx[0], block_idx[1])
+        by_subsetted = (
+            pd.Categorical.from_codes(by.codes[subset], categories=by.categories)
+            if chunked_axis == 0
+            else by
+        )
+        mask_subsetted = (
+            mask[subset] if (mask is not None and chunked_axis == 0) else mask
+        )
+        return {
+            f: _aggregate(
+                block,
+                by_subsetted,
+                f,
+                mask=mask_subsetted,
+                dof=dof,
+                keep_sparse=keep_sparse,
+            )[f]
+            for f in funcs_no_var_or_mean
+        }
+
+    @dask.delayed
+    def combine_aggs(a, b):
+        if chunked_axis == 0:
+            return {f: a[f] + b[f] for f in funcs_no_var_or_mean}
+        else:
+            return {
+                f: sparse.hstack([a[f], b[f]])
+                if isinstance(a[f], CSBase)
+                else np.concatenate([a[f], b[f]], axis=1)
+                for f in funcs_no_var_or_mean
+            }
+
+    offset = 0
+    delayed_chunks = []
+    blocks = data.to_delayed().ravel()
+    for i, block in enumerate(blocks):
+        block_idx = (offset, offset + data.chunks[chunked_axis][i])
+        delayed_chunks.append(aggregate_chunk(block, block_idx))
+        offset += data.chunks[chunked_axis][i]
+
+    while len(delayed_chunks) > 1:
+        delayed_chunks = [
+            combine_aggs(delayed_chunks[i], delayed_chunks[i + 1])
+            if i + 1 < len(delayed_chunks)
+            else delayed_chunks[i]
+            for i in range(0, len(delayed_chunks), 2)
+        ]
+
     aggregated = {
-        f: data.map_blocks(
-            partial(aggregate_chunk_sum_or_count_nonzero, func=f),
-            new_axis=(1,) if unchunked_axis == 1 else None,
-            chunks=chunks,
-            meta=np.array(
-                [],
-                dtype=np.float64
-                if f not in get_args(ConstantDtypeAgg)
-                else data.dtype,  # TODO: figure out best dtype for aggs like sum where dtype can change from original
-            ),
+        f: dask.array.from_delayed(
+            dask.delayed(lambda r, f=f: r[f])(delayed_chunks[0]),
+            shape=(len(by.categories), data.shape[1]),
+            dtype=np.float64,
         )
         for f in funcs_no_var_or_mean
     }
-    # If we have row chunking, we need to handle the extra axis by summing over all category × feature matrices.
-    # Otherwise, dask internally concatenates the #categories × #chunks arrays i.e., the column chunks are concatenated together to get a #categories × #features matrix.
-    if unchunked_axis == 1:
-        for k, v in aggregated.items():
-            aggregated[k] = v.sum(axis=chunked_axis)
+
     if has_var:
+        # mean/var are always dense, regardless of `keep_sparse`
         aggredated_mean_var = aggregate_dask_mean_var(data, by, mask=mask, dof=dof)
         aggregated["var"] = aggredated_mean_var["var"]
         if has_mean:
@@ -648,16 +714,23 @@ def aggregate_dask(
     # i.e., we can't just call map blocks over the mean function.
     elif has_mean:
         group_counts = _group_counts(by, mask)
+        # compute sum then divide; force sum to be dense here for mean
         aggregated["mean"] = (
-            aggregate_dask(data, by, "sum", mask=mask, dof=dof)["sum"]
+            aggregate_dask(data, by, "sum", mask=mask, dof=dof, keep_sparse=False)[
+                "sum"
+            ]
             / group_counts[:, None]
         )
     return aggregated
 
 
 @_aggregate.register(pd.DataFrame)
-def aggregate_df(data, by, func, *, mask=None, dof=1) -> dict[AggType, np.ndarray]:
-    return _aggregate(data.values, by, func, mask=mask, dof=dof)
+def aggregate_df(
+    data, by, func, *, mask=None, dof=1, keep_sparse=False
+) -> dict[AggType, Array]:
+    return _aggregate(
+        data.values, by, func, mask=mask, dof=dof, keep_sparse=keep_sparse
+    )
 
 
 @_aggregate.register(np.ndarray)
@@ -669,9 +742,10 @@ def aggregate_array(
     *,
     mask: NDArray[np.bool] | None = None,
     dof: int = 1,
-) -> dict[AggType, np.ndarray]:
+    keep_sparse: bool = True,
+) -> dict[AggType, np.ndarray | CSBase]:
     groupby = Aggregate(groupby=by, data=data, mask=mask)
-    result = {}
+    result: dict[AggType, np.ndarray | CSBase] = {}
 
     funcs = set([func] if isinstance(func, str) else func)
     if unknown := funcs - get_literal_vals(AggType):
@@ -679,22 +753,19 @@ def aggregate_array(
         raise ValueError(msg)
 
     if "sum" in funcs:  # sum is calculated separately from the rest
-        agg = groupby.sum()
-        result["sum"] = agg
+        result["sum"] = groupby.sum(keep_sparse=keep_sparse)
     # here and below for count, if var is present, these can be calculate alongside var
     if "mean" in funcs and "var" not in funcs:
-        agg = groupby.mean()
-        result["mean"] = agg
+        result["mean"] = groupby.mean()
     if "count_nonzero" in funcs:
-        result["count_nonzero"] = groupby.count_nonzero()
+        result["count_nonzero"] = groupby.count_nonzero(keep_sparse=keep_sparse)
     if "var" in funcs:
         mean_, var_ = groupby.mean_var(dof)
         result["var"] = var_
         if "mean" in funcs:
             result["mean"] = mean_
     if "median" in funcs:
-        agg = groupby.median()
-        result["median"] = agg
+        result["median"] = groupby.median()
     return result
 
 

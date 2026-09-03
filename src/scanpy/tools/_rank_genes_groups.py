@@ -365,7 +365,10 @@ class _RankGenes:
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
-        out = aggregate(agg_adata, by=obs_acc("_g"), func=funcs, dof=1)
+        # we fill dense arrays below, so don’t let `count_nonzero` stay sparse
+        out = aggregate(
+            agg_adata, by=obs_acc("_g"), func=funcs, dof=1, keep_sparse=False
+        )
         idx = out.obs_names.astype(int).to_numpy()
         mean[idx] = np.asarray(out.layers["mean"])
         if need_var:
