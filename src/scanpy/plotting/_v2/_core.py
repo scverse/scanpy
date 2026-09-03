@@ -14,19 +14,20 @@ if sys.version_info < (3, 15):
 import holoviews as hv
 import numpy as np
 import pandas as pd
-from anndata.acc import GraphAcc
+from anndata.acc import GraphAcc, LayerAcc, MultiAcc
 from fast_array_utils import stats
 from hv_anndata import A, AdDim
 
 import scanpy as sc
-from scanpy.plotting._common import dot_area
+
+from ..._utils._acc import _resolve, _resolve_all, _resolve_some
+from .._common import dot_area
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
     from typing import Literal
 
     from anndata import AnnData
-    from anndata.acc import LayerAcc, MultiAcc
     from holoviews.plotting.plot import GenericElementPlot
     from pandas.api.extensions import ExtensionArray
 
@@ -51,10 +52,10 @@ __all__ = [
 def scatter(
     adata: AnnData,
     /,
-    kdims: Collection[AdDim],
-    vdims: Collection[AdDim] = (),
+    kdims: Collection[str | AdDim],
+    vdims: Collection[str | AdDim] = (),
     *,
-    color: AdDim | Collection[AdDim] | None = None,
+    color: str | AdDim | Collection[str | AdDim] | None = None,
 ) -> hv.Scatter | hv.Layout:
     """Shortcut for a scatter plot.
 
@@ -111,16 +112,17 @@ def scatter(
 
     """
     try:
-        i, j = kdims
+        i, j = _resolve_all(kdims)
     except ValueError:
         msg = "kdims must have length 2"
         raise ValueError(msg) from None
-
-    if color is not None and not isinstance(color, AdDim):
-        return _facet(color, lambda c: scatter(adata, kdims, vdims, color=c))
-
+    vdims = _resolve_all(vdims)
     if color is not None:
+        color = _resolve_some(color)
+        if not isinstance(color, AdDim):
+            return _facet(color, lambda c: scatter(adata, [i, j], vdims, color=c))
         vdims = [*vdims, color]
+
     sc = hv.Scatter(adata, i, [j, *vdims])
     if color is not None:
         sc = sc.opts(color=color)
@@ -129,12 +131,12 @@ def scatter(
 
 
 def _scatter(
-    kdims: Collection[AdDim],
+    kdims: Collection[str | AdDim],
     adata: AnnData,
     /,
-    vdims: Collection[AdDim] = (),
+    vdims: Collection[str | AdDim] = (),
     *,
-    color: AdDim | Collection[AdDim] | None = None,
+    color: str | AdDim | Collection[str | AdDim] | None = None,
 ) -> hv.Scatter | hv.Layout:
     __tracebackhide__ = True
     return scatter(adata, kdims, vdims, color=color)
@@ -174,9 +176,9 @@ diffmap = _embedding("diffmap", "diffusion map")
 
 def heatmap(
     adata: AnnData,
-    base: LayerAcc | GraphAcc = A.X,
+    base: str | LayerAcc | GraphAcc = A.X,
     /,
-    vdims: Collection[AdDim] = (),
+    vdims: Collection[str | AdDim] = (),
     *,
     transpose: bool = False,
     add_dendrogram: bool | Literal["obs", "var"] = False,
@@ -243,33 +245,37 @@ def heatmap(
         ).opts(hv.opts.HeatMap(xticks=0, aspect=2))
 
     """
+    acc = _resolve(base, vec=False)
+    if not isinstance(acc, LayerAcc | GraphAcc):
+        msg = f"base must be a layer or graph accessor, got {acc!r}."
+        raise TypeError(msg)
     kdims = (
-        [getattr(A, base.dim).index] * 2
-        if isinstance(base, GraphAcc)
+        [getattr(A, acc.dim).index] * 2
+        if isinstance(acc, GraphAcc)
         else [A.obs.index, A.var.index]
     )
     if transpose:
         kdims.reverse()
-    hm = hv.HeatMap(adata, kdims, [base[:, :], *vdims])
+    hm = hv.HeatMap(adata, kdims, [acc[:, :], *_resolve_all(vdims)])
     shape = hm.gridded.interface.shape(hm.gridded, gridded=True)
     hm = hm.opts(_supported_opts(hv.HeatMap, show_values=sum(shape) < 80))
-    if isinstance(base, GraphAcc):
+    if isinstance(acc, GraphAcc):
         hm = hm.opts(aspect="square")
     if add_dendrogram:
         dims = kdims
         if isinstance(add_dendrogram, str):
             dims = [dims[0] if add_dendrogram == "obs" else dims[1]]
-        hm = hv.operation.dendrogram(hm, adjoint_dims=dims, main_dim=base[:, :])
+        hm = hv.operation.dendrogram(hm, adjoint_dims=dims, main_dim=acc[:, :])
     return hm
 
 
 def tracksplot(
     adata: AnnData,
     /,
-    vdims: Collection[AdDim],
+    vdims: Collection[str | AdDim],
     *,
-    kdim: AdDim | None = None,
-    color: AdDim | None = None,
+    kdim: str | AdDim | None = None,
+    color: str | AdDim | None = None,
 ) -> hv.NdLayout:
     """Tracksplot.
 
@@ -306,9 +312,13 @@ def tracksplot(
         ).opts(hv.opts.Curve(aspect=20))
 
     """
+    vdims = _resolve_all(vdims)
+    color = None if color is None else _resolve(color)
     if kdim is None:
         [dim] = {dim for vdim in vdims for dim in vdim.dims}
         kdim = getattr(A, dim).index
+    else:
+        kdim = _resolve(kdim)
     more_vdims = [] if color is None else [color]
     curves = {
         vdim: hv.Curve(adata, [kdim], [vdim, *more_vdims]).opts(
@@ -376,45 +386,45 @@ def _tracksplot2(
 def violin(
     adata: AnnData,
     /,
-    vdims: AdDim,
+    vdims: str | AdDim,
     *,
-    kdims: Collection[AdDim] = (),
-    color: AdDim | None = None,
+    kdims: Collection[str | AdDim] = (),
+    color: str | AdDim | None = None,
 ) -> hv.Violin: ...
 @overload
 def violin(
     adata: AnnData,
     /,
-    vdims: AdDim,
+    vdims: str | AdDim,
     *,
-    kdims: Collection[AdDim] = (),
-    color: Collection[AdDim],
+    kdims: Collection[str | AdDim] = (),
+    color: Collection[str | AdDim],
 ) -> hv.Layout: ...
 @overload
 def violin(
     adata: AnnData,
     /,
-    vdims: Collection[AdDim],
+    vdims: Collection[str | AdDim],
     *,
-    kdims: Collection[AdDim] = (),
-    color: AdDim | None = None,
+    kdims: Collection[str | AdDim] = (),
+    color: str | AdDim | None = None,
 ) -> hv.Layout: ...
 @overload
 def violin(
     adata: AnnData,
     /,
-    vdims: Collection[AdDim],
+    vdims: Collection[str | AdDim],
     *,
-    kdims: Collection[AdDim] = (),
-    color: Collection[AdDim],
+    kdims: Collection[str | AdDim] = (),
+    color: Collection[str | AdDim],
 ) -> hv.NdLayout: ...
 def violin(
     adata: AnnData,
     /,
-    vdims: Collection[AdDim] | AdDim,
+    vdims: Collection[str | AdDim] | str | AdDim,
     *,
-    kdims: Collection[AdDim] = (),
-    color: AdDim | Collection[AdDim] | None = None,
+    kdims: Collection[str | AdDim] = (),
+    color: str | AdDim | Collection[str | AdDim] | None = None,
 ) -> hv.Violin | hv.Layout | hv.NdLayout:
     """Shortcut for a violin plot.
 
@@ -482,9 +492,11 @@ def violin(
         )
 
     """
+    vdims = _resolve_some(vdims)
+    kdims = _resolve_all(kdims)
+    color = None if color is None else _resolve_some(color)
     match vdims, color:
         case AdDim(), AdDim() | None:
-            kdims = list(kdims)
             if color and color not in kdims:
                 kdims.append(color)
             opts = dict(violin_fill_color=color) if color else {}
@@ -493,13 +505,11 @@ def violin(
             color = _check_categorical_color(adata, color)
             return _facet(color, lambda c: violin(adata, vdims, kdims=kdims, color=c))
         case Collection(), AdDim() | None:
-            vdims = _as_vdims_list(vdims)
             return hv.Layout([
                 violin(adata, vdim, color=color).opts(title=vdim.label, ylabel="")
                 for vdim in vdims
             ]).opts(axiswise=True)
         case Collection(), Collection():
-            vdims = _as_vdims_list(vdims)
             color = _check_categorical_color(adata, color)
             return hv.NdLayout(
                 {
@@ -516,7 +526,9 @@ def violin(
             raise TypeError(msg)
 
 
-def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
+def stacked_violin(
+    adata: AnnData, /, xdim: str | AdDim, ydim: str | AdDim
+) -> hv.GridSpace:
     """Stacked violin plot.
 
     Groups data by `xdim` and `ydim` and then plots a single violin for each group.
@@ -550,6 +562,7 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
         sc.pl.stacked_violin(adata[:, markers], A.var.index, A.obs["bulk_labels"])
 
     """
+    xdim, ydim = _resolve(xdim), _resolve(ydim)
     if len(xdim.dims) != 1 or len(ydim.dims) != 1:
         msg = "xdim and ydim must map to the same axis."
         raise ValueError(msg)
@@ -584,7 +597,7 @@ def stacked_violin(adata: AnnData, /, xdim: AdDim, ydim: AdDim) -> hv.GridSpace:
 def dotplot(
     adata: AnnData,
     /,
-    group_by: AdDim,
+    group_by: str | AdDim,
     *,
     funcs: Mapping[str, AggType] = frozendict(dict(color="mean", size="count_nonzero")),
 ) -> hv.Points:
@@ -628,7 +641,7 @@ def dotplot(
         sc.pl.dotplot(adata[:, markers], A.obs["bulk_labels"])
 
     """
-    stats_wide = sc.get.aggregate(adata, group_by, funcs.values())
+    stats_wide = sc.get.aggregate(adata, _resolve(group_by), funcs.values())
     stats_long = reduce(
         pd.merge,
         (
@@ -653,10 +666,10 @@ def dotplot(
 def matrixplot(
     adata: AnnData,
     /,
-    group_by: AdDim,
+    group_by: str | AdDim,
     *,
     func: AggType = "mean",
-    data: LayerAcc | MultiAcc = A.X,
+    data: str | LayerAcc | MultiAcc = A.X,
     add_totals: bool = False,
 ) -> hv.HeatMap | hv.AdjointLayout:
     """Heatmap with totals per column.
@@ -698,7 +711,11 @@ def matrixplot(
         )
 
     """
-    agg = sc.get.aggregate(adata, group_by, func, acc=data)
+    acc = _resolve(data, vec=False)
+    if not isinstance(acc, LayerAcc | MultiAcc):
+        msg = f"data must be a layer or multi-dimensional accessor, got {acc!r}."
+        raise TypeError(msg)
+    agg = sc.get.aggregate(adata, _resolve(group_by), func, acc=acc)
     agg.var["totals"] = stats.sum(agg.layers[func], axis=0)
     heatmap = hv.HeatMap(
         agg,
@@ -712,14 +729,6 @@ def matrixplot(
         xlabel="",  # TODO: holoviews issue
     )
     return hv.AdjointLayout([_add_hover(heatmap), _add_hover(bars)])
-
-
-def _as_vdims_list(vdims: Collection[AdDim], /) -> list[AdDim]:
-    vdims = list(vdims)
-    if not all(isinstance(vdim, AdDim) for vdim in vdims):
-        msg = f"vdims must be an AdDim or a collection of AdDims, got {vdims!r}."
-        raise TypeError(msg)
-    return vdims
 
 
 def _check_categorical_color(
