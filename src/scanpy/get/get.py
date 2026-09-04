@@ -111,15 +111,17 @@ def rank_genes_groups_df(
         d = d.join(adata.var[gene_symbols], on="names")
 
     for pts, name in {"pts": "pct_nz_group", "pts_rest": "pct_nz_reference"}.items():
-        if pts in adata.uns[key]:
-            pts_df = (
-                adata
-                .uns[key][pts][group]
-                .rename_axis(index="names")
-                .reset_index()
-                .melt(id_vars="names", var_name="group", value_name=name)
-            )
-            d = d.merge(pts_df)
+        if pts not in adata.uns[key]:
+            continue
+        # pts columns are ordered by significance,
+        # so they align with names positionally instead of by index
+        pts_df = (
+            adata
+            .uns[key][pts][group]
+            .melt(var_name="group", value_name=name)
+            .assign(names=pd.DataFrame(adata.uns[key]["names"])[group].melt()["value"])
+        )
+        d = d.merge(pts_df)
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
