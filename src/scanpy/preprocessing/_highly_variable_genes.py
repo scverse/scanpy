@@ -181,7 +181,9 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     )
     if batch_key is not None:
         aggregated_mean_var = aggregate(
-            adata_agg, by=dim_acc("__hvg_v3_batch_info__"), func=["mean", "var"]
+            adata_agg,
+            by=dim_acc("__hvg_v3_batch_info__", dim="obs"),
+            func=["mean", "var"],
         )
         aggregated_mean_var.layers["mean"], aggregated_mean_var.layers["var"] = (
             materialize_as_ndarray(

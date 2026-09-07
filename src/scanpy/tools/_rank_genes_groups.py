@@ -371,7 +371,7 @@ class _RankGenes:
                 index=pd.RangeIndex(len(codes)).astype(str),
             ),
         )
-        out = aggregate(agg_adata, by=dim_acc("_g"), func=funcs, dof=1)
+        out = aggregate(agg_adata, by=dim_acc("_g", dim="obs"), func=funcs, dof=1)
         idx = out.obs_names.astype(int).to_numpy()
         mean[idx] = np.asarray(out.layers["mean"])
         if need_var:

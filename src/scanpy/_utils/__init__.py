@@ -988,7 +988,7 @@ def _resolve_axis(
     raise ValueError(msg)
 
 
-def dim_acc(col: str, *, dim: Literal["obs", "var"] = "obs") -> str | AdRef:
+def dim_acc(col: str, *, dim: Literal["obs", "var"]) -> str | AdRef:
     """Get reference to the `col`umn of `adata.{dim}` the way the active preset expects it."""
     from .._settings import Preset, settings
 
