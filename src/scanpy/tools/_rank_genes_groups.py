@@ -754,7 +754,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
     *,
-    mask: Mask | Default | None = Default(preset=("rank_genes_groups", "mask")),
+    mask: Mask | None = None,
     use_raw: bool | None = None,
     groups: Literal["all"] | Iterable[str] = "all",
     reference: str = "rest",
@@ -887,8 +887,6 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     mask = _mask_arg(mask, mask_var, dim="var")
-    if isinstance(mask, Default):
-        mask = settings.preset.rank_genes_groups.mask
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.
