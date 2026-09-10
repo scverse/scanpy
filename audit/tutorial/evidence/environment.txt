@@ -55,7 +55,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
 PyYAML==6.0.3
 requests==2.34.2
--e git+https://github.com/scverse/scanpy@6bdbb7ccf258901a995f2c6aecdaa62c75a34747#egg=scanpy
+-e git+https://github.com/scverse/scanpy@a6f1a2d23496e97a01860029f7bd57b0bcce6e27#egg=scanpy
 scikit-image==0.26.0
 scikit-learn==1.9.1
 scipy==1.18.1

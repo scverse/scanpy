@@ -8,5 +8,7 @@
   "python": "/tmp/scanpy-de-audit-env/bin/python",
   "worker_limit": 8,
   "plot_backend": "Agg",
-  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.43"
+  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.43",
+  "python_version": "Python 3.14.4",
+  "environment_note": "pip freeze with the editable Scanpy revision normalized to the audited upstream source baseline; audit commits do not change production code."
 }
