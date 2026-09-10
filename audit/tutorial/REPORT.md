@@ -12,8 +12,19 @@ Data import and file handling are preparation, outside the scientific review.
 
 The audit is in progress. Completed reviews are listed here.
 
+The tutorial’s hardcoded annotation map fails on this run.
+It labels 2,269 B-marker-enriched cells as Erythroid and 1,759 erythroid-marker-enriched cells as B Cells.
+Another 1,743 cells receive no annotation. The map assumes four clusters, but this run produces five.
+The [clustering review](08-clustering.md) gives the independent marker calculations.
+These labels do not feed into the tutorial DGE call, which uses a separate cluster column.
+
+![Original tutorial marker plot for the five coarse clusters](figures/coarse-markers.png)
+
+The original plot shows B-cell enrichment in row 2 and erythroid enrichment in rows 3 and 4.
+
 | Calculation | Independent result | Scientific interpretation |
 | --- | --- | --- |
+| Leiden and annotation | All four partitions match direct igraph exactly. Independent objective error is at most `3.4e-16`. | Hardcoded labels conflict with marker profiles for 4,028 cells; 1,743 lack labels. |
 | Highly variable genes | Exact agreement for all 2,000 selected genes. Maximum normalized-dispersion error: `4.316e-7`. | Only 628 qualify in both samples. The list includes 184 genes detected in ten cells or fewer. |
 | Differential expression | All 398,259 gene/group comparisons pass. Default p-values match exactly; maximum BH error is `2.221e-16`. | Tie correction changes the number of pairs with adjusted p < 0.05 from 80,557 to 165,700. |
 | Neighbors and UMAP | Full fuzzy-graph support matches; maximum weight error is `3.55e-6`. Exact-neighbor recall is 98.40% on 1,024 query cells. | The two-dimensional embedding retains 14.95% of exact neighbors for those queries. |
