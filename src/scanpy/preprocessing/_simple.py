@@ -837,6 +837,11 @@ def _regress_out_chunk(
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", sme.PerfectSeparationWarning)
+                # For a categorical key, `regres` is [1, per-category mean].
+                # If the category means coincide, that’s rank-deficient, but the
+                # (pseudo-inverse) fit still yields the correct residuals.
+                # statsmodels ≥0.15 warns about it: SingularMatrixWarning
+                warnings.filterwarnings("ignore", "The design matrix is rank-deficient")
                 result = sm.GLM(
                     data_chunk[:, col_index], regres, family=sm.families.Gaussian()
                 ).fit()
