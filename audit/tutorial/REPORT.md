@@ -15,11 +15,24 @@ The audit is in progress. Completed reviews are listed here.
 | Calculation | Independent result | Scientific interpretation |
 | --- | --- | --- |
 | Highly variable genes | Exact agreement for all 2,000 selected genes. Maximum normalized-dispersion error: `4.316e-7`. | Only 628 qualify in both samples. The list includes 184 genes detected in ten cells or fewer. |
+| Differential expression | All 398,259 gene/group comparisons pass. Default p-values match exactly; maximum BH error is `2.221e-16`. | Tie correction changes the number of pairs with adjusted p < 0.05 from 80,557 to 165,700. |
 
 The HVG result supports the implementation of the stated method on this dataset.
 It does not establish that each selected gene is a reliable biological marker.
 The pooled-sample method selects a different list, with 1,445 genes in common.
 See the [HVG review](05-hvg.md) for the formulas, source paths, tolerances, and limits.
+
+The original tutorial DGE call completes with all genes and groups, including both plots.
+Cluster 7 has NK-associated markers consistent with the notebook interpretation.
+Changing the fold-change definition reverses 25,882 signs, but most changes involve
+at least one effect of one log2 unit or less. Only four reversals exceed one log2 unit
+in both definitions and pass the default adjusted-p threshold.
+The [DGE review](10-dge.md) gives those actual examples and their expression fractions.
+
+The DGE calculation describes clusters derived from the same expression data.
+Its per-cell p-values do not establish population-level treatment or disease effects.
+The detailed review separates cluster-selection bias and biological replication
+from the correctness of the numerical formulas.
 
 ## Method and evidence
 
