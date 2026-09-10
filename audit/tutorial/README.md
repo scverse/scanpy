@@ -27,14 +27,25 @@ Each scientific report records the executed commands, independent checks, source
 and limits. The final report will distinguish implementation errors from statistical
 assumptions and tutorial portability problems.
 
+Create the recorded environment with Python 3.14:
+
+```sh
+python3.14 -m venv /tmp/scanpy-de-audit-env
+/tmp/scanpy-de-audit-env/bin/pip install -r audit/tutorial/evidence/environment.txt
+```
+
+The dependency file installs the audited Scanpy source revision.
+Run these commands from the audit checkout, which contains the runner and notebook.
 Run a stage with the preceding checkpoint present:
 
 ```sh
-python scripts/tutorial_audit/run_stage.py 1 --output /home/fdr/scanpy-tutorial-audit
+NUMBA_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 /tmp/scanpy-de-audit-env/bin/python scripts/tutorial_audit/run_stage.py 1 --output /home/fdr/scanpy-tutorial-audit
 ```
 
 The runner selects a noninteractive plotting backend and eight workers.
 It preserves the notebook calculations, parameter choices, and default random seeds.
+Run stages 1 through 10 in numerical order to reproduce every checkpoint.
+The scientific reports give separate commands for their independent numerical checks.
 
 Initial import and QC work used internal agents before the user clarified the required
 Herdr workflow. Those agents stopped. Their preparation artifacts remain available,
