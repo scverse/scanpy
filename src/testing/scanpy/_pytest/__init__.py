@@ -51,7 +51,9 @@ def original_settings(
 
     setup()
     if pkg_version("anndata") >= Version("0.12"):
-        ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
+        if pkg_version("anndata") < Version("0.13"):
+            ad.settings.zarr_write_format = 3
+        ad.settings.auto_shard_zarr_v3 = True
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = "hint"
     sc.settings.autoshow = True
