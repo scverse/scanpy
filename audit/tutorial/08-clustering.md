@@ -20,7 +20,9 @@ The calculation and both Ruff checks passed. The environment uses Scanpy `1.14.0
 
 ## Confirmed annotation failure
 
-Cell 62 maps numeric labels without reference to the current marker profiles. The saved coarse partition contains five labels, not the four labels in that map.
+Cell 62 maps numeric labels without reference to the current marker profiles.
+The [published stable tutorial](https://scanpy.readthedocs.io/en/stable/tutorials/basics/clustering.html) contains the same map, checked on 2026-09-10.
+The measured failure counts apply to the recorded development checkout and environment. The saved coarse partition contains five labels, not the four labels in that map.
 
 | Coarse cluster | Cells | Assigned annotation | Observed marker profile |
 | --- | ---: | --- | --- |
