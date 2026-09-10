@@ -22,6 +22,7 @@ Data import and basic QC only prepare the dataset.
 
 The table describes execution dependencies, not the order of scientific review.
 The runner saves an AnnData checkpoint after each stage and plots after each cell.
+[Execution records](evidence/execution.json) contain the cell lists, shapes, timings, and notebook hash for all ten stages.
 Data and large artifacts stay outside the Git repository.
 Each scientific report records the executed commands, independent checks, source review,
 and limits. The final report will distinguish implementation errors from statistical

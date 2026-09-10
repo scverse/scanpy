@@ -1,0 +1,572 @@
+{
+  "source": "Original runner output under /home/fdr/scanpy-tutorial-audit/metrics",
+  "stages": [
+    {
+      "stage": 1,
+      "cells": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "cell_seconds": {
+        "1": 5.89510309509933e-05,
+        "2": 0.00011846300913020968,
+        "4": 2.078471736982465,
+        "5": 12.253584876016248
+      },
+      "shape": [
+        17125,
+        36601
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample"
+      ],
+      "var_columns": []
+    },
+    {
+      "stage": 2,
+      "cells": [
+        9,
+        10,
+        12,
+        14,
+        16
+      ],
+      "cell_seconds": {
+        "9": 0.008753925969358534,
+        "10": 8.814861827995628,
+        "12": 0.3780617619631812,
+        "14": 0.010168634995352477,
+        "16": 0.33582138997735456
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells"
+      ]
+    },
+    {
+      "stage": 3,
+      "cells": [
+        18
+      ],
+      "cell_seconds": {
+        "18": 58.22052203898784
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells"
+      ]
+    },
+    {
+      "stage": 4,
+      "cells": [
+        22,
+        23
+      ],
+      "cell_seconds": {
+        "22": 0.017766446981113404,
+        "23": 1.7471994180232286
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells"
+      ]
+    },
+    {
+      "stage": 5,
+      "cells": [
+        25,
+        26
+      ],
+      "cell_seconds": {
+        "25": 1.5783754059812054,
+        "26": 0.01531095098471269
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    },
+    {
+      "stage": 6,
+      "cells": [
+        28,
+        30,
+        32
+      ],
+      "cell_seconds": {
+        "28": 0.43342273600865155,
+        "30": 0.007340259966440499,
+        "32": 0.041792732023168355
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    },
+    {
+      "stage": 7,
+      "cells": [
+        34,
+        36,
+        38
+      ],
+      "cell_seconds": {
+        "34": 20.66901712596882,
+        "36": 4.861691985977814,
+        "38": 0.01588467397959903
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    },
+    {
+      "stage": 8,
+      "cells": [
+        41,
+        42,
+        45,
+        46,
+        52,
+        54,
+        55
+      ],
+      "cell_seconds": {
+        "41": 0.3285235830117017,
+        "42": 0.02724253700580448,
+        "45": 0.07563494599889964,
+        "46": 0.046408359019551426,
+        "52": 1.4905721949762665,
+        "54": 0.037391828023828566,
+        "55": 0.037526090047322214
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet",
+        "leiden",
+        "leiden_res_0.02",
+        "leiden_res_0.50",
+        "leiden_res_2.00"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    },
+    {
+      "stage": 9,
+      "cells": [
+        59,
+        60,
+        62,
+        63
+      ],
+      "cell_seconds": {
+        "59": 0.000148679013364017,
+        "60": 0.09391541400691494,
+        "62": 0.0010066030081361532,
+        "63": 0.08779839298222214
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet",
+        "leiden",
+        "leiden_res_0.02",
+        "leiden_res_0.50",
+        "leiden_res_2.00",
+        "cell_type_lvl1"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    },
+    {
+      "stage": 10,
+      "cells": [
+        67,
+        69,
+        72,
+        73
+      ],
+      "cell_seconds": {
+        "67": 4.724835843022447,
+        "69": 0.334559429960791,
+        "72": 0.013198723027016968,
+        "73": 0.18787100299960002
+      },
+      "shape": [
+        17041,
+        23427
+      ],
+      "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+      "scanpy_version": "1.14.0.dev6+ga6f1a2d23",
+      "obs_columns": [
+        "sample",
+        "n_genes_by_counts",
+        "log1p_n_genes_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "pct_counts_in_top_50_genes",
+        "pct_counts_in_top_100_genes",
+        "pct_counts_in_top_200_genes",
+        "pct_counts_in_top_500_genes",
+        "total_counts_mt",
+        "log1p_total_counts_mt",
+        "pct_counts_mt",
+        "total_counts_ribo",
+        "log1p_total_counts_ribo",
+        "pct_counts_ribo",
+        "total_counts_hb",
+        "log1p_total_counts_hb",
+        "pct_counts_hb",
+        "n_genes",
+        "doublet_score",
+        "predicted_doublet",
+        "leiden",
+        "leiden_res_0.02",
+        "leiden_res_0.50",
+        "leiden_res_2.00",
+        "cell_type_lvl1"
+      ],
+      "var_columns": [
+        "mt",
+        "ribo",
+        "hb",
+        "n_cells_by_counts",
+        "mean_counts",
+        "log1p_mean_counts",
+        "pct_dropout_by_counts",
+        "total_counts",
+        "log1p_total_counts",
+        "n_cells",
+        "highly_variable",
+        "means",
+        "dispersions",
+        "dispersions_norm",
+        "highly_variable_nbatches",
+        "highly_variable_intersection"
+      ]
+    }
+  ]
+}
