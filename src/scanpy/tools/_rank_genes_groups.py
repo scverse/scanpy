@@ -653,8 +653,12 @@ class _RankGenes:
     ) -> None:
         generate_test_results = None
         if method in {"t-test", "t-test_overestim_var"}:
-            self._basic_stats(exponentiate_values=not mean_in_log_space, need_var=True)
-            generate_test_results = self.t_test(method)
+            # The test always runs on the (log-transformed) values in `X`;
+            # `mean_in_log_space` only selects how the fold change is computed.
+            self._basic_stats(exponentiate_values=False, need_var=True)
+            generate_test_results = list(self.t_test(method))
+            if not mean_in_log_space:
+                self._basic_stats(exponentiate_values=True)
         elif "wilcoxon" in method:
             generate_test_results = (
                 self.illico(tie_correct=tie_correct)

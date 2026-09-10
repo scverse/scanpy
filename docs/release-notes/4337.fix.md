@@ -1,0 +1,1 @@
+Fix {func}`scanpy.tl.rank_genes_groups` running the `t-test` and `t-test_overestim_var` methods on exponentiated values when `mean_in_log_space=False`; the test now always uses the (log-transformed) input and `mean_in_log_space` only affects `logfoldchanges` {smaller}`C Krafft`
