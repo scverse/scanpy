@@ -381,7 +381,7 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     pos: np.ndarray | Path | str | None = None,
     normalize_to_color: bool = False,
     cmap: str | Colormap | None = None,
-    cax: Axes | None = None,
+    cax: Axes | Sequence[Axes] | None = None,
     colorbar=None,  # TODO: this seems to be unused
     cb_kwds: Mapping[str, Any] = frozendict({}),
     frameon: bool | None = None,
@@ -491,7 +491,8 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
     cmap
         The color map.
     cax
-        A matplotlib axes object for a potential colorbar.
+        A matplotlib axes object, or a sequence of axes (one per color), for
+        a potential colorbar.
     cb_kwds
         Keyword arguments for :class:`~matplotlib.colorbar.Colorbar`,
         for instance, `ticks`.
@@ -685,8 +686,16 @@ def paga(  # noqa: PLR0912, PLR0913, PLR0915
                     rectangle = [left, bottom, width, height]
                     fig = plt.gcf()
                     ax_cb = fig.add_axes(rectangle)
-                else:
+                elif isinstance(cax, (list, tuple, np.ndarray)):
                     ax_cb = cax[icolor]
+                else:
+                    if sum(colorbars) > 1:
+                        msg = (
+                            "`cax` must be a sequence of axes (one per color) "
+                            "when multiple colorbars are requested."
+                        )
+                        raise ValueError(msg)
+                    ax_cb = cax
 
                 _ = plt.colorbar(
                     sct,
