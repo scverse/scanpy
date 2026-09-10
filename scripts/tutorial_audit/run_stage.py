@@ -9,11 +9,12 @@ import time
 from pathlib import Path
 
 import anndata as ad
-import matplotlib
+import matplotlib as mpl
 import pooch
+
 import scanpy as sc
 
-matplotlib.use("Agg")
+mpl.use("Agg")
 from matplotlib import pyplot as plt
 
 STAGES = {
@@ -31,6 +32,7 @@ STAGES = {
 
 
 def main():
+    """Execute original cells for one stage and record their output."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stage", type=int, choices=STAGES)
     parser.add_argument("--output", type=Path, required=True)
