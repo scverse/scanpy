@@ -1,0 +1,231 @@
+{
+  "counts_unchanged": true,
+  "cell_gene_order_unchanged": true,
+  "original_obs_unchanged_except_filter_statistics": true,
+  "n_genes_changed_cells": 5927,
+  "batches": {
+    "s1d1": {
+      "preprocessing": {
+        "batch": "s1d1",
+        "genes_passing_min_cells": 21675,
+        "cells_passing_min_genes": 8713,
+        "hvg_count": 3680,
+        "raw_parent_sum_exact": true,
+        "raw_hvg_input_exact": true,
+        "same_parent_pairs": 2,
+        "unique_ordered_parent_pairs": 17426,
+        "normalization_target_checked": 1000000.0,
+        "observed_zscore_max_error": 1.3145040611561853e-13,
+        "simulated_zscore_max_error": 6.572520305780927e-14,
+        "pca_fit_observed_only": true,
+        "pca_components": 30,
+        "pca_projection_max_errors": [
+          1.4210854715202004e-14,
+          1.0658141036401503e-14
+        ]
+      },
+      "score_error_formula_max_absolute_error": 6.661338147750939e-16,
+      "stored_neighbors_including_self": 142,
+      "expected_doublet_rate": 0.05,
+      "stdev_doublet_rate": 0.02,
+      "detectable_fraction": 0.32239182830253643,
+      "inferred_overall_rate": 0.07369170523317907,
+      "corrected_nonself_neighbors": 141,
+      "corrected_observed_mean_score_increase": 0.0018633816901737486,
+      "corrected_observed_max_score_increase": 0.1391193036354319,
+      "corrected_observed_increased_cells": 5167,
+      "corrected_calls_changed_fixed_threshold": 17,
+      "corrected_threshold": 0.22629450092034803,
+      "corrected_predicted_doublets": 224,
+      "corrected_calls_changed_recomputed_threshold": 17,
+      "corrected_gained_cell_names": [
+        "AATCGTGCATACCAGT-1",
+        "ACCACAAGTTAGGCTT-1",
+        "AGGTTACAGGCCTGCT-1",
+        "ATGGAGGCAGCTCCTT-1",
+        "CAGTGCGTCGAAGCAG-1",
+        "CCGGACATCGTACCTC-1",
+        "GCCATGGTCTCCGAGG-1",
+        "GGGACAATCTTTGCTA-1",
+        "GGGTGTCCAAGCCCAC-1",
+        "GGTGAAGTCTCACTCG-1",
+        "GTGCTGGCAACGCATT-1",
+        "TAGCACAGTTTGAACC-1",
+        "TCAGCAACAACTGCCG-1",
+        "TGAGTCACAATTTCTC-1",
+        "TGCTGAATCGCAATGT-1",
+        "TGTTTGTAGTCGTTAC-1",
+        "TTCCTCTGTAAGGCCA-1"
+      ],
+      "corrected_lost_cell_names": [],
+      "explicit_true_same_graph_observed_max_difference": 1.0547118733938987e-15,
+      "explicit_true_neighbor_count": 140,
+      "explicit_true_formula_denominator_count": 141,
+      "observed_cells": 8713,
+      "simulated_cells": 17426,
+      "predicted_doublets": 207,
+      "threshold": 0.22340494329344798,
+      "observed_score_range": [
+        0.002624671916010499,
+        0.649769585253457
+      ],
+      "simulated_score_range": [
+        0.00426075841499787,
+        0.7888888888888892
+      ],
+      "score_formula_max_absolute_error": 1.0547118733938987e-15,
+      "neighbors_including_self": 141,
+      "rows_including_self": 26139,
+      "rows_with_self_outside_first_column": 1,
+      "self_vote_sensitivity_max_score_change": 0.13793991195324695,
+      "self_vote_sensitivity_calls_changed_fixed_threshold": 20,
+      "self_vote_sensitivity_calls_changed_recomputed_threshold": 45,
+      "self_vote_sensitivity_recomputed_threshold": 0.21680027650238617,
+      "exact_other_neighbor_subset_cells": 128,
+      "exact_other_neighbor_subset_max_score_change": 0.05693152292347725,
+      "exact_other_neighbor_subset_calls_changed_fixed_threshold": 0,
+      "histogram_bin_sensitivity": {
+        "64": {
+          "threshold": 0.21880751284145253,
+          "predicted_doublets": 227
+        },
+        "128": {
+          "threshold": 0.22187246647611616,
+          "predicted_doublets": 227
+        },
+        "256": {
+          "threshold": 0.22340494329344798,
+          "predicted_doublets": 207
+        },
+        "512": {
+          "threshold": 0.22263870488478207,
+          "predicted_doublets": 227
+        }
+      },
+      "classifier_replays_match_independent_formulas": true,
+      "explicit_true_rows_still_containing_self": 1,
+      "exact_subset_corrected_neighbor_mean_recall": 0.9998891843971631
+    },
+    "s1d3": {
+      "preprocessing": {
+        "batch": "s1d3",
+        "genes_passing_min_cells": 21398,
+        "cells_passing_min_genes": 8328,
+        "hvg_count": 3551,
+        "raw_parent_sum_exact": true,
+        "raw_hvg_input_exact": true,
+        "same_parent_pairs": 4,
+        "unique_ordered_parent_pairs": 16656,
+        "normalization_target_checked": 1000000.0,
+        "observed_zscore_max_error": 1.5987211554602254e-13,
+        "simulated_zscore_max_error": 1.1901590823981678e-13,
+        "pca_fit_observed_only": true,
+        "pca_components": 30,
+        "pca_projection_max_errors": [
+          1.4210854715202004e-14,
+          1.0658141036401503e-14
+        ]
+      },
+      "score_error_formula_max_absolute_error": 5.828670879282072e-16,
+      "stored_neighbors_including_self": 139,
+      "expected_doublet_rate": 0.05,
+      "stdev_doublet_rate": 0.02,
+      "detectable_fraction": 0.037163784822286265,
+      "inferred_overall_rate": 0.019386106623586426,
+      "corrected_nonself_neighbors": 138,
+      "corrected_observed_mean_score_increase": 0.002377453519041241,
+      "corrected_observed_max_score_increase": 0.14045092137916337,
+      "corrected_observed_increased_cells": 5118,
+      "corrected_calls_changed_fixed_threshold": 14,
+      "corrected_threshold": 0.607092410391044,
+      "corrected_predicted_doublets": 20,
+      "corrected_calls_changed_recomputed_threshold": 14,
+      "corrected_gained_cell_names": [
+        "ACAACCATCAACCCGG-1",
+        "ACCCAAATCCATACTT-1",
+        "AGAACAACAGATCACT-1",
+        "AGCCAATGTACCCAGC-1",
+        "AGTGCCGTCTGCTGAA-1",
+        "CAAGACTAGTAAGAGG-1",
+        "CATGAGTAGAAGCGAA-1",
+        "CCATAAGGTACTCGCG-1",
+        "GACACGCCACAATGAA-1",
+        "GACGCTGTCCGACAGC-1",
+        "GAGTTGTAGCTCCATA-1",
+        "GTTAGACTCGCAATGT-1",
+        "TTCATGTGTCGAACAG-1",
+        "TTTAGTCCAGCCTACG-1"
+      ],
+      "corrected_lost_cell_names": [],
+      "explicit_true_same_graph_observed_max_difference": 0.0011843440403674424,
+      "explicit_true_neighbor_count": 137,
+      "explicit_true_formula_denominator_count": 138,
+      "observed_cells": 8328,
+      "simulated_cells": 16656,
+      "predicted_doublets": 6,
+      "threshold": 0.6101388774692024,
+      "observed_score_range": [
+        0.004622496147919876,
+        0.6448598130841134
+      ],
+      "simulated_score_range": [
+        0.005415162454873647,
+        0.7853107344632775
+      ],
+      "score_formula_max_absolute_error": 1.3322676295501878e-15,
+      "neighbors_including_self": 138,
+      "rows_including_self": 24984,
+      "rows_with_self_outside_first_column": 2,
+      "self_vote_sensitivity_max_score_change": 0.13923109600679562,
+      "self_vote_sensitivity_calls_changed_fixed_threshold": 14,
+      "self_vote_sensitivity_calls_changed_recomputed_threshold": 14,
+      "self_vote_sensitivity_recomputed_threshold": 0.6091426203603614,
+      "exact_other_neighbor_subset_cells": 128,
+      "exact_other_neighbor_subset_max_score_change": 0.045218869528261596,
+      "exact_other_neighbor_subset_calls_changed_fixed_threshold": 0,
+      "histogram_bin_sensitivity": {
+        "64": {
+          "threshold": 0.2674113311764469,
+          "predicted_doublets": 165
+        },
+        "128": {
+          "threshold": 0.6055691768519657,
+          "predicted_doublets": 6
+        },
+        "256": {
+          "threshold": 0.6101388774692024,
+          "predicted_doublets": 6
+        },
+        "512": {
+          "threshold": 0.607854027160584,
+          "predicted_doublets": 6
+        }
+      },
+      "classifier_replays_match_independent_formulas": true,
+      "explicit_true_rows_still_containing_self": 2,
+      "exact_subset_corrected_neighbor_mean_recall": 0.9999433876811594
+    }
+  },
+  "relevant_source_matches_baseline": true,
+  "upstream_reference_commit": "67f8ecbad14e8e1aa9c89b43dac6638cebe38640",
+  "baseline": "a6f1a2d2",
+  "rerun_head": "20b234166355135d7359710cbacdb0441ef1ed9e",
+  "shape": [
+    17041,
+    23427
+  ],
+  "raw_nonnegative_integer_counts": true,
+  "versions": {
+    "scanpy": "1.14.0.dev6+ga6f1a2d23",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "pynndescent": "0.6.0",
+    "scikit-image": "0.26.0"
+  },
+  "checkpoint_sha256": {
+    "2": "033dcd1e6a0bfb46fa5771ab6bf8ad6d8731d48fd2e1d249d7557ca32ac0225b",
+    "3": "e28455ed85f74b6cfb37e7a36eb16ac4d4d261801bcbfceb839c42aa0b0cd9d1"
+  },
+  "instrumented_rerun_exactly_matches": true
+}

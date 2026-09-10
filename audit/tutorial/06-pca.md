@@ -94,4 +94,4 @@ NUMBA_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 /tmp/scanpy-de-audit-env/bin/python s
 /tmp/scanpy-audit-tools/bin/ruff format --check scripts/tutorial_audit/check_06.py
 ```
 
-All numerical assertions and both configured Ruff checks pass. No production modification, unit test, commit, or PR forms part of this executor handoff.
+All numerical assertions and both configured Ruff checks pass.

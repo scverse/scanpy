@@ -25,7 +25,7 @@ The runner saves an AnnData checkpoint after each stage and plots after each cel
 [Execution records](evidence/execution.json) contain the cell lists, shapes, timings, and notebook hash for all ten stages.
 Data and large artifacts stay outside the Git repository.
 Each scientific report records the executed commands, independent checks, source review,
-and limits. The final report will distinguish implementation errors from statistical
+and limits. The [final report](REPORT.md) distinguishes implementation errors from statistical
 assumptions and tutorial portability problems.
 
 Create the recorded environment with Python 3.14:

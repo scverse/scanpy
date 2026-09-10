@@ -1,0 +1,49 @@
+{
+  "supervisor": "scanpy-audit-supervisor",
+  "supervisor_pane": "w6:pFG",
+  "workflow": "visible Herdr Codex executors; sequential scientific reviews",
+  "executors": [
+    {
+      "name": "scanpy-executor-1",
+      "pane": "w6:pFM",
+      "scope": "Highly variable genes",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-2",
+      "pane": "w6:pFN",
+      "scope": "Differential expression",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-3",
+      "pane": "w6:pFP",
+      "scope": "Neighbors and UMAP",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-4",
+      "pane": "w6:pFQ",
+      "scope": "Leiden clustering and biological annotation",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-5",
+      "pane": "w6:pFR",
+      "scope": "Principal component analysis",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-6",
+      "pane": "w6:pFS",
+      "scope": "Normalization and log transformation",
+      "state": "reviewed; pane closed"
+    },
+    {
+      "name": "scanpy-executor-7",
+      "pane": "w6:pFT",
+      "scope": "Scrublet doublet detection",
+      "state": "reviewed; pane closed"
+    }
+  ]
+}
