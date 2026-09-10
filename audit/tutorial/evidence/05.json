@@ -1,238 +1,195 @@
 {
-  "shape": [
-    17041,
-    23427
-  ],
-  "versions": {
-    "scanpy": "1.14.0.dev6+ga6f1a2d23",
-    "numpy": "2.5.3",
-    "scipy": "1.18.1",
-    "pandas": "3.0.5",
-    "fast-array-utils": "1.5"
-  },
-  "input_dtype": "float32",
-  "stored_metric_dtypes": {
-    "means": "float64",
-    "dispersions": "float64",
-    "dispersions_norm": "float32"
-  },
-  "normalization_target": 5853.0,
-  "count_normalization_vs_expm1_max_absolute_error": 0.002147756145859603,
-  "input_matrix_counts_annotations_unchanged": true,
-  "batches": {
-    "s1d1": {
-      "cells": 8713,
-      "expressed_genes": 23183,
-      "absent_genes": 244,
-      "selected": 2000,
-      "cutoff": 0.9857832352561409,
-      "cutoff_ties": 1,
-      "nonfinite_normalized_dispersions": 0,
-      "singleton_genes": [
-        "HBB",
-        "MALAT1",
-        "MT-ND2"
-      ],
-      "bin_counts": {
-        "(-0.00633, 0.317]": 21622,
-        "(0.317, 0.634]": 1035,
-        "(0.634, 0.951]": 250,
-        "(0.951, 1.268]": 88,
-        "(1.268, 1.585]": 35,
-        "(1.585, 1.902]": 31,
-        "(1.902, 2.218]": 26,
-        "(2.218, 2.535]": 29,
-        "(2.535, 2.852]": 25,
-        "(2.852, 3.169]": 18,
-        "(3.169, 3.486]": 11,
-        "(3.486, 3.803]": 1,
-        "(4.12, 4.437]": 3,
-        "(4.437, 4.754]": 3,
-        "(4.754, 5.071]": 4,
-        "(5.705, 6.022]": 1,
-        "(6.022, 6.339]": 1
-      },
-      "bin_edges": [
-        -0.006330663562266319,
-        0.31693494376129916,
-        0.6338620097647948,
-        0.9507890757682904,
-        1.267716141771786,
-        1.5846432077752814,
-        1.9015702737787772,
-        2.2184973397822723,
-        2.535424405785768,
-        2.8523514717892637,
-        3.169278537792759,
-        3.4862056037962548,
-        3.8031326697997505,
-        4.120059735803246,
-        4.436986801806741,
-        4.753913867810237,
-        5.070840933813733,
-        5.387767999817228,
-        5.704695065820724,
-        6.021622131824219,
-        6.338549197827715
-      ],
-      "scanpy_metric_max_absolute_errors": {
-        "means": 0.0,
-        "dispersions": 5.658411805775643e-08,
-        "dispersions_norm": 9.374990561639152e-08
-      },
-      "scanpy_selection_disagreements": 0,
-      "singleton_final_selected": {
-        "HBB": true,
-        "MALAT1": true,
-        "MT-ND2": true
-      },
-      "count_float64_selection_disagreements": 0,
-      "count_float64_metric_max_absolute_errors": {
-        "means": 5.06547834788762e-08,
-        "dispersions": 3.094950153936793e-07,
-        "dispersions_norm": 5.258374176086988e-07
-      }
+    "shape": [17041, 23427],
+    "versions": {
+        "scanpy": "1.14.0.dev6+ga6f1a2d23",
+        "numpy": "2.5.3",
+        "scipy": "1.18.1",
+        "pandas": "3.0.5",
+        "fast-array-utils": "1.5"
     },
-    "s1d3": {
-      "cells": 8328,
-      "expressed_genes": 23124,
-      "absent_genes": 303,
-      "selected": 2000,
-      "cutoff": 1.0285669034734046,
-      "cutoff_ties": 1,
-      "nonfinite_normalized_dispersions": 0,
-      "singleton_genes": [
-        "HBB",
-        "MALAT1",
-        "HBA2",
-        "MT-ATP6"
-      ],
-      "bin_counts": {
-        "(-0.00649, 0.325]": 21814,
-        "(0.325, 0.649]": 860,
-        "(0.649, 0.974]": 201,
-        "(0.974, 1.299]": 71,
-        "(1.299, 1.624]": 37,
-        "(1.624, 1.948]": 21,
-        "(1.948, 2.273]": 22,
-        "(2.273, 2.598]": 20,
-        "(2.598, 2.923]": 26,
-        "(2.923, 3.247]": 20,
-        "(3.247, 3.572]": 13,
-        "(3.572, 3.897]": 8,
-        "(3.897, 4.221]": 3,
-        "(4.221, 4.546]": 4,
-        "(4.546, 4.871]": 1,
-        "(5.196, 5.52]": 1,
-        "(5.52, 5.845]": 1,
-        "(6.17, 6.494]": 1
-      },
-      "bin_edges": [
-        -0.006489788982611142,
-        0.3247272450452163,
-        0.6494498274254392,
-        0.9741724098056622,
-        1.298894992185885,
-        1.623617574566108,
-        1.948340156946331,
-        2.2730627393265537,
-        2.597785321706777,
-        2.922507904087,
-        3.2472304864672226,
-        3.5719530688474457,
-        3.896675651227669,
-        4.221398233607892,
-        4.546120815988115,
-        4.870843398368338,
-        5.195565980748561,
-        5.5202885631287835,
-        5.845011145509007,
-        6.16973372788923,
-        6.494456310269452
-      ],
-      "scanpy_metric_max_absolute_errors": {
-        "means": 0.0,
-        "dispersions": 5.7672653281520825e-08,
-        "dispersions_norm": 9.578413018296317e-08
-      },
-      "scanpy_selection_disagreements": 0,
-      "singleton_final_selected": {
-        "HBB": true,
-        "MALAT1": true,
-        "HBA2": true,
-        "MT-ATP6": false
-      },
-      "count_float64_selection_disagreements": 0,
-      "count_float64_metric_max_absolute_errors": {
-        "means": 4.775639483867167e-08,
-        "dispersions": 2.5834057648665976e-07,
-        "dispersions_norm": 4.1770866410217877e-07
-      }
-    }
-  },
-  "metric_max_absolute_errors": {
-    "means": 0.0,
-    "dispersions": 5.058449437100876e-08,
-    "dispersions_norm": 4.3155304396691463e-07
-  },
-  "metric_tolerance": {
-    "rtol": 1e-05,
-    "atol": 1e-06
-  },
-  "selected_genes": 2000,
-  "selection_agreement": 1.0,
-  "nbatches_and_intersection_exact": true,
-  "selected_gene_list_sha256": "53e3d2d500f15644602a5cff71e537c3d65a764563730ebe51a3e9b76fb867ca",
-  "selected_nbatches_counts": {
-    "1": 1372,
-    "2": 628
-  },
-  "all_nbatches_counts": {
-    "0": 20055,
-    "1": 2744,
-    "2": 628
-  },
-  "final_boundary": [
-    {
-      "gene": "TRERF1",
-      "nbatches": 1,
-      "dispersion_norm": 0.7939602808708669,
-      "selected": true
+    "input_dtype": "float32",
+    "stored_metric_dtypes": {
+        "means": "float64",
+        "dispersions": "float64",
+        "dispersions_norm": "float32"
     },
-    {
-      "gene": "AC139768.1",
-      "nbatches": 1,
-      "dispersion_norm": 0.7939050193656375,
-      "selected": false
-    }
-  ],
-  "final_boundary_exact_ties": 1,
-  "selected_low_mean_count": 999,
-  "selected_high_mean_count": 6,
-  "selected_detected_in_at_most_10_cells": 184,
-  "selected_detection_count_range": [
-    3,
-    17032
-  ],
-  "selected_absent_in_one_batch": 26,
-  "selected_qc_gene_groups": {
-    "mt": 2,
-    "ribo": 0,
-    "hb": 7
-  },
-  "selected_ignored_mean_cutoff_count": 1005,
-  "selected_ignored_dispersion_cutoff_count": 0,
-  "equal_batch_vs_cell_weighted_log_mean_max_difference": 0.014698179736091666,
-  "count_float64_final_selection_disagreements": 0,
-  "count_float64_metric_max_absolute_errors": {
-    "means": 4.920558938081854e-08,
-    "dispersions": 2.386367352613661e-07,
-    "dispersions_norm": 4.930412913495275e-07
-  },
-  "pooled_hvg_overlap": 1445,
-  "mean_dispersion_only_top2000_overlap": 1793,
-  "external_evidence": [
-    "/home/fdr/scanpy-tutorial-audit/metrics/05-independent-gene-metrics.csv",
-    "/home/fdr/scanpy-tutorial-audit/metrics/05-selected-genes.txt"
-  ]
+    "normalization_target": 5853.0,
+    "count_normalization_vs_expm1_max_absolute_error": 0.002147756145859603,
+    "input_matrix_counts_annotations_unchanged": true,
+    "batches": {
+        "s1d1": {
+            "cells": 8713,
+            "expressed_genes": 23183,
+            "absent_genes": 244,
+            "selected": 2000,
+            "cutoff": 0.9857832352561409,
+            "cutoff_ties": 1,
+            "nonfinite_normalized_dispersions": 0,
+            "singleton_genes": ["HBB", "MALAT1", "MT-ND2"],
+            "bin_counts": {
+                "(-0.00633, 0.317]": 21622,
+                "(0.317, 0.634]": 1035,
+                "(0.634, 0.951]": 250,
+                "(0.951, 1.268]": 88,
+                "(1.268, 1.585]": 35,
+                "(1.585, 1.902]": 31,
+                "(1.902, 2.218]": 26,
+                "(2.218, 2.535]": 29,
+                "(2.535, 2.852]": 25,
+                "(2.852, 3.169]": 18,
+                "(3.169, 3.486]": 11,
+                "(3.486, 3.803]": 1,
+                "(4.12, 4.437]": 3,
+                "(4.437, 4.754]": 3,
+                "(4.754, 5.071]": 4,
+                "(5.705, 6.022]": 1,
+                "(6.022, 6.339]": 1
+            },
+            "bin_edges": [
+                -0.006330663562266319, 0.31693494376129916, 0.6338620097647948,
+                0.9507890757682904, 1.267716141771786, 1.5846432077752814,
+                1.9015702737787772, 2.2184973397822723, 2.535424405785768,
+                2.8523514717892637, 3.169278537792759, 3.4862056037962548,
+                3.8031326697997505, 4.120059735803246, 4.436986801806741,
+                4.753913867810237, 5.070840933813733, 5.387767999817228,
+                5.704695065820724, 6.021622131824219, 6.338549197827715
+            ],
+            "scanpy_metric_max_absolute_errors": {
+                "means": 0.0,
+                "dispersions": 5.658411805775643e-8,
+                "dispersions_norm": 9.374990561639152e-8
+            },
+            "scanpy_selection_disagreements": 0,
+            "singleton_final_selected": {
+                "HBB": true,
+                "MALAT1": true,
+                "MT-ND2": true
+            },
+            "count_float64_selection_disagreements": 0,
+            "count_float64_metric_max_absolute_errors": {
+                "means": 5.06547834788762e-8,
+                "dispersions": 3.094950153936793e-7,
+                "dispersions_norm": 5.258374176086988e-7
+            }
+        },
+        "s1d3": {
+            "cells": 8328,
+            "expressed_genes": 23124,
+            "absent_genes": 303,
+            "selected": 2000,
+            "cutoff": 1.0285669034734046,
+            "cutoff_ties": 1,
+            "nonfinite_normalized_dispersions": 0,
+            "singleton_genes": ["HBB", "MALAT1", "HBA2", "MT-ATP6"],
+            "bin_counts": {
+                "(-0.00649, 0.325]": 21814,
+                "(0.325, 0.649]": 860,
+                "(0.649, 0.974]": 201,
+                "(0.974, 1.299]": 71,
+                "(1.299, 1.624]": 37,
+                "(1.624, 1.948]": 21,
+                "(1.948, 2.273]": 22,
+                "(2.273, 2.598]": 20,
+                "(2.598, 2.923]": 26,
+                "(2.923, 3.247]": 20,
+                "(3.247, 3.572]": 13,
+                "(3.572, 3.897]": 8,
+                "(3.897, 4.221]": 3,
+                "(4.221, 4.546]": 4,
+                "(4.546, 4.871]": 1,
+                "(5.196, 5.52]": 1,
+                "(5.52, 5.845]": 1,
+                "(6.17, 6.494]": 1
+            },
+            "bin_edges": [
+                -0.006489788982611142, 0.3247272450452163, 0.6494498274254392,
+                0.9741724098056622, 1.298894992185885, 1.623617574566108,
+                1.948340156946331, 2.2730627393265537, 2.597785321706777,
+                2.922507904087, 3.2472304864672226, 3.5719530688474457,
+                3.896675651227669, 4.221398233607892, 4.546120815988115,
+                4.870843398368338, 5.195565980748561, 5.5202885631287835,
+                5.845011145509007, 6.16973372788923, 6.494456310269452
+            ],
+            "scanpy_metric_max_absolute_errors": {
+                "means": 0.0,
+                "dispersions": 5.7672653281520825e-8,
+                "dispersions_norm": 9.578413018296317e-8
+            },
+            "scanpy_selection_disagreements": 0,
+            "singleton_final_selected": {
+                "HBB": true,
+                "MALAT1": true,
+                "HBA2": true,
+                "MT-ATP6": false
+            },
+            "count_float64_selection_disagreements": 0,
+            "count_float64_metric_max_absolute_errors": {
+                "means": 4.775639483867167e-8,
+                "dispersions": 2.5834057648665976e-7,
+                "dispersions_norm": 4.1770866410217877e-7
+            }
+        }
+    },
+    "metric_max_absolute_errors": {
+        "means": 0.0,
+        "dispersions": 5.058449437100876e-8,
+        "dispersions_norm": 4.3155304396691463e-7
+    },
+    "metric_tolerance": {
+        "rtol": 1e-5,
+        "atol": 1e-6
+    },
+    "selected_genes": 2000,
+    "selection_agreement": 1.0,
+    "nbatches_and_intersection_exact": true,
+    "selected_gene_list_sha256": "53e3d2d500f15644602a5cff71e537c3d65a764563730ebe51a3e9b76fb867ca",
+    "selected_nbatches_counts": {
+        "1": 1372,
+        "2": 628
+    },
+    "all_nbatches_counts": {
+        "0": 20055,
+        "1": 2744,
+        "2": 628
+    },
+    "final_boundary": [
+        {
+            "gene": "TRERF1",
+            "nbatches": 1,
+            "dispersion_norm": 0.7939602808708669,
+            "selected": true
+        },
+        {
+            "gene": "AC139768.1",
+            "nbatches": 1,
+            "dispersion_norm": 0.7939050193656375,
+            "selected": false
+        }
+    ],
+    "final_boundary_exact_ties": 1,
+    "selected_low_mean_count": 999,
+    "selected_high_mean_count": 6,
+    "selected_detected_in_at_most_10_cells": 184,
+    "selected_detection_count_range": [3, 17032],
+    "selected_absent_in_one_batch": 26,
+    "selected_qc_gene_groups": {
+        "mt": 2,
+        "ribo": 0,
+        "hb": 7
+    },
+    "selected_ignored_mean_cutoff_count": 1005,
+    "selected_ignored_dispersion_cutoff_count": 0,
+    "equal_batch_vs_cell_weighted_log_mean_max_difference": 0.014698179736091666,
+    "count_float64_final_selection_disagreements": 0,
+    "count_float64_metric_max_absolute_errors": {
+        "means": 4.920558938081854e-8,
+        "dispersions": 2.386367352613661e-7,
+        "dispersions_norm": 4.930412913495275e-7
+    },
+    "pooled_hvg_overlap": 1445,
+    "mean_dispersion_only_top2000_overlap": 1793,
+    "external_evidence": [
+        "/home/fdr/scanpy-tutorial-audit/metrics/05-independent-gene-metrics.csv",
+        "/home/fdr/scanpy-tutorial-audit/metrics/05-selected-genes.txt"
+    ]
 }

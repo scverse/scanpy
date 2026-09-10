@@ -1,28 +1,28 @@
 {
-  "baseline_commit": "a6f1a2d23496e97a01860029f7bd57b0bcce6e27",
-  "notebook": "docs/tutorials/basics/clustering.ipynb",
-  "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
-  "tutorial_url": "https://scanpy.readthedocs.io/en/stable/tutorials/basics/clustering.html",
-  "dataset_doi": "10.6084/m9.figshare.22716739.v1",
-  "artifact_directory": "/home/fdr/scanpy-tutorial-audit",
-  "python": "/tmp/scanpy-de-audit-env/bin/python",
-  "worker_limit": 8,
-  "plot_backend": "Agg",
-  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.43",
-  "python_version": "Python 3.14.4",
-  "environment_note": "pip freeze with the editable Scanpy revision normalized to the audited upstream source baseline; audit commits do not change production code.",
-  "dataset_files": {
-    "s1d1": {
-      "file": "s1d1_filtered_feature_bc_matrix.h5",
-      "sha256": "322c30a7a4905f7f113472442d4aa2c81a1ad736c86651f6c0b81e5b2ff94ac8",
-      "md5": "a99285913ea3f3d22600d3d2f8a88e34",
-      "file_bytes": 22848647
-    },
-    "s1d3": {
-      "file": "s1d3_filtered_feature_bc_matrix.h5",
-      "sha256": "ca40b287fac57ac2048f11f56f1b630c7c188718908fc217c6baf2e49bdb1982",
-      "md5": "825f7f7578e3dc0b8955f5a97a402338",
-      "file_bytes": 20432298
+    "baseline_commit": "a6f1a2d23496e97a01860029f7bd57b0bcce6e27",
+    "notebook": "docs/tutorials/basics/clustering.ipynb",
+    "notebook_sha256": "327c31fa8a746b15332620008c63b53470db3eefde3ec65f82bac047cc395851",
+    "tutorial_url": "https://scanpy.readthedocs.io/en/stable/tutorials/basics/clustering.html",
+    "dataset_doi": "10.6084/m9.figshare.22716739.v1",
+    "artifact_directory": "/home/fdr/scanpy-tutorial-audit",
+    "python": "/tmp/scanpy-de-audit-env/bin/python",
+    "worker_limit": 8,
+    "plot_backend": "Agg",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.43",
+    "python_version": "Python 3.14.4",
+    "environment_note": "pip freeze with the editable Scanpy revision normalized to the audited upstream source baseline; audit commits do not change production code.",
+    "dataset_files": {
+        "s1d1": {
+            "file": "s1d1_filtered_feature_bc_matrix.h5",
+            "sha256": "322c30a7a4905f7f113472442d4aa2c81a1ad736c86651f6c0b81e5b2ff94ac8",
+            "md5": "a99285913ea3f3d22600d3d2f8a88e34",
+            "file_bytes": 22848647
+        },
+        "s1d3": {
+            "file": "s1d3_filtered_feature_bc_matrix.h5",
+            "sha256": "ca40b287fac57ac2048f11f56f1b630c7c188718908fc217c6baf2e49bdb1982",
+            "md5": "825f7f7578e3dc0b8955f5a97a402338",
+            "file_bytes": 20432298
+        }
     }
-  }
 }
