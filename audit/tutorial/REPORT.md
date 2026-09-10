@@ -38,4 +38,4 @@ No production Scanpy code changes form part of this audit.
 
 Large local artifacts are in `/home/fdr/scanpy-tutorial-audit`.
 The dataset DOI is [10.6084/m9.figshare.22716739.v1](https://doi.org/10.6084/m9.figshare.22716739.v1).
-The source notebook is [clustering.ipynb](../../../docs/tutorials/basics/clustering.ipynb).
+The source notebook is [clustering.ipynb](../../docs/tutorials/basics/clustering.ipynb).

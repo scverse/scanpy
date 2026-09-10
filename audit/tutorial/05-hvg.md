@@ -54,7 +54,7 @@ Genes absent from a sample do not participate in that sample's bins. Scanpy rest
 
 The final ordering uses decreasing HVG batch count, then decreasing mean normalized dispersion. Scanpy marks the first 2,000 genes and restores the original gene order. Exact ties in both sort keys inherit the grouped gene order in this implementation. Such ties do not determine the final boundary here.
 
-Source: [`_highly_variable_genes.py`](../../../src/scanpy/preprocessing/_highly_variable_genes.py), especially the single-batch calculation, bin normalization, `_subset_genes`, and batch aggregation. The Seurat primary documentation describes this binned dispersion method and its equal-width bins. Its current `mean.var.plot` interface uses cutoffs, so Scanpy's explicit top-2,000 extension is not an exact parameter match. [Seurat FindVariableFeatures](https://satijalab.org/seurat/reference/findvariablefeatures)
+Source: [`_highly_variable_genes.py`](../../src/scanpy/preprocessing/_highly_variable_genes.py), especially the single-batch calculation, bin normalization, `_subset_genes`, and batch aggregation. The Seurat primary documentation describes this binned dispersion method and its equal-width bins. Its current `mean.var.plot` interface uses cutoffs, so Scanpy's explicit top-2,000 extension is not an exact parameter match. [Seurat FindVariableFeatures](https://satijalab.org/seurat/reference/findvariablefeatures)
 
 Seurat's integration feature selection breaks batch-count ties with median ranks. The executed Scanpy flavor instead uses mean normalized dispersion. [Seurat SelectIntegrationFeatures](https://satijalab.org/seurat/reference/selectintegrationfeatures)
 
@@ -101,7 +101,7 @@ The axis labels omit the transformations and equal-sample averaging. The x-axis 
 
 No confirmed HVG implementation bug emerged. The method choices above are observed behavior. Sensitivity to bin counts, cell resampling, alternative HVG flavors, and later cluster assignments remains untested. General edge cases involving zero variance, empty batches, or exact final ties are outside this dataset audit.
 
-The reusable script is [`check_05.py`](../../../scripts/tutorial_audit/check_05.py). Small evidence is in [05.json](evidence/05.json). Complete per-gene metrics and minimum per-sample ranks are external:
+The reusable script is [`check_05.py`](../../scripts/tutorial_audit/check_05.py). Small evidence is in [05.json](evidence/05.json). Complete per-gene metrics and minimum per-sample ranks are external:
 
 - `/home/fdr/scanpy-tutorial-audit/metrics/05-independent-gene-metrics.csv`
 - `/home/fdr/scanpy-tutorial-audit/metrics/05-s1d1-gene-metrics.csv`
