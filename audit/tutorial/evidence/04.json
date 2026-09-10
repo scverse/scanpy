@@ -1,0 +1,243 @@
+{
+  "baseline": "a6f1a2d2",
+  "notebook_cells": [
+    22,
+    23
+  ],
+  "versions": {
+    "scanpy": "1.14.0.dev6+ga6f1a2d23",
+    "anndata": "0.13.3.post0",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1"
+  },
+  "shape": [
+    17041,
+    23427
+  ],
+  "nonzero_values_checked": 26539065,
+  "implicit_zeros_preserved": 372680442,
+  "zero_library_cells": 0,
+  "dtype": "float32",
+  "counts_layer_exact": true,
+  "obs_var_unchanged": true,
+  "full_replay_bitwise_equal": true,
+  "default_target": 5853.0,
+  "library_size": {
+    "min": 500.0,
+    "p05": 938.0,
+    "median": 5853.0,
+    "p95": 23110.0,
+    "max": 150731.0
+  },
+  "stored_qc_total_minus_current_total": {
+    "min": 0.0,
+    "p05": 0.0,
+    "median": 0.0,
+    "p95": 1.0,
+    "max": 66.0
+  },
+  "prelog_row_totals": {
+    "min": 5852.999539136887,
+    "p05": 5852.999738037586,
+    "median": 5852.999999046326,
+    "p95": 5853.000263333321,
+    "max": 5853.000479578972
+  },
+  "prelog_max_absolute_target_error": 0.00047957897186279297,
+  "prelog_max_relative_target_error": 8.193729228445079e-08,
+  "errors": {
+    "normalized": {
+      "max_absolute": 0.0003789783486354281,
+      "max_relative": 1.1123213167036848e-07,
+      "max_float32_ulps": 1,
+      "rmse": 1.3940468513512706e-06
+    },
+    "log1p": {
+      "max_absolute": 5.610411744072508e-07,
+      "max_relative": 1.982920967807014e-07,
+      "max_float32_ulps": 2,
+      "rmse": 3.682432587382892e-08
+    }
+  },
+  "pooled_library_vs_sum_log1p": {
+    "pearson": 0.056511026133613126,
+    "spearman": 0.19491970303870984
+  },
+  "pooled_library_vs_detected_genes": {
+    "pearson": 0.6589981158036899,
+    "spearman": 0.556464944370587
+  },
+  "highly_expressed_exclusion_enabled": false,
+  "optional_exclusion": {
+    "threshold": 0.05,
+    "all_nonzero_values_replayed": true,
+    "max_relative_error": 1.1436958354841848e-07,
+    "remaining_prelog_sum_max_absolute_target_error": 0.00031280517578125,
+    "gene_count": 36,
+    "genes": [
+      "S100A9",
+      "S100A8",
+      "IGKC",
+      "MTRNR2L12",
+      "JCHAIN",
+      "HBB",
+      "HBD",
+      "HBG1",
+      "HBG2",
+      "MTRNR2L8",
+      "MALAT1",
+      "AL627171.2",
+      "IGHA2",
+      "IGHG4",
+      "IGHG2",
+      "IGHA1",
+      "IGHG1",
+      "IGHG3",
+      "IGHM",
+      "HBA2",
+      "HBA1",
+      "FTL",
+      "IGLC1",
+      "IGLC2",
+      "IGLC3",
+      "TMSB4X",
+      "MT-ND1",
+      "MT-ND2",
+      "MT-CO1",
+      "MT-CO2",
+      "MT-ATP6",
+      "MT-CO3",
+      "MT-ND3",
+      "MT-ND4",
+      "MT-ND5",
+      "MT-CYB"
+    ],
+    "remaining_denominator": {
+      "min": 84.0,
+      "p05": 388.0,
+      "median": 3887.0,
+      "p95": 14268.0,
+      "max": 131623.0
+    },
+    "remaining_zero_denominator_cells": 0,
+    "remaining_nonzero_median_target": 3887.0
+  },
+  "by_sample": {
+    "s1d1": {
+      "cells": 8713,
+      "library_size": {
+        "min": 500.0,
+        "p05": 868.0,
+        "median": 5643.0,
+        "p95": 24345.59999999999,
+        "max": 87266.0
+      },
+      "scaling_multiplier": {
+        "min": 0.06707079504045103,
+        "p05": 0.2404131339009117,
+        "median": 1.0372142477405635,
+        "p95": 6.743087557603687,
+        "max": 11.706
+      },
+      "one_count_log_value": {
+        "min": 0.06491731973474568,
+        "p05": 0.21544449023472836,
+        "median": 0.7115833097897207,
+        "p95": 2.0468005173096158,
+        "max": 2.5420743228443414
+      },
+      "detected_genes": {
+        "min": 100.0,
+        "p05": 289.0,
+        "median": 1473.0,
+        "p95": 3893.399999999998,
+        "max": 7537.0
+      },
+      "sum_log1p": {
+        "min": 129.1363501548767,
+        "p05": 304.2802732527256,
+        "median": 1586.0703884363174,
+        "p95": 2322.562172448635,
+        "max": 2839.2464393377304
+      },
+      "library_vs_sum_log1p": {
+        "pearson": 0.13796662562235554,
+        "spearman": 0.31207506171716537
+      },
+      "library_vs_detected_genes": {
+        "pearson": 0.7201512393410776,
+        "spearman": 0.6634990970572429
+      },
+      "sample_specific_target": 5643.0,
+      "sample_specific_over_common_scale": 0.9641209636084059,
+      "sample_specific_minus_common_log_nonzero_mean": -0.018805078941970733,
+      "sample_specific_minus_common_log_nonzero_rms": 0.02041216511717653,
+      "sample_specific_minus_common_log_max_absolute": 0.03653024709706365,
+      "highly_expressed_gene_count_fraction": {
+        "min": 0.02543068088597211,
+        "p05": 0.09828247979861819,
+        "median": 0.25353356890459366,
+        "p95": 0.9127517454133448,
+        "max": 0.9718171792672466
+      }
+    },
+    "s1d3": {
+      "cells": 8328,
+      "library_size": {
+        "min": 500.0,
+        "p05": 1027.1000000000001,
+        "median": 6004.5,
+        "p95": 21851.999999999978,
+        "max": 150731.0
+      },
+      "scaling_multiplier": {
+        "min": 0.03883076473983454,
+        "p05": 0.2678477964054798,
+        "median": 0.9747689300666056,
+        "p95": 5.69861294977643,
+        "max": 11.706
+      },
+      "one_count_log_value": {
+        "min": 0.03809581602043843,
+        "p05": 0.23732077609626584,
+        "median": 0.6804513932289735,
+        "p95": 1.9018976802828698,
+        "max": 2.5420743228443414
+      },
+      "detected_genes": {
+        "min": 101.0,
+        "p05": 327.0,
+        "median": 1451.0,
+        "p95": 3470.0,
+        "max": 8452.0
+      },
+      "sum_log1p": {
+        "min": 107.96176040172577,
+        "p05": 258.1486764371395,
+        "median": 1527.8229341804981,
+        "p95": 2229.7933512806894,
+        "max": 2709.762497961521
+      },
+      "library_vs_sum_log1p": {
+        "pearson": -0.039710325292765365,
+        "spearman": 0.0672242570654795
+      },
+      "library_vs_detected_genes": {
+        "pearson": 0.5794839462878866,
+        "spearman": 0.4371812333537193
+      },
+      "sample_specific_target": 6004.5,
+      "sample_specific_over_common_scale": 1.0258841619682215,
+      "sample_specific_minus_common_log_nonzero_mean": 0.013584420997139432,
+      "sample_specific_minus_common_log_nonzero_rms": 0.014580839382241294,
+      "sample_specific_minus_common_log_max_absolute": 0.02554928704311976,
+      "highly_expressed_gene_count_fraction": {
+        "min": 0.018712768712768713,
+        "p05": 0.09382237763429449,
+        "median": 0.16656229473681233,
+        "p95": 0.9319561795529295,
+        "max": 0.9762703120969822
+      }
+    }
+  }
+}

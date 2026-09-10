@@ -25,10 +25,15 @@ The original plot shows B-cell enrichment in row 2 and erythroid enrichment in r
 | Calculation | Independent result | Scientific interpretation |
 | --- | --- | --- |
 | Leiden and annotation | All four partitions match direct igraph exactly. Independent objective error is at most `3.4e-16`. | Hardcoded labels conflict with marker profiles for 4,028 cells; 1,743 lack labels. |
+| Normalization | All 26,539,065 nonzero values agree within float32 accuracy. Full replay matches bit for bit. | A common target of 5,853 equalizes prelog totals but does not remove composition or depth associations. |
 | Highly variable genes | Exact agreement for all 2,000 selected genes. Maximum normalized-dispersion error: `4.316e-7`. | Only 628 qualify in both samples. The list includes 184 genes detected in ten cells or fewer. |
 | Differential expression | All 398,259 gene/group comparisons pass. Default p-values match exactly; maximum BH error is `2.221e-16`. | Tie correction changes the number of pairs with adjusted p < 0.05 from 80,557 to 165,700. |
 | PCA | Independent eigenvalues agree within `1.88e-6` relative error. All 50 PCs reproduce exactly on replay. | The 184 rare HVGs contribute 0.000670% of retained variance. Hemoglobin genes strongly influence PC1. |
 | Neighbors and UMAP | Full fuzzy-graph support matches; maximum weight error is `3.55e-6`. Exact-neighbor recall is 98.40% on 1,024 query cells. | The two-dimensional embedding retains 14.95% of exact neighbors for those queries. |
+
+The [normalization review](04-normalization.md) checks every value and the preserved counts.
+Separate sample targets change the scale by −3.59% and +2.59%.
+This is a modeling choice, not an implementation failure.
 
 The HVG result supports the implementation of the stated method on this dataset.
 It does not establish that each selected gene is a reliable biological marker.
