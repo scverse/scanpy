@@ -16,6 +16,7 @@ The audit is in progress. Completed reviews are listed here.
 | --- | --- | --- |
 | Highly variable genes | Exact agreement for all 2,000 selected genes. Maximum normalized-dispersion error: `4.316e-7`. | Only 628 qualify in both samples. The list includes 184 genes detected in ten cells or fewer. |
 | Differential expression | All 398,259 gene/group comparisons pass. Default p-values match exactly; maximum BH error is `2.221e-16`. | Tie correction changes the number of pairs with adjusted p < 0.05 from 80,557 to 165,700. |
+| Neighbors and UMAP | Full fuzzy-graph support matches; maximum weight error is `3.55e-6`. Exact-neighbor recall is 98.40% on 1,024 query cells. | The two-dimensional embedding retains 14.95% of exact neighbors for those queries. |
 
 The HVG result supports the implementation of the stated method on this dataset.
 It does not establish that each selected gene is a reliable biological marker.
@@ -33,6 +34,13 @@ The DGE calculation describes clusters derived from the same expression data.
 Its per-cell p-values do not establish population-level treatment or disease effects.
 The detailed review separates cluster-selection bias and biological replication
 from the correctness of the numerical formulas.
+
+The graph is connected, although the UMAP plot shows apparent islands.
+Its trustworthiness score is 0.95937, but exact neighbor overlap is much lower.
+Leiden uses the original graph, so projection distortion does not directly change clusters.
+The [UMAP review](07-umap.md) separates full-graph checks from sampled embedding metrics.
+It also records one documentation mismatch: stored distance rows contain 15 nonself
+entries, while the documented count is 14. Fuzzy memberships correctly use 14.
 
 ## Method and evidence
 
