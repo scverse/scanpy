@@ -406,6 +406,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     reference = str(adata.uns[key]["params"]["reference"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    if isinstance(group_names, str):
+        group_names = [group_names]
     # one panel for each group
     # set up the figure
     n_panels_x = min(n_panels_per_row, len(group_names))
@@ -544,6 +546,8 @@ def _rank_genes_groups_plot(  # noqa: PLR0912, PLR0913, PLR0915
     if groupby is None:
         groupby = str(adata.uns[key]["params"]["groupby"])
     group_names = adata.uns[key]["names"].dtype.names if groups is None else groups
+    if isinstance(group_names, str):
+        group_names = [group_names]
 
     if var_names is not None:
         if isinstance(var_names, Mapping):
