@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from anndata import AnnData
+from scipy import sparse
 
 import scanpy as sc
 from testing.scanpy._pytest.marks import needs
@@ -140,6 +141,42 @@ def test_use_raw_deprecated(adata: AnnData, call: Callable[[AnnData], object]) -
     sc.pp.neighbors(adata, n_neighbors=3)
     with pytest.warns(FutureWarning, match=r"argument use_raw is deprecated"):
         call(adata)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(sc.pp.log1p, id="log1p"),
+        pytest.param(
+            lambda d, **kw: sc.pp.scale(d, zero_center=True, **kw), id="scale"
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param(np.ones((4, 3), dtype="float32"), id="ndarray"),
+        pytest.param(sparse.csr_matrix(np.ones((4, 3), dtype="float32")), id="csr"),  # noqa: TID251
+        pytest.param([[1.0, 2.0], [3.0, 4.0]], id="unregistered"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(dict(use="layers.x"), r"Arguments \['use'\]", id="use"),
+        pytest.param(dict(out="layers.x"), r"Argument `out`", id="out"),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:.*is deprecated:FutureWarning")
+def test_anndata_only_args_rejected(
+    call: Callable[..., object], data: object, kwargs: dict[str, str], match: str
+) -> None:
+    """`use`/`out` need an `AnnData`, and every input kind says so the same way.
+
+    The check runs before `singledispatch` routes, so registered types reach it too.
+    """
+    with pytest.raises(TypeError, match=match):
+        call(data, **kwargs)
 
 
 def test_use_and_layer_conflict(adata: AnnData) -> None:

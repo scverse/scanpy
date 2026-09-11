@@ -20,6 +20,7 @@ from .._utils import (
     axis_mul_or_truediv,
     check_array_function_arguments,
     dematrix,
+    expose_dispatch,
     raise_not_implemented_error_if_backed_type,
     view_to_actual,
 )
@@ -74,6 +75,12 @@ def clip_array(
     return x
 
 
+@singledispatch
+def _scale(data, **kwargs):
+    """Dispatch on array kind. `AnnData` goes to `scale_anndata`, see `scale`."""
+    return scale_array(data, **kwargs)
+
+
 @_doc_params(
     mask=doc_mask(
         "Restrict both the derivation of scaling parameters and the scaling itself\n"
@@ -84,12 +91,10 @@ def clip_array(
     use=doc_use("Which matrix to scale."),
     out=doc_out("the place `use` reads from"),
 )
-@singledispatch
+@expose_dispatch(_scale)
 @deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-# only deprecated for `AnnData` input; registered overloads keep `copy`.
-# `singledispatch` copies this onto the dispatcher, which is what autodoc sees.
 @deprecated_arg("copy", DEPR_COPY)
 def scale[A: _Array](
     data: AnnData | A,
@@ -154,28 +159,37 @@ def scale[A: _Array](
         Variances per gene before scaling.
 
     """
-    check_array_function_arguments(layer=layer, obsm=obsm)
-    for name, val in dict(layer=layer, obsm=obsm, use=use).items():
-        if val is not None:
-            msg = f"`{name}` argument inappropriate for value of type {type(data)}"
-            raise ValueError(msg)
-    if not isinstance(out, Default):
-        msg = f"`out` argument inappropriate for value of type {type(data)}"
-        raise ValueError(msg)
-    return scale_array(
+    # validated here, before dispatch, so array input gets these messages too
+    if not isinstance(data, AnnData):
+        check_array_function_arguments(layer=layer, obsm=obsm, use=use)
+        if not isinstance(out, Default):
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return _scale(
+            data,
+            zero_center=zero_center,
+            max_value=max_value,
+            copy=copy,
+            mask=mask,
+            mask_obs=mask_obs,
+        )
+    return scale_anndata(
         data,
         zero_center=zero_center,
         max_value=max_value,
-        copy=copy,
+        use=use,
+        out=out,
         mask=mask,
+        copy=copy,
+        layer=layer,
+        obsm=obsm,
         mask_obs=mask_obs,
     )
 
 
-@scale.register(np.ndarray)
-@scale.register(DaskArray)
-@scale.register(CSBase)
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
+@_scale.register(np.ndarray)
+@_scale.register(DaskArray)
+@_scale.register(CSBase)
 def scale_array[A: _Array](
     x: A,
     *,
@@ -322,11 +336,7 @@ def scale_and_clip_csr(
                     data[j] /= std[indices[j]]
 
 
-@scale.register(AnnData)
-@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
-@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("copy", DEPR_COPY)
+@_scale.register(AnnData)
 def scale_anndata(
     adata: AnnData,
     *,
@@ -357,7 +367,7 @@ def scale_anndata(
     view_to_actual(adata)
     x = _get_arr(adata, use, layer=layer, obsm=obsm)
     raise_not_implemented_error_if_backed_type(x, "scale")
-    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = scale(
+    x, adata.var[str_mean_std[0]], adata.var[str_mean_std[1]] = _scale(
         x,
         zero_center=zero_center,
         max_value=max_value,

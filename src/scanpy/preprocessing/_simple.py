@@ -31,6 +31,7 @@ from .._utils import (
     _doc_params,
     _resolve_axis,
     check_array_function_arguments,
+    expose_dispatch,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
     sanitize_anndata,
@@ -309,15 +310,19 @@ def filter_genes(
     return gene_subset, number_per_gene
 
 
+@singledispatch
+def _log1p(data, *, base: Number | None = None, copy: bool = False):
+    """Dispatch on array kind. `AnnData` goes to `log1p_anndata`, see `log1p`."""
+    return log1p_array(data, copy=copy, base=base)
+
+
 @_doc_params(
     use=doc_use("Which matrix to logarithmize."),
     out=doc_out("the place `use` reads from"),
 )
-@singledispatch
+@expose_dispatch(_log1p)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-# only deprecated for `AnnData` input; registered overloads keep `copy`.
-# `singledispatch` copies this onto the dispatcher, which is what autodoc sees.
 @deprecated_arg("copy", DEPR_COPY)
 def log1p(
     data: AnnData | np.ndarray | CSBase,
@@ -361,26 +366,42 @@ def log1p(
     Returns `None` if the result was written, else the logarithmized matrix.
 
     """
-    check_array_function_arguments(
-        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm, use=use
+    # validated here, before dispatch, so array input gets these messages too
+    if not isinstance(data, AnnData):
+        check_array_function_arguments(
+            chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm, use=use
+        )
+        if not isinstance(out, Default):
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return _log1p(data, copy=copy, base=base)
+    return log1p_anndata(
+        data,
+        base=base,
+        use=use,
+        out=out,
+        chunked=bool(chunked),
+        chunk_size=chunk_size,
+        copy=copy,
+        layer=layer,
+        obsm=obsm,
     )
-    if not isinstance(out, Default):
-        msg = f"`out` argument inappropriate for value of type {type(data)}"
-        raise ValueError(msg)
-    return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(CSBase)
+@_log1p.register(CSBase)
 def log1p_sparse(x: CSBase, *, base: Number | None = None, copy: bool = False):
     x = check_array(
         x, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
-    x.data = log1p(x.data, copy=False, base=base)
+    x.data = _log1p(x.data, copy=False, base=base)
     return x
 
 
-@log1p.register(np.ndarray)
-def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False):
+@_log1p.register(np.ndarray)
+@_log1p.register(DaskArray)
+def log1p_array(
+    x: np.ndarray | DaskArray, *, base: Number | None = None, copy: bool = False
+):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -393,10 +414,7 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
     return x
 
 
-@log1p.register(AnnData)
-@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("copy", DEPR_COPY)
+@_log1p.register(AnnData)
 def log1p_anndata(  # noqa: PLR0912
     adata: AnnData,
     *,
@@ -433,7 +451,7 @@ def log1p_anndata(  # noqa: PLR0912
             msg = "log1p is not implemented for backed AnnData with backed mode not r+"
             raise NotImplementedError(msg)
         for chunk, start, end in adata.chunked_X(chunk_size):
-            adata.X[start:end] = log1p(chunk, base=base, copy=False)
+            adata.X[start:end] = _log1p(chunk, base=base, copy=False)
     else:
         x = _get_arr(adata, use, layer=layer, obsm=obsm)
         if is_backed_type(x):
@@ -444,7 +462,7 @@ def log1p_anndata(  # noqa: PLR0912
             msg = f"{msg} without `chunked=True`"
             raise NotImplementedError(msg)
         # log1p is in-place, so leave the source alone unless we write back over it
-        x = log1p(x, copy=not isinstance(out, Default), base=base)
+        x = _log1p(x, copy=not isinstance(out, Default), base=base)
         if (
             unwritten := _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
         ) is not None:
@@ -606,11 +624,11 @@ def regress_out(  # noqa: PLR0912, PLR0915
         keys = [keys]
 
     x = _get_arr(adata, use, layer=layer)
+    raise_not_implemented_error_if_backed_type(x, "regress_out")
     if not isinstance(out, Default):
         # regression is partly in-place, so leave the source alone
         # unless we write back over it
         x = x.copy()
-    raise_not_implemented_error_if_backed_type(x, "regress_out")
 
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")

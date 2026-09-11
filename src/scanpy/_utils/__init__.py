@@ -72,6 +72,7 @@ __all__ = [
     "descend_classes_and_funcs",
     "dim_acc",
     "ensure_igraph",
+    "expose_dispatch",
     "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
@@ -1000,6 +1001,22 @@ def dim_acc(col: str, *, dim: Literal["obs", "var"]) -> str | AdRef:
 
         return getattr(A, dim)[col]
     return col
+
+
+def expose_dispatch[F: Callable](inner: Callable) -> Callable[[F], F]:
+    """Expose `inner`’s `singledispatch` API on a validating wrapper around it.
+
+    Not `functools.wraps`: that sets `__wrapped__` even with `assigned=()`,
+    and :func:`inspect.signature` follows it – so the docs and our signature
+    conventions would see `inner`’s signature instead of the wrapper’s.
+    """
+
+    def decorate(wrapper: F) -> F:
+        for attr in ("register", "dispatch", "registry", "_clear_cache"):
+            setattr(wrapper, attr, getattr(inner, attr))
+        return wrapper
+
+    return decorate
 
 
 @contextmanager

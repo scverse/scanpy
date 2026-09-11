@@ -342,7 +342,7 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
     with ctx:
         sc.pp.scale(adata, zero_center=zero_center)
     with ctx:
-        scaled_x = sc.pp.scale(x, zero_center=zero_center, copy=True)
+        scaled_x = sc.pp.scale(x.copy(), zero_center=zero_center)
     np.testing.assert_equal(asarray(scaled_x), asarray(adata.X))
 
 
