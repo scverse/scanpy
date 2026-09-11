@@ -15,7 +15,7 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
-from .._docs import doc_mask
+from .._docs import DEPR_RAW, doc_mask, doc_use
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
@@ -28,7 +28,7 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg
+from ..get.get import _mask_arg, _rep_to_json, _resolve_obs, _resolve_rep
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from ..get.get import Mask
+    from ..get.get import Mask, RepAcc
 
 
 type _CorrMethod = Literal["benjamini-hochberg", "bonferroni"]
@@ -244,7 +244,7 @@ def _vars_rest(
 
 
 class _RankGenes:
-    def __init__(
+    def __init__(  # noqa: PLR0912
         self,
         adata: AnnData,
         groups: Iterable[str] | Literal["all"],
@@ -253,6 +253,7 @@ class _RankGenes:
         mask_var: NDArray[np.bool] | None = None,
         reference: Literal["rest"] | str = "rest",
         use_raw: bool = True,
+        use: RepAcc | str | None = None,
         layer: str | None = None,
         comp_pts: bool = False,
     ) -> None:
@@ -280,7 +281,12 @@ class _RankGenes:
             raise ValueError(msg)
 
         adata_comp = adata
-        if layer is not None:
+        if use is not None:
+            if use_raw:
+                msg = "Cannot specify `use` and have `use_raw=True`."
+                raise ValueError(msg)
+            x = _get_arr(adata_comp, use)
+        elif layer is not None:
             if use_raw:
                 msg = "Cannot specify `layer` and have `use_raw=True`."
                 raise ValueError(msg)
@@ -747,9 +753,12 @@ def _build_stats_dataframe(
 
 
 @_doc_params(
-    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var")
+    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
+    use=doc_use("Which matrix to perform tests on.", legacy=("layer",)),
 )
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
@@ -766,6 +775,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     method: DETest | Default = Default(preset=("rank_genes_groups", "method")),
     corr_method: _CorrMethod = "benjamini-hochberg",
     tie_correct: bool = False,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     mean_in_log_space: bool | Default = Default(
         preset=("rank_genes_groups", "mean_in_log_space")
@@ -797,8 +807,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     {mask}
     use_raw
         Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
-    layer
-        Key from `adata.layers` whose value will be used to perform tests on.
+    {use}
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
         shall be restricted, or `'all'` (default), for all groups. Note that if
@@ -886,6 +895,8 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
+    if use is not None:
+        use = _resolve_rep(use)
     mask = _mask_arg(mask, mask_var, dim="var")
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
@@ -951,6 +962,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         method=method,
         use_raw=use_raw,
         layer=layer,
+        **({} if use is None else dict(use=_rep_to_json(use))),
         corr_method=corr_method,
     )
 
@@ -961,6 +973,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
         mask_var=mask_var,
         reference=reference,
         use_raw=use_raw,
+        use=use,
         layer=layer,
         comp_pts=pts,
     )
@@ -1043,11 +1056,14 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
     return n_nonzero / x.shape[0]
 
 
-def filter_rank_genes_groups(  # noqa: PLR0912
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
+def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,
     key: str | None = None,
     groupby: str | None = None,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool | None = None,
     key_added: str = "rank_genes_groups_filtered",
@@ -1075,6 +1091,7 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     adata
     key
     groupby
+    use
     layer
     use_raw
     key_added
@@ -1106,10 +1123,15 @@ def filter_rank_genes_groups(  # noqa: PLR0912
     if groupby is None:
         groupby = adata.uns[key]["params"]["groupby"]
 
+    use = _resolve_obs(use)
     if use_raw is None:
-        use_raw = adata.uns[key]["params"]["use_raw"] if layer is None else False
+        use_raw = (
+            adata.uns[key]["params"]["use_raw"]
+            if layer is None and use is None
+            else False
+        )
 
-    x = _get_arr(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, use, use_raw=use_raw, layer=layer)
 
     same_params = (
         adata.uns[key]["params"]["groupby"] == groupby

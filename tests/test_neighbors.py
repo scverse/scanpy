@@ -266,11 +266,12 @@ def adata_pca() -> AnnData:
     return adata
 
 
+@needs.anndata_acc
 def test_use_rep_argument(adata_pca: AnnData):
     neigh_pca = Neighbors(adata_pca)
-    neigh_pca.compute_neighbors(n_pcs=5, use_rep="X_pca")
+    neigh_pca.compute_neighbors(n_pcs=5, use="obsm.X_pca")
     neigh_none = Neighbors(adata_pca)
-    neigh_none.compute_neighbors(n_pcs=5, use_rep=None)
+    neigh_none.compute_neighbors(n_pcs=5, use=None)
     np.testing.assert_allclose(
         neigh_pca.distances.toarray(), neigh_none.distances.toarray()
     )
@@ -287,19 +288,30 @@ def test_use_rep_argument(adata_pca: AnnData):
 def test_use_rep_acc(
     adata_pca: AnnData, acc: Callable[[], RepAcc], legacy: str
 ) -> None:
-    """An accessor `use_rep` is equivalent to the legacy string spelling it."""
+    """An accessor `use` is equivalent to the legacy `use_rep` string spelling it."""
     expected = adata_pca.copy()
-    sc.pp.neighbors(expected, n_pcs=5, use_rep=legacy)
-    sc.pp.neighbors(adata_pca, n_pcs=5, use_rep=acc())
+    with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+        sc.pp.neighbors(expected, n_pcs=5, use_rep=legacy)
+    sc.pp.neighbors(adata_pca, n_pcs=5, use=acc())
     np.testing.assert_allclose(
         adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
     )
 
 
 @needs.anndata_acc
+def test_use_and_use_rep(adata_pca: AnnData) -> None:
+    """`use` and `use_rep` are mutually exclusive."""
+    with (
+        pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"),
+        pytest.raises(TypeError, match=r"Pass either `use` or `use_rep`, not both"),
+    ):
+        sc.pp.neighbors(adata_pca, use=A.obsm["X_pca"], use_rep="X_pca")
+
+
+@needs.anndata_acc
 def test_use_rep_acc_stored(adata_pca: AnnData, tmp_path: Path) -> None:
     """A stored accessor `use_rep` survives a round trip and is understood by readers."""
-    sc.pp.neighbors(adata_pca, use_rep=A.obsm["X_pca"])
+    sc.pp.neighbors(adata_pca, use=A.obsm["X_pca"])
     assert adata_pca.uns["neighbors"]["params"]["use_rep"] == ['["obsm", "X_pca"]']
     adata_pca.write_h5ad(path := tmp_path / "adata.h5ad")
     adata = anndata.read_h5ad(path)
@@ -309,66 +321,81 @@ def test_use_rep_acc_stored(adata_pca: AnnData, tmp_path: Path) -> None:
     sc.tl.umap(adata)  # reads `use_rep` back out of `.uns`
 
 
-@needs.scanpy2
-def test_use_rep_spec(adata_pca: AnnData) -> None:
-    """Under the v2 preset, a `use_rep` string is an `anndata.acc` spec."""
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    "preset",
+    [
+        sc.Preset.ScanpyV1,
+        # only the v2 preset needs the full extra, see `Preset.check`
+        pytest.param(sc.Preset.ScanpyV2Preview, marks=needs.scanpy2),
+    ],
+)
+def test_use_rep_str_is_legacy(
+    subtests: pytest.Subtests, adata_pca: AnnData, preset: sc.Preset
+) -> None:
+    """A deprecated `use_rep` string is an `.obsm` key under every preset."""
     expected = adata_pca.copy()
-    sc.pp.neighbors(expected, use_rep=A.obsm["X_pca"])
-    with sc.settings.override(preset=sc.Preset.ScanpyV2Preview):
+    sc.pp.neighbors(expected, use=A.obsm["X_pca"])
+    with subtests.test("obsm key"), sc.settings.override(preset=preset):
+        with pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"):
+            sc.pp.neighbors(adata_pca, use_rep="X_pca")
+        np.testing.assert_allclose(
+            adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
+        )
+    with (
+        subtests.test("acc spec rejected"),
+        sc.settings.override(preset=preset),
+        pytest.warns(FutureWarning, match=r"argument use_rep is deprecated"),
+        pytest.raises(ValueError, match=r"Did not find obsm\.X_pca"),
+    ):
         sc.pp.neighbors(adata_pca, use_rep="obsm.X_pca")
-    np.testing.assert_allclose(
-        adata_pca.obsp["distances"].toarray(), expected.obsp["distances"].toarray()
-    )
 
 
 @needs.anndata_acc
 @pytest.mark.parametrize(
-    ("use_rep", "preset", "exc_type", "match"),
+    ("arg", "value", "exc_type", "match"),
     [
         pytest.param(
+            "use",
             lambda: A.varm["PCs"],
-            sc.Preset.ScanpyV1,
             ValueError,
             "aligned to `obs`",
             id="not-obs-aligned",
         ),
         pytest.param(
+            "use_rep",
             lambda: "nonexistent",
-            sc.Preset.ScanpyV1,
             ValueError,
             "Did not find nonexistent",
             id="missing",
         ),
         pytest.param(
+            "use",
             lambda: "nonexistent",
-            sc.Preset.ScanpyV2Preview,
             ValueError,
             "Cannot parse accessor",
             id="unparsable",
-            marks=needs.scanpy2,
         ),
         pytest.param(
+            "use",
             lambda: 1.0,
-            sc.Preset.ScanpyV1,
             TypeError,
             "must be a `LayerAcc`",
             id="wrong-type",
         ),
     ],
 )
+@pytest.mark.filterwarnings("ignore:.*use_rep is deprecated:FutureWarning")
 def test_use_rep_invalid(
     adata_pca: AnnData,
-    use_rep: Callable[[], object],
-    preset: sc.Preset,
+    arg: Literal["use", "use_rep"],
+    value: Callable[[], object],
     exc_type: type[Exception],
     match: str,
 ) -> None:
-    """Invalid `use_rep` arguments are refused with a message saying why."""
-    with (
-        sc.settings.override(preset=preset),
-        pytest.raises(exc_type, match=match),
-    ):
-        sc.pp.neighbors(adata_pca, use_rep=use_rep())  # type: ignore[arg-type]
+    """Invalid `use`/`use_rep` arguments are refused with a message saying why."""
+    with pytest.raises(exc_type, match=match):
+        sc.pp.neighbors(adata_pca, **{arg: value()})  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("conv", [sparse.csr_matrix.toarray, sparse.csr_matrix])  # noqa: TID251

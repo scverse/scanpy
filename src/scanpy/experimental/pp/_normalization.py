@@ -23,11 +23,11 @@ from ...experimental._docs import (
     doc_copy,
     doc_dist_params,
     doc_inplace,
-    doc_layer,
+    doc_input_obsm,
     doc_pca_chunk,
 )
-from ...get import _check_mask, _get_arr, _set_obs_rep
-from ...get.get import _mask_arg, _mask_hvg
+from ...get import _check_mask, _get_arr, _set_arr
+from ...get.get import _mask_arg, _mask_hvg, _resolve_obs
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import pca
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get.get import Mask
+    from ...get.get import Mask, RepAcc
 
 
 def _pearson_residuals(
@@ -85,16 +85,19 @@ def _pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     check_values=doc_check_values,
-    layer=doc_layer,
+    use=doc_input_obsm,
     inplace=doc_inplace,
     copy=doc_copy,
 )
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
 def normalize_pearson_residuals(
     adata: AnnData,
     *,
     theta: float = 100,
     clip: float | None = None,
     check_values: bool = True,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
@@ -113,7 +116,7 @@ def normalize_pearson_residuals(
     {adata}
     {dist_params}
     {check_values}
-    {layer}
+    {use}
     {inplace}
     {copy}
 
@@ -139,8 +142,9 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_arr(adata, layer=layer, obsm=obsm)
-    computed_on = layer or obsm or "adata.X"
+    use = _resolve_obs(use)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
+    computed_on = layer or obsm or (repr(use) if use is not None else "adata.X")
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
     start = logg.info(msg)
@@ -149,7 +153,7 @@ def normalize_pearson_residuals(
     settings_dict = dict(theta=theta, clip=clip, computed_on=computed_on)
 
     if inplace:
-        _set_obs_rep(adata, residuals, layer=layer, obsm=obsm)
+        _set_arr(adata, residuals, use, layer=layer, obsm=obsm)
         adata.uns["pearson_residuals_normalization"] = settings_dict
     else:
         results_dict = dict(X=residuals, **settings_dict)
@@ -171,8 +175,7 @@ def normalize_pearson_residuals(
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
-# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,

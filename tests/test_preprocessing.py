@@ -22,6 +22,7 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
 
 if TYPE_CHECKING:
@@ -341,7 +342,7 @@ def test_scale_array(*, count_matrix_format: _MatrixFormat, zero_center: bool) -
     with ctx:
         sc.pp.scale(adata, zero_center=zero_center)
     with ctx:
-        scaled_x = sc.pp.scale(x, zero_center=zero_center, copy=True)
+        scaled_x = sc.pp.scale(x.copy(), zero_center=zero_center)
     np.testing.assert_equal(asarray(scaled_x), asarray(adata.X))
 
 
@@ -367,15 +368,15 @@ def test_regress_out_ordinal():
 
     # results using only one processor
     single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
+        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=None
     )
     # results using 8 processors
     multi = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=8, copy=True
+        adata, keys=["n_counts", "percent_mito"], n_jobs=8, out=None
     )
 
-    assert adata.X.shape == single.X.shape
-    np.testing.assert_array_equal(single.X, multi.X)
+    assert adata.X.shape == single.shape
+    np.testing.assert_array_equal(single, multi)
 
 
 @pytest.mark.parametrize("dtype", [np.uint32, np.float64, np.uint64])
@@ -397,6 +398,7 @@ def test_regress_out_int(data_dir: Path, dtype: type[np.generic]):
     np.testing.assert_allclose(ground_truth, adata_other.X, atol=1e-5, rtol=1e-5)
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize("dtype", [np.int64, np.float64, np.int32])
 def test_regress_out_layer(dtype):
     rng = np.random.default_rng()
@@ -416,14 +418,18 @@ def test_regress_out_layer(dtype):
     adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
     single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
+        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=None
     )
     layer = sc.pp.regress_out(
-        adata, layer="counts", keys=["n_counts", "percent_mito"], n_jobs=1, copy=True
+        adata,
+        use="layers.counts",
+        keys=["n_counts", "percent_mito"],
+        n_jobs=1,
+        out=None,
     )
 
-    assert adata.X.shape == single.X.shape
-    np.testing.assert_allclose(single.X, layer.layers["counts"])
+    assert adata.X.shape == single.shape
+    np.testing.assert_allclose(single, layer)
 
 
 def test_regress_out_view():
@@ -452,9 +458,9 @@ def test_regress_out_categorical():
     # create a categorical column
     adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
-    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, copy=True)
+    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, out=None)
 
-    assert adata.X.shape == multi.X.shape
+    assert adata.X.shape == multi.shape
 
 
 def test_regress_out_constants():

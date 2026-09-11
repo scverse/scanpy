@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
+from .._docs import DEPR_RAW
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
-from ..get.get import _rep_to_json
+from ..get.get import _rep_to_json, _resolve_rep
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -23,12 +25,14 @@ if TYPE_CHECKING:
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,
     groupby: str | Sequence[str],
     *,
     n_pcs: int | None = None,
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
     var_names: Sequence[str] | None = None,
     use_raw: bool | None = None,
     cor_method: str = "pearson",
@@ -36,6 +40,8 @@ def dendrogram(  # noqa: PLR0913
     optimal_ordering: bool = False,
     key_added: str | None = None,
     inplace: bool = True,
+    # deprecated
+    use_rep: str | None = None,
 ) -> dict[str, Any] | None:
     """Compute a hierarchical clustering for the given `groupby` categories.
 
@@ -109,6 +115,8 @@ def dendrogram(  # noqa: PLR0913
 
     """
     raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
+    if use is not None:
+        use = _resolve_rep(use)
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]
@@ -128,7 +136,7 @@ def dendrogram(  # noqa: PLR0913
 
     if var_names is None:
         rep_df = pd.DataFrame(
-            _choose_representation_compat(adata, use_rep=use_rep, n_pcs=n_pcs)
+            _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)
         )
         categorical = adata.obs[groupby[0]]
         if len(groupby) > 1:
@@ -170,7 +178,7 @@ def dendrogram(  # noqa: PLR0913
     dat = dict(
         linkage=z_var,
         groupby=groupby,
-        use_rep=_rep_to_json(use_rep),
+        use_rep=_rep_to_json(use if use is not None else use_rep),
         cor_method=cor_method,
         linkage_method=linkage_method,
         categories_ordered=dendro_info["ivl"],
