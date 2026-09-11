@@ -603,11 +603,14 @@ class _RankGenes:
         # not all codes necessarily appear in data
         existing_codes = np.unique(self.grouping.cat.codes)
         for igroup, cat in enumerate(self.groups_order):
+            cat_code: int = np.argmax(self.grouping.cat.categories == cat)
             if len(self.groups_order) <= 2:  # binary logistic regression
+                # Binary coefficients point toward classes_[1]; orient them
+                # toward the group under which the scores will be reported.
                 scores = scores_all[0]
+                if cat_code == clf.classes_[0]:
+                    scores = -scores
             else:
-                # cat code is index of cat value in .categories
-                cat_code: int = np.argmax(self.grouping.cat.categories == cat)
                 # index of scores row is index of cat code in array of existing codes
                 scores_idx: int = np.argmax(existing_codes == cat_code)
                 scores = scores_all[scores_idx]
