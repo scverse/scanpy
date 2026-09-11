@@ -11,17 +11,21 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils import stats
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import doc_use
 from .._settings import Default, Verbosity, settings
 from .._utils import (
+    _doc_params,
     check_nonnegative_integers,
     dim_acc,
     raise_if_dask_feature_axis_chunked,
     sanitize_anndata,
 )
 from ..get import _get_arr, aggregate
+from ..get.get import _resolve_obs
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
 
@@ -32,6 +36,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._settings.presets import HVGFlavor
+    from ..get.get import RepAcc
 
 
 @singledispatch
@@ -119,6 +124,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
     flavor: Literal["seurat_v3", "seurat_v3_paper"] = "seurat_v3",
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int = 2000,
     batch_key: str | None = None,
@@ -156,7 +162,7 @@ def _highly_variable_genes_seurat_v3(  # noqa: PLR0912, PLR0915
         e.add_note("Please install `scikit-misc` and try again.")
         raise
     df = pd.DataFrame(index=adata.var_names)
-    data = _get_arr(adata, layer=layer)
+    data = _get_arr(adata, use, layer=layer)
     raise_if_dask_feature_axis_chunked(data)
 
     if check_values and not check_nonnegative_integers(data):
@@ -369,6 +375,7 @@ class HvgArgs(TypedDict):
 def _highly_variable_genes_single_batch(
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     filter_unexpressed_genes: bool = False,
     **kwargs: Unpack[HvgArgs],
@@ -385,7 +392,7 @@ def _highly_variable_genes_single_batch(
     flavor = kwargs["flavor"]
     n_bins = kwargs["n_bins"]
 
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, use, layer=layer)
 
     # Filter to genes that are expressed
     if filter_unexpressed_genes:
@@ -566,12 +573,17 @@ def _per_batch_func[R, **P](
 
 
 def _highly_variable_genes_batched(
-    adata: AnnData, batch_key: str, *, layer: str | None, **kwargs: Unpack[HvgArgs]
+    adata: AnnData,
+    batch_key: str,
+    *,
+    use: RepAcc | str | None,
+    layer: str | None,
+    **kwargs: Unpack[HvgArgs],
 ) -> pd.DataFrame:
     cutoff = kwargs["cutoff"]
     sanitize_anndata(adata)
     batches = adata.obs[batch_key].cat.categories
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, use, layer=layer)
 
     func = _per_batch_func
     if is_dask := isinstance(x, DaskArray):
@@ -584,6 +596,7 @@ def _highly_variable_genes_batched(
             _highly_variable_genes_single_batch,
             adata=adata,
             batch_mask=adata.obs[batch_key] == batch,
+            use=use,
             layer=layer,
             filter_unexpressed_genes=True,
             **kwargs,
@@ -629,9 +642,14 @@ def _highly_variable_genes_batched(
     return df
 
 
+@_doc_params(
+    use=doc_use("Which matrix to use for expression values.", legacy=("layer",))
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     n_top_genes: int | None = None,
     min_disp: float = 0.5,
@@ -687,8 +705,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    layer
-        If provided, use `adata.layers[layer]` for expression values instead of `adata.X`.
+    {use}\
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean
@@ -767,6 +784,7 @@ def highly_variable_genes(  # noqa: PLR0913
         flavor = settings.preset.highly_variable_genes.flavor
 
     start = logg.info("extracting highly variable genes")
+    use = _resolve_obs(use)
 
     if not isinstance(adata, AnnData):
         msg = (
@@ -782,6 +800,7 @@ def highly_variable_genes(  # noqa: PLR0913
         return _highly_variable_genes_seurat_v3(
             adata,
             flavor=flavor,
+            use=use,
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,
@@ -803,6 +822,7 @@ def highly_variable_genes(  # noqa: PLR0913
     if not batch_key:
         df = _highly_variable_genes_single_batch(
             adata,
+            use=use,
             layer=layer,
             cutoff=cutoff,
             n_bins=n_bins,
@@ -815,7 +835,13 @@ def highly_variable_genes(  # noqa: PLR0913
             warn(msg, UserWarning)
         # filter_unexpressed_genes will not get passed to _highly_variable_genes_batched since it's always True for that function
         df = _highly_variable_genes_batched(
-            adata, batch_key, layer=layer, cutoff=cutoff, n_bins=n_bins, flavor=flavor
+            adata,
+            batch_key,
+            use=use,
+            layer=layer,
+            cutoff=cutoff,
+            n_bins=n_bins,
+            flavor=flavor,
         )
 
     logg.info("    finished", time=start)

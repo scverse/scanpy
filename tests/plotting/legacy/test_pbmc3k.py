@@ -78,7 +78,9 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
     adata = adata[adata.obs["n_genes"] < 2500, :]
     adata = adata[adata.obs["percent_mito"] < 0.05, :]
 
-    adata.raw = sc.pp.log1p(adata, copy=True)
+    logged = adata.copy()
+    sc.pp.log1p(logged)
+    adata.raw = logged
 
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)

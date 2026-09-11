@@ -10,6 +10,7 @@ import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, warn
@@ -24,12 +25,15 @@ from ...experimental._docs import (
     doc_layer,
 )
 from ...get import _get_arr
+from ...get.get import _resolve_obs
 from ...preprocessing._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
     from typing import Literal
 
     from numpy.typing import NDArray
+
+    from ...get.get import RepAcc
 
 
 @njit
@@ -126,7 +130,7 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
+def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     *,
     theta: float = 100,
@@ -135,13 +139,15 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     batch_key: str | None = None,
     chunksize: int = 1000,
     check_values: bool = True,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
-    x = _get_arr(adata, layer=layer)
-    computed_on = layer if layer else "adata.X"
+    use = _resolve_obs(use)
+    x = _get_arr(adata, use, layer=layer)
+    computed_on = layer or (repr(use) if use is not None else "adata.X")
 
     # Check for raw counts
     if check_values and not check_nonnegative_integers(x):
@@ -165,13 +171,13 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     residual_gene_vars = []
     for batch in np.unique(batch_info):
         adata_subset_prefilter = adata[batch_info == batch]
-        x_batch_prefilter = _get_arr(adata_subset_prefilter, layer=layer)
+        x_batch_prefilter = _get_arr(adata_subset_prefilter, use, layer=layer)
 
         # Filter out zero genes
         with settings.override(verbosity=Verbosity.error):
             nonzero_genes = np.ravel(x_batch_prefilter.sum(axis=0)) != 0
         adata_subset = adata_subset_prefilter[:, nonzero_genes]
-        x_batch = _get_arr(adata_subset, layer=layer)
+        x_batch = _get_arr(adata_subset, use, layer=layer)
 
         # Prepare clipping
         if clip is None:
@@ -295,6 +301,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     layer=doc_layer,
     inplace=doc_inplace,
 )
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def highly_variable_genes(  # noqa: PLR0913
     adata: AnnData,
     *,
@@ -305,6 +312,7 @@ def highly_variable_genes(  # noqa: PLR0913
     chunksize: int = 1000,
     flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
@@ -380,6 +388,7 @@ def highly_variable_genes(  # noqa: PLR0913
             raise ValueError(msg)
         return _highly_variable_pearson_residuals(
             adata,
+            use=use,
             layer=layer,
             n_top_genes=n_top_genes,
             batch_key=batch_key,

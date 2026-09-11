@@ -15,6 +15,7 @@ import numpy as np
 import scipy
 from packaging.version import Version
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import _utils
 from .. import logging as logg
@@ -23,7 +24,7 @@ from .._docs import doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ..get.get import _rep_to_json
+from ..get.get import _rep_to_json, _resolve_rep
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -60,13 +61,15 @@ SCIPY_1_17 = pkg_version("scipy") >= Version("1.17")
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
 @_accepts_legacy_random_state(_DEFAULT_SEED := 0)
+@deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 def neighbors(  # noqa: PLR0913
     adata: AnnData,
     n_neighbors: int = 15,
     n_pcs: int | None = None,
     *,
     distances: np.ndarray | SpBase | None = None,
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
+    use_rep: str | None = None,
     knn: bool = True,
     method: _Method = "umap",
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
@@ -181,6 +184,8 @@ def neighbors(  # noqa: PLR0913
     :doc:`/how-to/knn-transformers`
 
     """
+    if use is not None:
+        use = _resolve_rep(use)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
@@ -196,6 +201,7 @@ def neighbors(  # noqa: PLR0913
         neighbors_.compute_neighbors(
             n_neighbors,
             n_pcs=n_pcs,
+            use=use,
             use_rep=use_rep,
             knn=knn,
             method=method,
@@ -209,7 +215,7 @@ def neighbors(  # noqa: PLR0913
         ignored = {
             p.name
             for p in signature(neighbors).parameters.values()
-            if p.name in {"use_rep", "knn", "n_pcs", "metric_kwds"}
+            if p.name in {"use", "use_rep", "knn", "n_pcs", "metric_kwds"}
             if params[p.name] != p.default
         }
         if meta_random_state.get("random_state") != _DEFAULT_SEED:
@@ -251,7 +257,11 @@ def neighbors(  # noqa: PLR0913
         metric=metric,
         **meta_random_state,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
+        **(
+            {}
+            if use is None and use_rep is None
+            else dict(use_rep=_rep_to_json(use if use is not None else use_rep))
+        ),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
     )
 
@@ -538,7 +548,8 @@ class Neighbors:
         n_neighbors: int = 30,
         n_pcs: int | None = None,
         *,
-        use_rep: RepAcc | str | None = None,
+        use: RepAcc | str | None = None,
+        use_rep: str | None = None,
         knn: bool = True,
         method: _Method | None = "umap",
         transformer: KnnTransformerLike | _KnownTransformer | None = None,
@@ -592,7 +603,9 @@ class Neighbors:
         self._rp_forest = None
         self.n_neighbors = n_neighbors
         self.knn = knn
-        x = _choose_representation_compat(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        x = _choose_representation_compat(
+            self._adata, use=use, use_rep=use_rep, n_pcs=n_pcs
+        )
         self._distances = transformer.fit_transform(x)
         knn_indices, knn_distances = _get_indices_distances_from_sparse_matrix(
             self._distances, n_neighbors

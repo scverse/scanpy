@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING, cast
 import numba
 import numpy as np
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSRBase
 from .._utils import _doc_params
 from ..get import _get_arr
+from ..get.get import _resolve_obs
 from ..neighbors._doc import doc_neighbors_key
 from ._common import _get_graph, _SparseMetric
 
@@ -19,11 +21,15 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy.typing import NDArray
 
+    from ..get.get import ArrAcc
     from ._common import _Vals
 
 
 @singledispatch
 @_doc_params(neighbors_key=doc_neighbors_key)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
@@ -31,6 +37,7 @@ def morans_i(
     *,
     use_graph: str | None = None,
     neighbors_key: str | None = None,
+    use: ArrAcc | str | None = None,
     layer: str | None = None,
     obsm: str | None = None,
     obsp: str | None = None,
@@ -103,7 +110,9 @@ def morans_i(
     adata = cast("AnnData", adata_or_graph)
     g = _get_graph(adata, use_graph=use_graph, neighbors_key=neighbors_key)
     if vals is None:
-        vals = _get_arr(adata, use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp).T
+        vals = _get_arr(
+            adata, _resolve_obs(use), use_raw=use_raw, layer=layer, obsm=obsm, obsp=obsp
+        ).T
     return morans_i(g, vals)
 
 

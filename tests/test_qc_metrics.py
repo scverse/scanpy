@@ -281,13 +281,14 @@ def test_qc_metrics_percentage(adata_mito: AnnData) -> None:  # In response to #
         sc.pp.calculate_qc_metrics(adata_mito, percent_top=[20, 30, 1001])
 
 
+@needs.anndata_acc
 def test_layer_raw(adata: AnnData):
     adata = adata.copy()
     adata.raw = adata.copy()
     adata.layers["counts"] = adata.X.copy()
     obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
     sc.pp.log1p(adata)  # To be sure they aren't reusing it
-    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, layer="counts")
+    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, use="layers.counts")
     obs_raw, var_raw = sc.pp.calculate_qc_metrics(adata, use_raw=True)
     assert np.allclose(obs_orig, obs_layer)
     assert np.allclose(obs_orig, obs_raw)

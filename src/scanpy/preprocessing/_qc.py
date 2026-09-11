@@ -9,8 +9,10 @@ import pandas as pd
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from scanpy.get import _get_arr
+from scanpy.get.get import _resolve_obs
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -30,6 +32,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from numpy._typing._array_like import NDArray
 
+    from ..get.get import RepAcc
+
 
 @_doc_params(
     doc_adata_basic=doc_adata_basic,
@@ -45,6 +49,7 @@ def describe_obs(  # noqa: PLR0913
     var_type: str = "genes",
     qc_vars: Collection[str] = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     log1p: bool | None = True,
@@ -86,7 +91,7 @@ def describe_obs(  # noqa: PLR0913
         warn(msg, FutureWarning)
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -140,6 +145,7 @@ def describe_var(
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -171,7 +177,7 @@ def describe_var(
     """
     # Handle whether X is passed
     if x is None:
-        x = _get_arr(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
         if isinstance(x, CSBase):
             x.eliminate_zeros()
     var_metrics = pd.DataFrame(index=adata.var_names)
@@ -204,13 +210,15 @@ def describe_var(
     doc_obs_qc_returns=doc_obs_qc_returns,
     doc_var_qc_returns=doc_var_qc_returns,
 )
-def calculate_qc_metrics(
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+def calculate_qc_metrics(  # noqa: PLR0913
     adata: AnnData,
     *,
     expr_type: str = "counts",
     var_type: str = "genes",
     qc_vars: Collection[str] | str = (),
     percent_top: Collection[int] | None = (50, 100, 200, 500),
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     use_raw: bool = False,
     inplace: bool = False,
@@ -276,7 +284,7 @@ def calculate_qc_metrics(
         msg = "Argument `parallel` is deprecated, and currently has no effect."
         warn(msg, FutureWarning)
     # Pass X so I only have to do it once
-    x = _get_arr(adata, use_raw=use_raw, layer=layer)
+    x = _get_arr(adata, _resolve_obs(use), use_raw=use_raw, layer=layer)
     if isinstance(x, CSBase):
         x.eliminate_zeros()
 

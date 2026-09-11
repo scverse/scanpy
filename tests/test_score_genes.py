@@ -16,6 +16,7 @@ from scipy import sparse
 import scanpy as sc
 from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
+from testing.scanpy._pytest.marks import needs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -75,11 +76,11 @@ def test_score_with_reference(data_dir: Path) -> None:
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.scale(adata)
 
-    sc.tl.score_genes(adata, gene_list=adata.var_names[:100], score_name="Test")
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:100])
     with (data_dir / "score_genes_reference_paul2015.pkl").open("rb") as file:
         reference = pickle.load(file)
-    # np.testing.assert_allclose(reference, adata.obs["Test"].to_numpy())
-    np.testing.assert_array_equal(reference, adata.obs["Test"].to_numpy())
+    # np.testing.assert_allclose(reference, adata.obs["score"].to_numpy())
+    np.testing.assert_array_equal(reference, adata.obs["score"].to_numpy())
 
 
 def test_add_score():
@@ -97,8 +98,8 @@ def test_add_score():
     some_genes = np.r_[
         np.unique(rng.choice(adata.var_names, 10)), np.unique(non_existing_genes)
     ]
-    sc.tl.score_genes(adata, some_genes, score_name="Test")
-    assert adata.obs["Test"].dtype == "float64"
+    sc.tl.score_genes(adata, some_genes)
+    assert adata.obs["score"].dtype == "float64"
 
 
 @pytest.mark.parametrize("fmt", ["csr", "csc"])
@@ -159,11 +160,11 @@ def test_score_genes_sparse_vs_dense():
 
     gene_set = adata_dense.var_names[:10]
 
-    sc.tl.score_genes(adata_sparse, gene_list=gene_set, score_name="Test")
-    sc.tl.score_genes(adata_dense, gene_list=gene_set, score_name="Test")
+    sc.tl.score_genes(adata_sparse, gene_list=gene_set)
+    sc.tl.score_genes(adata_dense, gene_list=gene_set)
 
     np.testing.assert_allclose(
-        adata_sparse.obs["Test"].values, adata_dense.obs["Test"].values
+        adata_sparse.obs["score"].values, adata_dense.obs["score"].values
     )
 
 
@@ -187,8 +188,8 @@ def test_score_genes_deplete(*, dense: bool) -> None:
         warnings.filterwarnings("ignore", category=sparse.SparseEfficiencyWarning)
         adata.X[ix_obs, :10] = 0
 
-    sc.tl.score_genes(adata, gene_list=adata.var_names[:10], score_name="Test")
-    scores = adata.obs["Test"].values
+    sc.tl.score_genes(adata, gene_list=adata.var_names[:10])
+    scores = adata.obs["score"].values
 
     np.testing.assert_array_less(scores[ix_obs], 0)
 
@@ -204,16 +205,16 @@ def test_npnanmean_vs_sparsemean(monkeypatch):
     gene_set = adata.var_names[:10]
 
     # the unpatched, i.e. _sparse_nanmean version
-    sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
-    sparse_scores = adata.obs["Test"].values.tolist()
+    sc.tl.score_genes(adata, gene_list=gene_set)
+    sparse_scores = adata.obs["score"].values.tolist()
 
     # now patch _sparse_nanmean by np.nanmean inside sc.tools
     def mock_fn(x: CSRBase, axis: Literal[0, 1]):
         return np.nanmean(x.toarray(), axis, dtype="float64")
 
     monkeypatch.setattr(sc.tl._score_genes, "_sparse_nanmean", mock_fn)
-    sc.tl.score_genes(adata, gene_list=gene_set, score_name="Test")
-    dense_scores = adata.obs["Test"].values
+    sc.tl.score_genes(adata, gene_list=gene_set)
+    dense_scores = adata.obs["score"].values
 
     np.testing.assert_allclose(sparse_scores, dense_scores)
 
@@ -243,7 +244,8 @@ def test_use_raw_none() -> None:
     sc.tl.score_genes(adata, adata_raw.var_names[:3], use_raw=None)
 
 
-def test_layer():
+@needs.anndata_acc
+def test_out_use():
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
 
     sc.pp.normalize_total(adata, target_sum=1e4)
@@ -251,12 +253,12 @@ def test_layer():
 
     # score X
     gene_set = adata.var_names[:10]
-    sc.tl.score_genes(adata, gene_set, score_name="X_score")
+    sc.tl.score_genes(adata, gene_set, out="obs.X_score")
     # score layer (`del` makes sure it actually uses the layer)
     adata.layers["test"] = adata.X.copy()
     adata.raw = adata
     del adata.X
-    sc.tl.score_genes(adata, gene_set, score_name="test_score", layer="test")
+    sc.tl.score_genes(adata, gene_set, out="obs.test_score", use="layers.test")
 
     np.testing.assert_array_equal(adata.obs["X_score"], adata.obs["test_score"])
 

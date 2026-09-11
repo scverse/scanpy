@@ -107,7 +107,11 @@ def test_scale(*, typ, container, zero_center, dtype, mask, x, x_centered, x_sca
             else nullcontext()
         ):
             scaled = sc.pp.scale(
-                x, zero_center=zero_center, copy=container == "array", mask=mask
+                x,
+                zero_center=zero_center,
+                mask=mask,
+                # `copy` is only deprecated on the `AnnData` overload
+                **(dict(copy=True) if container == "array" else {}),
             )
     received = sparse.csr_matrix(  # noqa: TID251
         x.X if scaled is None else scaled

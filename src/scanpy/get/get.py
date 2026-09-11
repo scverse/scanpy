@@ -39,7 +39,10 @@ else:
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
 
-type Mask = NDArray[np.bool] | AdRef[Idx2D | int, AnnData] | str
+type VecRef = AdRef[Idx2D | int, AnnData] | str
+"""A reference to a 1D array, e.g. `A.obs['x']` or `'obs.x'`."""
+
+type Mask = NDArray[np.bool] | VecRef
 """A boolean array, or a reference to one (see `_check_mask`)."""
 
 # --------------------------------------------------------------------------------
@@ -489,6 +492,13 @@ class _Rep(TypedDict, total=False):
     varp: str | None
 
 
+class _SetRep(_Rep, total=False):
+    """`_Rep` plus the 1D destinations only `_set_arr` can write to."""
+
+    obs: str | None
+    var: str | None
+
+
 type ArrAcc = GraphAcc | LayerAcc | MultiAcc
 type RepAcc = LayerAcc | MultiAcc
 """Accessor usable as a representation (`use_rep`), i.e. a non-graph 2D array."""
@@ -497,50 +507,50 @@ type RepAcc = LayerAcc | MultiAcc
 @overload
 def _get_arr(
     adata: AnnData,
-    acc: Collection[ArrAcc | str],
+    use: Collection[ArrAcc | str],
     *,
     dim: Literal["obs", "var"] | None = None,
 ) -> list[Any]: ...
 @overload
 def _get_arr(
     adata: AnnData,
-    acc: ArrAcc | str | None = None,
+    use: ArrAcc | str | None = None,
     *,
     dim: Literal["obs", "var"] | None = None,
     **choices: Unpack[_Rep],
 ) -> Any: ...
 def _get_arr(  # noqa: PLR0911, PLR0912
     adata: AnnData,
-    acc: ArrAcc | str | Collection[ArrAcc | str] | None = None,
+    use: ArrAcc | str | Collection[ArrAcc | str] | None = None,
     *,
     dim: Literal["obs", "var"] | None = None,
     **choices: Unpack[_Rep],
 ) -> Any:
     """Get a 2D array aligned with `dim`, via an `anndata.acc` accessor or old-style choices."""
-    if _collection_of(acc, (GraphAcc, LayerAcc, MultiAcc, str)):
-        return [_get_arr(adata, a, dim=dim, **choices) for a in acc]
+    if _collection_of(use, (GraphAcc, LayerAcc, MultiAcc, str)):
+        return [_get_arr(adata, u, dim=dim, **choices) for u in use]
 
-    if acc is not None:
-        if isinstance(acc, str):
+    if use is not None:
+        if isinstance(use, str):
             from anndata.acc import A
 
-            acc = A.resolve(acc, vec=False)
+            use = A.resolve(use, vec=False)
 
         if any(v not in (None, False) for v in choices.values()):
-            msg = "`acc` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
+            msg = "`use` cannot be combined with `layer`/`use_raw`/`obsm`/`obsp`/`varm`/`varp`"
             raise TypeError(msg)
-        if not isinstance(acc, GraphAcc | LayerAcc | MultiAcc):
+        if not isinstance(use, GraphAcc | LayerAcc | MultiAcc):
             msg = (
-                "`acc` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`), "
+                "`use` must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`), "
                 "`GraphAcc` (e.g. `A.obsp[...]`, `A.varp[...]`), or "
-                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {acc!r}"
+                f"`MultiAcc` (e.g. `A.obsm[...]`, `A.varm[...]`), was {use!r}"
             )
             raise TypeError(msg)
-        if isinstance(acc, MultiAcc | GraphAcc) and dim is not None and dim != acc.dim:
-            msg = f"`dim` ({dim!r}) does not match `acc`'s ({acc.dim!r})"
+        if isinstance(use, MultiAcc | GraphAcc) and dim is not None and dim != use.dim:
+            msg = f"`dim` ({dim!r}) does not match `use`'s ({use.dim!r})"
             raise ValueError(msg)
-        data = adata[acc]
-        if isinstance(acc, LayerAcc) and dim == "var":
+        data = adata[use]
+        if isinstance(use, LayerAcc) and dim == "var":
             data = data.T
         return data
 
@@ -577,38 +587,91 @@ def _get_arr(  # noqa: PLR0911, PLR0912
             raise ValueError(msg)
 
 
-def _set_obs_rep(
+def _set_arr(
     adata: AnnData,
     val: Any,
+    out: ArrAcc | VecRef | None = None,
+    **choices: Unpack[_SetRep],
+) -> None:
+    """Write `val`, via an `anndata.acc` accessor or old-style choices.
+
+    The inverse of `_get_arr`; see there for the accessor/`choices` split.
+    """
+    if out is not None:
+        if any(v not in (None, False) for v in choices.values()):
+            msg = "`out` cannot be combined with `layer`/`obsm`/`obsp`/`varm`/`varp`"
+            raise TypeError(msg)
+        _set_acc(adata, val, out)
+        return
+
+    match [(k, v) for k, v in choices.items() if v not in {None, False}]:
+        case []:
+            adata.X = val
+        case [("layer", layer)]:
+            adata.layers[layer] = val
+        case [(("obsm" | "obsp" | "varm" | "varp" | "obs" | "var") as k, v)]:
+            getattr(adata, k)[v] = val
+        case picked:
+            valid = [f"`{k}`" for k, _ in picked]
+            valid[-1] = f"or {valid[-1]}"
+            msg = f"Only one of {', '.join(valid)} can be specified."
+            raise ValueError(msg)
+
+
+def _write_out[V](
+    adata: AnnData,
+    val: V,
+    out: ArrAcc | VecRef | Default | None,
     *,
-    use_raw: bool = False,
-    layer: str | None = None,
-    obsm: str | None = None,
-    obsp: str | None = None,
-):
-    """Set value for observation rep."""
-    is_layer = layer is not None
-    is_raw = use_raw is not False
-    is_obsm = obsm is not None
-    is_obsp = obsp is not None
-    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
-    assert choices_made <= 1
-    if choices_made == 0:
-        adata.X = val
-    elif is_layer:
-        adata.layers[layer] = val
-    elif use_raw:
-        adata.raw.X = val
-    elif is_obsm:
-        adata.obsm[obsm] = val
-    elif is_obsp:
-        adata.obsp[obsp] = val
+    use: ArrAcc | VecRef | None = None,
+    **choices: Unpack[_SetRep],
+) -> V | None:
+    """Honor an `out` argument: write `val` and return `None`, or return `val` unwritten.
+
+    `out` is either an accessor to write to, `None` (return `val` instead of
+    writing it), or a `Default` meaning “the place `use`/`choices` read from”.
+    """
+    if out is None:
+        return val
+    if isinstance(out, Default):
+        _set_arr(adata, val, use, **choices)
     else:
-        msg = (
-            "That was unexpected. Please report this bug at:\n\n"
-            "\thttps://github.com/scverse/scanpy/issues"
-        )
-        raise AssertionError(msg)
+        _set_arr(adata, val, out)
+    return None
+
+
+def _is_multi(use: ArrAcc | str | None) -> bool:
+    """Whether `use` points at a `.{obs,var}m` array, whose columns aren’t variables."""
+    if use is None:
+        return False
+    if isinstance(use, str):
+        from anndata.acc import A
+
+        use = A.resolve(use, vec=False)
+    return isinstance(use, MultiAcc)
+
+
+def _set_acc(adata: AnnData, val: Any, acc: ArrAcc | VecRef) -> None:
+    """Write `val` to the location an `anndata.acc` accessor points at."""
+    from anndata.acc import A, MetaAcc
+
+    if isinstance(acc, str):
+        acc = A.resolve(acc)
+    match acc:
+        case LayerAcc(k=None):
+            adata.X = val
+        case LayerAcc(k=key):
+            adata.layers[key] = val
+        case MultiAcc(dim=dim, k=key):
+            getattr(adata, f"{dim}m")[key] = val
+        case GraphAcc(dim=dim, k=key):
+            getattr(adata, f"{dim}p")[key] = val
+        # assign by column. Assigning to an 1D array slice is done elsewhere
+        case AdRef(acc=MetaAcc(dim=dim), idx=str(col)):
+            getattr(adata, dim)[col] = val
+        case _:
+            msg = f"Cannot write to {acc!r}"
+            raise TypeError(msg)
 
 
 def _mask_arg[M](
@@ -830,18 +893,27 @@ def _get_vec(
     return adata[ref]
 
 
-def _resolve_rep(rep: RefAcc | str) -> RepAcc:
-    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
-    if isinstance(rep, str):
+def _resolve_obs[U: ArrAcc | str | None](use: U, /) -> U:
+    """Resolve a `use`/`out` string and require the result to be `obs`-aligned.
+
+    Every function that can only handle `obs`-aligned input funnels through here,
+    so `grep _resolve_obs` lists the ones that could be extended to work on `var`.
+    """
+    if use is None:
+        return use
+    if isinstance(use, str):
         from anndata.acc import A
 
-        rep = A.resolve(rep, vec=False)
-    if isinstance(rep, MultiAcc) and rep.dim != "obs":
-        msg = (
-            f"Representation must be aligned to `obs`, but {rep!r} is aligned to `var`"
-        )
+        use = A.resolve(use, vec=False)
+    if isinstance(use, MultiAcc | GraphAcc) and use.dim != "obs":
+        msg = f"Input must be aligned to `obs`, but {use!r} is aligned to `var`"
         raise ValueError(msg)
-    if isinstance(rep, LayerAcc | MultiAcc):
+    return use
+
+
+def _resolve_rep(rep: RefAcc | str) -> RepAcc:
+    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
+    if isinstance(rep := _resolve_obs(rep), LayerAcc | MultiAcc):
         return rep
     msg = (
         "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
@@ -885,18 +957,14 @@ def _ref_from_json[M: NDArray | None](
 def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
     """Serialize a `rep`resentation for storage in `.uns`.
 
-    v1 strings (`'X'` or an `.obsm` key) are stored unchanged,
-    accessors (and hence v2 strings) as `anndata.acc` JSON inside a 1-element list,
+    Deprecated `use_rep` strings (`'X'` or an `.obsm` key) are stored unchanged,
+    accessors as `anndata.acc` JSON inside a 1-element list,
     e.g. `A.obsm['pca']` as `['["obsm", "pca"]']`.
 
     TODO: Once AnnData can store a heterogeneous list, store that instead of a 1-element list.
     See https://github.com/scverse/anndata/issues/1979
     """
-    from scanpy import settings
-
-    if rep is None or (
-        isinstance(rep, str) and settings.preset is not Preset.ScanpyV2Preview
-    ):
+    if rep is None or isinstance(rep, str):
         return rep
     from anndata.acc import A
 
@@ -905,25 +973,16 @@ def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
 
 def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
     """Parse a `rep`resentation stored by `_rep_to_json`."""
-    from scanpy import settings
-
-    if rep is None:
+    if rep is None or isinstance(rep, str):
+        # a plain string is a deprecated `use_rep` one, i.e. `'X'` or an `.obsm` key
         return rep
-    if not isinstance(rep, str):
-        from anndata.acc import A
+    from anndata.acc import A
 
-        if (
-            isinstance(rep, Sequence | np.ndarray)
-            and len(rep) == 1
-            and isinstance(rep[0], str)
-        ):
-            # see `_rep_to_json`
-            rep: Sequence[str | int | None] = json.loads(rep[0])
-        return _resolve_rep(A.from_json(rep, vec=False))
-    if settings.preset is Preset.ScanpyV2Preview:
-        from anndata.acc import A
-
-        # a plain string was stored under the v1 preset,
-        # so interpret it as one instead of as an `anndata.acc` spec
-        return A.X if rep == "X" else A.obsm[rep]
-    return rep
+    if (
+        isinstance(rep, Sequence | np.ndarray)
+        and len(rep) == 1
+        and isinstance(rep[0], str)
+    ):
+        # see `_rep_to_json`
+        rep: Sequence[str | int | None] = json.loads(rep[0])
+    return _resolve_rep(A.from_json(rep, vec=False))

@@ -6,6 +6,7 @@ import pytest
 from anndata import read_h5ad
 
 import scanpy as sc
+from testing.scanpy._pytest.marks import needs
 
 
 @pytest.mark.parametrize(
@@ -13,7 +14,11 @@ import scanpy as sc
     [
         pytest.param("PCA", sc.pp.pca, " with chunked as False", id="pca"),
         pytest.param(
-            "PCA", partial(sc.pp.pca, layer="X_copy"), " from layers", id="pca_layer"
+            "PCA",
+            partial(sc.pp.pca, use="layers.X_copy"),
+            " from layers",
+            id="pca_layer",
+            marks=needs.anndata_acc,
         ),
         pytest.param(
             "regress_out",
@@ -81,9 +86,12 @@ def test_log1p_backed_errors(backed_adata):
         sc.pp.log1p(backed_adata)
     backed_adata.layers["X_copy"] = backed_adata.X
     layer_type = type(backed_adata.layers["X_copy"])
-    with pytest.raises(
-        NotImplementedError,
-        match=f"log1p is not implemented for matrices of type {layer_type} from layers",
+    with (
+        pytest.warns(FutureWarning, match=r"argument layer is deprecated"),
+        pytest.raises(
+            NotImplementedError,
+            match=f"log1p is not implemented for matrices of type {layer_type} from layers",
+        ),
     ):
         sc.pp.log1p(backed_adata, layer="X_copy")
     backed_adata.file.close()

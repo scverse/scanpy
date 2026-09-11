@@ -7,14 +7,20 @@ import numba
 import numpy as np
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
-from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_arr, _set_obs_rep
+from .._docs import DEPR_COPY, doc_out, doc_use
+from .._settings import Default
+from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
+from ..get import _get_arr, _write_out
+from ..get.get import _resolve_obs
 
 if TYPE_CHECKING:
     from anndata import AnnData
+
+    from ..get.get import RepAcc
 
 
 def _compute_nnz_median(counts: np.ndarray | DaskArray) -> np.floating:
@@ -124,13 +130,24 @@ def _normalize_total_helper(
     return x, counts_per_cell, gene_subset
 
 
-def normalize_total(  # noqa: PLR0912
+@_doc_params(
+    use=doc_use("Which matrix to normalize."),
+    out=doc_out("the place `use` reads from"),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("inplace", Deprecation("1.13.0", "Use `out=None` instead."))
+@deprecated_arg("copy", DEPR_COPY)
+def normalize_total(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,
     target_sum: float | None = None,
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     key_added: str | None = None,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    # deprecated
     layer: str | None = None,
     obsm: str | None = None,
     inplace: bool = True,
@@ -180,21 +197,18 @@ def normalize_total(  # noqa: PLR0912
     key_added
         Name of the field in `adata.obs` where the normalization factor is
         stored.
-    layer
-        Layer to normalize instead of `X`.
-    obsm
-        Array to normalize instead of `X`.
+    {use}\
+    {out}\
     inplace
-        Whether to update `adata` or return dictionary with normalized copies of
-        `adata.X` and `adata.layers`.
+        `inplace=False` is `out=None`.
     copy
-        Whether to modify copied input object. Not compatible with inplace=False.
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns dictionary with normalized copies of `adata.X` and `adata.layers`
-    or updates `adata` with normalized version of the original
-    `adata.X` and `adata.layers`, depending on `inplace`.
+    Returns `None` if the result was written, else a dictionary holding the
+    normalized matrix in `'X'` and the counts per cell before normalization
+    in `'norm_factor'`.
 
     Example
     -------
@@ -218,7 +232,7 @@ def normalize_total(  # noqa: PLR0912
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)["X"]
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=None)["X"]
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -230,7 +244,7 @@ def normalize_total(  # noqa: PLR0912
     ...     target_sum=1,
     ...     exclude_highly_expressed=True,
     ...     max_fraction=0.2,
-    ...     inplace=False,
+    ...     out=None,
     ... )["X"]
     normalizing counts per cell
     The following highly-expressed genes are not considered during normalization factor computation:
@@ -242,11 +256,17 @@ def normalize_total(  # noqa: PLR0912
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
 
     """
+    if not inplace:  # deprecated: `inplace=False` means `out=None`
+        if not isinstance(out, Default):
+            msg = "Pass either `out` or `inplace`, not both."
+            raise TypeError(msg)
+        out = None
     if copy:
-        if not inplace:
-            msg = "`copy=True` cannot be used with `inplace=False`."
+        if out is None:
+            msg = "`copy=True` cannot be used with `out=None`."
             raise ValueError(msg)
         adata = adata.copy()
+    use = _resolve_obs(use)
 
     if max_fraction < 0 or max_fraction > 1:
         msg = "Choose max_fraction between 0 and 1."
@@ -254,10 +274,12 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_arr(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, use, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if not inplace:
+    if not isinstance(out, Default):
+        # normalization is in-place, so leave the source alone
+        # unless we write back over it
         x = x.copy()
     if issubclass(x.dtype.type, int | np.integer):
         x = x.astype(np.float32)  # TODO: Check if float64 should be used
@@ -281,14 +303,9 @@ def normalize_total(  # noqa: PLR0912
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    dat = dict(
-        X=x,
-        norm_factor=counts_per_cell,
-    )
-    if inplace:
-        if key_added is not None:
-            adata.obs[key_added] = dat["norm_factor"]
-        _set_obs_rep(adata, dat["X"], layer=layer, obsm=obsm)
+    if out is not None and key_added is not None:
+        adata.obs[key_added] = counts_per_cell
+    unwritten = _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
 
     logg.info(
         "    finished ({time_passed})",
@@ -299,8 +316,6 @@ def normalize_total(  # noqa: PLR0912
             f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
         )
 
-    if copy:
-        return adata
-    elif not inplace:
-        return dat
-    return None
+    if unwritten is not None:
+        return dict(X=unwritten, norm_factor=counts_per_cell)
+    return adata if copy else None

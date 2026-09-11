@@ -147,14 +147,16 @@ def test_results_layers(
     scores = get_true_scores(data_dir, method)["scores"]
 
     with subtests.test("layer"):
-        rank_genes_groups(
-            adata,
-            "true_groups",
-            method=method,
-            layer="to_test",
-            use_raw=None if method == "wilcoxon" else False,
-            n_genes=20,
-        )
+        # the deprecated spelling, so this also runs without `anndata.acc`
+        with pytest.warns(FutureWarning, match=r"argument layer is deprecated"):
+            rank_genes_groups(
+                adata,
+                "true_groups",
+                method=method,
+                layer="to_test",
+                use_raw=None if method == "wilcoxon" else False,
+                n_genes=20,
+            )
         assert adata.uns["rank_genes_groups"]["params"]["use_raw"] is False
         for g in range(scores.shape[0]):
             np.testing.assert_allclose(

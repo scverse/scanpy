@@ -8,14 +8,16 @@ import numba
 import numpy as np
 import pandas as pd
 from fast_array_utils.numba import njit
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._docs import doc_rng
+from .._docs import DEPR_COPY, doc_out, doc_rng, doc_use
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _get_arr
+from ..get import _get_arr, _write_out
+from ..get.get import _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Sequence
@@ -25,6 +27,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike, NDArray
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get.get import RepAcc, VecRef
 
 
 type _StrIdx = pd.Index[str]
@@ -92,8 +95,15 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
     return _sparse_nanmean_across_slots(x.data, x.indices, n_out, divisor)
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(
+    rng=doc_rng,
+    use=doc_use("Which matrix to score on.", legacy=("layer",)),
+    out=doc_out("`.obs['score']`"),
+)
 @_accepts_legacy_random_state(0)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("score_name", Deprecation("1.13.0", "Use `out` instead."))
+@deprecated_arg("copy", DEPR_COPY)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
@@ -102,12 +112,15 @@ def score_genes(  # noqa: PLR0913
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
-    score_name: str = "score",
+    use: RepAcc | str | None = None,
+    out: VecRef | Default | None = Default("`.obs['score']`"),
     rng: SeedLike | RNGLike | None = None,
+    # deprecated
+    score_name: str | None = None,
     copy: bool = False,
     use_raw: bool | None = None,
     layer: str | None = None,
-) -> AnnData | None:
+) -> AnnData | pd.Series | None:
     """Score a set of genes :cite:p:`Tirosh2016`.
 
     The score is the average expression of a set of genes after subtraction by
@@ -136,24 +149,26 @@ def score_genes(  # noqa: PLR0913
         Genes for sampling the reference set. Default is all genes.
     n_bins
         Number of expression level bins for sampling.
-    score_name
-        Name of the field to be added in `.obs`.
+    {use}\
+    {out}\
     {rng}
+    score_name
+        A column of :attr:`~anndata.AnnData.obs`,
+        i.e. `score_name='k'` is `out=A.obs['k']`.
     copy
-        Copy `adata` or modify it inplace.
+        Whether to return a modified copy instead of modifying `adata` in place.
     use_raw
         Whether to use `raw` attribute of `adata`. Defaults to `True` if `.raw` is present.
 
         .. versionchanged:: 1.4.5
            Default value changed from `False` to `None`.
-    layer
-        Key from `adata.layers` whose value will be used to perform tests on.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an `AnnData` object. Sets the following field:
+    Returns `None` if the result was written, else the scores as a
+    :class:`~pandas.Series`. Sets the following field:
 
-    `adata.obs[score_name]` : :class:`numpy.ndarray` (dtype `float`)
+    `adata.obs['score' | out]` : :class:`numpy.ndarray` (dtype `float`)
         Scores of each cell.
 
     Examples
@@ -161,19 +176,31 @@ def score_genes(  # noqa: PLR0913
     See this `notebook <https://github.com/scverse/scanpy_usage/tree/master/180209_cell_cycle>`__.
 
     """
-    start = logg.info(f"computing score {score_name!r}")
+    if score_name is not None:  # deprecated: names an `.obs` column
+        if not isinstance(out, Default):
+            msg = "Pass either `out` or `score_name`, not both."
+            raise TypeError(msg)
+        key = score_name
+    else:
+        key = "score"
+    start = logg.info(f"computing score {key if isinstance(out, Default) else out!r}")
     rng = np.random.default_rng(rng)
     rng = _if_legacy_apply_global(rng)
-    adata = adata.copy() if copy else adata
+    if copy:
+        if out is None:
+            msg = "`copy=True` cannot be used with `out=None`."
+            raise TypeError(msg)
+        adata = adata.copy()
+    use = _resolve_obs(use)
     if isinstance(ctrl_as_ref, Default):
         ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
-    use_raw = check_use_raw(adata, use_raw, layer=layer)
+    use_raw = check_use_raw(adata, use_raw, use=use, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
         raise NotImplementedError(msg)
 
     gene_list, gene_pool, get_subset = _check_score_genes_args(
-        adata, gene_list, gene_pool, use_raw=use_raw, layer=layer
+        adata, gene_list, gene_pool, use=use, use_raw=use_raw, layer=layer
     )
     del use_raw, layer
 
@@ -205,19 +232,19 @@ def score_genes(  # noqa: PLR0913
     )
     score = means_list - means_control
 
-    adata.obs[score_name] = pd.Series(
-        np.array(score).ravel(), index=adata.obs_names, dtype="float64"
-    )
+    scores = pd.Series(np.array(score).ravel(), index=adata.obs_names, dtype="float64")
 
     logg.info(
         "    finished",
         time=start,
         deep=(
             "added\n"
-            f"    {score_name!r}, score of gene set (adata.obs).\n"
+            f"    {key if isinstance(out, Default) else out!r}, score of gene set (adata.obs).\n"
             f"    {len(control_genes)} total control genes are used."
         ),
     )
+    if (unwritten := _write_out(adata, scores, out, obs=key)) is not None:
+        return unwritten
     return adata if copy else None
 
 
@@ -226,6 +253,7 @@ def _check_score_genes_args(
     gene_list: pd.Index[str] | Sequence[str],
     gene_pool: pd.Index[str] | Sequence[str] | None,
     *,
+    use: RepAcc | str | None,
     layer: str | None,
     use_raw: bool,
 ) -> tuple[pd.Index[str], pd.Index[str], _GetSubset]:
@@ -252,7 +280,7 @@ def _check_score_genes_args(
         raise ValueError(msg)
 
     def get_subset(genes: pd.Index[str]):
-        x = _get_arr(adata, use_raw=use_raw, layer=layer)
+        x = _get_arr(adata, use, use_raw=use_raw, layer=layer)
         if len(genes) == len(var_names):
             return x
         idx = var_names.get_indexer(genes)
@@ -361,7 +389,9 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
-        score_genes(adata, genes, score_name=name, ctrl_size=ctrl_size, **kwargs)
+        adata.obs[name] = score_genes(
+            adata, genes, out=None, ctrl_size=ctrl_size, **kwargs
+        )
     scores = adata.obs[["S_score", "G2M_score"]]
 
     # default phase is S
