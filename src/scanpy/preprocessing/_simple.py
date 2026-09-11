@@ -346,8 +346,8 @@ def log1p(
         Rows correspond to cells and columns to genes.
     base
         Base of the logarithm. Natural logarithm is used by default.
-    {use}\
-    {out}\
+    {use}
+    {out}
     chunked
         Process the data matrix in chunks, which will save memory.
         Applies only to :class:`~anndata.AnnData`.
@@ -571,8 +571,8 @@ def regress_out(  # noqa: PLR0912, PLR0915
         The annotated data matrix.
     keys
         Keys for observation annotation on which to regress on.
-    {use}\
-    {out}\
+    {use}
+    {out}
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy.settings.n_jobs`.

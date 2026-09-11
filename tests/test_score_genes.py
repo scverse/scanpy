@@ -235,6 +235,7 @@ def test_one_gene():
     sc.tl.score_genes(adata, [adata.var_names[0]])
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_use_raw_none() -> None:
     adata = _create_adata(100, 1000, p_zero=0, p_nan=0)
     adata_raw = adata.copy()

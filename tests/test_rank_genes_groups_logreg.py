@@ -29,6 +29,7 @@ def test_rank_genes_groups_with_renamed_categories(method):
 
 
 @needs.anndata_acc
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_rank_genes_groups_with_renamed_categories_use_rep():
     adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)
     assert np.allclose(adata.X[1], [9.214668, -2.6487126, 4.2020774, 0.51076424])

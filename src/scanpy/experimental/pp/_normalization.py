@@ -23,7 +23,7 @@ from ...experimental._docs import (
     doc_copy,
     doc_dist_params,
     doc_inplace,
-    doc_layer,
+    doc_input_obsm,
     doc_pca_chunk,
 )
 from ...get import _check_mask, _get_arr, _set_arr
@@ -85,7 +85,7 @@ def _pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     check_values=doc_check_values,
-    layer=doc_layer,
+    use=doc_input_obsm,
     inplace=doc_inplace,
     copy=doc_copy,
 )
@@ -116,7 +116,7 @@ def normalize_pearson_residuals(
     {adata}
     {dist_params}
     {check_values}
-    {layer}
+    {use}
     {inplace}
     {copy}
 

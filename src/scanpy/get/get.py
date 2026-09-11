@@ -87,7 +87,7 @@ def rank_genes_groups_df(
     -------
     >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True)
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain")
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")
 
     """
@@ -492,9 +492,14 @@ class _Rep(TypedDict, total=False):
     varp: str | None
 
 
-class _SetRep(_Rep, total=False):
-    """`_Rep` plus the 1D destinations only `_set_arr` can write to."""
+class _SetRep(TypedDict, total=False):
+    """Like `_Rep`, but for writing: no `use_raw`, plus 1D destinations."""
 
+    layer: str | None
+    obsm: str | None
+    obsp: str | None
+    varm: str | None
+    varp: str | None
     obs: str | None
     var: str | None
 

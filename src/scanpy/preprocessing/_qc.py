@@ -16,6 +16,7 @@ from scanpy.get.get import _resolve_obs
 from scanpy.preprocessing._distributed import materialize_as_ndarray
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import DEPR_RAW
 from .._utils import _doc_params, axis_nnz
 from ._docs import (
     doc_adata_basic,
@@ -211,6 +212,7 @@ def describe_var(
     doc_var_qc_returns=doc_var_qc_returns,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def calculate_qc_metrics(  # noqa: PLR0913
     adata: AnnData,
     *,

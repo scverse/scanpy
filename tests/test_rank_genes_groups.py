@@ -132,6 +132,7 @@ def test_results(
 
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_results_layers(
     subtests: pytest.Subtests,
     data_dir: Path,
@@ -173,6 +174,7 @@ def test_results_layers(
             )
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_rank_genes_groups_use_raw():
     # https://github.com/scverse/scanpy/issues/1929
     pbmc = pbmc68k_reduced()
@@ -207,6 +209,7 @@ def test_emptycat():
         rank_genes_groups(pbmc, groupby="louvain")
 
 
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_log1p_save_restore(tmp_path):
     """Tests the sequence log1p→save→load→rank_genes_groups."""
     from anndata import read_h5ad

@@ -133,8 +133,8 @@ def scale[A: _Array](
         The default will be removed in scanpy 2.0.
     max_value
         Clip (truncate) to this value after scaling. If `None`, do not clip.
-    {use}\
-    {out}\
+    {use}
+    {out}
     copy
         For array input, whether to leave the input unmodified.
     {mask}

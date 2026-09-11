@@ -11,6 +11,7 @@ from fast_array_utils.numba import njit
 from scverse_misc import Deprecation, deprecated_arg
 
 from .._compat import CSRBase
+from .._docs import DEPR_RAW, doc_use
 from .._utils import _doc_params
 from ..get import _get_arr
 from ..get.get import _resolve_obs
@@ -26,10 +27,14 @@ if TYPE_CHECKING:
 
 
 @singledispatch
-@_doc_params(neighbors_key=doc_neighbors_key)
+@_doc_params(
+    neighbors_key=doc_neighbors_key,
+    use=doc_use("Which values to compute on.", legacy=("layer", "obsm", "obsp")),
+)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("obsp", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def morans_i(
     adata_or_graph: AnnData | CSRBase,
     /,
@@ -66,20 +71,13 @@ def morans_i(
     vals
         Values to calculate Moran's I for. If this is two dimensional, should
         be of shape `(n_features, n_cells)`. Otherwise should be of shape
-        `(n_cells,)`. This matrix can be selected from elements of the anndata
-        object by using key word arguments: `layer`, `obsm`, `obsp`, or
-        `use_raw`.
+        `(n_cells,)`. If not given, it is selected from `adata` using `use`.
     use_graph
         Key to use for graph in anndata object.
         If not provided, default neighbors connectivities will be used instead.
         (See ``neighbors_key`` below.)
     {neighbors_key}
-    layer
-        Key for `adata.layers` to choose `vals`.
-    obsm
-        Key for `adata.obsm` to choose `vals`.
-    obsp
-        Key for `adata.obsp` to choose `vals`.
+    {use}
     use_raw
         Whether to use `adata.raw.X` for `vals`.
 
@@ -95,9 +93,10 @@ def morans_i(
     .. code:: python
 
         import scanpy as sc, numpy as np
+        from anndata.acc import A
 
         pbmc = sc.datasets.pbmc68k_processed()
-        pc_c = sc.metrics.morans_i(pbmc, obsm="X_pca")
+        pc_c = sc.metrics.morans_i(pbmc, use=A.obsm["X_pca"])
 
     It's equivalent to call the function directly on the underlying arrays:
 

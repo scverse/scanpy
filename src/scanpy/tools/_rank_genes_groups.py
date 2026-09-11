@@ -15,7 +15,7 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import _utils
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, warn
-from .._docs import doc_mask
+from .._docs import DEPR_RAW, doc_mask, doc_use
 from .._settings import Default, Preset, settings
 from .._settings.presets import DETest
 from .._utils import (
@@ -753,10 +753,12 @@ def _build_stats_dataframe(
 
 
 @_doc_params(
-    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var")
+    mask=doc_mask("Select subset of genes to use in statistical tests.", dim="var"),
+    use=doc_use("Which matrix to perform tests on.", legacy=("layer",)),
 )
 @deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     adata: AnnData,
     groupby: str,
@@ -805,8 +807,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     {mask}
     use_raw
         Use `raw` attribute of `adata` if present. The default behavior is to use `raw` if present.
-    layer
-        Key from `adata.layers` whose value will be used to perform tests on.
+    {use}
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
         shall be restricted, or `'all'` (default), for all groups. Note that if
@@ -1056,6 +1057,7 @@ def _calc_frac(x: NDArray[np.number] | CSBase, /) -> NDArray[np.float64]:
 
 
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def filter_rank_genes_groups(  # noqa: PLR0912, PLR0913
     adata: AnnData,
     *,

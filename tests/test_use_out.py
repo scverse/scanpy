@@ -116,6 +116,32 @@ def test_legacy_layer_deprecated(
         call(adata, **{legacy: "counts"})
 
 
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(
+            lambda a: sc.pp.calculate_qc_metrics(a, percent_top=None, use_raw=False),
+            id="qc",
+        ),
+        pytest.param(
+            lambda a: sc.tl.score_genes(a, list(a.var_names[:2]), use_raw=False),
+            id="score_genes",
+        ),
+        pytest.param(
+            lambda a: sc.tl.rank_genes_groups(a, "group", use_raw=False),
+            id="rank_genes_groups",
+        ),
+        pytest.param(lambda a: sc.metrics.gearys_c(a, use_raw=False), id="gearys_c"),
+    ],
+)
+def test_use_raw_deprecated(adata: AnnData, call: Callable[[AnnData], object]) -> None:
+    """`.raw` is going away, so `use_raw` warns wherever it's passed."""
+    adata.obs["group"] = np.tile(["a", "b"], 10)
+    sc.pp.neighbors(adata, n_neighbors=3)
+    with pytest.warns(FutureWarning, match=r"argument use_raw is deprecated"):
+        call(adata)
+
+
 def test_use_and_layer_conflict(adata: AnnData) -> None:
     from anndata.acc import A
 

@@ -705,7 +705,7 @@ def highly_variable_genes(  # noqa: PLR0913
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    {use}\
+    {use}
     n_top_genes
         Number of highly-variable genes to keep. Mandatory if `flavor='seurat_v3'`.
     min_mean

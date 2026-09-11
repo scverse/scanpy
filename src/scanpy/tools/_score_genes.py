@@ -12,7 +12,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase
-from .._docs import DEPR_COPY, doc_out, doc_rng, doc_use
+from .._docs import DEPR_COPY, DEPR_RAW, doc_out, doc_rng, doc_use
 from .._settings import Default, settings
 from .._utils import _doc_params, check_use_raw, is_backed_type
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
@@ -104,6 +104,7 @@ def _sparse_nanmean(x: CSBase, /, axis: Literal[0, 1]) -> NDArray[np.float64]:
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 @deprecated_arg("score_name", Deprecation("1.13.0", "Use `out` instead."))
 @deprecated_arg("copy", DEPR_COPY)
+@deprecated_arg("use_raw", DEPR_RAW)
 def score_genes(  # noqa: PLR0913
     adata: AnnData,
     gene_list: Sequence[str] | pd.Index[str],
@@ -149,8 +150,8 @@ def score_genes(  # noqa: PLR0913
         Genes for sampling the reference set. Default is all genes.
     n_bins
         Number of expression level bins for sampling.
-    {use}\
-    {out}\
+    {use}
+    {out}
     {rng}
     score_name
         A column of :attr:`~anndata.AnnData.obs`,

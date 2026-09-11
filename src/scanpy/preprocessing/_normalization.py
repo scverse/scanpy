@@ -197,8 +197,8 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     key_added
         Name of the field in `adata.obs` where the normalization factor is
         stored.
-    {use}\
-    {out}\
+    {use}
+    {out}
     inplace
         `inplace=False` is `out=None`.
     copy

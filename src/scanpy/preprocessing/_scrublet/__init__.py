@@ -11,7 +11,7 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._docs import doc_rng
+from ..._docs import doc_rng, doc_use
 from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get import _get_arr
@@ -505,6 +505,7 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
+@_doc_params(use=doc_use("Which matrix holds the raw counts.", legacy=("layer",)))
 @_accepts_legacy_random_state(0)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def scrublet_simulate_doublets(
@@ -527,8 +528,7 @@ def scrublet_simulate_doublets(
         correspond to cells and columns to genes. Genes should have been
         filtered for expression and variability, and the object should contain
         raw expression of the same dimensions.
-    layer
-        Layer of adata where raw values are stored, or 'X' if values are in .X.
+    {use}
     sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed
         transcriptomes. If `None`, self.sim_doublet_ratio is used.

@@ -124,7 +124,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     n_comps
         Number of principal components to compute. Defaults to 50,
         or 1 - minimum dimension size of selected representation.
-    {use}\
+    {use}
     zero_center
         If `True`, compute (or approximate) PCA from covariance matrix.
         If `False`, performa a truncated SVD instead of PCA.

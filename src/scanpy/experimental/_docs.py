@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .._docs import doc_use
+
 doc_adata = """\
 adata
     The annotated data matrix of shape `n_obs` × `n_vars`.
@@ -29,9 +31,12 @@ check_values
     without checking. Setting this to `False` can speed up code for large datasets.
 """
 
-doc_layer = """\
-layer
-    Layer to use as input instead of `X`. If `None`, `X` is used.
+doc_input = f"""\
+{doc_use("Which matrix to use as input.", legacy=("layer",))}
+"""
+
+doc_input_obsm = f"""\
+{doc_use("Which matrix to use as input.")}
 """
 
 doc_subset = """\

@@ -9,12 +9,26 @@ from scverse_misc import Deprecation
 if TYPE_CHECKING:
     from typing import Final, Literal
 
-__all__ = ["DEPR_COPY", "doc_mask", "doc_out", "doc_ref_compat", "doc_rng", "doc_use"]
+__all__ = [
+    "DEPR_COPY",
+    "DEPR_RAW",
+    "doc_mask",
+    "doc_out",
+    "doc_ref_compat",
+    "doc_rng",
+    "doc_use",
+]
 
 DEPR_COPY: Final = Deprecation(
     "1.13.0", "Copy `adata` before calling this function instead."
 )
 """For functions that gained an `out` parameter, making `copy` redundant."""
+
+DEPR_RAW: Final = Deprecation(
+    "1.13.0",
+    ":attr:`~anndata.AnnData.raw` is deprecated. Keep the data in a layer instead.",
+)
+"""For `use_raw` parameters, which have no accessor equivalent."""
 
 doc_ref_compat = (
     "If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`, "
@@ -40,10 +54,11 @@ mask_{dim}
 
 def doc_use(desc: str, *, legacy: tuple[str, ...] = ("layer", "obsm")) -> str:
     """Docs for a `use` parameter and the deprecated parameters it replaces."""
-    legacy_docs = "".join(
+    # no trailing newline: the caller’s `{use}` is followed by its own one
+    legacy_docs = "\n".join(
         f"{name}\n"
         f"    A key of :attr:`~anndata.AnnData.{attr}`,\n"
-        f"    i.e. `{name}='k'` is `use=A.{attr}['k']`.\n"
+        f"    i.e. `{name}='k'` is `use=A.{attr}['k']`."
         for name in legacy
         if (attr := "layers" if name == "layer" else name)
     )
@@ -63,7 +78,7 @@ out
     Where to write the result, e.g. `A.layers['scaled']`.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.scaled'`.
     If :data:`None`, the result is returned instead of written.
-    If not given, it is written to {default}.
+    If not given, it is written to {default}.\
 """
 
 

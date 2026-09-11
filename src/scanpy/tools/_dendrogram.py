@@ -9,6 +9,7 @@ from pandas.api.types import CategoricalDtype
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
+from .._docs import DEPR_RAW
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from ..get.get import _rep_to_json, _resolve_rep
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 @deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("use_raw", DEPR_RAW)
 def dendrogram(  # noqa: PLR0913
     adata: AnnData,
     groupby: str | Sequence[str],

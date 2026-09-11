@@ -282,6 +282,7 @@ def test_qc_metrics_percentage(adata_mito: AnnData) -> None:  # In response to #
 
 
 @needs.anndata_acc
+@pytest.mark.filterwarnings("ignore:.*use_raw is deprecated:FutureWarning")
 def test_layer_raw(adata: AnnData):
     adata = adata.copy()
     adata.raw = adata.copy()

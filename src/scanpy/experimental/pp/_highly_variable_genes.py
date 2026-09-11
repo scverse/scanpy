@@ -22,7 +22,7 @@ from ...experimental._docs import (
     doc_dist_params,
     doc_genes_batch_chunk,
     doc_inplace,
-    doc_layer,
+    doc_input,
 )
 from ...get import _get_arr
 from ...get.get import _resolve_obs
@@ -298,7 +298,7 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0913, PLR0915
     dist_params=doc_dist_params,
     genes_batch_chunk=doc_genes_batch_chunk,
     check_values=doc_check_values,
-    layer=doc_layer,
+    use=doc_input,
     inplace=doc_inplace,
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
@@ -337,7 +337,7 @@ def highly_variable_genes(  # noqa: PLR0913
         Choose the flavor for identifying highly variable genes. In this experimental
         version, only 'pearson_residuals' is functional.
     {check_values}
-    {layer}
+    {use}
     subset
         If `True`, subset the data to highly-variable genes after finding them.
         Otherwise merely indicate highly variable genes in `adata.var` (see below).
