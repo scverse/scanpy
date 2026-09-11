@@ -90,6 +90,7 @@ def test_representation_acc(adatas) -> None:
     np.testing.assert_array_equal(ing._obsm["rep"], adata_new.obsm["X_pca"])
 
 
+@needs.anndata_acc
 @pytest.mark.parametrize("as_sparse", [False, True])
 def test_pca_transform_uses_reference_mean(
     as_sparse, monkeypatch: pytest.MonkeyPatch
@@ -108,7 +109,7 @@ def test_pca_transform_uses_reference_mean(
     adata_ref = sc.AnnData(ref_x)
     adata_new = sc.AnnData(query_x)
     adata_ref.var["selected"] = mask
-    sc.pp.pca(adata_ref, n_comps=3, mask_var="selected")
+    sc.pp.pca(adata_ref, n_comps=3, mask="var.selected")
     sc.pp.neighbors(adata_ref, n_neighbors=3, n_pcs=2)
     ing = sc.tl.Ingest(adata_ref)
 
