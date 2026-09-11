@@ -7,6 +7,7 @@ import numba
 import numpy as np
 from fast_array_utils import stats
 from fast_array_utils.numba import njit
+from fast_array_utils.stats import mean_var
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
@@ -298,6 +299,190 @@ def normalize_total(  # noqa: PLR0912
         logg.debug(
             f"and added {key_added!r}, counts per cell before normalization (adata.obs)"
         )
+
+    if copy:
+        return adata
+    elif not inplace:
+        return dat
+    return None
+
+
+def _estimate_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
+    r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
+
+    Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
+    :math:`μ_g` and :math:`\mathrm{Var}_g` are the per-gene mean and (population)
+    variance over cells. The model is linear in :math:`α`, so the ordinary
+    least-squares solution is closed form
+
+    .. math::
+        α = \frac{\sum_g (\mathrm{Var}_g - μ_g) \, μ_g^2}{\sum_g μ_g^4},
+
+    which is exactly the minimizer a non-linear `curve_fit` would converge to,
+    but without the dependency. :func:`~fast_array_utils.stats.mean_var` is
+    dispatched for dense, sparse and dask input alike, so the only dask-specific
+    step is computing the two final scalar sums.
+    """
+    mu, var = mean_var(x, axis=0, correction=0)
+    mu2 = mu**2
+    numerator = np.sum((var - mu) * mu2)
+    denominator = np.sum(mu2 * mu2)
+    if isinstance(x, DaskArray):
+        import dask
+
+        numerator, denominator = dask.compute(numerator, denominator)
+    if denominator == 0.0:
+        msg = (
+            "Cannot estimate overdispersion: every gene has zero mean. "
+            "Pass a positive `alpha` explicitly."
+        )
+        raise ValueError(msg)
+    alpha = float(numerator / denominator)
+    if not alpha > 0:
+        msg = (
+            f"Estimated overdispersion is non-positive (alpha = {alpha}); "
+            "pass a positive `alpha` explicitly."
+        )
+        raise ValueError(msg)
+    return alpha
+
+
+def _log1p_sparse_block(x: np.ndarray | CSBase) -> np.ndarray | CSBase:
+    """Apply log1p to a dense or sparse block while preserving sparse zeros."""
+    if isinstance(x, CSBase):
+        x = x.copy()
+        x.data = np.log1p(x.data)
+        return x
+    return np.log1p(x)
+
+
+def _normalize_clr_helper(
+    x: np.ndarray | CSBase | DaskArray,
+    *,
+    alpha: float | None,
+) -> tuple[np.ndarray | DaskArray, np.ndarray | DaskArray]:
+    """Compute the dense PFlog / shifted-CLR matrix and cell depths."""
+    # Keep the depths lazy for dask; `.ravel()` would otherwise materialize them.
+    cell_depths = stats.sum(x, axis=1)
+    if not isinstance(x, DaskArray):
+        cell_depths = np.asarray(cell_depths).ravel()
+
+    if alpha is None:
+        alpha = _estimate_overdispersion(x)
+    elif not alpha > 0:
+        msg = (
+            f"`alpha` must be positive to compute PFlog, got {alpha}. "
+            "The data may be underdispersed."
+        )
+        raise ValueError(msg)
+
+    x = x * (4.0 * float(alpha))
+
+    if isinstance(x, DaskArray):
+        log_values = x.map_blocks(
+            _log1p_sparse_block, dtype=np.float64, meta=x._meta.astype(np.float64)
+        )
+    else:
+        log_values = _log1p_sparse_block(x)
+
+    row_center = stats.sum(log_values, axis=1) / x.shape[1]
+    if not isinstance(row_center, DaskArray):
+        row_center = np.asarray(row_center).ravel()
+    if isinstance(log_values, CSBase):
+        log_values = log_values.toarray()
+    return log_values - row_center[:, None], cell_depths
+
+
+def normalize_clr(
+    adata: AnnData,
+    *,
+    alpha: float | None = None,
+    layer: str | None = None,
+    inplace: bool = True,
+    copy: bool = False,
+) -> AnnData | dict[str, np.ndarray | DaskArray] | None:
+    r"""Normalize counts with the shifted centered log-ratio (PFlog) transform.
+
+    If `alpha` is not provided, it is estimated from the input matrix. PFlog is
+    then computed as
+
+    .. math::
+        T(x)_i = \log(1 + 4 α x_i)
+            - \frac{1}{D} \sum_{j=1}^D \log(1 + 4 α x_j),
+
+    which is equivalent to centering
+    :math:`\log(x_i + 1 / (4 α))` because the constant :math:`\log(4 α)`
+    cancels during CLR centering.
+
+    .. note::
+        CLR centering generally maps zeros to non-zero values, so the resulting
+        matrix is dense even when the input is sparse.
+
+    Parameters
+    ----------
+    adata
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
+    alpha
+        Negative-binomial overdispersion of the dataset (``var = μ + α·μ²``).
+        If `None`, it is estimated from the input matrix. A positive numeric
+        value uses that value directly. PFlog applies
+        ``log1p(4 * alpha * x)`` before CLR centering.
+    layer
+        Layer to normalize instead of `X`.
+    inplace
+        Whether to update `adata` or return a dictionary with the normalized
+        matrix.
+    copy
+        Whether to modify a copied input object. Not compatible with
+        `inplace=False`.
+
+    Returns
+    -------
+    Returns a dictionary with the normalized matrix or updates `adata`, depending
+    on `inplace`.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from anndata import AnnData
+    >>> import scanpy as sc
+    >>> adata = AnnData(np.array([[1, 2, 30], [4, 50, 6]], dtype="float32"))
+    >>> sc.pp.normalize_clr(adata, alpha=0.5)
+    >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-5)
+    True
+    """
+    if copy:
+        if not inplace:
+            msg = "`copy=True` cannot be used with `inplace=False`."
+            raise ValueError(msg)
+        adata = adata.copy()
+
+    view_to_actual(adata)
+
+    x = _get_arr(adata, layer=layer)
+    if isinstance(x, CSCBase):
+        x = x.tocsr()
+    if not inplace:
+        x = x.copy()
+    if issubclass(x.dtype.type, int | np.integer):
+        x = x.astype(np.float64)
+
+    start = logg.info("normalizing counts per cell via PFlog")
+
+    x, cell_depths = _normalize_clr_helper(x, alpha=alpha)
+
+    if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
+        warn("Some cells have zero counts", UserWarning)
+
+    dat = dict(X=x)
+    if inplace:
+        _set_obs_rep(adata, x, layer=layer)
+
+    logg.info(
+        "    finished ({time_passed})",
+        time=start,
+    )
 
     if copy:
         return adata
