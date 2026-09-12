@@ -114,6 +114,7 @@ class BasePlot:
         vmax: float | None = None,
         vcenter: float | None = None,
         norm: Normalize | None = None,
+        min_cells: int | None = None,
         **kwds,
     ):
         self.var_names, self.var_groups = _var_groups(var_names)
@@ -142,6 +143,21 @@ class BasePlot:
                 "Plot would be very large."
             )
             warn(msg, UserWarning)
+
+        if min_cells is not None:
+            counts = self.obs_tidy.index.value_counts()
+            keep = counts[counts >= min_cells].index
+            if len(keep) == 0:
+                msg = (
+                    f"No groups with at least {min_cells} cells were found. "
+                    "Try lowering `min_cells`."
+                )
+                raise ValueError(msg)
+            self.obs_tidy = self.obs_tidy[self.obs_tidy.index.isin(keep)]
+            self.obs_tidy.index = self.obs_tidy.index.remove_unused_categories()
+            self.categories = self.obs_tidy.index.categories
+            if categories_order is not None:
+                categories_order = [c for c in categories_order if c in keep]
 
         if categories_order is not None and (
             set(self.obs_tidy.index.categories) != set(categories_order)
