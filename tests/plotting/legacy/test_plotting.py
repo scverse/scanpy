@@ -415,6 +415,62 @@ def test_dotplot_add_totals(plot_cmp):
     plot_cmp("dotplot_totals", tol=5)
 
 
+def _adata_for_min_cells() -> AnnData:
+    n_a, n_b, n_c = 15, 3, 2
+    x = np.random.default_rng(0).random((n_a + n_b + n_c, 3))
+    n_obs = n_a + n_b + n_c
+    obs = pd.DataFrame(
+        {"group": pd.Categorical(["A"] * n_a + ["B"] * n_b + ["C"] * n_c)},
+        index=[f"cell{i}" for i in range(n_obs)],
+    )
+    var = pd.DataFrame(index=[f"gene{i}" for i in range(3)])
+    return AnnData(X=x, obs=obs, var=var)
+
+
+def test_dotplot_min_cells_none_keeps_all_categories():
+    adata = _adata_for_min_cells()
+    plot = sc.pl.DotPlot(adata, adata.var_names.tolist(), groupby="group")
+    assert list(plot.categories) == ["A", "B", "C"]
+
+
+def test_dotplot_min_cells_filters_categories():
+    adata = _adata_for_min_cells()
+    plot = sc.pl.DotPlot(
+        adata, adata.var_names.tolist(), groupby="group", min_cells=5
+    )
+    assert list(plot.categories) == ["A"]
+
+
+def test_dotplot_min_cells_raises_when_no_group_survives():
+    adata = _adata_for_min_cells()
+    with pytest.raises(ValueError, match="min_cells"):
+        sc.pl.DotPlot(adata, adata.var_names.tolist(), groupby="group", min_cells=100)
+
+
+def test_dotplot_function_min_cells():
+    adata = _adata_for_min_cells()
+    plot = sc.pl.dotplot(
+        adata,
+        adata.var_names.tolist(),
+        groupby="group",
+        min_cells=5,
+        return_fig=True,
+    )
+    assert list(plot.categories) == ["A"]
+
+
+def test_dotplot_min_cells_with_categories_order():
+    adata = _adata_for_min_cells()
+    plot = sc.pl.DotPlot(
+        adata,
+        adata.var_names.tolist(),
+        groupby="group",
+        min_cells=5,
+        categories_order=["A", "B", "C"],
+    )
+    assert plot.categories_order == ["A"]
+
+
 def test_matrixplot_obj(plot_cmp):
     adata = pbmc68k_reduced()
     marker_genes_dict = {
