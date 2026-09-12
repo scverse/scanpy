@@ -82,12 +82,75 @@ def base(request):
     return request.param
 
 
+def _log1p_warnings(caplog: pytest.LogCaptureFixture, adata, **kwargs) -> list[str]:
+    """Run `sc.pp.log1p` and return any 'already log-transformed' warnings."""
+    caplog.clear()
+    sc.pp.log1p(adata, **kwargs)
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if "already log-transformed" in r.getMessage()
+    ]
+
+
+@pytest.fixture
+def log1p_adata() -> AnnData:
+    rng = np.random.default_rng(0)
+    a = rng.random((20, 5)).astype(np.float32)
+    adata = AnnData(a.copy())
+    adata.layers["spliced"] = a.copy()
+    adata.layers["unspliced"] = a.copy()
+    adata.obsm["rep"] = a.copy()
+    return adata
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "expect_warning"),
+    [
+        pytest.param({}, {"layer": "spliced"}, False, id="X_then_layer"),
+        pytest.param({"layer": "spliced"}, {}, False, id="layer_then_X"),
+        pytest.param(
+            {"layer": "spliced"}, {"layer": "unspliced"}, False, id="two_layers"
+        ),
+        pytest.param({}, {"obsm": "rep"}, False, id="X_then_obsm"),
+        pytest.param({}, {}, True, id="X_twice"),
+        pytest.param(
+            {"layer": "spliced"}, {"layer": "spliced"}, True, id="same_layer_twice"
+        ),
+        pytest.param({"obsm": "rep"}, {"obsm": "rep"}, True, id="same_obsm_twice"),
+    ],
+)
+def test_log1p_warns_per_representation(
+    caplog: pytest.LogCaptureFixture,
+    log1p_adata: AnnData,
+    first: dict[str, str],
+    second: dict[str, str],
+    *,
+    expect_warning: bool,
+) -> None:
+    """`log1p` should only warn when the *same* representation is transformed twice."""
+    assert not _log1p_warnings(caplog, log1p_adata, **first)
+    warnings_ = _log1p_warnings(caplog, log1p_adata, **second)
+    assert bool(warnings_) is expect_warning, warnings_
+
+
+def test_log1p_legacy_uns_state_implies_x(
+    caplog: pytest.LogCaptureFixture, log1p_adata: AnnData
+) -> None:
+    """`uns['log1p']` written before per-rep tracking has no `reps` and means `X`."""
+    log1p_adata.uns["log1p"] = {"base": None}  # e.g. read from an older `.h5ad`
+    assert not _log1p_warnings(caplog, log1p_adata, layer="spliced")
+    assert _log1p_warnings(caplog, log1p_adata)
+
+
 def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -> None:
     x = count_matrix_format(
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
     )
     check_rep_mutation(sc.pp.log1p, x, base=base)
-    check_rep_results(sc.pp.log1p, x, base=base)
+    # `uns["log1p"]["reps"]` records which representation was transformed, so it
+    # is expected to differ between them; `base` still has to match.
+    check_rep_results(sc.pp.log1p, x, base=base, ignore_uns=["log1p/reps"])
 
 
 def _random_probs(n: int, frac_zero: float) -> NDArray[np.float64]:
