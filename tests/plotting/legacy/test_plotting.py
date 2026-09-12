@@ -435,9 +435,7 @@ def test_dotplot_min_cells_none_keeps_all_categories():
 
 def test_dotplot_min_cells_filters_categories():
     adata = _adata_for_min_cells()
-    plot = sc.pl.DotPlot(
-        adata, adata.var_names.tolist(), groupby="group", min_cells=5
-    )
+    plot = sc.pl.DotPlot(adata, adata.var_names.tolist(), groupby="group", min_cells=5)
     assert list(plot.categories) == ["A"]
 
 
