@@ -29,7 +29,6 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
