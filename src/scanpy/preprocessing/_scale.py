@@ -11,11 +11,14 @@ from array_api_compat import array_namespace
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
 from fast_array_utils.types import HasArrayNamespace
+from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
+from .._docs import doc_mask
 from .._settings import Default, settings
 from .._utils import (
+    _doc_params,
     axis_mul_or_truediv,
     check_array_function_arguments,
     dematrix,
@@ -23,9 +26,12 @@ from .._utils import (
     view_to_actual,
 )
 from ..get import _check_mask, _get_arr, _set_obs_rep
+from ..get.get import AdRef, _mask_arg
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
+
+    from ..get.get import Mask
 
 type _Array = CSBase | np.ndarray | DaskArray
 
@@ -81,7 +87,17 @@ def clip_array(
     return x
 
 
+@_doc_params(
+    mask=doc_mask(
+        "Restrict both the derivation of scaling parameters and the scaling itself\n"
+        "    to a certain set of observations.",
+        dim="obs",
+        extra="This will transform data from csc to csr format if `issparse(data)`.",
+    )
+)
 @singledispatch
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale[A: _Array](
     data: AnnData | A,
     *,
@@ -90,7 +106,9 @@ def scale[A: _Array](
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool] | str | None = None,
+    mask: Mask | None = None,
+    # deprecated
+    mask_obs: Mask | None = None,
 ) -> AnnData | A | None:
     """Scale data to unit variance and zero mean.
 
@@ -127,11 +145,7 @@ def scale[A: _Array](
         If provided, which element of layers to scale.
     obsm
         If provided, which element of obsm to scale.
-    mask_obs
-        Restrict both the derivation of scaling parameters and the scaling itself
-        to a certain set of observations. The mask is specified as a boolean array
-        or a string referring to an array in :attr:`~anndata.AnnData.obs`.
-        This will transform data from csc to csr format if `issparse(data)`.
+    {mask}
 
     Returns
     -------
@@ -155,21 +169,29 @@ def scale[A: _Array](
         msg = f"`obsm` argument inappropriate for value of type {type(data)}"
         raise ValueError(msg)
     return scale_array(
-        data, zero_center=zero_center, max_value=max_value, copy=copy, mask_obs=mask_obs
+        data,
+        zero_center=zero_center,
+        max_value=max_value,
+        copy=copy,
+        mask=mask,
+        mask_obs=mask_obs,
     )
 
 
 @scale.register(np.ndarray)
 @scale.register(DaskArray)
 @scale.register(CSBase)
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
 @scale.register(HasArrayNamespace)
-def scale_array[A: _Array](  # noqa: PLR0912
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+def scale_array[A: _Array](
     x: A,
     *,
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     copy: bool = False,
     return_mean_std: bool = False,
+    mask: NDArray[np.bool] | None = None,
     mask_obs: NDArray[np.bool] | None = None,
 ) -> (
     A
@@ -205,17 +227,18 @@ def scale_array[A: _Array](  # noqa: PLR0912
             logg.info(int_msg)
             x = xp.astype(x, xp.float64)
 
-    mask_obs = (
+    mask = _mask_arg(mask, mask_obs, dim="obs")
+    mask = (
         # For CSR matrices, default to a set mask to take the `scale_array_masked` path.
         # This is faster than the maskless `axis_mul_or_truediv` path.
         np.ones(x.shape[0], dtype=np.bool)
-        if isinstance(x, CSRBase) and mask_obs is None and not zero_center
-        else _check_mask(x, mask_obs, "obs")
+        if isinstance(x, CSRBase) and mask is None and not zero_center
+        else _check_mask(x, mask, "obs")
     )
-    if mask_obs is not None:
+    if mask is not None:
         return scale_array_masked(
             x,
-            mask_obs,
+            mask,
             zero_center=zero_center,
             max_value=max_value,
             return_mean_std=return_mean_std,
@@ -323,6 +346,8 @@ def scale_and_clip_csr(
 
 
 @scale.register(AnnData)
+# `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale_anndata(
     adata: AnnData,
     *,
@@ -331,16 +356,18 @@ def scale_anndata(
     copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-    mask_obs: NDArray[np.bool] | str | None = None,
+    mask: Mask | None = None,
+    mask_obs: Mask | None = None,
 ) -> AnnData | None:
     adata = adata.copy() if copy else adata
+    mask = _mask_arg(mask, mask_obs, dim="obs")
     str_mean_std = ("mean", "std")
-    if mask_obs is not None:
-        if isinstance(mask_obs, str):
-            str_mean_std = (f"mean of {mask_obs}", f"std of {mask_obs}")
+    if mask is not None:
+        if isinstance(mask, str | AdRef):
+            str_mean_std = (f"mean of {mask}", f"std of {mask}")
         else:
             str_mean_std = ("mean with mask", "std with mask")
-        mask_obs = _check_mask(adata, mask_obs, "obs")
+        mask = _check_mask(adata, mask, "obs")
     view_to_actual(adata)
     x = _get_arr(adata, layer=layer, obsm=obsm)
     raise_not_implemented_error_if_backed_type(x, "scale")
@@ -350,7 +377,7 @@ def scale_anndata(
         max_value=max_value,
         copy=False,  # because a copy has already been made, if it were to be made
         return_mean_std=True,
-        mask_obs=mask_obs,
+        mask=mask,
     )
     _set_obs_rep(adata, x, layer=layer, obsm=obsm)
     return adata if copy else None

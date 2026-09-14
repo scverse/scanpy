@@ -129,10 +129,10 @@ docs = [
     "plotly",
     # TODO: remove necessity for being able to import doc-linked classes
     "scanpy[dask-ml,leiden,paga,plotting,scanpy2,scrublet]",
-    "scanpydoc>=0.16.1",
+    "scanpydoc>=0.17.4",
     "scverse-misc[sphinx]",
     "sphinx>=9.1",
-    "sphinx-autodoc-typehints>=1.25.2",
+    "sphinx-autodoc-typehints>=3.13.5",
     "sphinx-book-theme>=1.1",
     "sphinx-copybutton",
     "sphinx-design",
@@ -231,10 +231,18 @@ lint.pylint.max-positional-args = 5
 "pandas.api.types.is_categorical_dtype".msg = "Use isinstance(s.dtype, CategoricalDtype) instead"
 "pandas.value_counts".msg = "Use pd.Series(a).value_counts() instead"
 "pytest.importorskip".msg = "Use the “@needs” decorator/mark instead"
-"scipy.sparse.csc_array".msg = "Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csc_matrix".msg = "Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csr_array".msg = "Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
-"scipy.sparse.csr_matrix".msg = "Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing"
+"scipy.sparse.csc_array".msg = """\
+    Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csc_matrix".msg = """\
+    Use _compat.CSCBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csr_array".msg = """\
+    Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
+"scipy.sparse.csr_matrix".msg = """\
+    Use _compat.CSRBase or _compat.CSBase for typing/type checks and add `# noqa: TID251` when constructing\
+    """
 "scipy.sparse.issparse".msg = "Use isinstance(_, _compat.CSBase) or isinstance(_, _compat.SpBase) instead"
 "scipy.sparse.sparray".msg = "Use _compat.SpBase instead"
 "scipy.sparse.spmatrix".msg = "Use _compat.SpBase instead"

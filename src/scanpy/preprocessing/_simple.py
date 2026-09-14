@@ -26,7 +26,7 @@ from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray
-from .._docs import doc_rng
+from .._docs import doc_ref_compat, doc_rng
 from .._settings import settings
 from .._utils import (
     _doc_params,
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get.get import Mask
 
 
 def filter_cells(
@@ -702,7 +703,7 @@ def sample(
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -714,7 +715,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample[A: np.ndarray | CSBase | DaskArray](
@@ -726,11 +727,11 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(rng=doc_rng, ref=doc_ref_compat)
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
@@ -740,7 +741,7 @@ def sample(  # noqa: PLR0912
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> AnnData | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]] | None:
     r"""Sample observations or variables with or without replacement.
 
@@ -768,7 +769,8 @@ def sample(  # noqa: PLR0912
         Sample `obs`\ ervations (axis 0) or `var`\ iables (axis 1).
     p
         Drawing probabilities (floats) or mask (bools).
-        Either an `axis`-sized array, or the name of a column.
+        Either an `axis`-sized array, or a reference to one, e.g. `A.obs['is_control']`.
+        {ref}
         If `p` is an array of probabilities, it must sum to 1.
 
     Returns
