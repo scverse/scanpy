@@ -19,7 +19,7 @@ from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES
+from testing.scanpy._pytest.params import ARRAY_TYPES, as_dense_jax_array
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -7,7 +7,6 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from anndata.tests import helpers
 from scipy import sparse
 
 import scanpy as sc
@@ -18,7 +17,11 @@ from testing.scanpy._helpers import assert_equal
 from testing.scanpy._helpers.data import pbmc3k_processed
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import ARRAY_TYPES_MEM, param_with
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES_MEM,
+    as_dense_jax_array,
+    param_with,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -783,7 +786,7 @@ def test_var_no_catastrophic_cancellation(
     # ~n*offset**2 ≈ 1e19 in float64 (precision ~1e3) but their difference is
     # the variance ~1e-3, far below the rounding noise. Welford's online
     # algorithm avoids the subtraction entirely.
-    if array_type is helpers.as_dense_jax_array:
+    if array_type is as_dense_jax_array:
         request.applymarker(
             pytest.mark.xfail(reason="aggregate not implemented for jax arrays")
         )
