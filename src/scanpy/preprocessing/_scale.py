@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils.numba import njit
 from fast_array_utils.stats import mean_var
+from fast_array_utils.types import HasArrayNamespace
 from scverse_misc import Deprecation, deprecated_arg
 
 from .. import logging as logg
@@ -38,6 +40,11 @@ type _Array = CSBase | np.ndarray | DaskArray
 def clip[A: _Array](
     x: ArrayLike | A, *, max_value: float, zero_center: bool = True
 ) -> A:
+    raise NotImplementedError
+
+
+@clip.register(np.ndarray)
+def _(x: np.ndarray, *, max_value: float, zero_center: bool = True) -> np.ndarray:
     return clip_array(x, max_value=max_value, zero_center=zero_center)
 
 
@@ -52,6 +59,12 @@ def _(x: DaskArray, *, max_value: float, zero_center: bool = True) -> DaskArray:
     return x.map_blocks(
         clip, max_value=max_value, zero_center=zero_center, dtype=x.dtype, meta=x._meta
     )
+
+
+@clip.register(HasArrayNamespace)
+def _(x, *, max_value: float, zero_center: bool = True):
+    xp = array_namespace(x)
+    return xp.clip(x, min=-max_value if zero_center else None, max=max_value)
 
 
 @njit
@@ -169,6 +182,7 @@ def scale[A: _Array](
 @scale.register(DaskArray)
 @scale.register(CSBase)
 # `stacklevel=2` skips `singledispatch`’s dispatcher frame
+@scale.register(HasArrayNamespace)
 @deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def scale_array[A: _Array](
     x: A,
@@ -199,13 +213,19 @@ def scale_array[A: _Array](
         logg.info(  # Be careful of what? This should be more specific
             "... be careful when using `max_value` without `zero_center`."
         )
-
-    if np.issubdtype(x.dtype, np.integer):
-        logg.info(
-            "... as scaling leads to float results, integer "
-            "input is cast to float, returning copy."
-        )
-        x = x.astype(np.float64)
+    int_msg = (
+        "... as scaling leads to float results, integer "
+        "input is cast to float, returning copy."
+    )
+    if isinstance(x, np.ndarray | CSBase | DaskArray):
+        if np.issubdtype(x.dtype, np.integer):
+            logg.info(int_msg)
+            x = x.astype(np.float64)
+    else:
+        xp = array_namespace(x)
+        if xp.isdtype(x.dtype, "integral"):
+            logg.info(int_msg)
+            x = xp.astype(x, xp.float64)
 
     mask = _mask_arg(mask, mask_obs, dim="obs")
     mask = (
@@ -225,16 +245,25 @@ def scale_array[A: _Array](
         )
 
     mean, var = mean_var(x, axis=0, correction=1)
-    std = np.sqrt(var)
-    std[std == 0] = 1
-    if zero_center:
-        if isinstance(x, CSBase) or (
-            isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
-        ):
-            msg = "zero-centering a sparse array/matrix densifies it."
-            warn(msg, UserWarning)
-        x -= mean
-        x = dematrix(x)
+
+    if isinstance(x, np.ndarray | CSBase | DaskArray):
+        std = np.sqrt(var)
+        std[std == 0] = 1
+        if zero_center:
+            if isinstance(x, CSBase) or (
+                isinstance(x, DaskArray) and isinstance(x._meta, CSBase)
+            ):
+                msg = "zero-centering a sparse array/matrix densifies it."
+                warn(msg, UserWarning)
+            x -= mean
+            x = dematrix(x)
+    else:
+        xp = array_namespace(x)
+        std = xp.sqrt(var)
+        std = xp.where(std == 0, xp.ones_like(std), std)
+
+        if zero_center:
+            x = x - mean
 
     x = axis_mul_or_truediv(
         x,

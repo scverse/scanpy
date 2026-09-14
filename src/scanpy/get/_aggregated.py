@@ -522,7 +522,7 @@ def _block_moments(
 
 
 @numba.njit(inline="always")  # noqa: TID251
-def _chan_combine(  # noqa: PLR0917
+def _chan_combine(
     n_a: float, mean_a: float, m2_a: float, n_b: float, mean_b: float, m2_b: float
 ) -> tuple[float, float, float]:
     """Combine two ``(count, mean, M2)`` groups pairwise."""

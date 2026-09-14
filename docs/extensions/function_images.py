@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sphinx.ext.autodoc import Options
 
 
-def insert_function_images(  # noqa: PLR0917
+def insert_function_images(
     app: Sphinx, what: str, name: str, obj: Any, options: Options, lines: list[str]
 ) -> None:
     """Insert images for plot functions."""

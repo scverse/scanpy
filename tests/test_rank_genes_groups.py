@@ -21,7 +21,11 @@ from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_MEM,
+    as_dense_jax_array,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -133,11 +137,19 @@ def test_results(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(
+    request: pytest.FixtureRequest,
     subtests: pytest.Subtests,
     data_dir: Path,
     array_type,
     method: Literal["t-test", "wilcoxon"],
 ) -> None:
+
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="test mutates .X in-place; jax arrays are immutable"
+            )
+        )
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
     x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X

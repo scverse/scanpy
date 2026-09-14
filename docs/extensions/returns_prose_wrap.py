@@ -69,7 +69,7 @@ def _first_content(lines: list[str], start: int, end: int) -> int | None:
     return None
 
 
-def _wrap(  # noqa: PLR0917
+def _wrap(
     app: Sphinx, objtype: str, name: str, obj: object, options: object, lines: list[str]
 ) -> None:
     """Wrap prose Returns content under a dummy type entry (priority 50)."""
@@ -92,7 +92,7 @@ def _wrap(  # noqa: PLR0917
         ]
 
 
-def _unwrap(  # noqa: PLR0917
+def _unwrap(
     app: Sphinx, objtype: str, name: str, obj: object, options: object, lines: list[str]
 ) -> None:
     """Remove the dummy type entry and restore prose (priority 200)."""

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sphinx.ext.autodoc import Options
 
 
-def skip_deprecated(  # noqa: PLR0917
+def skip_deprecated(
     app: Sphinx,
     what: Literal[
         "module", "class", "exception", "function", "method", "attribute", "property"

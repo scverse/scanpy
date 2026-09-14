@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
 
-__all__ = ["ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
+__all__ = ["ArrayApi", "ArrayType", "DaskArray", "Numpy", "ScipySparse", "parse"]
 
 
 class ArrayType(ABC):
@@ -30,6 +30,16 @@ class Numpy(ArrayType):
 
     def rst(self, *, short: bool = False) -> str:  # pragma: no cover
         return f":class:`{'~' if short else ''}{self}`"
+
+
+@dataclass(unsafe_hash=True, frozen=True)
+class ArrayApi(ArrayType):
+    def __str__(self) -> str:  # pragma: no cover
+        return "array-api"
+
+    def rst(self, *, short: bool = False) -> str:  # pragma: no cover
+        # No single class to link to, so link to the standard itself
+        return "`Array API <https://data-apis.org/array-api/latest/>`__"
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -79,7 +89,7 @@ def parse(
         yield from (t for t in parse(include) if t not in excluded)
         return
 
-    inner_includes = [i for i in include if not i.startswith("da")]
+    inner_includes = [i for i in include if not i.startswith(("da", "aa"))]
     for t in include:
         if (
             match := re.fullmatch(r"([^\[]+)(?:\[(.+)\])?", t)
@@ -103,6 +113,11 @@ def _parse_mod(
                 msg = f"`np` takes no tags {tags!r}"
                 raise ValueError(msg)
             yield Numpy()
+        case "aa":
+            if tags:  # pragma: no cover
+                msg = f"`aa` takes no tags {tags!r}"
+                raise ValueError(msg)
+            yield ArrayApi()
         case "sp":
             if tags - {"csr", "csc"}:  # pragma: no cover
                 msg = f"invalid tags {tags!r}"
