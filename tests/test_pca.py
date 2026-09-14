@@ -22,7 +22,7 @@ from testing.scanpy._helpers.data import pbmc3k_normalized
 from testing.scanpy._pytest import params
 from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES as ARRAY_TYPES_ALL
-from testing.scanpy._pytest.params import param_with
+from testing.scanpy._pytest.params import as_dense_jax_array, param_with
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -333,8 +333,18 @@ def test_pca_sparse(key_added: str | None, keys: _PcaKeys):
 
 @pytest.mark.parametrize("rng_arg", ["rng", "random_state"])
 def test_pca_reproducible(
-    subtests: pytest.Subtests, array_type, rng_arg: Literal["rng", "random_state"]
+    request,
+    subtests: pytest.Subtests,
+    array_type,
+    rng_arg: Literal["rng", "random_state"],
 ):
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="as_dense_jax_array hits DLPack readonly BufferError on this JAX version",
+                strict=False,
+            )
+        )
     pbmc = pbmc3k_normalized()
     pbmc.X = array_type(pbmc.X)
 
@@ -487,12 +497,19 @@ def test_mask(request: pytest.FixtureRequest, array_type):
     )
 
 
-def test_mask_defaults(array_type, float_dtype):
+def test_mask_defaults(request, array_type, float_dtype):
     """Test if PCA behavior in relation to highly variable genes.
 
     1. That it’s equal withwithout and with – but mask is None
     2. If pca takes highly variable as mask as default
     """
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="as_dense_jax_array hits DLPack readonly BufferError on this JAX version",
+                strict=False,
+            )
+        )
     a = array_type(A_list).astype("float64")
     adata = AnnData(a)
 
