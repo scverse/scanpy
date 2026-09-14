@@ -22,7 +22,11 @@ from testing.scanpy._helpers import (
     maybe_dask_process_context,
 )
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_SPARSE
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_SPARSE,
+    as_dense_jax_array,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -618,7 +622,16 @@ def test_recipe_weinreb():
         (None, None, None, 20),
     ],
 )
-def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
+def test_filter_genes(
+    request, array_type, max_cells, max_counts, min_cells, min_counts
+):
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="as_dense_jax_array hits DLPack read only BufferError on this JAX version",
+                strict=False,
+            )
+        )
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
@@ -652,7 +665,16 @@ def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
         pytest.param(None, None, None, 20, id="min_counts"),
     ],
 )
-def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
+def test_filter_cells(
+    request, array_type, max_genes, max_counts, min_genes, min_counts
+):
+    if array_type is as_dense_jax_array:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="as_dense_jax_array hits DLPack read only BufferError on this JAX version",
+                strict=False,
+            )
+        )
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()

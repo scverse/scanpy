@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
-from anndata.tests import helpers
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -22,7 +21,11 @@ from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
+from testing.scanpy._pytest.params import (
+    ARRAY_TYPES,
+    ARRAY_TYPES_MEM,
+    as_dense_jax_array,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -141,7 +144,7 @@ def test_results_layers(
     method: Literal["t-test", "wilcoxon"],
 ) -> None:
 
-    if array_type is helpers.as_dense_jax_array:
+    if array_type is as_dense_jax_array:
         request.applymarker(
             pytest.mark.xfail(
                 reason="test mutates .X in-place; jax arrays are immutable"

@@ -290,10 +290,8 @@ class _RankGenes:
                 adata_comp = adata.raw
             x = adata_comp.X
         raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
-        if isinstance(adata.X, HasArrayNamespace) and not isinstance(
-            adata.X, np.ndarray
-        ):
-            adata.X = np.asarray(adata.X)
+        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
+            x = np.asarray(x)
 
         # for correct getnnz calculation
         if isinstance(x, CSBase):
