@@ -27,7 +27,7 @@ def diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None = None,
-    key_added: str | None | Default = Default(preset=("diffmap", "key_added")),
+    key_added: str | Default | None = Default(preset=("diffmap", "key_added")),
     rng: SeedLike | RNGLike | None = None,
     copy: bool = False,
 ) -> AnnData | None:
@@ -113,7 +113,7 @@ def _diffmap(
     n_comps: int = 15,
     *,
     neighbors_key: str | None,
-    key_added: str | None | Default,
+    key_added: str | Default | None,
     rng: np.random.Generator,
 ) -> None:
     from ._dpt import DPT

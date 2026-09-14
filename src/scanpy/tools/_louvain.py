@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 import pandas as pd
 from natsort import natsorted
-from packaging.version import Version
 from scverse_misc import Deprecation, deprecated
 
 from .. import _utils
 from .. import logging as logg
-from .._compat import pkg_version
 from .._utils import _choose_graph, _doc_params
 from ._docs import (
     doc_adata,
@@ -60,7 +61,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
     directed: bool = True,
     use_weights: bool = False,
     partition_type: type[MutableVertexPartition] | None = None,
-    partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    partition_kwargs: Mapping[str, Any] = frozendict({}),
     neighbors_key: str | None = None,
     obsp: str | None = None,
     copy: bool = False,
@@ -160,10 +161,7 @@ def louvain(  # noqa: PLR0912, PLR0913, PLR0915
                 partition_kwargs["resolution_parameter"] = resolution
             if use_weights:
                 partition_kwargs["weights"] = weights
-            if pkg_version("louvain") < Version("0.7.0"):
-                louvain.set_rng_seed(random_state)
-            else:
-                partition_kwargs["seed"] = random_state
+            partition_kwargs["seed"] = random_state
             logg.info('    using the "louvain" package of Traag (2017)')
             part = louvain.find_partition(
                 g,

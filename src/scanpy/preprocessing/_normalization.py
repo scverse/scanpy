@@ -11,7 +11,7 @@ from fast_array_utils.numba import njit
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
-from ..get import _get_obs_rep, _set_obs_rep
+from ..get import _get_arr, _set_obs_rep
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -38,6 +38,7 @@ def _normalize_csr(
 ):
     """For sparse CSR matrix, compute the normalization factors."""
     counts_per_cell = np.zeros(rows, dtype=mat.data.dtype)
+    counts_per_cols = np.zeros(columns, dtype=np.int32)
     for i in numba.prange(rows):
         count = 0.0
         for j in range(mat.indptr[i], mat.indptr[i + 1]):
@@ -45,7 +46,6 @@ def _normalize_csr(
         counts_per_cell[i] = count
     if exclude_highly_expressed:
         counts_per_cols_t = np.zeros((n_threads, columns), dtype=np.int32)
-        counts_per_cols = np.zeros(columns, dtype=np.int32)
 
         for i in numba.prange(n_threads):
             for r in range(i, rows, n_threads):
@@ -102,7 +102,7 @@ def _normalize_total_helper(
             n_threads=n_threads,
         )
         if target_sum is None:
-            target_sum = np.median(counts_per_cell)
+            target_sum = _compute_nnz_median(counts_per_cell)
         if exclude_highly_expressed:
             gene_subset = ~np.where(counts_per_cols)[0]
     else:
@@ -254,7 +254,7 @@ def normalize_total(  # noqa: PLR0912
 
     view_to_actual(adata)
 
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
     if not inplace:

@@ -71,6 +71,7 @@ def _bmmc(n_obs: int = 4000) -> AnnData:
     registry = pooch.create(
         path=pooch.os_cache("pooch"),
         base_url="doi:10.6084/m9.figshare.22716739.v1/",
+        retry_if_failed=3,
     )
     registry.load_registry_from_doi()
     samples = {smp: f"{smp}_filtered_feature_bc_matrix.h5" for smp in ("s1d1", "s1d3")}
@@ -106,6 +107,7 @@ def _lung93k() -> AnnData:
     registry = pooch.create(
         path=pooch.os_cache("pooch"),
         base_url="doi:10.6084/m9.figshare.25664775.v1/",
+        retry_if_failed=3,
     )
     registry.load_registry_from_doi()
     path = registry.fetch("adata.raw_compressed.h5ad")

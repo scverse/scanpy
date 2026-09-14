@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict, cast
 
 import numba
@@ -26,14 +25,11 @@ from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from pathlib import Path
     from typing import Any, Literal
 
     from numpy.lib.npyio import NpzFile
     from numpy.typing import NDArray
-
-HERE = Path(__file__).parent
-DATA_PATH = HERE / "_data"
-
 
 # We test results for a simple generic example
 # Tests are conducted for sparse and non-sparse AnnData objects.
@@ -70,8 +66,8 @@ class Expected(TypedDict):
     scores: NDArray[np.floating]
 
 
-def get_true_scores(method: Literal["t-test", "wilcoxon"]) -> Expected:
-    path = DATA_PATH / f"objs-{method}.npz"
+def get_true_scores(data_dir: Path, method: Literal["t-test", "wilcoxon"]) -> Expected:
+    path = data_dir / f"objs-{method}.npz"
     with (
         path.open("rb") as f,
         cast("NpzFile", np.load(f, allow_pickle=False)) as z,
@@ -103,11 +99,14 @@ def get_illico_results_df(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results(
-    subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
+    subtests: pytest.Subtests,
+    data_dir: Path,
+    array_type,
+    method: Literal["t-test", "wilcoxon"],
 ) -> None:
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     assert adata.raw is None  # Assumption for later checks
-    expected = get_true_scores(method)
+    expected = get_true_scores(data_dir, method)
     # no clue why we did this: https://github.com/scverse/scanpy/commit/7f10fa3138374bbc664776c6aae1c0e05cf2c5cf
     n = 7 if method == "wilcoxon" else None
 
@@ -116,8 +115,14 @@ def test_results(
 
     for g in range(expected["names"].shape[0]):
         with subtests.test(group=g):
+            # atol guards against ULP-level golden vs new-code bit-pattern
+            # differences at near-zero t-scores (e.g., genes with equal
+            # group/rest means produce 0.0 in one path vs ~1e-15 in another).
             np.testing.assert_allclose(
-                expected["scores"][g, :n], results["scores"][str(g)][:n], rtol=1e-5
+                expected["scores"][g, :n],
+                results["scores"][str(g)][:n],
+                rtol=1e-5,
+                atol=1e-10,
             )
             np.testing.assert_array_equal(
                 expected["names"][g, :n], results["names"][str(g)][:n]
@@ -128,7 +133,10 @@ def test_results(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(
-    subtests: pytest.Subtests, array_type, method: Literal["t-test", "wilcoxon"]
+    subtests: pytest.Subtests,
+    data_dir: Path,
+    array_type,
+    method: Literal["t-test", "wilcoxon"],
 ) -> None:
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
@@ -136,7 +144,7 @@ def test_results_layers(
     mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
     x[mask] = 0
     adata.X = array_type(x)
-    scores = get_true_scores(method)["scores"]
+    scores = get_true_scores(data_dir, method)["scores"]
 
     with subtests.test("layer"):
         rank_genes_groups(
@@ -338,7 +346,7 @@ def test_mask_n_genes(n_genes_add, n_genes_out_add):
 
     rank_genes_groups(
         pbmc,
-        mask_var=mask_var,
+        mask=mask_var,
         groupby="bulk_labels",
         groups=["CD14+ Monocyte", "Dendritic"],
         reference="CD14+ Monocyte",
@@ -367,7 +375,7 @@ def test_mask_not_equal():
     run(n_genes=n_genes)
     no_mask = pbmc.uns["rank_genes_groups"]["names"]
 
-    run(mask_var=mask_var)
+    run(mask=mask_var)
     with_mask = pbmc.uns["rank_genes_groups"]["names"]
 
     assert not np.array_equal(no_mask, with_mask)
@@ -395,7 +403,6 @@ def test_illico_iter(
             df,
             np.array(groups_order),
             ireference,
-            copy_pvalues=corr_method == "benjamini-hochberg",
         )
     )
     assert sorted(t[0] for t in out) == sorted(expected_indices)
@@ -415,7 +422,7 @@ def test_illico_iter(
 )
 @pytest.mark.parametrize("groups", [["CD14+ Monocyte", "Dendritic"], "all"])
 @pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
-@needs.illico
+@needs.scanpy2
 def test_illico(
     test: Literal["ovo", "ovr"],
     corr_method: Literal["benjamini-hochberg", "bonferroni"],
@@ -425,7 +432,6 @@ def test_illico(
     mean_in_log_space: bool,
     tie_correct: bool,
 ):
-
     pbmc = pbmc68k_reduced()
     pbmc.raw.X.sum_duplicates()
     pbmc.raw.X.sort_indices()
@@ -514,7 +520,7 @@ def test_illico_deprecation_warning():
         "wilcoxon",
         "t-test",
         "t-test_overestim_var",
-        pytest.param("wilcoxon_illico", marks=needs.illico),
+        pytest.param("wilcoxon_illico", marks=needs.scanpy2),
     ],
 )
 def test_mean_in_log_space(

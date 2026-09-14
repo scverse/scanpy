@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ... import logging as logg
 from ..._utils._doctests import doctest_needs
 
@@ -11,9 +13,19 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from anndata import AnnData
-    from samalg import SAM
+
+    try:
+        from samalg import SAM
+    except ImportError:
+        SAM = type("SAM", (), dict(__module__="samalg"))
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `sc-sam <https://github.com/atarashansky/self-assembling-manifold>`_ package directly.",
+    )
+)
 @doctest_needs("samalg")
 def sam(  # noqa: PLR0913
     adata: AnnData,
@@ -149,6 +161,8 @@ def sam(  # noqa: PLR0913
     algorithm as follows:
 
     >>> sam_obj = sce.tl.sam(adata, inplace=True)
+    FutureWarning: The function sam is deprecated and will be removed in the future. Use the `sc-sam <https://github.com/atarashansky/self-assembling-manifold>`_ package directly.
+        sam_obj = sce.tl.sam(adata, inplace=True)
 
     The input AnnData object should contain unstandardized, non-negative
     expression values. Preferably, the data should be log-normalized and no
@@ -164,6 +178,8 @@ def sam(  # noqa: PLR0913
     To visualize the output, we can use:
 
     >>> sce.pl.sam(adata, projection="X_umap")
+    FutureWarning: The function sam is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` instead.
+        sce.pl.sam(adata, projection="X_umap")
 
     `sce.pl.sam` accepts all keyword arguments used in the
     `matplotlib.pyplot.scatter` function.

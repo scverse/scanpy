@@ -19,7 +19,7 @@ from scanpy.get._aggregated import AggType
 from ._utils import get_count_dataset, get_dataset
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Literal
 
     from ._utils import Dataset, KeyCount
 
@@ -197,4 +197,47 @@ class Agg:  # noqa: D101
     def peakmem_agg(self, *_) -> None:
         sc.get.aggregate(
             self.adata, by="PatientNumber", func=self.agg_name, layer="counts"
+        )
+
+
+class RankGenesGroups:  # noqa: D101
+    params: tuple[list[Literal["ovo", "ovr"]], list[bool]] = (
+        ["ovr", "ovo"],
+        [True, False],
+    )
+    param_names = ("rest", "use_csc")
+
+    def setup_cache(self) -> None:
+        adata, _ = get_dataset("lung93k")
+        adata.layers["counts_csc"] = adata.layers["counts"].tocsc()
+        sc.pp.log1p(adata, layer="counts")
+        sc.pp.log1p(adata, layer="counts_csc")
+        adata.write_h5ad("lung93k.h5ad")
+
+    def setup(self, test: Literal["ovo", "ovr"], use_csc: bool) -> None:  # noqa: FBT001
+        self.adata = ad.read_h5ad("lung93k.h5ad")
+        counts_src_key = "counts_csc" if use_csc else "counts"
+        if counts_src_key != "counts":
+            self.adata.layers["counts"] = self.adata.layers[counts_src_key]
+            del self.adata.layers[counts_src_key]
+        self.reference = (
+            self.adata.obs["PatientNumber"].iloc[0] if test == "ovo" else "rest"
+        )
+
+    def time_agg(self, *_) -> None:
+        sc.tl.rank_genes_groups(
+            self.adata,
+            groupby="PatientNumber",
+            method="wilcoxon_illico",
+            reference=self.reference,
+            layer="counts",
+        )
+
+    def peakmem_agg(self, *_) -> None:
+        sc.tl.rank_genes_groups(
+            self.adata,
+            groupby="PatientNumber",
+            method="wilcoxon_illico",
+            reference=self.reference,
+            layer="counts",
         )

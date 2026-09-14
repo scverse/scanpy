@@ -5,8 +5,8 @@
 .. module:: scanpy.external
 ```
 
-```{warning}
-We are no longer accepting new tools into `scanpy.external`.
+```{deprecated} 1.13.0
+`scanpy.external` is deprecated and will be removed in a future release.
 For tools that integrate well with scanpy and anndata, or to submit your own, see the [scverse ecosystem](https://scverse.org/packages/#ecosystem).
 ```
 

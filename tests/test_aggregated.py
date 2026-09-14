@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
+    from anndata.acc import AdAcc
     from numpy.typing import NDArray
 
     from scanpy._compat import CSRBase
@@ -53,18 +54,25 @@ def xfail_dask_median(
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-def test_mask(axis: Literal[0, 1]) -> None:
+@pytest.mark.parametrize("typ", ["str", pytest.param("ref", marks=needs.anndata_acc)])
+def test_mask(axis: Literal[0, 1] | None, typ: Literal["str", "ref"]) -> None:
     blobs = sc.datasets.blobs()
     mask = blobs.obs["blobs"] == 0
     blobs.obs["mask_col"] = mask
     if axis == 1:
         blobs = blobs.T
-    by_name = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask="mask_col")
+    if typ == "str":
+        ref = "mask_col"
+    elif typ == "ref":
+        from anndata.acc import A
+
+        ref = A.obs["mask_col"] if axis == 0 else A.var["mask_col"]
+
+    by_ref = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=ref)
     by_value = sc.get.aggregate(blobs, "blobs", "sum", axis=axis, mask=mask)
 
-    assert_equal(by_name, by_value)
-
-    assert np.all(by_name["0"].layers["sum"] == 0)
+    assert_equal(by_ref, by_value)
+    assert np.all(by_ref["0"].layers["sum"] == 0)
 
 
 @pytest.mark.parametrize("array_type", VALID_ARRAY_TYPES)
@@ -187,13 +195,6 @@ def test_aggregate_entry() -> None:
     assert_equal(x_result_min, obsm_result)
     assert_equal(x_result.layers, obsm_result.layers)
     assert_equal(x_result.layers, varm_result.T.layers)
-
-
-def test_aggregate_incorrect_dim() -> None:
-    adata = pbmc3k_processed().raw.to_adata()
-
-    with pytest.raises(ValueError, match="was 'foo'"):
-        sc.get.aggregate(adata, ["louvain"], "sum", axis="foo")
 
 
 def to_bad_chunking(x: CSRBase) -> DaskArray:
@@ -394,56 +395,50 @@ def test_aggregate_examples(
 
 
 @pytest.mark.parametrize(
-    ("label_cols", "cols", "expected"),
+    ("label_cols", "expected"),
     [
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
-            ),
-            ["a", "b"],
-            pd.Categorical(["a_d", "b_d", "c_f"]),
-            id="two_of_two",
-        ),
-        pytest.param(
-            dict(
-                a=pd.Categorical(["a", "b", "c"]),
-                b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "b", "c"],
             pd.Categorical(["a_d_g", "b_d_h", "c_f_h"]),
-            id="three_of_three",
+            id="three",
         ),
         pytest.param(
             dict(
                 a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
+            ),
+            pd.Categorical(["a_d", "b_d", "c_f"]),
+            id="two-1",
+        ),
+        pytest.param(
+            dict(
+                a=pd.Categorical(["a", "b", "c"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["a", "c"],
             pd.Categorical(["a_g", "b_h", "c_h"]),
-            id="two_of_three-1",
+            id="two-2",
         ),
         pytest.param(
             dict(
-                a=pd.Categorical(["a", "b", "c"]),
                 b=pd.Categorical(["d", "d", "f"]),
                 c=pd.Categorical(["g", "h", "h"]),
             ),
-            ["b", "c"],
             pd.Categorical(["d_g", "d_h", "f_h"]),
-            id="two_of_three-2",
+            id="two-3",
         ),
     ],
 )
 def test_combine_categories(
-    label_cols: dict[str, pd.Categorical], cols: list[str], expected: pd.Categorical
+    label_cols: dict[str, pd.Categorical], expected: pd.Categorical
 ) -> None:
     from scanpy.get._aggregated import _combine_categories
 
     label_df = pd.DataFrame(label_cols)
-    result, result_label_df = _combine_categories(label_df, cols)
+    result, result_label_df = _combine_categories(label_df)
 
     assert isinstance(result, pd.Categorical)
 
@@ -454,7 +449,9 @@ def test_combine_categories(
     )
 
     reconstructed_df = pd.DataFrame(
-        [x.split("_") for x in result], columns=cols, index=result.astype(str)
+        [x.split("_") for x in result],
+        columns=list(label_cols),
+        index=result.astype(str),
     ).astype("category")
     pd.testing.assert_frame_equal(reconstructed_df, result_label_df)
 
@@ -504,6 +501,35 @@ def test_aggregate_obsm_varm() -> None:
     assert_equal(expected_mean.values, result_obsm.layers["mean"])
 
 
+@needs.anndata_acc
+def test_aggregate_obsp_varp() -> None:
+    from anndata.acc import A
+
+    adata_obsp = sc.datasets.blobs()
+    adata_obsp.obs["blobs"] = adata_obsp.obs["blobs"].astype(str)
+    rng = np.random.default_rng(0)
+    adata_obsp.obsp["test"] = rng.random((adata_obsp.n_obs, adata_obsp.n_obs))
+    adata_varp = adata_obsp.T.copy()
+
+    result_obsp = sc.get.aggregate(
+        adata_obsp, A.obs["blobs"], "sum", acc=A.obsp["test"]
+    )
+    result_varp = sc.get.aggregate(
+        adata_varp, A.var["blobs"], "sum", acc=A.varp["test"]
+    )
+
+    assert_equal(result_obsp, result_varp.T)
+
+    expected_sum = (
+        pd
+        .DataFrame(adata_obsp.obsp["test"], index=adata_obsp.obs_names)
+        .groupby(adata_obsp.obs["blobs"], observed=True)
+        .sum()
+    )
+    assert_equal(expected_sum.values, result_obsp.layers["sum"])
+    assert_equal(adata_obsp.obs_names, result_obsp.var_names)
+
+
 def test_aggregate_obsm_labels() -> None:
     from itertools import chain, repeat
 
@@ -548,10 +574,157 @@ def test_aggregate_obsm_labels() -> None:
     assert_equal(expected, result)
 
 
-def test_dispatch_not_implemented() -> None:
+@needs.anndata_acc
+@pytest.mark.parametrize("axis", ["obs", "var"])
+@pytest.mark.parametrize("attr", [pytest.param(None, id="x"), "layers", "obsm", "varm"])
+@pytest.mark.parametrize("by", ["blobs", ["blobs", "extra"]], ids=["single", "multi"])
+def test_acc_api(
+    *,
+    axis: Literal["obs", "var"],
+    attr: Literal["obsm", "varm", "layers"] | None,
+    by: str | list[str],
+) -> None:
+    if (attr == "obsm" and axis == "var") or (attr == "varm" and axis == "obs"):
+        pytest.skip()
+
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obs["extra"] = np.tile(["a", "b"], adata.n_obs)[: adata.n_obs]
+    if attr == "layers":
+        adata.layers["test"] = adata.X.copy()
+        del adata.X
+    elif attr in {"obsm", "varm"}:
+        adata.obsm["test"] = adata.X[:, ::2].copy()
+        del adata.X
+    if axis == "var":
+        adata = adata.T.copy()
+
+    old = sc.get.aggregate(
+        *(adata, by, ["sum", "mean"]),
+        axis=axis,
+        **({} if attr is None else {attr.removesuffix("s"): "test"}),
+    )
+    new = sc.get.aggregate(
+        *(adata, getattr(A, axis)[by], ["sum", "mean"]),
+        **({} if attr is None else dict(acc=getattr(A, attr)["test"])),
+    )
+
+    assert_equal(old, new)
+
+
+@needs.anndata_acc
+@pytest.mark.parametrize(
+    ("mk_args", "exc_cls", "pat"),
+    [
+        pytest.param(
+            lambda _: dict(axis=0), TypeError, r"axis.*cannot be used", id="axis"
+        ),
+        pytest.param(
+            lambda _: dict(layer="x"),
+            TypeError,
+            r"acc.*cannot be combined.*layer",
+            id="layer",
+        ),
+        pytest.param(
+            lambda a: dict(acc=a.obsm["test"][:, 0]),
+            TypeError,
+            r"`acc` must be a `LayerAcc`.*or.*`MultiAcc`",
+            id="acc-type",
+        ),
+        pytest.param(
+            lambda a: dict(by=[a.obs["blobs"], a.var.index]),
+            ValueError,
+            "same single axis",
+            id="by-dims",
+        ),
+        pytest.param(
+            lambda a: dict(acc=a.varm["test"]),
+            ValueError,
+            r"`dim`.*'obs'.*`acc`.*'var'",
+            id="acc-dim",
+        ),
+    ],
+)
+def test_acc_api_errors(
+    mk_args: Callable[[AdAcc], dict], exc_cls: type[Exception], pat: str
+) -> None:
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.varm["test"] = adata.X.T[:, ::2].copy()
+    adata.obsp["connectivities"] = np.eye(adata.n_obs)
+    kwargs = mk_args(A)
+    kwargs.setdefault("by", A.obs["blobs"])
+
+    with pytest.raises(exc_cls, match=pat):
+        sc.get.aggregate(adata, func="sum", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param(
+            dict(layer="test", obsm="test"),
+            r"Only one of `layer`, or `obsm` can be specified",
+            id="layer-and-obsm",
+        ),
+        pytest.param(
+            dict(obsm="test", axis=1),
+            r"`obsm` cannot be used when `dim` is `var`",
+            id="obsm-axis-var",
+        ),
+        pytest.param(
+            dict(varm="test", axis=0),
+            r"`varm` cannot be used when `dim` is `obs`",
+            id="varm-axis-obs",
+        ),
+        pytest.param(dict(axis="foo"), r"was 'foo'", id="bad-axis-value"),
+    ],
+)
+def test_old_api_errors(kwargs: dict, match: str) -> None:
+    adata = sc.datasets.blobs()
+    adata.layers["test"] = adata.X.copy()
+    adata.obsm["test"] = adata.X.copy()
+    adata.varm["test"] = np.column_stack([adata.X[0], adata.X[1]])
+    with pytest.raises((TypeError, ValueError), match=match):
+        sc.get.aggregate(adata, by="blobs", func="sum", **kwargs)
+
+
+def test_error_by_invalid_type() -> None:
+    adata = sc.datasets.blobs()
+    with pytest.raises(TypeError, match=r"not iterable"):
+        sc.get.aggregate(adata, 123, "sum")  # type: ignore[arg-type]
+
+
+def test_error_dispatch_not_implemented() -> None:
     adata = sc.datasets.blobs()
     with pytest.raises(NotImplementedError):
-        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")
+        sc.get.aggregate(adata.X, adata.obs["blobs"], "sum")  # type: ignore[arg-type]
+
+
+@needs.anndata_acc
+def test_by_obsm_slice() -> None:
+    """Test that not only `.obs`/`.var` are supported."""
+    from anndata.acc import A
+
+    adata = sc.datasets.blobs()
+    adata.obs["blobs"] = adata.obs["blobs"].astype(str)
+    adata.obsm["thing"] = np.column_stack([
+        adata.obs["blobs"].astype(int).to_numpy(),
+        np.zeros(adata.n_obs, dtype=int),
+    ])
+
+    result = sc.get.aggregate(adata, by=A.obsm["thing"][:, 0], func=["sum", "mean"])
+    expected = sc.get.aggregate(adata, by="blobs", func=["sum", "mean"])
+
+    np.testing.assert_allclose(result.layers["sum"], expected.layers["sum"])
+    np.testing.assert_allclose(result.layers["mean"], expected.layers["mean"])
+    pd.testing.assert_series_equal(
+        result.obs["n_obs_aggregated"], expected.obs["n_obs_aggregated"]
+    )
 
 
 def test_factors() -> None:

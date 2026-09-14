@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from scverse_misc import Deprecation, deprecated
 
 from ... import logging
 from ..._utils._doctests import doctest_needs
@@ -15,6 +16,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use :func:`palantir.core.run_palantir` from Wishbone’s successor "
+        "`palantir <https://github.com/dpeerlab/Palantir>`_ instead.",
+    )
+)
 @doctest_needs("wishbone")
 def wishbone(
     adata: AnnData,
@@ -86,12 +94,16 @@ def wishbone(
     ...     adata=adata, start_cell='ACAAGAGACTTATC-1',
     ...     components=[2, 3], num_waypoints=150,
     ... )
+    FutureWarning: The function wishbone is deprecated and will be removed in the future. Use :func:`palantir.core.run_palantir` from Wishbone’s successor `palantir <https://github.com/dpeerlab/Palantir>`_ instead.
+        sce.tl.wishbone(
 
     **Visualizing Wishbone results**
 
     >>> sc.pl.tsne(adata, color=['trajectory_wishbone', 'branch_wishbone'])
     >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ', 'MALAT1']
     >>> sce.pl.wishbone_marker_trajectory(adata, markers, show=True)
+    FutureWarning: The function wishbone_marker_trajectory is deprecated and will be removed in the future. Use :func:`palantir.plot.plot_gene_trends` from Wishbone’s successor `palantir <https://github.com/dpeerlab/Palantir>`_ instead.
+        sce.pl.wishbone_marker_trajectory(adata, markers, show=True)
 
     For further demonstration of Wishbone methods and visualization please follow the
     notebooks in the package `Wishbone_for_single_cell_RNAseq.ipynb

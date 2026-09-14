@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ... import logging as logg
 from ..._settings import settings
 from ..._utils._doctests import doctest_needs
@@ -16,6 +18,12 @@ if TYPE_CHECKING:
     from ..._utils.random import _LegacyRandom
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `phate <https://github.com/KrishnaswamyLab/PHATE>`_ package directly.",
+    )
+)
 @doctest_needs("phate")
 def phate(  # noqa: PLR0913
     adata: AnnData,
@@ -123,9 +131,13 @@ def phate(  # noqa: PLR0913
     (2000, 100)
     >>> adata = AnnData(tree_data)
     >>> sce.tl.phate(adata, k=5, a=20, t=150)
+    FutureWarning: The function phate is deprecated and will be removed in the future. Use the `phate <https://github.com/KrishnaswamyLab/PHATE>`_ package directly.
+        sce.tl.phate(adata, k=5, a=20, t=150)
     >>> adata.obsm["X_phate"].shape
     (2000, 2)
     >>> sce.pl.phate(adata)
+    FutureWarning: The function phate is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='phate'`` instead.
+        sce.pl.phate(adata)
 
     """
     start = logg.info("computing PHATE")

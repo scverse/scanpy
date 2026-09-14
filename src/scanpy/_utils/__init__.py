@@ -37,16 +37,17 @@ from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, KeysView, Mapping
-    from pathlib import Path
     from typing import Any
 
     from anndata import AnnData
+    from anndata.acc import AdRef
     from igraph import Graph
     from numpy.typing import ArrayLike, NDArray
     from pandas._typing import Dtype as PdDtype
 
     from .._compat import CSRBase
-    from ..neighbors import NeighborsParams, RPForestDict
+    from ..neighbors import RPForestDict
+    from ..neighbors._types import NeighborsParams
 
     type _MemoryArray = NDArray | CSBase
     type _SupportedArray = _MemoryArray | DaskArray
@@ -65,16 +66,15 @@ __all__ = [
     "axis_nnz",
     "check_array_function_arguments",
     "check_nonnegative_integers",
-    "check_presence_download",
     "check_use_raw",
     "compute_association_matrix_of_groups",
     "descend_classes_and_funcs",
+    "dim_acc",
     "ensure_igraph",
     "get_igraph_from_adjacency",
     "get_literal_vals",
     "get_networkit_from_adjacency",
     "indent",
-    "is_backed_type",
     "is_backed_type",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
@@ -266,7 +266,7 @@ def check_array_function_arguments(**kwargs):
 
 def check_use_raw(
     adata: AnnData,
-    use_raw: None | bool,  # noqa: FBT001
+    use_raw: bool | None,  # noqa: FBT001
     *,
     layer: str | None = None,
 ) -> bool:
@@ -857,20 +857,12 @@ def select_groups(
     if len(groups_ids) == 0:
         msg = (
             f"{np.array(groups_order_subset)} invalid! specify valid "
-            f"groups_order (or indices) from {adata.obs[key].cat.categories}",
+            f"groups_order (or indices) from {adata.obs[key].cat.categories}"
         )
         raise RuntimeError(msg)
     groups_masks_obs = groups_masks_obs[groups_ids]
     groups_order_subset = adata.obs[key].cat.categories[groups_ids].to_numpy()
     return groups_order_subset, groups_masks_obs
-
-
-def check_presence_download(filename: Path, backup_url: str):
-    """Check if file is present otherwise download."""
-    if not filename.is_file():
-        from ..readwrite import _download
-
-        _download(backup_url, filename)
 
 
 # --------------------------------------------------------------------------------
@@ -1019,6 +1011,17 @@ def _resolve_axis(
         return (1, "var")
     msg = f"`axis` must be either 0, 1, 'obs', or 'var', was {axis!r}"
     raise ValueError(msg)
+
+
+def dim_acc(col: str, *, dim: Literal["obs", "var"]) -> str | AdRef:
+    """Get reference to the `col`umn of `adata.{dim}` the way the active preset expects it."""
+    from .._settings import Preset, settings
+
+    if settings.preset is Preset.ScanpyV2Preview:
+        from anndata.acc import A
+
+        return getattr(A, dim)[col]
+    return col
 
 
 def is_backed_type(x: object, /) -> bool:

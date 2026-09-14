@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated
+
 from ... import logging as logg
 from ..._compat import CSBase
 from ..._keys import _existing_preset_keys
@@ -16,6 +18,13 @@ if TYPE_CHECKING:
     from anndata import AnnData
 
 
+@deprecated(
+    Deprecation(
+        "1.13.0",
+        "Use the `trimap <https://github.com/eamid/trimap>`_ package directly, or its "
+        "`JAX implementation <https://github.com/google-research/google-research/tree/master/trimap>`_.",
+    )
+)
 @doctest_needs("trimap")
 def trimap(  # noqa: PLR0913
     adata: AnnData,
@@ -87,7 +96,11 @@ def trimap(  # noqa: PLR0913
     >>> import scanpy.external as sce
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> pbmc = sce.tl.trimap(pbmc, copy=True)
+    FutureWarning: The function trimap is deprecated and will be removed in the future. Use the `trimap <https://github.com/eamid/trimap>`_ package directly, or its `JAX implementation <https://github.com/google-research/google-research/tree/master/trimap>`_.
+        pbmc = sce.tl.trimap(pbmc, copy=True)
     >>> sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
+    FutureWarning: The function trimap is deprecated and will be removed in the future. Use :func:`scanpy.pl.embedding` with ``basis='trimap'`` instead.
+        sce.pl.trimap(pbmc, color=["bulk_labels"], s=10)
 
     """
     try:

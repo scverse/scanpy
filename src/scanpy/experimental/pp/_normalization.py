@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from types import MappingProxyType
+import sys
 from typing import TYPE_CHECKING
+
+if sys.version_info < (3, 15):
+    from types import MappingProxyType as frozendict  # noqa: N813
 
 import numpy as np
 from anndata import AnnData
+from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ... import settings
@@ -22,7 +26,8 @@ from ...experimental._docs import (
     doc_layer,
     doc_pca_chunk,
 )
-from ...get import _check_mask, _get_obs_rep, _set_obs_rep
+from ...get import _check_mask, _get_arr, _set_obs_rep
+from ...get.get import _mask_arg, _mask_hvg
 from ...preprocessing._docs import doc_mask_var
 from ...preprocessing._pca import pca
 
@@ -31,6 +36,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from ..._utils.random import RNGLike, SeedLike
+    from ...get.get import Mask
 
 
 def _pearson_residuals(
@@ -133,7 +139,7 @@ def normalize_pearson_residuals(
         adata = adata.copy()
 
     view_to_actual(adata)
-    x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+    x = _get_arr(adata, layer=layer, obsm=obsm)
     computed_on = layer or obsm or "adata.X"
 
     msg = f"computing analytic Pearson residuals on {computed_on}"
@@ -160,11 +166,13 @@ def normalize_pearson_residuals(
     adata=doc_adata,
     dist_params=doc_dist_params,
     pca_chunk=doc_pca_chunk,
-    mask_var=doc_mask_var,
+    mask=doc_mask_var,
     check_values=doc_check_values,
     inplace=doc_inplace,
 )
 @_accepts_legacy_random_state(0)
+# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
 def normalize_pearson_residuals_pca(
     adata: AnnData,
     *,
@@ -172,12 +180,12 @@ def normalize_pearson_residuals_pca(
     clip: float | None = None,
     n_comps: int | None = 50,
     rng: SeedLike | RNGLike | None = None,
-    kwargs_pca: Mapping[str, Any] = MappingProxyType({}),
-    mask_var: np.ndarray | str | None | Default = Default(
-        "adata.var.get('highly_variable')"
-    ),
+    kwargs_pca: Mapping[str, Any] = frozendict({}),
+    mask: Mask | Default | None = Default("adata.var.get('highly_variable')"),
     check_values: bool = True,
     inplace: bool = True,
+    # deprecated
+    mask_var: Mask | None = None,
 ) -> AnnData | None:
     """Apply analytic Pearson residual normalization and PCA, based on :cite:t:`Lause2021`.
 
@@ -193,7 +201,7 @@ def normalize_pearson_residuals_pca(
     {adata}
     {dist_params}
     {pca_chunk}
-    {mask_var}
+    {mask}
     {check_values}
     {inplace}
 
@@ -224,9 +232,8 @@ def normalize_pearson_residuals_pca(
     """
     key_added = kwargs_pca.get("key_added", settings.preset.pca.key_added)
     keys = _embedding_keys("pca", key_added)
-    if isinstance(mask_var, Default):
-        mask_var = "highly_variable" if "highly_variable" in adata.var else None
-    mask_var = _check_mask(adata, mask_var, "var")
+    mask = _mask_hvg(adata, _mask_arg(mask, mask_var, dim="var"))
+    mask_var = _check_mask(adata, mask, "var")
 
     if mask_var is not None:
         adata_sub = adata[:, mask_var].copy()

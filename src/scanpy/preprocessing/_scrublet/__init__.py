@@ -13,7 +13,7 @@ from ... import preprocessing as pp
 from ..._docs import doc_rng
 from ..._utils import _doc_params
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ...get import _get_obs_rep
+from ...get import _get_arr
 from . import pipeline
 from .core import Scrublet
 
@@ -178,6 +178,10 @@ def scrublet(  # noqa: PLR0913
     start = logg.info("Running Scrublet")
 
     adata_obs = adata.copy()
+    # `adata.obs_names` may contain duplicates, and cells may get filtered out below,
+    # so use unique positional labels to map results back onto `adata` unambiguously.
+    positions = pd.RangeIndex(adata.n_obs).astype(str)
+    adata_obs.obs_names = positions
 
     def _run_scrublet(
         ad_obs: AnnData, ad_sim: AnnData | None, *, rng: np.random.Generator
@@ -267,7 +271,7 @@ def scrublet(  # noqa: PLR0913
         )
 
         # Now reset the obs to get the scrublet scores
-        adata.obs = scrubbed_obs.loc[adata.obs_names.array]
+        adata.obs = scrubbed_obs.reindex(positions).set_axis(adata.obs_names)
 
         # Save the .uns from each batch separately
         adata.uns["scrublet"] = {}
@@ -281,10 +285,11 @@ def scrublet(  # noqa: PLR0913
 
     else:
         scrubbed = _run_scrublet(adata_obs, adata_sim, rng=rng)
+        scrubbed_obs = scrubbed["obs"].reindex(positions)
 
         # Copy outcomes to input object from our processed version
-        adata.obs["doublet_score"] = scrubbed["obs"]["doublet_score"]
-        adata.obs["predicted_doublet"] = scrubbed["obs"]["predicted_doublet"]
+        adata.obs["doublet_score"] = scrubbed_obs["doublet_score"].to_numpy()
+        adata.obs["predicted_doublet"] = scrubbed_obs["predicted_doublet"].to_numpy()
         adata.uns["scrublet"] = scrubbed["uns"]
 
     logg.info("    Scrublet finished", time=start)
@@ -547,7 +552,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(

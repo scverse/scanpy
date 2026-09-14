@@ -24,7 +24,7 @@ from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray
-from .._docs import doc_rng
+from .._docs import doc_ref_compat, doc_rng
 from .._settings import settings
 from .._utils import (
     _doc_params,
@@ -36,7 +36,7 @@ from .._utils import (
     view_to_actual,
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _check_mask, _get_obs_rep, _set_obs_rep
+from ..get import _check_mask, _get_arr, _set_obs_rep
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
+    from ..get.get import Mask
 
 
 def filter_cells(
@@ -407,7 +408,7 @@ def log1p_anndata(
         for chunk, start, end in adata.chunked_X(chunk_size):
             adata.X[start:end] = log1p(chunk, base=base, copy=False)
     else:
-        x = _get_obs_rep(adata, layer=layer, obsm=obsm)
+        x = _get_arr(adata, layer=layer, obsm=obsm)
         if is_backed_type(x):
             msg = f"log1p is not implemented for matrices of type {type(x)}"
             if layer is not None:
@@ -557,7 +558,7 @@ def regress_out(
     if isinstance(keys, str):
         keys = [keys]
 
-    x = _get_obs_rep(adata, layer=layer)
+    x = _get_arr(adata, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
 
     if isinstance(x, CSBase):
@@ -691,7 +692,7 @@ def sample(
     copy: Literal[False] = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> None: ...
 @overload
 def sample(
@@ -703,7 +704,7 @@ def sample(
     copy: Literal[True],
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> AnnData: ...
 @overload
 def sample[A: np.ndarray | CSBase | DaskArray](
@@ -715,11 +716,11 @@ def sample[A: np.ndarray | CSBase | DaskArray](
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
+    p: Mask | NDArray[np.floating] | None = None,
 ) -> tuple[A, NDArray[np.int64]]: ...
 
 
-@_doc_params(rng=doc_rng)
+@_doc_params(rng=doc_rng, ref=doc_ref_compat)
 def sample(  # noqa: PLR0912
     data: AnnData | np.ndarray | CSBase | DaskArray,
     fraction: float | None = None,
@@ -729,8 +730,8 @@ def sample(  # noqa: PLR0912
     copy: bool = False,
     replace: bool = False,
     axis: Literal["obs", 0, "var", 1] = "obs",
-    p: str | NDArray[np.bool] | NDArray[np.floating] | None = None,
-) -> AnnData | None | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]]:
+    p: Mask | NDArray[np.floating] | None = None,
+) -> AnnData | tuple[np.ndarray | CSBase | DaskArray, NDArray[np.int64]] | None:
     r"""Sample observations or variables with or without replacement.
 
     .. array-support:: pp.sample
@@ -757,7 +758,8 @@ def sample(  # noqa: PLR0912
         Sample `obs`\ ervations (axis 0) or `var`\ iables (axis 1).
     p
         Drawing probabilities (floats) or mask (bools).
-        Either an `axis`-sized array, or the name of a column.
+        Either an `axis`-sized array, or a reference to one, e.g. `A.obs['is_control']`.
+        {ref}
         If `p` is an array of probabilities, it must sum to 1.
 
     Returns
