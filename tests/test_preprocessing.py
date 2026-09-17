@@ -622,9 +622,14 @@ def test_recipe_weinreb():
         (None, None, None, 20),
     ],
 )
-def test_filter_genes(
-    request, array_type, max_cells, max_counts, min_cells, min_counts
-):
+def test_filter_genes(  # noqa: PLR0917
+    request: pytest.FixtureRequest,
+    array_type,
+    max_cells: int | None,
+    max_counts: int | None,
+    min_cells: int | None,
+    min_counts: int | None,
+) -> None:
     if array_type is as_dense_jax_array:
         request.applymarker(
             pytest.mark.xfail(
@@ -665,9 +670,14 @@ def test_filter_genes(
         pytest.param(None, None, None, 20, id="min_counts"),
     ],
 )
-def test_filter_cells(
-    request, array_type, max_genes, max_counts, min_genes, min_counts
-):
+def test_filter_cells(  # noqa: PLR0917
+    request: pytest.FixtureRequest,
+    array_type,
+    max_genes: int | None,
+    max_counts: int | None,
+    min_genes: int | None,
+    min_counts: int | None,
+) -> None:
     if array_type is as_dense_jax_array:
         request.applymarker(
             pytest.mark.xfail(
