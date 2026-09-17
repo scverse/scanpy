@@ -71,6 +71,10 @@ class DotPlot(BasePlot):
         Whether or not to standardize that dimension between 0 and 1,
         meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
+    min_cells
+        Minimum number of cells a `groupby` category must have to be
+        included in the plot. Categories with fewer cells are silently
+        dropped. If `None`, all categories are kept.
     kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
@@ -141,6 +145,7 @@ class DotPlot(BasePlot):
         vcenter: float | None = None,
         norm: Normalize | None = None,
         group_colors: Mapping[str, ColorLike] | None = None,
+        min_cells: int | None = None,
         **kwds,
     ) -> None:
         BasePlot.__init__(
@@ -164,6 +169,7 @@ class DotPlot(BasePlot):
             vmax=vmax,
             vcenter=vcenter,
             norm=norm,
+            min_cells=min_cells,
             **kwds,
         )
 
@@ -989,6 +995,7 @@ def dotplot(  # noqa: PLR0913
     dot_max: float | None = DotPlot.DEFAULT_DOT_MAX,
     dot_min: float | None = DotPlot.DEFAULT_DOT_MIN,
     smallest_dot: float = DotPlot.DEFAULT_SMALLEST_DOT,
+    min_cells: int | None = None,
     **kwds,
 ) -> DotPlot | dict | None:
     r"""Make a *dot plot* of the expression values of `var_names`.
@@ -1042,6 +1049,10 @@ def dotplot(  # noqa: PLR0913
         All fractions smaller than dot_min are clipped to this value.
     smallest_dot
         All expression levels with `dot_min` are plotted with this size.
+    min_cells
+        Minimum number of cells a `groupby` category must have to be
+        included in the plot. Categories with fewer cells are silently
+        dropped. If `None`, all categories are kept.
     {show_save_ax}
     {vminmax}
     kwds
@@ -1133,6 +1144,7 @@ def dotplot(  # noqa: PLR0913
         vmax=vmax,
         vcenter=vcenter,
         norm=norm,
+        min_cells=min_cells,
         **kwds,
     )
 
