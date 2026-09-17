@@ -20,23 +20,26 @@ from fast_array_utils.conv import to_dense
 from fast_array_utils.numba import njit
 from numpy._typing._array_like import NDArray
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated_arg
 from sklearn.utils import check_array
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray
-from .._docs import doc_ref_compat, doc_rng
-from .._settings import settings
+from .._docs import DEPR_COPY, doc_out, doc_ref_compat, doc_rng, doc_use
+from .._settings import Default, settings
 from .._utils import (
     _doc_params,
     _resolve_axis,
     check_array_function_arguments,
+    expose_dispatch,
     is_backed_type,
     raise_not_implemented_error_if_backed_type,
     sanitize_anndata,
     view_to_actual,
 )
 from .._utils.random import _accepts_legacy_random_state, _if_legacy_apply_global
-from ..get import _check_mask, _get_arr, _set_obs_rep
+from ..get import _check_mask, _get_arr, _write_out
+from ..get.get import _resolve_obs
 from ._distributed import materialize_as_ndarray
 
 if TYPE_CHECKING:
@@ -48,7 +51,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from .._utils.random import RNGLike, SeedLike
-    from ..get.get import Mask
+    from ..get.get import Mask, RepAcc
 
 
 def filter_cells(
@@ -308,13 +311,29 @@ def filter_genes(
 
 
 @singledispatch
+def _log1p(data, *, base: Number | None = None, copy: bool = False):
+    """Dispatch on array kind. `AnnData` goes to `log1p_anndata`, see `log1p`."""
+    return log1p_array(data, copy=copy, base=base)
+
+
+@_doc_params(
+    use=doc_use("Which matrix to logarithmize."),
+    out=doc_out("the place `use` reads from"),
+)
+@expose_dispatch(_log1p)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("copy", DEPR_COPY)
 def log1p(
     data: AnnData | np.ndarray | CSBase,
     *,
     base: Number | None = None,
-    copy: bool = False,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
     chunked: bool | None = None,
     chunk_size: int | None = None,
+    # deprecated
+    copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | np.ndarray | CSBase | None:
@@ -332,41 +351,57 @@ def log1p(
         Rows correspond to cells and columns to genes.
     base
         Base of the logarithm. Natural logarithm is used by default.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
+    {use}
+    {out}
     chunked
         Process the data matrix in chunks, which will save memory.
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
-    layer
-        Entry of layers to transform.
-    obsm
-        Entry of obsm to transform.
+    copy
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns `None` if the result was written, else the logarithmized matrix.
 
     """
-    check_array_function_arguments(
-        chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm
+    # validated here, before dispatch, so array input gets these messages too
+    if not isinstance(data, AnnData):
+        check_array_function_arguments(
+            chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm, use=use
+        )
+        if not isinstance(out, Default):
+            msg = "Argument `out` is only valid if an AnnData object is passed."
+            raise TypeError(msg)
+        return _log1p(data, copy=copy, base=base)
+    return log1p_anndata(
+        data,
+        base=base,
+        use=use,
+        out=out,
+        chunked=bool(chunked),
+        chunk_size=chunk_size,
+        copy=copy,
+        layer=layer,
+        obsm=obsm,
     )
-    return log1p_array(data, copy=copy, base=base)
 
 
-@log1p.register(CSBase)
+@_log1p.register(CSBase)
 def log1p_sparse(x: CSBase, *, base: Number | None = None, copy: bool = False):
     x = check_array(
         x, accept_sparse=("csr", "csc"), dtype=(np.float64, np.float32), copy=copy
     )
-    x.data = log1p(x.data, copy=False, base=base)
+    x.data = _log1p(x.data, copy=False, base=base)
     return x
 
 
-@log1p.register(np.ndarray)
-def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False):
+@_log1p.register(np.ndarray)
+@_log1p.register(DaskArray)
+def log1p_array(
+    x: np.ndarray | DaskArray, *, base: Number | None = None, copy: bool = False
+):
     # Can force arrays to be np.ndarrays, but would be useful to not
     # X = check_array(X, dtype=(np.float64, np.float32), ensure_2d=False, copy=copy)
     if copy:
@@ -379,49 +414,64 @@ def log1p_array(x: np.ndarray, *, base: Number | None = None, copy: bool = False
     return x
 
 
-@log1p.register(AnnData)
-def log1p_anndata(
+@_log1p.register(AnnData)
+def log1p_anndata(  # noqa: PLR0912
     adata: AnnData,
     *,
     base: Number | None = None,
-    copy: bool = False,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
     chunked: bool = False,
     chunk_size: int | None = None,
+    copy: bool = False,
     layer: str | None = None,
     obsm: str | None = None,
-) -> AnnData | None:
+) -> AnnData | np.ndarray | CSBase | None:
     if "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
-    adata = adata.copy() if copy else adata
+    if copy:
+        if out is None:
+            msg = "`copy=True` cannot be used with `out=None`."
+            raise TypeError(msg)
+        adata = adata.copy()
+    use = _resolve_obs(use)
     view_to_actual(adata)
 
     if chunked:
-        if (layer is not None) or (obsm is not None):
+        if (layer is not None) or (obsm is not None) or (use is not None):
             msg = (
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
+            raise NotImplementedError(msg)
+        if not isinstance(out, Default):
+            msg = "Currently cannot perform chunked operations with `out`."
             raise NotImplementedError(msg)
         if adata.isbacked and adata.file._filemode != "r+":
             msg = "log1p is not implemented for backed AnnData with backed mode not r+"
             raise NotImplementedError(msg)
         for chunk, start, end in adata.chunked_X(chunk_size):
-            adata.X[start:end] = log1p(chunk, base=base, copy=False)
+            adata.X[start:end] = _log1p(chunk, base=base, copy=False)
     else:
-        x = _get_arr(adata, layer=layer, obsm=obsm)
+        x = _get_arr(adata, use, layer=layer, obsm=obsm)
         if is_backed_type(x):
             msg = f"log1p is not implemented for matrices of type {type(x)}"
-            if layer is not None:
+            if layer is not None or use is not None:
                 msg = f"{msg} from layers"
                 raise NotImplementedError(msg)
             msg = f"{msg} without `chunked=True`"
             raise NotImplementedError(msg)
-        x = log1p(x, copy=False, base=base)
-        _set_obs_rep(adata, x, layer=layer, obsm=obsm)
+        # log1p is in-place, so leave the source alone unless we write back over it
+        x = _log1p(x, copy=not isinstance(out, Default), base=base)
+        if (
+            unwritten := _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
+        ) is not None:
+            return unwritten
 
     adata.uns["log1p"] = {"base": base}
     if copy:
         return adata
+    return None
 
 
 def sqrt(
@@ -508,14 +558,23 @@ def numpy_regress_out(
     return data
 
 
-def regress_out(
+@_doc_params(
+    use=doc_use("Which matrix to regress on.", legacy=("layer",)),
+    out=doc_out("the place `use` reads from"),
+)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
+@deprecated_arg("copy", DEPR_COPY)
+def regress_out(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     keys: str | Sequence[str],
     *,
-    layer: str | None = None,
+    use: RepAcc | str | None = None,
+    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
     n_jobs: int | None = None,
+    # deprecated
     copy: bool = False,
-) -> AnnData | None:
+    layer: str | None = None,
+) -> AnnData | np.ndarray | CSBase | None:
     """Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
@@ -530,17 +589,18 @@ def regress_out(
         The annotated data matrix.
     keys
         Keys for observation annotation on which to regress on.
-    layer
-        If provided, which element of layers to regress on.
+    {use}
+    {out}
     n_jobs
         Number of jobs for parallel computation.
         `None` means using :attr:`scanpy.settings.n_jobs`.
     copy
-        Determines whether a copy of `adata` is returned.
+        Whether to return a modified copy instead of modifying `adata` in place.
 
     Returns
     -------
-    Returns `None` if `copy=False`, else returns an updated `AnnData` object. Sets the following fields:
+    Returns `None` if the result was written, else the corrected matrix.
+    Sets the following fields:
 
     `adata.X` | `adata.layers[layer]` : :class:`numpy.ndarray` | :class:`scipy.sparse.csr_matrix` (dtype `float`)
         Corrected count data matrix.
@@ -549,7 +609,12 @@ def regress_out(
     from joblib import Parallel, delayed
 
     start = logg.info(f"regressing out {keys}")
-    adata = adata.copy() if copy else adata
+    if copy:
+        if out is None:
+            msg = "`copy=True` cannot be used with `out=None`."
+            raise TypeError(msg)
+        adata = adata.copy()
+    use = _resolve_obs(use)
 
     sanitize_anndata(adata)
 
@@ -558,8 +623,12 @@ def regress_out(
     if isinstance(keys, str):
         keys = [keys]
 
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, use, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
+    if not isinstance(out, Default):
+        # regression is partly in-place, so leave the source alone
+        # unless we write back over it
+        x = x.copy()
 
     if isinstance(x, CSBase):
         logg.info("    sparse input is densified and may lead to high memory use")
@@ -639,8 +708,9 @@ def regress_out(
         # The transpose is needed to get the matrix in the shape needed
         res = np.vstack(res).T
 
-    _set_obs_rep(adata, res, layer=layer)
     logg.info("    finished", time=start)
+    if (unwritten := _write_out(adata, res, out, use=use, layer=layer)) is not None:
+        return unwritten
     return adata if copy else None
 
 

@@ -40,7 +40,6 @@ def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
 @pytest.mark.usefixtures("_threading")
 def test_consistency(metric) -> None:
     pbmc = pbmc68k_reduced()
-    pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.obsp["connectivities"]
     equality_check = partial(np.testing.assert_allclose, atol=1e-11)
 
@@ -59,12 +58,22 @@ def test_consistency(metric) -> None:
         metric(g, pbmc.obs["percent_mito"].values),
     )
 
+
+@needs.anndata_acc
+@pytest.mark.usefixtures("_threading")
+def test_consistency_use(metric) -> None:
+    """Selecting `vals` via `use` matches passing the same array directly."""
+    pbmc = pbmc68k_reduced()
+    pbmc.layers["raw"] = pbmc.raw.X.copy()
+    g = pbmc.obsp["connectivities"]
+    equality_check = partial(np.testing.assert_allclose, atol=1e-11)
+
     equality_check(
-        metric(pbmc, obsm="X_pca"),
+        metric(pbmc, use="obsm.X_pca"),
         metric(g, pbmc.obsm["X_pca"].T),
     )
 
-    all_genes = metric(pbmc, layer="raw")
+    all_genes = metric(pbmc, use="layers.raw")
     first_gene = metric(
         pbmc, vals=pbmc[:, pbmc.var_names[0]].layers["raw"].toarray().ravel()
     )
@@ -72,7 +81,7 @@ def test_consistency(metric) -> None:
 
     # Test that results are similar for sparse and dense reps of same data
     equality_check(
-        metric(pbmc, layer="raw"),
+        metric(pbmc, use="layers.raw"),
         metric(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
 

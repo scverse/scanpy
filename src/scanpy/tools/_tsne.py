@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from scverse_misc import Deprecation, deprecated_arg
+
 from .. import logging as logg
 from .._compat import warn
 from .._docs import doc_rng
@@ -9,7 +11,7 @@ from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..get.get import _rep_to_json
+from ..get.get import _rep_to_json, _resolve_rep
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -22,12 +24,13 @@ if TYPE_CHECKING:
 
 @_accepts_legacy_random_state(0)
 @_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@deprecated_arg("use_rep", Deprecation("1.13.0", "Use `use` instead."))
 def tsne(  # noqa: PLR0913
     adata: AnnData,
     n_pcs: int | None = None,
     *,
     n_components: int = 2,
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
     perplexity: float = 30,
     metric: str = "euclidean",
     early_exaggeration: float = 12,
@@ -37,6 +40,8 @@ def tsne(  # noqa: PLR0913
     n_jobs: int | None = None,
     key_added: str | Default | None = Default(preset=("tsne", "key_added")),
     copy: bool = False,
+    # deprecated
+    use_rep: str | None = None,
 ) -> AnnData | None:
     r"""t-SNE :cite:p:`vanDerMaaten2008,Amir2013,Pedregosa2011`.
 
@@ -105,9 +110,11 @@ def tsne(  # noqa: PLR0913
 
     """
     start = logg.info("computing tSNE")
+    if use is not None:
+        use = _resolve_rep(use)
     keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
-    x = _choose_representation_compat(adata, use_rep=use_rep, n_pcs=n_pcs)
+    x = _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)
     raise_not_implemented_error_if_backed_type(x, "tsne")
     # params for sklearn
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
@@ -158,7 +165,7 @@ def tsne(  # noqa: PLR0913
         learning_rate=learning_rate,
         n_jobs=n_jobs,
         metric=metric,
-        use_rep=_rep_to_json(use_rep),
+        use_rep=_rep_to_json(use if use is not None else use_rep),
         n_components=n_components,
     )
     adata.obsm[keys.obsm] = x_tsne  # annotate samples with tSNE coordinates

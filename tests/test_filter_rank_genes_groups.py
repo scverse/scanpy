@@ -63,6 +63,7 @@ EXPECTED = {
     ],
 )
 @pytest.mark.parametrize("layer", [None, "layer"], ids=["raw", "layer"])
+@pytest.mark.filterwarnings("ignore:.*argument layer is deprecated:FutureWarning")
 def test_filter_rank_genes_groups(
     *, reference: str, pts: bool, abs: bool, layer: str | None
 ) -> None:

@@ -22,7 +22,7 @@ from ._common import (
     _make_transformer,
 )
 from ._connectivity import umap
-from ._doc import doc_n_pcs, doc_use_rep
+from ._doc import doc_n_pcs, doc_use
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -39,14 +39,14 @@ if TYPE_CHECKING:
 
 
 @doctest_needs("anndata_acc")
-@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep, rng=doc_rng)
+@_doc_params(n_pcs=doc_n_pcs, use=doc_use, rng=doc_rng)
 def bbknn(  # noqa: PLR0913
     adata: AnnData,
     neighbors_within_batch: int = 3,
     n_pcs: int | None = None,
     *,
     batches: AdRef | str = "obs.batch",
-    use_rep: RepAcc | str | None = None,
+    use: RepAcc | str | None = None,
     transformer: KnnTransformerLike | _KnownTransformer | None = None,
     metric: _Metric | _MetricFn = "euclidean",
     metric_kwds: Mapping[str, Any] = frozendict({}),
@@ -81,7 +81,7 @@ def bbknn(  # noqa: PLR0913
     {n_pcs}
     batches
         `adata.obs` column name discriminating between the batches.
-    {use_rep}
+    {use}
     transformer
         kNN search backend following the API of
         :class:`~sklearn.neighbors.KNeighborsTransformer`.
@@ -164,8 +164,8 @@ def bbknn(  # noqa: PLR0913
 
     if not isinstance(batches, AdRef):
         batches = A.resolve(batches, vec=True)
-    if use_rep is not None:
-        use_rep = _resolve_rep(use_rep)
+    if use is not None:
+        use = _resolve_rep(use)
 
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."
@@ -184,7 +184,7 @@ def bbknn(  # noqa: PLR0913
         )
         raise ValueError(msg)
 
-    x = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    x = _choose_representation(adata, use_rep=use, n_pcs=n_pcs)
     knn_indices, knn_distances = _compute_batch_balanced_knn(
         x,
         batches=batch_arr,
@@ -217,7 +217,7 @@ def bbknn(  # noqa: PLR0913
         method="umap",
         metric=metric,
         **({} if not metric_kwds else dict(metric_kwds=metric_kwds)),
-        **({} if use_rep is None else dict(use_rep=_rep_to_json(use_rep))),
+        **({} if use is None else dict(use_rep=_rep_to_json(use))),
         **({} if n_pcs is None else dict(n_pcs=n_pcs)),
         batches=A.to_json(batches),
         neighbors_within_batch=neighbors_within_batch,

@@ -7,18 +7,21 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from scipy import sparse
+from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ... import preprocessing as pp
-from ..._docs import doc_rng
-from ..._utils import _doc_params
+from ..._docs import doc_rng, doc_use
+from ..._utils import _doc_params, own_deprecations
 from ..._utils.random import _accepts_legacy_random_state, _LegacyRng
 from ...get import _get_arr
+from ...get.get import _resolve_obs
 from . import pipeline
 from .core import Scrublet
 
 if TYPE_CHECKING:
     from ..._utils.random import RNGLike, SeedLike
+    from ...get.get import RepAcc
     from ...neighbors import _Metric, _MetricFn
 
 
@@ -201,21 +204,22 @@ def scrublet(  # noqa: PLR0913
 
             # HVG process needs log'd data.
             ad_obs.layers["log1p"] = ad_obs.X.copy()
-            pp.log1p(ad_obs, layer="log1p")
-            pp.highly_variable_genes(ad_obs, layer="log1p")
-            del ad_obs.layers["log1p"]
-            ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
+            with own_deprecations():
+                pp.log1p(ad_obs, layer="log1p")
+                pp.highly_variable_genes(ad_obs, layer="log1p")
+                del ad_obs.layers["log1p"]
+                ad_obs = ad_obs[:, ad_obs.var["highly_variable"]].copy()
 
-            # Simulate the doublets based on the raw expressions from the normalised
-            # and filtered object.
+                # Simulate the doublets based on the raw expressions from the
+                # normalised and filtered object.
 
-            ad_sim = scrublet_simulate_doublets(
-                ad_obs,
-                layer="raw",
-                sim_doublet_ratio=sim_doublet_ratio,
-                synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
-                rng=rng,
-            )
+                ad_sim = scrublet_simulate_doublets(
+                    ad_obs,
+                    layer="raw",
+                    sim_doublet_ratio=sim_doublet_ratio,
+                    synthetic_doublet_umi_subsampling=synthetic_doublet_umi_subsampling,
+                    rng=rng,
+                )
             del ad_obs.layers["raw"]
             if log_transform:
                 pp.log1p(ad_obs)
@@ -501,10 +505,13 @@ def _scrublet_call_doublets(  # noqa: PLR0913
     return adata_obs
 
 
+@_doc_params(use=doc_use("Which matrix holds the raw counts.", legacy=("layer",)))
 @_accepts_legacy_random_state(0)
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
 def scrublet_simulate_doublets(
     adata: AnnData,
     *,
+    use: RepAcc | str | None = None,
     layer: str | None = None,
     sim_doublet_ratio: float = 2.0,
     synthetic_doublet_umi_subsampling: float = 1.0,
@@ -521,8 +528,7 @@ def scrublet_simulate_doublets(
         correspond to cells and columns to genes. Genes should have been
         filtered for expression and variability, and the object should contain
         raw expression of the same dimensions.
-    layer
-        Layer of adata where raw values are stored, or 'X' if values are in .X.
+    {use}
     sim_doublet_ratio
         Number of doublets to simulate relative to the number of observed
         transcriptomes. If `None`, self.sim_doublet_ratio is used.
@@ -552,7 +558,7 @@ def scrublet_simulate_doublets(
         scores for observed transcriptomes and simulated doublets.
 
     """
-    x = _get_arr(adata, layer=layer)
+    x = _get_arr(adata, _resolve_obs(use), layer=layer)
     scrub = Scrublet(x, rng=rng)
 
     scrub.simulate_doublets(

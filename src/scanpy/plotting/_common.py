@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from fast_array_utils import stats
 
+from .._utils import own_deprecations
 from ..preprocessing._normalization import normalize_total
 
 if TYPE_CHECKING:
@@ -47,7 +48,8 @@ def highest_expr_genes(
     DataFrame with cells as rows and top genes as columns, values are
     percent of total counts.
     """
-    norm_expr = normalize_total(adata, target_sum=100, layer=layer, inplace=False)["X"]
+    with own_deprecations():
+        norm_expr = normalize_total(adata, target_sum=100, out=None, layer=layer)["X"]
     mean_percent = stats.mean(norm_expr, axis=0)
     top_idx = np.argsort(mean_percent)[::-1][:n_top]
     columns = (
