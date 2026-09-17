@@ -391,8 +391,10 @@ def pbmc68k_reduced() -> AnnData:
     """
     from scanpy._settings import Preset, settings
 
-    store = zarr.storage.ZipStore(HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r")
-    adata = read_zarr(zarr.open_group(store=store, mode="r"))
+    with zarr.storage.ZipStore(
+        HERE / "10x_pbmc68k_reduced.zarr.zip", mode="r"
+    ) as store:
+        adata = read_zarr(zarr.open_group(store=store, mode="r"))
 
     # normalize using `n_counts`,
     # i.e. the size factors computed over all genes passing the initial filtering.
