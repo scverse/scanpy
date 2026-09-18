@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from anndata import AnnData
+from anndata.tests.helpers import asarray
 from scipy.stats import mannwhitneyu
 
 import scanpy as sc
@@ -24,7 +25,6 @@ from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import (
     ARRAY_TYPES,
     ARRAY_TYPES_MEM,
-    as_dense_jax_array,
 )
 
 if TYPE_CHECKING:
@@ -137,24 +137,16 @@ def test_results(
 @pytest.mark.parametrize("method", ["t-test", "wilcoxon"])
 @pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
 def test_results_layers(
-    request: pytest.FixtureRequest,
     subtests: pytest.Subtests,
     data_dir: Path,
     array_type,
     method: Literal["t-test", "wilcoxon"],
 ) -> None:
-
-    if array_type is as_dense_jax_array:
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="test mutates .X in-place; jax arrays are immutable"
-            )
-        )
     adata = get_example_data(array_type, rng=_LegacyRng(1234))
     adata.layers["to_test"] = adata.X.copy()
-    x = adata.X.tolil() if isinstance(adata.X, CSBase) else adata.X
-    mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
-    x[mask] = 0
+    # zero out random entries in a writable numpy copy (jax arrays are immutable)
+    x = asarray(adata.X).copy()
+    x[np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)] = 0
     adata.X = array_type(x)
     scores = get_true_scores(data_dir, method)["scores"]
 
