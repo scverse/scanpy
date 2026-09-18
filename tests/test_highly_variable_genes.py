@@ -378,7 +378,6 @@ def test_pearson_residuals_batch(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_compare_to_upstream(
     *,
-    request: pytest.FixtureRequest,
     flavor: Literal["seurat", "cell_ranger"],
     params: Any,
     ref_path: Path,
