@@ -13,8 +13,9 @@ from scipy import sparse
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from .._compat import CSBase, CSRBase, DaskArray, warn
+from .._docs import doc_ref_compat
 from .._settings import Preset, settings
-from .._utils import _resolve_axis, get_literal_vals
+from .._utils import _doc_params, _resolve_axis, get_literal_vals
 from .._utils._doctests import doctest_needs
 from ._kernels import (
     agg_sum_csc,
@@ -238,6 +239,7 @@ def _normalize_by[I: Idx2D | int](
     return by_list, dim
 
 
+@_doc_params(ref=doc_ref_compat)
 @doctest_needs("anndata_acc")
 def aggregate(
     adata: AnnData,
@@ -336,9 +338,7 @@ def aggregate(
         var: 'n_cells'
         layers: 'mean', 'count_nonzero'
 
-    .. [#ref] If :attr:`scanpy.settings.preset` is :attr:`~scanpy.Preset.ScanpyV2Preview`,
-       :class:`str`\ s are :meth:`anndata.acc.AdAcc.resolve`\ d to :class:`~anndata.acc.AdRef`\ s,
-       otherwise interpreted as :attr:`anndata.AnnData.obs` columns.
+    .. [#ref] {ref}
 
     """
     if not isinstance(adata, AnnData):

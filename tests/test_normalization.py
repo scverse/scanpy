@@ -221,8 +221,14 @@ def _check_pearson_pca_fields(ad, n_cells, n_comps):
     [
         pytest.param(False, dict(), "n_genes", id="no_hvg"),
         pytest.param(True, dict(), "n_hvgs", id="hvg_default"),
-        pytest.param(True, dict(mask_var=None), "n_genes", id="hvg_opt_out"),
-        pytest.param(False, dict(mask_var="test_mask"), "n_unmasked", id="mask"),
+        pytest.param(True, dict(mask=None), "n_genes", id="hvg_opt_out"),
+        pytest.param(
+            False,
+            dict(mask="var.test_mask"),
+            "n_unmasked",
+            id="mask",
+            marks=needs.anndata_acc,
+        ),
     ],
 )
 def test_normalize_pearson_residuals_pca(

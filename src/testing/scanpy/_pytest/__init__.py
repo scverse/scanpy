@@ -7,6 +7,8 @@ import sys
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
+from packaging.version import Version
+
 if sys.version_info < (3, 15):
     from types import MappingProxyType as frozendict  # noqa: N813
 
@@ -48,6 +50,7 @@ def original_settings(
     from matplotlib.testing import setup
 
     import scanpy as sc
+    from scanpy._compat import pkg_version
 
     global _original_settings  # noqa: PLW0603
     if _original_settings is None:
@@ -61,7 +64,9 @@ def original_settings(
 
     setup()
     sc.settings.preset = sc.Preset.ScanpyV1
-    ad.settings.zarr_write_format = 3  # default in anndata 0.13, warns otherwise
+    if pkg_version("anndata") < Version("0.13"):
+        ad.settings.zarr_write_format = 3
+    ad.settings.auto_shard_zarr_v3 = True
     sc.settings.logfile = sys.stderr
     sc.settings.verbosity = sc.Verbosity.hint
     sc.settings.autoshow = True
