@@ -130,19 +130,18 @@ def _calculate_res_dense(
     return residuals
 
 
-def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0913, PLR0915
+def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
     adata: AnnData,
     *,
-    theta: float = 100,
-    clip: float | None = None,
-    n_top_genes: int = 1000,
-    batch_key: str | None = None,
-    chunksize: int = 1000,
-    check_values: bool = True,
-    use: RepAcc | str | None = None,
-    layer: str | None = None,
-    subset: bool = False,
-    inplace: bool = True,
+    theta: float,
+    clip: float | None,
+    n_top_genes: int,
+    batch_key: str | None,
+    check_values: bool,
+    use: RepAcc | str | None,
+    layer: str | None,
+    subset: bool,
+    inplace: bool,
 ) -> pd.DataFrame | None:
     view_to_actual(adata)
     use = _resolve_obs(use)
@@ -313,9 +312,10 @@ def highly_variable_genes(  # noqa: PLR0913
     flavor: Literal["pearson_residuals"] = "pearson_residuals",
     check_values: bool = True,
     use: RepAcc | str | None = None,
-    layer: str | None = None,
     subset: bool = False,
     inplace: bool = True,
+    # deprecated
+    layer: str | None = None,
 ) -> pd.DataFrame | None:
     """Select highly variable genes using analytic Pearson residuals :cite:p:`Lause2021`.
 
@@ -394,7 +394,6 @@ def highly_variable_genes(  # noqa: PLR0913
             batch_key=batch_key,
             theta=theta,
             clip=clip,
-            chunksize=chunksize,
             subset=subset,
             check_values=check_values,
             inplace=inplace,
