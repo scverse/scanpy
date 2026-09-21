@@ -290,3 +290,98 @@ def test_gene_list_is_control(*, ctrl_as_ref: bool):
         sc.tl.score_genes(
             adata, gene_list="g3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
         )
+
+
+def _null_adata_with_levels(
+    n_levels: int, genes_per_level: int, n_obs: int, *, rng: np.random.Generator
+) -> AnnData:
+    """Genes at `n_levels` expression levels, each on in a random half of the cells."""
+    levels = np.repeat(np.linspace(1, 100, n_levels), genes_per_level)
+    x = rng.choice([1.0, 0.0], size=(n_obs, levels.size)) * levels
+    adata = AnnData(x.astype(np.float32))
+    adata.var_names = [f"g{i}" for i in range(levels.size)]
+    return adata
+
+
+def test_ctrl_per_gene_centers_null_scores() -> None:
+    """Scores of a gene set with no signal are centered at 0 (see #3845).
+
+    Six genes from the lowest expression level and two from high levels: sampling
+    reference genes once per bin over-weights the high bins and biases scores down.
+    """
+    adata = _null_adata_with_levels(25, 40, 500, rng=np.random.default_rng(0))
+    genes = [f"g{i}" for i in range(6)] + ["g999", "g801"]
+
+    per_bin, per_gene = (
+        sc.tl.score_genes(
+            adata, genes, ctrl_per_gene=ctrl_per_gene, rng=0, copy=True
+        ).obs["score"]
+        for ctrl_per_gene in (False, True)
+    )
+    assert per_bin.mean() < -10
+    assert abs(per_gene.mean()) < 0.05 * abs(per_bin.mean())
+
+
+@pytest.mark.parametrize(
+    "ctrl_as_ref", [True, False], ids=["ctrl_as_ref", "no_ctrl_as_ref"]
+)
+@pytest.mark.parametrize(
+    "array_type",
+    [np.asarray, sparse.csr_matrix],  # noqa: TID251
+    ids=["dense", "sparse"],
+)
+def test_ctrl_per_gene_weights_genes_equally(
+    *, ctrl_as_ref: bool, array_type: Callable
+) -> None:
+    """With whole bins as reference, the reference mean is the mean of per-gene bin means."""
+    from scipy.stats import rankdata
+
+    rng = np.random.default_rng(0)
+    lam = np.repeat([1.0, 5.0, 20.0, 50.0], 10)
+    x = rng.poisson(lam, size=(200, 40)).astype(np.float64)
+    adata = AnnData(array_type(x))
+    adata.var_names = [f"g{i}" for i in range(40)]
+    genes = ["g0", "g1", "g2", "g35"]  # three genes in one bin, one in another
+    n_bins = 5
+
+    sc.tl.score_genes(
+        adata,
+        genes,
+        ctrl_per_gene=True,
+        ctrl_as_ref=ctrl_as_ref,
+        ctrl_size=100,  # larger than any bin: every gene uses its whole bin
+        n_bins=n_bins,
+    )
+
+    # same binning as `score_genes`
+    cut = rankdata(x.mean(axis=0), method="min") // int(np.round(40 / (n_bins - 1)))
+    idx = adata.var_names.get_indexer(genes)
+    ref_means = [
+        # genes of `gene_list` never end up in the reference, whatever `ctrl_as_ref`
+        x[:, np.setdiff1d(np.flatnonzero(cut == cut[i]), idx)].mean(axis=1)
+        for i in idx
+    ]
+    expected = x[:, idx].mean(axis=1) - np.mean(ref_means, axis=0)
+    np.testing.assert_allclose(adata.obs["score"], expected, rtol=1e-10, atol=1e-10)
+
+
+def test_ctrl_per_gene_preset() -> None:
+    assert sc.Preset.ScanpyV1.score_genes.ctrl_per_gene is False
+    assert sc.Preset.ScanpyV2Preview.score_genes.ctrl_per_gene is True
+
+
+def test_ctrl_per_gene_sparse_vs_dense_with_nans() -> None:
+    """Missing values are ignored the same way for dense and sparse input."""
+    adata = _create_adata(
+        100, 1000, p_zero=0.3, p_nan=0.3, rng=np.random.default_rng(0)
+    )
+    genes = adata.var_names[:20]
+    dense = adata.copy()
+    dense.X = dense.X.toarray()
+
+    sparse_score, dense_score = (
+        sc.tl.score_genes(ad, genes, ctrl_per_gene=True, rng=0, copy=True).obs["score"]
+        for ad in (adata, dense)
+    )
+    assert np.isfinite(sparse_score).all()
+    np.testing.assert_allclose(sparse_score, dense_score, rtol=1e-6)
