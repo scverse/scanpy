@@ -57,11 +57,11 @@ def test_out_writes_elsewhere(adata: AnnData, name: str) -> None:
 
 @pytest.mark.parametrize("name", TRANSFORMS)
 def test_out_none_returns(adata: AnnData, name: str) -> None:
-    """`out=None` returns the result without touching `adata`."""
+    """`out=True` returns the result without touching `adata`."""
     from anndata.acc import A
 
     before = _orig(adata).copy()
-    res = TRANSFORMS[name](adata, use=A.layers["counts"], out=None)
+    res = TRANSFORMS[name](adata, use=A.layers["counts"], out=True)
     if name == "normalize_total":
         res = res["X"]
     assert res is not None
@@ -199,7 +199,7 @@ def test_score_genes_out(adata: AnnData) -> None:
     sc.tl.score_genes(adata, genes, out=A.obs["mine"])
     assert "mine" in adata.obs
 
-    scores = sc.tl.score_genes(adata, genes, out=None)
+    scores = sc.tl.score_genes(adata, genes, out=True)
     assert scores.shape == (adata.n_obs,)
     assert "score" not in adata.obs
 
@@ -226,7 +226,7 @@ def test_score_genes_out_and_score_name(adata: AnnData) -> None:
 
 
 def test_normalize_total_inplace_deprecated(adata: AnnData) -> None:
-    """`inplace=False` is the deprecated way to say `out=None`."""
+    """`inplace=False` is the deprecated way to say `out=True`."""
     with pytest.warns(FutureWarning, match=r"argument inplace is deprecated"):
         res = sc.pp.normalize_total(adata, target_sum=1, inplace=False)
     assert set(res) == {"X", "norm_factor"}

@@ -89,7 +89,7 @@ def _scale(data, **kwargs):
         extra="This will transform data from csc to csr format if `issparse(data)`.",
     ),
     use=doc_use("Which matrix to scale."),
-    out=doc_out("the place `use` reads from"),
+    out=doc_out(),
 )
 @expose_dispatch(_scale)
 @deprecated_arg("mask_obs", Deprecation("1.13.0", "Use `mask` instead."))
@@ -102,7 +102,7 @@ def scale[A: _Array](
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     mask: Mask | None = None,
     # deprecated
     copy: bool = False,
@@ -162,7 +162,7 @@ def scale[A: _Array](
     # validated here, before dispatch, so array input gets these messages too
     if not isinstance(data, AnnData):
         check_array_function_arguments(layer=layer, obsm=obsm, use=use)
-        if not isinstance(out, Default):
+        if out is not False:
             msg = "Argument `out` is only valid if an AnnData object is passed."
             raise TypeError(msg)
         return _scale(
@@ -343,7 +343,7 @@ def scale_anndata(
     zero_center: bool | Default = Default(preset=("scale", "zero_center")),
     max_value: float | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     mask: Mask | None = None,
     copy: bool = False,
     layer: str | None = None,
@@ -351,8 +351,8 @@ def scale_anndata(
     mask_obs: Mask | None = None,
 ) -> AnnData | _Array | None:
     if copy:
-        if out is None:
-            msg = "`copy=True` cannot be used with `out=None`."
+        if out is True:
+            msg = "`copy=True` cannot be used with `out=True`."
             raise TypeError(msg)
         adata = adata.copy()
     use = _resolve_obs(use)
@@ -372,12 +372,12 @@ def scale_anndata(
         zero_center=zero_center,
         max_value=max_value,
         # scaling is in-place, so leave the source alone unless we write back over it
-        copy=not isinstance(out, Default),
+        copy=out is not False,
         return_mean_std=True,
         mask=mask,
     )
     if (
-        unwritten := _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
+        unwritten := _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
     ) is not None:
         return unwritten
     return adata if copy else None

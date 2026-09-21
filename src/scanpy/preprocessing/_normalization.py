@@ -12,7 +12,6 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._docs import DEPR_COPY, doc_out, doc_use
-from .._settings import Default
 from .._utils import _doc_params, axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_arr, _write_out
 from ..get.get import _resolve_obs
@@ -132,11 +131,13 @@ def _normalize_total_helper(
 
 @_doc_params(
     use=doc_use("Which matrix to normalize."),
-    out=doc_out("the place `use` reads from"),
+    out=doc_out(),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("obsm", Deprecation("1.13.0", "Use `use`/`out` instead."))
-@deprecated_arg("inplace", Deprecation("1.13.0", "Use `out=None` instead."))
+@deprecated_arg(
+    "inplace", Deprecation("1.13.0", "Use `out=True` instead of `inplace=False`.")
+)
 @deprecated_arg("copy", DEPR_COPY)
 def normalize_total(  # noqa: PLR0912, PLR0913
     adata: AnnData,
@@ -146,7 +147,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     max_fraction: float = 0.05,
     key_added: str | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     # deprecated
     layer: str | None = None,
     obsm: str | None = None,
@@ -200,7 +201,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     {use}
     {out}
     inplace
-        `inplace=False` is `out=None`.
+        `inplace=False` is `out=True`.
     copy
         Whether to return a modified copy instead of modifying `adata` in place.
 
@@ -232,7 +233,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
            [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=None)["X"]
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, out=True)["X"]
     normalizing counts per cell
         finished (0:00:00)
     >>> X_norm
@@ -244,7 +245,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     ...     target_sum=1,
     ...     exclude_highly_expressed=True,
     ...     max_fraction=0.2,
-    ...     out=None,
+    ...     out=True,
     ... )["X"]
     normalizing counts per cell
     The following highly-expressed genes are not considered during normalization factor computation:
@@ -256,14 +257,14 @@ def normalize_total(  # noqa: PLR0912, PLR0913
            [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
 
     """
-    if not inplace:  # deprecated: `inplace=False` means `out=None`
-        if not isinstance(out, Default):
+    if not inplace:  # deprecated: `inplace=False` means `out=True`
+        if out is not False:
             msg = "Pass either `out` or `inplace`, not both."
             raise TypeError(msg)
-        out = None
+        out = True
     if copy:
-        if out is None:
-            msg = "`copy=True` cannot be used with `out=None`."
+        if out is True:
+            msg = "`copy=True` cannot be used with `out=True`."
             raise ValueError(msg)
         adata = adata.copy()
     use = _resolve_obs(use)
@@ -277,7 +278,7 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     x = _get_arr(adata, use, layer=layer, obsm=obsm)
     if isinstance(x, CSCBase):
         x = x.tocsr()
-    if not isinstance(out, Default):
+    if out is not False:
         # normalization is in-place, so leave the source alone
         # unless we write back over it
         x = x.copy()
@@ -303,9 +304,9 @@ def normalize_total(  # noqa: PLR0912, PLR0913
     if not isinstance(cell_subset, DaskArray) and not np.all(cell_subset):
         warn("Some cells have zero counts", UserWarning)
 
-    if out is not None and key_added is not None:
+    if out is not True and key_added is not None:
         adata.obs[key_added] = counts_per_cell
-    unwritten = _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
+    unwritten = _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
 
     logg.info(
         "    finished ({time_passed})",

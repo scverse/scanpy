@@ -71,14 +71,14 @@ use
 """
 
 
-def doc_out(default: str) -> str:
+def doc_out(default: str = "the place `use` reads from") -> str:
     """Docs for an `out` parameter."""
     return f"""\
 out
     Where to write the result, e.g. `A.layers['scaled']`.
     :class:`str`\\ s are :meth:`anndata.acc.AdAcc.resolve`\\ d, e.g. `'layers.scaled'`.
-    If :data:`None`, the result is returned instead of written.
-    If not given, it is written to {default}.\
+    If :data:`True`, the result is returned instead of written.
+    If :data:`False`, it is written to {default}.\
 """
 
 

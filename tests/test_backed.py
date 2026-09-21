@@ -30,7 +30,7 @@ from testing.scanpy._pytest.marks import needs
             # `out` makes `regress_out` copy `x`; that must not happen
             # before the backed check, or the copy would silently succeed
             "regress_out",
-            partial(sc.pp.regress_out, keys=["n_counts", "percent_mito"], out=None),
+            partial(sc.pp.regress_out, keys=["n_counts", "percent_mito"], out=True),
             "",
             id="regress_out_out",
         ),

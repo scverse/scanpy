@@ -368,11 +368,11 @@ def test_regress_out_ordinal():
 
     # results using only one processor
     single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=None
+        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=True
     )
     # results using 8 processors
     multi = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=8, out=None
+        adata, keys=["n_counts", "percent_mito"], n_jobs=8, out=True
     )
 
     assert adata.X.shape == single.shape
@@ -418,14 +418,14 @@ def test_regress_out_layer(dtype):
     adata.layers["counts"] = adata.X.copy().astype(dtype_cast)
 
     single = sc.pp.regress_out(
-        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=None
+        adata, keys=["n_counts", "percent_mito"], n_jobs=1, out=True
     )
     layer = sc.pp.regress_out(
         adata,
         use="layers.counts",
         keys=["n_counts", "percent_mito"],
         n_jobs=1,
-        out=None,
+        out=True,
     )
 
     assert adata.X.shape == single.shape
@@ -458,7 +458,7 @@ def test_regress_out_categorical():
     # create a categorical column
     adata.obs["batch"] = pd.Categorical(rng.integers(1, 4, size=adata.X.shape[0]))
 
-    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, out=None)
+    multi = sc.pp.regress_out(adata, keys="batch", n_jobs=8, out=True)
 
     assert adata.X.shape == multi.shape
 

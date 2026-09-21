@@ -114,7 +114,7 @@ def score_genes(  # noqa: PLR0913
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
     use: RepAcc | str | None = None,
-    out: VecRef | Default | None = Default("`.obs['score']`"),
+    out: VecRef | str | bool = False,
     rng: SeedLike | RNGLike | None = None,
     # deprecated
     score_name: str | None = None,
@@ -178,18 +178,18 @@ def score_genes(  # noqa: PLR0913
 
     """
     if score_name is not None:  # deprecated: names an `.obs` column
-        if not isinstance(out, Default):
+        if out is not False:
             msg = "Pass either `out` or `score_name`, not both."
             raise TypeError(msg)
         key = score_name
     else:
         key = "score"
-    start = logg.info(f"computing score {key if isinstance(out, Default) else out!r}")
+    start = logg.info(f"computing score {key if out is False else out!r}")
     rng = np.random.default_rng(rng)
     rng = _if_legacy_apply_global(rng)
     if copy:
-        if out is None:
-            msg = "`copy=True` cannot be used with `out=None`."
+        if out is True:
+            msg = "`copy=True` cannot be used with `out=True`."
             raise TypeError(msg)
         adata = adata.copy()
     use = _resolve_obs(use)
@@ -240,11 +240,11 @@ def score_genes(  # noqa: PLR0913
         time=start,
         deep=(
             "added\n"
-            f"    {key if isinstance(out, Default) else out!r}, score of gene set (adata.obs).\n"
+            f"    {key if out is False else out!r}, score of gene set (adata.obs).\n"
             f"    {len(control_genes)} total control genes are used."
         ),
     )
-    if (unwritten := _write_out(adata, scores, out, obs=key)) is not None:
+    if (unwritten := _write_out(adata, scores, out=out, obs=key)) is not None:
         return unwritten
     return adata if copy else None
 
@@ -391,7 +391,7 @@ def score_genes_cell_cycle(
     ctrl_size = min(len(s_genes), len(g2m_genes))
     for genes, name in [(s_genes, "S_score"), (g2m_genes, "G2M_score")]:
         adata.obs[name] = score_genes(
-            adata, genes, out=None, ctrl_size=ctrl_size, **kwargs
+            adata, genes, out=True, ctrl_size=ctrl_size, **kwargs
         )
     scores = adata.obs[["S_score", "G2M_score"]]
 

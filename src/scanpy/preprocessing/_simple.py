@@ -26,7 +26,7 @@ from sklearn.utils import check_array
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray
 from .._docs import DEPR_COPY, doc_out, doc_ref_compat, doc_rng, doc_use
-from .._settings import Default, settings
+from .._settings import settings
 from .._utils import (
     _doc_params,
     _resolve_axis,
@@ -318,7 +318,7 @@ def _log1p(data, *, base: Number | None = None, copy: bool = False):
 
 @_doc_params(
     use=doc_use("Which matrix to logarithmize."),
-    out=doc_out("the place `use` reads from"),
+    out=doc_out(),
 )
 @expose_dispatch(_log1p)
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
@@ -329,7 +329,7 @@ def log1p(
     *,
     base: Number | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     chunked: bool | None = None,
     chunk_size: int | None = None,
     # deprecated
@@ -371,7 +371,7 @@ def log1p(
         check_array_function_arguments(
             chunked=chunked, chunk_size=chunk_size, layer=layer, obsm=obsm, use=use
         )
-        if not isinstance(out, Default):
+        if out is not False:
             msg = "Argument `out` is only valid if an AnnData object is passed."
             raise TypeError(msg)
         return _log1p(data, copy=copy, base=base)
@@ -420,7 +420,7 @@ def log1p_anndata(  # noqa: PLR0912
     *,
     base: Number | None = None,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     chunked: bool = False,
     chunk_size: int | None = None,
     copy: bool = False,
@@ -431,8 +431,8 @@ def log1p_anndata(  # noqa: PLR0912
         logg.warning("adata.X seems to be already log-transformed.")
 
     if copy:
-        if out is None:
-            msg = "`copy=True` cannot be used with `out=None`."
+        if out is True:
+            msg = "`copy=True` cannot be used with `out=True`."
             raise TypeError(msg)
         adata = adata.copy()
     use = _resolve_obs(use)
@@ -444,7 +444,7 @@ def log1p_anndata(  # noqa: PLR0912
                 "Currently cannot perform chunked operations on arrays not stored in X."
             )
             raise NotImplementedError(msg)
-        if not isinstance(out, Default):
+        if out is not False:
             msg = "Currently cannot perform chunked operations with `out`."
             raise NotImplementedError(msg)
         if adata.isbacked and adata.file._filemode != "r+":
@@ -462,9 +462,9 @@ def log1p_anndata(  # noqa: PLR0912
             msg = f"{msg} without `chunked=True`"
             raise NotImplementedError(msg)
         # log1p is in-place, so leave the source alone unless we write back over it
-        x = _log1p(x, copy=not isinstance(out, Default), base=base)
+        x = _log1p(x, copy=out is not False, base=base)
         if (
-            unwritten := _write_out(adata, x, out, use=use, layer=layer, obsm=obsm)
+            unwritten := _write_out(adata, x, out=out, use=use, layer=layer, obsm=obsm)
         ) is not None:
             return unwritten
 
@@ -560,7 +560,7 @@ def numpy_regress_out(
 
 @_doc_params(
     use=doc_use("Which matrix to regress on.", legacy=("layer",)),
-    out=doc_out("the place `use` reads from"),
+    out=doc_out(),
 )
 @deprecated_arg("layer", Deprecation("1.13.0", "Use `use`/`out` instead."))
 @deprecated_arg("copy", DEPR_COPY)
@@ -569,7 +569,7 @@ def regress_out(  # noqa: PLR0912, PLR0915
     keys: str | Sequence[str],
     *,
     use: RepAcc | str | None = None,
-    out: RepAcc | str | Default | None = Default("the place `use` reads from"),
+    out: RepAcc | str | bool = False,
     n_jobs: int | None = None,
     # deprecated
     copy: bool = False,
@@ -610,8 +610,8 @@ def regress_out(  # noqa: PLR0912, PLR0915
 
     start = logg.info(f"regressing out {keys}")
     if copy:
-        if out is None:
-            msg = "`copy=True` cannot be used with `out=None`."
+        if out is True:
+            msg = "`copy=True` cannot be used with `out=True`."
             raise TypeError(msg)
         adata = adata.copy()
     use = _resolve_obs(use)
@@ -625,9 +625,9 @@ def regress_out(  # noqa: PLR0912, PLR0915
 
     x = _get_arr(adata, use, layer=layer)
     raise_not_implemented_error_if_backed_type(x, "regress_out")
-    if not isinstance(out, Default):
-        # regression is partly in-place, so leave the source alone
-        # unless we write back over it
+    if out is not False:
+        # regression is partly in-place,
+        # so leave the source alone unless we write back over it
         x = x.copy()
 
     if isinstance(x, CSBase):
@@ -709,7 +709,7 @@ def regress_out(  # noqa: PLR0912, PLR0915
         res = np.vstack(res).T
 
     logg.info("    finished", time=start)
-    if (unwritten := _write_out(adata, res, out, use=use, layer=layer)) is not None:
+    if (unwritten := _write_out(adata, res, out=out, use=use, layer=layer)) is not None:
         return unwritten
     return adata if copy else None
 

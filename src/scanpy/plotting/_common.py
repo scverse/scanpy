@@ -49,7 +49,7 @@ def highest_expr_genes(
     percent of total counts.
     """
     with own_deprecations():
-        norm_expr = normalize_total(adata, target_sum=100, out=None, layer=layer)["X"]
+        norm_expr = normalize_total(adata, target_sum=100, out=True, layer=layer)["X"]
     mean_percent = stats.mean(norm_expr, axis=0)
     top_idx = np.argsort(mean_percent)[::-1][:n_top]
     columns = (

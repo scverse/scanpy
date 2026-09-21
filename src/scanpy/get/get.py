@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, Literal, Unpack
 
-    from anndata.acc import Idx2D, RefAcc
+    from anndata.acc import Idx2D
 
     from .._compat import DaskArray
 
@@ -32,9 +32,10 @@ if TYPE_CHECKING:
 
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
-    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc
+    from anndata.acc import AdRef, GraphAcc, LayerAcc, MultiAcc, RefAcc
 else:
     AdRef = type("AdRef", (), dict(__module__="anndata.acc"))
+    RefAcc = type("RefAcc", (), dict(__module__="anndata.acc"))
     GraphAcc = type("GraphAcc", (), dict(__module__="anndata.acc"))
     LayerAcc = type("LayerAcc", (), dict(__module__="anndata.acc"))
     MultiAcc = type("MultiAcc", (), dict(__module__="anndata.acc"))
@@ -626,22 +627,23 @@ def _set_arr(
 def _write_out[V](
     adata: AnnData,
     val: V,
-    out: ArrAcc | VecRef | Default | None,
     *,
+    out: ArrAcc | VecRef | bool,
     use: ArrAcc | VecRef | None = None,
     **choices: Unpack[_SetRep],
 ) -> V | None:
     """Honor an `out` argument: write `val` and return `None`, or return `val` unwritten.
 
-    `out` is either an accessor to write to, `None` (return `val` instead of
-    writing it), or a `Default` meaning “the place `use`/`choices` read from”.
+    `out` is either an accessor to write to,
+    `True` (return `val` instead of writing it),
+    or `False` (the place `use`/`choices` read from).
     """
-    if out is None:
-        return val
-    if isinstance(out, Default):
-        _set_arr(adata, val, use, **choices)
-    else:
+    if isinstance(out, AdRef | RefAcc | str):
         _set_arr(adata, val, out)
+        return None
+    if out:
+        return val
+    _set_arr(adata, val, use, **choices)
     return None
 
 
