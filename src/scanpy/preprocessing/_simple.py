@@ -386,7 +386,7 @@ def log1p_array_api(x, *, base: Number | None = None, copy: bool = False):
     xp = array_namespace(x)
     result = xp.log1p(x)
     if base is not None:
-        result = result / float(np.log(base))
+        result = result / float(xp.log(base))
     return result
 
 

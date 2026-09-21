@@ -129,6 +129,11 @@ def _parse_mod(
         case "da":
             for chunk in parse(tags if tags else inner_includes, inner=True):
                 yield DaskArray(chunk=chunk)
+        case "xp":
+            if tags:  # pragma: no cover
+                msg = f"`xp` takes no tags {tags!r}"
+                raise ValueError(msg)
+            yield ArrayApi()
         case _:  # pragma: no cover
             msg = f"invalid module {mod!r}"
             raise ValueError(msg)

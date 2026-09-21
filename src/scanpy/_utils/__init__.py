@@ -820,6 +820,8 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
     from numbers import Integral
 
     data = x if isinstance(x, np.ndarray) else x.data
+    if np.issubdtype(data.dtype, np.unsignedinteger):
+        return True
     # Check no negatives
     if np.signbit(data).any():
         return False
@@ -832,6 +834,8 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
 @check_nonnegative_integers.register(HasArrayNamespace)
 def _check_nonnegative_integers_array_api(x: HasArrayNamespace, /) -> bool:
     xp = array_namespace(x)
+    if xp.isdtype(x.dtype, "unsigned integer"):
+        return True
     if bool(xp.any(x < 0)):
         return False
     if xp.isdtype(x.dtype, "integral"):
