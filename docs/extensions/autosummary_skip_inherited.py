@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sphinx.ext.autodoc import Options
 
 
-def skip_inherited(
+def skip_inherited(  # noqa: PLR0917
     app: Sphinx,
     what: Literal[
         "module", "class", "exception", "function", "method", "attribute", "property"

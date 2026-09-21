@@ -19,7 +19,7 @@ from scanpy._compat import CSRBase
 from testing.scanpy._helpers import _check_check_values_warnings
 from testing.scanpy._helpers.data import pbmc3k, pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import ARRAY_TYPES, as_dense_jax_array
+from testing.scanpy._pytest.params import ARRAY_TYPES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -378,19 +378,11 @@ def test_pearson_residuals_batch(
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 def test_compare_to_upstream(
     *,
-    request: pytest.FixtureRequest,
     flavor: Literal["seurat", "cell_ranger"],
     params: Any,
     ref_path: Path,
     array_type: Callable,
 ):
-    if array_type is as_dense_jax_array:
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="as_dense_jax_array hits DLPack readonly BufferError on this JAX version",
-                strict=False,
-            )
-        )
     hvg_info = pd.read_csv(ref_path)
 
     pbmc = pbmc68k_reduced()
@@ -657,7 +649,6 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(
-    request,
     subtests: pytest.Subtests,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
     array_type,
@@ -670,13 +661,6 @@ def test_subset_inplace_consistency(
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
-    if array_type is as_dense_jax_array:
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="as_dense_jax_array hits DLPack readonly BufferError on this JAX version",
-                strict=False,
-            )
-        )
     rng = np.random.default_rng(0)
     adata = (
         sc.datasets.blobs(n_observations=20, n_variables=80, rng=rng)

@@ -34,12 +34,7 @@ from array_api_compat import array_namespace
 from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
-from .._compat import (
-    CSBase,
-    DaskArray,
-    SpBase,
-    warn,
-)
+from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
