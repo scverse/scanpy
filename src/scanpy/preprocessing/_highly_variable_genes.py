@@ -96,6 +96,18 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     )
 
 
+@clip_square_sum.register(HasArrayNamespace)
+def _[A: HasArrayNamespace](data_batch: A, clip_val: np.ndarray) -> tuple[A, A]:
+    xp = array_namespace(data_batch)
+    batch_counts = xp.astype(data_batch, xp.float64, copy=True)
+    clip_val_broad = xp.broadcast_to(clip_val, batch_counts.shape)
+    # immutability issue, since jax cannot be mutated in place, we just create a new array with where
+    batch_counts = xp.where(batch_counts > clip_val_broad, clip_val_broad, batch_counts)
+    squared_batch_counts_sum = xp.sum(xp.square(batch_counts), axis=0)
+    batch_counts_sum = xp.sum(batch_counts, axis=0)
+    return squared_batch_counts_sum, batch_counts_sum
+
+
 # parallel=False needed for accuracy
 @numba.njit(cache=True, parallel=False)  # noqa: TID251
 def _sum_and_sum_squares_clipped(

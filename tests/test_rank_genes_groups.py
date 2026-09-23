@@ -22,10 +22,7 @@ from scanpy.tools._rank_genes_groups import _illico_results_to_iter, _RankGenes
 from testing.scanpy._helpers import random_mask
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
-from testing.scanpy._pytest.params import (
-    ARRAY_TYPES,
-    ARRAY_TYPES_MEM,
-)
+from testing.scanpy._pytest.params import ARRAY_TYPES, ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
