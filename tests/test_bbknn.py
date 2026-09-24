@@ -16,6 +16,7 @@ from scanpy.neighbors._bbknn import (
     _handle_transformer,
     _trim,
 )
+from testing.scanpy._pytest.marks import needs
 from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
@@ -87,6 +88,7 @@ def test_bbknn(adata: AnnData) -> None:
     assert (conns != conns.T).nnz == 0
 
 
+@needs.anndata_acc
 def test_bbknn_representation(adata: AnnData) -> None:
     dists = sc.pp.bbknn(adata, 3, batches="obs.batch", copy=True).obsp["distances"]
     # like `pp.neighbors`, we use the PCA – except for data narrower than `N_PCS`
@@ -94,7 +96,7 @@ def test_bbknn_representation(adata: AnnData) -> None:
 
     reps = dict(X=A.X, pca=A.obsm["pca"])
     for name in (used, unused):
-        sc.pp.bbknn(adata, 3, batches="obs.batch", use_rep=reps[name], key_added=name)
+        sc.pp.bbknn(adata, 3, batches="obs.batch", use=reps[name], key_added=name)
 
     # accessors round trip through `.uns` for readers like `tl.umap`
     assert _rep_from_json(adata.uns["pca"]["params"]["use_rep"]) == A.obsm["pca"]

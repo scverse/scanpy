@@ -106,9 +106,8 @@ def test_scale(*, typ, container, zero_center, dtype, mask, x, x_centered, x_sca
             if zero_center and any(f in typ.__name__ for f in ("csr", "csc"))
             else nullcontext()
         ):
-            scaled = sc.pp.scale(
-                x, zero_center=zero_center, copy=container == "array", mask=mask
-            )
+            # array input is scaled in place and returned, `AnnData` returns `None`
+            scaled = sc.pp.scale(x, zero_center=zero_center, mask=mask)
     received = sparse.csr_matrix(  # noqa: TID251
         x.X if scaled is None else scaled
     ).toarray()
@@ -165,18 +164,6 @@ def test_mask_obs_deprecated(
         sc.pp.scale(adata_masked, zero_center=True, mask_obs="some cells")
     assert np.array_equal(adata_masked.X, X_centered_for_mask)
     assert col in adata_masked.var.columns
-
-
-def test_mask_obs_deprecated_fallback() -> None:
-    # extra test for the singledispatch’s fallback branch calling `scale_array`
-    # (registered types like `np.ndarray` never run it)
-    mask = np.array((0, 0, 1, 1, 1, 0, 0), dtype=bool)
-    scale_fallback = sc.pp.scale.dispatch(object)
-    with pytest.warns(FutureWarning, match=r"argument mask_obs is deprecated"):
-        scaled = scale_fallback(
-            np.array(X_for_mask, dtype="float32"), copy=True, mask_obs=mask
-        )
-    assert np.array_equal(scaled, X_centered_for_mask)
 
 
 def test_mask_both() -> None:

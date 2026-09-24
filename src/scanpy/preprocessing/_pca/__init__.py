@@ -8,13 +8,20 @@ from scverse_misc import Deprecation, deprecated_arg
 
 from ... import logging as logg
 from ..._compat import CSBase, DaskArray, warn
-from ..._docs import doc_rng
+from ..._docs import doc_rng, doc_use
 from ..._keys import _embedding_keys
 from ..._settings import Default, settings
 from ..._utils import _doc_params, get_literal_vals, is_backed_type
 from ..._utils.random import _accepts_legacy_random_state, _legacy_random_state
 from ...get import _check_mask, _get_arr
-from ...get.get import _mask_arg, _mask_hvg, _ref_to_json
+from ...get.get import (
+    _is_multi,
+    _mask_arg,
+    _mask_hvg,
+    _ref_to_json,
+    _rep_to_json,
+    _resolve_rep,
+)
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
 
@@ -28,7 +35,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from ..._utils.random import RNGLike, SeedLike
-    from ...get.get import Mask
+    from ...get.get import Mask, RepAcc
 
 
 type MethodDaskML = type[dmld.PCA | dmld.IncrementalPCA | dmld.TruncatedSVD]
@@ -51,16 +58,20 @@ type SvdSolvPCACustom = Literal["covariance_eigh"]
 type SvdSolver = SvdSolvDaskML | SvdSolvSkearn | SvdSolvPCACustom
 
 
-@_doc_params(mask=doc_mask_var, rng=doc_rng)
+@_doc_params(
+    mask=doc_mask_var,
+    rng=doc_rng,
+    use=doc_use("Which matrix to run PCA on."),
+)
 @_accepts_legacy_random_state(0)
-# `stacklevel=2` skips `_accepts_legacy_random_state`’s wrapper frame
-@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."), stacklevel=2)
+@deprecated_arg("mask_var", Deprecation("1.13.0", "Use `mask` instead."))
+@deprecated_arg("layer", Deprecation("1.13.0", "Use `use` instead."))
+@deprecated_arg("obsm", Deprecation("1.13.0", "Use `use` instead."))
 def pca(  # noqa: PLR0912, PLR0913, PLR0915
     data: AnnData | np.ndarray | CSBase,
     n_comps: int | None = None,
     *,
-    layer: str | None = None,
-    obsm: str | None = None,
+    use: RepAcc | str | None = None,
     zero_center: bool = True,
     svd_solver: SvdSolver | None = None,
     chunked: bool = False,
@@ -71,6 +82,9 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     dtype: DTypeLike = "float32",
     key_added: str | Default | None = Default(preset=("pca", "key_added")),
     copy: bool = False,
+    # deprecated
+    layer: str | None = None,
+    obsm: str | None = None,
     mask_var: Mask | None = None,
 ) -> AnnData | np.ndarray | CSBase | None:
     r"""Principal component analysis :cite:p:`Pedregosa2011`.
@@ -110,10 +124,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     n_comps
         Number of principal components to compute. Defaults to 50,
         or 1 - minimum dimension size of selected representation.
-    layer
-        If provided, which element of :attr:`~anndata.AnnData.layers` to use for PCA instead of `X`.
-    obsm
-        If provided, which element of :attr:`~anndata.AnnData.obsm` to use for PCA instead of `X`.
+    {use}
     zero_center
         If `True`, compute (or approximate) PCA from covariance matrix.
         If `False`, performa a truncated SVD instead of PCA.
@@ -201,10 +212,12 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     logg_start = logg.info("computing PCA")
+    if use is not None:
+        use = _resolve_rep(use)
     rng = np.random.default_rng(rng)
-    if (layer is not None or obsm is not None) and chunked:
+    if (layer is not None or obsm is not None or use is not None) and chunked:
         # Current chunking implementation relies on pca being called on X
-        msg = "Cannot use `layer`/`obsm` and `chunked` at the same time."
+        msg = "Cannot use `use`/`layer`/`obsm` and `chunked` at the same time."
         raise NotImplementedError(msg)
 
     # chunked calculation is not randomized, anyways
@@ -215,7 +228,11 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
             "reproducibility, choose `svd_solver='arpack'`."
         )
     if return_anndata := isinstance(data, AnnData):
-        if (layer is None and obsm is None) and not chunked and is_backed_type(data.X):
+        if (
+            (layer is None and obsm is None and use is None)
+            and not chunked
+            and is_backed_type(data.X)
+        ):
             msg = f"PCA is not implemented for matrices of type {type(data.X)} with chunked as False"
             raise NotImplementedError(msg)
         adata = data.copy() if copy else data
@@ -223,8 +240,13 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         adata = AnnData(data)
 
     mask = _mask_arg(mask, mask_var, dim="var")
-    if not isinstance(mask, Default) and mask is not None and obsm is not None:
-        msg = "Argument `mask` is incompatible with `obsm`."
+    if (
+        not isinstance(mask, Default)
+        and mask is not None
+        and (obsm is not None or _is_multi(use))
+    ):
+        # `mask` selects variables, which an `.obsm` array’s columns aren’t
+        msg = "Argument `mask` is incompatible with `.obsm` arrays."
         raise ValueError(msg)
     mask = _mask_hvg(adata, mask)
     mask_param, mask_var = mask, _check_mask(adata, mask, "var")
@@ -236,8 +258,8 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
 
     logg.info(f"    with {n_comps=}")
 
-    x = _get_arr(adata_comp, layer=layer, obsm=obsm)
-    if is_backed_type(x) and (layer is not None or obsm is not None):
+    x = _get_arr(adata_comp, use, layer=layer, obsm=obsm)
+    if is_backed_type(x) and (layer is not None or obsm is not None or use is not None):
         msg = f"PCA is not implemented for matrices of type {type(x)} from layers/obsm"
         raise NotImplementedError(msg)
 
@@ -341,7 +363,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
         keys = _embedding_keys("pca", key_added)
         adata.obsm[keys.obsm] = x_pca
 
-        if obsm:
+        if obsm or _is_multi(use):
             pass  # see below, components are stored in `uns`.
         elif mask_var is not None:
             adata.varm[keys.varm] = np.zeros(shape=(adata.n_vars, n_comps))
@@ -355,10 +377,15 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
                 mask_var=_ref_to_json(mask_param),
                 **(dict(layer=layer) if layer is not None else {}),
                 **(dict(obsm=obsm) if obsm is not None else {}),
+                **(dict(use=_rep_to_json(use)) if use is not None else {}),
             ),
             variance=pca_.explained_variance_,
             variance_ratio=pca_.explained_variance_ratio_,
-            **(dict(components=pca_.components_.T) if obsm is not None else {}),
+            **(
+                dict(components=pca_.components_.T)
+                if obsm is not None or _is_multi(use)
+                else {}
+            ),
         )
 
         logg.info("    finished", time=logg_start)
