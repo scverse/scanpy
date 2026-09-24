@@ -649,7 +649,7 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
 )
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(
-    request,
+    request: pytest.FixtureRequest,
     subtests: pytest.Subtests,
     flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
     array_type,
@@ -662,11 +662,14 @@ def test_subset_inplace_consistency(
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
-    if array_type is as_dense_jax_array and flavor in {"seurat_v3", "seurat_v3_paper"}:
+    if (
+        array_type is as_dense_jax_array
+        and flavor in {"seurat_v3", "seurat_v3_paper"}
+        and batch_key is not None
+    ):
         request.applymarker(
             pytest.mark.xfail(
-                reason="seurat_v3 not jax compatible (numba aggregation + DLPack readonly limitation)",
-                strict=False,
+                reason="batched seurat_v3 not jax compatible (sc.get.aggregate)"
             )
         )
     rng = np.random.default_rng(0)

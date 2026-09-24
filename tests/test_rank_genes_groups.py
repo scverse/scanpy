@@ -143,7 +143,8 @@ def test_results_layers(
     adata.layers["to_test"] = adata.X.copy()
     # zero out random entries in a writable numpy copy (jax arrays are immutable)
     x = asarray(adata.X).copy()
-    x[np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)] = 0
+    mask = np.random.default_rng().integers(0, 2, adata.shape, dtype=bool)
+    x[mask] = 0
     adata.X = array_type(x)
     scores = get_true_scores(data_dir, method)["scores"]
 

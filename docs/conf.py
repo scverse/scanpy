@@ -188,6 +188,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.filter_genes": (["np", "sp", "da"], []),
     "pp.harmony_integrate": (["np"], []),
     "pp.hashsolo": (["np", "sp"], []),
+    # HVG flavor seurat_v3 has no array api support yet if `batch_key` is not None
     "pp.highly_variable_genes": (["np", "sp", "da", "xp"], ["da[sp[csc]]"]),
     "pp.log1p": (["np", "sp", "da", "xp"], []),
     "pp.neighbors": (["np", "sp"], []),
