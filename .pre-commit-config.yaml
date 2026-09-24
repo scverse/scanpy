@@ -8,7 +8,7 @@ repos:
     - --drop=abstract
     groups: [format]
 - repo: https://github.com/biomejs/pre-commit
-  rev: v2.5.12
+  rev: v2.5.13
   hooks:
   - id: biome-format
     groups: [format]
@@ -19,7 +19,7 @@ repos:
   - id: pyproject-fmt
     groups: [format]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.6
+  rev: v0.16.8
   hooks:
   - id: ruff-check
     args: [--fix, --exit-non-zero-on-fix]
