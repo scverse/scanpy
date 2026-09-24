@@ -178,6 +178,12 @@ ALL_SPS = [_docs.ScipySparse(fmt) for fmt in ("csr", "csc")]
             id="dask_inherits",
         ),
         pytest.param(
+            "np xp da",
+            "",
+            [_docs.Numpy(), _docs.ArrayApi(), _docs.DaskArray(_docs.Numpy())],
+            id="dask_skips_xp",
+        ),
+        pytest.param(
             "sp da[sp[csr]]",
             [],
             [*ALL_SPS, _docs.DaskArray(_docs.ScipySparse("csr"))],

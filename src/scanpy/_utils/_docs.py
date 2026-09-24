@@ -56,7 +56,7 @@ class ScipySparse(ArrayType):
         )
 
 
-type Inner = Numpy | ScipySparse
+type Inner = Numpy | ScipySparse | ArrayApi
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -89,7 +89,8 @@ def parse(
         yield from (t for t in parse(include) if t not in excluded)
         return
 
-    inner_includes = [i for i in include if not i.startswith(("da", "aa"))]
+    # bare `da` doesn’t imply `da[xp]`, as dask doesn’t support array API chunks yet
+    inner_includes = [i for i in include if not i.startswith(("da", "xp"))]
     for t in include:
         if (
             match := re.fullmatch(r"([^\[]+)(?:\[(.+)\])?", t)
@@ -113,11 +114,6 @@ def _parse_mod(
                 msg = f"`np` takes no tags {tags!r}"
                 raise ValueError(msg)
             yield Numpy()
-        case "aa":
-            if tags:  # pragma: no cover
-                msg = f"`aa` takes no tags {tags!r}"
-                raise ValueError(msg)
-            yield ArrayApi()
         case "sp":
             if tags - {"csr", "csc"}:  # pragma: no cover
                 msg = f"invalid tags {tags!r}"
