@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from fast_array_utils.numba import njit
+from fast_array_utils.types import HasArrayNamespace
 from scipy import sparse
 from scverse_misc import Deprecation, deprecated_arg
 
@@ -28,7 +29,6 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -290,6 +290,8 @@ class _RankGenes:
                 adata_comp = adata.raw
             x = adata_comp.X
         raise_not_implemented_error_if_backed_type(x, "rank_genes_groups")
+        if isinstance(x, HasArrayNamespace) and not isinstance(x, np.ndarray):
+            x = np.asarray(x)
 
         # for correct getnnz calculation
         if isinstance(x, CSBase):
@@ -886,7 +888,11 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
     >>> sc.pl.rank_genes_groups(adata)
 
     """
-    mask = _mask_arg(mask, mask_var, dim="var")
+    from scanpy import settings
+
+    # rank_genes_groups uses numba kernels internally, so need convert at entry.
+    if isinstance(mask_var, Default):
+        mask_var = settings.preset.rank_genes_groups.mask_var
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space
     # If scanpy presets are used for v2, use illico - prevents the presets from showing the `wilcoxon_illico` method and allows us to silently replace `wilcoxon`'s implementation.

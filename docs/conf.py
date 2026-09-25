@@ -188,14 +188,15 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "pp.filter_genes": (["np", "sp", "da"], []),
     "pp.harmony_integrate": (["np"], []),
     "pp.hashsolo": (["np", "sp"], []),
-    "pp.highly_variable_genes": (["np", "sp", "da"], ["da[sp[csc]]"]),
-    "pp.log1p": (["np", "sp", "da"], []),
+    # HVG flavor seurat_v3 has no array api support yet if `batch_key` is not None
+    "pp.highly_variable_genes": (["np", "sp", "da", "xp"], ["da[sp[csc]]"]),
+    "pp.log1p": (["np", "sp", "da", "xp"], []),
     "pp.neighbors": (["np", "sp"], []),
     "pp.normalize_total": (["np", "sp[csr]", "da"], []),
     "pp.pca": (["np", "sp", "da"], ["da[sp[csc]]"]),
     "pp.regress_out": (["np"], []),
     "pp.sample": (["np", "sp", "da"], []),
-    "pp.scale": (["np", "sp", "da"], []),
+    "pp.scale": (["np", "sp", "da", "xp"], []),
     "pp.scrublet": (["np", "sp"], []),
     "pp.scrublet_simulate_doublets": (["np", "sp"], []),
     "tl.dendrogram": (["np", "sp"], []),
@@ -207,7 +208,7 @@ array_support: dict[str, tuple[list[str], list[str]]] = {
     "tl.leiden": (["np", "sp"], []),  # only uses graph in obsp
     "tl.louvain": (["np", "sp"], []),  # only uses graph in obsp
     "tl.paga": (["np", "sp"], []),
-    "tl.rank_genes_groups": (["np", "sp"], []),
+    "tl.rank_genes_groups": (["np", "sp", "xp"], []),
     "tl.score_genes": (["np", "sp"], []),
     "tl.tsne": (["np", "sp"], []),
     "tl.umap": (["np", "sp"], []),

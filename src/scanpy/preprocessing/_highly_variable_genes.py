@@ -10,7 +10,9 @@ import numba
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from array_api_compat import array_namespace
 from fast_array_utils import stats
+from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
 from .._compat import CSBase, CSRBase, DaskArray, warn
@@ -92,6 +94,18 @@ def _(data_batch: CSBase, clip_val: np.ndarray) -> tuple[np.ndarray, np.ndarray]
         clip_val=clip_val,
         nnz=batch_counts.nnz,
     )
+
+
+@clip_square_sum.register(HasArrayNamespace)
+def _[A: HasArrayNamespace](data_batch: A, clip_val: np.ndarray) -> tuple[A, A]:
+    xp = array_namespace(data_batch)
+    batch_counts = xp.astype(data_batch, xp.float64, copy=True)
+    clip_val_broad = xp.broadcast_to(clip_val, batch_counts.shape)
+    # immutability issue, since jax cannot be mutated in place, we just create a new array with where
+    batch_counts = xp.where(batch_counts > clip_val_broad, clip_val_broad, batch_counts)
+    squared_batch_counts_sum = xp.sum(xp.square(batch_counts), axis=0)
+    batch_counts_sum = xp.sum(batch_counts, axis=0)
+    return squared_batch_counts_sum, batch_counts_sum
 
 
 # parallel=False needed for accuracy
@@ -408,12 +422,17 @@ def _highly_variable_genes_single_batch(
         # use out if possible. only possible since we copy the data matrix
         if isinstance(x, np.ndarray):
             np.expm1(x, out=x)
+        elif isinstance(x, HasArrayNamespace):
+            xp = array_namespace(x)
+            x = xp.expm1(x)
         else:
             x = np.expm1(x)
 
     mean, var = materialize_as_ndarray(stats.mean_var(x, axis=0, correction=1))
     # now actually compute the dispersion
-    mean[mean == 0] = 1e-12  # set entries equal to zero to small value
+    # JAX arrays are immutable, so in-place assignment (mean[mean == 0] = ...)
+    # fails; np.where allocates a fresh array instead
+    mean = np.where(mean == 0, 1e-12, mean)  # set zero entries to a small value
     dispersion = var / mean
     if flavor == "seurat":  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan
