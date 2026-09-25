@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import warnings
 from functools import partial
@@ -608,35 +609,6 @@ def _read_mtx(
     return AnnData(x)
 
 
-# Copy of pandas._libs.parsers.STR_NA_VALUES (pandas 2.3 / 3.0). Kept here so
-# production does not import pandas._libs. If
-# test_pandas_str_na_values_unchanged fails, pandas changed this set: update it,
-# then _10X_FEATURE_NA_VALUES follows automatically.
-_PANDAS_STR_NA_VALUES = frozenset({
-    "",
-    "#N/A",
-    "#N/A N/A",
-    "#NA",
-    "-1.#IND",
-    "-1.#QNAN",
-    "-NaN",
-    "-nan",
-    "1.#IND",
-    "1.#QNAN",
-    "<NA>",
-    "N/A",
-    "NA",
-    "NULL",
-    "NaN",
-    "None",
-    "n/a",
-    "nan",
-    "null",
-})
-# FlyBase gene symbol `nan` is a real identifier; treat other pandas NA tokens as missing.
-_10X_FEATURE_NA_VALUES = _PANDAS_STR_NA_VALUES - {"nan"}
-
-
 def _read_10x_mtx(
     path: Path,
     *,
@@ -659,30 +631,32 @@ def _read_10x_mtx(
         # transposing will convert e.g. CSR to CSC and vice versa
         sparse_format=dict(csr="csc", csc="csr", coo="coo")[sparse_format],
     ).T  # transpose the data
-    genes = pd.read_csv(
-        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
-        header=None,
-        sep="\t",
-        keep_default_na=False,
-        na_values=_10X_FEATURE_NA_VALUES,
+    genes = _read_str_tsv(
+        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}"
     )
     if var_names == "gene_symbols":
         var_names_idx = pd.Index(genes[1].array)
         if make_unique:
             var_names_idx = anndata.utils.make_index_unique(var_names_idx)
-        adata.var_names = var_names_idx.astype("str")
+        adata.var_names = var_names_idx
         adata.var["gene_ids"] = genes[0].array
     elif var_names == "gene_ids":
-        adata.var_names = genes[0].array.astype("str")
+        adata.var_names = genes[0].array
         adata.var["gene_symbols"] = genes[1].array
     else:
         msg = "`var_names` needs to be 'gene_symbols' or 'gene_ids'"
         raise ValueError(msg)
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
-    barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
-    adata.obs_names = barcodes[0].array.astype("str")
+    barcodes = _read_str_tsv(path / f"{prefix}barcodes.tsv{suffix}")
+    adata.obs_names = barcodes[0].array
     return adata
+
+
+def _read_str_tsv(path: Path) -> pd.DataFrame:
+    return pd.read_csv(
+        path, sep="\t", header=None, dtype=str, na_filter=False, quoting=csv.QUOTE_NONE
+    )
 
 
 # -------------------------------------------------------------------------------
