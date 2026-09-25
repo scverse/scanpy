@@ -99,6 +99,7 @@ def score_genes(  # noqa: PLR0913
     gene_list: Sequence[str] | pd.Index[str],
     *,
     ctrl_as_ref: bool | Default = Default(preset=("score_genes", "ctrl_as_ref")),
+    ctrl_per_gene: bool | Default = Default(preset=("score_genes", "ctrl_per_gene")),
     ctrl_size: int = 50,
     gene_pool: Sequence[str] | pd.Index[str] | None = None,
     n_bins: int = 25,
@@ -129,9 +130,18 @@ def score_genes(  # noqa: PLR0913
     ctrl_as_ref
         Allow the algorithm to use the control genes as reference.
         Will be changed to `False` in scanpy 2.0.
+    ctrl_per_gene
+        Sample `ctrl_size` reference genes for every gene in `gene_list` from that gene’s
+        expression bin, and weight the reference so that every gene contributes equally,
+        as described in :cite:t:`Tirosh2016`.
+        If `False`, reference genes are sampled once per expression bin that occurs in
+        `gene_list`, so bins holding many genes of `gene_list` are under-represented
+        in the reference and scores are biased (see :issue:`3845`).
+        Will be changed to `True` in scanpy 2.0.
     ctrl_size
-        Number of reference genes to be sampled from each bin. If `len(gene_list)` is not too
-        low, you can set `ctrl_size=len(gene_list)`.
+        Number of reference genes to be sampled from each bin
+        (for each gene of `gene_list` if `ctrl_per_gene=True`).
+        If `len(gene_list)` is not too low, you can set `ctrl_size=len(gene_list)`.
     gene_pool
         Genes for sampling the reference set. Default is all genes.
     n_bins
@@ -167,12 +177,14 @@ def score_genes(  # noqa: PLR0913
     adata = adata.copy() if copy else adata
     if isinstance(ctrl_as_ref, Default):
         ctrl_as_ref = settings.preset.score_genes.ctrl_as_ref
+    if isinstance(ctrl_per_gene, Default):
+        ctrl_per_gene = settings.preset.score_genes.ctrl_per_gene
     use_raw = check_use_raw(adata, use_raw, layer=layer)
     if is_backed_type(adata.X) and not use_raw:
         msg = f"score_genes is not implemented for matrices of type {type(adata.X)}"
         raise NotImplementedError(msg)
 
-    gene_list, gene_pool, get_subset = _check_score_genes_args(
+    gene_list, gene_pool, get_subset, var_names = _check_score_genes_args(
         adata, gene_list, gene_pool, use_raw=use_raw, layer=layer
     )
     del use_raw, layer
@@ -181,16 +193,20 @@ def score_genes(  # noqa: PLR0913
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
+    control_sets = list(
+        _score_genes_bins(
+            gene_list,
+            gene_pool,
+            ctrl_as_ref=ctrl_as_ref,
+            ctrl_per_gene=ctrl_per_gene,
+            ctrl_size=ctrl_size,
+            n_bins=n_bins,
+            get_subset=get_subset,
+            rng=rng,
+        )
+    )
     control_genes = pd.Index([], dtype="string")
-    for r_genes in _score_genes_bins(
-        gene_list,
-        gene_pool,
-        ctrl_as_ref=ctrl_as_ref,
-        ctrl_size=ctrl_size,
-        n_bins=n_bins,
-        get_subset=get_subset,
-        rng=rng,
-    ):
+    for r_genes in control_sets:
         control_genes = control_genes.union(r_genes)
 
     if len(control_genes) == 0:
@@ -199,10 +215,15 @@ def score_genes(  # noqa: PLR0913
             msg += " Try setting `ctrl_as_ref=False`."
         raise RuntimeError(msg)
 
-    means_list, means_control = (
-        _nan_means(get_subset(genes), axis=1, dtype="float64")
-        for genes in (gene_list, control_genes)
-    )
+    if ctrl_per_gene:
+        means_list = _nan_means(get_subset(gene_list), axis=1, dtype="float64")
+        weights = _control_weights(control_sets, control_genes, var_names)
+        means_control = _weighted_nan_means(get_subset(control_genes), weights)
+    else:
+        means_list, means_control = (
+            _nan_means(get_subset(genes), axis=1, dtype="float64")
+            for genes in (gene_list, control_genes)
+        )
     score = means_list - means_control
 
     adata.obs[score_name] = pd.Series(
@@ -228,10 +249,11 @@ def _check_score_genes_args(
     *,
     layer: str | None,
     use_raw: bool,
-) -> tuple[pd.Index[str], pd.Index[str], _GetSubset]:
+) -> tuple[pd.Index[str], pd.Index[str], _GetSubset, pd.Index[str]]:
     """Restrict `gene_list` and `gene_pool` to present genes in `adata`.
 
-    Also returns a function to get subset of `adata.X` based on a set of genes passed.
+    Also returns a function to get subset of `adata.X` based on a set of genes passed,
+    and the `var_names` it indexes into.
     """
     var_names = adata.raw.var_names if use_raw else adata.var_names
     gene_list = pd.Index([gene_list] if isinstance(gene_list, str) else gene_list)
@@ -258,7 +280,7 @@ def _check_score_genes_args(
         idx = var_names.get_indexer(genes)
         return x[:, idx]
 
-    return gene_list, gene_pool, get_subset
+    return gene_list, gene_pool, get_subset, var_names
 
 
 def _score_genes_bins(
@@ -266,6 +288,7 @@ def _score_genes_bins(
     gene_pool: pd.Index[str],
     *,
     ctrl_as_ref: bool,
+    ctrl_per_gene: bool,
     ctrl_size: int,
     n_bins: int,
     get_subset: _GetSubset,
@@ -280,12 +303,18 @@ def _score_genes_bins(
     obs_cut = obs_avg.rank(method="min") // n_items
     keep_ctrl_in_obs_cut = np.False_ if ctrl_as_ref else obs_cut.index.isin(gene_list)
 
-    # now pick `ctrl_size` genes from every cut
-    cuts = np.unique(obs_cut.loc[gene_list])
+    # now pick `ctrl_size` genes from every cut (or for every gene, from its cut)
+    cuts = (
+        obs_cut.loc[gene_list].to_numpy()
+        if ctrl_per_gene
+        else np.unique(obs_cut.loc[gene_list])
+    )
+    warned: set[float] = set()
     # spawn sub-rngs so this can maybe be parallelized without changing random number generation
     for cut, sub_rng in zip(cuts, rng.spawn(len(cuts)), strict=True):
         r_genes: pd.Index[str] = obs_cut[(obs_cut == cut) & ~keep_ctrl_in_obs_cut].index
-        if len(r_genes) == 0:
+        if len(r_genes) == 0 and cut not in warned:
+            warned.add(cut)
             msg = (
                 f"No control genes for {cut=}. You might want to increase "
                 f"gene_pool size (current size: {len(gene_pool)})"
@@ -296,6 +325,46 @@ def _score_genes_bins(
         if ctrl_as_ref:  # otherwise `r_genes` is already filtered
             r_genes = r_genes.difference(gene_list)
         yield r_genes
+
+
+def _control_weights(
+    control_sets: Sequence[pd.Index[str]],
+    control_genes: pd.Index[str],
+    var_names: pd.Index[str],
+) -> NDArray[np.float64]:
+    """Weight reference genes so that every gene of `gene_list` contributes equally.
+
+    Following :cite:t:`Tirosh2016`, the reference is the concatenation of one matched
+    control set per gene, so its mean equals the average of the per-gene control means.
+    """
+    sets = [s for s in control_sets if len(s) > 0]
+    weights = pd.Series(0.0, index=control_genes)
+    for s in sets:
+        weights.loc[s] += 1 / len(s)
+    weights /= len(sets)
+    # `get_subset` returns the full matrix (in `var_names` order) when all genes are selected
+    order = var_names if len(control_genes) == len(var_names) else control_genes
+    return weights.reindex(order).to_numpy()
+
+
+def _weighted_nan_means(
+    x: np.ndarray | CSBase, weights: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    """Weighted mean of each row, ignoring NaNs (weighted version of :func:`_nan_means`)."""
+    if isinstance(x, CSBase):
+        x = x.tocsr(copy=True)
+        is_nan = np.isnan(x.data)
+        x_nan = x.copy()
+        x_nan.data = is_nan.astype(np.float64)
+        x.data[is_nan] = 0
+        num = x @ weights
+        den = weights.sum() - x_nan @ weights
+    else:
+        is_nan = np.isnan(x)
+        num = np.where(is_nan, 0, x) @ weights
+        den = ~is_nan @ weights
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.asarray(num / den, dtype=np.float64).ravel()
 
 
 def _nan_means(
