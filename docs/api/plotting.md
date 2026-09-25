@@ -17,6 +17,13 @@ See {doc}`/tutorials/plotting/core` for an overview of how to use these function
 See the {ref}`settings` section for all important plotting configurations.
 ```
 
+```{note}
+In the new (HoloViews) backend, every parameter taking a dimension or accessor
+(e.g. `A.obs["cell_type"]` or `A.layers["counts"]`) also accepts an equivalent
+string spec (e.g. `"obs.cell_type"` or `"layers.counts"`),
+which is resolved using {meth}`anndata.acc.AdAcc.resolve`.
+```
+
 (pl-generic)=
 
 ## Generic
