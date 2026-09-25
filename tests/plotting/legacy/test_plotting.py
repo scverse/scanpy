@@ -926,6 +926,29 @@ def test_rank_genes_group_axes(plot_cmp):
     plt.close()
 
 
+@pytest.mark.parametrize(
+    ("plot_func", "kwargs"),
+    [
+        pytest.param(sc.pl.rank_genes_groups, {}, id="rank_genes_groups"),
+        pytest.param(
+            sc.pl.rank_genes_groups_dotplot,
+            {"dendrogram": False},
+            id="shared-rank-genes-groups-plots",
+        ),
+    ],
+)
+def test_rank_genes_groups_single_group_string(
+    plot_func: Callable[..., Any], kwargs: dict[str, Any]
+) -> None:
+    adata = pbmc68k_reduced()
+    sc.tl.rank_genes_groups(adata, "bulk_labels")
+
+    result = plot_func(adata, groups="Dendritic", n_genes=2, show=False, **kwargs)
+
+    assert result is not None
+    plt.close("all")
+
+
 @pytest.fixture(scope="session")
 def gene_symbols_adatas_session() -> tuple[AnnData, AnnData]:
     """Create two anndata objects which are equivalent except for var_names.
