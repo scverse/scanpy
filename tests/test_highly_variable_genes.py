@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal
 
+    from scanpy._settings.presets import HVGFlavor
+
 FILE = Path(__file__).parent / Path("_scripts/seurat_hvg.csv")
 FILE_V3 = Path(__file__).parent / Path("_scripts/seurat_hvg_v3.csv.gz")
 FILE_V3_BATCH = Path(__file__).parent / Path("_scripts/seurat_hvg_v3_batch.csv")
@@ -638,6 +640,7 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
         "cell_ranger",
         pytest.param("seurat_v3", marks=needs.skmisc),
         pytest.param("seurat_v3_paper", marks=needs.skmisc),
+        "poisson_gene_selection",
     ],
 )
 @pytest.mark.parametrize(
@@ -651,14 +654,14 @@ def test_seurat_v3_bad_chunking(adata, array_type, flavor):
 @pytest.mark.parametrize("batch_key", [None, "batch"])
 def test_subset_inplace_consistency(
     subtests: pytest.Subtests,
-    flavor: Literal["seurat", "cell_ranger", "seurat_v3", "seurat_v3_paper"],
+    flavor: HVGFlavor,
     array_type,
     batch_key: Literal["batch"] | None,
 ) -> None:
     """Tests `n_top_genes=n`.
 
     - if `inplace` and `subset` interact correctly
-    - for both the `seurat` and `cell_ranger` flavors
+    - for all flavors
     - for dask arrays and non-dask arrays
     - for both with and without batch_key
     """
