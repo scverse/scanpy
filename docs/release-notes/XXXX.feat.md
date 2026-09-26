@@ -1,0 +1,1 @@
+Add `flavor='poisson_gene_selection'` to {func}`~scanpy.pp.highly_variable_genes`, which ranks genes by zero enrichment relative to a Poisson model, using the closed form of the `scvi-tools` Monte-Carlo estimate with output matching `rapids-singlecell` {smaller}`YOUR NAME`
