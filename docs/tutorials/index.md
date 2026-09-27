@@ -25,8 +25,8 @@ plotting/index
 ```{seealso}
 For more powerful tools for analysing single cell dynamics, check out the scverse ecosystem packages:
 
-* [CellRank](https://cellrank.readthedocs.io)
-* [Dynamo](https://dynamo-release.readthedocs.io/)
+* {doc}`CellRank <cellrank:index>`
+* {doc}`Dynamo <dynamo:index>`
 ```
 
 ```{toctree}
@@ -48,6 +48,6 @@ Scanpy used to have tutorials for its (now deprecated) spatial data functionalit
 For up-to-date tutorials on working with spatial data, see:
 
 * SquidPy {doc}`squidpy:notebooks/tutorials/index`
-* [SpatialData tutorials](https://spatialdata.scverse.org/page/tutorials/notebooks/notebooks.html)
+* SpatialData {doc}`spatialdata:tutorials/notebooks/notebooks`
 * [Scverse ecosystem spatial tutorials](https://scverse.org/learn/)
 ```
