@@ -65,9 +65,9 @@ def phenograph(  # noqa: PLR0913
     between cells and then identifying communities in this graph. It supports both
     Louvain_ and Leiden_ algorithms for community detection.
 
-    .. _Louvain: https://louvain-igraph.readthedocs.io/en/latest/
+    .. _Louvain: https://louvain-igraph.readthedocs.io/
 
-    .. _Leiden: https://leidenalg.readthedocs.io/en/latest/reference.html
+    .. _Leiden: https://leidenalg.readthedocs.io/page/reference.html
 
     .. note::
        More information and bug reports `here

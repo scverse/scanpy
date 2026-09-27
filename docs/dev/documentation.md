@@ -22,7 +22,7 @@ When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
 
-[towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
+[towncrier create]: https://towncrier.readthedocs.io/page/tutorial.html#creating-news-fragments
 
 ## docstrings format
 
@@ -39,7 +39,7 @@ Some key points:
 
 Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned here.
 
-[napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
+[napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/page/example_numpy.html#example-numpy
 [sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 [`sc.tl.leiden`’s docstring]: https://github.com/scverse/scanpy/blob/350c3424d2f96c4a3a7bb3b7d0428d38d842ebe8/src/scanpy/tools/_leiden.py#L49-L120
 
