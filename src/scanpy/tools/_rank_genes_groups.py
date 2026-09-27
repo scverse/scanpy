@@ -601,7 +601,9 @@ class _RankGenes:
             if len(self.groups_order) <= 2:  # binary logistic regression
                 # Binary coefficients point toward classes_[1]; orient them
                 # toward the group under which the scores will be reported.
-                scores = scores_all[0] if cat_code == clf.classes_[1] else -scores_all[0]
+                scores = (
+                    scores_all[0] if cat_code == clf.classes_[1] else -scores_all[0]
+                )
             else:
                 # index of scores row is index of cat code in array of existing codes
                 scores_idx: int = np.argmax(existing_codes == cat_code)

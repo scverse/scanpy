@@ -83,7 +83,12 @@ def test_binary_logreg_scores_point_toward_requested_group(categories, target):
     )
     reference = "B" if target == "A" else "A"
     sc.tl.rank_genes_groups(
-        adata, "group", groups=[target], reference=reference, method="logreg", use_raw=False
+        adata,
+        "group",
+        groups=[target],
+        reference=reference,
+        method="logreg",
+        use_raw=False,
     )
     result = adata.uns["rank_genes_groups"]
     names = result["names"][target]
