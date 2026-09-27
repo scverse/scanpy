@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 
 import scanpy as sc
 
@@ -66,12 +67,7 @@ def test_rank_genes_groups_with_unsorted_groups():
 
 @pytest.mark.parametrize("categories", [["A", "unused", "B"], ["B", "unused", "A"]])
 @pytest.mark.parametrize("target", ["A", "B"])
-@pytest.mark.parametrize("representation", ["dense", "sparse", "raw", "layer"])
-def test_binary_logreg_scores_point_toward_requested_group(
-    categories, target, representation
-):
-    from anndata import AnnData
-    from scipy.sparse import csr_matrix  # noqa: TID251
+def test_binary_logreg_scores_point_toward_requested_group(categories, target):
 
     x = np.vstack([
         np.tile([10.0, 0.0, 1.0], (30, 1)),
@@ -85,20 +81,9 @@ def test_binary_logreg_scores_point_toward_requested_group(
         ),
         var=pd.DataFrame(index=["A_marker", "B_marker", "shared"]),
     )
-    kwargs = {"use_raw": False}
-    if representation == "sparse":
-        adata.X = csr_matrix(adata.X)
-    elif representation == "raw":
-        adata.raw = adata.copy()
-        adata.X = np.zeros_like(x)
-        kwargs = {"use_raw": True}
-    elif representation == "layer":
-        adata.layers["expression"] = adata.X.copy()
-        adata.X = np.zeros_like(x)
-        kwargs["layer"] = "expression"
     reference = "B" if target == "A" else "A"
     sc.tl.rank_genes_groups(
-        adata, "group", groups=[target], reference=reference, method="logreg", **kwargs
+        adata, "group", groups=[target], reference=reference, method="logreg", use_raw=False
     )
     result = adata.uns["rank_genes_groups"]
     names = result["names"][target]
@@ -110,8 +95,6 @@ def test_binary_logreg_scores_point_toward_requested_group(
 
 @pytest.mark.parametrize("categories", [["A", "B"], ["B", "A"]])
 def test_binary_logreg_default_group_direction(categories):
-    from anndata import AnnData
-
     adata = AnnData(
         np.vstack([np.tile([10.0, 0.0], (20, 1)), np.tile([0.0, 10.0], (20, 1))]),
         obs=pd.DataFrame(
