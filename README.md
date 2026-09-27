@@ -47,7 +47,7 @@ In other words, we do not officially support (or encourage users to do) somethin
 However, we are aware that many users do use these internal APIs and thus encourage them to [open an issue][] or migrate to the public API.
 That is, if something is missing from our public API as documented, for example a feature you wish to be exported publicly, please open an issue.
 
-[api section]: https://scanpy.readthedocs.io/en/stable/api.html
+[api section]: https://scanpy.readthedocs.io/en/stable/api/index.html
 [leading underscore]: https://peps.python.org/pep-0008/#public-and-internal-interfaces
 [open an issue]: https://github.com/scverse/scanpy/issues/new/choose
 
