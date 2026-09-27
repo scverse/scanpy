@@ -1,6 +1,6 @@
 """Benchmark tool operations in Scanpy.
 
-API documentation: <https://scanpy.readthedocs.io/en/stable/api/tools.html>.
+API documentation: <https://scanpy.scverse.org/page/api/tools.html>.
 """
 
 from __future__ import annotations

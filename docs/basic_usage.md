@@ -2,4 +2,4 @@
 orphan: true
 ---
 
-This file has moved to <https://scanpy.readthedocs.io/en/stable/usage-principles.html>.
+This file has moved to <https://scanpy.scverse.org/page/usage-principles.html>.

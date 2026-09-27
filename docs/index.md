@@ -40,14 +40,14 @@ Find a bug? Interested in improving scanpy? Checkout our GitHub for the latest d
 :::
 
 :::{grid-item-card} GPU acceleration {octicon}`rocket;1em;`
-:link: https://rapids-singlecell.readthedocs.io
+:link: https://rapids-singlecell.scverse.org/
 
 Working with millions of cells and have a GPU available?
 [rapids-singlecell][rsc] mirrors the scanpy API with order-of-magnitude speedups on core preprocessing, neighbors, embedding, and clustering steps.
 :::
 ::::
 
-[rsc]: https://rapids-singlecell.readthedocs.io
+[rsc]: https://rapids-singlecell.scverse.org/
 
 **Other resources**
 

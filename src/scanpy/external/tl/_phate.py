@@ -59,7 +59,7 @@ def phate(  # noqa: PLR0913
     visualization of biological progressions.
 
     For more information and access to the object-oriented interface, read the
-    `PHATE documentation <https://phate.readthedocs.io/>`__.  For
+    :doc:`PHATE documentation <phate:index>`.  For
     tutorials, bug reports, and R/MATLAB implementations, visit the `PHATE
     GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`__. For help
     using PHATE, go `here <https://krishnaswamylab.org/get-help>`__.

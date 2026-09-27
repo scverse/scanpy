@@ -78,7 +78,7 @@ dependencies = [
 ]
 urls.Bluesky = "https://bsky.app/profile/scverse.bsky.social"
 urls.Discourse = "https://discourse.scverse.org/c/help/scanpy/37"
-urls.Documentation = "https://scanpy.readthedocs.io/"
+urls.Documentation = "https://scanpy.scverse.org/"
 urls.Homepage = "https://scanpy.org"
 urls.Source = "https://github.com/scverse/scanpy"
 urls.Twitter = "https://x.com/scverse_team"

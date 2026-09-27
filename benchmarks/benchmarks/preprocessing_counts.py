@@ -1,6 +1,6 @@
 """Benchmark preprocessing operations in Scanpy that run on counts.
 
-API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.html>.
+API documentation: <https://scanpy.scverse.org/page/api/preprocessing.html>.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ class Agg:  # noqa: D101
         counts_src_key = "counts_csc" if use_csc else "counts"
         if use_dask:
             if agg_name == "median":
-                # Skip this one: https://asv.readthedocs.io/en/stable/writing_benchmarks.html#setup-and-teardown-functions
+                # Skip this one: https://asv.readthedocs.io/page/writing_benchmarks.html#setup-and-teardown-functions
                 raise NotImplementedError()
             z = zarr.open("lung93k.zarr")
             self.adata = ad.AnnData(
