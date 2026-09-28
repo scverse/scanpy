@@ -873,28 +873,47 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
         msg = f"Expected number of y-labels to be `{len(keys)}`, found `{len(ylabel)}`."
         raise ValueError(msg)
 
+    user_hue = kwds.get("hue")
     if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby, *keys], layer=layer, use_raw=use_raw)
+        obs_df = get.obs_df(
+            adata,
+            keys=list(
+                dict.fromkeys([groupby, *keys, *([user_hue] if user_hue else [])])
+            ),
+            layer=layer,
+            use_raw=use_raw,
+        )
+        hue_key = user_hue or groupby
+        kwds["hue"] = hue_key
         if kwds.get("palette") is None:
-            if not isinstance(adata.obs[groupby].dtype, CategoricalDtype):
+            if isinstance(adata.obs[hue_key].dtype, CategoricalDtype):
+                _utils.add_colors_for_categorical_sample_annotation(adata, hue_key)
+                kwds["palette"] = dict(
+                    zip(
+                        obs_df[hue_key].cat.categories,
+                        adata.uns[f"{hue_key}_colors"],
+                        strict=True,
+                    )
+                )
+            elif user_hue is None:
                 msg = (
                     f"The column `adata.obs[{groupby!r}]` needs to be categorical, "
                     f"but is of dtype {adata.obs[groupby].dtype}."
                 )
                 raise ValueError(msg)
-            _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
-            kwds["hue"] = groupby
-            kwds["palette"] = dict(
-                zip(
-                    obs_df[groupby].cat.categories,
-                    adata.uns[f"{groupby}_colors"],
-                    strict=True,
-                )
-            )
+            # A user-supplied non-categorical hue is left to seaborn's own
+            # palette handling (e.g. a continuous colormap).
     else:
-        obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
+        obs_df = get.obs_df(
+            adata,
+            keys=list(dict.fromkeys([*keys, *([user_hue] if user_hue else [])])),
+            layer=layer,
+            use_raw=use_raw,
+        )
     if groupby is None:
-        obs_tidy = pd.melt(obs_df, value_vars=keys)
+        obs_tidy = pd.melt(
+            obs_df, value_vars=keys, id_vars=[user_hue] if user_hue else None
+        )
         x = "variable"
         ys = ["value"]
     else:
@@ -980,6 +999,13 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 **kwds,
             )
             if stripplot:
+                # When the user colors violins by a second grouping, dodge the
+                # strip points the same way so they land on their violins.
+                strip_hue = (
+                    {"hue": kwds["hue"], "dodge": True, "legend": False}
+                    if kwds.get("hue") and kwds["hue"] != x
+                    else {}
+                )
                 sns.stripplot(
                     x=x,
                     y=y,
@@ -989,6 +1015,7 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                     color="black",
                     size=size,
                     ax=ax_base,
+                    **strip_hue,
                 )
             if xlabel == "" and groupby is not None and rotation is None:
                 xlabel = groupby.replace("_", " ")
