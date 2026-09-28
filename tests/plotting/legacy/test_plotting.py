@@ -406,6 +406,31 @@ def test_dotplot_style_no_reset():
     assert plot.cmap == "winter", "style() should not reset unspecified parameters"
 
 
+@pytest.mark.parametrize(
+    "plot_fn",
+    [sc.pl.dotplot, sc.pl.matrixplot],
+    ids=["dotplot", "matrixplot"],
+)
+@pytest.mark.parametrize(
+    ("values", "expected_suffixes"),
+    [
+        pytest.param(
+            pd.Categorical(np.tile([1, 2], 350)), ("_1", "_2"), id="int_categorical"
+        ),
+        pytest.param(np.tile([0.5, 2.0], 350), ("_0.5", "_2.0"), id="numeric"),
+    ],
+)
+def test_multi_groupby_nonstring(plot_fn, values, expected_suffixes):
+    """Multi-column `groupby` accepts non-string columns."""
+    adata = pbmc68k_reduced()
+    adata.obs["num"] = values
+    plot = plot_fn(adata, adata.var_names[:4], ["bulk_labels", "num"], return_fig=True)
+    categories = list(plot.categories)
+    assert len(categories) == 2 * adata.obs["bulk_labels"].nunique()
+    first_label = adata.obs["bulk_labels"].cat.categories[0]
+    assert categories[:2] == [f"{first_label}{s}" for s in expected_suffixes]
+
+
 def test_dotplot_add_totals(plot_cmp):
     pbmc = pbmc68k_reduced()
     markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}
