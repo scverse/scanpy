@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import warnings
 from functools import partial
@@ -620,28 +621,32 @@ def _read_10x_mtx(
         cache=cache,
         cache_compression=cache_compression,
     ).T  # transpose the data
-    genes = pd.read_csv(
-        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}",
-        header=None,
-        sep="\t",
+    genes = _read_str_tsv(
+        path / f"{prefix}{'genes' if is_legacy else 'features'}.tsv{suffix}"
     )
     if var_names == "gene_symbols":
         var_names_idx = pd.Index(genes[1].array)
         if make_unique:
             var_names_idx = anndata.utils.make_index_unique(var_names_idx)
-        adata.var_names = var_names_idx.astype("str")
+        adata.var_names = var_names_idx
         adata.var["gene_ids"] = genes[0].array
     elif var_names == "gene_ids":
-        adata.var_names = genes[0].array.astype("str")
+        adata.var_names = genes[0].array
         adata.var["gene_symbols"] = genes[1].array
     else:
         msg = "`var_names` needs to be 'gene_symbols' or 'gene_ids'"
         raise ValueError(msg)
     if not is_legacy:
         adata.var["feature_types"] = genes[2].array
-    barcodes = pd.read_csv(path / f"{prefix}barcodes.tsv{suffix}", header=None)
+    barcodes = _read_str_tsv(path / f"{prefix}barcodes.tsv{suffix}")
     adata.obs_names = barcodes[0].array
     return adata
+
+
+def _read_str_tsv(path: Path) -> pd.DataFrame:
+    return pd.read_csv(
+        path, sep="\t", header=None, dtype=str, na_filter=False, quoting=csv.QUOTE_NONE
+    )
 
 
 @old_positionals("ext", "compression", "compression_opts")

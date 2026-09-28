@@ -87,24 +87,55 @@ def test_read_10x(
 
 
 @pytest.mark.parametrize(
-    ("genes", "col_dtypes"),
+    ("genes", "other_col"),
     [
-        pytest.param("symbols", dict(gene_ids="int64"), id="symbols"),
-        pytest.param("ids", dict(gene_symbols="str"), id="ids"),
+        pytest.param("symbols", "gene_ids", id="symbols"),
+        pytest.param("ids", "gene_symbols", id="ids"),
     ],
 )
 def test_read_10x_mtx_int(
-    data_10x: Path, genes: Literal["symbols", "ids"], col_dtypes: dict[str, str]
+    data_10x: Path, genes: Literal["symbols", "ids"], other_col: str
 ) -> None:
     str_dt = "str" if pd.options.future.infer_string else "object"
-    col_dtypes = {k: str_dt if v == "str" else v for k, v in col_dtypes.items()}
 
     adata = sc.read_10x_mtx(
         data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False
     )
 
     assert adata.var.index.dtype == str_dt
-    assert dict(adata.var.dtypes) == dict(feature_types=str_dt, **col_dtypes)
+    assert dict(adata.var.dtypes) == dict(feature_types=str_dt, **{other_col: str_dt})
+
+
+@pytest.fixture
+def mtx_dir_with_nan(tmp_path: Path, data_10x: Path) -> Path:
+    dest = tmp_path / "mtx"
+    shutil.copytree(data_10x / "int-ids", dest)
+    lines = (dest / "features.tsv").read_text().splitlines()
+    cols = lines[0].split("\t")
+    cols[0] = "FBgn0036414"
+    cols[1] = "nan"
+    lines[0] = "\t".join(cols)
+    (dest / "features.tsv").write_text("\n".join(lines) + "\n")
+    return dest
+
+
+@pytest.mark.parametrize("var_names", ["gene_symbols", "gene_ids"])
+def test_read_10x_mtx_gene_symbol_nan(
+    mtx_dir_with_nan: Path, var_names: Literal["gene_symbols", "gene_ids"]
+) -> None:
+    adata = sc.read_10x_mtx(mtx_dir_with_nan, var_names=var_names, compressed=False)
+
+    if var_names == "gene_symbols":
+        assert adata.var_names[0] == "nan"
+        assert not pd.isna(adata.var_names[0])
+        adata.var["mt"] = adata.var_names.str.startswith("mt:")
+        assert not adata.var["mt"].isna().any()
+        sc.pp.calculate_qc_metrics(
+            adata, qc_vars=["mt"], percent_top=None, log1p=False, inplace=True
+        )
+    else:
+        assert adata.var["gene_symbols"].iloc[0] == "nan"
+        assert not adata.var["gene_symbols"].isna().iloc[0]
 
 
 def test_read_10x_h5_v1(data_10x: Path) -> None:
