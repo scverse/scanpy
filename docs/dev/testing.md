@@ -16,7 +16,7 @@ It can take a while to run the whole test suite. There are a few ways to cut dow
    This can be done by specifying paths or test name patterns using the `-k` argument (e.g. `hatch test test_plotting.py` or `hatch test -k "test_umap*"`)
 2. Run the tests in parallel using the `-n` argument (e.g. `hatch test -n 8`).
 
-[pytest]: https://docs.pytest.org/en/stable/
+[pytest]: https://docs.pytest.org/
 
 ### Miscellaneous tips
 
@@ -37,7 +37,7 @@ You can read more about [fixtures][] in pytest’s documentation, but we’d als
 [existing test suite]: https://github.com/scverse/scanpy/tree/main/tests
 [in-depth testing guide]: https://katyhuff.github.io/2016-07-11-scipy/testing/
 [test-driven development]: https://en.wikipedia.org/wiki/Test-driven_development
-[fixtures]: https://docs.pytest.org/en/stable/fixture.html
+[fixtures]: https://docs.pytest.org/page/fixture.html
 
 ### What to test
 
@@ -51,7 +51,7 @@ If you're not sure what to tests about your function, some ideas include:
 - Do you have arguments which should have orthogonal effects on the output? Check that they are independent. For example, if there is a flag for extended output, the base output should remain the same either way.
 - Are you optimizing a method? Check that it's results are the same as a gold standard implementation.
 
-[`pytest.raises`]: https://docs.pytest.org/en/stable/assert.html#assertions-about-expected-exceptions
+[`pytest.raises`]: https://docs.pytest.org/page/assert.html#assertions-about-expected-exceptions
 
 ### Performance
 
@@ -65,7 +65,7 @@ Some approaches to this include:
 - Is there a common setup/ computation happening in each test? Consider caching these in a [scoped test fixture][].
 - Is the behaviour you're testing for dependent on the size of the data? If not, consider reducing it.
 
-[scoped test fixture]: https://docs.pytest.org/en/stable/fixture.html#sharing-test-data
+[scoped test fixture]: https://docs.pytest.org/page/fixture.html#sharing-test-data
 
 (plotting-tests)=
 
