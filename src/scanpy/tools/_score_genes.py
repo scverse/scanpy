@@ -131,9 +131,11 @@ def score_genes(  # noqa: PLR0913
         Allow the algorithm to use the control genes as reference.
         Will be changed to `False` in scanpy 2.0.
     ctrl_per_gene
-        Sample `ctrl_size` reference genes for every gene in `gene_list` from that gene’s
-        expression bin, and weight the reference so that every gene contributes equally,
-        as described in :cite:t:`Tirosh2016`.
+        Sample `ctrl_size` reference genes for every gene in `gene_list` from that
+        gene’s expression bin, as described in :cite:t:`Tirosh2016`.
+        The reference is the concatenation of these per-gene samples, so a gene drawn
+        for several genes of `gene_list` counts several times (implemented as weights
+        on the unique reference genes).
         If `False`, reference genes are sampled once per expression bin that occurs in
         `gene_list`, so bins holding many genes of `gene_list` are under-represented
         in the reference and scores are biased (see :issue:`3845`).
