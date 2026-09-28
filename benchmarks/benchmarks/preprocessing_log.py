@@ -1,6 +1,6 @@
 """Benchmark preprocessing operations in Scanpy that run on log-transformed data.
 
-API documentation: <https://scanpy.readthedocs.io/en/stable/api/preprocessing.html>.
+API documentation: <https://scanpy.scverse.org/page/api/preprocessing.html>.
 """
 
 from __future__ import annotations

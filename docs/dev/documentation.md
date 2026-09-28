@@ -16,26 +16,16 @@ Next, if problems persist, clear the sphinx cache (`hatch run docs:clean`) and t
 
 ## Adding to the docs
 
-For any user-visible changes, please make sure a note has been added to the release notes using [`hatch run towncrier:create`][towncrier create].
+For any user-visible changes, please make sure a note has been added to the release notes using `hatch run towncrier:create` (see towncrier’s {doc}`towncrier:tutorial`).
 When asked for “Issue number (`+` if none)”, enter the *PR number* instead.
 
 Once you've added a new function to the documentation, you'll need to make sure there is a link somewhere in the documentation site pointing to it.
 This should be added to `docs/api.md` under a relevant heading.
 
-For tutorials and more in depth examples, consider adding a notebook to the [scanpy-tutorials][] repository.
-
-The tutorials are tied to this repository via a submodule.
-To update the submodule, run `git submodule update --remote` from the root of the repository.
-Subsequently, commit and push the changes in a PR.
-This should be done before each release to ensure the tutorials are up to date.
-
-[towncrier create]: https://towncrier.readthedocs.io/en/stable/tutorial.html#creating-news-fragments
-[scanpy-tutorials]: https://github.com/scverse/scanpy-tutorials/
-
 ## docstrings format
 
 We use the numpydoc style for writing docstrings.
-We'd primarily suggest looking at existing docstrings for examples, but the [napolean guide to numpy style docstrings][] is also a great source.
+We'd primarily suggest looking at existing docstrings for examples, but napoleon’s {doc}`napoleon:example_numpy` page is also a great source.
 If you're unfamiliar with the reStructuredText (rST) markup format, check out the [Sphinx rST primer][].
 
 Some key points:
@@ -47,7 +37,6 @@ Some key points:
 
 Look at [`sc.tl.leiden`’s docstring][] as an example for everything mentioned here.
 
-[napolean guide to numpy style docstrings]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy
 [sphinx rst primer]: https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 [`sc.tl.leiden`’s docstring]: https://github.com/scverse/scanpy/blob/350c3424d2f96c4a3a7bb3b7d0428d38d842ebe8/src/scanpy/tools/_leiden.py#L49-L120
 
