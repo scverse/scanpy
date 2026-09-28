@@ -431,6 +431,21 @@ def test_multi_groupby_nonstring(plot_fn, values, expected_suffixes):
     assert categories[:2] == [f"{first_label}{s}" for s in expected_suffixes]
 
 
+@pytest.mark.parametrize(
+    "plot_fn",
+    [sc.pl.dotplot, sc.pl.matrixplot],
+    ids=["dotplot", "matrixplot"],
+)
+def test_multi_groupby_partial_nan(plot_fn):
+    """Rows missing any of several `groupby` values get no joined category."""
+    adata = pbmc68k_reduced()
+    labels = adata.obs["bulk_labels"].astype(object)
+    labels.iloc[:10] = np.nan
+    adata.obs["part_nan"] = pd.Categorical(labels)
+    plot = plot_fn(adata, adata.var_names[:4], ["part_nan", "phase"], return_fig=True)
+    assert not any("nan" in str(c) for c in plot.categories)
+
+
 def test_dotplot_add_totals(plot_cmp):
     pbmc = pbmc68k_reduced()
     markers = {"T-cell": "CD3D", "B-cell": "CD79A", "myeloid": "CST3"}

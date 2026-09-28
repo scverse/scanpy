@@ -2068,9 +2068,11 @@ def _prepare_dataframe(  # noqa: PLR0912
         categorical.name = groupby[0]
     else:
         # join the groupby values  using "_" to make a new 'category'
-        categorical = (
-            obs_tidy[groupby].astype(str).apply("_".join, axis=1).astype("category")
-        )
+        joined = obs_tidy[groupby].apply(lambda r: "_".join(map(str, r)), axis=1)
+        # rows missing any groupby value get no category, as in the
+        # single-column path where NaN never becomes a category
+        joined = joined.where(obs_tidy[groupby].notna().all(axis=1))
+        categorical = joined.astype("category")
         categorical.name = "_".join(groupby)
 
         # preserve category order
