@@ -40,7 +40,10 @@ def _tmp_dataset_dir(tmp_path: Path) -> None:
 
 @pytest.mark.internet
 def test_burczynski06():
-    with pytest.warns(UserWarning, match=r"Variable names are not unique"):
+    with (
+        pytest.warns(FutureWarning, match=r"burczynski06 is deprecated"),
+        pytest.warns(UserWarning, match=r"Variable names are not unique"),
+    ):
         adata = sc.datasets.burczynski06()
     assert adata.shape == (127, 22283)
     assert not (adata.X == 0).any()
@@ -107,7 +110,10 @@ def test_blobs():
 
 
 def test_toggleswitch():
-    with pytest.warns(UserWarning, match=r"Observation names are not unique"):
+    with (
+        pytest.warns(FutureWarning, match=r"toggleswitch is deprecated"),
+        pytest.warns(UserWarning, match=r"Observation names are not unique"),
+    ):
         sc.datasets.toggleswitch()
 
 
@@ -289,6 +295,9 @@ def test_doc_shape(ds_name):
             "ignore", r"Unknown extension is not supported", UserWarning
         )
         warnings.filterwarnings("ignore", r".*squidpy\.(datasets|read)", FutureWarning)
+        warnings.filterwarnings(
+            "ignore", r"The function \w+ is deprecated", FutureWarning
+        )
         dataset = cached_fn()
 
     repr_ = repr(dataset)

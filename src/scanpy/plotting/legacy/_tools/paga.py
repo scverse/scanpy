@@ -17,6 +17,7 @@ from matplotlib import patheffects, rcParams, ticker
 from matplotlib import pyplot as plt
 from matplotlib.colors import is_color_like
 from pandas.api.types import CategoricalDtype
+from scverse_misc import Deprecation, deprecated
 
 from scanpy.tools._draw_graph import coerce_fa2_layout, fa2_positions
 
@@ -1372,6 +1373,7 @@ def paga_path(  # noqa: PLR0912, PLR0913, PLR0915
     return (ax, df) if return_data else ax
 
 
+@deprecated(Deprecation("1.13.0"))
 def paga_adjacency(
     adata: AnnData,
     *,

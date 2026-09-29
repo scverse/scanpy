@@ -624,7 +624,8 @@ def test_recipe_weinreb():
     adata.X = adata.X.toarray()
 
     orig = adata.copy()
-    sc.pp.recipe_weinreb17(adata, log=False, copy=True)
+    with pytest.warns(FutureWarning, match=r"recipe_weinreb17 is deprecated"):
+        sc.pp.recipe_weinreb17(adata, log=False, copy=True)
     assert_equal(orig, adata)
 
 

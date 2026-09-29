@@ -43,7 +43,6 @@ For visual quality control, see {func}`~scanpy.pl.highest_expr_genes` and
    :toctree: generated/
 
    pp.recipe_zheng17
-   pp.recipe_weinreb17
    pp.recipe_seurat
 ```
 
