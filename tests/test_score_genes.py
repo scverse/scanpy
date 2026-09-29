@@ -16,6 +16,7 @@ from scipy import sparse
 import scanpy as sc
 from scanpy._utils.random import random_str
 from testing.scanpy._helpers.data import paul15
+from testing.scanpy._pytest.params import ARRAY_TYPES_MEM
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -290,3 +291,21 @@ def test_gene_list_is_control(*, ctrl_as_ref: bool):
         sc.tl.score_genes(
             adata, gene_list="g3", ctrl_size=1, n_bins=5, ctrl_as_ref=ctrl_as_ref
         )
+
+
+@pytest.mark.parametrize("array_type", ARRAY_TYPES_MEM)
+def test_score_genes_cell_cycle(array_type: Callable[[np.ndarray], object]) -> None:
+    """Cells expressing only S or only G2M genes get that phase, cells expressing neither get G1."""
+    phases = np.repeat(["S", "G2M", "G1"], 20)
+    # every gene has mean 1, so all genes share one bin and the rest serve as controls
+    x = np.ones((phases.size, 120))
+    x[:, :20] = 0
+    x[phases == "S", :10] = 3
+    x[phases == "G2M", 10:20] = 3
+    adata = AnnData(array_type(x))
+
+    sc.tl.score_genes_cell_cycle(
+        adata, s_genes=adata.var_names[:10], g2m_genes=adata.var_names[10:20], rng=0
+    )
+
+    np.testing.assert_array_equal(adata.obs["phase"], phases)
