@@ -490,19 +490,17 @@ def test_regress_out_constants():
 
 
 def test_regress_out_near_constant_covariate_is_stable():
-    """Ill-conditioned numeric regressors should preserve a known residual."""
     t = np.array([-3.0, -1.0, 1.0, 3.0])
-    expected = np.array([1.0, -1.0, -1.0, 1.0])
-    covariate = 2.0 + 1e-7 * t
-    x = np.column_stack([10.0 + 2.0 * t + expected, 5.0 - t + 2.0 * expected])
-    adata = AnnData(x, obs={"covariate": covariate})
+    residual = np.array([1.0, -1.0, -1.0, 1.0])
+    adata = AnnData(
+        np.column_stack([10.0 + 2.0 * t + residual, 5.0 - t + 2.0 * residual]),
+        obs={"covariate": 2.0 + 1e-7 * t},
+    )
 
     sc.pp.regress_out(adata, keys="covariate")
 
-    # The residual is analytically known: it is orthogonal to both the
-    # intercept and ``t``, and therefore to ``2 + 1e-7 * t`` as well.
     np.testing.assert_allclose(
-        adata.X, np.column_stack([expected, 2 * expected]), atol=1e-6
+        adata.X, np.column_stack([residual, 2 * residual]), atol=1e-6
     )
 
 

@@ -499,17 +499,31 @@ def get_resid(
 def numpy_regress_out(
     data: np.ndarray,
     regressor: np.ndarray,
+    gram: np.ndarray,
 ) -> np.ndarray:
-    """Numba kernel for regress out unwanted sorces of variantion.
+    coeff = np.linalg.solve(gram, regressor.T @ data)
+    return get_resid(data, regressor, coeff)
 
-    Finding coefficient using Linear regression (Linear Least Squares).
-    """
-    # Solve the least-squares problem directly.  Forming ``regressor.T @
-    # regressor`` squares the condition number and can produce incorrect
-    # residuals for covariates that are nearly constant.
-    coeff, *_ = np.linalg.lstsq(regressor, data, rcond=None)
-    data = get_resid(data, regressor, coeff)
-    return data
+
+def _normalize_regressors(regressors: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    regressors = regressors.astype(np.float64, copy=True)
+    regressors[:, 1:] -= regressors[:, 1:].mean(axis=0)
+    norms = np.linalg.norm(regressors, axis=0)
+    regressors /= np.where(norms > 0, norms, 1.0)
+    return regressors, regressors.T @ regressors
+
+
+def _regress_out_numpy(
+    data: np.ndarray | CSBase,
+    regressors: np.ndarray,
+    gram: np.ndarray,
+) -> np.ndarray:
+    if np.issubdtype(data.dtype, np.integer):
+        target_dtype = np.float32 if data.dtype.itemsize <= 4 else np.float64
+        kwargs = {"order": "C"} if isinstance(data, np.ndarray) else {}
+        data = data.astype(target_dtype, **kwargs)
+    data = to_dense(data, order="C") if isinstance(data, CSBase) else data
+    return numpy_regress_out(data, regressors, gram)
 
 
 def regress_out(
@@ -599,20 +613,12 @@ def regress_out(
         # add column of ones at index 0 (first column)
         regressors.insert(0, "ones", 1.0)
         regressors = regressors.to_numpy()
+        normalized_regressors, gram = _normalize_regressors(regressors)
 
     # if the regressors are not categorical and the matrix is not singular
     # use the shortcut numpy_regress_out
-    if not variable_is_categorical and np.linalg.det(regressors.T @ regressors) != 0:
-        # Because we update `X` in `numpy_regress_out`, it needs to be floating point to match
-        # the incoming values.
-        if np.issubdtype(x.dtype, np.integer):
-            target_dtype = np.float32 if x.dtype.itemsize <= 4 else np.float64
-            kwargs = {}
-            if isinstance(x, np.ndarray):
-                kwargs["order"] = "C"
-            x = x.astype(target_dtype, **kwargs)
-        x = to_dense(x, order="C") if isinstance(x, CSBase) else x
-        res = numpy_regress_out(x, regressors)
+    if not variable_is_categorical and np.linalg.det(gram) != 0:
+        res = _regress_out_numpy(x, normalized_regressors, gram)
 
     # for a categorical variable or if the above checks failed,
     # we fall back to the GLM implemetation of regression.
