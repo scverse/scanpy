@@ -297,7 +297,6 @@ def test_gene_list_is_control(*, ctrl_as_ref: bool):
 def test_score_genes_cell_cycle(array_type: Callable[[np.ndarray], object]) -> None:
     """Cells expressing only S or only G2M genes get that phase, cells expressing neither get G1."""
     phases = np.repeat(["S", "G2M", "G1"], 20)
-    # every gene has mean 1, so all genes share one bin and the rest serve as controls
     x = np.ones((phases.size, 120))
     x[:, :20] = 0
     x[phases == "S", :10] = 3
