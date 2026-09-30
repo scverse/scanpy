@@ -13,6 +13,7 @@ from .. import logging as logg
 from .._compat import CSBase, CSCBase, CSRBase, DaskArray, warn
 from .._utils import axis_mul_or_truediv, dematrix, view_to_actual
 from ..get import _get_arr, _set_obs_rep
+from ._simple import log1p
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -307,7 +308,7 @@ def normalize_total(  # noqa: PLR0912
     return None
 
 
-def _estimate_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
+def _estimate_nb_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
     r"""Estimate the negative-binomial overdispersion :math:`α` from raw counts.
 
     Fits :math:`\mathrm{Var}_g = μ_g + α \cdot μ_g^2` across genes, where
@@ -347,16 +348,7 @@ def _estimate_overdispersion(x: np.ndarray | CSBase | DaskArray) -> float:
     return alpha
 
 
-def _log1p_sparse_block(x: np.ndarray | CSBase) -> np.ndarray | CSBase:
-    """Apply log1p to a dense or sparse block while preserving sparse zeros."""
-    if isinstance(x, CSBase):
-        x = x.copy()
-        x.data = np.log1p(x.data)
-        return x
-    return np.log1p(x)
-
-
-def _normalize_clr_helper(
+def _normalize_shifted_clr_helper(
     x: np.ndarray | CSBase | DaskArray,
     *,
     alpha: float | None,
@@ -368,7 +360,7 @@ def _normalize_clr_helper(
         cell_depths = np.asarray(cell_depths).ravel()
 
     if alpha is None:
-        alpha = _estimate_overdispersion(x)
+        alpha = _estimate_nb_overdispersion(x)
     elif not alpha > 0:
         msg = (
             f"`alpha` must be positive to compute PFlog, got {alpha}. "
@@ -376,16 +368,9 @@ def _normalize_clr_helper(
         )
         raise ValueError(msg)
 
-    x = x * (4.0 * float(alpha))
+    log_values = log1p(x * (4.0 * float(alpha)))
 
-    if isinstance(x, DaskArray):
-        log_values = x.map_blocks(
-            _log1p_sparse_block, dtype=np.float64, meta=x._meta.astype(np.float64)
-        )
-    else:
-        log_values = _log1p_sparse_block(x)
-
-    row_center = stats.sum(log_values, axis=1) / x.shape[1]
+    row_center = stats.sum(log_values, axis=1) / log_values.shape[1]
     if not isinstance(row_center, DaskArray):
         row_center = np.asarray(row_center).ravel()
     if isinstance(log_values, CSBase):
@@ -393,7 +378,7 @@ def _normalize_clr_helper(
     return log_values - row_center[:, None], cell_depths
 
 
-def normalize_clr(
+def normalize_shifted_clr(
     adata: AnnData,
     *,
     alpha: float | None = None,
@@ -448,7 +433,7 @@ def normalize_clr(
     >>> from anndata import AnnData
     >>> import scanpy as sc
     >>> adata = AnnData(np.array([[1, 2, 30], [4, 50, 6]], dtype="float32"))
-    >>> sc.pp.normalize_clr(adata, alpha=0.5)
+    >>> sc.pp.normalize_shifted_clr(adata, alpha=0.5)
     >>> np.allclose(adata.X.sum(axis=1), 0, atol=1e-5)
     True
     """
@@ -470,7 +455,7 @@ def normalize_clr(
 
     start = logg.info("normalizing counts per cell via PFlog")
 
-    x, cell_depths = _normalize_clr_helper(x, alpha=alpha)
+    x, cell_depths = _normalize_shifted_clr_helper(x, alpha=alpha)
 
     if not isinstance(cell_depths, DaskArray) and not np.all(cell_depths > 0):
         warn("Some cells have zero counts", UserWarning)
