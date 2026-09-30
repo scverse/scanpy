@@ -59,7 +59,6 @@ def test_categorical_covariates(covariates: list[str]) -> None:
     """Categorical covariates are modeled, so their effect survives batch correction."""
     rng = np.random.default_rng(0)
     batch = rng.integers(0, 3, 600)
-    # `cond` is confounded with batch, so its effect is lost if it is not modeled
     treated = rng.random(600) < np.where(batch == 0, 0.8, 0.2)
     cond_effect = rng.normal(0, 2, 10)
     x = (
