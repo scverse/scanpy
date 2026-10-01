@@ -41,6 +41,7 @@ overrides.matrix.deps.pre-install-commands = [
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
+    { if = [ "pre" ], value = "3.15" },
 ]
 overrides.matrix.deps.extra-dependencies = [
     { if = [ "stable" ], value = "scipy>=1.17" },
