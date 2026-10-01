@@ -82,6 +82,26 @@ def base(request):
     return request.param
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "expect_warning"),
+    [
+        pytest.param({}, True, id="X"),
+        pytest.param({"layer": "spliced"}, False, id="layer"),
+        pytest.param({"obsm": "rep"}, False, id="obsm"),
+    ],
+)
+def test_log1p_already_transformed_warning(
+    caplog: pytest.LogCaptureFixture, kwargs: dict[str, str], *, expect_warning: bool
+) -> None:
+    """Only warn when the representation being transformed is `X`."""
+    a = np.random.default_rng(0).random((20, 5)).astype(np.float32)
+    adata = AnnData(a.copy(), layers={"spliced": a.copy()}, obsm={"rep": a.copy()})
+    sc.pp.log1p(adata)
+    caplog.clear()
+    sc.pp.log1p(adata, **kwargs)
+    assert ("already log-transformed" in caplog.text) is expect_warning
+
+
 def test_log1p_rep(count_matrix_format: _MatrixFormat, base, dtype: DTypeLike) -> None:
     x = count_matrix_format(
         np.abs(sparse.random(100, 200, density=0.3, dtype=dtype)).toarray()
