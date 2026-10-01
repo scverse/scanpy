@@ -41,10 +41,19 @@ if TYPE_CHECKING:
 SEABORN_PANDAS3_XFAIL = pkg_version("pandas").major >= 3 and pkg_version(
     "matplotlib"
 ) < Version("3.11")
+# pandas 3.1 changes the broken rendering of some of them again
+SEABORN_PANDAS31_XFAIL = SEABORN_PANDAS3_XFAIL or pkg_version("pandas") >= Version(
+    "3.1.0rc0"
+)
 
 xfail_seaborn_pandas3 = (
     [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
     if SEABORN_PANDAS3_XFAIL
+    else []
+)
+xfail_seaborn_pandas31 = (
+    [pytest.mark.xfail(reason="seaborn violin plot is incompatible with pandas 3")]
+    if SEABORN_PANDAS31_XFAIL
     else []
 )
 
@@ -314,7 +323,7 @@ params_dotplot_matrixplot_stacked_violin = [
         ),
         id="stacked_violin_std_scale_group",
         # https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas31,
     ),
     pytest.param(
         partial(
@@ -574,7 +583,7 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
             rotation=90,
         )
         with context.xfail(
-            SEABORN_PANDAS3_XFAIL,
+            SEABORN_PANDAS31_XFAIL,
             reason="seaborn violin plot is incompatible with pandas 3",
             raises=AssertionError,
         ):
@@ -594,7 +603,12 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
             use_raw=False,
             rotation=90,
         )
-        plot_cmp("violin_multi_panel_with_layer")
+        with context.xfail(
+            SEABORN_PANDAS31_XFAIL,
+            reason="seaborn violin plot is incompatible with pandas 3",
+            raises=AssertionError,
+        ):
+            plot_cmp("violin_multi_panel_with_layer")
 
     with subtests.test("ncols"):
         sc.pl.violin(
@@ -619,7 +633,7 @@ def test_violin(subtests: pytest.Subtests, exit_stack: ExitStack, plot_cmp) -> N
         )
         assert len(plt.gcf().axes) == 3
         with context.xfail(
-            SEABORN_PANDAS3_XFAIL,
+            SEABORN_PANDAS31_XFAIL,
             reason="seaborn violin plot is incompatible with pandas 3",
             raises=AssertionError,
         ):
@@ -871,7 +885,7 @@ _RANK_GENES_GROUPS_PARAMS = [
         ),
         id="violin",
         # https://github.com/mwaskom/seaborn/issues/3893
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas31,
     ),
     pytest.param(
         partial(
@@ -885,7 +899,7 @@ _RANK_GENES_GROUPS_PARAMS = [
         ),
         id="violin_not_raw",
         # https://github.com/mwaskom/seaborn/issues/3893
-        marks=xfail_seaborn_pandas3,
+        marks=xfail_seaborn_pandas31,
     ),
 ]
 
