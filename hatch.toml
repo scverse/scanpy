@@ -38,6 +38,10 @@ overrides.matrix.deps.pre-install-commands = [
     { if = [
         "low-vers",
     ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --skip-extras=scanpy2 --groups=test -o ci/scanpy-low-vers.txt" },
+    # TODO: remove once h5py has cp315 wheels on PyPI
+    { if = [
+        "pre",
+    ], value = "uv pip install --index=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple h5py" },
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.12" },
