@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 
 import scanpy as sc
 
@@ -62,3 +63,53 @@ def test_rank_genes_groups_with_unsorted_groups():
         bdata.uns["rank_genes_groups"]["scores"]["Three"]
     ).to_numpy()
     np.testing.assert_equal(array_ad, array_bd)
+
+
+@pytest.mark.parametrize("categories", [["A", "unused", "B"], ["B", "unused", "A"]])
+@pytest.mark.parametrize("target", ["A", "B"])
+def test_binary_logreg_scores_point_toward_requested_group(categories, target):
+
+    x = np.vstack([
+        np.tile([10.0, 0.0, 1.0], (30, 1)),
+        np.tile([0.0, 10.0, 1.0], (30, 1)),
+    ])
+    adata = AnnData(
+        x,
+        obs=pd.DataFrame(
+            {"group": pd.Categorical(["A"] * 30 + ["B"] * 30, categories=categories)},
+            index=[f"cell_{i}" for i in range(60)],
+        ),
+        var=pd.DataFrame(index=["A_marker", "B_marker", "shared"]),
+    )
+    reference = "B" if target == "A" else "A"
+    sc.tl.rank_genes_groups(
+        adata,
+        "group",
+        groups=[target],
+        reference=reference,
+        method="logreg",
+        use_raw=False,
+    )
+    result = adata.uns["rank_genes_groups"]
+    names = result["names"][target]
+    scores = dict(zip(names, result["scores"][target], strict=True))
+    assert names[0] == f"{target}_marker"
+    assert scores[f"{target}_marker"] > 0
+    assert scores[f"{reference}_marker"] < 0
+
+
+@pytest.mark.parametrize("categories", [["A", "B"], ["B", "A"]])
+def test_binary_logreg_default_group_direction(categories):
+    adata = AnnData(
+        np.vstack([np.tile([10.0, 0.0], (20, 1)), np.tile([0.0, 10.0], (20, 1))]),
+        obs=pd.DataFrame(
+            {"group": pd.Categorical(["A"] * 20 + ["B"] * 20, categories=categories)},
+            index=[f"cell_{i}" for i in range(40)],
+        ),
+        var=pd.DataFrame(index=["A_marker", "B_marker"]),
+    )
+    sc.tl.rank_genes_groups(adata, "group", method="logreg", use_raw=False)
+    result = adata.uns["rank_genes_groups"]
+    target = categories[0]
+    assert result["names"][target][0] == f"{target}_marker"
+    assert result["scores"][target][0] > 0
