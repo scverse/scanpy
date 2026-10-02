@@ -41,7 +41,7 @@ overrides.matrix.deps.pre-install-commands = [
     # TODO: remove this once these have cp315 wheels on PyPI (and switch the default to `python = "3.15"` above)
     { if = [
         "pre",
-    ], value = "uv pip install --no-deps --index=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple h5py pyarrow scikit-image" },
+    ], value = "uv pip install --no-deps --index=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple h5py pyarrow scikit-image lazy_loader" },
 ]
 overrides.matrix.deps.python = [
     { if = [ "low-vers" ], value = "3.13" },
