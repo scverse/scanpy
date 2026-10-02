@@ -925,6 +925,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 raise ValueError(msg)
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
             kwds["hue"] = groupby
+            # hue == x, seaborn wrongly detects need for dodging with pandas 3
+            kwds.setdefault("dodge", False)
             kwds["palette"] = dict(
                 zip(
                     obs_df[groupby].cat.categories,

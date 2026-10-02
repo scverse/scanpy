@@ -567,7 +567,8 @@ class StackedViolin(BasePlot):
                 color=row_colors[idx],
                 order=x_axis_order,
                 hue_order=x_axis_order,
-                **self.kwds,
+                # hue == x, seaborn wrongly detects need for dodging with pandas 3
+                **({"dodge": False} | self.kwds),
             )
             if self.stripplot:
                 row_ax = sns.stripplot(
