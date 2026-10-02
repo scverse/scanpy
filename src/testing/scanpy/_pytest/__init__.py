@@ -41,7 +41,7 @@ def original_settings(
     cache: pytest.Cache,
     tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[Mapping[str, object], None, None]:
+) -> Generator[Mapping[str, object]]:
     """Switch to agg backend, reset settings, and close all figures at teardown."""
     # make sure seaborn is imported and did its thing
     import anndata as ad
@@ -89,7 +89,7 @@ def original_settings(
 
 
 @pytest.fixture(autouse=True, scope="session")
-def max_threads() -> Generator[int, None, None]:
+def max_threads() -> Generator[int]:
     """Limit number of threads used per worker when using pytest-xdist.
 
     Prevents oversubscription of the CPU when multiple tests with parallel code are
