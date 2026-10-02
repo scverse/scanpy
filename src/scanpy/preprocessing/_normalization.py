@@ -276,7 +276,7 @@ def normalize_total(  # noqa: PLR0912
     if exclude_highly_expressed:
         logg.info(
             "The following highly-expressed genes are not considered during normalization factor computation:\n"
-            f"{adata.var_names[~gene_subset].tolist()}"
+            f"{adata.var_names[~np.asarray(gene_subset)].tolist()}"
         )
 
     cell_subset = counts_per_cell > 0
