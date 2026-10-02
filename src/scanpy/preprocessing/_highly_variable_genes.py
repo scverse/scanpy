@@ -612,11 +612,10 @@ def _highly_variable_genes_batched(
         # break ties with normalized dispersion across batches
 
         df_orig_ind = adata.var.index.copy()
-        df.sort_values(
+        df = df.sort_values(
             ["highly_variable_nbatches", "dispersions_norm"],
             ascending=False,
             na_position="last",
-            inplace=True,
         )
         df["highly_variable"] = np.arange(df.shape[0]) < cutoff
         df = df.loc[df_orig_ind]

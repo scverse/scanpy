@@ -71,7 +71,7 @@ def test_read_10x(
 
     # Drop genome column for comparing v3
     if "3.0.0" in h5_relpath:
-        h5.var.drop(columns="genome", inplace=True)
+        h5.var = h5.var.drop(columns="genome")
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)

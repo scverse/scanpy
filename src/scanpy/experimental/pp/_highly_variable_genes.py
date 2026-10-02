@@ -239,11 +239,10 @@ def _highly_variable_pearson_residuals(  # noqa: PLR0912, PLR0915
 
     # Sort genes by how often they selected as hvg within each batch and
     # break ties with median rank of residual variance across batches
-    df.sort_values(
+    df = df.sort_values(
         ["highly_variable_nbatches", "highly_variable_rank"],
         ascending=[False, True],
         na_position="last",
-        inplace=True,
     )
 
     high_var = np.zeros(df.shape[0], dtype=bool)
