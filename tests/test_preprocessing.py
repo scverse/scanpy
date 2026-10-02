@@ -489,6 +489,21 @@ def test_regress_out_constants():
     assert_equal(adata, adata_copy)
 
 
+def test_regress_out_near_constant_covariate_is_stable():
+    t = np.array([-3.0, -1.0, 1.0, 3.0])
+    residual = np.array([1.0, -1.0, -1.0, 1.0])
+    adata = AnnData(
+        np.column_stack([10.0 + 2.0 * t + residual, 5.0 - t + 2.0 * residual]),
+        obs={"covariate": 2.0 + 1e-7 * t},
+    )
+
+    sc.pp.regress_out(adata, keys="covariate")
+
+    np.testing.assert_allclose(
+        adata.X, np.column_stack([residual, 2 * residual]), atol=1e-6
+    )
+
+
 @pytest.mark.parametrize(
     ("keys", "test_file", "atol"),
     [
