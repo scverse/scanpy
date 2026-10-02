@@ -523,21 +523,25 @@ def test_illico_deprecation_warning():
         pytest.param("wilcoxon_illico", marks=needs.scanpy2),
     ],
 )
+@pytest.mark.parametrize("base", [None, 2], ids=["base_e", "base_2"])
 def test_mean_in_log_space(
     expected_logfc: float,
     method: Literal["wilcoxon", "wilcoxon_illico", "t-test", "t-test_overestim_var"],
+    base: float | None,
     *,
     mean_in_log_space: bool,
 ):
     # group_a: 5 cells with log-space value 0, 5 cells with log(9)
     # group_b: 10 cells all with log(9)  (used as reference)
     n_genes = 5
+    log9 = np.log(9) if base is None else np.log(9) / np.log(base)
     group_a = np.zeros((10, n_genes))
-    group_a[5:] = np.log(9)
-    group_b = np.full((10, n_genes), np.log(9))
+    group_a[5:] = log9
+    group_b = np.full((10, n_genes), log9)
     adata = AnnData(
         X=np.concatenate([group_a, group_b]),
         obs={"bulk_labels": ["a"] * 10 + ["b"] * 10},
+        uns={} if base is None else {"log1p": {"base": base}},
     )
     with (
         sc.settings.override(preset=sc.Preset.ScanpyV2Preview)
