@@ -9,7 +9,8 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import re
-from contextlib import suppress
+import warnings
+from contextlib import contextmanager, suppress
 from functools import partial, reduce, singledispatch, wraps
 from operator import mul, or_, truediv
 from textwrap import indent
@@ -36,7 +37,7 @@ from .._compat import CSBase, DaskArray, SpBase, warn
 from ._numba import _numba_thread_limit
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, KeysView, Mapping
+    from collections.abc import Callable, Generator, Iterable, KeysView, Mapping
     from typing import Any
 
     from anndata import AnnData
@@ -71,10 +72,12 @@ __all__ = [
     "descend_classes_and_funcs",
     "dim_acc",
     "ensure_igraph",
+    "expose_dispatch",
     "get_igraph_from_adjacency",
     "get_literal_vals",
     "indent",
     "is_backed_type",
+    "own_deprecations",
     "raise_not_implemented_error_if_backed_type",
     "renamed_arg",
     "sanitize_anndata",
@@ -256,6 +259,7 @@ def check_use_raw(
     adata: AnnData,
     use_raw: bool | None,  # noqa: FBT001
     *,
+    use: object = None,
     layer: str | None = None,
 ) -> bool:
     """Normalize checking `use_raw`.
@@ -264,7 +268,7 @@ def check_use_raw(
     """
     if use_raw is not None:
         return use_raw
-    if layer is not None:
+    if use is not None or layer is not None:
         return False
     return adata.raw is not None
 
@@ -997,6 +1001,41 @@ def dim_acc(col: str, *, dim: Literal["obs", "var"]) -> str | AdRef:
 
         return getattr(A, dim)[col]
     return col
+
+
+def expose_dispatch[F: Callable](inner: Callable) -> Callable[[F], F]:
+    """Expose `inner`’s `singledispatch` API on a validating wrapper around it.
+
+    Not `functools.wraps`: that sets `__wrapped__` even with `assigned=()`,
+    and :func:`inspect.signature` follows it – so the docs and our signature
+    conventions would see `inner`’s signature instead of the wrapper’s.
+    """
+
+    def decorate(wrapper: F) -> F:
+        for attr in ("register", "dispatch", "registry", "_clear_cache"):
+            setattr(wrapper, attr, getattr(inner, attr))
+        return wrapper
+
+    return decorate
+
+
+@contextmanager
+def own_deprecations() -> Generator[None]:
+    """Silence our own deprecation warnings for the duration of an internal call.
+
+    Internal calls sometimes have to use a deprecated parameter:
+    `use` needs `anndata.acc`, which isn’t guaranteed to be installed.
+    Users can’t act on a deprecation they didn’t trigger, so don’t show it to them.
+
+    `module=` can’t narrow this:
+    `scverse_misc`’s `warn_outside` blames the first frame outside scanpy,
+    so these warnings are attributed to the caller’s module.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"The argument \w+ is deprecated", FutureWarning
+        )
+        yield
 
 
 def is_backed_type(x: object, /) -> bool:

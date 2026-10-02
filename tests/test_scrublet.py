@@ -149,7 +149,8 @@ def _preprocess_for_scrublet(adata: AnnData) -> AnnData:
     sc.pp.filter_cells(adata_pp, min_genes=3)
     adata_pp.layers["raw"] = adata_pp.X.copy()
     sc.pp.normalize_total(adata_pp)
-    logged = sc.pp.log1p(adata_pp, copy=True)
+    logged = adata_pp.copy()
+    sc.pp.log1p(logged)
     sc.pp.highly_variable_genes(logged)
     return adata_pp[:, logged.var["highly_variable"]].copy()
 
@@ -264,6 +265,7 @@ def test_scrublet_params(scrub_small: AnnData, param: str, value: Any):
         assert_equal(scrub_small, curr)
 
 
+@needs.anndata_acc
 def test_scrublet_simulate_doublets():
     """Check that doublet simulation runs and simulates some doublets."""
     adata_obs = pbmc200()
@@ -271,13 +273,13 @@ def test_scrublet_simulate_doublets():
     sc.pp.filter_cells(adata_obs, min_genes=3)
     adata_obs.layers["raw"] = adata_obs.X
     sc.pp.normalize_total(adata_obs)
-    logged = sc.pp.log1p(adata_obs, copy=True)
-
-    _ = sc.pp.highly_variable_genes(logged)
-    adata_obs = adata_obs[:, logged.var["highly_variable"]]
+    # HVG needs log'd data, but the simulation uses the un-log'd counts
+    sc.pp.log1p(adata_obs, out="layers.log1p")
+    sc.pp.highly_variable_genes(adata_obs, use="layers.log1p")
+    adata_obs = adata_obs[:, adata_obs.var["highly_variable"]]
 
     adata_sim = sc.pp.scrublet_simulate_doublets(
-        adata_obs, sim_doublet_ratio=0.02, layer="raw"
+        adata_obs, sim_doublet_ratio=0.02, use="layers.raw"
     )
 
     assert_array_equal(

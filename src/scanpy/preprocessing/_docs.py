@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from .._docs import doc_mask
+from .._docs import doc_mask, doc_use
 
 doc_adata_basic = """\
 adata
     Annotated data matrix.\
 """
 
-doc_expr_reps = """\
-layer
-    If provided, use `adata.layers[layer]` for expression values instead
-    of `adata.X`.
+doc_expr_reps = f"""\
+{doc_use("Which matrix to use for expression values.", legacy=("layer",))}
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
 """

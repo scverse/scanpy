@@ -105,6 +105,9 @@ copy_sigs["sc.pp.sqrt"]["first_name"] = "data"
 copy_sigs["sc.pp.normalize_total"]["return_ann"] = copy_sigs[
     "sc.experimental.pp.normalize_pearson_residuals"
 ]["return_ann"] = "AnnData | dict[str, np.ndarray] | None"
+# functions with `out` can return the result instead of writing it
+copy_sigs["sc.pp.regress_out"]["return_ann"] = "AnnData | np.ndarray | CSBase | None"
+copy_sigs["sc.tl.score_genes"]["return_ann"] = "AnnData | pd.Series | None"
 copy_sigs["sc.external.pp.magic"]["copy_default"] = None
 
 

@@ -16,7 +16,7 @@ key = "test"
 @pytest.mark.parametrize("key_added", [None, "custom_key"])
 def test_dendrogram_key_added(groupby, key_added):
     adata = pbmc68k_reduced()
-    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added, use_rep="X_pca")
+    sc.tl.dendrogram(adata, groupby=groupby, key_added=key_added)
     if isinstance(groupby, list):
         dendrogram_key = f"dendrogram_{'_'.join(groupby)}"
     else:
