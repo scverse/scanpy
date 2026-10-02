@@ -925,6 +925,8 @@ def violin(  # noqa: PLR0912, PLR0913, PLR0915
                 raise ValueError(msg)
             _utils.add_colors_for_categorical_sample_annotation(adata, groupby)
             kwds["hue"] = groupby
+            # hue == x, seaborn wrongly detects need for dodging with pandas 3
+            kwds.setdefault("dodge", False)
             kwds["palette"] = dict(
                 zip(
                     obs_df[groupby].cat.categories,
@@ -2130,7 +2132,7 @@ def _prepare_dataframe(  # noqa: PLR0912
 
     if groupby_index is not None:
         # reset index to treat all columns the same way.
-        obs_tidy.reset_index(inplace=True)
+        obs_tidy = obs_tidy.reset_index()
         groupby.append(groupby_index)
 
     if groupby is None:

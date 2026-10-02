@@ -71,7 +71,7 @@ def test_read_10x(
 
     # Drop genome column for comparing v3
     if "3.0.0" in h5_relpath:
-        h5.var.drop(columns="genome", inplace=True)
+        h5.var = h5.var.drop(columns="genome")
 
     # Check equivalence
     assert_anndata_equal(mtx, h5)
@@ -96,7 +96,7 @@ def test_read_10x(
 def test_read_10x_mtx_int(
     data_10x: Path, genes: Literal["symbols", "ids"], other_col: str
 ) -> None:
-    str_dt = "str" if pd.options.future.infer_string else "object"
+    str_dt = pd.Series(["x"]).dtype
 
     adata = sc.read_10x_mtx(
         data_10x / "int-ids", var_names=f"gene_{genes}", compressed=False

@@ -106,7 +106,7 @@ def rank_genes_groups_df(
 
     # remove group column for backward compat if len(group) == 1
     if len(group) == 1:
-        d.drop(columns="group", inplace=True)
+        d = d.drop(columns="group")
 
     return d.reset_index(drop=True)
 
