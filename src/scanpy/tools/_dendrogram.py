@@ -11,7 +11,7 @@ from scverse_misc import Deprecation, deprecated_arg
 from .. import logging as logg
 from .._docs import DEPR_RAW
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
-from ..get.get import _rep_to_json, _resolve_rep
+from ..get.get import _rep_to_json, _resolve_obs
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -116,7 +116,7 @@ def dendrogram(  # noqa: PLR0913
     """
     raise_not_implemented_error_if_backed_type(adata.X, "dendrogram")
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
     if isinstance(groupby, str):
         # if not a list, turn into a list
         groupby = [groupby]

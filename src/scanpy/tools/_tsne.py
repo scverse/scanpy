@@ -11,7 +11,7 @@ from .._keys import _embedding_keys
 from .._settings import Default, settings
 from .._utils import _doc_params, raise_not_implemented_error_if_backed_type
 from .._utils.random import _accepts_legacy_random_state, _legacy_random_state
-from ..get.get import _rep_to_json, _resolve_rep
+from ..get.get import _rep_to_json, _resolve_obs
 from ..neighbors._doc import doc_n_pcs, doc_use_rep
 from ._utils import _choose_representation_compat
 
@@ -111,7 +111,7 @@ def tsne(  # noqa: PLR0913
     """
     start = logg.info("computing tSNE")
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
     keys = _embedding_keys("tsne", key_added)
     adata = adata.copy() if copy else adata
     x = _choose_representation_compat(adata, use=use, use_rep=use_rep, n_pcs=n_pcs)

@@ -14,7 +14,7 @@ from .. import logging as logg
 from .._docs import doc_rng
 from .._utils import _doc_params
 from .._utils._doctests import doctest_needs
-from ..get.get import _rep_to_json, _resolve_rep
+from ..get.get import _rep_to_json, _resolve_obs
 from ._common import (
     _get_bbknn_metadata,
     _get_indices_distances_from_rect_matrix,
@@ -165,7 +165,7 @@ def bbknn(  # noqa: PLR0913
     if not isinstance(batches, AdRef):
         batches = A.resolve(batches, vec=True)
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
 
     if neighbors_within_batch < 1:
         msg = "`neighbors_within_batch` needs to be greater than 0."

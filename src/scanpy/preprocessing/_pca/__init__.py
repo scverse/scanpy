@@ -20,7 +20,7 @@ from ...get.get import (
     _mask_hvg,
     _ref_to_json,
     _rep_to_json,
-    _resolve_rep,
+    _resolve_obs,
 )
 from .._docs import doc_mask_var
 from ._compat import _pca_compat_sparse
@@ -213,7 +213,7 @@ def pca(  # noqa: PLR0912, PLR0913, PLR0915
     """
     logg_start = logg.info("computing PCA")
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
     rng = np.random.default_rng(rng)
     if (layer is not None or obsm is not None or use is not None) and chunked:
         # Current chunking implementation relies on pca being called on X

@@ -28,7 +28,7 @@ from .._utils import (
 )
 from ..get import _check_mask, _get_arr, aggregate
 from ..get._aggregated import _chan_combine
-from ..get.get import _mask_arg, _rep_to_json, _resolve_obs, _resolve_rep
+from ..get.get import _mask_arg, _rep_to_json, _resolve_obs
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
@@ -896,7 +896,7 @@ def rank_genes_groups(  # noqa: PLR0912, PLR0913, PLR0915
 
     """
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
     mask = _mask_arg(mask, mask_var, dim="var")
     if isinstance(mean_in_log_space, Default):
         mean_in_log_space = settings.preset.rank_genes_groups.mean_in_log_space

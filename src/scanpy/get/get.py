@@ -894,11 +894,19 @@ def _get_vec(
     return adata[ref]
 
 
-def _resolve_obs[U: ArrAcc | str | None](use: U, /) -> U:
+@overload
+def _resolve_obs[U: ArrAcc | str | None](
+    use: U, /, *, rep: Literal[False] = False
+) -> U: ...
+@overload
+def _resolve_obs(use: RefAcc | str, /, *, rep: Literal[True]) -> RepAcc: ...
+def _resolve_obs(use: RefAcc | str | None, /, *, rep: bool = False) -> RefAcc | None:
     """Resolve a `use`/`out` string and require the result to be `obs`-aligned.
 
     Every function that can only handle `obs`-aligned input funnels through here,
     so `grep _resolve_obs` lists the ones that could be extended to work on `var`.
+
+    With `rep=True`, additionally require a `rep`resentation (`LayerAcc`/`MultiAcc`).
     """
     if use is None:
         return use
@@ -909,18 +917,13 @@ def _resolve_obs[U: ArrAcc | str | None](use: U, /) -> U:
     if isinstance(use, MultiAcc | GraphAcc) and use.dim != "obs":
         msg = f"Input must be aligned to `obs`, but {use!r} is aligned to `var`"
         raise ValueError(msg)
+    if rep and not isinstance(use, LayerAcc | MultiAcc):
+        msg = (
+            "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
+            f"`MultiAcc` (e.g. `A.obsm[...]`), was {use!r}"
+        )
+        raise TypeError(msg)
     return use
-
-
-def _resolve_rep(rep: RefAcc | str) -> RepAcc:
-    """Resolve a `rep`resentation string into a `LayerAcc`/`MultiAcc` using `anndata.acc`."""
-    if isinstance(rep := _resolve_obs(rep), LayerAcc | MultiAcc):
-        return rep
-    msg = (
-        "Representation must be a `LayerAcc` (e.g. `A.X`, `A.layers[...]`) or a "
-        f"`MultiAcc` (e.g. `A.obsm[...]`), was {rep!r}"
-    )
-    raise TypeError(msg)
 
 
 def _ref_to_json[M: NDArray | None](ref: AdRef | str | M) -> str | list[str] | M:
@@ -969,7 +972,7 @@ def _rep_to_json(rep: RepAcc | str | None) -> str | list[str] | None:
         return rep
     from anndata.acc import A
 
-    return [json.dumps(A.to_json(_resolve_rep(rep)))]
+    return [json.dumps(A.to_json(_resolve_obs(rep, rep=True)))]
 
 
 def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str | None:
@@ -986,4 +989,4 @@ def _rep_from_json(rep: str | Sequence[str | int | None] | None) -> RepAcc | str
     ):
         # see `_rep_to_json`
         rep: Sequence[str | int | None] = json.loads(rep[0])
-    return _resolve_rep(A.from_json(rep, vec=False))
+    return _resolve_obs(A.from_json(rep, vec=False), rep=True)

@@ -24,7 +24,7 @@ from .._docs import doc_rng
 from .._keys import _EmbeddingKeys, _existing_preset_keys
 from .._utils import NeighborsView, _doc_params, get_literal_vals
 from .._utils.random import _accepts_legacy_random_state, _LegacyRng
-from ..get.get import _rep_to_json, _resolve_rep
+from ..get.get import _rep_to_json, _resolve_obs
 from . import _connectivity
 from ._common import (
     _get_indices_distances_from_dense_matrix,
@@ -185,7 +185,7 @@ def neighbors(  # noqa: PLR0913
 
     """
     if use is not None:
-        use = _resolve_rep(use)
+        use = _resolve_obs(use, rep=True)
     meta_random_state = (
         dict(random_state=rng.arg) if isinstance(rng, _LegacyRng) else {}
     )
