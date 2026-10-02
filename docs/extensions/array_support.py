@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 
-ALL_INNER = list(_docs.parse(["np", "sp"], inner=True))
+ALL_INNER = list(_docs.parse(["np", "sp", "xp"], inner=True))
 
 
 class ArraySupport(SphinxDirective):

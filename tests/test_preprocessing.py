@@ -629,68 +629,30 @@ def test_recipe_weinreb():
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    ("max_cells", "max_counts", "min_cells", "min_counts"),
-    [
-        (100, None, None, None),
-        (None, 100, None, None),
-        (None, None, 20, None),
-        (None, None, None, 20),
-    ],
-)
-def test_filter_genes(array_type, max_cells, max_counts, min_cells, min_counts):
+@pytest.mark.parametrize("arg", ["max_cells", "max_counts", "min_cells", "min_counts"])
+def test_filter_genes(array_type, arg: str) -> None:
+    kw = {arg: 100 if arg.startswith("max") else 20}
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.filter_genes(
-        adata,
-        max_cells=max_cells,
-        max_counts=max_counts,
-        min_cells=min_cells,
-        min_counts=min_counts,
-    )
-    sc.pp.filter_genes(
-        adata_casted,
-        max_cells=max_cells,
-        max_counts=max_counts,
-        min_cells=min_cells,
-        min_counts=min_counts,
-    )
+    sc.pp.filter_genes(adata, **kw)
+    sc.pp.filter_genes(adata_casted, **kw)
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
-@pytest.mark.parametrize(
-    ("max_genes", "max_counts", "min_genes", "min_counts"),
-    [
-        pytest.param(100, None, None, None, id="max_genes"),
-        pytest.param(None, 100, None, None, id="max_counts"),
-        pytest.param(None, None, 20, None, id="min_genes"),
-        pytest.param(None, None, None, 20, id="min_counts"),
-    ],
-)
-def test_filter_cells(array_type, max_genes, max_counts, min_genes, min_counts):
+@pytest.mark.parametrize("arg", ["max_genes", "max_counts", "min_genes", "min_counts"])
+def test_filter_cells(array_type, arg: str) -> None:
+    kw = {arg: 100 if arg.startswith("max") else 20}
     adata = pbmc68k_reduced()
     adata.X = adata.raw.X
     adata_casted = adata.copy()
     adata_casted.X = array_type(adata_casted.raw.X)
-    sc.pp.filter_cells(
-        adata,
-        max_genes=max_genes,
-        max_counts=max_counts,
-        min_genes=min_genes,
-        min_counts=min_counts,
-    )
-    sc.pp.filter_cells(
-        adata_casted,
-        max_genes=max_genes,
-        max_counts=max_counts,
-        min_genes=min_genes,
-        min_counts=min_counts,
-    )
+    sc.pp.filter_cells(adata, **kw)
+    sc.pp.filter_cells(adata_casted, **kw)
     adata_casted.X = conv.to_dense(adata_casted.X, to_cpu_memory=True)
     adata.X = conv.to_dense(adata.X)
     assert_allclose(adata_casted.X, adata.X, rtol=1e-5, atol=1e-5)

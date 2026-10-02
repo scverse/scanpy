@@ -30,6 +30,8 @@ import h5py
 import numpy as np
 import pandas as pd
 from anndata._core.sparse_dataset import BaseCompressedSparseDataset
+from array_api_compat import array_namespace
+from fast_array_utils.types import HasArrayNamespace
 
 from .. import logging as logg
 from .._compat import CSBase, DaskArray, SpBase, warn
@@ -610,6 +612,20 @@ def axis_mul_or_truediv(
     allow_divide_by_zero: bool = True,
     out: ArrayLike | None = None,
 ) -> np.ndarray:
+    raise NotImplementedError
+
+
+@axis_mul_or_truediv.register(np.ndarray)
+def _(
+    x: np.ndarray,
+    /,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: ArrayLike | None = None,
+) -> np.ndarray:
     _check_op(op)
     scaling_array = _broadcast_axis(scaling_array, axis)
     if op is mul:
@@ -731,8 +747,38 @@ def _[T: (DaskArray, np.ndarray)](
     )
 
 
+@axis_mul_or_truediv.register(HasArrayNamespace)
+def _(
+    x: HasArrayNamespace,
+    /,
+    scaling_array: np.ndarray,
+    axis: Literal[0, 1],
+    op: Callable[[Any, Any], Any],
+    *,
+    allow_divide_by_zero: bool = True,
+    out: ArrayLike | None = None,
+) -> Any:
+
+    _check_op(op)
+    scaling_array = _broadcast_axis(scaling_array, axis)
+    xp = array_namespace(x)
+    scaling_array = xp.asarray(scaling_array)
+    if op is mul:
+        return x * scaling_array
+    if not allow_divide_by_zero:
+        scaling_array = xp.where(
+            scaling_array == 0, xp.ones_like(scaling_array), scaling_array
+        )
+    return x / scaling_array
+
+
 @singledispatch
 def axis_nnz(x: ArrayLike, /, axis: Literal[0, 1]) -> np.ndarray:
+    raise NotImplementedError
+
+
+@axis_nnz.register(np.ndarray)
+def _(x: np.ndarray, /, axis: Literal[0, 1]) -> np.ndarray:
     return np.count_nonzero(x, axis=axis)
 
 
@@ -751,6 +797,12 @@ def _(x: DaskArray, /, axis: Literal[0, 1]) -> DaskArray:
     )
 
 
+@axis_nnz.register(HasArrayNamespace)
+def _(x: HasArrayNamespace, /, axis: Literal[0, 1]) -> Any:
+    xp = array_namespace(x)
+    return xp.count_nonzero(x, axis=axis)
+
+
 @singledispatch
 def check_nonnegative_integers(x: _SupportedArray, /) -> bool | DaskArray:
     """Check values of X to ensure it is count data."""
@@ -763,6 +815,8 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
     from numbers import Integral
 
     data = x if isinstance(x, np.ndarray) else x.data
+    if np.issubdtype(data.dtype, np.unsignedinteger):
+        return True
     # Check no negatives
     if np.signbit(data).any():
         return False
@@ -770,6 +824,18 @@ def _check_nonnegative_integers_in_mem(x: _MemoryArray, /) -> bool:
     elif issubclass(data.dtype.type, Integral):
         return True
     return not np.any((data % 1) != 0)
+
+
+@check_nonnegative_integers.register(HasArrayNamespace)
+def _check_nonnegative_integers_array_api(x: HasArrayNamespace, /) -> bool:
+    xp = array_namespace(x)
+    if xp.isdtype(x.dtype, "unsigned integer"):
+        return True
+    if bool(xp.any(x < 0)):
+        return False
+    if xp.isdtype(x.dtype, "integral"):
+        return True
+    return not bool(xp.any((x % 1) != 0))
 
 
 @check_nonnegative_integers.register(DaskArray)
