@@ -23,11 +23,10 @@ from .._utils._doctests import doctest_skipif
 from .._utils.random import _legacy_random_state, _LegacyRng
 from ..get import _check_mask
 from ..get.get import MultiAcc, _ref_from_json, _rep_from_json
-from ..neighbors import FlatTree
 from ._utils import _choose_representation_compat
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Iterable
 
     from anndata import AnnData
     from pynndescent import NNDescent
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
 
     from .._keys import _EmbeddingKeys
     from ..get.get import RepAcc
-    from ..neighbors import RPForestDict
 
 
 @doctest_skipif(reason="illustrative short example but not runnable")
@@ -151,27 +149,6 @@ def ingest(
 
     logg.info("    finished", time=start)
     return ing.to_adata(inplace=inplace)
-
-
-def _rp_forest_generate(
-    rp_forest_dict: RPForestDict,
-) -> Generator[FlatTree]:
-    props = FlatTree._fields
-    num_trees = len(rp_forest_dict[props[0]]["start"]) - 1
-
-    for i in range(num_trees):
-        tree = []
-        for prop in props:
-            start = rp_forest_dict[prop]["start"][i]
-            end = rp_forest_dict[prop]["start"][i + 1]
-            tree.append(rp_forest_dict[prop]["data"][start:end])
-        yield FlatTree(*tree)
-
-    tree = []
-    for prop in props:
-        start = rp_forest_dict[prop]["start"][num_trees]
-        tree.append(rp_forest_dict[prop]["data"][start:])
-    yield FlatTree(*tree)
 
 
 class _DimDict(MutableMapping):

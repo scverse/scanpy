@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import colormaps, rcParams
 from matplotlib import pyplot as plt
+from scverse_misc import Deprecation, deprecated
 
 from .... import logging as logg
 from ...._settings import Default, settings
@@ -1276,6 +1277,7 @@ def rank_genes_groups_violin(  # noqa: PLR0913
     return axs
 
 
+@deprecated(Deprecation("1.13.0"))
 def sim(
     adata: AnnData,
     *,

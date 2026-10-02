@@ -119,6 +119,7 @@ def blobs(
     return AnnData(x, obs=dict(blobs=y.astype(str)))
 
 
+@deprecated(Deprecation("1.13.0"))
 @_doctest_skipif_old_anndata
 @doctest_internet
 def burczynski06() -> AnnData:
@@ -136,6 +137,8 @@ def burczynski06() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.burczynski06()
+    FutureWarning: The function burczynski06 is deprecated and will be removed in the future.
+        sc.datasets.burczynski06()
     UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
         ...
     AnnData object with n_obs × n_vars = 127 × 22283
@@ -304,6 +307,7 @@ def paul15() -> AnnData:
     return adata
 
 
+@deprecated(Deprecation("1.13.0"))
 @_doctest_skipif_old_anndata
 def toggleswitch() -> AnnData:
     """Simulated toggleswitch.
@@ -320,6 +324,8 @@ def toggleswitch() -> AnnData:
     --------
     >>> import scanpy as sc
     >>> sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
+    FutureWarning: The function toggleswitch is deprecated and will be removed in the future.
+        sc.datasets.toggleswitch()  # doctest: +ELLIPSIS
     UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
         ...
     AnnData object with n_obs × n_vars = 200 × 2
