@@ -121,7 +121,7 @@ def _ranks(
     /,
     mask_obs: NDArray[np.bool] | None = None,
     mask_obs_rest: NDArray[np.bool] | None = None,
-) -> Generator[tuple[NDArray[np.float64], int, int], None, None]:
+) -> Generator[tuple[NDArray[np.float64], int, int]]:
     n_genes = x.shape[1]
 
     if isinstance(x, CSBase):
@@ -459,7 +459,7 @@ class _RankGenes:
 
     def t_test(
         self, method: Literal["t-test", "t-test_overestim_var"]
-    ) -> Generator[_TestResult, None, None]:
+    ) -> Generator[_TestResult]:
         from scipy import stats
 
         for group_index, (mask_obs, mean_group, var_group) in enumerate(
@@ -508,7 +508,7 @@ class _RankGenes:
 
             yield group_index, scores, pvals
 
-    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def wilcoxon(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from scipy import stats
 
         n_genes = self.X.shape[1]
@@ -585,7 +585,7 @@ class _RankGenes:
 
                 yield group_index, scores[group_index], pvals
 
-    def logreg(self, **kwds) -> Generator[_TestResult, None, None]:
+    def logreg(self, **kwds) -> Generator[_TestResult]:
         # if reference is not set, then the groups listed will be compared to the rest
         # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
@@ -616,7 +616,7 @@ class _RankGenes:
             if len(self.groups_order) <= 2:
                 break
 
-    def illico(self, *, tie_correct: bool) -> Generator[_TestResult, None, None]:
+    def illico(self, *, tie_correct: bool) -> Generator[_TestResult]:
         from illico import asymptotic_wilcoxon
 
         adata = AnnData(

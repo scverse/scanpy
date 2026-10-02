@@ -86,7 +86,7 @@ class ArraySupport(SphinxDirective):
     def _render_support_data(
         self,
         data: list[tuple[_docs.Inner, bool, bool]],
-    ) -> Generator[nodes.row, None, None]:
+    ) -> Generator[nodes.row]:
         for t, group in groupby(data, key=lambda r: type(r[0])):
             group = list(group)  # noqa: PLW2901
             if (  # if all sparse types have the same support, just one row
