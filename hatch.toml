@@ -38,13 +38,13 @@ overrides.matrix.deps.pre-install-commands = [
     { if = [
         "low-vers",
     ], value = "uv run ci/scripts/low-vers.py pyproject.toml --all-extras --skip-extras=scanpy2 --groups=test -o ci/scanpy-low-vers.txt" },
-    # TODO: remove once these have cp315 wheels on PyPI
+    # TODO: remove this once these have cp315 wheels on PyPI (and switch the default to `python = "3.15"` above)
     { if = [
         "pre",
     ], value = "uv pip install --no-deps --index=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple h5py pyarrow scikit-image" },
 ]
 overrides.matrix.deps.python = [
-    { if = [ "low-vers" ], value = "3.12" },
+    { if = [ "low-vers" ], value = "3.13" },
     { if = [ "pre" ], value = "3.15" },
 ]
 overrides.matrix.deps.extra-dependencies = [

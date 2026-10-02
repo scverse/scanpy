@@ -90,7 +90,7 @@ def gen_pca_params(
     svd_solver_type: Literal["valid", "invalid"] | None,
     zero_center: bool,
     id: str,
-) -> Generator[tuple[SVDSolver | None, str | None, str | None], None, None]:
+) -> Generator[tuple[SVDSolver | None, str | None, str | None]]:
     if "dask" in id and "1d_chunked" not in id:
         xfail_reason = "dask without 1d chunking scheme not supported"
         yield None, None, xfail_reason

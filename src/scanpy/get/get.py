@@ -17,18 +17,12 @@ from .._settings import Default, Preset
 from .._utils import dim_acc
 
 if TYPE_CHECKING:
-    import sys
     from collections.abc import Iterable
-    from typing import Any, Literal, Unpack
+    from typing import Any, Literal, TypeIs, Unpack
 
     from anndata.acc import Idx2D, RefAcc
 
     from .._compat import DaskArray
-
-    if sys.version_info >= (3, 13):
-        from typing import TypeIs
-    else:
-        from typing_extensions import TypeIs
 
 
 if TYPE_CHECKING or find_spec("anndata.acc"):
