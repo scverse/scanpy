@@ -76,7 +76,7 @@ class Verbosity(IntEnum, metaclass=VerbosityMeta):
     @contextmanager
     def override(
         self, verbosity: Verbosity | _VerbosityName | int
-    ) -> Generator[Verbosity, None, None]:
+    ) -> Generator[Verbosity]:
         """Temporarily override verbosity.
 
         >>> import scanpy as sc

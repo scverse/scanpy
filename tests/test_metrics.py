@@ -29,7 +29,7 @@ def metric(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(params=["single-threaded", "multi-threaded"])
-def _threading(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+def _threading(request: pytest.FixtureRequest) -> Generator[None]:
     if request.param == "single-threaded":
         with threadpoolctl.threadpool_limits(limits=1):
             yield

@@ -427,7 +427,9 @@ def log1p_anndata(  # noqa: PLR0912
     layer: str | None = None,
     obsm: str | None = None,
 ) -> AnnData | np.ndarray | CSBase | None:
-    if "log1p" in adata.uns:
+    # `uns["log1p"]` only tells us that `adata.X` was transformed, so don’t warn
+    # when the call targets a layer or obsm instead.
+    if layer is None and obsm is None and "log1p" in adata.uns:
         logg.warning("adata.X seems to be already log-transformed.")
 
     if copy:

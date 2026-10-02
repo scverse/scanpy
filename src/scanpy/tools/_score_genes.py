@@ -299,7 +299,7 @@ def _score_genes_bins(
     n_bins: int,
     get_subset: _GetSubset,
     rng: np.random.Generator,
-) -> Generator[pd.Index[str], None, None]:
+) -> Generator[pd.Index[str]]:
     # average expression of genes
     obs_avg = pd.Series(_nan_means(get_subset(gene_pool), axis=0), index=gene_pool)
     # Sometimes (and I don’t know how) missing data may be there, with NaNs for missing entries

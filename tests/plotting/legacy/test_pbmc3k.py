@@ -19,8 +19,6 @@ import pytest
 import threadpoolctl
 
 import scanpy as sc
-from scanpy._compat import pkg_version
-from testing.scanpy._pytest import context
 from testing.scanpy._pytest.marks import needs
 
 HERE = Path(__file__).parent
@@ -197,10 +195,4 @@ def test_pbmc3k(subtests: pytest.Subtests, plot_cmp) -> None:  # noqa: PLR0915
         sc.pl.violin(
             adata, ["CST3", "NKG7", "PPBP"], groupby="leiden", rotation=90, show=False
         )
-        # See https://github.com/scverse/scanpy/pull/3929#issuecomment-3685784980
-        with context.xfail(
-            pkg_version("pandas").major >= 3,
-            reason="seaborn violin plot is incompatible with pandas 3",
-            raises=AssertionError,
-        ):
-            plot_cmp("violin_2")
+        plot_cmp("violin_2")

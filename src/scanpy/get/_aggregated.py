@@ -594,7 +594,7 @@ def aggregate_dask(
         # only subset the mask and by if we need to i.e.,
         # there is chunking along the same axis as by and mask
         if chunked_axis == 0:
-            # See https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html
+            # See https://docs.dask.org/page/generated/dask.array.map_blocks.html
             # for what is contained in `block_info`.
             subset = slice(*block_info[0]["array-location"][0])
             by_subsetted = by[subset]
