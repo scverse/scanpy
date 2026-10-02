@@ -31,11 +31,11 @@ check_values
     without checking. Setting this to `False` can speed up code for large datasets.
 """
 
-doc_input = f"""\
+doc_layer = f"""\
 {doc_use("Which matrix to use as input.", legacy=("layer",))}
 """
 
-doc_input_obsm = f"""\
+doc_input_matrix = f"""\
 {doc_use("Which matrix to use as input.")}
 """
 
