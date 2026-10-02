@@ -83,12 +83,14 @@ def base(request):
     return request.param
 
 
+@pytest.mark.filterwarnings(r"ignore:.*argument (obsm|layer).*deprecated:FutureWarning")
 @pytest.mark.parametrize(
     ("kwargs", "expect_warning"),
     [
         pytest.param({}, True, id="X"),
         pytest.param({"layer": "spliced"}, False, id="layer"),
         pytest.param({"obsm": "rep"}, False, id="obsm"),
+        pytest.param({"use": "obsm.rep"}, False, id="use", marks=needs.anndata_acc),
     ],
 )
 def test_log1p_already_transformed_warning(
