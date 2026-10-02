@@ -102,6 +102,7 @@ class ScalePreset(NamedTuple):
 
 class ScoreGenesPreset(NamedTuple):
     ctrl_as_ref: bool
+    ctrl_per_gene: bool
 
 
 class LeidenPreset(NamedTuple):
@@ -263,8 +264,10 @@ class Preset(enum.StrEnum):
     def score_genes() -> Mapping[Preset, ScoreGenesPreset]:
         """Settings for :func:`~scanpy.tl.score_genes`."""  # noqa: D401
         return {
-            Preset.ScanpyV1: ScoreGenesPreset(ctrl_as_ref=True),
-            Preset.ScanpyV2Preview: ScoreGenesPreset(ctrl_as_ref=False),
+            Preset.ScanpyV1: ScoreGenesPreset(ctrl_as_ref=True, ctrl_per_gene=False),
+            Preset.ScanpyV2Preview: ScoreGenesPreset(
+                ctrl_as_ref=False, ctrl_per_gene=True
+            ),
         }
 
     @preset_property
