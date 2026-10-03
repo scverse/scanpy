@@ -449,7 +449,8 @@ def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
         adata, adata.var_names, "group", return_fig=True, show=False
     )
     expected = (
-        pd.DataFrame(
+        pd
+        .DataFrame(
             values,
             index=pd.CategoricalIndex(groups, name="group"),
             columns=adata.var_names,

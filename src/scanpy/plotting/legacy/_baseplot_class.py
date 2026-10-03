@@ -111,9 +111,7 @@ def _prepare_plot_data(  # noqa: PLR0912, PLR0915
         if group == adata.obs.index.name:
             groupby_index = group
 
-    grouping = adata.obs[
-        [key for key in groupby_keys if key != groupby_index]
-    ].copy()
+    grouping = adata.obs[[key for key in groupby_keys if key != groupby_index]].copy()
     if groupby_index is not None:
         grouping[groupby_index] = adata.obs.index
         grouping = grouping[groupby_keys]
