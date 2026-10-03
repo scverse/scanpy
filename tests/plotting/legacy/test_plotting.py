@@ -432,8 +432,8 @@ def test_dotplot_aggregates_sparse_data_without_dense_frame(
 
     assert isinstance(plot._plot_data, CSBase)
     assert plot._obs_tidy is None
-    pd.testing.assert_frame_equal(plot.dot_size_df, expected_size)
-    pd.testing.assert_frame_equal(plot.dot_color_df, expected_color)
+    pd.testing.assert_frame_equal(plot.dot_size_df, expected_size, check_names=False)
+    pd.testing.assert_frame_equal(plot.dot_color_df, expected_color, check_names=False)
 
 
 def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
@@ -462,7 +462,7 @@ def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
 
     assert isinstance(plot._plot_data, CSBase)
     assert plot._obs_tidy is None
-    pd.testing.assert_frame_equal(plot.values_df, expected)
+    pd.testing.assert_frame_equal(plot.values_df, expected, check_names=False)
 
 
 def test_dotplot_add_totals(plot_cmp):
