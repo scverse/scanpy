@@ -13,9 +13,10 @@ import pytest
 import seaborn as sns
 from anndata import AnnData
 from matplotlib.testing.compare import compare_images
+from scipy import sparse
 
 import scanpy as sc
-from scanpy._compat import pkg_version
+from scanpy._compat import CSBase, pkg_version
 from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
@@ -392,6 +393,75 @@ def test_dotplot_style_no_reset():
     assert plot.cmap == "winter"
     plot.style(color_on="square")
     assert plot.cmap == "winter", "style() should not reset unspecified parameters"
+
+
+@pytest.mark.parametrize("expression_cutoff", [0, 1])
+@pytest.mark.parametrize("mean_only_expressed", [False, True])
+def test_dotplot_aggregates_sparse_data_without_dense_frame(
+    expression_cutoff: float, *, mean_only_expressed: bool
+) -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y", "z"]),
+    )
+
+    plot = sc.pl.dotplot(
+        adata,
+        adata.var_names,
+        "group",
+        expression_cutoff=expression_cutoff,
+        mean_only_expressed=mean_only_expressed,
+        return_fig=True,
+        show=False,
+    )
+
+    index = pd.CategoricalIndex(groups, name="group")
+    tidy = pd.DataFrame(values, index=index, columns=adata.var_names)
+    expressed = tidy > expression_cutoff
+    expected_size = expressed.groupby(level=0, observed=True).mean()
+    expected_color = (
+        tidy.mask(~expressed).groupby(level=0, observed=True).mean().fillna(0)
+        if mean_only_expressed
+        else tidy.groupby(level=0, observed=True).mean()
+    )
+    expected_size.index.name = None
+    expected_color.index.name = None
+
+    assert isinstance(plot._plot_data, CSBase)
+    assert plot._obs_tidy is None
+    pd.testing.assert_frame_equal(plot.dot_size_df, expected_size)
+    pd.testing.assert_frame_equal(plot.dot_color_df, expected_color)
+
+
+def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
+    values = np.array([[0, 1], [2, 0], [0, 5], [6, 0]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+
+    plot = sc.pl.matrixplot(
+        adata, adata.var_names, "group", return_fig=True, show=False
+    )
+    expected = (
+        pd.DataFrame(
+            values,
+            index=pd.CategoricalIndex(groups, name="group"),
+            columns=adata.var_names,
+        )
+        .groupby(level=0, observed=True)
+        .mean()
+    )
+    expected.index.name = None
+
+    assert isinstance(plot._plot_data, CSBase)
+    assert plot._obs_tidy is None
+    pd.testing.assert_frame_equal(plot.values_df, expected)
 
 
 def test_dotplot_add_totals(plot_cmp):
