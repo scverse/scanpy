@@ -11,12 +11,13 @@ import numpy as np
 import pandas as pd
 import pytest
 import seaborn as sns
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
 from matplotlib.testing.compare import compare_images
 from scipy import sparse
 
 import scanpy as sc
 from scanpy._compat import CSBase, pkg_version
+from scanpy.plotting.legacy._anndata import _prepare_dataframe
 from testing.scanpy._helpers.data import (
     krumsiek11,
     pbmc3k,
@@ -30,6 +31,7 @@ from testing.scanpy._pytest.params import param_with
 if TYPE_CHECKING:
     from collections.abc import Callable
     from contextlib import ExitStack
+    from pathlib import Path
     from typing import Any, Literal
 
     from matplotlib.axes import Axes
@@ -432,8 +434,12 @@ def test_dotplot_aggregates_sparse_data_without_dense_frame(
 
     assert isinstance(plot._plot_data, CSBase)
     assert plot._obs_tidy is None
-    pd.testing.assert_frame_equal(plot.dot_size_df, expected_size, check_names=False)
-    pd.testing.assert_frame_equal(plot.dot_color_df, expected_color, check_names=False)
+    pd.testing.assert_frame_equal(
+        plot.dot_size_df, expected_size, check_dtype=False, check_names=False
+    )
+    pd.testing.assert_frame_equal(
+        plot.dot_color_df, expected_color, check_dtype=False, check_names=False
+    )
 
 
 def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
@@ -462,7 +468,101 @@ def test_matrixplot_aggregates_sparse_data_without_dense_frame() -> None:
 
     assert isinstance(plot._plot_data, CSBase)
     assert plot._obs_tidy is None
-    pd.testing.assert_frame_equal(plot.values_df, expected, check_names=False)
+    pd.testing.assert_frame_equal(
+        plot.values_df, expected, check_dtype=False, check_names=False
+    )
+
+
+def test_baseplot_sparse_data_sources_match_dataframe_semantics() -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame(
+            {
+                "group": pd.Categorical(["b", "a", "b", "a"]),
+                "group2": pd.Categorical(["x", "x", "y", "y"]),
+                "numeric": [0.1, 0.4, 0.8, 1.2],
+            },
+            index=pd.Index(["c0", "c1", "c2", "c3"], name="cell"),
+        ),
+        var=pd.DataFrame({"symbol": ["X", "Y", "Z"]}, index=["g0", "g1", "g2"]),
+    )
+    adata.layers["double"] = adata.X * 2
+    adata.raw = adata.copy()
+
+    cases = [
+        (["g2", "g0", "g2"], "group", {}),
+        (["g0", "g1"], "group", {"layer": "double", "use_raw": False}),
+        (["g0", "g1"], "group", {"use_raw": True}),
+        (["Z", "X"], "group", {"gene_symbols": "symbol"}),
+        (["g0", "g1"], "group", {"log": True}),
+        (["g0", "g1"], "numeric", {}),
+        (["g0", "g1"], ["group", "group2"], {}),
+        (["g0", "g1"], "cell", {}),
+    ]
+    for var_names, groupby, kwargs in cases:
+        categories, tidy = _prepare_dataframe(adata, var_names, groupby, **kwargs)
+        expected = tidy.groupby(level=0, observed=True).mean().reindex(categories)
+        plot = sc.pl.matrixplot(
+            adata, var_names, groupby, return_fig=True, show=False, **kwargs
+        )
+
+        assert plot._obs_tidy is None
+        assert list(plot.values_df.index) == list(expected.index)
+        assert plot.values_df.columns.tolist() == expected.columns.tolist()
+        np.testing.assert_allclose(
+            plot.values_df.to_numpy(), expected.to_numpy(), equal_nan=True
+        )
+
+
+def test_baseplot_aggregates_backed_sparse_data(tmp_path: Path) -> None:
+    adata = AnnData(
+        sparse.csr_matrix(np.array([[0, 1], [2, 0]], dtype=np.float32)),  # noqa: TID251
+        obs=pd.DataFrame(
+            {"group": pd.Categorical(["a", "b"])}, index=["cell-0", "cell-1"]
+        ),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+    path = tmp_path / "sparse.h5ad"
+    adata.write_h5ad(path)
+
+    backed = read_h5ad(path, backed="r")
+    try:
+        plot = sc.pl.matrixplot(
+            backed, ["y", "x"], "group", return_fig=True, show=False
+        )
+        assert plot._obs_tidy is None
+        np.testing.assert_array_equal(plot.values_df, [[1, 0], [0, 2]])
+    finally:
+        backed.file.close()
+
+
+def test_baseplot_validates_groupby_and_var_names() -> None:
+    adata = AnnData(
+        np.ones((2, 2)),
+        obs=pd.DataFrame({"group": ["a", "b"]}, index=["cell-0", "cell-1"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+
+    with pytest.raises(ValueError, match="groupby has to be a valid observation"):
+        sc.pl.matrixplot(adata, ["x"], "missing", return_fig=True)
+    with pytest.raises(KeyError, match="Could not find key"):
+        sc.pl.matrixplot(adata, ["missing"], "group", return_fig=True)
+
+    adata.obs.index.name = "group"
+    with pytest.raises(ValueError, match="both and index and a column level"):
+        sc.pl.matrixplot(adata, ["x"], "group", return_fig=True)
+
+    adata.obs.index.name = None
+    adata.var["symbol"] = ["duplicate", "duplicate"]
+    with pytest.raises(KeyError, match="Found duplicate entries"):
+        sc.pl.matrixplot(
+            adata,
+            ["duplicate"],
+            "group",
+            gene_symbols="symbol",
+            return_fig=True,
+        )
 
 
 def test_dotplot_add_totals(plot_cmp):

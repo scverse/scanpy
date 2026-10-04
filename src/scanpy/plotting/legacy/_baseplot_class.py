@@ -351,7 +351,8 @@ class BasePlot:
     def _aggregate(self, func: AggType, *, data=None) -> pd.DataFrame:
         """Aggregate selected plotting data without constructing a cell-level frame."""
         data = self._plot_data if data is None else data
-        values = _aggregate(data, by=self._groupby_obs, func=func)[func]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            values = _aggregate(data, by=self._groupby_obs, func=func)[func]
         if hasattr(values, "compute"):
             values = values.compute()
         if func == "mean" and np.issubdtype(data.dtype, np.floating):
