@@ -537,6 +537,72 @@ def test_baseplot_aggregates_backed_sparse_data(tmp_path: Path) -> None:
         backed.file.close()
 
 
+@pytest.mark.parametrize("mean_only_expressed", [False, True])
+def test_dotplot_aggregates_backed_sparse_data(
+    tmp_path: Path, *, mean_only_expressed: bool
+) -> None:
+    values = np.array([[0, 1, 3], [2, 0, 4], [0, 5, 0], [6, 0, 2]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y", "z"]),
+    )
+    path = tmp_path / "sparse.h5ad"
+    adata.write_h5ad(path)
+
+    backed = read_h5ad(path, backed="r")
+    try:
+        plot = sc.pl.dotplot(
+            backed,
+            ["z", "x"],
+            "group",
+            mean_only_expressed=mean_only_expressed,
+            return_fig=True,
+            show=False,
+        )
+        assert plot._obs_tidy is None
+    finally:
+        backed.file.close()
+
+    tidy = pd.DataFrame(
+        values[:, [2, 0]],
+        index=pd.CategoricalIndex(groups, name="group"),
+        columns=["z", "x"],
+    )
+    expressed = tidy > 0
+    expected_size = expressed.groupby(level=0, observed=True).mean()
+    expected_color = (
+        tidy.mask(~expressed).groupby(level=0, observed=True).mean().fillna(0)
+        if mean_only_expressed
+        else tidy.groupby(level=0, observed=True).mean()
+    )
+    np.testing.assert_allclose(plot.dot_size_df.to_numpy(), expected_size.to_numpy())
+    np.testing.assert_allclose(plot.dot_color_df.to_numpy(), expected_color.to_numpy())
+
+
+def test_dotplot_negative_expression_cutoff_sparse() -> None:
+    values = np.array([[0, 1], [2, 0], [0, 5], [6, 0]], dtype=np.float32)
+    groups = pd.Categorical(["a", "a", "b", "b"])
+    adata = AnnData(
+        sparse.csr_matrix(values),  # noqa: TID251
+        obs=pd.DataFrame({"group": groups}, index=["0", "1", "2", "3"]),
+        var=pd.DataFrame(index=["x", "y"]),
+    )
+    plot = sc.pl.dotplot(
+        adata,
+        adata.var_names,
+        "group",
+        expression_cutoff=-1,
+        mean_only_expressed=True,
+        return_fig=True,
+        show=False,
+    )
+    # every value (including zeros) exceeds -1
+    np.testing.assert_allclose(plot.dot_size_df.to_numpy(), 1.0)
+    np.testing.assert_allclose(plot.dot_color_df.to_numpy(), [[1, 0.5], [3, 2.5]])
+
+
 def test_baseplot_validates_groupby_and_var_names() -> None:
     adata = AnnData(
         np.ones((2, 2)),

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib import colormaps
+from scipy.sparse import SparseEfficiencyWarning
 
 from ... import logging as logg
 from ..._compat import CSBase, set_module, warn
@@ -228,7 +230,11 @@ class DotPlot(BasePlot):
 
         Refactored to helper to satisfy complexity checks.
         """
-        expressed = self._plot_data > self.expression_cutoff
+        with warnings.catch_warnings():
+            # A negative cutoff makes zeros count as expressed, so scipy warns that
+            # the comparison is inefficient; the result is still what we want.
+            warnings.simplefilter("ignore", SparseEfficiencyWarning)
+            expressed = self._plot_data > self.expression_cutoff
 
         if dot_size_df is None:
             dot_size_df = self._aggregate("mean", data=expressed)
