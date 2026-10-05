@@ -13,6 +13,10 @@ import scanpy as sc
 from scanpy import Neighbors
 from scanpy._compat import CSBase
 from scanpy.get.get import _rep_from_json
+from scanpy.neighbors._common import (
+    _get_indices_distances_from_rect_matrix,
+    _get_indices_distances_from_sparse_matrix,
+)
 from testing.scanpy._helpers.data import pbmc68k_reduced
 from testing.scanpy._pytest.marks import needs
 
@@ -404,3 +408,46 @@ def test_neighbors_distance_equivalence() -> None:
     assert p.pop("metric") == "euclidean"
     assert p_d.pop("metric") is None
     assert p == p_d
+
+
+def test_indices_distances_non_constant_neighbors() -> None:
+    """A kNN matrix with varying neighbor counts falls back to the per-row path."""
+    dist = np.array(
+        [
+            [0, 1, 2, 3, 0],
+            [1, 0, 4, 2, 5],
+            [2, 4, 0, 0, 3],
+            [3, 2, 0, 0, 6],
+            [0, 5, 3, 6, 0],
+        ],
+        dtype=np.float64,
+    )
+    d = sparse.csr_matrix(dist)  # noqa: TID251
+
+    with pytest.warns(RuntimeWarning, match=r"no constant number of neighbors"):
+        indices, distances = _get_indices_distances_from_sparse_matrix(d, 3)
+
+    np.testing.assert_array_equal(
+        indices, [[0, 1, 2], [1, 0, 3], [2, 0, 4], [3, 1, 0], [4, 2, 1]]
+    )
+    np.testing.assert_array_equal(
+        distances, [[0, 1, 2], [0, 1, 2], [0, 2, 3], [0, 2, 3], [0, 3, 5]]
+    )
+
+
+def test_indices_distances_rect_matrix_padded() -> None:
+    """Rows with varying neighbor counts are padded, then truncated to the closest."""
+    rect = np.array(
+        [
+            [2, 0, 1, 0],
+            [0, 3, 1, 2],
+            [4, 0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+    d = sparse.csr_matrix(rect)  # noqa: TID251
+
+    indices, distances = _get_indices_distances_from_rect_matrix(d, 2)
+
+    np.testing.assert_array_equal(indices, [[2, 0], [2, 3], [3, 0]])
+    np.testing.assert_array_equal(distances, [[1, 2], [1, 2], [1, 4]])

@@ -629,6 +629,38 @@ def test_recipe_weinreb():
     assert_equal(orig, adata)
 
 
+@pytest.mark.parametrize("chunked", [False, True], ids=["full", "chunked"])
+def test_sqrt(count_matrix_format: _MatrixFormat, *, chunked: bool) -> None:
+    x = np.arange(20, dtype=np.float64).reshape(5, 4)
+    adata = AnnData(count_matrix_format(x.copy()))
+
+    sc.pp.sqrt(adata, chunked=chunked, chunk_size=2)
+
+    assert_allclose(asarray(adata.X), np.sqrt(x))
+
+
+@pytest.mark.parametrize(
+    ("filter_func", "attr", "arg", "col"),
+    [
+        pytest.param(sc.pp.filter_cells, "obs", "min_genes", "n_genes", id="cells"),
+        pytest.param(sc.pp.filter_genes, "var", "min_cells", "n_cells", id="genes"),
+    ],
+)
+def test_filter_inplace_false(
+    filter_func: Callable, attr: str, arg: str, col: str
+) -> None:
+    """`inplace=False` returns the mask and counts without touching `adata`."""
+    adata = pbmc68k_reduced().raw.to_adata()
+    orig = adata.copy()
+
+    mask, number = filter_func(adata, **{arg: 3}, inplace=False)
+
+    assert_equal(adata, orig)
+    filter_func(adata, **{arg: 3})
+    assert mask.sum() == len(getattr(adata, attr))
+    np.testing.assert_array_equal(number[mask], getattr(adata, attr)[col])
+
+
 @pytest.mark.parametrize("array_type", ARRAY_TYPES)
 @pytest.mark.parametrize(
     ("max_cells", "max_counts", "min_cells", "min_counts"),

@@ -503,6 +503,25 @@ def test_illico_deprecation_warning():
         )
 
 
+def test_pts_vs_reference() -> None:
+    """With a reference group, `pts` holds each group's fraction of expressing cells."""
+    x = np.zeros((30, 2))
+    x[0:10, 0] = np.arange(1, 11)  # a: gene0 in 10/10 cells
+    x[10:14, 0] = np.arange(1, 5)  # b: gene0 in 4/10 cells
+    x[4:10, 1] = np.arange(1, 7)  # a: gene1 in 6/10 cells
+    x[10:12, 1] = [7, 8]  # b: gene1 in 2/10 cells
+    x[20:25, :] = 1  # c: not selected
+    adata = AnnData(x, obs={"grp": ["a"] * 10 + ["b"] * 10 + ["c"] * 10})
+
+    rank_genes_groups(
+        adata, "grp", groups=["a"], reference="b", method="wilcoxon", pts=True
+    )
+
+    expected = pd.DataFrame({"a": [1.0, 0.6], "b": [0.4, 0.2]}, index=adata.var_names)
+    pd.testing.assert_frame_equal(adata.uns["rank_genes_groups"]["pts"], expected)
+    assert "pts_rest" not in adata.uns["rank_genes_groups"]
+
+
 @pytest.mark.parametrize(
     ("mean_in_log_space", "expected_logfc"),
     [
